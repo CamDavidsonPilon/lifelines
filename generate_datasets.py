@@ -41,7 +41,7 @@ def inverseSq_(t,alpha=1,beta=1):
 @coeff_func
 def periodic_(t, alpha=1,beta=1):
     """| 0.5*beta*sin(0.1*alpha*t) |"""
-    return np.abs(0.5*beta*np.sin(0.1*alpha*t))
+    return 0.5*beta*np.sin(0.1*alpha*t)
 @coeff_func
 def constant_(t,alpha=1,beta=1):
     """constant: beta"""
@@ -113,14 +113,14 @@ def time_varying_coefficients(d, timelines, constant=False, independent=0, randg
         beta = 0
      else:
         beta = randgen((1-constant)*0.5/d)
-     coefficients[:,i] = f(timelines,alpha=randgen(2000/t), beta=beta)
+     coefficients[:,i] = f(timelines,alpha=randgen(2000.0/t), beta=beta)
      data_generators.append(f.func_doc)
 
   df_coefficients = pd.DataFrame( coefficients, columns = data_generators, index = timelines)
   return df_coefficients
 
 
-def generate_hazard_rates(n,d, lifeline, constant=False, independent=0, n_binary=0, model="aalen"):
+def generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
   """
     n: the number of instances
     d: the number of covariates
@@ -130,23 +130,23 @@ def generate_hazard_rates(n,d, lifeline, constant=False, independent=0, n_binary
     model: from ["aalen", "cox"]
 
   Returns:
-    hazard rates (n,t) array,
-    data generators (d+1) array of functions that create the coeffients), 
-    covarites (n,d) array
+    hazard rates: (t,n) dataframe,
+    coefficients: (t,d+1) dataframe of coefficients, 
+    covarites: (n,d) dataframe
 
   """
   covariates = generate_covariates(n,d, n_binary=n_binary)
   if model=="aalen":
-      coefficients = time_varying_coefficients(d+1,lifeline, independent=independent, constant=constant)
+      coefficients = time_varying_coefficients(d+1,timelines, independent=independent, constant=constant)
       hazard_rates = np.dot( covariates, coefficients.T )
-      return pd.DataFrame(hazard_rates.T,index=lifeline), coefficients, covariates
+      return pd.DataFrame(hazard_rates.T,index=timelines), coefficients, pd.DataFrame(covariates)
   elif model=="cox":
       covariates = covariates[:,:-1]
-      coefficients = constant_coefficients(d, lifeline, independent)
-      baseline = time_varying_coefficients(1, lifeline)
+      coefficients = constant_coefficients(d, timelines, independent)
+      baseline = time_varying_coefficients(1, timelines)
       hazard_rates =np.exp(np.dot( covariates, coefficients.T ))*baseline[baseline.columns[0]].values
       coefficients[ "baseline: "+ baseline.columns[0] ] = baseline.values
-      return pd.DataFrame(hazard_rates.T,index=lifeline),coefficients, covariates
+      return pd.DataFrame(hazard_rates.T,index=timelines),coefficients, pd.DataFrame(covariates)
   else:
     raise Exception
 
@@ -157,7 +157,7 @@ def generate_random_lifetimes(hazard_rates,timelines, size = 1):
     timelines: (t,) the observation times
 
   Returns:
-    a (n,size) list of random variables.
+    a (n,size) array of random variables.
   """
   n = hazard_rates.shape[1]
   survival_times = np.empty((n,size))
@@ -171,11 +171,18 @@ def generate_random_lifetimes(hazard_rates,timelines, size = 1):
      survival_times[cross==0,i] = np.inf
   return survival_times.T
 
+def generate_observational_matrix(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
+  hz, coeff, covariates = generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen")
+  R = generate_random_lifetimes(hz,timelines)
+  covariates["event_at"] = R.T
+  return covariates.sort("event_at"), cumulative_quadrature(coeff
+
 def cumulative_quadrature(fx, t):
   """Boss algo"""
+  #pdb.set_trace()
   lower_x = t[0]
   cum_integral = np.empty((fx.shape[0],t.shape[0]))
-  cum_integral[0,:] = 0
+  cum_integral[:,0] = 0
   for i in xrange(1,t.shape[0]):
     if (t[i-1]-lower_x) == 0:
         cum_integral[:,i] = (0.5*fx[:,i-1] + 0.5*fx[:,i])*(t[i] - lower_x)/i
@@ -189,9 +196,10 @@ def construct_survival_curves(hazard_rates, timelines):
     hazard_rates: (n,t) array
     timelines: (t,) the observational times 
 
-  Returns:
+  Returns:t
     survial curves, (n,t) array
   """
+  #pdb.set_trace()
   cumulative_hazards = cumulative_quadrature(hazard_rates.values.T, timelines).T
   return pd.DataFrame( np.exp(-cumulative_hazards), index=timelines)
 

@@ -12,16 +12,16 @@ Currently, the libary can only create arti---
 
 
 
-### Just show me an example!
+### Just show me the example!
 
     from matplotlib import pylab as plt
     from lifelines import *
 
-    n_ind = 3
-    n_dim = 5
+    n_ind = 4 # how many lifetimes do we observe
+    n_dim = 5 # the number of covarites to generate. 
     t = np.linspace(0,40,400)
 
-    hz, coefs, covart = generate_hazard_rates(n_ind, n_dim, t)
+    hz, coefs, covart = generate_hazard_rates(n_ind, n_dim, t, model="aalen")
     # you're damn right these are dataframes
 
     hz.plot()
@@ -35,6 +35,7 @@ Currently, the libary can only create arti---
 
     #using the hazard curves, we can sample from survival times.
     print generate_random_lifetimes(hz, t, 500 )
+    
     array([[ 9.4235589 ,  3.60902256,  3.0075188 ,  0.60150376],
            [ 1.00250627,  3.20802005,  0.70175439,  0.30075188],
            [ 5.71428571,  8.02005013,  5.41353383,  0.30075188],
