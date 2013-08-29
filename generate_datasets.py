@@ -27,14 +27,6 @@ def log_(t,alpha=1, beta=1):
   """beta*np.log(alpha*t+1)"""
   return beta*np.log(alpha*t+1)
 @coeff_func
-def sqrt_(t,alpha=0,beta=1):
-    """beta*np.sqrt(t+alpha)"""
-    return beta*np.sqrt(t+alpha)
-@coeff_func
-def inverse_(t,alpha=1,beta=1):
-    """beta/(t+alpha+1)"""
-    return beta/(t+alpha+1)
-@coeff_func
 def inverseSq_(t,alpha=1,beta=1):
     """beta/(t+alpha+1)**2"""
     return beta/(t+alpha+1)**(0.5)
@@ -47,7 +39,7 @@ def constant_(t,alpha=1,beta=1):
     """constant: beta"""
     return beta
 
-FUNCS = [exp_comp_, log_, inverse_, sqrt_, inverseSq_, constant_, periodic_ ] 
+FUNCS = [exp_comp_, log_, inverseSq_, constant_, periodic_ ] 
 
 
 def generate_covariates(n, d, n_binary=0, p=0.5):
@@ -175,7 +167,7 @@ def generate_observational_matrix(n,d, timelines, constant=False, independent=0,
   hz, coeff, covariates = generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen")
   R = generate_random_lifetimes(hz,timelines)
   covariates["event_at"] = R.T
-  return covariates.sort("event_at"), cumulative_quadrature(coeff
+  return covariates.sort("event_at"), pd.DataFrame(cumulative_quadrature(coeff.values.T,timelines).T, columns = coeff.columns, index = timelines )
 
 def cumulative_quadrature(fx, t):
   """Boss algo"""
