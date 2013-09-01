@@ -53,20 +53,24 @@ lifelines
 
 
 ### Censorship events
+When there are right-censored events, the simplest case being there are still surviving individuals, we need to be more careful and factor these 
+non-observed individuals in. The api for this is an obvious extension from above:
 
-    from matplotlib import pylab as plt
-    from lifelines.generate_datasets import *
-    from lifelines.estimation import *
+
     t = np.linspace(0,40,1000)
     hz, coefs, covart = generate_hazard_rates(1, 2, t, model="aalen")
 
     #generate random lifetimes with uniform censoring. C is the boolean of censorship
     T, C = generate_random_lifetimes(hz, t, size=750, censor=True )
 
-    kmf = KaplanMeierFitter()
-    kmf.fit(T,t,censorship=C)
-    ax = kmf.survival_function_.plot()
+In the above line, `C` is a boolean array with `True` iff we observed the death event, otherwise, they individual was right-censored. `T` is the death event, or if censored, the most lifespan before censorship.  
 
+
+    kmf = KaplanMeierFitter()
+    kmf.fit(T,t,censorship=C) #add in the censorship here
+
+    #plot it
+    ax = kmf.survival_function_.plot()
     sv = construct_survival_curves(hz,t) 
     sv.plot(ax=ax) 
 
