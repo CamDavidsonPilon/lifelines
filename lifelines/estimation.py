@@ -90,8 +90,8 @@ class NelsonAalenFitter(object):
         except:
           pass
         df = pd.DataFrame( index=self.timeline)
-        df["upper_bound_%.2f"%self.alpha] = self.cumulative_hazard_*np.exp(coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_ )
-        df["lower_bound_%.2f"%self.alpha] = self.cumulative_hazard_*np.exp(-coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_ )
+        df["upper_bound_%.2f"%self.alpha] = self.cumulative_hazard_.values*np.exp(coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
+        df["lower_bound_%.2f"%self.alpha] = self.cumulative_hazard_.values*np.exp(-coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
         return df
 
         
@@ -144,7 +144,7 @@ class KaplanMeierFitter(object):
       except:
         pass
       df = pd.DataFrame( index=self.timeline)
-      print "broken?"
+      "broken?"
       df["upper_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(coef*cumulative_sq_/np.log(self.survival_function_.values)))
       df["lower_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(-coef*cumulative_sq_/np.log(self.survival_function_.values)))
       #df["upper_bound_%.2f"%self.alpha] = self.survival_function_ + coef*np.sqrt(self.survival_function_*cumulative_sq_)

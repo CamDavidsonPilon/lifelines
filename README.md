@@ -39,12 +39,12 @@ With the software's great indulgence, there is another use of survival analysis:
            [ 1.80451128,  1.5037594 ,  0.30075188,  0.40100251],
            [ 1.40350877,  1.5037594 ,  0.80200501,  0.10025063]])
 
-    surival_times = rv[:,0][:,None]  
+    survival_times = rv[:,0][:,None]  
 
     #estimation is clean and built to resemble scikit learn's api.
     kmf = KaplanMeierFitter()
     kmf.fit(survival_times)
-    kfm.survival_function_.plot()
+    kmf.survival_function_.plot()
 
 ![KaplanMeier estimate](http://i.imgur.com/aztRkvl.png)
 
