@@ -6,14 +6,14 @@ import pdb
 
 
 
-def _additive_estimate(event_times, timeline, observed, additive_f, initial, nelson_aalen_smoothing=False):
+def _additive_estimate(event_times, timeline, observed, additive_f, initial, column_name, nelson_aalen_smoothing=False):
     """
 
     nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
 
     """
     n = timeline.shape[0]
-    _additive_estimate_ = pd.DataFrame(np.zeros((n,1)), index=timeline)
+    _additive_estimate_ = pd.DataFrame(np.zeros((n,1)), index=timeline, columns=[column_name])
     _additive_var = pd.DataFrame(np.zeros((n,1)), index=timeline)
 
     N = event_times["removed"].sum()
@@ -51,7 +51,7 @@ class NelsonAalenFitter(object):
        #check it 0
        return 1.*d/N
 
-    def fit(self, event_times, timeline=None, censorship=None):
+    def fit(self, event_times, timeline=None, censorship=None, column_name='NA-estimate'):
         """
         event_times: an (n,1) array of times that the death event occured at 
         timeline: return the best estimate at the values in timelines (postively increasing)
@@ -78,7 +78,7 @@ class NelsonAalenFitter(object):
            self.timeline = timeline
         self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
                                                                      self.timeline, self.censorship, 
-                                                                     self.additive_f, 0, 
+                                                                     self.additive_f, 0, column_name,
                                                                      nelson_aalen_smoothing=self.nelson_aalen_smoothing )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
         return
@@ -101,7 +101,7 @@ class KaplanMeierFitter(object):
   def __init__(self, alpha = 0.95):
        self.alpha = alpha
 
-  def fit(self, event_times, timeline=None, censorship=None):
+  def fit(self, event_times, timeline=None, censorship=None, column_name='KM-estimate'):
        """
        event_times: an (n,1) array of times that the death event occured at 
        timeline: return the best estimate at the values in timelines (postively increasing)
@@ -127,7 +127,9 @@ class KaplanMeierFitter(object):
           self.timeline = self.event_times.index.values.copy()
        else:
           self.timeline = timeline
-       log_surivial_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline, self.censorship, self.additive_f, 0 )
+       log_surivial_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline, 
+                                                                  self.censorship, self.additive_f, 
+                                                                  0, column_name )
        self.survival_function_ = np.exp(log_surivial_function)
        self.confidence_interval_ = self._bounds(cumulative_sq_)
        return self
@@ -143,8 +145,8 @@ class KaplanMeierFitter(object):
         pass
       df = pd.DataFrame( index=self.timeline)
       print "broken?"
-      df["upper_bound_%.2f"%self.alpha] = self.survival_function_**(np.exp(coef*cumulative_sq_/np.log(self.survival_function_)))
-      df["lower_bound_%.2f"%self.alpha] = self.survival_function_**(np.exp(-coef*cumulative_sq_/np.log(self.survival_function_)))
+      df["upper_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(coef*cumulative_sq_/np.log(self.survival_function_.values)))
+      df["lower_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(-coef*cumulative_sq_/np.log(self.survival_function_.values)))
       #df["upper_bound_%.2f"%self.alpha] = self.survival_function_ + coef*np.sqrt(self.survival_function_*cumulative_sq_)
       #df["lower_bound_%.2f"%self.alpha] = self.survival_function_ - coef*np.sqrt(self.survival_function_*cumulative_sq_)
       return df

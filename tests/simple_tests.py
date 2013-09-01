@@ -1,7 +1,7 @@
 #quick tests
 
 import numpy as np
-from generate_datasets import *
+from lifelines.generate_datasets import *
 
 T = np.linspace(0,100,1000)
 

@@ -6,7 +6,8 @@ lifelines
 ### Just show me the examples!
 
     from matplotlib import pylab as plt
-    from lifelines import *
+    from lifelines.generate_datasets import *
+    from lifelines.estimation import *
 
     n_ind = 4 # how many lifetimes do we observe
     n_dim = 5 # the number of covarites to generate. 
@@ -51,6 +52,29 @@ lifelines
 ![NelsonAalen](http://i.imgur.com/xA9OBFN.png)
 
 
-
 ### Censorship events
+
+    from matplotlib import pylab as plt
+    from lifelines.generate_datasets import *
+    from lifelines.estimation import *
+    t = np.linspace(0,40,1000)
+    hz, coefs, covart = generate_hazard_rates(1, 2, t, model="aalen")
+
+    #generate random lifetimes with uniform censoring. C is the boolean of censorship
+    T, C = generate_random_lifetimes(hz, t, size=750, censor=True )
+
+    kmf = KaplanMeierFitter()
+    kmf.fit(T,t,censorship=C)
+    ax = kmf.survival_function_.plot()
+
+    sv = construct_survival_curves(hz,t) 
+    sv.plot(ax=ax) 
+
+    ##what if we had ignored the censorship events?
+    kmf.fit(T,t, column_name="KM-estimate without factoring censorship")
+    kmf.survival_function_.plot(ax=ax)
+
+    plt.show()
+
+![SVest](http://i.imgur.com/jYm911Z.png)
 
