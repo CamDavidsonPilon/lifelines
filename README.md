@@ -49,3 +49,8 @@ lifelines
     naf.cumulative_hazard_.plot()
 
 ![NelsonAalen](http://i.imgur.com/xA9OBFN.png)
+
+
+
+### Censorship events
+

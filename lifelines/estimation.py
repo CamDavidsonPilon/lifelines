@@ -142,6 +142,7 @@ class KaplanMeierFitter(object):
       except:
         pass
       df = pd.DataFrame( index=self.timeline)
+      print "broken?"
       df["upper_bound_%.2f"%self.alpha] = self.survival_function_**(np.exp(coef*cumulative_sq_/np.log(self.survival_function_)))
       df["lower_bound_%.2f"%self.alpha] = self.survival_function_**(np.exp(-coef*cumulative_sq_/np.log(self.survival_function_)))
       #df["upper_bound_%.2f"%self.alpha] = self.survival_function_ + coef*np.sqrt(self.survival_function_*cumulative_sq_)
