@@ -3,6 +3,8 @@ import numpy as np
 from numpy import random
 import pandas as pd
 
+import pdb
+
 class coeff_func(object):
   """This is a decorator class used later to construct nice names"""
   def __init__(self, f):
@@ -32,7 +34,7 @@ def inverseSq_(t,alpha=1,beta=1):
     return beta/(t+alpha+1)**(0.5)
 @coeff_func
 def periodic_(t, alpha=1,beta=1):
-    """| 0.5*beta*sin(0.1*alpha*t) |"""
+    """| 0.5*beta*sin(0.1*alpha*t + alpha*beta) |"""
     return 0.5*beta*np.sin(0.1*alpha*t)
 @coeff_func
 def constant_(t,alpha=1,beta=1):
@@ -76,40 +78,40 @@ def constant_coefficients(d, timelines, constant=False, independent=0):
 
 
 def time_varying_coefficients(d, timelines, constant=False, independent=0, randgen= random.exponential):
-  """
-  Time vary coefficients
+    """
+    Time vary coefficients
 
-  d: the dimension of the dataset
-  timelines: the observational times
-  constant: True for constant coefficients 
-  independent: the number of coffients to set to 0 (covariate is ind of survival), or 
-    a list of covariates to make indepent.
-  randgen: how scalar coefficients (betas) are sampled.
+    d: the dimension of the dataset
+    timelines: the observational times
+    constant: True for constant coefficients 
+    independent: the number of coffients to set to 0 (covariate is ind of survival), or 
+      a list of covariates to make indepent.
+    randgen: how scalar coefficients (betas) are sampled.
 
-  returns a matrix (t,d+1) of coefficients
-  """
-  t = timelines.shape[0]
-  try:
-    a = np.arange(d)
-    random.shuffle(a)
-    independent = a[:independent]
-  except IndexError:
-    pass
+    returns a matrix (t,d+1) of coefficients
+    """
+    t = timelines.shape[0]
+    try:
+      a = np.arange(d)
+      random.shuffle(a)
+      independent = a[:independent]
+    except IndexError:
+      pass
 
-  n_funcs = len(FUNCS)
-  coefficients = np.zeros((t,d))
-  data_generators = []
-  for i in range(d):
-     f = FUNCS[random.randint(0,n_funcs)] if not constant else constant_
-     if i in independent:
-        beta = 0
-     else:
-        beta = randgen((1-constant)*0.5/d)
-     coefficients[:,i] = f(timelines,alpha=randgen(2000.0/t), beta=beta)
-     data_generators.append(f.func_doc)
+    n_funcs = len(FUNCS)
+    coefficients = np.zeros((t,d))
+    data_generators = []
+    for i in range(d):
+       f = FUNCS[random.randint(0,n_funcs)] if not constant else constant_
+       if i in independent:
+          beta = 0
+       else:
+          beta = randgen((1-constant)*0.5/d)
+       coefficients[:,i] = f(timelines,alpha=randgen(2000.0/t), beta=beta)
+       data_generators.append(f.func_doc)
 
-  df_coefficients = pd.DataFrame( coefficients, columns = data_generators, index = timelines)
-  return df_coefficients
+    df_coefficients = pd.DataFrame( coefficients, columns = data_generators, index = timelines)
+    return df_coefficients
 
 
 def generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
@@ -121,7 +123,7 @@ def generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binar
     n_binary: the number of binary covariates
     model: from ["aalen", "cox"]
 
-  Returns:
+  Returns:s
     hazard rates: (t,n) dataframe,
     coefficients: (t,d+1) dataframe of coefficients, 
     covarites: (n,d) dataframe
@@ -142,14 +144,16 @@ def generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binar
   else:
     raise Exception
 
-def generate_random_lifetimes(hazard_rates,timelines, size = 1):
+def generate_random_lifetimes(hazard_rates,timelines, size = 1, censor=False):
   """ 
   Based on the hazard rates, compute random variables from the survival function
     hazard_rates: (n,t) array of hazard rates
     timelines: (t,) the observation times
 
   Returns:
-    a (n,size) array of random variables.
+    survival_times: (n,size) array of random variables.
+    (optional) observed: if censor is true, returns (n,size) array with bool True 
+       if the death was observed (not right-censored)
   """
   n = hazard_rates.shape[1]
   survival_times = np.empty((n,size))
@@ -161,7 +165,16 @@ def generate_random_lifetimes(hazard_rates,timelines, size = 1):
      cross = v.argmax(1)
      survival_times[:,i] = timelines[cross]
      survival_times[cross==0,i] = np.inf
-  return survival_times.T
+
+  if censor:
+      T = timelines.max()
+      rv = T*random.uniform(size=survival_times.shape)
+      #pdb.set_trace()
+      observed = survival_times <= rv
+      survival_times = np.minimum(rv, survival_times)
+      return survival_times.T, observed.T
+  else:
+      return survival_times.T
 
 def generate_observational_matrix(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
   hz, coeff, covariates = generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen")

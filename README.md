@@ -1,18 +1,9 @@
 lifelines
 =======
+ 
 
 
-This will be a library for survival analysis in Pyth---
-
-Currently, the libary can only create arti---
-
-...articial datasets. That e---
-
-...okay, I get it: Lifelines. 
-
-
-
-### Just show me the example!
+### Just show me the examples!
 
     from matplotlib import pylab as plt
     from lifelines import *

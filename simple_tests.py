@@ -7,7 +7,7 @@ T = np.linspace(0,100,1000)
 
 def int_sv_equals_exp_T():
   """
-  Integral of SV curve = E[T]
+  Integral of SV curve = E[T] (assuming SV curve has finite integral)
   """
   #create a survival curve
   hz, coefs, covart = generate_hazard_rates(1, 10, T)
