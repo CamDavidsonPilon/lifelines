@@ -6,8 +6,12 @@ import pdb
 
 
 
-def _additive_estimate(event_times, timeline, observed,  additive_f,initial):
+def _additive_estimate(event_times, timeline, observed, additive_f, initial, nelson_aalen_smoothing=False):
+    """
 
+    nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
+
+    """
     n = timeline.shape[0]
     _additive_estimate_ = pd.DataFrame(np.zeros((n,1)), index=timeline)
     _additive_var = pd.DataFrame(np.zeros((n,1)), index=timeline)
@@ -15,18 +19,20 @@ def _additive_estimate(event_times, timeline, observed,  additive_f,initial):
     N = event_times["removed"].sum()
     t_0 = event_times.index[0]
     _additive_estimate_.ix[(timeline<t_0)]=initial
-    _additive_var.ix[(timeline<t_0)]=initial**2
+    _additive_var.ix[(timeline<t_0)]=0
 
     v = initial
-    v_sq = initial**2
+    v_sq = 0
     for t, removed, observed_deaths in event_times.itertuples():
         #pdb.set_trace()
         missing = removed - observed_deaths
-        print t, removed, observed_deaths, missing, N
         N -= missing
-        v += additive_f(N,observed_deaths)
+        if nelson_aalen_smoothing:
+           v += np.sum([additive_f(N,i) for i in range(observed_deaths)])
+        else:
+           v += additive_f(N,observed_deaths)
+           v_sq += (1.*observed_deaths/N)**2
         N -= observed_deaths
-        v_sq += 1./(N)**2
         _additive_estimate_.ix[ (t_0<timeline)*(timeline<=t) ] = v  
         _additive_var.ix[ (t_0<timeline)*(timeline<=t) ] = v_sq
         t_0 = t
@@ -37,14 +43,15 @@ def _additive_estimate(event_times, timeline, observed,  additive_f,initial):
 
 
 class NelsonAalenFitter(object):
-    def __init__(self, alpha=0.95):
+    def __init__(self, alpha=0.95, nelson_aalen_smoothing=False):
         self.alpha = alpha
+        self.nelson_aalen_smoothing = nelson_aalen_smoothing
 
-    def additive_f(self, N,i ):
+    def additive_f(self, N,d ):
        #check it 0
-       return 1./(N-i)
+       return 1.*d/N
 
-    def fit(self, event_times, timeline=None):
+    def fit(self, event_times, timeline=None, censorship=None):
         """
         event_times: an (n,1) array of times that the death event occured at 
         timeline: return the best estimate at the values in timelines (postively increasing)
@@ -54,16 +61,25 @@ class NelsonAalenFitter(object):
           values as the NelsonAalen estimate
         """
         #need to sort event_times
-        pdb.set_trace()
-        self.event_times = pd.Series( event_times[:,0] ).value_counts().sort_index()
-        #self.event_times = np.sort(event_times,0)
+        df = pd.DataFrame( event_times, columns=["event_at"] )
+        df["removed"] = 1
+
+        if censorship is None:
+           self.censorship = np.ones_like(event_times, dtype=bool)
+        else:
+           self.censorship = censorship.copy()
+
+        df["observed"] = self.censorship
+        self.event_times = df.groupby("event_at").sum().sort_index()
 
         if timeline is None:
-          self.timeline = self.event_times[:,0].copy()
+           self.timeline = self.event_times.index.values.copy()
         else:
-          self.timeline = timeline
-
-        self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline, self.additive_f, 0 )
+           self.timeline = timeline
+        self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
+                                                                     self.timeline, self.censorship, 
+                                                                     self.additive_f, 0, 
+                                                                     nelson_aalen_smoothing=self.nelson_aalen_smoothing )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
         return
 
@@ -74,8 +90,8 @@ class NelsonAalenFitter(object):
         except:
           pass
         df = pd.DataFrame( index=self.timeline)
-        df["upper_bound_%.2f"%self.alpha] = self.cumulative_hazard_ + coef*np.sqrt(cumulative_sq_)
-        df["lower_bound_%.2f"%self.alpha] = self.cumulative_hazard_ - coef*np.sqrt(cumulative_sq_)
+        df["upper_bound_%.2f"%self.alpha] = self.cumulative_hazard_*np.exp(coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_ )
+        df["lower_bound_%.2f"%self.alpha] = self.cumulative_hazard_*np.exp(-coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_ )
         return df
 
         
@@ -85,7 +101,7 @@ class KaplanMeierFitter(object):
   def __init__(self, alpha = 0.95):
        self.alpha = alpha
 
-  def fit(self, event_times, timeline=None, censorship = None):
+  def fit(self, event_times, timeline=None, censorship=None):
        """
        event_times: an (n,1) array of times that the death event occured at 
        timeline: return the best estimate at the values in timelines (postively increasing)
@@ -96,7 +112,6 @@ class KaplanMeierFitter(object):
          values as the NelsonAalen estimate
        """
        #need to sort event_times
-       pdb.set_trace()
        df = pd.DataFrame( event_times, columns=["event_at"] )
        df["removed"] = 1
 
@@ -127,8 +142,10 @@ class KaplanMeierFitter(object):
       except:
         pass
       df = pd.DataFrame( index=self.timeline)
-      df["upper_bound_%.2f"%self.alpha] = self.survival_function_ + coef*np.sqrt(self.survival_function_*cumulative_sq_)
-      df["lower_bound_%.2f"%self.alpha] = self.survival_function_ - coef*np.sqrt(self.survival_function_*cumulative_sq_)
+      df["upper_bound_%.2f"%self.alpha] = self.survival_function_**(np.exp(coef*cumulative_sq_/np.log(self.survival_function_)))
+      df["lower_bound_%.2f"%self.alpha] = self.survival_function_**(np.exp(-coef*cumulative_sq_/np.log(self.survival_function_)))
+      #df["upper_bound_%.2f"%self.alpha] = self.survival_function_ + coef*np.sqrt(self.survival_function_*cumulative_sq_)
+      #df["lower_bound_%.2f"%self.alpha] = self.survival_function_ - coef*np.sqrt(self.survival_function_*cumulative_sq_)
       return df
 
 
