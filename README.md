@@ -90,7 +90,7 @@ In the above line, `C` is a boolean array with `True` iff we observed the death 
 
 We can visualize the lifetimes too (really only good for data checking for small samples)
 
-
+    from lifelines.plotting import plot_lifetimes
     N = 20
     current = 10
     birthtimes = current*np.random.uniform(size=(N,))
