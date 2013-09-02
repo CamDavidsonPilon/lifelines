@@ -144,11 +144,16 @@ def generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binar
   else:
     raise Exception
 
-def generate_random_lifetimes(hazard_rates,timelines, size = 1, censor=False):
+def generate_random_lifetimes(hazard_rates,timelines, size = 1, censor=None):
   """ 
   Based on the hazard rates, compute random variables from the survival function
     hazard_rates: (n,t) array of hazard rates
     timelines: (t,) the observation times
+    size: the number to return, per hardard rate 
+    censor: If True, adds uniform censoring between timelines.max() and  0
+            If a postive number, censors all events above that value.
+            If (n,) np.array, but be positive. 
+
 
   Returns:
     survival_times: (n,size) array of random variables.
@@ -158,19 +163,22 @@ def generate_random_lifetimes(hazard_rates,timelines, size = 1, censor=False):
   n = hazard_rates.shape[1]
   survival_times = np.empty((n,size))
   cumulative_hazards = cumulative_quadrature(hazard_rates.values.T, timelines)
+
   for i in xrange(size):
      u = random.rand(n,1)
      e = -np.log(u)
-     v = (e - cumulative_hazards ) < 0
+     v = (e - cumulative_hazards) < 0
      cross = v.argmax(1)
      survival_times[:,i] = timelines[cross]
      survival_times[cross==0,i] = np.inf
 
-  if censor:
-      T = timelines.max()
-      rv = T*random.uniform(size=survival_times.shape)
-      #pdb.set_trace()
-      observed = survival_times <= rv
+  if censor is not None:
+      if type(censor)==bool:
+        T = timelines.max()
+        rv = T*random.uniform(size=survival_times.shape)
+      else:
+        rv = censor
+      observed = np.less_equal(survival_times, rv)
       survival_times = np.minimum(rv, survival_times)
       return survival_times.T, observed.T
   else:
@@ -219,6 +227,8 @@ def right_censor_lifetimes(lifetimes, max_, min_ = 0):
   Returns 
     The actual observations including uniform right censoring, and
     D_i (observed death or did not)
+
+  I think this is deprecated
   """
   n = lifetimes.shape[0]
   u = min_ + (max_-min_)*random.rand(n)

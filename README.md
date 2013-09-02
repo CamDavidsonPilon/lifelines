@@ -85,3 +85,17 @@ In the above line, `C` is a boolean array with `True` iff we observed the death 
 
 ![SVest](http://i.imgur.com/jYm911Z.png)
 
+
+### Plotting 
+
+We can visualize the lifetimes too (really only good for data checking for small samples)
+
+
+    N = 20
+    current = 10
+    birthtimes = current*np.random.uniform(size=(N,))
+    T, C= generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes )
+    plot_lifetimes(T, censorship=C, birthtimes=birthtimes)
+
+![lifetimes](http://i.imgur.com/JDt3t3X.png)
+
