@@ -84,7 +84,7 @@ class NelsonAalenFitter(object):
         return
 
     def _bounds(self, cumulative_sq_):
-        inverse_norm = { 0.95:1.65, 0.99:1.99 }
+        inverse_norm = { 0.95:1.96, 0.99:2.57 }
         try:
           coef = inverse_norm[self.alpha]
         except:
@@ -138,7 +138,7 @@ class KaplanMeierFitter(object):
       return np.log(1 - 1.*d/N)
 
   def _bounds(self, cumulative_sq_):
-      inverse_norm = { 0.95:1.65, 0.99:1.99 }
+      inverse_norm = { 0.95:1.96, 0.99:2.57 }
       try:
         coef = inverse_norm[self.alpha]
       except:
@@ -164,62 +164,90 @@ coef.plot()
 
 
 
-class AalenAdditiveModel(object):
+class AalenAdditiveFitter(object):
 
-  def __init__(self,fit_intercept=True):
-      self.fit_intercept = fit_intercept
+  def __init__(self,fit_intercept=True, alpha=0.95):
+    self.fit_intercept = fit_intercept
+    self.alpha = alpha
 
-  def fit(self, event_times, X, timeline = None, censorship=None):
-      """currently X is a static (n,d) array
+  def fit(self, event_times, X, timeline = None, censorship=None, columns = None):
+    """currently X is a static (n,d) array
 
-      event_times: (1,n) array of event times
-      X: (n,d) the design matrix 
-      timeline: (t,) timepoints in ascending order
-      censorship: (1,n) boolean array of censorships: True if observed, False if right-censored.
-                  By default, assuming all are observed.
+    event_times: (1,n) array of event times
+    X: (n,d) the design matrix 
+    timeline: (1,t) timepoints in ascending order
+    censorship: (1,n) boolean array of censorships: True if observed, False if right-censored.
+                By default, assuming all are observed.
 
-      Fits: self.cumulative_hazards_: a (t,d+1) dataframe of cumulative hazard coefficients
-            self.hazards_: a (t,d+1) dataframe of hazard coefficients
+    Fits: self.cumulative_hazards_: a (t,d+1) dataframe of cumulative hazard coefficients
+          self.hazards_: a (t,d+1) dataframe of hazard coefficients
 
-      """
+    """
 
-      n,d = X.shape
+    n,d = X.shape
+    X_ = X.copy()
+    ix = event_times.argsort(1)[0,:]
+    X_ = X_[ix,:].copy() if not self.fit_intercept else np.c_[ X_[ix,:].copy(), np.ones((n,1)) ]
+    sorted_event_times = event_times[0,ix].copy()
 
-      ix = event_times.argsort(1)[0,:]
-      X_ = X[ix,:].copy() if not self.fit_intercept else np.c_[ X[ix,:].copy(), np.ones((n,1)) ]
-      sorted_event_times = event_times[0,ix].copy()
+    if columns is None:
+      columns = range(d) + ["baseline"]
+    else:
+      columns += ["baseline"]
 
-      if censorship is None:
-          observed = np.ones(n, dtype=bool)
-      else:
-          observed = censorship.reshape(n)
+    if censorship is None:
+        observed = np.ones(n, dtype=bool)
+    else:
+        observed = censorship.reshape(n)
 
-      if timeline is None:
-          timeline = sorted_event_times
-      t = timeline.shape[0]
+    if timeline is None:
+        timeline = sorted_event_times
+    t = timeline.shape[0]
 
-      self.cumulative_hazards_ = pd.DataFrame(np.zeros((t,d+self.fit_intercept)), index=timeline)
-      self.hazards_ = pd.DataFrame(np.zeros((t,d+self.fit_intercept)), index=timeline)
-      t_0 = sorted_event_times[0]
-      cum_v = np.zeros((d+self.fit_intercept,1))
-      for i,time in enumerate(sorted_event_times):
-          if not observed[i]:
-            X[i,:] = 0
-          try:
-            V = np.dot(np.linalg.inv(np.dot(X_.T,X_)), X_.T)
-          except LinAlgError:
-            continue
-          v = np.dot(V,basis(n,i))
-          cum_v = cum_v + v
-          self.cumulative_hazards_.ix[(t_0<timeline)*(timeline<=t)] = cum_v.T
-          self.hazards_.ix[(t_0<timeline)*(timeline<=t)] = v.T
+    self.cumulative_hazards_ = pd.DataFrame(np.zeros((t,d+self.fit_intercept)), index=timeline, columns = columns)
+    self.hazards_ = pd.DataFrame(np.zeros((t,d+self.fit_intercept)), index=timeline, columns = columns)
+    self._variance = pd.DataFrame(np.zeros((t,d+self.fit_intercept)), index=timeline, columns = columns)
+    t_0 = sorted_event_times[0]
+    cum_v = np.zeros((d+self.fit_intercept,1))
+    for i,time in enumerate(sorted_event_times):
+        if not observed[i]:
           X_[i,:] = 0
-          t_0 = time
-      return self
+        try:
+          V = np.dot(np.linalg.inv(np.dot(X_.T,X_)), X_.T)
+        except LinAlgError:
+          continue
+        e_i = basis(n,i)
+        v = np.dot(V, e_i)
+        cum_v = cum_v + v
+        self.cumulative_hazards_.ix[(t_0<timeline)*(timeline<=t)] = cum_v.T
+        self.hazards_.ix[(t_0<timeline)*(timeline<=t)] = v.T
+        e_i = e_i.astype(bool)
+        self._variance.ix[(t_0<timeline)*(timeline<=t)] = np.dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
+        X_[i,:] = 0
+        t_0 = time
+    self.timeline = timeline
+    self._compute_confidence_intervals()
+    return self
+
+  def _compute_confidence_intervals(self):
+    inverse_norm = { 0.95:1.96, 0.99:2.57 }
+    try:
+      alpha2 = inverse_norm[self.alpha]
+    except: 
+      pass
+    n = self.timeline.shape[0]
+    d = self.cumulative_hazards_.shape[1]
+    index = [['upper']*n+['lower']*n, np.concatenate( [self.timeline, self.timeline] ) ]
+    self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)),index=index)
+    self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.values)
+    self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
+    return 
 
   def predict(self, X):
     """
     X: a (n,d) covariate matrix
+
+    Returns the hazard rates for the individuals
     """
     n,d = X.shape
     X_ = X.copy() if not self.fit_intercept else np.c_[ X.copy(), np.ones((n,1)) ]
