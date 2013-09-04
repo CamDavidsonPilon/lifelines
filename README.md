@@ -99,3 +99,11 @@ We can visualize the lifetimes too (really only good for data checking for small
 
 ![lifetimes](http://i.imgur.com/JDt3t3X.png)
 
+
+## Moar examples?
+
+There are some IPython notebook files in the repo, and you can view them online here:
+
+- [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Lifelines%2520Examples.ipynb)
+- [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/The%2520Gehan%2520Survival%2520Data.ipynb)
+
