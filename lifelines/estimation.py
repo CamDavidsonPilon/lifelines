@@ -1,7 +1,10 @@
-#estimation tests
-import pandas as pd
 import numpy as np
 from numpy.linalg import LinAlgError
+
+import pandas as pd
+import pandas.tools.plotting as gfx
+
+from lifelines.plotting import plot_dataframes
 import pdb
 
 
@@ -46,6 +49,8 @@ class NelsonAalenFitter(object):
                                                                      self.additive_f, 0, columns,
                                                                      nelson_aalen_smoothing=self.nelson_aalen_smoothing )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
+        self.plot = plot_dataframes(self, "cumulative_harzard_")
+
         return
 
     def _bounds(self, cumulative_sq_):
@@ -58,8 +63,6 @@ class NelsonAalenFitter(object):
         df["upper_bound_%.2f"%self.alpha] = self.cumulative_hazard_.values*np.exp(coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
         df["lower_bound_%.2f"%self.alpha] = self.cumulative_hazard_.values*np.exp(-coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
         return df
-
-        
 
 class KaplanMeierFitter(object):
    
@@ -97,6 +100,7 @@ class KaplanMeierFitter(object):
                                                                   0, columns )
        self.survival_function_ = np.exp(log_surivial_function)
        self.confidence_interval_ = self._bounds(cumulative_sq_)
+       self.plot = plot_dataframes(self, "survival_function_")
        return self
 
   def additive_f(self,N,d):
@@ -114,10 +118,7 @@ class KaplanMeierFitter(object):
       "broken?"
       df["upper_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(coef*cumulative_sq_/np.log(self.survival_function_.values)))
       df["lower_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(-coef*cumulative_sq_/np.log(self.survival_function_.values)))
-      #df["upper_bound_%.2f"%self.alpha] = self.survival_function_ + coef*np.sqrt(self.survival_function_*cumulative_sq_)
-      #df["lower_bound_%.2f"%self.alpha] = self.survival_function_ - coef*np.sqrt(self.survival_function_*cumulative_sq_)
       return df
-
 
 def _additive_estimate(event_times, timeline, observed, additive_f, initial, columns, nelson_aalen_smoothing=False):
     """
@@ -145,7 +146,7 @@ def _additive_estimate(event_times, timeline, observed, additive_f, initial, col
            v += np.sum([additive_f(N,i+1) for i in range(observed_deaths)])
         else:
            v += additive_f(N,observed_deaths)
-           v_sq += (1.*observed_deaths/N)**2
+        v_sq += (1.*observed_deaths/N)**2
         N -= observed_deaths
         t_0 = t
     _additive_estimate_.ix[(timeline>=t)]=v
@@ -257,5 +258,4 @@ def basis(n,i):
   x = np.zeros((n,1))
   x[i] = 1
   return x
-
 
