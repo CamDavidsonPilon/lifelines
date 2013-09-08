@@ -2,9 +2,10 @@ import numpy as np
 from numpy.linalg import LinAlgError
 
 import pandas as pd
-import pandas.tools.plotting as gfx
 
 from lifelines.plotting import plot_dataframes
+from lifelines.utils import dataframe_from_events_censorship
+
 import pdb
 
 
@@ -28,17 +29,13 @@ class NelsonAalenFitter(object):
           DataFrame with index either event_times or timelines (if not None), with
           values as the NelsonAalen estimate
         """
-        #need to sort event_times
-        df = pd.DataFrame( event_times, columns=["event_at"] )
-        df["removed"] = 1
-
+        
         if censorship is None:
-           self.censorship = np.ones_like(event_times, dtype=bool)
+           self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
         else:
            self.censorship = censorship.copy()
 
-        df["observed"] = self.censorship
-        self.event_times = df.groupby("event_at").sum().sort_index()
+        self.event_times = dataframe_from_events_censorship(event_times, self.censorship)
 
         if timeline is None:
            self.timeline = self.event_times.index.values.copy()
@@ -80,16 +77,12 @@ class KaplanMeierFitter(object):
          values as the NelsonAalen estimate
        """
        #need to sort event_times
-       df = pd.DataFrame( event_times, columns=["event_at"] )
-       df["removed"] = 1
-
        if censorship is None:
-          self.censorship = np.ones_like(event_times, dtype=bool)
+          self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
        else:
           self.censorship = censorship.copy()
 
-       df["observed"] = self.censorship
-       self.event_times = df.groupby("event_at").sum().sort_index()
+       self.event_times = dataframe_from_events_censorship(event_times, self.censorship)
 
        if timeline is None:
           self.timeline = self.event_times.index.values.copy()

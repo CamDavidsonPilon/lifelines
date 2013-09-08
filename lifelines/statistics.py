@@ -1,9 +1,10 @@
 #test statistics
 import numpy as np
 import pandas as pd 
-import pdb
 
-def two_sample_test(event_times_A, event_times_B, censorship_A = None, censorship_B=None, t_0 = -1):
+from lifelines.utils import dataframe_from_events_censorship
+
+def intensity_test(event_times_A, event_times_B, censorship_A = None, censorship_B=None, t_0 = -1):
   """
   See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
 
@@ -54,20 +55,3 @@ def two_sample_test(event_times_A, event_times_B, censorship_A = None, censorshi
   U = Z_1/np.sqrt(v_sq)
   return U
 
-
-def dataframe_from_events_censorship(event_times, censorship=None):
-    """Accepts:
-        event_times: (n,1) array of event times 
-        censorship: if not None, (n,1) boolean array, 1 if observed event, 0 is censored
-    """
-    df = pd.DataFrame( event_times, columns=["event_at"] )
-    df["removed"] = 1
-
-    if censorship is None:
-       censorship = np.ones_like(event_times, dtype=bool) #why boolean?
-    else:
-       censorship = censorship.copy()
-
-    df["observed"] = censorship
-    event_times = df.groupby("event_at").sum().sort_index()
-    return event_times
