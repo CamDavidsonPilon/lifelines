@@ -3,8 +3,6 @@ import numpy as np
 from numpy import random
 import pandas as pd
 
-import pdb
-
 class coeff_func(object):
   """This is a decorator class used later to construct nice names"""
   def __init__(self, f):

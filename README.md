@@ -1,14 +1,13 @@
 lifelines
 =======
  
-What is survival analysis and why should I learn it? Historically, survival analysis has been developed and applied most heavily by the actuarial and medical community. Generally, its purpose is to answer *why do event occur now versus later* under uncertainity and censoring (where *events* might be deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer *what factors might influence deaths?*
+What is survival analysis and why should I learn it? Historically, survival analysis has been developed and applied most heavily by the actuarial and medical community. Generally, its purpose is to answer *why do events occur now versus later* under uncertainity and censoring (where *events* might be deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer *what factors might influence deaths?*
 
-There is another use of survival analysis: customers subscribing to services. Telcom companies have understood this for years, but kept it in-house, but recently and specifically SaaS providers are understanding the benefits of survival analysis. 
- 
+There is another use of survival analysis: customers subscribing to services. Telcom companies have understood this for years, but kept it in-house, but recently and specifically SaaS providers and app developers are understanding the benefits of survival analysis. 
 
 ### Enough talk - just show me the examples!
 
-    from matplotlib import pylab as plt
+    %pylab
     from lifelines.generate_datasets import *
     from lifelines.estimation import *
 
