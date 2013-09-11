@@ -4,15 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-"""
-N = 20
-current = 10
-birthtimes = current*np.random.uniform(size=(N,))
-T, C= generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes )
-plot_lifetimes(T, censorship=C, birthtimes=birthtimes)
-
-"""
-
 def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
     """
 

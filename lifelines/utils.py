@@ -13,3 +13,9 @@ def dataframe_from_events_censorship(event_times, censorship):
     df["observed"] = censorship
     event_times = df.groupby("event_at").sum().sort_index()
     return event_times
+
+def basis(n,i):
+    x = np.zeros((n,1))
+    x[i] = 1
+    return x
+

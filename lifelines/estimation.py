@@ -1,10 +1,11 @@
 import numpy as np
-from numpy.linalg import LinAlgError
+from numpy.linalg import LinAlgError, inv
+from numpy import dot
 
 import pandas as pd
 
 from lifelines.plotting import plot_dataframes
-from lifelines.utils import dataframe_from_events_censorship
+from lifelines.utils import dataframe_from_events_censorship, basis
 
 import pdb
 
@@ -46,7 +47,7 @@ class NelsonAalenFitter(object):
                                                                      self.additive_f, 0, columns,
                                                                      nelson_aalen_smoothing=self.nelson_aalen_smoothing )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
-        self.plot = plot_dataframes(self, "cumulative_harzard_")
+        self.plot = plot_dataframes(self, "cumulative_hazard_")
 
         return
 
@@ -196,26 +197,26 @@ class AalenAdditiveFitter(object):
 
     if timeline is None:
         timeline = sorted_event_times
-    t = timeline.shape[0]
 
-    self.cumulative_hazards_ = pd.DataFrame(np.zeros((t,d+self.fit_intercept)), index=timeline, columns = columns)
-    self.hazards_ = pd.DataFrame(np.zeros((t,d+self.fit_intercept)), index=timeline, columns = columns)
-    self._variance = pd.DataFrame(np.zeros((t,d+self.fit_intercept)), index=timeline, columns = columns)
+    zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
+    self.cumulative_hazards_ = pd.DataFrame(zeros.copy() , index=timeline, columns = columns)
+    self.hazards_ = pd.DataFrame(zeros.copy(), index=timeline, columns = columns)
+    self._variance = pd.DataFrame(zeros.copy(), index=timeline, columns = columns)
     t_0 = sorted_event_times[0]
     cum_v = np.zeros((d+self.fit_intercept,1))
     for i,time in enumerate(sorted_event_times):
+        relevant_times = (t_0<timeline)*(timeline<=time)
         if not observed[i]:
           X_[i,:] = 0
         try:
-          V = np.dot(np.linalg.inv(np.dot(X_.T,X_) + self.penalizer*np.eye(d+self.fit_intercept)), X_.T)
+          V = dot(inv(dot(X_.T,X_)), X_.T)
         except LinAlgError:
           continue
-        e_i = basis(n,i)
-        v = np.dot(V, e_i)
+        v = dot(V, basis(n,i))
         cum_v = cum_v + v
-        self.cumulative_hazards_.ix[(t_0<timeline)*(timeline<=t)] = cum_v.T
-        self.hazards_.ix[(t_0<timeline)*(timeline<=t)] = v.T
-        self._variance.ix[(t_0<timeline)*(timeline<=t)] = np.dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
+        self.cumulative_hazards_.ix[relevant_times] = self.cumulative_hazards_.ix[relevant_times].values + cum_v.T
+        self.hazards_.ix[relevant_times] = self.hazards_.ix[relevant_times].values + v.T
+        self._variance.ix[relevant_times] = self._variance.ix[relevant_times].values + dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
         X_[i,:] = 0
         t_0 = time
     self.timeline = timeline
@@ -236,7 +237,7 @@ class AalenAdditiveFitter(object):
     self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
     return 
 
-  def predict(self, X):
+  def predict_cumulative_hazard(self, X):
     """
     X: a (n,d) covariate matrix
 
@@ -246,9 +247,40 @@ class AalenAdditiveFitter(object):
     X_ = X.copy() if not self.fit_intercept else np.c_[ X.copy(), np.ones((n,1)) ]
     return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline)
 
+  def predict_survival_function(self,X):
+    """
+    X: a (n,d) covariate matrix
 
-def basis(n,i):
-  x = np.zeros((n,1))
-  x[i] = 1
-  return x
+    Returns the survival functions for the individuals
+    """
+    return np.exp(-self.predict_cumulative_hazard(X))
+
+  def predict_median_lifetimes(self,X):
+    """
+    X: a (n,d) covariate matrix
+    Returns the median lifetimes for the individuals
+    """
+    sf = median_survival_times(self.predict_survival_function(X))
+
+def median_survival_times(survival_functions):
+    """
+    survival_functions: a (n,d) dataframe or numpy array.
+    If dataframe, will return index values (actual times)
+    If numpy array, will return indices.
+
+    Returns -1 if infinity.
+    """
+    sv_b = (survival_functions < 0.5)
+    try:
+        v = sv_b.idxmax(0)
+        v[~sv_b.ix[-1,:]] = -1
+    except:
+        v = sv_b.argmax(0)
+        v[~sv_b[-1,:]] = -1
+    return v
+
+
+
+def ipcw(target_event_times, target_censorship, predicted_event_times ):
+    pass
 

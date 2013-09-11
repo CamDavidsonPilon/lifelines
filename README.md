@@ -7,7 +7,7 @@ There is another use of survival analysis: customers subscribing to services -- 
 
 ####Dependencies:
 
-The usual Python data stack: numpy, pandas, matplotlib (optional)
+The usual Python data stack: **numpy, pandas, matplotlib (optional)**
 
 
 ### Enough talk - just show me the examples!

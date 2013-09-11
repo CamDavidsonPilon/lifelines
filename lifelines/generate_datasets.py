@@ -154,8 +154,8 @@ def generate_random_lifetimes(hazard_rates,timelines, size = 1, censor=None):
 
 
   Returns:
-    survival_times: (n,size) array of random variables.
-    (optional) observed: if censor is true, returns (n,size) array with bool True 
+    survival_times: (size,n) array of random variables.
+    (optional) censorship: if censor is true, returns (size,n) array with bool True 
        if the death was observed (not right-censored)
   """
   n = hazard_rates.shape[1]

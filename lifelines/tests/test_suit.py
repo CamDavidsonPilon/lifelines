@@ -6,9 +6,12 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 from collections import Counter
+import matplotlib.pyplot as plt
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter
 from ..statistics import intensity_test
+from ..generate_datasets import *
+from ..plotting import plot_lifetimes
 
 LIFETIMES = np.array([2,4,4,4,5,7,10,11,11,12])
 CENSORSHIP = np.array([1,1,0,1,0,1,1,1,1,0])
@@ -58,8 +61,8 @@ class StatisticalTests(unittest.TestCase):
   def test_unequal_intensity_censorship(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(1, size=(200,1))
-      censorA = np.random.binomial(200,0.5, size=(200,1))
-      censorB = np.random.binomial(200,0.5, size=(200,1))
+      censorA = np.random.binomial(1,0.5, size=(200,1))
+      censorB = np.random.binomial(1,0.5, size=(200,1))
       U = intensity_test(data1, data2, censorship_A = censorA, censorship_B = censorB)
       self.assertTrue( np.abs(U)>=1.96)
 
@@ -100,6 +103,48 @@ class StatisticalTests(unittest.TestCase):
            n -= self.lifetimes.get(t)
         na[i] = v
       return na
+
+
+class PlottingTests(unittest.TestCase):
+
+  def test_kmf_plotting(self):
+      data1 = np.random.exponential(5, size=(200,1))
+      data2 = np.random.exponential(5, size=(200,1))
+      kmf = KaplanMeierFitter()
+      kmf.fit(data1)
+      ax = kmf.plot()
+      kmf.fit(data2)
+      kmf.plot(ax=ax, c="#A60628")
+      return 
+
+  def test_naf_plotting(self):
+      data1 = np.random.exponential(5, size=(200,1))
+      data2 = np.random.exponential(1, size=(200,1))
+      naf = NelsonAalenFitter()
+      naf.fit(data1)
+      ax = naf.plot()
+      naf.fit(data2)
+      naf.plot(ax=ax, c="#A60628")
+      return 
+
+  def test_plot_lifetimes_calendar(self):
+      plt.figure()
+      t = np.linspace(0, 20, 1000)
+      hz, coef, covrt =generate_hazard_rates(1,5, t) 
+      N = 20
+      current = 10
+      birthtimes = current*np.random.uniform(size=(N,))
+      T, C= generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes )
+      plot_lifetimes(T, censorship=C, birthtimes=birthtimes)
+
+  def test_plot_lifetimes_relative(self):
+      plt.figure()
+      t = np.linspace(0, 20, 1000)
+      hz, coef, covrt =generate_hazard_rates(1,5, t) 
+      N = 20
+      current = 10
+      T, C= generate_random_lifetimes(hz, t, size=N, censor=True )
+      plot_lifetimes(T, censorship=C)
 
 
 if __name__ == '__main__':
