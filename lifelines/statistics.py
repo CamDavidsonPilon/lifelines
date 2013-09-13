@@ -1,15 +1,18 @@
 #test statistics
 import numpy as np
-import pandas as pd 
 
 from lifelines.utils import dataframe_from_events_censorship
 
 def intensity_test(event_times_A, event_times_B, censorship_A = None, censorship_B=None, t_0 = -1):
   """
+  Measures and reports on whether two intensity processes are different. That is, given two 
+  event series, determines whether the data generating processes are statistically different. 
+
   See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
 
-  event_times_X: a (nx1) array of event times (deaths,...) for the population.
-  t_0: the period under observation, -1 for all time.
+  Parameters:
+    event_times_X: a (nx1) array of event times (deaths,...) for the population.
+    t_0: the period under observation, -1 for all time.
 
   """
 

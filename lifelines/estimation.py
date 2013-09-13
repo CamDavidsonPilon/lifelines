@@ -211,14 +211,24 @@ class AalenAdditiveFitter(object):
         try:
           V = dot(inv(dot(X_.T,X_)), X_.T)
         except LinAlgError:
+          self.cumulative_hazards_.ix[relevant_times] =cum_v.T
+          self.hazards_.ix[relevant_times] = v.T 
+          self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
+          X_[i,:] = 0
+          t_0 = time
           continue
         v = dot(V, basis(n,i))
         cum_v = cum_v + v
         self.cumulative_hazards_.ix[relevant_times] = self.cumulative_hazards_.ix[relevant_times].values + cum_v.T
         self.hazards_.ix[relevant_times] = self.hazards_.ix[relevant_times].values + v.T
         self._variance.ix[relevant_times] = self._variance.ix[relevant_times].values + dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
-        X_[i,:] = 0
         t_0 = time
+        X_[i,:] = 0
+
+    relevant_times = (timeline>time)
+    self.cumulative_hazards_.ix[relevant_times] = cum_v.T
+    self.hazards_.ix[relevant_times] = v.T
+    self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
     self.timeline = timeline
     self._compute_confidence_intervals()
     return self
@@ -260,7 +270,7 @@ class AalenAdditiveFitter(object):
     X: a (n,d) covariate matrix
     Returns the median lifetimes for the individuals
     """
-    sf = median_survival_times(self.predict_survival_function(X))
+    return median_survival_times(self.predict_survival_function(X))
 
 def median_survival_times(survival_functions):
     """
