@@ -23,8 +23,9 @@ class NelsonAalenFitter(object):
 
     def fit(self, event_times, timeline=None, censorship=None, columns=['NA-estimate']):
         """
-        event_times: an (n,1) array of times that the death event occured at 
-        timeline: return the best estimate at the values in timelines (postively increasing)
+        Parameters:
+          event_times: an (n,1) array of times that the death event occured at 
+          timeline: return the best estimate at the values in timelines (postively increasing)
 
         Returns:
           DataFrame with index either event_times or timelines (if not None), with
@@ -69,10 +70,11 @@ class KaplanMeierFitter(object):
 
   def fit(self, event_times, timeline=None, censorship=None, columns=['KM-estimate']):
        """
-       event_times: an (n,1) array of times that the death event occured at 
-       timeline: return the best estimate at the values in timelines (postively increasing)
-       censorship: an (n,1) array of booleans -- True if the the death was observed, False if the event 
-          was lost (right-censored). Defaults all True if censorship==None
+       Parameters:
+         event_times: an (n,1) array of times that the death event occured at 
+         timeline: return the best estimate at the values in timelines (postively increasing)
+         censorship: an (n,1) array of booleans -- True if the the death was observed, False if the event 
+            was lost (right-censored). Defaults all True if censorship==None
        Returns:
          DataFrame with index either event_times or timelines (if not None), with
          values as the NelsonAalen estimate

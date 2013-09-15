@@ -20,7 +20,7 @@ class coeff_func(object):
 
 @coeff_func
 def exp_comp_(t,alpha=1,beta =1):
-  """beta(1 - np.exp(-alpha*t))"""
+  """beta*(1 - np.exp(-alpha*t))"""
   return beta*(1 - np.exp(-alpha*t))
 @coeff_func
 def log_(t,alpha=1, beta=1):
@@ -28,15 +28,15 @@ def log_(t,alpha=1, beta=1):
   return beta*np.log(alpha*t+1)
 @coeff_func
 def inverseSq_(t,alpha=1,beta=1):
-    """beta/(t+alpha+1)**2"""
+    """beta/(t+alpha+1)**(0.5)"""
     return beta/(t+alpha+1)**(0.5)
 @coeff_func
 def periodic_(t, alpha=1,beta=1):
-    """| 0.5*beta*sin(0.1*alpha*t + alpha*beta) |"""
+    """abs(0.5*beta*sin(0.1*alpha*t + alpha*beta))"""
     return 0.5*beta*np.sin(0.1*alpha*t)
 @coeff_func
 def constant_(t,alpha=1,beta=1):
-    """constant: beta"""
+    """beta"""
     return beta
 
 FUNCS = [exp_comp_, log_, inverseSq_, constant_, periodic_ ] 
