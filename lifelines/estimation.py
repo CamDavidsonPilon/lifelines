@@ -5,7 +5,7 @@ from numpy import dot
 import pandas as pd
 
 from lifelines.plotting import plot_dataframes
-from lifelines.utils import dataframe_from_events_censorship, basis
+from lifelines.utils import dataframe_from_events_censorship, basis, smooth
 
 import pdb
 
@@ -190,7 +190,7 @@ class AalenAdditiveFitter(object):
     if columns is None:
       columns = range(d) + ["baseline"]
     else:
-      columns += ["baseline"]
+      columns =  [c for c in columns ] + ["baseline"]
 
     if censorship is None:
         observed = np.ones(n, dtype=bool)
@@ -199,11 +199,11 @@ class AalenAdditiveFitter(object):
 
     if timeline is None:
         timeline = sorted_event_times
-
     zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
     self.cumulative_hazards_ = pd.DataFrame(zeros.copy() , index=timeline, columns = columns)
     self.hazards_ = pd.DataFrame(zeros.copy(), index=timeline, columns = columns)
     self._variance = pd.DataFrame(zeros.copy(), index=timeline, columns = columns)
+    penalizer = self.penalizer*np.eye(d + self.fit_intercept)
     t_0 = sorted_event_times[0]
     cum_v = np.zeros((d+self.fit_intercept,1))
     for i,time in enumerate(sorted_event_times):
@@ -211,7 +211,7 @@ class AalenAdditiveFitter(object):
         if not observed[i]:
           X_[i,:] = 0
         try:
-          V = dot(inv(dot(X_.T,X_)), X_.T)
+          V = dot(inv(dot(X_.T,X_) - penalizer), X_.T)
         except LinAlgError:
           self.cumulative_hazards_.ix[relevant_times] =cum_v.T
           self.hazards_.ix[relevant_times] = v.T 

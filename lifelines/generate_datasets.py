@@ -188,17 +188,17 @@ def generate_observational_matrix(n,d, timelines, constant=False, independent=0,
   covariates["event_at"] = R.T
   return covariates.sort("event_at"), pd.DataFrame(cumulative_quadrature(coeff.values.T,timelines).T, columns = coeff.columns, index = timelines )
 
-def cumulative_quadrature(fx, t):
+def cumulative_quadrature(fx, x):
   """Boss algo"""
   #pdb.set_trace()
-  lower_x = t[0]
-  cum_integral = np.empty((fx.shape[0],t.shape[0]))
+  lower_x = x[0]
+  cum_integral = np.empty((fx.shape[0],x.shape[0]))
   cum_integral[:,0] = 0
-  for i in xrange(1,t.shape[0]):
-    if (t[i-1]-lower_x) == 0:
-        cum_integral[:,i] = (0.5*fx[:,i-1] + 0.5*fx[:,i])*(t[i] - lower_x)/i
+  for i in xrange(1,x.shape[0]):
+    if (x[i-1]-lower_x) == 0:
+        cum_integral[:,i] = (0.5*fx[:,i-1] + 0.5*fx[:,i])*(x[i] - lower_x)/i
         continue
-    cum_integral[:,i] = ( cum_integral[:,i-1]*( (i-1)/(t[i-1]-lower_x) ) + 0.5*fx[:,i-1] + 0.5*fx[:,i])*( (t[i] - lower_x)/i )
+    cum_integral[:,i] = ( cum_integral[:,i-1]*( (i-1)/(x[i-1]-lower_x) ) + 0.5*fx[:,i-1] + 0.5*fx[:,i])*( (x[i] - lower_x)/i )
   return cum_integral
 
 def construct_survival_curves(hazard_rates, timelines):

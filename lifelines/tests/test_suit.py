@@ -7,6 +7,7 @@ import numpy as np
 import numpy.testing as npt
 from collections import Counter
 import matplotlib.pyplot as plt
+import pdb
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter
 from ..statistics import intensity_test
@@ -16,6 +17,24 @@ from ..plotting import plot_lifetimes
 LIFETIMES = np.array([2,4,4,4,5,7,10,11,11,12])
 CENSORSHIP = np.array([1,1,0,1,0,1,1,1,1,0])
 N = len(LIFETIMES)
+
+class MiscTests(unittest.TestCase):
+
+    def test_quadratic_integration_identity(self):
+      #integrate x between 0 and 10:
+      x = np.linspace(0,10,1000)[:,None]
+      answer = 0.5*x**2
+      approx_answer = cumulative_quadrature( x.T, x).T
+      npt.assert_almost_equal(answer, approx_answer, decimal=5)
+
+
+    def test_quadratic_integration_exp(self):
+      #integrate exp(x) between 0 and 4:
+      x = np.linspace(0,4,1000)[:,None]
+      answer = np.exp(x) -1.
+      approx_answer = cumulative_quadrature( np.exp(x).T, x).T
+      #pdb.set_trace()
+      npt.assert_almost_equal(answer, approx_answer, decimal=4)
 
 class StatisticalTests(unittest.TestCase):
 
@@ -104,7 +123,6 @@ class StatisticalTests(unittest.TestCase):
         na[i] = v
       return na
 
-
 class PlottingTests(unittest.TestCase):
 
   def test_kmf_plotting(self):
@@ -142,10 +160,8 @@ class PlottingTests(unittest.TestCase):
       t = np.linspace(0, 20, 1000)
       hz, coef, covrt =generate_hazard_rates(1,5, t) 
       N = 20
-      current = 10
       T, C= generate_random_lifetimes(hz, t, size=N, censor=True )
       plot_lifetimes(T, censorship=C)
-
 
 if __name__ == '__main__':
     unittest.main()

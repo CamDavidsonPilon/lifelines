@@ -25,6 +25,7 @@ The usual Python data stack: **numpy, pandas, matplotlib (optional)**
 
     hz.plot()
 
+(this styling of Matplotlib is present in the `styles/` folder)
 ![Hazard Rates](http://i.imgur.com/O8Og76O.png)
 
     sv = construct_survival_curves(hz, t )
