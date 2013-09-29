@@ -5,7 +5,7 @@ from numpy import dot
 import pandas as pd
 
 from lifelines.plotting import plot_dataframes
-from lifelines.utils import dataframe_from_events_censorship, basis, smooth
+from lifelines.utils import dataframe_from_events_censorship, basis
 
 import pdb
 
@@ -199,22 +199,28 @@ class AalenAdditiveFitter(object):
 
     if timeline is None:
         timeline = sorted_event_times
+    
     zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
+    
     self.cumulative_hazards_ = pd.DataFrame(zeros.copy() , index=timeline, columns = columns)
-    self.hazards_ = pd.DataFrame(zeros.copy(), index=timeline, columns = columns)
+    self.hazards_ = pd.DataFrame(np.zeros((event_times.shape[1],d+self.fit_intercept)), index=sorted_event_times, columns = columns)
     self._variance = pd.DataFrame(zeros.copy(), index=timeline, columns = columns)
+    
     penalizer = self.penalizer*np.eye(d + self.fit_intercept)
+    
     t_0 = sorted_event_times[0]
     cum_v = np.zeros((d+self.fit_intercept,1))
+    
+    d = 0
     for i,time in enumerate(sorted_event_times):
         relevant_times = (t_0<timeline)*(timeline<=time)
-        if not observed[i]:
+        if observed[i] == 0:
           X_[i,:] = 0
         try:
           V = dot(inv(dot(X_.T,X_) - penalizer), X_.T)
         except LinAlgError:
           self.cumulative_hazards_.ix[relevant_times] =cum_v.T
-          self.hazards_.ix[relevant_times] = v.T 
+          self.hazards_.iloc[i] = v.T 
           self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
           X_[i,:] = 0
           t_0 = time
@@ -222,18 +228,28 @@ class AalenAdditiveFitter(object):
         v = dot(V, basis(n,i))
         cum_v = cum_v + v
         self.cumulative_hazards_.ix[relevant_times] = self.cumulative_hazards_.ix[relevant_times].values + cum_v.T
-        self.hazards_.ix[relevant_times] = self.hazards_.ix[relevant_times].values + v.T
+        self.hazards_.iloc[i] = self.hazards_.iloc[i].values + v.T
         self._variance.ix[relevant_times] = self._variance.ix[relevant_times].values + dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
         t_0 = time
         X_[i,:] = 0
 
     relevant_times = (timeline>time)
     self.cumulative_hazards_.ix[relevant_times] = cum_v.T
-    self.hazards_.ix[relevant_times] = v.T
+    self.hazards_.iloc[i] = v.T
     self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
     self.timeline = timeline
+    self.censorship = censorship
     self._compute_confidence_intervals()
     return self
+
+  def smoothed_hazards_(self, bandwith=1):
+    """
+    Using the gaussian kernel to smooth the hazard function, with sigma/bandwith
+
+    """
+    C = self.censorship.astype(bool)
+    return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:])/bandwith, 
+            columns=self.hazards_.columns, index=self.timeline)
 
   def _compute_confidence_intervals(self):
     inverse_norm = { 0.95:1.96, 0.99:2.57 }
@@ -292,6 +308,8 @@ def median_survival_times(survival_functions):
     return v
 
 
+def gaussian(t,T,sigma=1.):
+    return 1./np.sqrt(np.pi*2.*sigma**2)*np.exp(-0.5*(t-T)**2/sigma)
 
 def ipcw(target_event_times, target_censorship, predicted_event_times ):
     pass

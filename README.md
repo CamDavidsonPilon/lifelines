@@ -5,9 +5,16 @@ What is survival analysis and why should I learn it? Historically, survival anal
 
 There is another use of survival analysis: customers subscribing to services -- births users joining and deaths are users leaving. Telcom companies have understood this for years, but kept it in-house, but recently and specifically SaaS providers and app developers are understanding the benefits of survival analysis. 
 
-####Dependencies:
+The two concepts in Survival Analysis are 
 
-The usual Python data stack: **numpy, pandas, matplotlib (optional)**
+1. Survival functions, denoted *S(t)*, and
+2. hazard rates, denoted *h(t)* 
+
+The former defines the probability the event has not happened after *t* units of time. The second, hazard curves, are related to the first by:
+
+![eq](http://i.imgur.com/y7OECvN.gif)
+
+so knowing (or estimating) one, you can calculate the other.
 
 
 ### Enough talk - just show me the examples!
@@ -91,11 +98,33 @@ In the above line, `C` is a boolean array with `True` iff we observed the death 
 ![SVest](http://i.imgur.com/jYm911Z.png)
 
 
+### Survival Regression
+
+Currently implemented is Aalen Additive model,
+
+    from lifelines.estimation import AalenAdditiveFitter
+
+    #will fit the cumulative hazards
+    aaf = AalenAdditiveFitter(fit_intercept=True)
+    aaf.fit(T[None,:], X, censorship=C)
+    aaf.cumulative_hazards_.plot()
+
+![AalenCumulative](http://i.imgur.com/1LupZvH.png)
+
+    #plot the kernel smoothed hazards
+    aaf.smoothed_hazards(20).plot()
+
+![AalenSmooth](http://i.imgur.com/ymVfsed.png)
+
+
 ### Plotting 
 
-We can visualize the lifetimes too (really only good for data checking for small samples)
+The styling present in the above graphs is from a custom `matplotlibrc` file, you can find it in the `styles/` directory. 
+
+There is a plotting library in Lifelines, under `lifelines.plotting`. We can visualize the lifetimes of individuals (really only good for data checking for small samples).
 
     from lifelines.plotting import plot_lifetimes
+
     N = 20
     current = 10
     birthtimes = current*np.random.uniform(size=(N,))
@@ -111,4 +140,10 @@ There are some IPython notebook files in the repo, and you can view them online 
 
 - [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Lifelines%2520Examples.ipynb)
 - [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/The%2520Gehan%2520Survival%2520Data.ipynb)
+
+
+####Dependencies:
+
+The usual Python data stack: **numpy, pandas, matplotlib (optional)**
+
 
