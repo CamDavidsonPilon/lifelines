@@ -138,7 +138,7 @@ There is a plotting library in Lifelines, under `lifelines.plotting`. We can vis
 
 There are some IPython notebook files in the repo, and you can view them online here:
 
-- [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Lifelines%2520Examples.ipynb)
+- [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Divorces%2520Rates.ipynb)
 - [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/The%2520Gehan%2520Survival%2520Data.ipynb)
 
 
