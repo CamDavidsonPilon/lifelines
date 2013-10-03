@@ -95,6 +95,7 @@ class KaplanMeierFitter(object):
                                                                   self.censorship, self.additive_f, 
                                                                   0, columns )
        self.survival_function_ = np.exp(log_surivial_function)
+       self.median_ = median_survival_times(self.survival_function_)
        self.confidence_interval_ = self._bounds(cumulative_sq_)
        self.plot = plot_dataframes(self, "survival_function_")
        return self
@@ -162,7 +163,7 @@ coef.plot()
 
 class AalenAdditiveFitter(object):
 
-  def __init__(self,fit_intercept=True, alpha=0.95, penalizer = 0):
+  def __init__(self,fit_intercept=True, alpha=0.95, penalizer = 0.0):
     self.fit_intercept = fit_intercept
     self.alpha = alpha
     self.penalizer = penalizer
@@ -248,7 +249,7 @@ class AalenAdditiveFitter(object):
 
     """
     C = self.censorship.astype(bool)
-    return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:])/bandwith, 
+    return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:]), 
             columns=self.hazards_.columns, index=self.timeline)
 
   def _compute_confidence_intervals(self):
@@ -290,7 +291,7 @@ class AalenAdditiveFitter(object):
     """
     return median_survival_times(self.predict_survival_function(X))
 
-def median_survival_times(survival_functions):
+def qth_survival_times(q, survival_functions):
     """
     survival_functions: a (n,d) dataframe or numpy array.
     If dataframe, will return index values (actual times)
@@ -298,14 +299,18 @@ def median_survival_times(survival_functions):
 
     Returns -1 if infinity.
     """
-    sv_b = (survival_functions < 0.5)
+    assert 0<=q<=1, "q must be between 0 and 1"
+    sv_b = (survival_functions < q)
     try:
         v = sv_b.idxmax(0)
-        v[~sv_b.ix[-1,:]] = -1
+        v[~sv_b.iloc[-1,:]] = -1
     except:
         v = sv_b.argmax(0)
         v[~sv_b[-1,:]] = -1
     return v
+
+def median_survival_times(survival_functions):
+    return qth_survival_times(0.5, survival_functions)
 
 
 def gaussian(t,T,sigma=1.):
