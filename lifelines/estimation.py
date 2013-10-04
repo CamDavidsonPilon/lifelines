@@ -6,6 +6,7 @@ import pandas as pd
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import dataframe_from_events_censorship, basis
 
+import pdb
 
 class NelsonAalenFitter(object):
     def __init__(self, alpha=0.95, nelson_aalen_smoothing=False):
@@ -158,10 +159,10 @@ class AalenAdditiveFitter(object):
   def fit(self, event_times, X, timeline = None, censorship=None, columns = None):
     """currently X is a static (n,d) array
 
-    event_times: (1,n) array of event times
-    X: (n,d) the design matrix 
-    timeline: (1,t) timepoints in ascending order
-    censorship: (1,n) boolean array of censorships: True if observed, False if right-censored.
+    event_times: (n,1) array of event times
+    X: (n,d) the design matrix, either a numpy matrix or DataFrame.  
+    timeline: (t,1) timepoints in ascending order
+    censorship: (n,1) boolean array of censorships: True if observed, False if right-censored.
                 By default, assuming all are observed.
 
     Fits: self.cumulative_hazards_: a (t,d+1) dataframe of cumulative hazard coefficients
@@ -169,8 +170,14 @@ class AalenAdditiveFitter(object):
 
     """
     n,d = X.shape
-    X_ = X.copy()
-    ix = event_times.argsort(1)[0,:]
+    if type(X)==pd.core.frame.DataFrame:
+      X_ = X.values.copy()
+      if columns is None:
+        columns = X.columns
+    else:
+      X_ = X.copy()
+
+    ix = event_times.argsort()[0,:]
     X_ = X_[ix,:].copy() if not self.fit_intercept else np.c_[ X_[ix,:].copy(), np.ones((n,1)) ]
     sorted_event_times = event_times[0,ix].copy()
 

@@ -57,5 +57,3 @@ def intensity_test(event_times_A, event_times_B, censorship_A = None, censorship
   Z_1 = N_1 - E_1
   U = Z_1/np.sqrt(v_sq)
   return U
-
-def 

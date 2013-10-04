@@ -9,6 +9,8 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import pdb
 
+import pandas as pd
+
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter
 from ..statistics import intensity_test
 from ..generate_datasets import *
@@ -35,6 +37,16 @@ class MiscTests(unittest.TestCase):
       approx_answer = cumulative_quadrature( np.exp(x).T, x).T
       #pdb.set_trace()
       npt.assert_almost_equal(answer, approx_answer, decimal=4)
+
+    def test_aalen_additive_allows_numpy_or_df(self):
+      t = np.random.random((10,1)).T
+      dfX = pd.DataFrame(np.random.random((10,3)), columns = ["A", "B", "C"])
+      c = dfX.columns
+      npX = np.random.random((10,5))
+      aaf = AalenAdditiveFitter()
+      aaf.fit(t,npX)
+      aaf.fit(t, dfX)
+      npt.assert_array_equal( c, aaf.cumulative_hazards_.columns[:3] )
 
 class StatisticalTests(unittest.TestCase):
 
