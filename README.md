@@ -16,6 +16,25 @@ The former defines the probability the event has not happened after *t* units of
 
 so knowing (or estimating) one, you can calculate the other.
 
+####Dependencies:
+
+The usual Python data stack: **numpy, pandas, matplotlib (optional)**
+
+
+### (Quick) Intro to *lifelines* and survival analysis
+
+**Work in progress (20%) ***
+If you are new to survival analysis, wondering why it is useful, and are interesting in worked examples,
+I recommend following the `tutorial_and_examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/tutorial_and_examples.ipynb).
+
+
+### Documentation
+
+**Work in progress (75%) ***
+I've added documentation to a notebook, `Documentation.ipynb`, that adds detail to 
+the classes, methods and data types. You can use the IPython notebook to view it, or view it [online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
+
+
 
 ### Enough talk - just show me the examples!
 
@@ -138,12 +157,9 @@ There is a plotting library in Lifelines, under `lifelines.plotting`. We can vis
 
 There are some IPython notebook files in the repo, and you can view them online here:
 
-- [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Divorces%2520Rates.ipynb)
-- [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/The%2520Gehan%2520Survival%2520Data.ipynb)
+- [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/Divorces%2520Rates.ipynb)
+- [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/The%2520Gehan%2520Survival%2520Data.ipynb)
 
 
-####Dependencies:
-
-The usual Python data stack: **numpy, pandas, matplotlib (optional)**
 
 
