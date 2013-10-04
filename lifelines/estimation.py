@@ -1,13 +1,10 @@
 import numpy as np
 from numpy.linalg import LinAlgError, inv
 from numpy import dot
-
 import pandas as pd
 
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import dataframe_from_events_censorship, basis
-
-import pdb
 
 
 class NelsonAalenFitter(object):
@@ -15,13 +12,7 @@ class NelsonAalenFitter(object):
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
 
-    def additive_f(self, N,d ):
-       #check it 0
-       if N==d==0:
-          return 0
-       return 1.*d/N
-
-    def fit(self, event_times, timeline=None, censorship=None, columns=['NA-estimate']):
+    def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate']):
         """
         Parameters:
           event_times: an (n,1) array of times that the death event occured at 
@@ -45,12 +36,18 @@ class NelsonAalenFitter(object):
            self.timeline = timeline
         self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
                                                                      self.timeline, self.censorship, 
-                                                                     self.additive_f, 0, columns,
+                                                                     self._additive_f, 0, columns,
                                                                      nelson_aalen_smoothing=self.nelson_aalen_smoothing )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
 
         return
+
+    def _additive_f(self, N,d ):
+       #check it 0
+       if N==d==0:
+          return 0
+       return 1.*d/N
 
     def _bounds(self, cumulative_sq_):
         inverse_norm = { 0.95:1.96, 0.99:2.57 }
@@ -68,7 +65,7 @@ class KaplanMeierFitter(object):
   def __init__(self, alpha = 0.95):
        self.alpha = alpha
 
-  def fit(self, event_times, timeline=None, censorship=None, columns=['KM-estimate']):
+  def fit(self, event_times,censorship=None, timeline=None, columns=['KM-estimate']):
        """
        Parameters:
          event_times: an (n,1) array of times that the death event occured at 
@@ -92,7 +89,7 @@ class KaplanMeierFitter(object):
        else:
           self.timeline = timeline
        log_surivial_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline, 
-                                                                  self.censorship, self.additive_f, 
+                                                                  self.censorship, self._additive_f, 
                                                                   0, columns )
        self.survival_function_ = np.exp(log_surivial_function)
        self.median_ = median_survival_times(self.survival_function_)
@@ -100,7 +97,7 @@ class KaplanMeierFitter(object):
        self.plot = plot_dataframes(self, "survival_function_")
        return self
 
-  def additive_f(self,N,d):
+  def _additive_f(self,N,d):
       if N==d==0:
         return 0
       return np.log(1 - 1.*d/N)
@@ -150,16 +147,6 @@ def _additive_estimate(event_times, timeline, observed, additive_f, initial, col
     _additive_var.ix[(timeline>=t)]=v_sq
     return _additive_estimate_, _additive_var
 
-"""
-hz, coef, covrt = generate_hazard_rates(2000, 4, t)
-T,C = generate_random_lifetimes(hz,t, size = 1,censor = True)
-aam.fit(T, X, censorship=C)
-aam.cumulative_hazards_.plot()
-coef.plot()
-
-"""
-
-
 
 class AalenAdditiveFitter(object):
 
@@ -181,7 +168,6 @@ class AalenAdditiveFitter(object):
           self.hazards_: a (t,d+1) dataframe of hazard coefficients
 
     """
-
     n,d = X.shape
     X_ = X.copy()
     ix = event_times.argsort(1)[0,:]
@@ -211,7 +197,7 @@ class AalenAdditiveFitter(object):
     
     t_0 = sorted_event_times[0]
     cum_v = np.zeros((d+self.fit_intercept,1))
-    
+    v = cum_v.copy()
     d = 0
     for i,time in enumerate(sorted_event_times):
         relevant_times = (t_0<timeline)*(timeline<=time)
@@ -290,6 +276,10 @@ class AalenAdditiveFitter(object):
     Returns the median lifetimes for the individuals
     """
     return median_survival_times(self.predict_survival_function(X))
+
+
+
+#utils
 
 def qth_survival_times(q, survival_functions):
     """
