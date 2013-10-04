@@ -12,7 +12,7 @@ The two concepts in Survival Analysis are
 
 The former defines the probability the event has not happened after *t* units of time. The second, hazard curves, are related to the first by:
 
-![eq](http://i.imgur.com/y7OECvN.gif)
+![eq](http://i.imgur.com/y7OECvNl.gif)
 
 so knowing (or estimating) one, you can calculate the other.
 
@@ -33,12 +33,12 @@ so knowing (or estimating) one, you can calculate the other.
     hz.plot()
 
 (this styling of Matplotlib is present in the `styles/` folder)
-![Hazard Rates](http://i.imgur.com/O8Og76O.png)
+![Hazard Rates](http://i.imgur.com/O8Og76Ol.png)
 
     sv = construct_survival_curves(hz, t )
     sv.plot() #moar dataframes
 
-![Survival Curves](http://i.imgur.com/jWu3CM9.png)
+![Survival Curves](http://i.imgur.com/jWu3CM9l.png)
 
     #using the hazard curves, we can sample from survival times.
     rv = generate_random_lifetimes(hz, t, 50 )
@@ -58,13 +58,13 @@ so knowing (or estimating) one, you can calculate the other.
     kmf.fit(survival_times)
     kmf.survival_function_.plot()
 
-![KaplanMeier estimate](http://i.imgur.com/aztRkvl.png)
+![KaplanMeier estimate](http://i.imgur.com/aztRkvll.png)
 
     naf = NelsonAalenFitter()
     naf.fit(survival_times)
     naf.cumulative_hazard_.plot()
 
-![NelsonAalen](http://i.imgur.com/xA9OBFN.png)
+![NelsonAalen](http://i.imgur.com/xA9OBFNl.png)
 
 
 ### Censorship events
@@ -95,7 +95,7 @@ In the above line, `C` is a boolean array with `True` iff we observed the death 
 
     plt.show()
 
-![SVest](http://i.imgur.com/jYm911Z.png)
+![SVest](http://i.imgur.com/jYm911Zl.png)
 
 
 ### Survival Regression
@@ -109,12 +109,12 @@ Currently implemented is Aalen Additive model,
     aaf.fit(T[None,:], X, censorship=C)
     aaf.cumulative_hazards_.plot()
 
-![AalenCumulative](http://i.imgur.com/1LupZvH.png)
+![AalenCumulative](http://i.imgur.com/1LupZvHl.png)
 
     #plot the kernel smoothed hazards
     aaf.smoothed_hazards(20).plot()
 
-![AalenSmooth](http://i.imgur.com/ymVfsed.png)
+![AalenSmooth](http://i.imgur.com/ymVfsedl.png)
 
 
 ### Plotting 
@@ -131,7 +131,7 @@ There is a plotting library in Lifelines, under `lifelines.plotting`. We can vis
     T, C= generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes )
     plot_lifetimes(T, censorship=C, birthtimes=birthtimes)
 
-![lifetimes](http://i.imgur.com/JDt3t3X.png)
+![lifetimes](http://i.imgur.com/JDt3t3Xl.png)
 
 
 ## Moar examples?

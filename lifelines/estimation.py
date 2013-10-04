@@ -37,7 +37,7 @@ class NelsonAalenFitter(object):
            self.timeline = timeline
         self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
                                                                      self.timeline, self.censorship, 
-                                                                     self._additive_f, 0, columns,
+                                                                     self._additive_f, 0, columns, self._variance_f,
                                                                      nelson_aalen_smoothing=self.nelson_aalen_smoothing )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
@@ -167,7 +167,7 @@ class AalenAdditiveFitter(object):
     self.alpha = alpha
     self.penalizer = penalizer
 
-  def fit(self, event_times, X, timeline = None, censorship=None, columns = None):
+  def fit(self, event_times, X, timeline = None, censorship=None, columns=None):
     """currently X is a static (n,d) array
 
     event_times: (n,1) array of event times
@@ -243,6 +243,7 @@ class AalenAdditiveFitter(object):
     self.hazards_.iloc[i] = v.T
     self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
     self.timeline = timeline
+    self.X = X
     self.censorship = censorship
     self._compute_confidence_intervals()
     return self
@@ -277,8 +278,12 @@ class AalenAdditiveFitter(object):
     Returns the hazard rates for the individuals
     """
     n,d = X.shape
+    try:
+      X_ = X.values.copy()
+    except:
+      X_ = X.copy()
     X_ = X.copy() if not self.fit_intercept else np.c_[ X.copy(), np.ones((n,1)) ]
-    return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline)
+    return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=self.hazards_.columns)
 
   def predict_survival_function(self,X):
     """
