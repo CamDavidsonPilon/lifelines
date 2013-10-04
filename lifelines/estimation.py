@@ -61,6 +61,11 @@ class NelsonAalenFitter(object):
         df["lower_bound_%.2f"%self.alpha] = self.cumulative_hazard_.values*np.exp(-coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
         return df
 
+    def _variance_f(self, N, d):
+        if N==d==0:
+            return 0
+        return (1.*d/N)**2
+
 class KaplanMeierFitter(object):
    
   def __init__(self, alpha = 0.95):
@@ -91,7 +96,7 @@ class KaplanMeierFitter(object):
           self.timeline = timeline
        log_surivial_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline, 
                                                                   self.censorship, self._additive_f, 
-                                                                  0, columns )
+                                                                  0, columns, self._variance_f )
        self.survival_function_ = np.exp(log_surivial_function)
        self.median_ = median_survival_times(self.survival_function_)
        self.confidence_interval_ = self._bounds(cumulative_sq_)
@@ -110,12 +115,18 @@ class KaplanMeierFitter(object):
       except:
         pass
       df = pd.DataFrame( index=self.timeline)
-      "broken?"
       df["upper_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(coef*cumulative_sq_/np.log(self.survival_function_.values)))
       df["lower_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(-coef*cumulative_sq_/np.log(self.survival_function_.values)))
       return df
 
-def _additive_estimate(event_times, timeline, observed, additive_f, initial, columns, nelson_aalen_smoothing=False):
+  def _variance_f(self,N,d):
+     if N==d==0:
+        return 0
+     return 1.*d/(N*(N-d))
+
+
+def _additive_estimate(event_times, timeline, observed, additive_f, initial, columns, variance_f,
+                      nelson_aalen_smoothing=False):
     """
 
     nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
@@ -141,7 +152,7 @@ def _additive_estimate(event_times, timeline, observed, additive_f, initial, col
            v += np.sum([additive_f(N,i+1) for i in range(observed_deaths)])
         else:
            v += additive_f(N,observed_deaths)
-        v_sq += (1.*observed_deaths/N)**2
+        v_sq += variance_f(N,observed_deaths)
         N -= observed_deaths
         t_0 = t
     _additive_estimate_.ix[(timeline>=t)]=v
