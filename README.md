@@ -21,22 +21,24 @@ so knowing (or estimating) one, you can calculate the other.
 The usual Python data stack: **numpy, pandas, matplotlib (optional)**
 
 
-### (Quick) Intro to *lifelines* and survival analysis
+## (Quick) Intro to *lifelines* and survival analysis
 
-**Work in progress (20%) ***
+**Work in progress (20%) **
+
 If you are new to survival analysis, wondering why it is useful, and are interesting in worked examples,
 I recommend following the `tutorial_and_examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/tutorial_and_examples.ipynb).
 
 
-### Documentation
+## Documentation
 
-**Work in progress (75%) ***
+**Work in progress (75%) **
+
 I've added documentation to a notebook, `Documentation.ipynb`, that adds detail to 
 the classes, methods and data types. You can use the IPython notebook to view it, or view it [online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
 
 
 
-### Enough talk - just show me the examples!
+## Enough talk - just show me the examples!
 
     %pylab
     from lifelines.generate_datasets import *
