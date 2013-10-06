@@ -132,6 +132,7 @@ def _additive_estimate(event_times, timeline, observed, additive_f, initial, col
     nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
 
     """
+    timeline = timeline.astype(float)
     if timeline[0] > 0:
        timeline = np.insert(timeline,0,0.)
 
@@ -183,6 +184,7 @@ class AalenAdditiveFitter(object):
           self.hazards_: a (t,d+1) dataframe of hazard coefficients
 
     """
+    #deal with the covariate matrix. Check if it is a dataframe or numpy array
     n,d = X.shape
     if type(X)==pd.core.frame.DataFrame:
       X_ = X.values.copy()
@@ -191,38 +193,42 @@ class AalenAdditiveFitter(object):
     else:
       X_ = X.copy()
 
+    # append a columns of ones for the baseline hazard
     ix = event_times.argsort()[0,:]
     X_ = X_[ix,:].copy() if not self.fit_intercept else np.c_[ X_[ix,:].copy(), np.ones((n,1)) ]
     sorted_event_times = event_times[0,ix].copy()
 
+    #set the column's names of the dataframe.
     if columns is None:
       columns = range(d) + ["baseline"]
     else:
       columns =  [c for c in columns ] + ["baseline"]
 
+    #set the censorship events. 1 if the death was observed.
     if censorship is None:
         observed = np.ones(n, dtype=bool)
     else:
         observed = censorship.reshape(n)
 
+    #set the timeline -- this is used as DataFrame index in the results
     if timeline is None:
         timeline = sorted_event_times
-        
+
+    timeline = timeline.astype(float)
     if timeline[0] > 0:
        timeline = np.insert(timeline,0,0.)
     
     zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
-    
     self.cumulative_hazards_ = pd.DataFrame(zeros.copy() , index=timeline, columns = columns)
     self.hazards_ = pd.DataFrame(np.zeros((event_times.shape[1],d+self.fit_intercept)), index=sorted_event_times, columns = columns)
     self._variance = pd.DataFrame(zeros.copy(), index=timeline, columns = columns)
     
+    #create the penalizer matrix for L2 regression
     penalizer = self.penalizer*np.eye(d + self.fit_intercept)
     
     t_0 = sorted_event_times[0]
     cum_v = np.zeros((d+self.fit_intercept,1))
     v = cum_v.copy()
-    d = 0
     for i,time in enumerate(sorted_event_times):
         relevant_times = (t_0<timeline)*(timeline<=time)
         if observed[i] == 0:
@@ -230,12 +236,14 @@ class AalenAdditiveFitter(object):
         try:
           V = dot(inv(dot(X_.T,X_) - penalizer), X_.T)
         except LinAlgError:
+          #if penalizer > 0, this should not occur.
           self.cumulative_hazards_.ix[relevant_times] =cum_v.T
           self.hazards_.iloc[i] = v.T 
           self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
           X_[i,:] = 0
           t_0 = time
           continue
+
         v = dot(V, basis(n,i))
         cum_v = cum_v + v
         self.cumulative_hazards_.ix[relevant_times] = self.cumulative_hazards_.ix[relevant_times].values + cum_v.T
@@ -244,6 +252,7 @@ class AalenAdditiveFitter(object):
         t_0 = time
         X_[i,:] = 0
 
+    #clean up last iteration
     relevant_times = (timeline>time)
     self.cumulative_hazards_.ix[relevant_times] = cum_v.T
     self.hazards_.iloc[i] = v.T
