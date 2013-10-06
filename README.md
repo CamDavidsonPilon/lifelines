@@ -23,10 +23,10 @@ The usual Python data stack: **numpy, pandas, matplotlib (optional)**
 
 ## (Quick) Intro to *lifelines* and survival analysis
 
-**Work in progress (20%) **
+**Work in progress (30%) **
 
 If you are new to survival analysis, wondering why it is useful, and are interesting in worked examples,
-I recommend following the `tutorial_and_examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
+I recommend following the `Tutorial and Examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
 
 ## Documentation
@@ -39,6 +39,8 @@ the classes, methods and data types. You can use the IPython notebook to view it
 
 
 ## Enough talk - just show me the examples!
+
+### Generating Datasets
 
     %pylab
     from lifelines.generate_datasets import *
@@ -88,7 +90,7 @@ the classes, methods and data types. You can use the IPython notebook to view it
 ![NelsonAalen](http://i.imgur.com/xA9OBFNl.png)
 
 
-### Censorship events
+### Censorship events and estimation
 When there are right-censored events, the simplest case being there are still surviving individuals, we need to be more careful and factor these 
 non-observed individuals in. The api for this is an obvious extension from above:
 
@@ -121,13 +123,13 @@ In the above line, `C` is a boolean array with `True` iff we observed the death 
 
 ### Survival Regression
 
-Currently implemented is Aalen Additive model,
+Currently implemented is Aalen Additive model
 
     from lifelines.estimation import AalenAdditiveFitter
 
     #will fit the cumulative hazards
     aaf = AalenAdditiveFitter(fit_intercept=True)
-    aaf.fit(T[None,:], X, censorship=C)
+    aaf.fit(T[None,:], X, censorship=C) #X is a dataframe of numpy array of covariatesg
     aaf.cumulative_hazards_.plot()
 
 ![AalenCumulative](http://i.imgur.com/1LupZvHl.png)
