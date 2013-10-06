@@ -1,4 +1,4 @@
-"","ctryname","cowcode2","politycode","un_region_name","un_continent_name","ehead","leaderspellreg","democracy","regime","edatereg","tenurereg","rightcensreg"
+"","ctryname","cowcode2","politycode","un_region_name","un_continent_name","ehead","leaderspellreg","democracy","regime","start_year","duration","observed"
 "1","Afghanistan",700,700,"Southern Asia","Asia","Mohammad Zahir Shah","Mohammad Zahir Shah.Afghanistan.1946.1952.Monarchy","Non-democracy","Monarchy",1946,7,1
 "2","Afghanistan",700,700,"Southern Asia","Asia","Sardar Mohammad Daoud","Sardar Mohammad Daoud.Afghanistan.1953.1962.Civilian Dict","Non-democracy","Civilian Dict",1953,10,1
 "3","Afghanistan",700,700,"Southern Asia","Asia","Mohammad Zahir Shah","Mohammad Zahir Shah.Afghanistan.1963.1972.Monarchy","Non-democracy","Monarchy",1963,10,1

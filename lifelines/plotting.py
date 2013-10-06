@@ -45,9 +45,9 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
 
 def plot_dataframes(self, estimate):
     def plot(c="#348ABD", **kwargs):
-      ax = getattr(self, estimate).plot(drawstyle="steps-pre", c=c, **kwargs)
+      ax = getattr(self, estimate).plot(c=c, **kwargs)
       kwargs["ax"] = ax
-      self.confidence_interval_.plot( drawstyle="steps-pre", c=c, linestyle="--", **kwargs)
+      self.confidence_interval_.plot(c=c, linestyle="--", **kwargs)
       return ax
     return plot
 

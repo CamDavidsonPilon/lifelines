@@ -132,6 +132,9 @@ def _additive_estimate(event_times, timeline, observed, additive_f, initial, col
     nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
 
     """
+    if timeline[0] > 0:
+       timeline = np.insert(timeline,0,0.)
+
     n = timeline.shape[0]
     _additive_estimate_ = pd.DataFrame(np.zeros((n,1)), index=timeline, columns=columns)
     _additive_var = pd.DataFrame(np.zeros((n,1)), index=timeline)
@@ -204,6 +207,9 @@ class AalenAdditiveFitter(object):
 
     if timeline is None:
         timeline = sorted_event_times
+        
+    if timeline[0] > 0:
+       timeline = np.insert(timeline,0,0.)
     
     zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
     

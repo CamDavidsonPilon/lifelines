@@ -26,7 +26,7 @@ The usual Python data stack: **numpy, pandas, matplotlib (optional)**
 **Work in progress (20%) **
 
 If you are new to survival analysis, wondering why it is useful, and are interesting in worked examples,
-I recommend following the `tutorial_and_examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/tutorial_and_examples.ipynb).
+I recommend following the `tutorial_and_examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
 
 ## Documentation
