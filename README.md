@@ -18,12 +18,13 @@ If you are new to survival analysis, wondering why it is useful, and are interes
 I recommend running the `Tutorial and Examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
 
+
 ## Documentation
 
 **Work in progress (75%) **
 
 I've added documentation to a notebook, `Documentation.ipynb`, that adds detail to 
-the classes, methods and data types. You can use the IPython notebook to view it, or view it [online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
+the classes, methods and data types. You can use the IPython notebook to view it, or view it [`online`](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
 
 
 
