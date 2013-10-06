@@ -1,20 +1,9 @@
 lifelines
 =======
  
-What is survival analysis and why should I learn it? Historically, survival analysis has been developed and applied most heavily by the actuarial and medical community. Generally, its purpose is to answer *why do events occur now versus later* under uncertainity and censoring (where *events* might be deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer *what factors might influence deaths?*
+[What is survival analysis and why should I learn it](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb)? Historically, survival analysis has been developed and applied heavily by the actuarial and medical community. Generally, its purpose is to answer *why do events occur now versus later* under uncertainity (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
 
-There is another use of survival analysis: customers subscribing to services -- births users joining and deaths are users leaving. Telcom companies have understood this for years, but kept it in-house, but recently and specifically SaaS providers and app developers are understanding the benefits of survival analysis. 
-
-The two concepts in Survival Analysis are 
-
-1. Survival functions, denoted *S(t)*, and
-2. hazard rates, denoted *h(t)* 
-
-The former defines the probability the event has not happened after *t* units of time. The second, hazard curves, are related to the first by:
-
-![eq](http://i.imgur.com/y7OECvNl.gif)
-
-so knowing (or estimating) one, you can calculate the other.
+But outside of medicine and actuarial science, there are many interesting and exicting applications of this lesser-known technique. SaaS providers are interested in measuring customer lifetimes; sociologists are interested in measure political parties lifetimes, or relationships, or marriages; Telcoms are interested in understand customer behaviours, etc. 
 
 ####Dependencies:
 
@@ -25,8 +14,8 @@ The usual Python data stack: **numpy, pandas, matplotlib (optional)**
 
 **Work in progress (30%) **
 
-If you are new to survival analysis, wondering why it is useful, and are interesting in worked examples,
-I recommend following the `Tutorial and Examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
+If you are new to survival analysis, wondering why it is useful, and are interested in examples,
+I recommend running the `Tutorial and Examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
 
 ## Documentation
