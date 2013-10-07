@@ -63,12 +63,12 @@ class StatisticalTests(unittest.TestCase):
       npt.assert_almost_equal(kmf.survival_function_.values, self.km )
   
   def test_nelson_aalen(self):
-      naf = NelsonAalenFitter()
+      naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
       naf.fit(LIFETIMES)
       npt.assert_almost_equal(naf.cumulative_hazard_.values, self.na )
   
   def test_censor_nelson_aalen(self):
-      naf = NelsonAalenFitter()
+      naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
       naf.fit(LIFETIMES, censorship=CENSORSHIP)
       npt.assert_almost_equal(naf.cumulative_hazard_.values, self.nac )
   
@@ -114,7 +114,9 @@ class StatisticalTests(unittest.TestCase):
            v *= ( 1-self.lifetimes.get(t)/n )
            n -= self.lifetimes.get(t)
         km[i] = v
-      return km
+      if km[0] < 1.:
+        km = np.insert(km,0,1.)
+      return km.reshape(len(km),1)
 
   def nelson_aalen(self, censor = False):
       na = np.zeros((len(self.lifetimes.keys()),1))
@@ -133,7 +135,9 @@ class StatisticalTests(unittest.TestCase):
            v += ( self.lifetimes.get(t)/n )
            n -= self.lifetimes.get(t)
         na[i] = v
-      return na
+      if na[0] > 0:
+        na = np.insert(na,0,0.)
+      return na.reshape(len(na),1)
 
 class PlottingTests(unittest.TestCase):
 

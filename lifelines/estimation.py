@@ -8,10 +8,26 @@ from lifelines.utils import dataframe_from_events_censorship, basis
 
 import pdb
 
+
+
 class NelsonAalenFitter(object):
-    def __init__(self, alpha=0.95, nelson_aalen_smoothing=False):
+    """
+    Class for fitting the Nelson-Aalen estimate for the cumulative hazard. 
+
+    NelsonAalenFitter( alpha=0.95, nelson_aalen_smoothing=True)
+
+    alpha: The alpha value associated with the confidence intervals. 
+    nelson_aalen_smoothing: If the event times are naturally discrete (like discrete years, minutes, etc.)
+      then it is advisable to turn this parameter to False. See [1], pg.84.
+
+    """
+    def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
+        if nelson_aalen_smoothing:
+          self._variance_f = self._variance_f_smooth
+        else:
+          self._variance_f = self._variance_f_discrete
 
     def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate']):
         """
@@ -61,10 +77,15 @@ class NelsonAalenFitter(object):
         df["lower_bound_%.2f"%self.alpha] = self.cumulative_hazard_.values*np.exp(-coef*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
         return df
 
-    def _variance_f(self, N, d):
+    def _variance_f_smooth(self, N, d):
         if N==d==0:
             return 0
-        return (1.*d/N)**2
+        return (1./N)**2  
+
+    def _variance_f_discrete(self, N, d):
+        if N==d==0:
+            return 0
+        return 1.*(N-d)*d/N**3
 
 class KaplanMeierFitter(object):
    
@@ -153,10 +174,11 @@ def _additive_estimate(event_times, timeline, observed, additive_f, initial, col
         missing = removed - observed_deaths
         N -= missing
         if nelson_aalen_smoothing:
-           v += np.sum([additive_f(N,i+1) for i in range(observed_deaths)])
+           v += np.sum([additive_f(N-i,1) for i in range(int(observed_deaths))])
+           v_sq += np.sum([variance_f(N-i,1) for i in range(int(observed_deaths))])
         else:
            v += additive_f(N,observed_deaths)
-        v_sq += variance_f(N,observed_deaths)
+           v_sq += variance_f(N,observed_deaths)
         N -= observed_deaths
         t_0 = t
     _additive_estimate_.ix[(timeline>=t)]=v
@@ -347,3 +369,9 @@ def gaussian(t,T,sigma=1.):
 def ipcw(target_event_times, target_censorship, predicted_event_times ):
     pass
 
+
+"""
+References:
+[1] Aalen, O., Borgan, O., Gjessing, H., 2008. Survival and Event History Analysis
+
+"""
