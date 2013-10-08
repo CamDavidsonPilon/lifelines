@@ -26,8 +26,10 @@ class NelsonAalenFitter(object):
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
         if nelson_aalen_smoothing:
           self._variance_f = self._variance_f_smooth
+          self._additive_f = self._additive_f_smooth
         else:
           self._variance_f = self._variance_f_discrete
+          self._additive_f = self._additive_f_discrete
 
     def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate']):
         """
@@ -53,18 +55,11 @@ class NelsonAalenFitter(object):
            self.timeline = timeline
         self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
                                                                      self.timeline, self.censorship, 
-                                                                     self._additive_f, 0, columns, self._variance_f,
-                                                                     nelson_aalen_smoothing=self.nelson_aalen_smoothing )
+                                                                     self._additive_f, 0, columns, self._variance_fgi )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
 
         return
-
-    def _additive_f(self, N,d ):
-       #check it 0
-       if N==d==0:
-          return 0
-       return 1.*d/N
 
     def _bounds(self, cumulative_sq_):
         inverse_norm = { 0.95:1.96, 0.99:2.57 }
@@ -80,12 +75,24 @@ class NelsonAalenFitter(object):
     def _variance_f_smooth(self, N, d):
         if N==d==0:
             return 0
-        return (1./N)**2  
+        return np.sum([1./(N-i)**2 for i in range(d)])
 
     def _variance_f_discrete(self, N, d):
         if N==d==0:
             return 0
         return 1.*(N-d)*d/N**3
+
+    def _additive_f_smooth(self, N, d):
+        if N==d==0:
+          return 0
+        return np.sum([1./(N-i) for i in range(d)])
+
+    def _additive_f_discrete(self, N,d ):
+       #check it 0
+       if N==d==0:
+          return 0
+       return 1.*d/N
+
 
 class KaplanMeierFitter(object):
    
@@ -146,8 +153,7 @@ class KaplanMeierFitter(object):
      return 1.*d/(N*(N-d))
 
 
-def _additive_estimate(event_times, timeline, observed, additive_f, initial, columns, variance_f,
-                      nelson_aalen_smoothing=False):
+def _additive_estimate(event_times, timeline, observed, additive_f, initial, columns, variance_f):
     """
 
     nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
@@ -173,12 +179,8 @@ def _additive_estimate(event_times, timeline, observed, additive_f, initial, col
         _additive_var.ix[ (t_0<=timeline)*(timeline<t) ] = v_sq
         missing = removed - observed_deaths
         N -= missing
-        if nelson_aalen_smoothing:
-           v += np.sum([additive_f(N-i,1) for i in range(int(observed_deaths))])
-           v_sq += np.sum([variance_f(N-i,1) for i in range(int(observed_deaths))])
-        else:
-           v += additive_f(N,observed_deaths)
-           v_sq += variance_f(N,observed_deaths)
+        v += additive_f(N,observed_deaths)
+        v_sq += variance_f(N,observed_deaths)
         N -= observed_deaths
         t_0 = t
     _additive_estimate_.ix[(timeline>=t)]=v
