@@ -55,7 +55,7 @@ class NelsonAalenFitter(object):
            self.timeline = timeline
         self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
                                                                      self.timeline, self.censorship, 
-                                                                     self._additive_f, 0, columns, self._variance_fgi )
+                                                                     self._additive_f, 0, columns, self._variance_f )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
 
