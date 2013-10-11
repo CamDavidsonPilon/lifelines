@@ -3,7 +3,7 @@ import numpy as np
 
 from lifelines.utils import dataframe_from_events_censorship
 
-def intensity_test(event_times_A, event_times_B, censorship_A = None, censorship_B=None, t_0 = -1):
+def logrank_test(event_times_A, event_times_B, censorship_A = None, censorship_B=None, t_0 = -1):
   """
   Measures and reports on whether two intensity processes are different. That is, given two 
   event series, determines whether the data generating processes are statistically different. 
