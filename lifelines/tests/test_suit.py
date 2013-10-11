@@ -15,6 +15,7 @@ from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitt
 from ..statistics import intensity_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
+from ..utils import datetimes_to_durations
 
 LIFETIMES = np.array([2,4,4,4,5,7,10,11,11,12])
 CENSORSHIP = np.array([1,1,0,1,0,1,1,1,1,0])
@@ -28,7 +29,6 @@ class MiscTests(unittest.TestCase):
       answer = 0.5*x**2
       approx_answer = cumulative_quadrature( x.T, x).T
       npt.assert_almost_equal(answer, approx_answer, decimal=5)
-
 
     def test_quadratic_integration_exp(self):
       #integrate exp(x) between 0 and 4:
@@ -47,6 +47,30 @@ class MiscTests(unittest.TestCase):
       aaf.fit(t,npX)
       aaf.fit(t, dfX)
       npt.assert_array_equal( c, aaf.cumulative_hazards_.columns[:3] )
+
+    def test_datetimes_to_durations_days(self):
+        start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
+        end_date = ['2013-10-13', '2013-10-10', '2013-10-15']
+        T,C = datetimes_to_durations(start_date, end_date)
+        npt.assert_almost_equal(T, np.array([3,1,5+365]) )
+        npt.assert_almost_equal(C, np.array([1,1,1], dtype=bool) )
+        return    
+
+    def test_datetimes_to_durations_years(self):
+        start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
+        end_date = ['2013-10-13', '2013-10-10', '2013-10-15']
+        T,C = datetimes_to_durations(start_date, end_date, freq='Y')
+        npt.assert_almost_equal(T, np.array([0,0,1]) )
+        npt.assert_almost_equal(C, np.array([1,1,1], dtype=bool) )
+        return
+
+    def test_datetimes_to_durations_censor(self):
+        start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
+        end_date = ['2013-10-13', None, '']
+        T,C = datetimes_to_durations(start_date, end_date, freq='Y')
+        npt.assert_almost_equal(C, np.array([1,0,0], dtype=bool) )
+        return
+
 
 class StatisticalTests(unittest.TestCase):
 
