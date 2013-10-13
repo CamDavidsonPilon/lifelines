@@ -37,8 +37,8 @@ def logrank_test(event_times_A, event_times_B, censorship_A = None, censorship_B
 
   v = 0
   v_sq = 0
-  y_1 = Y_1.ix[0]
-  y_2 = Y_2.ix[0]
+  y_1 = Y_1.iloc[0]
+  y_2 = Y_2.iloc[0]
   for t, n_t in N_dot.ix[N_dot.index<=t_0].itertuples():
     try:
       y_1 = Y_1.loc[t]
