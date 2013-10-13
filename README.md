@@ -1,9 +1,12 @@
 lifelines
 =======
  
-[What is survival analysis and why should I learn it](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb)? Historically, survival analysis has been developed and applied heavily by the actuarial and medical community. Generally, its purpose is to answer *why do events occur now versus later* under uncertainity (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
+[What is survival analysis and why should I learn it?](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb) Survival analysis was originally developed and applied heavily by the actuarial and medical community. Its purpose was to answer *why do events occur now versus later* under uncertainity (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
 
-But outside of medicine and actuarial science, there are many interesting and exicting applications of this lesser-known technique. SaaS providers are interested in measuring customer lifetimes; sociologists are interested in measure political parties lifetimes, or relationships, or marriages; Telcoms are interested in understand customer behaviours, etc. 
+But outside of medicine and actuarial science, there are many other interesting and exicting applications of this lesser-known technique. SaaS providers are interested in measuring customer lifetimes; sociologists are interested in measure political parties lifetimes, or relationships, or marriages; Telcoms are interested in understand customer behaviours, etc. 
+
+*lifelines* is a pure Python implementation of the best parts of survival analysis, with simple classes
+and helper functions. 
 
 ####Dependencies:
 
@@ -12,25 +15,27 @@ The usual Python data stack: **numpy, pandas, matplotlib (optional)**
 
 ## (Quick) Intro to *lifelines* and survival analysis
 
-**Work in progress (30%) **
+**Work in progress (50%) **
 
-If you are new to survival analysis, wondering why it is useful, and are interested in examples,
-I recommend running the `Tutorial and Examples.ipynb` notebook, or you can view it online [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
+If you are new to survival analysis, wondering why it is useful, or are interested in examples,
+I recommend running the `Tutorial and Examples.ipynb` notebook in a IPython notebook session. Alternatively, you can view it online [`here`](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
 
 
 ## Documentation
 
-**Work in progress (75%) **
+**Work in progress (80%) **
 
 I've added documentation to a notebook, `Documentation.ipynb`, that adds detail to 
 the classes, methods and data types. You can use the IPython notebook to view it, or view it [`online`](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
 
 
 
-## Enough talk - just show me the examples!
+### Enough talk - just show me the examples!
 
-### Generating Datasets
+These demonstrate some functionality. If you are unfamiliar with Survival Analysis, I would start [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
+
+### Generating artificial datasets
 
     %pylab
     from lifelines.generate_datasets import *
@@ -113,7 +118,7 @@ In the above line, `C` is a boolean array with `True` iff we observed the death 
 
 ### Survival Regression
 
-Currently implemented is Aalen Additive model
+Currently implemented is Aalen's Additive model
 
     from lifelines.estimation import AalenAdditiveFitter
 
@@ -130,7 +135,7 @@ Currently implemented is Aalen Additive model
 ![AalenSmooth](http://i.imgur.com/ymVfsedl.png)
 
 
-### Plotting 
+### Plotting and Styles
 
 The styling present in the above graphs is from a custom `matplotlibrc` file, you can find it in the `styles/` directory. 
 
@@ -149,7 +154,8 @@ There is a plotting library in Lifelines, under `lifelines.plotting`. We can vis
 
 ## Moar examples?
 
-There are some IPython notebook files in the repo, and you can view them online here:
+There are some IPython notebook files in the repo, and you can view them online here (though they may 
+contain syntax from older versions of *lifelines*.)
 
 - [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/Divorces%2520Rates.ipynb)
 - [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/The%2520Gehan%2520Survival%2520Data.ipynb)
