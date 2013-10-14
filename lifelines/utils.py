@@ -92,7 +92,5 @@ def AandS_approximation(p):
 
     return t - (c_0+c_1*t+c_2*t**2)/(1+d_1*t+d_2*t*t+d_3*t**3)
 
-
-
 def kernel_smoother(timeline, hazards, sigma):
     pass
