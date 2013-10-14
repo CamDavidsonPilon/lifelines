@@ -1,21 +1,44 @@
-#test statistics
 import numpy as np
+from itertools import combinations
 
-import pdb
+from lifelines.utils import dataframe_from_events_censorship, inv_normal_cdf
 
-from lifelines.utils import dataframe_from_events_censorship
+def multi_logrank_test( event_durations, groups, censorship=None, t_0=-1, alpha=0.95):
+  """
+  This uses the berferonni? correction
 
-def logrank_test(event_times_A, event_times_B, censorship_A = None, censorship_B=None, t_0 = -1):
+  """
+  assert event_times.shape[0] == groups.shape[0], "event_times must be the same shape as groups"
+  
+  if censorship is None:
+      censorship = np.ones((event_times.shape[0],1))
+
+  data = pd.DataFrame( np.c_[groups, event_times, censorship], columns=['groups','durations','censorship']).groupby('group')
+
+  new_alpha = 1 - (1. - alpha)/(n*(n-1)/2.) #correction accounting for n pairwise comparisons.
+
+  #iterate over all combinations. 
+    
+
+
+def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1):
   """
   Measures and reports on whether two intensity processes are different. That is, given two 
   event series, determines whether the data generating processes are statistically different. 
 
+  Pre lifelines 0.2: this returned a test statistic. 
+  Post lifelines 0.2: this returns the results of the entire test. 
+
   See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
 
   Parameters:
-    event_times_X: a (nx1) array of event times (deaths,...) for the population.
+    event_times_X: a (nx1) array of event durations (birth to death,...) for the population.
     t_0: the period under observation, -1 for all time.
 
+  Returns 
+    summary: a print-friendly string detailing the results of the test.
+    p: the p-value
+    Z: the test result: True if reject the null, (pendantically None if inconclusive)
   """
   if censorship_A is None:
     censorship_A = np.ones((event_times_A.shape[0], 1))  
@@ -35,18 +58,23 @@ def logrank_test(event_times_A, event_times_B, censorship_A = None, censorship_B
   Y_dot = event_times_AB["removed"].sum() - event_times_AB["removed"].cumsum()
   Y_1 = event_times_A["removed"].sum() - event_times_A["removed"].cumsum()
   Y_2 = event_times_B["removed"].sum() - event_times_B["removed"].cumsum()
-
   v = 0
   v_sq = 0
   y_1 = Y_1.iloc[0]
   y_2 = Y_2.iloc[0]
   for t, n_t in N_dot.ix[N_dot.index<=t_0].itertuples():
     try:
+      #sorta a nasty hack to check of the time is not in the 
+      # data. Could be done better.
       y_1 = Y_1.loc[t]
+    except KeyError:
+      pass  
     except IndexError:
-      pass      
+      pass
     try:  
       y_2 = Y_2.loc[t]
+    except KeyError:
+      pass
     except IndexError:
       pass
     y_dot = Y_dot.loc[t]
@@ -57,5 +85,41 @@ def logrank_test(event_times_A, event_times_B, censorship_A = None, censorship_B
   E_1 = v
   N_1 = event_times_A[["observed"]].sum()[0]
   Z_1 = N_1 - E_1
-  U = Z_1/np.sqrt(v_sq)
-  return U
+  U = Z_1/np.sqrt(v_sq) #this is approx normal under null.
+  
+  test_result, p_value = z_test(U,alpha)
+  summary = pretty_print_summary(test_result, p_value, U, t_0=t_0, test='logrank', alpha=alpha)
+  return summary, p_value, test_result
+
+
+def z_test(Z, alpha):
+  """
+  Pendantically returns None, p-value if test is inconclusive, else returns True, p-value.
+  """
+  if (Z < inv_normal_cdf((1.-alpha)/2.) ) or (Z > inv_normal_cdf((1+alpha)/2)):
+    #reject null
+    print "TODO: implement calc of p-value."
+    return True, 0.05 #TODO
+  else:
+    #cannot reject null
+    return None, 0.05
+
+def pretty_print_summary( test_results, p_value, test_statistic, **kwargs):
+  """
+  kwargs are experiment meta-data. 
+  """
+  HEADER = "   __ p-value ___|__ test statistic __|__ test results __"
+
+
+  s = "Results\n"
+  meta_data = pretty_print_meta_data( kwargs )
+  s += meta_data + "\n"
+  s += HEADER + "\n"
+  s += "           %.3f |            %.3f |   %s   "%(p_value, test_statistic, test_results)
+  return s
+
+def pretty_print_meta_data(dictionary):
+  s = ""
+  for k,v in dictionary.iteritems():
+      s=  s + "   " + k.__str__() +  ": " + v.__str__() + "\n"
+  return s

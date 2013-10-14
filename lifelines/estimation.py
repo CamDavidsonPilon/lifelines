@@ -4,9 +4,8 @@ from numpy import dot
 import pandas as pd
 
 from lifelines.plotting import plot_dataframes
-from lifelines.utils import dataframe_from_events_censorship, basis
+from lifelines.utils import dataframe_from_events_censorship, basis, inv_normal_cdf
 
-import pdb
 
 
 
@@ -64,8 +63,9 @@ class NelsonAalenFitter(object):
     def _bounds(self, cumulative_sq_):
         alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
         df = pd.DataFrame( index=self.timeline)
-        df["upper_bound_%.2f"%self.alpha] = self.cumulative_hazard_.values*np.exp(alpha2*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
-        df["lower_bound_%.2f"%self.alpha] = self.cumulative_hazard_.values*np.exp(-alpha2*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
+        name = self.cumulative_hazard_.columns[0]
+        df["%s_upper_%.2f"%(name,self.alpha)] = self.cumulative_hazard_.values*np.exp(alpha2*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
+        df["%s_lower_%.2f"%(name,self.alpha)] = self.cumulative_hazard_.values*np.exp(-alpha2*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
         return df
 
     def _variance_f_smooth(self, N, d):
@@ -92,10 +92,10 @@ class NelsonAalenFitter(object):
 
 class KaplanMeierFitter(object):
    
-  def __init__(self, alpha = 0.95):
+  def __init__(self, alpha=0.95):
        self.alpha = alpha
 
-  def fit(self, event_times,censorship=None, timeline=None, columns=['KM-estimate']):
+  def fit(self, event_times, censorship=None, timeline=None, columns=['KM-estimate']):
        """
        Parameters:
          event_times: an (n,1) array of times that the death event occured at 
@@ -127,7 +127,7 @@ class KaplanMeierFitter(object):
        self.plot = plot_dataframes(self, "survival_function_")
        return self
 
-  def _additive_f(self,N,d):
+  def _additive_f(self, N, d):
       if N==d==0:
         return 0
       return np.log(1 - 1.*d/N)
@@ -135,11 +135,12 @@ class KaplanMeierFitter(object):
   def _bounds(self, cumulative_sq_):
       alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
       df = pd.DataFrame( index=self.timeline)
-      df["upper_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(alpha2*cumulative_sq_/np.log(self.survival_function_.values)))
-      df["lower_bound_%.2f"%self.alpha] = self.survival_function_.values**(np.exp(-alpha2*cumulative_sq_/np.log(self.survival_function_.values)))
+      name = self.survival_function_.columns[0]
+      df["%s_upper_%.2f"%(name,self.alpha)] = self.survival_function_.values**(np.exp(alpha2*cumulative_sq_/np.log(self.survival_function_.values)))
+      df["%s_lower_%.2f"%(name,self.alpha)] = self.survival_function_.values**(np.exp(-alpha2*cumulative_sq_/np.log(self.survival_function_.values)))
       return df
 
-  def _variance_f(self,N,d):
+  def _variance_f(self, N, d):
      if N==d==0:
         return 0
      return 1.*d/(N*(N-d))
@@ -356,28 +357,6 @@ def gaussian(t,T,sigma=1.):
 
 def ipcw(target_event_times, target_censorship, predicted_event_times ):
     pass
-
-
-def inv_normal_cdf(p):
-    if p < 0.5:
-      return -AandS_approximation(p)
-    else:
-      return AandS_approximation(1-p)
-
-def AandS_approximation(p):
-    #Formula 26.2.23 from A&S and help from John Cook ;)
-    # http://www.johndcook.com/normal_cdf_inverse.html
-    c_0 = 2.515517
-    c_1 = 0.802853
-    c_2 = 0.010328
-
-    d_1 = 1.432788
-    d_2 = 0.189269
-    d_3 = 0.001308
-
-    t = np.sqrt(-2*np.log(p))
-
-    return t - (c_0+c_1*t+c_2*t**2)/(1+d_1*t+d_2*t*t+d_3*t**3)
 
 """
 References:

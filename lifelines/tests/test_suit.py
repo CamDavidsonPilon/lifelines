@@ -12,7 +12,7 @@ import pdb
 import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter
-from ..statistics import intensity_test
+from ..statistics import logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import datetimes_to_durations
@@ -104,22 +104,33 @@ class StatisticalTests(unittest.TestCase):
   def test_equal_intensity(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(5, size=(200,1))
-      U = intensity_test(data1, data2)
-      self.assertTrue( np.abs(U)<=1.96)
+      summary, p_value, result = logrank_test(data1, data2)
+      print summary
+      self.assertTrue(result==None)
 
   def test_unequal_intensity(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(1, size=(200,1))
-      U = intensity_test(data1, data2)
-      self.assertTrue( np.abs(U)>=1.96)
+      summary, p_value, result = logrank_test(data1, data2)
+      print summary
+      self.assertTrue(result)
 
   def test_unequal_intensity_censorship(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(1, size=(200,1))
       censorA = np.random.binomial(1,0.5, size=(200,1))
       censorB = np.random.binomial(1,0.5, size=(200,1))
-      U = intensity_test(data1, data2, censorship_A = censorA, censorship_B = censorB)
-      self.assertTrue( np.abs(U)>=1.96)
+      summary, p_value, result = logrank_test(data1, data2, censorship_A = censorA, censorship_B = censorB)
+      print summary
+      self.assertTrue(result)
+
+  def test_integer_times_logrank_test(self):
+      data1 = np.random.exponential(5, size=(200,1)).astype(int)
+      data2 = np.random.exponential(1, size=(200,1)).astype(int)
+      summary, p_value, result = logrank_test(data1, data2)
+      print summary
+      self.assertTrue(result)
+
 
   def kaplan_meier(self, censor=False):
       km = np.zeros((len(self.lifetimes.keys()),1))
