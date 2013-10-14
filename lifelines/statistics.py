@@ -8,15 +8,17 @@ def multi_logrank_test( event_durations, groups, censorship=None, t_0=-1, alpha=
   This uses the berferonni? correction
 
   """
-  assert event_times.shape[0] == groups.shape[0], "event_times must be the same shape as groups"
+  assert event_durations.shape[0] == groups.shape[0], "event_durations must be the same shape as groups"
   
   if censorship is None:
-      censorship = np.ones((event_times.shape[0],1))
+      censorship = np.ones((event_durations.shape[0],1))
 
-  data = pd.DataFrame( np.c_[groups, event_times, censorship], columns=['groups','durations','censorship']).groupby('group')
+  data = pd.DataFrame( np.c_[groups, event_durations, censorship], columns=['groups','durations','censorship']).groupby('group')
 
   new_alpha = 1 - (1. - alpha)/(n*(n-1)/2.) #correction accounting for n pairwise comparisons.
 
+
+  raise Exception
   #iterate over all combinations. 
     
 
