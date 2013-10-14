@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import combinations
 
-from lifelines.utils import dataframe_from_events_censorship, inv_normal_cdf
+from lifelines.utils import dataframe_from_events_censorship, inv_normal_cdf,normal_cdf
 
 def multi_logrank_test( event_durations, groups, censorship=None, t_0=-1, alpha=0.95):
   """
@@ -94,17 +94,20 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
   return summary, p_value, test_result
 
 
+def p_value_normal(U):
+  return 2*normal_cdf(-np.abs(U))
+
 def z_test(Z, alpha):
   """
   Pendantically returns None, p-value if test is inconclusive, else returns True, p-value.
   """
+  p = p_value_normal(Z)
   if (Z < inv_normal_cdf((1.-alpha)/2.) ) or (Z > inv_normal_cdf((1+alpha)/2)):
     #reject null
-    print "TODO: implement calc of p-value."
-    return True, 0.05 #TODO
+    return True, p #TODO
   else:
     #cannot reject null
-    return None, 0.05
+    return None, p
 
 def pretty_print_summary( test_results, p_value, test_statistic, **kwargs):
   """
@@ -117,7 +120,7 @@ def pretty_print_summary( test_results, p_value, test_statistic, **kwargs):
   meta_data = pretty_print_meta_data( kwargs )
   s += meta_data + "\n"
   s += HEADER + "\n"
-  s += "           %.3f |            %.3f |   %s   "%(p_value, test_statistic, test_results)
+  s += "         %.5f |            %.3f |   %s   "%(p_value, test_statistic, test_results)
   return s
 
 def pretty_print_meta_data(dictionary):
