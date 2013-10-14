@@ -1,6 +1,8 @@
 #test statistics
 import numpy as np
 
+import pdb
+
 from lifelines.utils import dataframe_from_events_censorship
 
 def logrank_test(event_times_A, event_times_B, censorship_A = None, censorship_B=None, t_0 = -1):
@@ -15,7 +17,6 @@ def logrank_test(event_times_A, event_times_B, censorship_A = None, censorship_B
     t_0: the period under observation, -1 for all time.
 
   """
-
   if censorship_A is None:
     censorship_A = np.ones((event_times_A.shape[0], 1))  
   if censorship_B is None:
@@ -42,16 +43,17 @@ def logrank_test(event_times_A, event_times_B, censorship_A = None, censorship_B
   for t, n_t in N_dot.ix[N_dot.index<=t_0].itertuples():
     try:
       y_1 = Y_1.loc[t]
-    except KeyError:
+    except IndexError:
       pass      
     try:  
       y_2 = Y_2.loc[t]
-    except KeyError:
+    except IndexError:
       pass
     y_dot = Y_dot.loc[t]
     if y_dot != 0:
       v += 1.*y_1/y_dot
       v_sq += (1.*y_2*y_1)/(y_dot**2)
+
   E_1 = v
   N_1 = event_times_A[["observed"]].sum()[0]
   Z_1 = N_1 - E_1

@@ -19,7 +19,7 @@ def dataframe_from_events_censorship(event_times, censorship):
         individuals who were observed to have died (i.e. not censored.)
 
     """
-    df = pd.DataFrame( event_times, columns=["event_at"] )
+    df = pd.DataFrame( event_times.astype(float), columns=["event_at"] )
     df["removed"] = 1
     df["observed"] = censorship
     event_times = df.groupby("event_at").sum().sort_index()
