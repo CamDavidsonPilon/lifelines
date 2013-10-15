@@ -49,8 +49,8 @@ class MiscTests(unittest.TestCase):
       npt.assert_array_equal( c, aaf.cumulative_hazards_.columns[:3] )
 
     def test_datetimes_to_durations_days(self):
-        start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
-        end_date = ['2013-10-13', '2013-10-10', '2013-10-15']
+        start_date = ['2013-10-10 0:00:00', '2013-10-09', '2012-10-10']
+        end_date = ['2013-10-13', '2013-10-10 0:00:00', '2013-10-15']
         T,C = datetimes_to_durations(start_date, end_date)
         npt.assert_almost_equal(T, np.array([3,1,5+365]) )
         npt.assert_almost_equal(C, np.array([1,1,1], dtype=bool) )

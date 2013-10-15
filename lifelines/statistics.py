@@ -3,6 +3,10 @@ from itertools import combinations
 
 from lifelines.utils import dataframe_from_events_censorship, inv_normal_cdf,normal_cdf
 
+import pdb
+
+
+
 def multi_logrank_test( event_durations, groups, censorship=None, t_0=-1, alpha=0.95):
   """
   This uses the berferonni? correction
@@ -40,7 +44,7 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
   Returns 
     summary: a print-friendly string detailing the results of the test.
     p: the p-value
-    Z: the test result: True if reject the null, (pendantically None if inconclusive)
+    the test result: True if reject the null, (pendantically None if inconclusive)
   """
   if censorship_A is None:
     censorship_A = np.ones((event_times_A.shape[0], 1))  
@@ -56,14 +60,21 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
   event_times_A = dataframe_from_events_censorship( event_times_A, censorship_A)
   event_times_B = dataframe_from_events_censorship( event_times_B, censorship_B)
 
-  N_dot = event_times_AB[["observed"]].cumsum()
-  Y_dot = event_times_AB["removed"].sum() - event_times_AB["removed"].cumsum()
-  Y_1 = event_times_A["removed"].sum() - event_times_A["removed"].cumsum()
+  #Poisson Process of total deaths observed 
+  N_dot = event_times_AB[["observed"]].cumsum() 
+
+  #susceptible population remaining
+  Y_dot = event_times_AB["removed"].sum() - event_times_AB["removed"].cumsum() 
+
+  #susceptible population remaining in subpopulations
+  Y_1 = event_times_A["removed"].sum() - event_times_A["removed"].cumsum() 
   Y_2 = event_times_B["removed"].sum() - event_times_B["removed"].cumsum()
+
   v = 0
   v_sq = 0
   y_1 = Y_1.iloc[0]
   y_2 = Y_2.iloc[0]
+  n_t_ = 0
   for t, n_t in N_dot.ix[N_dot.index<=t_0].itertuples():
     try:
       #sorta a nasty hack to check of the time is not in the 
@@ -81,9 +92,13 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
       pass
     y_dot = Y_dot.loc[t]
     if y_dot != 0:
-      v += 1.*y_1/y_dot
-      v_sq += (1.*y_2*y_1)/(y_dot**2)
+      delta = n_t - n_t_
+      v += 1.*y_1*delta/y_dot
+      if y_dot >= 2:
+         v_sq += (1.*y_2*y_1*delta)*(y_dot - delta)/(y_dot**2)/(y_dot-1)
+      n_t_ = n_t
 
+  pdb.set_trace()
   E_1 = v
   N_1 = event_times_A[["observed"]].sum()[0]
   Z_1 = N_1 - E_1
