@@ -6,7 +6,36 @@ from pandas import to_datetime
 
 import pdb
 
-def dataframe_from_events_censorship(event_times, censorship):
+def group_event_series( groups, durations, censorship):
+    """
+    Joins multiple event series together into two dataframes:
+
+    groups: a (n,) array of individuals' group ids.
+    durations: a (n,) array of durations of each individual
+    censorship: a (n,) array of censorship, 1 if observed, 0 else. 
+
+    """
+    unique_groups = np.unique(groups)
+
+    #set first group
+    g = unique_groups[0]
+    ix = groups == g
+    T = durations[ix]
+    C = censorship[ix]
+
+    g_name = g.__str__()
+    data = dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name])
+    for g in unique_groups[1:]:
+        ix = groups == g
+        T = durations[ix]
+        C = censorship[ix]
+        g_name = g.__str__()
+        data = data.join(dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name]), how='outer' )
+    data = data.fillna(0)
+    return data.filter(like='removed:'), data.filter(like='observed:')
+
+
+def dataframe_from_events_censorship(event_times, censorship, columns=["removed", "observed"]):
     """
     Parameters:
         event_times: (n,1) array of event times 
@@ -20,15 +49,10 @@ def dataframe_from_events_censorship(event_times, censorship):
 
     """
     df = pd.DataFrame( event_times.astype(float), columns=["event_at"] )
-    df["removed"] = 1
-    df["observed"] = censorship
+    df[columns[0]] = 1
+    df[columns[1]] = censorship
     event_times = df.groupby("event_at").sum().sort_index()
     return event_times
-
-def basis(n,i):
-    x = np.zeros((n,1))
-    x[i] = 1
-    return x
 
 def datetimes_to_durations( start_times, end_times, fill_date = None, freq='D', dayfirst=False, na_values=None ):
     """
@@ -91,6 +115,23 @@ def AandS_approximation(p):
     t = np.sqrt(-2*np.log(p))
 
     return t - (c_0+c_1*t+c_2*t**2)/(1+d_1*t+d_2*t*t+d_3*t**3)
+
+def basis(n,i):
+    x = np.zeros((n,1))
+    x[i] = 1
+    return x
+
+def stuff_dataframe(df, new_index):
+    """
+    Fits a existing dataframe to conform to a new index.
+    """
+    n,m = new_index.shape[0], df.shape[1]
+    new_df = pd.DataFrame( np.zeros(n,m), index=index, columns = df.columns)
+
+    t_0 = new_index[0]
+    for t in new_index:
+        ix = (t_0 <= index)*(index<= t)
+        d 
 
 def kernel_smoother(timeline, hazards, sigma):
     pass
