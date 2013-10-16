@@ -27,4 +27,8 @@ setup(
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering",
     ],
+    install_requires=[
+        "numpy",
+        "pandas",
+    ]
 )
