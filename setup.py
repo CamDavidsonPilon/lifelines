@@ -34,4 +34,14 @@ setup(
     extras_require={
         "plotting": ["matplotlib"],
     },
+    package_data = {
+        "lifelines": [
+            "../README.md",
+            "../LICENSE",
+            "../MANIFEST.in",
+            "../*.ipynb",
+            "../datasets/*",
+            "../styles/*",
+        ]
+    }
 )
