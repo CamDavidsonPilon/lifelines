@@ -1,6 +1,5 @@
 #plotting
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -16,6 +15,7 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
     examples:
 
     """
+    import matplotlib.pyplot as plt
     N = lifetimes.shape[0]
     if N>100:
       print "warning: you may want to subsample to less than 100 individuals."
