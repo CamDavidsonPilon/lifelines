@@ -136,9 +136,9 @@ class KaplanMeierFitter(object):
       alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
       df = pd.DataFrame( index=self.timeline)
       name = self.survival_function_.columns[0]
-      v = self.survival_function_.values
-      df["%s_upper_%.2f"%(name,self.alpha)] = v**(np.exp(alpha2*cumulative_sq_/v/np.log(v)))
-      df["%s_lower_%.2f"%(name,self.alpha)] = v**(np.exp(-alpha2*cumulative_sq_/v/np.log(v)))
+      v = np.log(self.survival_function_.values)
+      df["%s_upper_%.2f"%(name,self.alpha)] =  np.exp(-np.exp(np.log(-v)+alpha2*np.sqrt(cumulative_sq_)/v))
+      df["%s_lower_%.2f"%(name,self.alpha)] =  np.exp(-np.exp(np.log(-v)-alpha2*np.sqrt(cumulative_sq_)/v))
       return df
 
   def _variance_f(self, N, d):

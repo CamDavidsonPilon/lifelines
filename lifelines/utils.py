@@ -6,7 +6,7 @@ from pandas import to_datetime
 
 import pdb
 
-def group_event_series( groups, durations, censorship):
+def group_event_series( groups, durations, censorship, limit=-1):
     """
     Joins multiple event series together into two dataframes:
 
@@ -16,6 +16,7 @@ def group_event_series( groups, durations, censorship):
         censorship: a (n,) array of censorship, 1 if observed, 0 else. 
 
     """
+
     unique_groups = np.unique(groups)
 
     #set first group
@@ -33,6 +34,9 @@ def group_event_series( groups, durations, censorship):
         g_name = g.__str__()
         data = data.join(dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name]), how='outer' )
     data = data.fillna(0)
+    #hmmm
+    if int(limit) != -1:
+        data = data.ix[:limit]
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:')
 
 
