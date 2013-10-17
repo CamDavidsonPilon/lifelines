@@ -133,6 +133,7 @@ class KaplanMeierFitter(object):
       return np.log(1 - 1.*d/N)
 
   def _bounds(self, cumulative_sq_):
+      # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdfg
       alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
       df = pd.DataFrame( index=self.timeline)
       name = self.survival_function_.columns[0]
