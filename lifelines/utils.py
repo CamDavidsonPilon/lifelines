@@ -10,9 +10,10 @@ def group_event_series( groups, durations, censorship):
     """
     Joins multiple event series together into two dataframes:
 
-    groups: a (n,) array of individuals' group ids.
-    durations: a (n,) array of durations of each individual
-    censorship: a (n,) array of censorship, 1 if observed, 0 else. 
+    Parameters
+        groups: a (n,) array of individuals' group ids.
+        durations: a (n,) array of durations of each individual
+        censorship: a (n,) array of censorship, 1 if observed, 0 else. 
 
     """
     unique_groups = np.unique(groups)
@@ -32,7 +33,7 @@ def group_event_series( groups, durations, censorship):
         g_name = g.__str__()
         data = data.join(dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name]), how='outer' )
     data = data.fillna(0)
-    return data.filter(like='removed:'), data.filter(like='observed:')
+    return unique_groups, data.filter(like='removed:'), data.filter(like='observed:')
 
 
 def dataframe_from_events_censorship(event_times, censorship, columns=["removed", "observed"]):

@@ -98,7 +98,6 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
          v_sq += (1.*y_2*y_1*delta)*(y_dot - delta)/(y_dot**2)/(y_dot-1)
       n_t_ = n_t
 
-  pdb.set_trace()
   E_1 = v
   N_1 = event_times_A[["observed"]].sum()[0]
   Z_1 = N_1 - E_1

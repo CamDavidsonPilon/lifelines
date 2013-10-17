@@ -53,8 +53,8 @@ class NelsonAalenFitter(object):
         else:
            self.timeline = timeline
         self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
-                                                                     self.timeline, self.censorship, 
-                                                                     self._additive_f, 0, columns, self._variance_f )
+                                                                     self.timeline, self._additive_f,
+                                                                      columns, self._variance_f )
         self.confidence_interval_ = self._bounds(cumulative_sq_)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
 
@@ -106,7 +106,7 @@ class KaplanMeierFitter(object):
          DataFrame with index either event_times or timelines (if not None), with
          values as the NelsonAalen estimate
        """
-       #need to sort event_times
+       #set to all observed if censorship is none
        if censorship is None:
           self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
        else:
@@ -118,9 +118,9 @@ class KaplanMeierFitter(object):
           self.timeline = self.event_times.index.values.copy()
        else:
           self.timeline = timeline
-       log_surivial_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline, 
-                                                                  self.censorship, self._additive_f, 
-                                                                  0, columns, self._variance_f )
+       log_surivial_function, cumulative_sq_ = _additive_estimate(self.event_times, 
+                                                                  self.timeline, self._additive_f, 
+                                                                   columns, self._variance_f )
        self.survival_function_ = np.exp(log_surivial_function)
        self.median_ = median_survival_times(self.survival_function_)
        self.confidence_interval_ = self._bounds(cumulative_sq_)
@@ -136,8 +136,9 @@ class KaplanMeierFitter(object):
       alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
       df = pd.DataFrame( index=self.timeline)
       name = self.survival_function_.columns[0]
-      df["%s_upper_%.2f"%(name,self.alpha)] = self.survival_function_.values**(np.exp(alpha2*cumulative_sq_/np.log(self.survival_function_.values)))
-      df["%s_lower_%.2f"%(name,self.alpha)] = self.survival_function_.values**(np.exp(-alpha2*cumulative_sq_/np.log(self.survival_function_.values)))
+      v = self.survival_function_.values
+      df["%s_upper_%.2f"%(name,self.alpha)] = v**(np.exp(alpha2*cumulative_sq_/v/np.log(v)))
+      df["%s_lower_%.2f"%(name,self.alpha)] = v**(np.exp(-alpha2*cumulative_sq_/v/np.log(v)))
       return df
 
   def _variance_f(self, N, d):
@@ -146,7 +147,7 @@ class KaplanMeierFitter(object):
      return 1.*d/(N*(N-d))
 
 
-def _additive_estimate(event_times, timeline, observed, additive_f, initial, columns, variance_f):
+def _additive_estimate(event_times, timeline, additive_f, columns, variance_f):
     """
 
     nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
@@ -162,10 +163,10 @@ def _additive_estimate(event_times, timeline, observed, additive_f, initial, col
 
     N = event_times["removed"].sum()
     t_0 =0
-    _additive_estimate_.ix[(timeline<t_0)]=initial
+    _additive_estimate_.ix[(timeline<t_0)]= 0
     _additive_var.ix[(timeline<t_0)]=0
 
-    v = initial
+    v = 0
     v_sq = 0
     for t, removed, observed_deaths in event_times.itertuples():
         times = (t_0<=timeline)*(timeline<t)
