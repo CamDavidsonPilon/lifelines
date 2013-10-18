@@ -41,7 +41,6 @@ def constant_(t,alpha=1,beta=1):
 
 FUNCS = [exp_comp_, log_, inverseSq_, constant_, periodic_ ] 
 
-
 def generate_covariates(n, d, n_binary=0, p=0.5):
     """
     n: the number of instances, integer

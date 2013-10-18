@@ -1,7 +1,5 @@
 import numpy as np
-from itertools import combinations
-
-from lifelines.utils import dataframe_from_events_censorship, inv_normal_cdf,normal_cdf
+from lifelines.utils import dataframe_from_events_censorship, inv_normal_cdf,normal_cdf,group_event_series
 
 import pdb
 
@@ -17,14 +15,53 @@ def multi_logrank_test( event_durations, groups, censorship=None, t_0=-1, alpha=
   if censorship is None:
       censorship = np.ones((event_durations.shape[0],1))
 
-  data = pd.DataFrame( np.c_[groups, event_durations, censorship], columns=['groups','durations','censorship']).groupby('group')
+  unique_groups, rm, obs = group_event_series(groups, event_durations, censorship,t_0)
+  n_groups = unique_groups.shape[0]
 
-  new_alpha = 1 - (1. - alpha)/(n*(n-1)/2.) #correction accounting for n pairwise comparisons.
+  N_j = obs.sum(0).values
+  n_ij = ( rm.sum(0).values - rm.cumsum(0).shift(1).fillna(0) )
+  N = obs.values.sum()
+  d_i = obs.sum(1)
+  n_i = rm.values.sum() - rm.sum(1).cumsum().shift(1).fillna(0)
+  Z_j =  N_j - n_ij.mul(d_i/n_i, axis='index').sum(0)
+
+
+  V_ = n_ij.div(n_i, axis='index').fillna(1)
+  m_ = np.sqrt((d_i*(n_i - d_i)/(n_i-1.)).fillna(1))
+  V_ = V_.mul(m_, axis='index')
+  V = -np.dot(V_.T, V_)
+  V[ arange(n), arange(n) ] = -V[ arange(n), arange(n) ]
+
+
+
 
 
   raise Exception
   #iterate over all combinations. 
-    
+  
+
+def __compute_expected_logrank(rm,obs):
+
+  #compute the total number of removed ind. per group
+  N_j = rm.sum(0).values
+
+  #compute the dynamic number of ind. remaining per group
+  n_ij = ( N_j - rm.cumsum(0) )
+
+  #compute the total numer of ind. removed
+  N = rm.values.sum()
+
+  #compute the total deaths observed over time.
+  d_i = obs.sum(1)
+
+  #compute the total ind. remaining over time
+  n_i = N - rm.sum(1).cumsum()
+
+  #compute the expected difference
+  Z_j =  N_j - ((d_i/n_i).values[:,None]*n_ij).sum(0)
+
+  return Z_j
+
 
 
 def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1):

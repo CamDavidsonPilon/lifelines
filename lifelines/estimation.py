@@ -7,8 +7,6 @@ from lifelines.plotting import plot_dataframes
 from lifelines.utils import dataframe_from_events_censorship, basis, inv_normal_cdf
 
 
-
-
 class NelsonAalenFitter(object):
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard. 
@@ -71,7 +69,7 @@ class NelsonAalenFitter(object):
     def _variance_f_smooth(self, N, d):
         if N==d==0:
             return 0
-        return np.sum([1./(N-i)**2 for i in range(d)])
+        return np.sum([1./(N-i)**2 for i in range(int(d))])
 
     def _variance_f_discrete(self, N, d):
         if N==d==0:
@@ -81,7 +79,7 @@ class NelsonAalenFitter(object):
     def _additive_f_smooth(self, N, d):
         if N==d==0:
           return 0
-        return np.sum([1./(N-i) for i in range(d)])
+        return np.sum([1./(N-i) for i in range(int(d))])
 
     def _additive_f_discrete(self, N,d ):
        #check it 0

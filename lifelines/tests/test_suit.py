@@ -105,6 +105,17 @@ class StatisticalTests(unittest.TestCase):
       kmf.fit(LIFETIMES, censorship = CENSORSHIP)
       npt.assert_almost_equal(kmf.survival_function_.values, self.kmc )
 
+  def test_not_to_break(self):
+      try:
+        naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
+        naf.fit(LIFETIMES)
+        naf = NelsonAalenFitter(nelson_aalen_smoothing=True)
+        naf.fit(LIFETIMES)
+        self.assertTrue(1==1)
+      except Exception as e:
+        print e
+        self.assertTrue(0==1)
+
   def test_equal_intensity(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(5, size=(200,1))
