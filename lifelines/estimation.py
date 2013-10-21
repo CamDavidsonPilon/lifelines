@@ -6,6 +6,7 @@ import pandas as pd
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import dataframe_from_events_censorship, basis, inv_normal_cdf
 
+import pdb
 
 class NelsonAalenFitter(object):
     """
@@ -28,11 +29,14 @@ class NelsonAalenFitter(object):
           self._variance_f = self._variance_f_discrete
           self._additive_f = self._additive_f_discrete
 
-    def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate']):
+    def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate'],alpha=None):
         """
         Parameters:
           event_times: an (n,1) array of times that the death event occured at 
           timeline: return the best estimate at the values in timelines (postively increasing)
+          columns: a length 1 array to name the column of the estimate.
+          alpha: the alpha value in the confidence intervals. Overrides the initializing
+             alpha for this call to fit only. 
 
         Returns:
           DataFrame with index either event_times or timelines (if not None), with
@@ -42,24 +46,26 @@ class NelsonAalenFitter(object):
         if censorship is None:
            self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
         else:
-           self.censorship = censorship.copy()
-
+           self.censorship = censorship.copy().astype(bool)
         self.event_times = dataframe_from_events_censorship(event_times, self.censorship)
 
+        if alpha is None:
+            alpha = self.alpha
+
         if timeline is None:
-           self.timeline = self.event_times.index.values.copy()
+           self.timeline = self.event_times.index.values.copy().astype(float)
         else:
            self.timeline = timeline
         self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
                                                                      self.timeline, self._additive_f,
                                                                       columns, self._variance_f )
-        self.confidence_interval_ = self._bounds(cumulative_sq_)
+        self.confidence_interval_ = self._bounds(cumulative_sq_,alpha)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
 
         return
 
-    def _bounds(self, cumulative_sq_):
-        alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
+    def _bounds(self, cumulative_sq_, alpha):
+        alpha2 = inv_normal_cdf(1 - (1-alpha)/2)
         df = pd.DataFrame( index=self.timeline)
         name = self.cumulative_hazard_.columns[0]
         df["%s_upper_%.2f"%(name,self.alpha)] = self.cumulative_hazard_.values*np.exp(alpha2*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
@@ -93,22 +99,29 @@ class KaplanMeierFitter(object):
   def __init__(self, alpha=0.95):
        self.alpha = alpha
 
-  def fit(self, event_times, censorship=None, timeline=None, columns=['KM-estimate']):
+  def fit(self, event_times, censorship=None, timeline=None, columns=['KM-estimate'], alpha=None):
        """
        Parameters:
          event_times: an (n,1) array of times that the death event occured at 
          timeline: return the best estimate at the values in timelines (postively increasing)
          censorship: an (n,1) array of booleans -- True if the the death was observed, False if the event 
             was lost (right-censored). Defaults all True if censorship==None
+         columns: a length 1 array to name the column of the estimate.
+         alpha: the alpha value in the confidence intervals. Overrides the initializing
+            alpha for this call to fit only. 
+
        Returns:
          DataFrame with index either event_times or timelines (if not None), with
-         values as the NelsonAalen estimate
+         values under column_name with the KaplanMeier estimate
        """
        #set to all observed if censorship is none
        if censorship is None:
           self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
        else:
           self.censorship = censorship.copy()
+
+       if not alpha:
+          alpha = self.alpha
 
        self.event_times = dataframe_from_events_censorship(event_times, self.censorship)
 
@@ -121,7 +134,7 @@ class KaplanMeierFitter(object):
                                                                    columns, self._variance_f )
        self.survival_function_ = np.exp(log_surivial_function)
        self.median_ = median_survival_times(self.survival_function_)
-       self.confidence_interval_ = self._bounds(cumulative_sq_)
+       self.confidence_interval_ = self._bounds(cumulative_sq_,alpha)
        self.plot = plot_dataframes(self, "survival_function_")
        return self
 
@@ -130,9 +143,9 @@ class KaplanMeierFitter(object):
         return 0
       return np.log(1 - 1.*d/N)
 
-  def _bounds(self, cumulative_sq_):
+  def _bounds(self, cumulative_sq_, alpha):
       # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdfg
-      alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
+      alpha2 = inv_normal_cdf((1.+ alpha)/2.)
       df = pd.DataFrame( index=self.timeline)
       name = self.survival_function_.columns[0]
       v = np.log(self.survival_function_.values)
@@ -161,7 +174,8 @@ def _additive_estimate(event_times, timeline, additive_f, columns, variance_f):
     _additive_var = pd.DataFrame(np.zeros((n,1)), index=timeline)
 
     N = event_times["removed"].sum()
-    t_0 =0
+    t_0 = 0
+
     _additive_estimate_.ix[(timeline<t_0)]= 0
     _additive_var.ix[(timeline<t_0)]=0
 
@@ -354,7 +368,7 @@ def median_survival_times(survival_functions):
     return qth_survival_times(0.5, survival_functions)
 
 def gaussian(t,T,sigma=1.):
-    return 1./np.sqrt(np.pi*2.*sigma**2)*np.exp(-0.5*(t-T)**2/sigma)
+    return 1./np.sqrt(np.pi*2.*sigma**2)*np.exp(-0.5*(t-T)**2/sigma**2)
 
 def ipcw(target_event_times, target_censorship, predicted_event_times ):
     pass

@@ -41,6 +41,31 @@ def constant_(t,alpha=1,beta=1):
 
 FUNCS = [exp_comp_, log_, inverseSq_, constant_, periodic_ ] 
 
+
+
+def right_censor_lifetimes(lifetimes, max_ , min_ = 0):
+  """
+  Right censor the deaths, uniformly
+    lifetimes: (n,) array of positive random variables
+    max_: the max time a censorship can occur
+    min_: the min time a censorship can occur 
+
+  Returns 
+    The actual observations including uniform right censoring, and
+    D_i (observed death or did not)
+
+  I think this is deprecated
+  """
+  n = lifetimes.shape[0]
+  u = min_ + (max_-min_)*random.rand(n)
+  observations = np.minimum( u, lifetimes)
+  return observations, lifetimes == observations
+
+
+
+
+### Models with covariates
+
 def generate_covariates(n, d, n_binary=0, p=0.5):
     """
     n: the number of instances, integer
@@ -214,21 +239,4 @@ def construct_survival_curves(hazard_rates, timelines):
   return pd.DataFrame( np.exp(-cumulative_hazards), index=timelines)
 
 
-def right_censor_lifetimes(lifetimes, max_, min_ = 0):
-  """
-  Right censor the deaths, uniformly
-    lifetimes: (n,) array of positive random variables
-    max_: the max time a censorship can occur
-    min_: the min time a censorship can occur 
-
-  Returns 
-    The actual observations including uniform right censoring, and
-    D_i (observed death or did not)
-
-  I think this is deprecated
-  """
-  n = lifetimes.shape[0]
-  u = min_ + (max_-min_)*random.rand(n)
-  observations = np.minimum( u, lifetimes)
-  return observations, lifetimes == observations
 
