@@ -181,11 +181,10 @@ def _additive_estimate(event_times, timeline, additive_f, columns, variance_f):
 
     v = 0
     v_sq = 0
-    for t, removed, observed_deaths in event_times.itertuples():
+    for t, removed, observed_deaths, missing in event_times.itertuples():
         times = (t_0<=timeline)*(timeline<t)
         _additive_estimate_.ix[times] = v  
         _additive_var.ix[times] = v_sq
-        missing = removed - observed_deaths
         N -= missing
         v += additive_f(N,observed_deaths)
         v_sq += variance_f(N,observed_deaths)

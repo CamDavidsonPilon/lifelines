@@ -10,7 +10,7 @@ def group_event_series( groups, durations, censorship, limit=-1):
     """
     Joins multiple event series together into two dataframes:
 
-    Parameters
+    Parameters:
         groups: a (n,) array of individuals' group ids.
         durations: a (n,) array of durations of each individual
         censorship: a (n,) array of censorship, 1 if observed, 0 else. 
@@ -25,38 +25,43 @@ def group_event_series( groups, durations, censorship, limit=-1):
     T = durations[ix]
     C = censorship[ix]
 
-    g_name = g.__str__()
-    data = dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name])
+    g_name = str(g)
+    data = dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name, 'censored:'+g_name])
     for g in unique_groups[1:]:
         ix = groups == g
         T = durations[ix]
         C = censorship[ix]
-        g_name = g.__str__()
-        data = data.join(dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name]), how='outer' )
+        g_name = str(g)
+        data = data.join(dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name, 'censored:'+g_name]), how='outer' )
     data = data.fillna(0)
-    #hmmm
+    #hmmm pandas...its too bad I can't do data.ix[:limit] and leave out the if. 
     if int(limit) != -1:
         data = data.ix[:limit]
-    return unique_groups, data.filter(like='removed:'), data.filter(like='observed:')
+    return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
 
-def dataframe_from_events_censorship(event_times, censorship, columns=["removed", "observed"]):
+def dataframe_from_events_censorship(event_times, censorship, columns=["removed", "observed", "censored"]):
     """
     Parameters:
         event_times: (n,1) array of event times 
         censorship: if not None, (n,1) boolean array, 1 if observed event, 0 is censored
+        columns: a 3-length array to call the, in order, removed individuals, observed deaths
+        and censorships.
 
     Returns:
         Pandas DataFrame with index as the unique times in event_times. The columns named 
         'removed' refers to the number of individuals who were removed from the population 
         by the end of the period. The column 'observed' refers to the number of removed 
-        individuals who were observed to have died (i.e. not censored.)
+        individuals who were observed to have died (i.e. not censored.) The column
+        'censored' is defined as 'removed' - 'observed' (the number of individuals who
+         left the population due to censorship)
 
     """
     df = pd.DataFrame( event_times.astype(float), columns=["event_at"] )
     df[columns[0]] = 1
     df[columns[1]] = censorship
     event_times = df.groupby("event_at").sum().sort_index()
+    event_times[columns[2]] = event_times[columns[0]] - event_times[columns[1]]
     return event_times
 
 def datetimes_to_durations( start_times, end_times, fill_date = None, freq='D', dayfirst=False, na_values=None ):
