@@ -12,7 +12,7 @@ import pdb
 import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter
-from ..statistics import logrank_test
+from ..statistics import logrank_test,multi_logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import datetimes_to_durations
@@ -151,6 +151,21 @@ class StatisticalTests(unittest.TestCase):
       summary, p_value, result = logrank_test(waltonT1, waltonT2)
       print summary
       self.assertTrue(result)
+
+  def test_multivariate_unequal_intensities(self):
+     T = np.random.exponential(10, size=300)
+     g = np.random.binomial(2, 0.5, size=300)
+     T[g==1] = np.random.exponential(6, size=(g==1).sum())
+     s, _, result = multi_logrank_test(T, g)
+     print s
+     self.assertTrue(result==True)
+
+  def test_multivariate_equal_intensities(self):
+     T = np.random.exponential(10, size=300)
+     g = np.random.binomial(2, 0.5, size=300)
+     s, _, result = multi_logrank_test(T, g)
+     print result
+     self.assertTrue(result==None)
 
 
   def kaplan_meier(self, censor=False):
