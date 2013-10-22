@@ -101,9 +101,7 @@ def datetimes_to_durations( start_times, end_times, fill_date = None, freq='D', 
 
     return T.values, C.values
 
-def normal_cdf(x):
-    #from http://www.hindawi.com/journals/mpe/2012/124029/, eq 4.3. Why hasn't J. Cook done this yet?
-    return 0.5*np.tanh( 39.*x/(2*np.sqrt(2*np.pi)) - 111./2.*np.arctan( 35.*x/111./np.sqrt(2.*np.pi)) ) + 0.5 
+
 
 def inv_normal_cdf(p):
     if p < 0.5:
@@ -131,17 +129,6 @@ def basis(n,i):
     x[i] = 1
     return x
 
-def stuff_dataframe(df, new_index):
-    """
-    Fits a existing dataframe to conform to a new index.
-    """
-    n,m = new_index.shape[0], df.shape[1]
-    new_df = pd.DataFrame( np.zeros(n,m), index=index, columns = df.columns)
-
-    t_0 = new_index[0]
-    for t in new_index:
-        ix = (t_0 <= index)*(index<= t)
-        d 
 
 def kernel_smoother(timeline, hazards, sigma):
     pass

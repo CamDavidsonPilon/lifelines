@@ -1,13 +1,24 @@
 import numpy as np
-from lifelines.utils import dataframe_from_events_censorship, inv_normal_cdf,normal_cdf,group_event_series
-
-import pdb
-
+from scipy import stats
+from lifelines.utils import group_event_series
 
 
-def multi_logrank_test( event_durations, groups, censorship=None, t_0=-1, alpha=0.95):
+def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True):
   """
-  This uses the berferonni? correction
+  Parameters:
+    event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
+    groups: a (n,) numpy array of unique group labels for each individual.
+    censorship: a (n,) numpy array of censorship events: 1 if observed death, 0 if censored. Defaults
+        to all observed.
+    alpha: the level of signifiance desired.
+    t_0: the final time to compare the series' up to. Defaults to all.
+    bonferroni: If true, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M
+          [http://en.wikipedia.org/wiki/Bonferroni_correction]
+
+  Returns:
+    summary: a print-friendly summary of the statistical test
+    p_value: the p-value
+    test_result: True if reject the null, (pendantically) None if we can't reject the null.
 
   """
   assert event_durations.shape[0] == groups.shape[0], "event_durations must be the same shape as groups"
@@ -15,53 +26,39 @@ def multi_logrank_test( event_durations, groups, censorship=None, t_0=-1, alpha=
   if censorship is None:
       censorship = np.ones((event_durations.shape[0],1))
 
-  unique_groups, rm, obs = group_event_series(groups, event_durations, censorship,t_0)
+  unique_groups, rm, obs, _ = group_event_series(groups, event_durations, censorship,t_0)
   n_groups = unique_groups.shape[0]
+  m = n_groups*(n_groups-1)/2
 
+  if bonferroni:
+    alpha = 1- (1-alpha)/m
+
+  #compute the factors needed
   N_j = obs.sum(0).values
   n_ij = ( rm.sum(0).values - rm.cumsum(0).shift(1).fillna(0) )
-  N = obs.values.sum()
   d_i = obs.sum(1)
   n_i = rm.values.sum() - rm.sum(1).cumsum().shift(1).fillna(0)
-  Z_j =  N_j - n_ij.mul(d_i/n_i, axis='index').sum(0)
+  ev = n_ij.mul(d_i/n_i, axis='index').sum(0)
+  Z_j =  N_j - ev
 
+  assert abs(Z_j.sum()) < 10e-8, "Sum is not zero." #this should move to a test eventually.
 
-  V_ = n_ij.div(n_i, axis='index').fillna(1)
-  m_ = np.sqrt((d_i*(n_i - d_i)/(n_i-1.)).fillna(1))
-  V_ = V_.mul(m_, axis='index')
+  #compute covariance matrix
+  V_ = n_ij.mul(np.sqrt(d_i)/n_i, axis='index').fillna(1)
   V = -np.dot(V_.T, V_)
-  V[ arange(n), arange(n) ] = -V[ arange(n), arange(n) ]
+  ix = np.arange(n_groups)
+  V[ix, ix] = V[ix, ix] + ev
 
+  #take the first n-1 groups 
+  U = Z_j.ix[:-1].dot(np.linalg.inv(V[:-1,:-1]).dot(Z_j.ix[:-1])) #Z.T*inv(V)*Z
 
+  #compute the p-values and tests
+  test_result, p_value = chisq_test(U, n_groups-1, alpha)
+  summary = pretty_print_summary(test_result, p_value, U, t_0=t_0, test='logrank', 
+                                 alpha=alpha, null_distribution='chi squared', 
+                                 df=n_groups-1, use_bonferonni=bonferroni)
 
-
-
-  raise Exception
-  #iterate over all combinations. 
-  
-
-def __compute_expected_logrank(rm,obs):
-
-  #compute the total number of removed ind. per group
-  N_j = rm.sum(0).values
-
-  #compute the dynamic number of ind. remaining per group
-  n_ij = ( N_j - rm.cumsum(0) )
-
-  #compute the total numer of ind. removed
-  N = rm.values.sum()
-
-  #compute the total deaths observed over time.
-  d_i = obs.sum(1)
-
-  #compute the total ind. remaining over time
-  n_i = N - rm.sum(1).cumsum()
-
-  #compute the expected difference
-  Z_j =  N_j - ((d_i/n_i).values[:,None]*n_ij).sum(0)
-
-  return Z_j
-
+  return summary, p_value, test_result
 
 
 def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1):
@@ -83,82 +80,25 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
     p: the p-value
     the test result: True if reject the null, (pendantically None if inconclusive)
   """
+
   if censorship_A is None:
-    censorship_A = np.ones((event_times_A.shape[0], 1))  
+    censorship_A = np.ones(event_times_A.shape[0])  
   if censorship_B is None:
-    censorship_B = np.ones((event_times_B.shape[0], 1))
+    censorship_B = np.ones(event_times_B.shape[0])
 
-  if t_0 == -1: 
-    t_0 = np.max([event_times_A.max(), event_times_B.max()])
-  
-  event_times_AB = dataframe_from_events_censorship( np.append(event_times_A,event_times_B),
-                                                     np.append( censorship_A, censorship_B) )
-
-  event_times_A = dataframe_from_events_censorship( event_times_A, censorship_A)
-  event_times_B = dataframe_from_events_censorship( event_times_B, censorship_B)
-
-  #Poisson Process of total deaths observed 
-  N_dot = event_times_AB[["observed"]].cumsum() 
-
-  #susceptible population remaining
-  Y_dot = event_times_AB["removed"].sum() - event_times_AB["removed"].cumsum() 
-
-  #susceptible population remaining in subpopulations
-  Y_1 = event_times_A["removed"].sum() - event_times_A["removed"].cumsum() 
-  Y_2 = event_times_B["removed"].sum() - event_times_B["removed"].cumsum()
-
-  v = 0
-  v_sq = 0
-  y_1 = Y_1.iloc[0]
-  y_2 = Y_2.iloc[0]
-  n_t_ = 0
-  for t, n_t in N_dot.ix[N_dot.index<=t_0].itertuples():
-    try:
-      #sorta a nasty hack to check of the time is not in the 
-      # data. Could be done better.
-      y_1 = Y_1.loc[t]
-    except KeyError:
-      pass  
-    except IndexError:
-      pass
-    try:  
-      y_2 = Y_2.loc[t]
-    except KeyError:
-      pass
-    except IndexError:
-      pass
-    y_dot = Y_dot.loc[t]
-    if y_dot != 0:
-      delta = n_t - n_t_
-      v += 1.*y_1*delta/y_dot
-      if y_dot >= 2:
-         v_sq += (1.*y_2*y_1*delta)*(y_dot - delta)/(y_dot**2)/(y_dot-1)
-      n_t_ = n_t
-
-  E_1 = v
-  N_1 = event_times_A[["observed"]].sum()[0]
-  Z_1 = N_1 - E_1
-  U = Z_1/np.sqrt(v_sq) #this is approx normal under null.
-  
-  test_result, p_value = z_test(U,alpha)
-  summary = pretty_print_summary(test_result, p_value, U, t_0=t_0, test='logrank', alpha=alpha)
-  return summary, p_value, test_result
+  event_times = np.r_[event_times_A, event_times_B]
+  groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
+  censorship = np.r_[censorship_A,censorship_B]
+  return multi_logrank_test( event_times, groups, censorship,alpha=alpha, t_0=t_0)
 
 
-def p_value_normal(U):
-  return 2*normal_cdf(-np.abs(U))
 
-def z_test(Z, alpha):
-  """
-  Pendantically returns None, p-value if test is inconclusive, else returns True, p-value.
-  """
-  p = p_value_normal(Z)
-  if (Z < inv_normal_cdf((1.-alpha)/2.) ) or (Z > inv_normal_cdf((1+alpha)/2)):
-    #reject null
-    return True, p #TODO
+def chisq_test(U, degrees_freedom, alpha):
+  p_value = 1 - stats.chi2.cdf(U, degrees_freedom)
+  if p_value < 1-alpha:
+    return True, p_value
   else:
-    #cannot reject null
-    return None, p
+    return None, p_value
 
 def pretty_print_summary( test_results, p_value, test_statistic, **kwargs):
   """
@@ -171,11 +111,11 @@ def pretty_print_summary( test_results, p_value, test_statistic, **kwargs):
   meta_data = pretty_print_meta_data( kwargs )
   s += meta_data + "\n"
   s += HEADER + "\n"
-  s += "         %.5f |            %.3f |   %s   "%(p_value, test_statistic, test_results)
+  s += "         %.5f |              %.3f |     %s   "%(p_value, test_statistic, test_results)
   return s
 
 def pretty_print_meta_data(dictionary):
   s = ""
   for k,v in dictionary.iteritems():
-      s=  s + "   " + k.__str__() +  ": " + v.__str__() + "\n"
+      s=  s + "   " + k.__str__().replace('_', ' ') +  ": " + v.__str__() + "\n"
   return s
