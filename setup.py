@@ -30,6 +30,7 @@ setup(
     install_requires=[
         "numpy",
         "pandas",
+        "scipy"
     ],
     extras_require={
         "plotting": ["matplotlib"],

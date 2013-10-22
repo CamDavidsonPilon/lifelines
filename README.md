@@ -10,7 +10,7 @@ and helper functions.
 
 ####Dependencies:
 
-The usual Python data stack: **numpy, pandas, matplotlib (optional)**
+The usual Python data stack: **numpy, scipy, pandas **[a modern version please]**, matplotlib (optional)**
 
 
 ## (Quick) Intro to *lifelines* and survival analysis
