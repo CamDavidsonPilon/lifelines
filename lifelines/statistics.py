@@ -3,6 +3,37 @@ from scipy import stats
 from lifelines.utils import group_event_series
 
 
+def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1):
+  """
+  Measures and reports on whether two intensity processes are different. That is, given two 
+  event series, determines whether the data generating processes are statistically different. 
+  The test-statistic is chi-squared under the null hypothesis. 
+
+  Pre lifelines 0.2: this returned a test statistic. 
+  Post lifelines 0.2: this returns the results of the entire test. 
+
+  See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
+
+  Parameters:
+    event_times_X: a (nx1) array of event durations (birth to death,...) for the population.
+    t_0: the period under observation, -1 for all time.
+
+  Returns 
+    summary: a print-friendly string detailing the results of the test.
+    p: the p-value
+    the test result: True if reject the null, (pendantically None if inconclusive)
+  """
+
+  if censorship_A is None:
+    censorship_A = np.ones(event_times_A.shape[0])  
+  if censorship_B is None:
+    censorship_B = np.ones(event_times_B.shape[0])
+
+  event_times = np.r_[event_times_A, event_times_B]
+  groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
+  censorship = np.r_[censorship_A,censorship_B]
+  return multi_logrank_test( event_times, groups, censorship,alpha=alpha, t_0=t_0)
+
 def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True):
   """
   Parameters:
@@ -39,6 +70,8 @@ def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_
   d_i = obs.sum(1)
   n_i = rm.values.sum() - rm.sum(1).cumsum().shift(1).fillna(0)
   ev = n_ij.mul(d_i/n_i, axis='index').sum(0)
+
+  #vector of observed minus expected
   Z_j =  N_j - ev
 
   assert abs(Z_j.sum()) < 10e-8, "Sum is not zero." #this should move to a test eventually.
@@ -61,38 +94,6 @@ def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_
   return summary, p_value, test_result
 
 
-def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1):
-  """
-  Measures and reports on whether two intensity processes are different. That is, given two 
-  event series, determines whether the data generating processes are statistically different. 
-
-  Pre lifelines 0.2: this returned a test statistic. 
-  Post lifelines 0.2: this returns the results of the entire test. 
-
-  See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
-
-  Parameters:
-    event_times_X: a (nx1) array of event durations (birth to death,...) for the population.
-    t_0: the period under observation, -1 for all time.
-
-  Returns 
-    summary: a print-friendly string detailing the results of the test.
-    p: the p-value
-    the test result: True if reject the null, (pendantically None if inconclusive)
-  """
-
-  if censorship_A is None:
-    censorship_A = np.ones(event_times_A.shape[0])  
-  if censorship_B is None:
-    censorship_B = np.ones(event_times_B.shape[0])
-
-  event_times = np.r_[event_times_A, event_times_B]
-  groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
-  censorship = np.r_[censorship_A,censorship_B]
-  return multi_logrank_test( event_times, groups, censorship,alpha=alpha, t_0=t_0)
-
-
-
 def chisq_test(U, degrees_freedom, alpha):
   p_value = 1 - stats.chi2.cdf(U, degrees_freedom)
   if p_value < 1-alpha:
@@ -105,8 +106,6 @@ def pretty_print_summary( test_results, p_value, test_statistic, **kwargs):
   kwargs are experiment meta-data. 
   """
   HEADER = "   __ p-value ___|__ test statistic __|__ test results __"
-
-
   s = "Results\n"
   meta_data = pretty_print_meta_data( kwargs )
   s += meta_data + "\n"
