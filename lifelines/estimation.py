@@ -325,8 +325,7 @@ class AalenAdditiveFitter(object):
     except:
       X_ = X.copy()
     X_ = X.copy() if not self.fit_intercept else np.c_[ X.copy(), np.ones((n,1)) ]
-    return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=self.hazards_.columns)
-
+    return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline )
   def predict_survival_function(self,X):
     """
     X: a (n,d) covariate matrix

@@ -1,9 +1,12 @@
+from itertools import combinations
+
 import numpy as np
 from scipy import stats
+import pandas as pd
+
 from lifelines.utils import group_event_series
 
-
-def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1):
+def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1, **kwargs):
   """
   Measures and reports on whether two intensity processes are different. That is, given two 
   event series, determines whether the data generating processes are statistically different. 
@@ -32,10 +35,71 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
   event_times = np.r_[event_times_A, event_times_B]
   groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
   censorship = np.r_[censorship_A,censorship_B]
-  return multi_logrank_test( event_times, groups, censorship,alpha=alpha, t_0=t_0, bonferonni=False)
+  return multivariate_logrank_test( event_times, groups, censorship,alpha=alpha, t_0=t_0, **kwargs)
 
-def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True):
+
+def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True):
+    """
+    Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2). 
+    We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase 
+    the chance that here will exist a significantly different pair purely by chance. For this reason, we use the 
+    Bonferroni correction (rewight the alpha value higher to accomidate the multiple tests).
+
+
+    Parameters:
+      event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
+      groups: a (n,) numpy array of unique group labels for each individual.
+      censorship: a (n,) numpy array of censorship events: 1 if observed death, 0 if censored. Defaults
+          to all observed.
+      alpha: the level of signifiance desired.
+      t_0: the final time to compare the series' up to. Defaults to all.
+      bonferroni: If true, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M
+            [http://en.wikipedia.org/wiki/Bonferroni_correction]
+
+    Returns:
+      S: a (n,n) dataframe of print-friendly test summaries (np.nan on the diagonal).
+      P: a (n,n) dataframe of p-values (np.nan on the diagonal).
+      T: a (n,n) dataframe of test results (True is significant, None if not) (np.nan on the diagonal).
+    """
+    
+    if censorship is None:
+        censorship = np.ones((event_durations.shape[0],1))
+
+    unique_groups = np.unique(groups)
+    n = unique_groups.shape[0]
+
+    if bonferroni:
+      m = 0.5*n*(n-1)
+      alpha = 1- (1-alpha)/m
+
+    P = np.zeros((n,n), dtype=float)
+    T = np.empty((n,n), dtype=object)
+    S = np.empty((n,n), dtype=object)
+
+    np.fill_diagonal(P, np.nan)
+    np.fill_diagonal(T, np.nan)
+    np.fill_diagonal(S, np.nan)
+
+    for i1, i2 in combinations(np.arange(n),2):
+        g1, g2 = unique_groups[[i1,i2]]
+        ix1,ix2 = (groups == g1), (groups == g2)
+        summary, p_value, result = logrank_test(event_durations[ix1], event_durations[ix2], 
+                                           censorship[ix1], censorship[ix2], 
+                                           alpha=alpha, t_0=t_0, use_bonferroni=bonferroni)
+        T[i1,i2], T[i2,i1] = result, result 
+        P[i1,i2], P[i2,i1] = p_value, p_value
+        S[i1,i2], S[i2,i1] = summary, summary
+
+    return [pd.DataFrame(x, columns=unique_groups, index=unique_groups) for x in [S,P,T]]
+
+
+
+def multivariate_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_0=-1, **kwargs):
   """
+  H_0: all event series are from the same generating processes
+  H_A: there exist atleast one group that differs from the other.
+
+
   Parameters:
     event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
     groups: a (n,) numpy array of unique group labels for each individual.
@@ -43,9 +107,7 @@ def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_
         to all observed.
     alpha: the level of signifiance desired.
     t_0: the final time to compare the series' up to. Defaults to all.
-    bonferroni: If true, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M
-          [http://en.wikipedia.org/wiki/Bonferroni_correction]
-
+   
   Returns:
     summary: a print-friendly summary of the statistical test
     p_value: the p-value
@@ -59,10 +121,6 @@ def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_
 
   unique_groups, rm, obs, _ = group_event_series(groups, event_durations, censorship,t_0)
   n_groups = unique_groups.shape[0]
-  m = n_groups*(n_groups-1)/2
-
-  if bonferroni:
-    alpha = 1- (1-alpha)/m
 
   #compute the factors needed
   N_j = obs.sum(0).values
@@ -89,7 +147,7 @@ def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_
   test_result, p_value = chisq_test(U, n_groups-1, alpha)
   summary = pretty_print_summary(test_result, p_value, U, t_0=t_0, test='logrank', 
                                  alpha=alpha, null_distribution='chi squared', 
-                                 df=n_groups-1, use_bonferonni=bonferroni)
+                                 df=n_groups-1,**kwargs)
 
   return summary, p_value, test_result
 

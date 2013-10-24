@@ -44,11 +44,12 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
 
 
 def plot_dataframes(self, estimate):
-    def plot(c="#348ABD", **kwargs):
+    def plot(c="#348ABD", ci_legend=False, **kwargs):
       estimate_ = getattr(self, estimate)
       n = estimate_.shape[0]
       ax = estimate_.plot(c=c, marker='o', markeredgewidth=0, markersize=10./n, **kwargs)
-      kwargs["ax"] = ax
+      kwargs["ax"]=ax
+      kwargs["legend"]=ci_legend
       self.confidence_interval_.plot(c=c, linestyle="--", **kwargs)
       return ax
     return plot

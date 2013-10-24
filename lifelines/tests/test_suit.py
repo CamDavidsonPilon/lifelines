@@ -12,18 +12,10 @@ import pdb
 import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter
-from ..statistics import logrank_test,multi_logrank_test
+from ..statistics import logrank_test,multivariate_logrank_test, pairwise_logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import datetimes_to_durations
-
-LIFETIMES = np.array([2,4,4,4,5,7,10,11,11,12])
-CENSORSHIP = np.array([1,1,0,1,0,1,1,1,1,0])
-
-waltonT2 = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26., 26., 33., 33., 47., 62., 62., 9., 9., 9., 15., 15., 22., 22., 22., 22., 29., 29., 29., 29., 29., 36., 36., 43.])
-waltonT1 = np.array([33., 54., 54., 61., 61., 61., 61., 61., 61., 61., 61., 61., 61., 61., 69., 69., 69., 69., 69., 69., 69., 69., 69., 69., 69., 32., 53., 53., 60., 60., 60., 60., 60., 68., 68., 68., 68., 68., 68., 68., 68., 68., 68., 75., 17., 51., 51., 51., 58., 58., 58., 58., 66., 66., 7., 7., 41., 41., 41., 41., 41., 41., 41., 48., 48., 48., 48., 48., 48., 48., 48., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 63., 63., 63., 63., 63., 63., 63., 63., 63., 69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45., 45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 66.])
-
-N = len(LIFETIMES)
 
 class MiscTests(unittest.TestCase):
 
@@ -147,7 +139,6 @@ class StatisticalTests(unittest.TestCase):
       self.assertTrue(result)
 
   def test_waltons_data(self):
-  
       summary, p_value, result = logrank_test(waltonT1, waltonT2)
       print summary
       self.assertTrue(result)
@@ -156,16 +147,28 @@ class StatisticalTests(unittest.TestCase):
      T = np.random.exponential(10, size=300)
      g = np.random.binomial(2, 0.5, size=300)
      T[g==1] = np.random.exponential(6, size=(g==1).sum())
-     s, _, result = multi_logrank_test(T, g)
+     s, _, result = multivariate_logrank_test(T, g)
      print s
      self.assertTrue(result==True)
 
   def test_multivariate_equal_intensities(self):
      T = np.random.exponential(10, size=300)
      g = np.random.binomial(2, 0.5, size=300)
-     s, _, result = multi_logrank_test(T, g)
-     print result
+     s, _, result = multivariate_logrank_test(T, g)
+     print s
      self.assertTrue(result==None)
+
+  def test_pairwise_waltons_data(self):
+      _,_,R = pairwise_logrank_test(waltonT, waltonG)
+      print R
+      self.assertTrue(R.values[0,1])
+
+  def test_pairwise_logrank_test(self):
+      T = np.random.exponential(10, size=300)
+      g = np.random.binomial(2, 0.7, size=300)
+      S, P, R = pairwise_logrank_test(T, g, alpha=0.95)
+      V = np.array([[np.nan,None,None],[None,np.nan,None],[None,None,np.nan]])
+      npt.assert_array_equal(R,V)
 
 
   def kaplan_meier(self, censor=False):
@@ -249,6 +252,64 @@ class PlottingTests(unittest.TestCase):
       N = 20
       T, C= generate_random_lifetimes(hz, t, size=N, censor=True )
       plot_lifetimes(T, censorship=C)
+
+#some data
+
+LIFETIMES = np.array([2,4,4,4,5,7,10,11,11,12])
+CENSORSHIP = np.array([1,1,0,1,0,1,1,1,1,0])
+
+waltonT2 = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26., 26., 33., 33., 47., 62., 62., 9., 9., 9., 15., 15., 22., 22., 22., 22., 29., 29., 29., 29., 29., 36., 36., 43.])
+waltonT1 = np.array([33., 54., 54., 61., 61., 61., 61., 61., 61., 61., 61., 61., 61., 61., 69., 69., 69., 69., 69., 69., 69., 69., 69., 69., 69., 32., 53., 53., 60., 60., 60., 60., 60., 68., 68., 68., 68., 68., 68., 68., 68., 68., 68., 75., 17., 51., 51., 51., 58., 58., 58., 58., 66., 66., 7., 7., 41., 41., 41., 41., 41., 41., 41., 48., 48., 48., 48., 48., 48., 48., 48., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 63., 63., 63., 63., 63., 63., 63., 63., 63., 69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45., 45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 66.])
+
+waltonG = np.array(['miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
+       'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
+       'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
+       'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
+       'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
+       'miR-137', 'miR-137', 'miR-137', 'miR-137', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control', 'control', 'control', 'control', 'control', 'control',
+       'control'], dtype=object)
+
+waltonT = np.array([  6.,  13.,  13.,  13.,  19.,  19.,  19.,  26.,  26.,  26.,  26.,
+        26.,  33.,  33.,  47.,  62.,  62.,   9.,   9.,   9.,  15.,  15.,
+        22.,  22.,  22.,  22.,  29.,  29.,  29.,  29.,  29.,  36.,  36.,
+        43.,  33.,  54.,  54.,  61.,  61.,  61.,  61.,  61.,  61.,  61.,
+        61.,  61.,  61.,  61.,  69.,  69.,  69.,  69.,  69.,  69.,  69.,
+        69.,  69.,  69.,  69.,  32.,  53.,  53.,  60.,  60.,  60.,  60.,
+        60.,  68.,  68.,  68.,  68.,  68.,  68.,  68.,  68.,  68.,  68.,
+        75.,  17.,  51.,  51.,  51.,  58.,  58.,  58.,  58.,  66.,  66.,
+         7.,   7.,  41.,  41.,  41.,  41.,  41.,  41.,  41.,  48.,  48.,
+        48.,  48.,  48.,  48.,  48.,  48.,  56.,  56.,  56.,  56.,  56.,
+        56.,  56.,  56.,  56.,  56.,  56.,  56.,  56.,  56.,  56.,  56.,
+        56.,  56.,  63.,  63.,  63.,  63.,  63.,  63.,  63.,  63.,  63.,
+        69.,  69.,  38.,  38.,  45.,  45.,  45.,  45.,  45.,  45.,  45.,
+        45.,  45.,  45.,  53.,  53.,  53.,  53.,  53.,  60.,  60.,  60.,
+        60.,  60.,  60.,  60.,  60.,  60.,  60.,  60.,  66.])
+
+N = len(LIFETIMES)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
