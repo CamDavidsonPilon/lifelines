@@ -32,7 +32,7 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
   event_times = np.r_[event_times_A, event_times_B]
   groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
   censorship = np.r_[censorship_A,censorship_B]
-  return multi_logrank_test( event_times, groups, censorship,alpha=alpha, t_0=t_0)
+  return multi_logrank_test( event_times, groups, censorship,alpha=alpha, t_0=t_0, bonferonni=False)
 
 def multi_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True):
   """
