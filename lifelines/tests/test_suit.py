@@ -35,7 +35,7 @@ class MiscTests(unittest.TestCase):
       npt.assert_almost_equal(answer, approx_answer, decimal=4)
 
     def test_aalen_additive_allows_numpy_or_df(self):
-      t = np.random.random((10,1)).T
+      t = np.random.random((10,1))
       dfX = pd.DataFrame(np.random.random((10,3)), columns = ["A", "B", "C"])
       c = dfX.columns
       npX = np.random.random((10,5))
