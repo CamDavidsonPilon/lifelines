@@ -10,30 +10,30 @@ and helper functions.
 
 ####Dependencies:
 
-The usual Python data stack: **numpy, scipy, pandas **[a modern version please]**, matplotlib (optional)**
+The usual Python data stack: **numpy, scipy, pandas **[a modern version please]**, matplotlib (optional).
 
 
 ## (Quick) Intro to *lifelines* and survival analysis
 
-**Work in progress (50%) **
+*Work in progress (75%)*
 
 If you are new to survival analysis, wondering why it is useful, or are interested in examples,
-I recommend running the `Tutorial and Examples.ipynb` notebook in a IPython notebook session. Alternatively, you can view it online [`here`](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
+I recommend running the `Tutorial and Examples.ipynb` notebook in a IPython notebook session. Alternatively, you can [view it online here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
 
 
 ## Documentation
 
-**Work in progress (80%) **
+*Work in progress (70%)*
 
 I've added documentation to a notebook, `Documentation.ipynb`, that adds detail to 
-the classes, methods and data types. You can use the IPython notebook to view it, or view it [`online`](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
+the classes, methods and data types. You can use the IPython notebook to view it, or [view it online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
 
 
 
 ### Enough talk - just show me the examples!
 
-These demonstrate some functionality. If you are unfamiliar with Survival Analysis, I would start [here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
+These demonstrate some functionality. If you are unfamiliar with Survival Analysis, I would [start here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
 ### Generating artificial datasets
 
