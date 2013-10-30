@@ -250,7 +250,7 @@ class AalenAdditiveFitter(object):
     if columns is None:
       columns = range(d) 
     else:
-      columns =  [c for c in columns ] 
+      columns = [c for c in columns] 
 
     if self.fit_intercept:
       columns += ['baseline']
@@ -259,20 +259,21 @@ class AalenAdditiveFitter(object):
     if censorship is None:
         observed = np.ones(n, dtype=bool)
     else:
-        observed = censorship.reshape(n)
+        observed = censorship[ix].reshape(n)
 
     #set the timeline -- this is used as DataFrame index in the results
     if timeline is None:
-        timeline = sorted_event_times
+        timeline = sorted_event_times.copy()
 
-    timeline = timeline.astype(float)
+    timeline = np.unique(timeline.astype(float))
     if timeline[0] > 0:
        timeline = np.insert(timeline,0,0.)
     
+    unique_times = np.unique(timeline)
     zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
-    self.cumulative_hazards_ = pd.DataFrame(zeros.copy() , index=timeline, columns = columns)
-    self.hazards_ = pd.DataFrame(np.zeros((event_times.shape[0],d+self.fit_intercept)), index=sorted_event_times, columns = columns)
-    self._variance = pd.DataFrame(zeros.copy(), index=timeline, columns = columns)
+    self.cumulative_hazards_ = pd.DataFrame(zeros.copy() , index=unique_times, columns = columns)
+    self.hazards_ = pd.DataFrame(np.zeros((event_times.shape[0],d+self.fit_intercept)), index=event_times[:,0], columns = columns)
+    self._variance = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
     
     #create the penalizer matrix for L2 regression
     penalizer = self.penalizer*np.eye(d + self.fit_intercept)
@@ -361,11 +362,15 @@ class AalenAdditiveFitter(object):
 
 def qth_survival_times(q, survival_functions):
     """
-    survival_functions: a (n,d) dataframe or numpy array.
-    If dataframe, will return index values (actual times)
-    If numpy array, will return indices.
+    Parameters:
+      q: a float between 0 and 1.
+      survival_functions: a (n,d) dataframe or numpy array.
+        If dataframe, will return index values (actual times)
+        If numpy array, will return indices.
 
-    Returns -1 if infinity.
+    Returns:
+      v: an array containing the first times the value was crossed.
+        -1 if infinity.
     """
     assert 0<=q<=1, "q must be between 0 and 1"
     sv_b = (survival_functions < q)
