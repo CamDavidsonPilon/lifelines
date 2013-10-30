@@ -342,6 +342,7 @@ class AalenAdditiveFitter(object):
       X_ = X.copy()
     X_ = X.copy() if not self.fit_intercept else np.c_[ X.copy(), np.ones((n,1)) ]
     return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=columns )
+  
   def predict_survival_function(self,X, columns=None):
     """
     X: a (n,d) covariate matrix
@@ -357,9 +358,7 @@ class AalenAdditiveFitter(object):
     """
     return median_survival_times(self.predict_survival_function(X))
 
-
 #utils
-
 def qth_survival_times(q, survival_functions):
     """
     Parameters:
