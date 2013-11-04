@@ -20,12 +20,12 @@ class coeff_func(object):
 
 @coeff_func
 def exp_comp_(t,alpha=1,beta =1):
-  """beta*(1 - np.exp(-alpha*t))"""
-  return beta*(1 - np.exp(-alpha*t))
+  """beta*(1 - np.exp(-alpha*(t-beta)))"""
+  return beta*(1 - np.exp(-alpha*np.maximum(0,t-10*beta)))
 @coeff_func
 def log_(t,alpha=1, beta=1):
-  """beta*np.log(alpha*t+1)"""
-  return beta*np.log(alpha*t+1)
+  """beta*np.log(alpha*(t-beta)+1)"""
+  return beta*np.log(alpha*np.maximum(0,t-10*beta)+1)
 @coeff_func
 def inverseSq_(t,alpha=1,beta=1):
     """beta/(t+alpha+1)**(0.5)"""
@@ -174,7 +174,7 @@ def generate_random_lifetimes(hazard_rates,timelines, size = 1, censor=None):
     size: the number to return, per hardard rate 
     censor: If True, adds uniform censoring between timelines.max() and  0
             If a postive number, censors all events above that value.
-            If (n,) np.array, but be positive. 
+            If (n,) np.array >=0 , censor elementwise. 
 
 
   Returns:
@@ -200,11 +200,12 @@ def generate_random_lifetimes(hazard_rates,timelines, size = 1, censor=None):
         rv = T*random.uniform(size=survival_times.shape)
       else:
         rv = censor
+
       observed = np.less_equal(survival_times, rv)
       survival_times = np.minimum(rv, survival_times)
       return survival_times.T, observed.T
   else:
-      return survival_times.T
+      return survival_times
 
 def generate_observational_matrix(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
   hz, coeff, covariates = generate_hazard_rates(n,d, timelines, constant=False, independent=0, n_binary=0, model="aalen")

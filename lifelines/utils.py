@@ -8,13 +8,13 @@ import pdb
 
 def group_event_series( groups, durations, censorship, limit=-1):
     """
-    Joins multiple event series together into two dataframes:
+    Joins multiple event series together into dataframes. A generalization of 
+    `dataframe_from_events_censorship` to groups.
 
     Parameters:
         groups: a (n,) array of individuals' group ids.
         durations: a (n,) array of durations of each individual
         censorship: a (n,) array of censorship, 1 if observed, 0 else. 
-
     """
 
     unique_groups = np.unique(groups)
@@ -40,13 +40,13 @@ def group_event_series( groups, durations, censorship, limit=-1):
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
 
-def dataframe_from_events_censorship(event_times, censorship, columns=["removed", "observed", "censored"]):
+def dataframe_from_events_censorship(event_times, censorship, columns=["removed", "observed", "censored"], weights=None):
     """
     Parameters:
         event_times: (n,1) array of event times 
         censorship: if not None, (n,1) boolean array, 1 if observed event, 0 is censored
         columns: a 3-length array to call the, in order, removed individuals, observed deaths
-        and censorships.
+          and censorships.
 
     Returns:
         Pandas DataFrame with index as the unique times in event_times. The columns named 
@@ -58,7 +58,7 @@ def dataframe_from_events_censorship(event_times, censorship, columns=["removed"
 
     """
     df = pd.DataFrame( event_times.astype(float), columns=["event_at"] )
-    df[columns[0]] = 1
+    df[columns[0]] = 1 if weights == None else weights
     df[columns[1]] = censorship
     event_times = df.groupby("event_at").sum().sort_index()
     event_times[columns[2]] = event_times[columns[0]] - event_times[columns[1]]
@@ -101,8 +101,6 @@ def datetimes_to_durations( start_times, end_times, fill_date = None, freq='D', 
 
     return T.values, C.values
 
-
-
 def inv_normal_cdf(p):
     if p < 0.5:
       return -AandS_approximation(p)
@@ -123,6 +121,34 @@ def AandS_approximation(p):
     t = np.sqrt(-2*np.log(p))
 
     return t - (c_0+c_1*t+c_2*t**2)/(1+d_1*t+d_2*t*t+d_3*t**3)
+
+
+def median_loss(T, T_pred):
+    return np.abs(T-T_pred).mean()
+
+def cross_validation(fitter, T, X, censorship=None, k=5, loss_function="median"):
+    """
+    This implements the censor-sensative loss function as given in 
+    'Prediction Performance of Survival Models', Yan Yuan, 2008
+    """
+
+    pass
+
+def yaun_loss(fitter, T_true, T_pred, X_train, T_train, censorship=None):
+
+
+    if censorship==None:
+        t = T_pred.shape[0]
+        sC = np.ones((t,1))
+        censorship = np.ones((t,1))
+    else:
+        #We are estimating S_c(*|z),is the probability that the 
+        # jth individual survived to time yj without being censored
+        fitter.fit(T_train,X_train, censorship=1-censorship, timeline=T_true) 
+        sC = fitter.predict_survival_function(X_train).ix[T_true[:,0]].values.diagonal()[:,None] #dirty way to get this
+
+    return (censorship*(T_pred-T_true)**2/sC).mean()
+
 
 def basis(n,i):
     x = np.zeros((n,1))

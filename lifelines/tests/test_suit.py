@@ -171,6 +171,22 @@ class StatisticalTests(unittest.TestCase):
       npt.assert_array_equal(R,V)
 
 
+  def test_aalen_additive_median_predictions_split_data(self):
+      #generate some hazard rates and a survival data set
+      n = 2500
+      d = 5
+      timeline = np.linspace(0,70,5000)
+      hz, coef, X = generate_hazard_rates(n,d, timeline )
+      T = generate_random_lifetimes(hz, timeline)
+      #fit it to Aalen's model
+      aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+      aaf.fit(T,X, censorship=None)
+
+      #predictions
+      T_pred = aaf.predict_median(X)
+
+      self.assertTrue( abs((T_pred.values > T).mean() - 0.5) < 0.1 )
+
   def kaplan_meier(self, censor=False):
       km = np.zeros((len(self.lifetimes.keys()),1))
       ordered_lifetimes = np.sort( self.lifetimes.keys())
@@ -242,7 +258,7 @@ class PlottingTests(unittest.TestCase):
       N = 20
       current = 10
       birthtimes = current*np.random.uniform(size=(N,))
-      T, C= generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes )
+      T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes )
       plot_lifetimes(T, censorship=C, birthtimes=birthtimes)
 
   def test_plot_lifetimes_relative(self):

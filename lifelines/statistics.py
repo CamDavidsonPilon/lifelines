@@ -18,13 +18,16 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
   See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
 
   Parameters:
-    event_times_X: a (nx1) array of event durations (birth to death,...) for the population.
+    event_times_foo: a (nx1) array of event durations (birth to death,...) for the population.
+    censorship_bar: a (nx1) array of censorship flags, 1 if observed, 0 if not. Default assumes all observed.
     t_0: the period under observation, -1 for all time.
+    alpha: the level of signifiance
+    kwargs: add keywords and meta-data to the experiment summary
 
   Returns 
     summary: a print-friendly string detailing the results of the test.
     p: the p-value
-    the test result: True if reject the null, (pendantically None if inconclusive)
+    test result: True if reject the null, (pendantically None if inconclusive)
   """
 
   if censorship_A is None:
@@ -38,7 +41,7 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
   return multivariate_logrank_test( event_times, groups, censorship,alpha=alpha, t_0=t_0, **kwargs)
 
 
-def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True):
+def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs):
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2). 
     We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase 
@@ -54,7 +57,8 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
       alpha: the level of signifiance desired.
       t_0: the final time to compare the series' up to. Defaults to all.
       bonferroni: If true, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M
-            [http://en.wikipedia.org/wiki/Bonferroni_correction]
+            See (here)[http://en.wikipedia.org/wiki/Bonferroni_correction].
+      kwargs: add keywords and meta-data to the experiment summary.
 
     Returns:
       S: a (n,n) dataframe of print-friendly test summaries (np.nan on the diagonal).
@@ -83,16 +87,16 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
     for i1, i2 in combinations(np.arange(n),2):
         g1, g2 = unique_groups[[i1,i2]]
         ix1,ix2 = (groups == g1), (groups == g2)
+        test_name = str(g1) + " vs. " + str(g2)
         summary, p_value, result = logrank_test(event_durations[ix1], event_durations[ix2], 
                                            censorship[ix1], censorship[ix2], 
-                                           alpha=alpha, t_0=t_0, use_bonferroni=bonferroni)
+                                           alpha=alpha, t_0=t_0, use_bonferroni=bonferroni, 
+                                           test_name=test_name, **kwargs)
         T[i1,i2], T[i2,i1] = result, result 
         P[i1,i2], P[i2,i1] = p_value, p_value
         S[i1,i2], S[i2,i1] = summary, summary
 
     return [pd.DataFrame(x, columns=unique_groups, index=unique_groups) for x in [S,P,T]]
-
-
 
 def multivariate_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_0=-1, **kwargs):
   """
@@ -107,6 +111,7 @@ def multivariate_logrank_test( event_durations, groups, censorship=None, alpha=0
         to all observed.
     alpha: the level of signifiance desired.
     t_0: the final time to compare the series' up to. Defaults to all.
+    kwargs: add keywords and meta-data to the experiment summary.
    
   Returns:
     summary: a print-friendly summary of the statistical test

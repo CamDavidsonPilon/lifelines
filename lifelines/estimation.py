@@ -6,7 +6,6 @@ import pandas as pd
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import dataframe_from_events_censorship, basis, inv_normal_cdf
 
-import pdb
 
 class NelsonAalenFitter(object):
     """
@@ -242,7 +241,7 @@ class AalenAdditiveFitter(object):
       X_ = X.copy()
 
     # append a columns of ones for the baseline hazard
-    ix = event_times.argsort(0)[:,0]
+    ix = event_times.argsort(0)[:,0].copy()
     X_ = X_[ix,:].copy() if not self.fit_intercept else np.c_[ X_[ix,:].copy(), np.ones((n,1)) ]
     sorted_event_times = event_times[ix,0].copy()
 
@@ -284,12 +283,12 @@ class AalenAdditiveFitter(object):
     for i,time in enumerate(sorted_event_times):
         relevant_times = (t_0<timeline)*(timeline<=time)
         if observed[i] == 0:
-          X_[i,:] = 0
+            X_[i,:] = 0
         try:
-          V = dot(inv(dot(X_.T,X_) + penalizer), X_.T)
+            V = dot(inv(dot(X_.T,X_) + penalizer), X_.T)
         except LinAlgError:
-          #if penalizer > 0, this should not occur. But sometimes it does...
-          V = dot(pinv(dot(X_.T,X_) + penalizer), X_.T)
+            #if penalizer > 0, this should not occur. But sometimes it does...
+            V = dot(pinv(dot(X_.T,X_) + penalizer), X_.T)
 
         v = dot(V, basis(n,i))
         cum_v = cum_v + v
@@ -311,23 +310,23 @@ class AalenAdditiveFitter(object):
     return self
 
   def smoothed_hazards_(self, bandwith=1):
-    """
-    Using the gaussian kernel to smooth the hazard function, with sigma/bandwith
+        """
+        Using the gaussian kernel to smooth the hazard function, with sigma/bandwith
 
-    """
-    C = self.censorship.astype(bool)
-    return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:]), 
-            columns=self.hazards_.columns, index=self.timeline)
+        """
+        C = self.censorship.astype(bool)
+        return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:]), 
+                columns=self.hazards_.columns, index=self.timeline)
 
   def _compute_confidence_intervals(self):
-    alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
-    n = self.timeline.shape[0]
-    d = self.cumulative_hazards_.shape[1]
-    index = [['upper']*n+['lower']*n, np.concatenate( [self.timeline, self.timeline] ) ]
-    self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)),index=index)
-    self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.values)
-    self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
-    return 
+        alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
+        n = self.timeline.shape[0]
+        d = self.cumulative_hazards_.shape[1]
+        index = [['upper']*n+['lower']*n, np.concatenate( [self.timeline, self.timeline] ) ]
+        self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)),index=index)
+        self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.values)
+        self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
+        return 
 
   def predict_cumulative_hazard(self, X, columns=None):
     """
@@ -351,16 +350,21 @@ class AalenAdditiveFitter(object):
     """
     return np.exp(-self.predict_cumulative_hazard(X, columns=columns))
 
-  def predict_median_lifetimes(self,X):
+  def predict_median(self,X):
     """
     X: a (n,d) covariate matrix
     Returns the median lifetimes for the individuals
     """
     return median_survival_times(self.predict_survival_function(X))
 
+  def predict_expectation(self,X):
+    return 
+
 #utils
 def qth_survival_times(q, survival_functions):
     """
+    This can be done much better.
+
     Parameters:
       q: a float between 0 and 1.
       survival_functions: a (n,d) dataframe or numpy array.
@@ -371,14 +375,14 @@ def qth_survival_times(q, survival_functions):
       v: an array containing the first times the value was crossed.
         -1 if infinity.
     """
-    assert 0<=q<=1, "q must be between 0 and 1"
-    sv_b = (survival_functions < q)
+    assert 0.<=q<=1., "q must be between 0. and 1."
+    sv_b = (1.0*(survival_functions < q)).cumsum() > 0
     try:
         v = sv_b.idxmax(0)
-        v[~sv_b.iloc[-1,:]] = -1
+        v[sv_b.iloc[-1,:]==0] = -1
     except:
         v = sv_b.argmax(0)
-        v[~sv_b[-1,:]] = -1
+        v[sv_b[-1,:]==0] = -1
     return v
 
 def median_survival_times(survival_functions):

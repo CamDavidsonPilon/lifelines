@@ -6,9 +6,9 @@ import numpy as np
 def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
     """
 
-    lifetimes: an (nx1) numpy array of lifetimes. 
-    censorship: an (nx1) numpy array of booleans: True if event observed, else False. 
-    birthtimes: an (nx1) numpy array offsetting the births away from t=0. 
+    lifetimes: an (n,) numpy array of lifetimes. 
+    censorship: an (n,) numpy array of booleans: True if event observed, else False. 
+    birthtimes: an (n,) numpy array offsetting the births away from t=0. 
 
 
     Creates a lifetime plot, see 
