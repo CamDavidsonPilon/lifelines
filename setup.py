@@ -12,12 +12,12 @@ def read(fname):
 
 setup(
     name="lifelines",
-    version="0.1.0",
+    version="0.2.0",
     author="Cameron Davidson-Pilon",
     author_email="cam.davidson.pilon@gmail.com",
     description="Survival analysis in Python",
     license="MIT",
-    keywords="survival analysis statistics",
+    keywords="survival analysis statistics data analysis",
     url="https://github.com/CamDavidsonPilon/lifelines",
     packages=['lifelines'],
     long_description=read('README.md'),
@@ -29,7 +29,7 @@ setup(
     ],
     install_requires=[
         "numpy",
-        "pandas",
+        "pandas >= 0.12",
         "scipy"
     ],
     extras_require={

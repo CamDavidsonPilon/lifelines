@@ -3,14 +3,29 @@ lifelines
  
 [What is survival analysis and why should I learn it?](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb) Survival analysis was originally developed and applied heavily by the actuarial and medical community. Its purpose was to answer *why do events occur now versus later* under uncertainity (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
 
-But outside of medicine and actuarial science, there are many other interesting and exicting applications of this lesser-known technique. SaaS providers are interested in measuring customer lifetimes; sociologists are interested in measure political parties lifetimes, or relationships, or marriages; Telcoms are interested in understand customer behaviours, etc. 
+But outside of medicine and actuarial science, there are many other interesting and exicting applications of this 
+lesser-known technique, for example:
+- SaaS providers are interested in measuring customer lifetimes; 
+- ecommerce shops are interested the time between creating a cart and making an order (or not making an order)
+- sociologists are interested in measure political parties lifetimes, or relationships, or marriages; 
+- Telcoms are interested in understanding customer behaviours, etc.
 
-*lifelines* is a pure Python implementation of the best parts of survival analysis, with simple classes
-and helper functions. 
+ *lifelines* is a pure Python implementation of the best parts of survival analysis.
+
+We'd love to hear if you use *lifelines*, please ping me at [@cmrn_dp](https://twitter.com/Cmrn_DP) and let me know your 
+thoughts on the library. 
 
 ####Dependencies:
 
 The usual Python data stack: numpy, scipy, pandas (a modern version please), matplotlib (optional).
+
+#### Installation:
+
+You can install *lifelines* using 
+
+       pip install -U git+https://github.com/CamDavidsonPilon/lifelines.git
+
+from the command line. 
 
 
 ## (Quick) Intro to *lifelines* and survival analysis

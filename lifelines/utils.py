@@ -149,6 +149,9 @@ def yaun_loss(fitter, T_true, T_pred, X_train, T_train, censorship=None):
 
     return (censorship*(T_pred-T_true)**2/sC).mean()
 
+def quadrature(fx,x):
+  t = x.shape[0]
+  return (0.5*fx[:,0] + fx[:,1:-1].sum(1) + 0.5*fx[:,-1])*(x[-1] - x[0])*1.0/t
 
 def basis(n,i):
     x = np.zeros((n,1))

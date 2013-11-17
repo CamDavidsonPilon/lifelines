@@ -1,11 +1,12 @@
-import numpy as np
+ƒimport numpy as np
 from numpy.linalg import LinAlgError, inv, pinv
 from numpy import dot
 import pandas as pd
 
 from lifelines.plotting import plot_dataframes
-from lifelines.utils import dataframe_from_events_censorship, basis, inv_normal_cdf
+from lifelines.utils import dataframe_from_events_censorship, basis, inv_normal_cdf, quadrature
 
+import pdb
 
 class NelsonAalenFitter(object):
     """
@@ -358,7 +359,11 @@ class AalenAdditiveFitter(object):
     return median_survival_times(self.predict_survival_function(X))
 
   def predict_expectation(self,X):
-    return 
+    """
+    Compute the expected lifetime, E[T], using covarites X.
+    """
+    t = self.cumulative_hazards_.index
+    return quadrature(self.predict_survival_function(X).values.T, t)
 
 #utils
 def qth_survival_times(q, survival_functions):
@@ -373,7 +378,7 @@ def qth_survival_times(q, survival_functions):
 
     Returns:
       v: an array containing the first times the value was crossed.
-        -1 if infinity.
+        np.inf if infinity.
     """
     assert 0.<=q<=1., "q must be between 0. and 1."
     sv_b = (1.0*(survival_functions < q)).cumsum() > 0
@@ -382,7 +387,7 @@ def qth_survival_times(q, survival_functions):
         v[sv_b.iloc[-1,:]==0] = -1
     except:
         v = sv_b.argmax(0)
-        v[sv_b[-1,:]==0] = -1
+        v[sv_b[-1,:]==0] = np.inf
     return v
 
 def median_survival_times(survival_functions):

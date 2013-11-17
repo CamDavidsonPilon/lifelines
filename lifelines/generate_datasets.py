@@ -62,8 +62,6 @@ def right_censor_lifetimes(lifetimes, max_ , min_ = 0):
   return observations, lifetimes == observations
 
 
-
-
 ### Models with covariates
 
 def generate_covariates(n, d, n_binary=0, p=0.5):
@@ -215,13 +213,13 @@ def generate_observational_matrix(n,d, timelines, constant=False, independent=0,
 
 def cumulative_quadrature(fx, x):
   """Boss algo"""
-  #pdb.set_trace()
+
   lower_x = x[0]
   cum_integral = np.empty((fx.shape[0],x.shape[0]))
   cum_integral[:,0] = 0
   for i in xrange(1,x.shape[0]):
     if (x[i-1]-lower_x) == 0:
-        cum_integral[:,i] = (0.5*fx[:,i-1] + 0.5*fx[:,i])*(x[i] - lower_x)/i
+        cum_integral[:,i] = 0.5*(fx[:,i-1] + fx[:,i])*(x[i] - lower_x)/i
         continue
     cum_integral[:,i] = ( cum_integral[:,i-1]*( (i-1)/(x[i-1]-lower_x) ) + 0.5*fx[:,i-1] + 0.5*fx[:,i])*( (x[i] - lower_x)/i )
   return cum_integral
