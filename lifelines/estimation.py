@@ -156,6 +156,8 @@ class KaplanMeierFitter(object):
   def _variance_f(self, N, d):
      if N==d==0:
         return 0
+     if N==d:
+        return 0
      return 1.*d/(N*(N-d))
 
 
