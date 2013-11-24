@@ -1,7 +1,7 @@
-#plotting
-
+#plotting 
 import numpy as np
-
+from matplotlib import pyplot as plt
+import pdb
 
 def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
     """
@@ -15,7 +15,6 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
     examples:
 
     """
-    import matplotlib.pyplot as plt
     N = lifetimes.shape[0]
     if N>100:
       print "warning: you may want to subsample to less than 100 individuals."
@@ -44,13 +43,27 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
 
 
 def plot_dataframes(self, estimate):
-    def plot(c="#348ABD", ci_legend=False, **kwargs):
+    def plot(c="#348ABD", ci_legend=False, ci_force_lines=False, **kwargs):
+      """"
+      A wrapper around plotting lines. Matplotlib plot arguments can be passed in, plus:
+
+        ci_force_lines: force the confidence intervals to be line plots (versus default areas).
+        ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
+
+      """
       estimate_ = getattr(self, estimate)
       n = estimate_.shape[0]
       ax = estimate_.plot(c=c, marker='o', markeredgewidth=0, markersize=10./n, **kwargs)
       kwargs["ax"]=ax
-      kwargs["legend"]=ci_legend
-      self.confidence_interval_.plot(c=c, linestyle="--", **kwargs)
+      if ci_force_lines:
+        kwargs["legend"]=ci_legend
+        self.confidence_interval_.plot(c=c, linestyle="--", linewidth=1, **kwargs)
+      else:
+        x = self.confidence_interval_.index.values.astype(float)
+        x = x.astype(float)
+        lower = self.confidence_interval_.filter(like='lower').values[:,0]
+        upper = self.confidence_interval_.filter(like='upper').values[:,0]
+        plt.fill_between(x, lower, y2=upper, color=c, alpha=0.25)
       return ax
     return plot
 

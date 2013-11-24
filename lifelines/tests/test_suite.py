@@ -235,9 +235,9 @@ class PlottingTests(unittest.TestCase):
       data1 = np.random.exponential(10, size=(200,1))
       data2 = np.random.exponential(2, size=(200,1))
       kmf = KaplanMeierFitter()
-      kmf.fit(data1)
+      kmf.fit(data1, columns = ['test label 1'])
       ax = kmf.plot()
-      kmf.fit(data2)
+      kmf.fit(data2, columns = ['test labe 2'] )
       kmf.plot(ax=ax, c="#A60628")
       return 
 
@@ -248,7 +248,7 @@ class PlottingTests(unittest.TestCase):
       naf.fit(data1)
       ax = naf.plot()
       naf.fit(data2)
-      naf.plot(ax=ax, c="#A60628")
+      naf.plot(ax=ax, c="#A60628", ci_force_lines=True)
       return 
 
   def test_plot_lifetimes_calendar(self):
