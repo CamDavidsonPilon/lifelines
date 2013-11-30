@@ -46,7 +46,7 @@ class NelsonAalenFitter(object):
         if censorship is None:
            self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
         else:
-           self.censorship = censorship.copy().astype(bool)
+           self.censorship = np.array(censorship).copy().astype(bool)
         self.event_times = dataframe_from_events_censorship(event_times, self.censorship)
 
         if alpha is None:
@@ -62,7 +62,7 @@ class NelsonAalenFitter(object):
         self.confidence_interval_ = self._bounds(cumulative_sq_,alpha)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
 
-        return
+        return self
 
     def _bounds(self, cumulative_sq_, alpha):
         alpha2 = inv_normal_cdf(1 - (1-alpha)/2)
@@ -118,7 +118,7 @@ class KaplanMeierFitter(object):
        if censorship is None:
           self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
        else:
-          self.censorship = censorship.copy()
+          self.censorship = np.array(censorship).copy()
 
        if not alpha:
           alpha = self.alpha

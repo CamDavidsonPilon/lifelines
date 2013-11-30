@@ -1,7 +1,6 @@
 #plotting 
 import numpy as np
 from matplotlib import pyplot as plt
-import pdb
 
 def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
     """
@@ -60,7 +59,6 @@ def plot_dataframes(self, estimate):
         self.confidence_interval_.plot(c=c, linestyle="--", linewidth=1, **kwargs)
       else:
         x = self.confidence_interval_.index.values.astype(float)
-        x = x.astype(float)
         lower = self.confidence_interval_.filter(like='lower').values[:,0]
         upper = self.confidence_interval_.filter(like='upper').values[:,0]
         plt.fill_between(x, lower, y2=upper, color=c, alpha=0.25)

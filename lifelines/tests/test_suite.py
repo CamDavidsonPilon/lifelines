@@ -187,6 +187,22 @@ class StatisticalTests(unittest.TestCase):
 
       self.assertTrue( abs((T_pred.values > T).mean() - 0.5) < 0.1 )
 
+  def test_lists_to_KaplanMeierFitter(self):
+      T = [2,3,4.,1.,6,5.]
+      C = [1,0,0,0,1,1]
+      kmf = KaplanMeierFitter()
+      with_list = kmf.fit(T,C).survival_function_.values
+      with_array = kmf.fit(np.array(T),np.array(C)).survival_function_.values
+      npt.assert_array_equal(with_list,with_array)
+
+  def test_lists_to_NelsonAalenFitter(self):
+      T = [2,3,4.,1.,6,5.]
+      C = [1,0,0,0,1,1]
+      naf = NelsonAalenFitter()
+      with_list = naf.fit(T,C).cumulative_hazard_.values
+      with_array = naf.fit(np.array(T),np.array(C)).cumulative_hazard_.values
+      npt.assert_array_equal(with_list,with_array)
+
   def kaplan_meier(self, censor=False):
       km = np.zeros((len(self.lifetimes.keys()),1))
       ordered_lifetimes = np.sort( self.lifetimes.keys())

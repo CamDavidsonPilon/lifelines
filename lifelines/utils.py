@@ -57,6 +57,7 @@ def dataframe_from_events_censorship(event_times, censorship, columns=["removed"
          left the population due to censorship)
 
     """
+    event_times = np.array( event_times )
     df = pd.DataFrame( event_times.astype(float), columns=["event_at"] )
     df[columns[0]] = 1 if weights == None else weights
     df[columns[1]] = censorship
