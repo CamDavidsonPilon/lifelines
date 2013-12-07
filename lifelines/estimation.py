@@ -6,8 +6,6 @@ import pandas as pd
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import dataframe_from_events_censorship, basis, inv_normal_cdf, quadrature
 
-import pdb
-
 class NelsonAalenFitter(object):
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard. 
@@ -29,7 +27,7 @@ class NelsonAalenFitter(object):
           self._variance_f = self._variance_f_discrete
           self._additive_f = self._additive_f_discrete
 
-    def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate'],alpha=None):
+    def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate'], alpha=None, insert_0=True):
         """
         Parameters:
           event_times: an (n,1) array of times that the death event occured at 
@@ -37,6 +35,8 @@ class NelsonAalenFitter(object):
           columns: a length 1 array to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only. 
+          insert_0: add a leading 0 (if not present) in the timeline.
+
 
         Returns:
           DataFrame with index either event_times or timelines (if not None), with
@@ -58,7 +58,7 @@ class NelsonAalenFitter(object):
            self.timeline = timeline
         self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
                                                                      self.timeline, self._additive_f,
-                                                                      columns, self._variance_f )
+                                                                      columns, self._variance_f, insert_0 )
         self.confidence_interval_ = self._bounds(cumulative_sq_,alpha)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
 
@@ -99,7 +99,7 @@ class KaplanMeierFitter(object):
   def __init__(self, alpha=0.95):
        self.alpha = alpha
 
-  def fit(self, event_times, censorship=None, timeline=None, columns=['KM-estimate'], alpha=None):
+  def fit(self, event_times, censorship=None, timeline=None, columns=['KM-estimate'], alpha=None, insert_0=True):
        """
        Parameters:
          event_times: an (n,1) array of times that the death event occured at 
@@ -109,6 +109,7 @@ class KaplanMeierFitter(object):
          columns: a length 1 array to name the column of the estimate.
          alpha: the alpha value in the confidence intervals. Overrides the initializing
             alpha for this call to fit only. 
+         insert_0: add a leading 0 (if not present) in the timeline.
 
        Returns:
          DataFrame with index either event_times or timelines (if not None), with
@@ -131,7 +132,7 @@ class KaplanMeierFitter(object):
           self.timeline = timeline
        log_surivial_function, cumulative_sq_ = _additive_estimate(self.event_times, 
                                                                   self.timeline, self._additive_f, 
-                                                                   columns, self._variance_f )
+                                                                   columns, self._variance_f, insert_0 )
        self.survival_function_ = np.exp(log_surivial_function)
        self.median_ = median_survival_times(self.survival_function_)
        self.confidence_interval_ = self._bounds(cumulative_sq_,alpha)
@@ -161,14 +162,14 @@ class KaplanMeierFitter(object):
      return 1.*d/(N*(N-d))
 
 
-def _additive_estimate(event_times, timeline, additive_f, columns, variance_f):
+def _additive_estimate(event_times, timeline, additive_f, columns, variance_f, insert_0):
     """
 
     nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
 
     """
     timeline = timeline.astype(float)
-    if timeline[0] > 0:
+    if insert_0 and timeline[0] > 0:
        timeline = np.insert(timeline,0,0.)
 
     n = timeline.shape[0]
