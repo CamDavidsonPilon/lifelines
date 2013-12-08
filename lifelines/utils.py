@@ -9,7 +9,7 @@ import pdb
 def group_event_series( groups, durations, censorship, limit=-1):
     """
     Joins multiple event series together into dataframes. A generalization of 
-    `dataframe_from_events_censorship` to groups.
+    `survival_table_from_events` to groups.
 
     Parameters:
         groups: a (n,) array of individuals' group ids.
@@ -26,13 +26,13 @@ def group_event_series( groups, durations, censorship, limit=-1):
     C = censorship[ix]
 
     g_name = str(g)
-    data = dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name, 'censored:'+g_name])
+    data = survival_table_from_events(T,C,columns=['removed:'+g_name, "observed:"+g_name, 'censored:'+g_name])
     for g in unique_groups[1:]:
         ix = groups == g
         T = durations[ix]
         C = censorship[ix]
         g_name = str(g)
-        data = data.join(dataframe_from_events_censorship(T,C,columns=['removed:'+g_name, "observed:"+g_name, 'censored:'+g_name]), how='outer' )
+        data = data.join(survival_table_from_events(T,C,columns=['removed:'+g_name, "observed:"+g_name, 'censored:'+g_name]), how='outer' )
     data = data.fillna(0)
     #hmmm pandas...its too bad I can't do data.ix[:limit] and leave out the if. 
     if int(limit) != -1:
@@ -40,7 +40,7 @@ def group_event_series( groups, durations, censorship, limit=-1):
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
 
-def dataframe_from_events_censorship(event_times, censorship, columns=["removed", "observed", "censored"], weights=None):
+def survival_table_from_events(event_times, censorship, columns=["removed", "observed", "censored"], weights=None):
     """
     Parameters:
         event_times: (n,1) array of event times 
@@ -55,6 +55,20 @@ def dataframe_from_events_censorship(event_times, censorship, columns=["removed"
         individuals who were observed to have died (i.e. not censored.) The column
         'censored' is defined as 'removed' - 'observed' (the number of individuals who
          left the population due to censorship)
+    
+    Example:
+        #Input:
+        survival_table_from_events( waltonT, np.ones_like(waltonT)) #available in test suite
+
+        #Output:
+
+                  removed  observed  censored
+        event_at
+        6               1         1         0
+        7               2         2         0
+        9               3         3         0
+        13              3         3         0
+        15              2         2         0
 
     """
     event_times = np.array( event_times )

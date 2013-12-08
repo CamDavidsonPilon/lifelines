@@ -4,7 +4,7 @@ from numpy import dot
 import pandas as pd
 
 from lifelines.plotting import plot_dataframes
-from lifelines.utils import dataframe_from_events_censorship, basis, inv_normal_cdf, quadrature
+from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature
 
 class NelsonAalenFitter(object):
     """
@@ -47,7 +47,7 @@ class NelsonAalenFitter(object):
            self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
         else:
            self.censorship = np.array(censorship).copy().astype(bool)
-        self.event_times = dataframe_from_events_censorship(event_times, self.censorship)
+        self.event_times = survival_table_from_events(event_times, self.censorship)
 
         if alpha is None:
             alpha = self.alpha
@@ -124,7 +124,7 @@ class KaplanMeierFitter(object):
        if not alpha:
           alpha = self.alpha
 
-       self.event_times = dataframe_from_events_censorship(event_times, self.censorship)
+       self.event_times = survival_table_from_events(event_times, self.censorship)
 
        if timeline is None:
           self.timeline = self.event_times.index.values.copy()

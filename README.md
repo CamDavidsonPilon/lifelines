@@ -6,13 +6,11 @@ lifelines
 But outside of medicine and actuarial science, there are many other interesting and exicting applications of this 
 lesser-known technique, for example:
 - SaaS providers are interested in measuring customer lifetimes; 
-- ecommerce shops are interested the time between creating a cart and making an order (or not making an order)
-- sociologists are interested in measure political parties lifetimes, or relationships, or marriages; 
-- Telcoms are interested in understanding customer behaviours, etc.
+- ecommerce shops are interested the time between first and second order (called *repeat purchase rate*).
+- sociologists are interested in measure political parties lifetimes, or relationships, or marriages
+- and many others 
 
- *lifelines* is a pure Python implementation of the best parts of survival analysis.
-
-We'd love to hear if you use *lifelines*, please ping me at [@cmrn_dp](https://twitter.com/Cmrn_DP) and let me know your 
+*lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you use *lifelines*, please ping me at [@cmrn_dp](https://twitter.com/Cmrn_DP) and let me know your 
 thoughts on the library. 
 
 ####Dependencies:
