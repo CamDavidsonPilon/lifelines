@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 from pandas import to_datetime
 
-import pdb
-
 def group_event_series( groups, durations, censorship, limit=-1):
     """
     Joins multiple event series together into dataframes. A generalization of 
@@ -14,7 +12,46 @@ def group_event_series( groups, durations, censorship, limit=-1):
     Parameters:
         groups: a (n,) array of individuals' group ids.
         durations: a (n,) array of durations of each individual
-        censorship: a (n,) array of censorship, 1 if observed, 0 else. 
+        censorship: a (n,) array of censorship, 1 if observed, 0 else.  
+
+    Output:
+        - np.array of unique groups
+        - dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
+        - dataframe of observed count data at event_times for each group, column names are 'observed:<group name>'
+        - dataframe of censored count data at event_times for each group, column names are 'censored:<group name>'
+
+    Example:
+        #input
+        group_event_series(waltonG, waltonT, np.ones_like(waltonT)) #data available in test_suite.py
+
+        #output 
+        [ 
+            array(['control', 'miR-137'], dtype=object), 
+
+                      removed:control  removed:miR-137
+            event_at
+            6                       0                1
+            7                       2                0
+            9                       0                3
+            13                      0                3
+            15                      0                2
+            ...,
+                      observed:control  observed:miR-137
+            event_at
+            6                        0                 1
+            7                        2                 0
+            9                        0                 3
+            13                       0                 3
+            15                       0                 2
+            ...,
+                      censored:control  censored:miR-137
+            event_at
+            6                        0                 0
+            7                        0                 0
+            9                        0                 0
+            ...,
+        ]
+
     """
 
     unique_groups = np.unique(groups)
@@ -57,10 +94,10 @@ def survival_table_from_events(event_times, censorship, columns=["removed", "obs
          left the population due to censorship)
     
     Example:
-        #Input:
+        #input
         survival_table_from_events( waltonT, np.ones_like(waltonT)) #available in test suite
 
-        #Output:
+        #output
 
                   removed  observed  censored
         event_at
