@@ -265,6 +265,18 @@ class PlottingTests(unittest.TestCase):
       ax = naf.plot()
       naf.fit(data2)
       naf.plot(ax=ax, c="#A60628", ci_force_lines=True)
+      plt.title('testing naf')
+      return 
+
+  def test_naf_plotting_sliceg(self):
+      data1 = np.random.exponential(5, size=(200,1))
+      data2 = np.random.exponential(1, size=(200,1))
+      naf = NelsonAalenFitter()
+      naf.fit(data1)
+      ax = naf.plot(ix=slice(0,None))
+      naf.fit(data2)
+      naf.plot(ax=ax, c="#A60628", ci_force_lines=True, ix=slice(50,150))
+      plt.title('testing slicing')
       return 
 
   def test_plot_lifetimes_calendar(self):

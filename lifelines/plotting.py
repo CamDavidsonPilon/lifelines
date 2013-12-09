@@ -42,7 +42,7 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
 
 
 def plot_dataframes(self, estimate):
-    def plot(c="#348ABD", ci_legend=False, ci_force_lines=False, **kwargs):
+    def plot(c="#348ABD", ix=None, ci_legend=False, ci_force_lines=False, **kwargs):
       """"
       A wrapper around plotting lines. Matplotlib plot arguments can be passed in, plus:
 
@@ -50,17 +50,20 @@ def plot_dataframes(self, estimate):
         ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
 
       """
+      if ix == None:
+        ix = slice(0,None)
+
       estimate_ = getattr(self, estimate)
       n = estimate_.shape[0]
-      ax = estimate_.plot(c=c, marker='o', markeredgewidth=0, markersize=10./n, **kwargs)
+      ax = estimate_.ix[ix].plot(c=c, marker='o', markeredgewidth=0, markersize=10./n, **kwargs)
       kwargs["ax"]=ax
       if ci_force_lines:
         kwargs["legend"]=ci_legend
-        self.confidence_interval_.plot(c=c, linestyle="--", linewidth=1, **kwargs)
+        self.confidence_interval_.ix[ix].plot(c=c, linestyle="--", linewidth=1, **kwargs)
       else:
-        x = self.confidence_interval_.index.values.astype(float)
-        lower = self.confidence_interval_.filter(like='lower').values[:,0]
-        upper = self.confidence_interval_.filter(like='upper').values[:,0]
+        x = self.confidence_interval_.index[ix].values.astype(float)
+        lower = self.confidence_interval_.filter(like='lower').values[ix,0]
+        upper = self.confidence_interval_.filter(like='upper').values[ix,0]
         plt.fill_between(x, lower, y2=upper, color=c, alpha=0.25)
       return ax
     return plot
