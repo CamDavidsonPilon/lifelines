@@ -268,7 +268,7 @@ class PlottingTests(unittest.TestCase):
       plt.title('testing naf')
       return 
 
-  def test_naf_plotting_sliceg(self):
+  def test_naf_plotting_slice(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(1, size=(200,1))
       naf = NelsonAalenFitter()

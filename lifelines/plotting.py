@@ -48,6 +48,8 @@ def plot_dataframes(self, estimate):
 
         ci_force_lines: force the confidence intervals to be line plots (versus default areas).
         ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
+        ix: specify a subsection of the curves to plot, i.e. .plot(ix=slice(0,-3)) will plot all 
+         but the last three points in the estimate and confidence intervals.
 
       """
       if ix == None:

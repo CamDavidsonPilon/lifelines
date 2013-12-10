@@ -20,6 +20,10 @@ The usual Python data stack: numpy, scipy, pandas (a modern version please), mat
 #### Installation:
 
 You can install *lifelines* using 
+      
+       pip install lifelines
+
+Or getting the bleeding edge version with:
 
        pip install -U git+https://github.com/CamDavidsonPilon/lifelines.git
 
