@@ -25,7 +25,7 @@ You can install *lifelines* using
 
 Or getting the bleeding edge version with:
 
-       pip install -U git+https://github.com/CamDavidsonPilon/lifelines.git
+       pip install git+https://github.com/CamDavidsonPilon/lifelines.git
 
 from the command line. 
 
