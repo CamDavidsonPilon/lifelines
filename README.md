@@ -35,23 +35,20 @@ from the command line.
 
 ## (Quick) Intro to *lifelines* and survival analysis
 
-*Work in progress (75%)*
-
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and use,
 I recommend running the `Tutorial and Examples.ipynb` notebook in a IPython notebook session. Alternatively, you can [view it online here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
 
 ## Documentation
 
-*Work in progress (70%)*
+*Work in progress (80%)*
 
 I've added documentation to a notebook, `Documentation.ipynb`, that adds detail to 
 the classes, methods and data types. You can use the IPython notebook to view it, or [view it online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
 
 #### More examples
 
-There are some IPython notebook files in the repo, and you can view them online here (though they may 
-contain syntax from older versions of *lifelines*.)
+There are some IPython notebook files in the repo, and you can view them online here.
 
 - [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/Divorces%2520Rates.ipynb)
 - [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/The%2520Gehan%2520Survival%2520Data.ipynb)
