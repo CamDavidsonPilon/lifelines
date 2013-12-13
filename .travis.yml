@@ -8,4 +8,4 @@ before_install:
 # command to install dependencies
 install: "python setup.py install"
 # command to run tests
-script: python -m unittest lifelines.tests.test_suite
+script: python -m lifelines.tests.test_suite
