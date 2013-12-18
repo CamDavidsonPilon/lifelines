@@ -81,7 +81,6 @@ class NelsonAalenFitter(object):
     def _variance_f_smooth(self, population, deaths):
         df = pd.DataFrame( {'N':population, 'd':deaths})
         return df.apply( lambda (N,d): np.sum([1./(N-i)**2 for i in range(int(d))]), axis=1 )
-        
 
     def _variance_f_discrete(self, population, deaths):
         return 1.*(population-deaths)*deaths/population**3
@@ -161,7 +160,6 @@ class KaplanMeierFitter(object):
 
 
 def _additive_estimate(events, timeline, _additive_f, _additive_var):
-
     N = events["removed"].sum()
 
     deaths = events['observed']

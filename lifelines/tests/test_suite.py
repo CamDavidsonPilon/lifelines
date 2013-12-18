@@ -212,10 +212,9 @@ class StatisticalTests(unittest.TestCase):
         if censor:
            ix = LIFETIMES == t
            c = sum(1-CENSORSHIP[ix])
-           n -=  c
            if n!=0:
               v *= ( 1-(self.lifetimes.get(t)-c)/n )
-           n -= self.lifetimes.get(t) - c
+           n -= self.lifetimes.get(t)
         else:
            v *= ( 1-self.lifetimes.get(t)/n )
            n -= self.lifetimes.get(t)
@@ -233,10 +232,9 @@ class StatisticalTests(unittest.TestCase):
         if censor:
            ix = LIFETIMES == t
            c = sum(1-CENSORSHIP[ix])
-           n -=  c
            if n!=0:
               v += ( (self.lifetimes.get(t)-c)/n )
-           n -= self.lifetimes.get(t) - c
+           n -= self.lifetimes.get(t)
         else:
            v += ( self.lifetimes.get(t)/n )
            n -= self.lifetimes.get(t)
