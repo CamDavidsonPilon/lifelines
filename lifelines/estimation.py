@@ -6,9 +6,6 @@ import pandas as pd
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature
 
-
-import pdb
-
 class NelsonAalenFitter(object):
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard. 
