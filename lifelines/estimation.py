@@ -165,7 +165,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var):
     deaths = events['observed']
     population = N - events['removed'].cumsum().shift(1).fillna(0)
     estimate_ = np.cumsum(_additive_f(population,deaths)) 
-    var_ = _additive_var(population, deaths)
+    var_ = np.cumsum(_additive_var(population, deaths))
 
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
     var_ = var_.reindex(timeline, method='pad')
