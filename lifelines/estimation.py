@@ -6,6 +6,9 @@ import pandas as pd
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature
 
+
+import pdb
+
 class NelsonAalenFitter(object):
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard. 
@@ -54,12 +57,15 @@ class NelsonAalenFitter(object):
 
         if timeline is None:
            self.timeline = self.event_times.index.values.copy().astype(float)
+           if insert_0 and self.timeline[0]>0:
+               self.timeline = np.insert(self.timeline,0,0.)
         else:
-           self.timeline = timeline
-        self.cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, 
-                                                                     self.timeline, self._additive_f,
-                                                                      columns, self._variance_f, insert_0 )
-        self.confidence_interval_ = self._bounds(cumulative_sq_,alpha)
+           self.timeline = timeline.astype(float)
+
+        cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
+                                                                     self._additive_f, self._variance_f )
+        self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=columns)
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
 
         return self
@@ -72,26 +78,20 @@ class NelsonAalenFitter(object):
         df["%s_lower_%.2f"%(name,self.alpha)] = self.cumulative_hazard_.values*np.exp(-alpha2*np.sqrt(cumulative_sq_)/self.cumulative_hazard_.values )
         return df
 
-    def _variance_f_smooth(self, N, d):
-        if N==d==0:
-            return 0
-        return np.sum([1./(N-i)**2 for i in range(int(d))])
+    def _variance_f_smooth(self, population, deaths):
+        df = pd.DataFrame( {'N':population, 'd':deaths})
+        return df.apply( lambda (N,d): np.sum([1./(N-i)**2 for i in range(int(d))]), axis=1 )
 
-    def _variance_f_discrete(self, N, d):
-        if N==d==0:
-            return 0
-        return 1.*(N-d)*d/N**3
+    def _variance_f_discrete(self, population, deaths):
+        return 1.*(population-deaths)*deaths/population**3
 
-    def _additive_f_smooth(self, N, d):
-        if N==d==0:
-          return 0
-        return np.sum([1./(N-i) for i in range(int(d))])
+    def _additive_f_smooth(self, population, deaths):
+        df = pd.DataFrame( {'N':population, 'd':deaths})
+        return df.apply( lambda (N,d): np.sum([1./(N-i) for i in range(int(d))]), axis=1 )
 
-    def _additive_f_discrete(self, N,d ):
+    def _additive_f_discrete(self, population, deaths):
        #check it 0
-       if N==d==0:
-          return 0
-       return 1.*d/N
+       return (1.*deaths/population).replace([np.inf],0)
 
 
 class KaplanMeierFitter(object):
@@ -127,22 +127,20 @@ class KaplanMeierFitter(object):
        self.event_times = survival_table_from_events(event_times, self.censorship)
 
        if timeline is None:
-          self.timeline = self.event_times.index.values.copy()
+          self.timeline = self.event_times.index.values.copy().astype(float)
+          if insert_0 and self.timeline[0]>0:
+              self.timeline = np.insert(self.timeline,0,0.)
        else:
-          self.timeline = timeline
-       log_surivial_function, cumulative_sq_ = _additive_estimate(self.event_times, 
-                                                                  self.timeline, self._additive_f, 
-                                                                   columns, self._variance_f, insert_0 )
-       self.survival_function_ = np.exp(log_surivial_function)
-       self.median_ = median_survival_times(self.survival_function_)
-       self.confidence_interval_ = self._bounds(cumulative_sq_,alpha)
+          self.timeline = timeline.astype(float)
+
+       log_survival_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
+                                                                  self._additive_f, self._additive_var)
+
+       self.survival_function_ = pd.DataFrame(np.exp(log_survival_function), columns=columns)
+       #self.median_ = median_survival_times(self.survival_function_)
+       self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
        self.plot = plot_dataframes(self, "survival_function_")
        return self
-
-  def _additive_f(self, N, d):
-      if N==d==0:
-        return 0
-      return np.log(1 - 1.*d/N)
 
   def _bounds(self, cumulative_sq_, alpha):
       # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdfg
@@ -154,48 +152,24 @@ class KaplanMeierFitter(object):
       df["%s_lower_%.2f"%(name,self.alpha)] =  np.exp(-np.exp(np.log(-v)-alpha2*np.sqrt(cumulative_sq_)/v))
       return df
 
-  def _variance_f(self, N, d):
-     if N==d==0:
-        return 0
-     if N==d:
-        return 0
-     return 1.*d/(N*(N-d))
+  def _additive_f(self, population,deaths):
+      return np.log(population-deaths) - np.log(population)
+
+  def _additive_var(self, population, deaths):
+      return (1.*deaths/(population*(population-deaths))).replace([np.inf],0)
 
 
-def _additive_estimate(event_times, timeline, additive_f, columns, variance_f, insert_0):
-    """
+def _additive_estimate(events, timeline, _additive_f, _additive_var):
+    N = events["removed"].sum()
 
-    nelson_aalen_smoothing: see section 3.1.3 in Survival and Event History Analysis
+    deaths = events['observed']
+    population = N - events['removed'].cumsum().shift(1).fillna(0)
+    estimate_ = np.cumsum(_additive_f(population,deaths)) 
+    var_ = _additive_var(population, deaths)
 
-    """
-    timeline = timeline.astype(float)
-    if insert_0 and timeline[0] > 0:
-       timeline = np.insert(timeline,0,0.)
-
-    n = timeline.shape[0]
-    _additive_estimate_ = pd.DataFrame(np.zeros((n,1)), index=timeline, columns=columns)
-    _additive_var = pd.DataFrame(np.zeros((n,1)), index=timeline)
-
-    N = event_times["removed"].sum()
-    t_0 = 0
-
-    _additive_estimate_.ix[(timeline<t_0)]= 0
-    _additive_var.ix[(timeline<t_0)]=0
-
-    v = 0
-    v_sq = 0
-    for t, removed, observed_deaths, missing in event_times.itertuples():
-        times = (t_0<=timeline)*(timeline<t)
-        _additive_estimate_.ix[times] = v  
-        _additive_var.ix[times] = v_sq
-        N -= missing
-        v += additive_f(N,observed_deaths)
-        v_sq += variance_f(N,observed_deaths)
-        N -= observed_deaths
-        t_0 = t
-    _additive_estimate_.ix[(timeline>=t)]=v
-    _additive_var.ix[(timeline>=t)]=v_sq
-    return _additive_estimate_, _additive_var
+    estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
+    var_ = var_.reindex(timeline, method='pad')
+    return estimate_, var_
 
 
 class AalenAdditiveFitter(object):
