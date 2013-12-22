@@ -30,11 +30,9 @@ setup(
     install_requires=[
         "numpy",
         "pandas >= 0.12",
-        "scipy"
+        "scipy",
+	"matplotlib"
     ],
-    extras_require={
-        "plotting": ["matplotlib"],
-    },
     package_data = {
         "lifelines": [
             "../README.md",
