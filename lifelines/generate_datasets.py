@@ -42,7 +42,6 @@ def constant_(t,alpha=1,beta=1):
 FUNCS = [exp_comp_, log_, inverseSq_, constant_, periodic_ ] 
 
 
-
 def right_censor_lifetimes(lifetimes, max_ , min_ = 0):
   """
   Right censor the deaths, uniformly

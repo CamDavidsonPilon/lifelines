@@ -245,7 +245,7 @@ class AalenAdditiveFitter(object):
     
     unique_times = np.unique(timeline)
     zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
-    self.cumulative_hazards_ = pd.DataFrame(zeros.copy() , index=unique_times, columns = columns)
+    self.cumulative_hazards_ = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
     self.hazards_ = pd.DataFrame(np.zeros((event_times.shape[0],d+self.fit_intercept)), index=event_times[:,0], columns = columns)
     self._variance = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
     
@@ -285,23 +285,23 @@ class AalenAdditiveFitter(object):
     return self
 
   def smoothed_hazards_(self, bandwith=1):
-        """
-        Using the gaussian kernel to smooth the hazard function, with sigma/bandwith
+      """
+      Using the gaussian kernel to smooth the hazard function, with sigma/bandwith
 
-        """
-        C = self.censorship.astype(bool)
-        return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:]), 
-                columns=self.hazards_.columns, index=self.timeline)
+      """
+      C = self.censorship.astype(bool)
+      return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:]), 
+              columns=self.hazards_.columns, index=self.timeline)
 
   def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
-        n = self.timeline.shape[0]
-        d = self.cumulative_hazards_.shape[1]
-        index = [['upper']*n+['lower']*n, np.concatenate( [self.timeline, self.timeline] ) ]
-        self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)),index=index)
-        self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.values)
-        self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
-        return 
+      alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
+      n = self.timeline.shape[0]
+      d = self.cumulative_hazards_.shape[1]
+      index = [['upper']*n+['lower']*n, np.concatenate( [self.timeline, self.timeline] ) ]
+      self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)),index=index)
+      self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.values)
+      self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
+      return 
 
   def predict_cumulative_hazard(self, X, columns=None):
     """

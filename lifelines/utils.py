@@ -150,7 +150,8 @@ def datetimes_to_durations( start_times, end_times, fill_date = None, freq='D', 
     end_times_ = to_datetime(end_times, dayfirst=dayfirst, coerce=True)
 
     T = (end_times_ - start_times_).map(lambda x: x.astype(freq_string).astype(float) )
-
+    if (T < 0).sum():
+        print "Warning: some values of start_times are before end_times"
     return T.values, C.values
 
 def inv_normal_cdf(p):
@@ -187,8 +188,7 @@ def cross_validation(fitter, T, X, censorship=None, k=5, loss_function="median")
     pass
 
 def yaun_loss(fitter, T_true, T_pred, X_train, T_train, censorship=None):
-
-
+    "WIP"
     if censorship==None:
         t = T_pred.shape[0]
         sC = np.ones((t,1))
@@ -202,8 +202,8 @@ def yaun_loss(fitter, T_true, T_pred, X_train, T_train, censorship=None):
     return (censorship*(T_pred-T_true)**2/sC).mean()
 
 def quadrature(fx,x):
-  t = x.shape[0]
-  return (0.5*fx[:,0] + fx[:,1:-1].sum(1) + 0.5*fx[:,-1])*(x[-1] - x[0])*1.0/t
+    t = x.shape[0]
+    return (0.5*fx[:,0] + fx[:,1:-1].sum(1) + 0.5*fx[:,-1])*(x[-1] - x[0])*1.0/t
 
 def basis(n,i):
     x = np.zeros((n,1))
