@@ -182,10 +182,6 @@ class StatisticalTests(unittest.TestCase):
       print R
       self.assertTrue(R.values[0,1])
 
-  def test_construct_survival_curves(self):
-    
-
-
   def test_pairwise_logrank_test(self):
       T = np.random.exponential(10, size=300)
       g = np.random.binomial(2, 0.7, size=300)
