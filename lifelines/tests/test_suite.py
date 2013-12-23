@@ -182,13 +182,16 @@ class StatisticalTests(unittest.TestCase):
       print R
       self.assertTrue(R.values[0,1])
 
+  def test_construct_survival_curves(self):
+    
+
+
   def test_pairwise_logrank_test(self):
       T = np.random.exponential(10, size=300)
       g = np.random.binomial(2, 0.7, size=300)
       S, P, R = pairwise_logrank_test(T, g, alpha=0.95)
       V = np.array([[np.nan,None,None],[None,np.nan,None],[None,None,np.nan]])
       npt.assert_array_equal(R,V)
-
 
   def test_aalen_additive_median_predictions_split_data(self):
       #This tests to make sure that my median predictions statisfy

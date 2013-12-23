@@ -29,9 +29,9 @@ setup(
     ],
     install_requires=[
         "numpy",
-        "pandas >= 0.12",
         "scipy",
-	"matplotlib"
+	"matplotlib",
+	"pandas>=0.12"
     ],
     package_data = {
         "lifelines": [
