@@ -53,7 +53,6 @@ from the command line.
     print kmf.survival_function_.head()
 
     naf = NelsonAalenFitter()
-    naf = KaplanMeierFitter()
     naf.fit(T, C) 
     naf.plot()
     print naf.cumulative_hazard_.head()
