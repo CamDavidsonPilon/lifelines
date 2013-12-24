@@ -19,11 +19,15 @@ thoughts on the library.
 
 ![liflines](http://i.imgur.com/QXW71zA.png)
 
+## Installation:
+
+
 ####Dependencies:
 
 The usual Python data stack: numpy, scipy, pandas (a modern version please), matplotlib (optional, but seriously...).
 
-#### Installation:
+
+#### Installing
 
 You can install *lifelines* using 
       
@@ -38,6 +42,28 @@ from the command line.
 
 ## (Quick) Intro to *lifelines* and survival analysis
 
+  from lifelines.estimation import KaplanMeierFitter, NelsonAalenFitter
+
+  #fake data
+  #T are the durations, C are boolean censorships
+  T = np.random.exponential(1, size=500)
+  C = np.random.binomial(1, 0.5, size=500)
+
+  kmf = KaplanMeierFitter()
+  kmf.fit(T, C) 
+  kmf.plot()
+  print kmf.survival_function_.head()
+
+  naf = NelsonAalenFitter()
+  naf = KaplanMeierFitter()
+  naf.fit(T, C) 
+  naf.plot()
+  print naf.cumulative_hazard_.head()
+
+
+
+## (Less Quick) Intro to *lifelines* and survival analysis
+
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
 I recommend running the `Tutorial and Examples.ipynb` notebook in a IPython notebook session. Alternatively, you can [view it online here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
 
@@ -48,6 +74,8 @@ I recommend running the `Tutorial and Examples.ipynb` notebook in a IPython note
 
 I've added documentation to a notebook, `Documentation.ipynb`, that adds detail to 
 the classes, methods and data types. You can use the IPython notebook to view it, or [view it online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
+
+
 
 #### More examples
 
