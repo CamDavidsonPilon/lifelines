@@ -17,8 +17,6 @@ lesser-known technique, for example:
 thoughts on the library. 
 
 
-![liflines](http://i.imgur.com/QXW71zA.png)
-
 ## Installation:
 
 
@@ -42,23 +40,23 @@ from the command line.
 
 ## (Quick) Intro to *lifelines* and survival analysis
 
-  from lifelines.estimation import KaplanMeierFitter, NelsonAalenFitter
+    from lifelines.estimation import KaplanMeierFitter, NelsonAalenFitter
 
-  #fake data
-  #T are the durations, C are boolean censorships
-  T = np.random.exponential(1, size=500)
-  C = np.random.binomial(1, 0.5, size=500)
+    #fake data
+    #T are the durations, C are boolean censorships
+    T = np.random.exponential(1, size=500)
+    C = np.random.binomial(1, 0.5, size=500)
 
-  kmf = KaplanMeierFitter()
-  kmf.fit(T, C) 
-  kmf.plot()
-  print kmf.survival_function_.head()
+    kmf = KaplanMeierFitter()
+    kmf.fit(T, C) 
+    kmf.plot()
+    print kmf.survival_function_.head()
 
-  naf = NelsonAalenFitter()
-  naf = KaplanMeierFitter()
-  naf.fit(T, C) 
-  naf.plot()
-  print naf.cumulative_hazard_.head()
+    naf = NelsonAalenFitter()
+    naf = KaplanMeierFitter()
+    naf.fit(T, C) 
+    naf.plot()
+    print naf.cumulative_hazard_.head()
 
 
 
@@ -84,6 +82,8 @@ There are some IPython notebook files in the repo, and you can view them online 
 - [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/Divorces%2520Rates.ipynb)
 - [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/The%2520Gehan%2520Survival%2520Data.ipynb)
 
+
+![liflines](http://i.imgur.com/QXW71zA.png)
 
 
 
