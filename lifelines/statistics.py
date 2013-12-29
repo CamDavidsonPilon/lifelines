@@ -61,9 +61,18 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
       kwargs: add keywords and meta-data to the experiment summary.
 
     Returns:
-      S: a (n,n) dataframe of print-friendly test summaries (np.nan on the diagonal).
+      S: a (n,n) dataframe of print-friendly test summaries (np.nan on the diagonal). Ex:
       P: a (n,n) dataframe of p-values (np.nan on the diagonal).
+                    a         b         c
+          a       NaN  0.711136  0.401462
+          b  0.711136       NaN  0.734605
+          c  0.401462  0.734605       NaN
       T: a (n,n) dataframe of test results (True is significant, None if not) (np.nan on the diagonal).
+                a     b     c
+          a   NaN  None  None
+          b  None   NaN  None
+          c  None  None   NaN
+
     """
     
     if censorship is None:
@@ -102,7 +111,6 @@ def multivariate_logrank_test( event_durations, groups, censorship=None, alpha=0
   """
   H_0: all event series are from the same generating processes
   H_A: there exist atleast one group that differs from the other.
-
 
   Parameters:
     event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
