@@ -78,7 +78,12 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
     if censorship is None:
         censorship = np.ones((event_durations.shape[0],1))
 
-    unique_groups = np.unique(groups)
+    #if they pass in a dataframe
+    try: 
+      unique_groups = np.unique(groups).values
+    except:
+      unique_groups = np.unique(groups)
+
     n = unique_groups.shape[0]
 
     if bonferroni:

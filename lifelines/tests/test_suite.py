@@ -234,7 +234,6 @@ class StatisticalTests(unittest.TestCase):
       plt.show()
       return
 
-
   def test_lists_to_KaplanMeierFitter(self):
       T = [2,3,4.,1.,6,5.]
       C = [1,0,0,0,1,1]
@@ -250,6 +249,18 @@ class StatisticalTests(unittest.TestCase):
       with_list = naf.fit(T,C).cumulative_hazard_.values
       with_array = naf.fit(np.array(T),np.array(C)).cumulative_hazard_.values
       npt.assert_array_equal(with_list,with_array)
+
+  def test_pairwise_allows_dataframes(self):
+      N = 100
+      df = pd.DataFrame(np.empty((N,3)), columns=["T", "C", "group"])
+      df["T"] = np.random.exponential(1,size=N)
+      df["C"] = np.random.binomial(1,0.6, size=N)
+      df["group"] = np.random.binomial(2,0.5, size=N)
+      try:
+        pairwise_logrank_test(df['T'], df["group"], censorship=df["C"])
+        self.assertTrue(True)
+      except:
+        self.assertTrue(False)
 
   def kaplan_meier(self, censor=False):
       km = np.zeros((len(self.lifetimes.keys()),1))
