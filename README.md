@@ -75,15 +75,15 @@ Compare two populations using the logrank test:
 ## (Less Quick) Intro to *lifelines* and survival analysis
 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
-I recommend running the `Tutorial and Examples.ipynb` notebook in a IPython notebook session. Alternatively, you can [view it online here](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Tutorial%20and%20Examples.ipynb).
+I recommend running the IPython notebooks in the `notebooks` dir. 
 
+Alternatively, you can **view them online**
 
-## Documentation
+1. [Introduction to survival analysis](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/notebooks/Survival%20Analysis%20intro.ipynb)
+2. [Using lifelines on real data](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/notebooks/Intro%20to%20lifelines.ipynb) 
+3. [Documentation (not fully complete)](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/notebooks/Documentation.ipynb)
 
-*Work in progress (80%)*
-
-I've added documentation to a notebook, `Documentation.ipynb`, that adds detail to 
-the classes, methods and data types. You can use the IPython notebook to view it, or [view it online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
+classes, methods and data types. You can use the IPython notebook to view it, or [view it online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
 
 
 #### More examples
