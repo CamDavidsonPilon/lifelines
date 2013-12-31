@@ -170,174 +170,174 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var):
 
 
 class AalenAdditiveFitter(object):
-  """
-  This class fits the regression model:
+    """
+    This class fits the regression model:
 
-  hazard(t)  = b_0(t) + b_t(t)*x_1 + ... + b_N(t)*x_N
+    hazard(t)  = b_0(t) + b_t(t)*x_1 + ... + b_N(t)*x_N
 
-  that is, the hazard rate is a linear function of the covariates. Currently the covariates
-  must be time independent. 
+    that is, the hazard rate is a linear function of the covariates. Currently the covariates
+    must be time independent. 
 
-  Parameters:
-    fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The 
-      intercept, b_0(t) acts as a baseline hazard. 
-    alpha: the level in the confidence intervals.
-    penalizer: Attach a L2 penalizer to the regression. This improves stability of the estimates
-     and controls high correlation between covariates.
-
-  """
-
-  def __init__(self,fit_intercept=True, alpha=0.95, penalizer = 0.0):
-    self.fit_intercept = fit_intercept
-    self.alpha = alpha
-    self.penalizer = penalizer
-    assert penalizer >= 0, "penalizer keyword must be >= 0."
-
-  def fit(self, event_times, X, timeline = None, censorship=None, columns=None):
-    """currently X is a static (n,d) array
-
-    event_times: (n,1) array of event times
-    X: (n,d) the design matrix, either a numpy matrix or DataFrame.  
-    timeline: (t,1) timepoints in ascending order
-    censorship: (n,1) boolean array of censorships: True if observed, False if right-censored.
-                By default, assuming all are observed.
-
-    Fits: self.cumulative_hazards_: a (t,d+1) dataframe of cumulative hazard coefficients
-          self.hazards_: a (t,d+1) dataframe of hazard coefficients
+    Parameters:
+      fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The 
+        intercept, b_0(t) acts as a baseline hazard. 
+      alpha: the level in the confidence intervals.
+      penalizer: Attach a L2 penalizer to the regression. This improves stability of the estimates
+       and controls high correlation between covariates.
 
     """
-    #deal with the covariate matrix. Check if it is a dataframe or numpy array
-    n,d = X.shape
-    if type(X)==pd.core.frame.DataFrame:
-      X_ = X.values.copy()
-      if columns is None:
-        columns = X.columns
-    else:
-      X_ = X.copy()
 
-    # append a columns of ones for the baseline hazard
-    ix = event_times.argsort(0)[:,0].copy()
-    X_ = X_[ix,:].copy() if not self.fit_intercept else np.c_[ X_[ix,:].copy(), np.ones((n,1)) ]
-    sorted_event_times = event_times[ix,0].copy()
+    def __init__(self,fit_intercept=True, alpha=0.95, penalizer = 0.0):
+        self.fit_intercept = fit_intercept
+        self.alpha = alpha
+        self.penalizer = penalizer
+        assert penalizer >= 0, "penalizer keyword must be >= 0."
 
-    #set the column's names of the dataframe.
-    if columns is None:
-      columns = range(d) 
-    else:
-      columns = [c for c in columns] 
+    def fit(self, event_times, X, timeline = None, censorship=None, columns=None):
+        """currently X is a static (n,d) array
 
-    if self.fit_intercept:
-      columns += ['baseline']
+        event_times: (n,1) array of event times
+        X: (n,d) the design matrix, either a numpy matrix or DataFrame.  
+        timeline: (t,1) timepoints in ascending order
+        censorship: (n,1) boolean array of censorships: True if observed, False if right-censored.
+                    By default, assuming all are observed.
 
-    #set the censorship events. 1 if the death was observed.
-    if censorship is None:
-        observed = np.ones(n, dtype=bool)
-    else:
-        observed = censorship[ix].reshape(n)
+        Fits: self.cumulative_hazards_: a (t,d+1) dataframe of cumulative hazard coefficients
+              self.hazards_: a (t,d+1) dataframe of hazard coefficients
 
-    #set the timeline -- this is used as DataFrame index in the results
-    if timeline is None:
-        timeline = sorted_event_times.copy()
+        """
+        #deal with the covariate matrix. Check if it is a dataframe or numpy array
+        n,d = X.shape
+        if type(X)==pd.core.frame.DataFrame:
+          X_ = X.values.copy()
+          if columns is None:
+            columns = X.columns
+        else:
+          X_ = X.copy()
 
-    timeline = np.unique(timeline.astype(float))
-    if timeline[0] > 0:
-       timeline = np.insert(timeline,0,0.)
-    
-    unique_times = np.unique(timeline)
-    zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
-    self.cumulative_hazards_ = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
-    self.hazards_ = pd.DataFrame(np.zeros((event_times.shape[0],d+self.fit_intercept)), index=event_times[:,0], columns = columns)
-    self._variance = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
-    
-    #create the penalizer matrix for L2 regression
-    penalizer = self.penalizer*np.eye(d + self.fit_intercept)
-    
-    t_0 = sorted_event_times[0]
-    cum_v = np.zeros((d+self.fit_intercept,1))
-    v = cum_v.copy()
-    for i,time in enumerate(sorted_event_times):
-        relevant_times = (t_0<timeline)*(timeline<=time)
-        if observed[i] == 0:
+        # append a columns of ones for the baseline hazard
+        ix = event_times.argsort(0)[:,0].copy()
+        X_ = X_[ix,:].copy() if not self.fit_intercept else np.c_[ X_[ix,:].copy(), np.ones((n,1)) ]
+        sorted_event_times = event_times[ix,0].copy()
+
+        #set the column's names of the dataframe.
+        if columns is None:
+          columns = range(d) 
+        else:
+          columns = [c for c in columns] 
+
+        if self.fit_intercept:
+          columns += ['baseline']
+
+        #set the censorship events. 1 if the death was observed.
+        if censorship is None:
+            observed = np.ones(n, dtype=bool)
+        else:
+            observed = censorship[ix].reshape(n)
+
+        #set the timeline -- this is used as DataFrame index in the results
+        if timeline is None:
+            timeline = sorted_event_times.copy()
+
+        timeline = np.unique(timeline.astype(float))
+        if timeline[0] > 0:
+           timeline = np.insert(timeline,0,0.)
+        
+        unique_times = np.unique(timeline)
+        zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
+        self.cumulative_hazards_ = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
+        self.hazards_ = pd.DataFrame(np.zeros((event_times.shape[0],d+self.fit_intercept)), index=event_times[:,0], columns = columns)
+        self._variance = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
+        
+        #create the penalizer matrix for L2 regression
+        penalizer = self.penalizer*np.eye(d + self.fit_intercept)
+        
+        t_0 = sorted_event_times[0]
+        cum_v = np.zeros((d+self.fit_intercept,1))
+        v = cum_v.copy()
+        for i,time in enumerate(sorted_event_times):
+            relevant_times = (t_0<timeline)*(timeline<=time)
+            if observed[i] == 0:
+                X_[i,:] = 0
+            try:
+                V = dot(inv(dot(X_.T,X_) + penalizer), X_.T)
+            except LinAlgError:
+                #if penalizer > 0, this should not occur. But sometimes it does...
+                V = dot(pinv(dot(X_.T,X_) + penalizer), X_.T)
+
+            v = dot(V, basis(n,i))
+            cum_v = cum_v + v
+            self.cumulative_hazards_.ix[relevant_times] = self.cumulative_hazards_.ix[relevant_times].values + cum_v.T
+            self.hazards_.iloc[i] = self.hazards_.iloc[i].values + v.T
+            self._variance.ix[relevant_times] = self._variance.ix[relevant_times].values + dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
+            t_0 = time
             X_[i,:] = 0
+
+        #clean up last iteration
+        relevant_times = (timeline>time)
+        self.cumulative_hazards_.ix[relevant_times] = cum_v.T
+        self.hazards_.iloc[i] = v.T
+        self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
+        self.timeline = timeline
+        self.X = X
+        self.censorship = censorship
+        self._compute_confidence_intervals()
+        return self
+
+    def smoothed_hazards_(self, bandwith=1):
+        """
+        Using the gaussian kernel to smooth the hazard function, with sigma/bandwith
+
+        """
+        C = self.censorship.astype(bool)
+        return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:]), 
+                columns=self.hazards_.columns, index=self.timeline)
+
+    def _compute_confidence_intervals(self):
+        alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
+        n = self.timeline.shape[0]
+        d = self.cumulative_hazards_.shape[1]
+        index = [['upper']*n+['lower']*n, np.concatenate( [self.timeline, self.timeline] ) ]
+        self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)),index=index)
+        self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.values)
+        self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
+        return 
+
+    def predict_cumulative_hazard(self, X, columns=None):
+        """
+        X: a (n,d) covariate matrix
+
+        Returns the hazard rates for the individuals
+        """
+        n,d = X.shape
         try:
-            V = dot(inv(dot(X_.T,X_) + penalizer), X_.T)
-        except LinAlgError:
-            #if penalizer > 0, this should not occur. But sometimes it does...
-            V = dot(pinv(dot(X_.T,X_) + penalizer), X_.T)
+          X_ = X.values.copy()
+        except:
+          X_ = X.copy()
+        X_ = X.copy() if not self.fit_intercept else np.c_[ X.copy(), np.ones((n,1)) ]
+        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=columns )
+      
+    def predict_survival_function(self,X, columns=None):
+        """
+        X: a (n,d) covariate matrix
 
-        v = dot(V, basis(n,i))
-        cum_v = cum_v + v
-        self.cumulative_hazards_.ix[relevant_times] = self.cumulative_hazards_.ix[relevant_times].values + cum_v.T
-        self.hazards_.iloc[i] = self.hazards_.iloc[i].values + v.T
-        self._variance.ix[relevant_times] = self._variance.ix[relevant_times].values + dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
-        t_0 = time
-        X_[i,:] = 0
+        Returns the survival functions for the individuals
+        """
+        return np.exp(-self.predict_cumulative_hazard(X, columns=columns))
 
-    #clean up last iteration
-    relevant_times = (timeline>time)
-    self.cumulative_hazards_.ix[relevant_times] = cum_v.T
-    self.hazards_.iloc[i] = v.T
-    self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
-    self.timeline = timeline
-    self.X = X
-    self.censorship = censorship
-    self._compute_confidence_intervals()
-    return self
+    def predict_median(self,X):
+        """
+        X: a (n,d) covariate matrix
+        Returns the median lifetimes for the individuals
+        """
+        return median_survival_times(self.predict_survival_function(X))
 
-  def smoothed_hazards_(self, bandwith=1):
-      """
-      Using the gaussian kernel to smooth the hazard function, with sigma/bandwith
-
-      """
-      C = self.censorship.astype(bool)
-      return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:]), 
-              columns=self.hazards_.columns, index=self.timeline)
-
-  def _compute_confidence_intervals(self):
-      alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
-      n = self.timeline.shape[0]
-      d = self.cumulative_hazards_.shape[1]
-      index = [['upper']*n+['lower']*n, np.concatenate( [self.timeline, self.timeline] ) ]
-      self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)),index=index)
-      self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.values)
-      self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
-      return 
-
-  def predict_cumulative_hazard(self, X, columns=None):
-    """
-    X: a (n,d) covariate matrix
-
-    Returns the hazard rates for the individuals
-    """
-    n,d = X.shape
-    try:
-      X_ = X.values.copy()
-    except:
-      X_ = X.copy()
-    X_ = X.copy() if not self.fit_intercept else np.c_[ X.copy(), np.ones((n,1)) ]
-    return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=columns )
-  
-  def predict_survival_function(self,X, columns=None):
-    """
-    X: a (n,d) covariate matrix
-
-    Returns the survival functions for the individuals
-    """
-    return np.exp(-self.predict_cumulative_hazard(X, columns=columns))
-
-  def predict_median(self,X):
-    """
-    X: a (n,d) covariate matrix
-    Returns the median lifetimes for the individuals
-    """
-    return median_survival_times(self.predict_survival_function(X))
-
-  def predict_expectation(self,X):
-    """
-    Compute the expected lifetime, E[T], using covarites X.
-    """
-    t = self.cumulative_hazards_.index
-    return quadrature(self.predict_survival_function(X).values.T, t)
+    def predict_expectation(self,X):
+        """
+        Compute the expected lifetime, E[T], using covarites X.
+        """
+        t = self.cumulative_hazards_.index
+        return quadrature(self.predict_survival_function(X).values.T, t)
 
 #utils
 def qth_survival_times(q, survival_functions):
