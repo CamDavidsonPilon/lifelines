@@ -205,7 +205,7 @@ class StatisticalTests(unittest.TestCase):
       T_pred = aaf.predict_median(X)
       self.assertTrue( abs((T_pred.values > T).mean() - 0.5) < 0.05 )
 
-  def test_aalen_additive_fit(self):
+  def test_aalen_additive_fit_no_censor(self):
       #this is a visual test of the fitting the cumulative 
       #hazards.
       n = 2500
@@ -230,6 +230,36 @@ class StatisticalTests(unittest.TestCase):
       ax = plt.subplot(d+2,1,d+2)
       ax.plot( (T > np.arange(T_max)).sum(0), c="k", label="number of observations" )
       ax.set_xlabel("time")
+      plt.show()
+      return  
+
+  def test_aalen_additive_fit_with_censor(self):
+      #this is a visual test of the fitting the cumulative 
+      #hazards.
+      n = 2500
+      d = 3
+      timeline = np.linspace(0,70,5000)
+      hz, coef, X = generate_hazard_rates(n, d, timeline)
+      cumulative_hazards = cumulative_quadrature( coef.values.T, timeline).T
+      T = generate_random_lifetimes(hz, timeline)
+      C = np.random.binomial(1, 0.8, size=n)
+
+      #fit the aaf, no intercept as it is already built into X, X[2] is ones
+      aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+      aaf.fit(T,X, censorship=C, columns = coef.columns)
+
+      T_max = aaf.timeline[-10]
+      #plot baby
+      for i,column in enumerate(coef.columns):
+        ax = plt.subplot(d+2,1,i+1)
+        ax.plot( timeline[timeline<T_max], cumulative_hazards[timeline<T_max,i])
+        aaf.cumulative_hazards_[column].ix[:-10].plot(ax=ax)
+        ax.legend(loc='lower right')
+
+      ax = plt.subplot(d+2,1,d+2)
+      ax.plot( (T > np.arange(T_max)).sum(0), c="k", label="number of observations" )
+      ax.set_xlabel("time")
+      plt.title("aalen fit with 0.8 /censorship")
       plt.show()
       return
 
