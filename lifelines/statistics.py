@@ -12,6 +12,9 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
     event series, determines whether the data generating processes are statistically different. 
     The test-statistic is chi-squared under the null hypothesis. 
 
+    H_0: both event series are from the same generating processes
+    H_A: the event series are from different generating processes.
+
     Pre lifelines 0.2: this returned a test statistic. 
     Post lifelines 0.2: this returns the results of the entire test. 
 
@@ -119,6 +122,9 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
 
 def multivariate_logrank_test( event_durations, groups, censorship=None, alpha=0.95, t_0=-1, **kwargs):
     """
+    This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
+      be equal when n=2):
+
     H_0: all event series are from the same generating processes
     H_A: there exist atleast one group that differs from the other.
 
