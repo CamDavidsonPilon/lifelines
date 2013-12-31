@@ -12,7 +12,6 @@ lifelines
 But outside of medicine and actuarial science, there are many other interesting and exciting applications of this 
 lesser-known technique, for example:
 - SaaS providers are interested in measuring customer lifetimes, or time to first behaviours.
-- ecommerce shops are interested the time between first and second order (called *repeat purchase rate*).
 - sociologists are interested in measure political parties lifetimes, or relationships, or marriages
 - Business are interested in what variables affect lifetime value
 
@@ -25,8 +24,7 @@ thoughts on the library.
 
 ####Dependencies:
 
-The usual Python data stack: numpy, scipy, pandas (a modern version please), matplotlib (optional, but seriously...).
-
+The usual Python data stack: numpy, scipy, pandas (a modern version please), matplotlib
 
 #### Installing
 
@@ -41,25 +39,30 @@ Or getting the bleeding edge version with:
 from the command line. 
 
 
-## (Quick) Intro to *lifelines* and survival analysis
-
-    from lifelines.estimation import KaplanMeierFitter, NelsonAalenFitter
+## Intro to *lifelines* and survival analysis
 
     #fake data
     #T are the durations, C are boolean censorships
     T = np.random.exponential(1, size=500)
     C = np.random.binomial(1, 0.5, size=500)
 
+Non-parametrically fit the survival curve:
+
+    from lifelines.estimation import KaplanMeierFitter
+
     kmf = KaplanMeierFitter()
     kmf.fit(T, C) 
     kmf.plot()
     print kmf.survival_function_.head()
 
+Non-parametrically fit the cumulative hazard curve:
+
+    from lifelines.estimation import  NelsonAalenFitter
+
     naf = NelsonAalenFitter()
     naf.fit(T, C) 
     naf.plot()
     print naf.cumulative_hazard_.head()
-
 
 
 ## (Less Quick) Intro to *lifelines* and survival analysis
