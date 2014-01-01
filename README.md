@@ -12,7 +12,7 @@ But outside of medicine and actuarial science, there are many other interesting 
 lesser-known technique, for example:
 - SaaS providers are interested in measuring customer lifetimes, or time to first behaviours.
 - sociologists are interested in measure political parties lifetimes, or relationships, or marriages
-- Business are interested in what variables affect lifetime value
+- Businesses are interested in what variables affect lifetime value
 
 *lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please ping me at [@cmrn_dp](https://twitter.com/Cmrn_DP) and let me know your 
 thoughts on the library. 
