@@ -12,7 +12,7 @@ But outside of medicine and actuarial science, there are many other interesting 
 lesser-known technique, for example:
 - SaaS providers are interested in measuring customer lifetimes, or time to first behaviours.
 - sociologists are interested in measure political parties lifetimes, or relationships, or marriages
-- Business are interested in what variables affect lifetime value
+- Businesses are interested in what variables affect lifetime value
 
 *lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please ping me at [@cmrn_dp](https://twitter.com/Cmrn_DP) and let me know your 
 thoughts on the library. 
@@ -97,4 +97,28 @@ There are some IPython notebook files in the repo, and you can view them online 
 ![lifelines](http://i.imgur.com/QXW71zA.png)
 
 
+## License
+
+The Feedback MIT License (FMIT) 
+
+Copyright (c) 2013, Cameron Davidson-Pilon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+1. The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+2. Person obtaining a copy must return feedback to the authors.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
