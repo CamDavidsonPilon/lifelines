@@ -156,7 +156,7 @@ class KaplanMeierFitter(object):
        """
        #set to all observed if censorship is none
        if censorship is None:
-          self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
+          self.censorship = np.ones(event_times.shape[0], dtype=bool) #why boolean?
        else:
           self.censorship = np.array(censorship).copy()
 
