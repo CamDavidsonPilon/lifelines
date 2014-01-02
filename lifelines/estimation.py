@@ -179,6 +179,7 @@ class KaplanMeierFitter(object):
        #self.median_ = median_survival_times(self.survival_function_)
        self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
        self.plot = plot_dataframes(self, "survival_function_")
+       self.median_ = median_survival_times(self.survival_function_)
        return self
 
   def _bounds(self, cumulative_sq_, alpha):
