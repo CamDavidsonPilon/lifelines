@@ -42,7 +42,7 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
 
 
 def plot_dataframes(self, estimate):
-    def plot(c="#348ABD", ix=None, ci_legend=False, ci_force_lines=False, **kwargs):
+    def plot(c="#348ABD", ix=None, hazard=False, ci_legend=False, ci_force_lines=False, bandwidth=None, **kwargs):
       """"
       A wrapper around plotting lines. Matplotlib plot arguments can be passed in, plus:
 
@@ -50,22 +50,31 @@ def plot_dataframes(self, estimate):
         ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
         ix: specify a subsection of the curves to plot, i.e. .plot(ix=slice(0,-3)) will plot all 
          but the last three points in the estimate and confidence intervals.
+        bandwidth: specify the bandwidth of the kernel smoother for the smoothed-hazard rate. Only used 
+         when called 'plot_hazard'
 
       """
+      if estimate=="hazard_":
+          assert bandwidth != None, 'Must specify a bandwidth parameter in the call to plot_hazard'
+          estimate_ = self.smoothed_hazard_(bandwidth)
+          confidence_interval_ = self.hazard_confidence_intervals_(bandwidth,hazard_=estimate_.values[:,0])
+      else:
+          confidence_interval_ = getattr(self, 'confidence_interval_')
+          estimate_ = getattr(self, estimate)
+       
       if ix == None:
         ix = slice(0,None)
 
-      estimate_ = getattr(self, estimate)
       n = estimate_.shape[0]
       ax = estimate_.ix[ix].plot(c=c, marker='o', markeredgewidth=0, markersize=10./n, **kwargs)
       kwargs["ax"]=ax
       if ci_force_lines:
         kwargs["legend"]=ci_legend
-        self.confidence_interval_.ix[ix].plot(c=c, linestyle="--", linewidth=1, **kwargs)
+        confidence_interval_.ix[ix].plot(c=c, linestyle="--", linewidth=1, **kwargs)
       else:
         x = self.confidence_interval_.index[ix].values.astype(float)
-        lower = self.confidence_interval_.filter(like='lower').values[ix,0]
-        upper = self.confidence_interval_.filter(like='upper').values[ix,0]
+        lower = confidence_interval_.filter(like='lower').values[ix,0]
+        upper = confidence_interval_.filter(like='upper').values[ix,0]
         plt.fill_between(x, lower, y2=upper, color=c, alpha=0.25)
       return ax
     return plot

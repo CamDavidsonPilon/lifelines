@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import LinAlgError, inv, pinv
 from numpy import dot
 import pandas as pd
+import pdb
 
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature
@@ -44,7 +45,7 @@ class NelsonAalenFitter(object):
         """
         
         if censorship is None:
-           self.censorship = np.ones_like(event_times, dtype=bool) #why boolean?
+           self.censorship = np.ones(event_times.shape[0], dtype=bool) #why boolean?
         else:
            self.censorship = np.array(censorship).copy().astype(bool)
         self.event_times = survival_table_from_events(event_times, self.censorship)
@@ -64,6 +65,9 @@ class NelsonAalenFitter(object):
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=columns)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
+        self.plot_cumulative_hazard = self.plot
+        self.plot_hazard = plot_dataframes(self, 'hazard_')
+        self._cumulative_sq = cumulative_sq_
 
         return self
 
@@ -90,6 +94,44 @@ class NelsonAalenFitter(object):
        #check it 0
        return (1.*deaths/population).replace([np.inf],0)
 
+    def smoothed_hazard_(self, bandwidth, timeline=None,):
+      """
+      timeline: default is self.timeline. A (1,) numpy array of positions interested in.
+      bandwidth: the bandwith to used in the Epanechnikov kernel.
+
+      """
+      if timeline == None:
+          timeline = self.timeline
+      else:
+        timeline = timeline.reshape(timeline.shape[0])
+      C = self.censorship.astype(bool)
+      name = "smoothed-" + self.cumulative_hazard_.columns[0]
+      hazard_ = self.cumulative_hazard_.diff().fillna(0)
+      return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:,None], self.timeline[C][None,:],bandwidth), hazard_.values[C,:]), 
+              columns=[name], index=timeline)
+
+    def hazard_confidence_intervals_(self, bandwidth, timeline=None, hazard_=None):
+      """
+      timeline: default is self.timeline. A (1,) numpy array of positions interested in.
+      bandwidth: the bandwith to use in the Epanechnikov kernel.
+
+      """
+      if hazard_==None:
+        hazard_ = self.hazard_(bandwidth, timeline).values[:,0]
+      if timeline == None:
+          timeline = self.timeline
+      else:
+        timeline = timeline.reshape(timeline.shape[0])
+
+      alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
+      C = self.censorship.astype(bool)
+      name = "smoothed-" + self.cumulative_hazard_.columns[0]
+      std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:,None], self.timeline[C][None,:],bandwidth)**2, self._cumulative_sq.diff().fillna(0).values[C]))
+      values = {
+            "%s_upper_%.2f"%(name,self.alpha):hazard_*np.exp(alpha2*std_hazard_/hazard_),
+            "%s_lower_%.2f"%(name,self.alpha):hazard_*np.exp(-alpha2*std_hazard_/hazard_)
+            }
+      return pd.DataFrame( values, index=timeline)
 
 class KaplanMeierFitter(object):
    
@@ -193,7 +235,7 @@ class AalenAdditiveFitter(object):
         self.penalizer = penalizer
         assert penalizer >= 0, "penalizer keyword must be >= 0."
 
-    def fit(self, event_times, X, timeline = None, censorship=None, columns=None):
+    def fit(self, event_times, X, timeline=None, censorship=None, columns=None):
         """currently X is a static (n,d) array
 
         event_times: (n,1) array of event times
@@ -281,16 +323,17 @@ class AalenAdditiveFitter(object):
         self.timeline = timeline
         self.X = X
         self.censorship = censorship
+        self.event_times = event_times
         self._compute_confidence_intervals()
         return self
 
     def smoothed_hazards_(self, bandwith=1):
         """
-        Using the gaussian kernel to smooth the hazard function, with sigma/bandwith
+        Using the epanechnikov kernel to smooth the hazard function, with sigma/bandwith
 
         """
         C = self.censorship.astype(bool)
-        return pd.DataFrame( np.dot(gaussian(self.timeline[:,None], self.timeline[C][None,:],bandwith), self.hazards_.values[C,:]), 
+        return pd.DataFrame( np.dot(epanechnikov_kernel(self.timeline[:,None], self.timeline[C],bandwith), self.hazards_.values[C,:]), 
                 columns=self.hazards_.columns, index=self.timeline)
 
     def _compute_confidence_intervals(self):
@@ -370,8 +413,13 @@ def median_survival_times(survival_functions):
 def gaussian(t,T,sigma=1.):
     return 1./np.sqrt(np.pi*2.*sigma**2)*np.exp(-0.5*(t-T)**2/sigma**2)
 
-def ipcw(target_event_times, target_censorship, predicted_event_times ):
-    pass
+def epanechnikov_kernel(t, T, bandwidth=1.):
+    M = 0.75*(1-(t-T)/bandwidth)**2
+    M[ abs((t-T)) >= bandwidth] = 0
+    return M
+
+def asymmetric_epanechnikov_kernel(q, x):
+    return (64*(2 - 4*q + 6*q*q - 3*q**3) + 240*(1-q)**2*x)/((1+q)**4*(19 - 18*q + 3*q**2))
 
 """
 References:

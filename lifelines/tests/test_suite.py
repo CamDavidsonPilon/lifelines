@@ -259,7 +259,7 @@ class StatisticalTests(unittest.TestCase):
       ax = plt.subplot(d+2,1,d+2)
       ax.plot( (T > np.arange(T_max)).sum(0), c="k", label="number of observations" )
       ax.set_xlabel("time")
-      plt.title("aalen fit with 0.8 /censorship")
+      plt.suptitle("aalen fit with 0.8 observations, d = %d"%d)
       plt.show()
       return
 
@@ -383,6 +383,31 @@ class PlottingTests(unittest.TestCase):
       N = 20
       T, C= generate_random_lifetimes(hz, t, size=N, censor=True )
       plot_lifetimes(T, censorship=C)
+
+  def test_naf_plot_cumulative_hazard(self):
+      data1 = np.random.exponential(5, size=(200,1))
+      naf = NelsonAalenFitter()
+      naf.fit(data1)
+      ax = naf.plot()
+      naf.plot_cumulative_hazard(ax=ax, c="#A60628", ci_force_lines=True)
+      plt.title("I should have plotted the same thing, but different styles + color!")
+      return
+
+  def test_naf_plot_cumulative_hazard_bandwidth_2(self):
+      data1 = np.random.exponential(5, size=(200,1))
+      naf = NelsonAalenFitter()
+      naf.fit(data1)
+      naf.plot_hazard(c="#A60628", ci_force_lines=True, bandwidth=1.)
+      plt.title('testing smoothing hazard')
+      return  
+
+  def test_naf_plot_cumulative_hazard_bandwith_1(self):
+      data1 = np.random.exponential(5, size=(200,1))
+      naf = NelsonAalenFitter()
+      naf.fit(data1)
+      naf.plot_hazard(c="#A60628", bandwidth=5.)
+      plt.title('testing smoothing hazard')
+      return
 
 #some data
 
