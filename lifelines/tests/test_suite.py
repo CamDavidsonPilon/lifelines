@@ -161,6 +161,13 @@ class StatisticalTests(unittest.TestCase):
       print summary
       self.assertTrue(result)
 
+  def test_smoothing_hazard_ties(self):
+    T = np.random.binomial(20,0.7, size=300)
+    C = np.random.binomial(1,0.8, size=300)
+    naf = NelsonAalenFitter()
+    naf.fit(T,C)
+    print naf.smoothed_hazard_(1.)
+
   def test_multivariate_unequal_intensities(self):
       T = np.random.exponential(10, size=300)
       g = np.random.binomial(2, 0.5, size=300)

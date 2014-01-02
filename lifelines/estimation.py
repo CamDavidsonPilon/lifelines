@@ -94,39 +94,35 @@ class NelsonAalenFitter(object):
        #check it 0
        return (1.*deaths/population).replace([np.inf],0)
 
-    def smoothed_hazard_(self, bandwidth, timeline=None,):
+    def smoothed_hazard_(self, bandwidth):
       """
-      timeline: default is self.timeline. A (1,) numpy array of positions interested in.
       bandwidth: the bandwith to used in the Epanechnikov kernel.
 
       """
-      if timeline == None:
-          timeline = self.timeline
-      else:
-        timeline = timeline.reshape(timeline.shape[0])
-      C = self.censorship.astype(bool)
-      name = "smoothed-" + self.cumulative_hazard_.columns[0]
-      hazard_ = self.cumulative_hazard_.diff().fillna(0)
+      timeline = self.timeline
+      cumulative_hazard_name =  self.cumulative_hazard_.columns[0]
+      hazard_name = "smoothed-" + cumulative_hazard_name
+      hazard_ = self.cumulative_hazard_.diff().fillna(0) 
+      C = (hazard_[cumulative_hazard_name] != 0.0).values
       return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:,None], self.timeline[C][None,:],bandwidth), hazard_.values[C,:]), 
-              columns=[name], index=timeline)
+              columns=[hazard_name], index=timeline)
 
-    def hazard_confidence_intervals_(self, bandwidth, timeline=None, hazard_=None):
+    def hazard_confidence_intervals_(self, bandwidth, hazard_=None):
       """
       timeline: default is self.timeline. A (1,) numpy array of positions interested in.
       bandwidth: the bandwith to use in the Epanechnikov kernel.
+      hazard_: a computed (n,) numpy array of estimated hazard rates. See naf.hazard_
 
       """
       if hazard_==None:
-        hazard_ = self.hazard_(bandwidth, timeline).values[:,0]
-      if timeline == None:
-          timeline = self.timeline
-      else:
-        timeline = timeline.reshape(timeline.shape[0])
+        hazard_ = self.hazard_(bandwidth).values[:,0]
 
+      timeline = self.timeline
       alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
-      C = self.censorship.astype(bool)
       name = "smoothed-" + self.cumulative_hazard_.columns[0]
-      std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:,None], self.timeline[C][None,:],bandwidth)**2, self._cumulative_sq.diff().fillna(0).values[C]))
+      var_hazard_ = self._cumulative_sq.diff().fillna(0)
+      C = (var_hazard_.values != 0.0) #only consider the points with jumps
+      std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:,None], self.timeline[C][None,:],bandwidth)**2, var_hazard_.values[C]))
       values = {
             "%s_upper_%.2f"%(name,self.alpha):hazard_*np.exp(alpha2*std_hazard_/hazard_),
             "%s_lower_%.2f"%(name,self.alpha):hazard_*np.exp(-alpha2*std_hazard_/hazard_)
@@ -179,6 +175,7 @@ class KaplanMeierFitter(object):
        #self.median_ = median_survival_times(self.survival_function_)
        self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
        self.plot = plot_dataframes(self, "survival_function_")
+       self.plot_survival_function = self.plot
        self.median_ = median_survival_times(self.survival_function_)
        return self
 
@@ -200,6 +197,10 @@ class KaplanMeierFitter(object):
 
 
 def _additive_estimate(events, timeline, _additive_f, _additive_var):
+    """
+    Called to compute the Kaplan Meier and Nelson-Aalen estimates.
+
+    """
     N = events["removed"].sum()
 
     deaths = events['observed']
