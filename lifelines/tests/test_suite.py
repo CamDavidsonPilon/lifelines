@@ -121,10 +121,10 @@ class StatisticalTests(unittest.TestCase):
         naf.fit(LIFETIMES)
         naf = NelsonAalenFitter(nelson_aalen_smoothing=True)
         naf.fit(LIFETIMES)
-        self.assertTrue(1==1)
+        self.assertTrue(True)
       except Exception as e:
         print e
-        self.assertTrue(0==1)
+        self.assertTrue(False)
 
   def test_equal_intensity(self):
       data1 = np.random.exponential(5, size=(200,1))
@@ -162,11 +162,29 @@ class StatisticalTests(unittest.TestCase):
       self.assertTrue(result)
 
   def test_smoothing_hazard_ties(self):
-    T = np.random.binomial(20,0.7, size=300)
-    C = np.random.binomial(1,0.8, size=300)
-    naf = NelsonAalenFitter()
-    naf.fit(T,C)
-    print naf.smoothed_hazard_(1.)
+      T = np.random.binomial(20,0.7, size=300)
+      C = np.random.binomial(1,0.8, size=300)
+      naf = NelsonAalenFitter()
+      naf.fit(T,C)
+      naf.smoothed_hazard_(1.)
+      self.assertTrue(True) 
+
+  def test_smoothing_hazard_nontied(self):
+      T = np.random.exponential(20, size=300)**2
+      C = np.random.binomial(1,0.8, size=300)
+      naf = NelsonAalenFitter()
+      naf.fit(T,C)
+      naf.smoothed_hazard_(1.)
+      naf.fit(T)
+      naf.smoothed_hazard_(1.)
+      self.assertTrue(True) 
+
+  def test_smoothing_hazard_ties_no_censorship(self):
+      T = np.random.binomial(20,0.7, size=300)
+      naf = NelsonAalenFitter()
+      naf.fit(T)
+      naf.smoothed_hazard_(1.)
+      self.assertTrue(True)   
 
   def test_multivariate_unequal_intensities(self):
       T = np.random.exponential(10, size=300)

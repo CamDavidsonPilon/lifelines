@@ -184,11 +184,10 @@ def cross_validation(fitter, T, X, censorship=None, k=5, loss_function="median")
     This implements the censor-sensative loss function as given in 
     'Prediction Performance of Survival Models', Yan Yuan, 2008
     """
-
     pass
 
 def yaun_loss(fitter, T_true, T_pred, X_train, T_train, censorship=None):
-    "WIP"
+    "[WIP]"
     if censorship==None:
         t = T_pred.shape[0]
         sC = np.ones((t,1))
@@ -210,6 +209,7 @@ def basis(n,i):
     x[i] = 1
     return x
 
-
-def kernel_smoother(timeline, hazards, sigma):
-    pass
+def epanechnikov_kernel(t, T, bandwidth=1.):
+    M = 0.75*(1-(t-T)/bandwidth)**2
+    M[ abs((t-T)) >= bandwidth] = 0
+    return M

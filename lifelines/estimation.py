@@ -2,10 +2,9 @@ import numpy as np
 from numpy.linalg import LinAlgError, inv, pinv
 from numpy import dot
 import pandas as pd
-import pdb
 
 from lifelines.plotting import plot_dataframes
-from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature
+from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature, epanechnikov_kernel
 
 class NelsonAalenFitter(object):
     """
@@ -104,7 +103,7 @@ class NelsonAalenFitter(object):
       hazard_name = "smoothed-" + cumulative_hazard_name
       hazard_ = self.cumulative_hazard_.diff().fillna(0) 
       C = (hazard_[cumulative_hazard_name] != 0.0).values
-      return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:,None], self.timeline[C][None,:],bandwidth), hazard_.values[C,:]), 
+      return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth), hazard_.values[C,:]), 
               columns=[hazard_name], index=timeline)
 
     def hazard_confidence_intervals_(self, bandwidth, hazard_=None):
@@ -122,7 +121,7 @@ class NelsonAalenFitter(object):
       name = "smoothed-" + self.cumulative_hazard_.columns[0]
       var_hazard_ = self._cumulative_sq.diff().fillna(0)
       C = (var_hazard_.values != 0.0) #only consider the points with jumps
-      std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:,None], self.timeline[C][None,:],bandwidth)**2, var_hazard_.values[C]))
+      std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth)**2, var_hazard_.values[C]))
       values = {
             "%s_upper_%.2f"%(name,self.alpha):hazard_*np.exp(alpha2*std_hazard_/hazard_),
             "%s_lower_%.2f"%(name,self.alpha):hazard_*np.exp(-alpha2*std_hazard_/hazard_)
@@ -411,14 +410,6 @@ def qth_survival_times(q, survival_functions):
 
 def median_survival_times(survival_functions):
     return qth_survival_times(0.5, survival_functions)
-
-def gaussian(t,T,sigma=1.):
-    return 1./np.sqrt(np.pi*2.*sigma**2)*np.exp(-0.5*(t-T)**2/sigma**2)
-
-def epanechnikov_kernel(t, T, bandwidth=1.):
-    M = 0.75*(1-(t-T)/bandwidth)**2
-    M[ abs((t-T)) >= bandwidth] = 0
-    return M
 
 def asymmetric_epanechnikov_kernel(q, x):
     return (64*(2 - 4*q + 6*q*q - 3*q**3) + 240*(1-q)**2*x)/((1+q)**4*(19 - 18*q + 3*q**2))
