@@ -186,6 +186,14 @@ class StatisticalTests(unittest.TestCase):
       naf.smoothed_hazard_(1.)
       self.assertTrue(True)   
 
+  def test_smoothing_hazard_with_spike_at_time_0(self):
+      T = np.random.binomial(20,0.7, size=300)
+      T[np.random.binomial(1,0.3, size=300).astype(bool)] = 0
+      naf = NelsonAalenFitter()
+      naf.fit(T)
+      df = naf.smoothed_hazard_(bandwidth=0.1)
+      self.assertTrue(df.iloc[0] > df.iloc[1] )
+
   def test_multivariate_unequal_intensities(self):
       T = np.random.exponential(10, size=300)
       g = np.random.binomial(2, 0.5, size=300)

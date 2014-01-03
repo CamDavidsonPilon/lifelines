@@ -57,7 +57,7 @@ def plot_dataframes(self, estimate):
       if estimate=="hazard_":
           assert bandwidth != None, 'Must specify a bandwidth parameter in the call to plot_hazard'
           estimate_ = self.smoothed_hazard_(bandwidth)
-          confidence_interval_ = self.hazard_confidence_intervals_(bandwidth,hazard_=estimate_.values[:,0])
+          confidence_interval_ = self.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:,0])
       else:
           confidence_interval_ = getattr(self, 'confidence_interval_')
           estimate_ = getattr(self, estimate)

@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import LinAlgError, inv, pinv
 from numpy import dot
 import pandas as pd
+import pdb
 
 from lifelines.plotting import plot_dataframes
 from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature, epanechnikov_kernel
@@ -94,39 +95,39 @@ class NelsonAalenFitter(object):
        return (1.*deaths/population).replace([np.inf],0)
 
     def smoothed_hazard_(self, bandwidth):
-      """
-      bandwidth: the bandwith to used in the Epanechnikov kernel.
+        """
+        bandwidth: the bandwith used in the Epanechnikov kernel.
 
-      """
-      timeline = self.timeline
-      cumulative_hazard_name =  self.cumulative_hazard_.columns[0]
-      hazard_name = "smoothed-" + cumulative_hazard_name
-      hazard_ = self.cumulative_hazard_.diff().fillna(0) 
-      C = (hazard_[cumulative_hazard_name] != 0.0).values
-      return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth), hazard_.values[C,:]), 
-              columns=[hazard_name], index=timeline)
+        """
+        timeline = self.timeline
+        cumulative_hazard_name =  self.cumulative_hazard_.columns[0]
+        hazard_name = "smoothed-" + cumulative_hazard_name
+        hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0] )
+        C = (hazard_[cumulative_hazard_name] != 0.0).values
+        return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth), hazard_.values[C,:]), 
+                columns=[hazard_name], index=timeline)
 
-    def hazard_confidence_intervals_(self, bandwidth, hazard_=None):
-      """
-      timeline: default is self.timeline. A (1,) numpy array of positions interested in.
-      bandwidth: the bandwith to use in the Epanechnikov kernel.
-      hazard_: a computed (n,) numpy array of estimated hazard rates. See naf.hazard_
 
-      """
-      if hazard_==None:
-        hazard_ = self.hazard_(bandwidth).values[:,0]
+    def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
+        """
+        bandwidth: the bandwith to use in the Epanechnikov kernel.
+        hazard_: a computed (n,) numpy array of estimated hazard rates. If none, uses naf.smoothed_hazard_
+        """
+        if hazard_==None:
+          hazard_ = self.smoothed_hazard_(bandwidth).values[:,0]
 
-      timeline = self.timeline
-      alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
-      name = "smoothed-" + self.cumulative_hazard_.columns[0]
-      var_hazard_ = self._cumulative_sq.diff().fillna(0)
-      C = (var_hazard_.values != 0.0) #only consider the points with jumps
-      std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth)**2, var_hazard_.values[C]))
-      values = {
-            "%s_upper_%.2f"%(name,self.alpha):hazard_*np.exp(alpha2*std_hazard_/hazard_),
-            "%s_lower_%.2f"%(name,self.alpha):hazard_*np.exp(-alpha2*std_hazard_/hazard_)
-            }
-      return pd.DataFrame( values, index=timeline)
+        timeline = self.timeline
+        alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
+        name = "smoothed-" + self.cumulative_hazard_.columns[0]
+        self._cumulative_sq.iloc[0] = 0 #why?
+        var_hazard_ = self._cumulative_sq.diff().fillna( self._cumulative_sq.iloc[0] )
+        C = (var_hazard_.values != 0.0) #only consider the points with jumps
+        std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth)**2, var_hazard_.values[C]))
+        values = {
+              "%s_upper_%.2f"%(name,self.alpha):hazard_*np.exp(alpha2*std_hazard_/hazard_),
+              "%s_lower_%.2f"%(name,self.alpha):hazard_*np.exp(-alpha2*std_hazard_/hazard_)
+              }
+        return pd.DataFrame(values, index=timeline)
 
 class KaplanMeierFitter(object):
    
