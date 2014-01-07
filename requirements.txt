@@ -1,0 +1,4 @@
+numpy>=1.7
+scipy>=0.12
+pandas>=0.12
+matplotlib

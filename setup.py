@@ -23,7 +23,7 @@ setup(
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 4 - Beta",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: FMIT License",
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering",
     ],
