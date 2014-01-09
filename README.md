@@ -1,7 +1,6 @@
 lifelines
 =======
 
-[![Build Status](https://travis-ci.org/CamDavidsonPilon/lifelines.png)](https://travis-ci.org/CamDavidsonPilon/lifelines)
 [![Downloads](https://pypip.in/d/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 [![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 
