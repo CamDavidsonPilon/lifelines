@@ -286,7 +286,7 @@ class StatisticalTests(unittest.TestCase):
       for i,column in enumerate(coef.columns):
         ax = plt.subplot(d+2,1,i+1)
         ax.plot( timeline[timeline<T_max], cumulative_hazards[timeline<T_max,i])
-        aaf.cumulative_hazards_[column].ix[:-10].plot(ax=ax)
+        aaf.plot(ax=ax, columns=[column])
         ax.legend(loc='lower right')
 
       ax = plt.subplot(d+2,1,d+2)

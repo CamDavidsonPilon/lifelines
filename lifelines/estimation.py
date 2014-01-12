@@ -4,7 +4,7 @@ from numpy import dot
 import pandas as pd
 import pdb
 
-from lifelines.plotting import plot_dataframes
+from lifelines.plotting import plot_dataframes, plot_regressions
 from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature, epanechnikov_kernel
 
 class NelsonAalenFitter(object):
@@ -327,6 +327,7 @@ class AalenAdditiveFitter(object):
         self.censorship = censorship
         self.event_times = event_times
         self._compute_confidence_intervals()
+        self.plot = plot_regressions(self)
         return self
 
     def smoothed_hazards_(self, bandwith=1):
@@ -343,9 +344,9 @@ class AalenAdditiveFitter(object):
         n = self.timeline.shape[0]
         d = self.cumulative_hazards_.shape[1]
         index = [['upper']*n+['lower']*n, np.concatenate( [self.timeline, self.timeline] ) ]
-        self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)),index=index)
-        self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.values)
-        self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.values)
+        self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)), index=index, columns=self.cumulative_hazards_.columns)
+        self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.cumsum().values)
+        self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.cumsum().values)
         return 
 
     def predict_cumulative_hazard(self, X, columns=None):

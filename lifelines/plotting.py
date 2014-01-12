@@ -41,19 +41,56 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
     plt.show()
 
 
+def shaded_plot(x, y, y_upper, y_lower, **kwargs):
+    ax = kwargs.pop('ax', plt.gca())
+    base_line, = ax.plot(x, y, **kwargs)
+    ax.fill_between(x, y_lower, y_upper, facecolor=base_line.get_color(), alpha=0.25)
+    return
+
+def plot_regressions(self):
+    def plot(ix=None, columns = [], ci_legend=False, ci_force_lines=False, **kwargs):
+
+        if ix == None:
+          ix = slice(0,None)
+
+        if len(columns)==0:
+          columns = self.cumulative_hazards_.columns
+
+        if "ax" in kwargs:
+            ax = kwargs["ax"]
+        else:   
+            ax = plt.subplot(111)
+
+        x = self.cumulative_hazards_.ix[ix].index.values.astype(float)
+        for column in columns:
+          y = self.cumulative_hazards_[column].ix[ix].values
+          y_upper = self.confidence_intervals_[column].ix['upper'].ix[ix].values
+          y_lower = self.confidence_intervals_[column].ix['lower'].ix[ix].values
+          shaded_plot(x, y, y_upper, y_lower, ax=ax, label=column)
+
+        return ax
+    return plot
+
+
 def plot_dataframes(self, estimate):
-    def plot(c="#348ABD", ix=None, hazard=False, ci_legend=False, ci_force_lines=False, bandwidth=None, **kwargs):
+    def plot(c="#348ABD", ix=None, flat=False, ci_legend=False, ci_force_lines=False, bandwidth=None, **kwargs):
       """"
       A wrapper around plotting lines. Matplotlib plot arguments can be passed in, plus:
 
-        ci_force_lines: force the confidence intervals to be line plots (versus default areas).
+        flat: a design style with stepped lines and no shading. Similar to R.
+        ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas).
         ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
-        ix: specify a subsection of the curves to plot, i.e. .plot(ix=slice(0,-3)) will plot all 
-         but the last three points in the estimate and confidence intervals.
+        ix: specify a subsection of the curves to plot, ex:
+               .plot(ix=slice(0,-3)) will plot all but the last three points in the estimate and confidence intervals.
+               .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10. (This is because they are floats, not ints.)
         bandwidth: specify the bandwidth of the kernel smoother for the smoothed-hazard rate. Only used 
          when called 'plot_hazard'
 
       """
+      if flat:
+          ci_force_lines=True
+          kwargs["drawstyle"] = "steps-pre"
+
       if estimate=="hazard_":
           assert bandwidth != None, 'Must specify a bandwidth parameter in the call to plot_hazard'
           estimate_ = self.smoothed_hazard_(bandwidth)
