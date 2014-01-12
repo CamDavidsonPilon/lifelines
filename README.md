@@ -1,7 +1,6 @@
 lifelines
 =======
 
-[![Build Status](https://travis-ci.org/CamDavidsonPilon/lifelines.png)](https://travis-ci.org/CamDavidsonPilon/lifelines)
 [![Downloads](https://pypip.in/d/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 [![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 
@@ -32,7 +31,12 @@ You can install *lifelines* using
 
 Or getting the bleeding edge version with:
 
+       pip install git+https://github.com/CamDavidsonPilon/lifelines.git
+
+or upgrade with 
+
        pip install --upgrade git+https://github.com/CamDavidsonPilon/lifelines.git
+
 
 from the command line. 
 
@@ -79,9 +83,9 @@ I recommend running the IPython notebooks in the `notebooks` dir.
 
 Alternatively, you can **view them online**
 
-1. [Introduction to survival analysis](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/notebooks/Survival%20Analysis%20intro.ipynb)
-2. [Using lifelines on real data](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/notebooks/Intro%20to%20lifelines.ipynb) 
-3. [Documentation (not fully complete)](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/notebooks/Documentation.ipynb)
+1. [Introduction to survival analysis](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Survival%20Analysis%20intro.ipynb)
+2. [Using lifelines on real data](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Intro%20to%20lifelines.ipynb) 
+3. [Documentation (not fully complete)](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Documentation.ipynb)
 
 classes, methods and data types. You can use the IPython notebook to view it, or [view it online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
 
