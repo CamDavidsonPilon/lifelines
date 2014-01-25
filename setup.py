@@ -12,18 +12,18 @@ def read(fname):
 
 setup(
     name="lifelines",
-    version="0.2.2.2",
+    version="0.2.2.4",
     author="Cameron Davidson-Pilon",
     author_email="cam.davidson.pilon@gmail.com",
     description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
-    license="FMIT",
+    license="MIT",
     keywords="survival analysis statistics data analysis",
     url="https://github.com/CamDavidsonPilon/lifelines",
     packages=['lifelines'],
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 4 - Beta",
-        "License :: OSI Approved :: FMIT License",
+        "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering",
     ],

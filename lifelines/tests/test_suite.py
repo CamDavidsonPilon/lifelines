@@ -113,7 +113,7 @@ class StatisticalTests(unittest.TestCase):
 
   def test_median(self):
       sv = pd.DataFrame(1 - np.linspace(0,1,1000))
-      self.assertTrue( median_survival_times(sv) == 500 )
+      self.assertTrue( median_survival_times(sv).ix[0] == 500 )
 
   def test_not_to_break(self):
       try:
@@ -192,7 +192,7 @@ class StatisticalTests(unittest.TestCase):
       naf = NelsonAalenFitter()
       naf.fit(T)
       df = naf.smoothed_hazard_(bandwidth=0.1)
-      self.assertTrue(df.iloc[0] > df.iloc[1] )
+      self.assertTrue(df.iloc[0].values[0] > df.iloc[1].values[0] )
 
   def test_multivariate_unequal_intensities(self):
       T = np.random.exponential(10, size=300)
@@ -257,7 +257,7 @@ class StatisticalTests(unittest.TestCase):
       for i,column in enumerate(coef.columns):
         ax = plt.subplot(d+2,1,i+1)
         ax.plot( timeline[timeline<T_max], cumulative_hazards[timeline<T_max,i])
-        aaf.cumulative_hazards_[column].ix[:-10].plot(ax=ax)
+        aaf.cumulative_hazards_[column].plot(ax=ax)
         ax.legend(loc='lower right')
 
       ax = plt.subplot(d+2,1,d+2)
@@ -388,6 +388,23 @@ class PlottingTests(unittest.TestCase):
       plt.title('testing naf')
       return 
 
+  def test_estimators_accept_lists(self):
+      data = [1,2,3,4,5]
+      NelsonAalenFitter().fit(data)
+      KaplanMeierFitter().fit(data)
+      return True  
+
+  def test_ix_slicing(self):
+      naf = NelsonAalenFitter().fit(waltonT)
+      self.assertTrue(naf.cumulative_hazard_.ix[0:10].shape[0]==4)
+      return
+
+  def test_iloc_slicing(self):
+      naf = NelsonAalenFitter().fit(waltonT)
+      self.assertTrue(naf.cumulative_hazard_.iloc[0:10].shape[0]==10)
+      self.assertTrue(naf.cumulative_hazard_.iloc[0:-1].shape[0]==32)
+      return
+
   def test_naf_plotting_slice(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(1, size=(200,1))
@@ -395,7 +412,7 @@ class PlottingTests(unittest.TestCase):
       naf.fit(data1)
       ax = naf.plot(ix=slice(0,None))
       naf.fit(data2)
-      naf.plot(ax=ax, c="#A60628", ci_force_lines=True, ix=slice(50,150))
+      naf.plot(ax=ax, c="#A60628", ci_force_lines=True, iloc=slice(100,180))
       plt.title('testing slicing')
       return 
 

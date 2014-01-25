@@ -73,20 +73,23 @@ def plot_regressions(self):
 
 
 def plot_dataframes(self, estimate):
-    def plot(c="#348ABD", ix=None, flat=False, ci_legend=False, ci_force_lines=False, bandwidth=None, **kwargs):
+    def plot(c="#348ABD", ix=None, iloc=None, flat=False, ci_legend=False, ci_force_lines=False, bandwidth=None, **kwargs):
       """"
       A wrapper around plotting lines. Matplotlib plot arguments can be passed in, plus:
 
         flat: a design style with stepped lines and no shading. Similar to R.
         ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas).
         ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
-        ix: specify a subsection of the curves to plot, ex:
-               .plot(ix=slice(0,-3)) will plot all but the last three points in the estimate and confidence intervals.
-               .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10. (This is because they are floats, not ints.)
+        ix: specify a time-based subsection of the curves to plot, ex:
+                 .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.   
+        iloc: specify a location-based subsection of the curves to plot, ex:
+                 .plot(iloc=slice(0,10)) will plot the first 10 time points. 
         bandwidth: specify the bandwidth of the kernel smoother for the smoothed-hazard rate. Only used 
          when called 'plot_hazard'
 
       """
+      assert (ix == None or iloc == None), 'Cannot set both ix and iloc in call to .plot'
+
       if flat:
           ci_force_lines=True
           kwargs["drawstyle"] = "steps-pre"
@@ -98,20 +101,24 @@ def plot_dataframes(self, estimate):
       else:
           confidence_interval_ = getattr(self, 'confidence_interval_')
           estimate_ = getattr(self, estimate)
-       
-      if ix == None:
-        ix = slice(0,None)
+                
+      get = "ix" if ix != None else "iloc"
+      if iloc == ix == None:
+        user_submitted_ix = slice(0,None)
+      else:
+        user_submitted_ix = ix if ix != None else iloc
 
-      n = estimate_.shape[0]
-      ax = estimate_.ix[ix].plot(c=c, marker='o', markeredgewidth=0, markersize=10./n, **kwargs)
+      get_loc = lambda df: getattr(df, get)[user_submitted_ix]
+
+      ax = get_loc(estimate_).plot(c=c, **kwargs)
       kwargs["ax"]=ax
       if ci_force_lines:
         kwargs["legend"]=ci_legend
-        confidence_interval_.ix[ix].plot(c=c, linestyle="--", linewidth=1, **kwargs)
+        get_loc(confidence_interval_).plot(c=c, linestyle="--", linewidth=1, **kwargs)
       else:
-        x = self.confidence_interval_.index[ix].values.astype(float)
-        lower = confidence_interval_.filter(like='lower').values[ix,0]
-        upper = confidence_interval_.filter(like='upper').values[ix,0]
+        x = get_loc(confidence_interval_).index.values.astype(float)
+        lower = get_loc(confidence_interval_.filter(like='lower')).values[:,0]
+        upper = get_loc(confidence_interval_.filter(like='upper')).values[:,0]
         plt.fill_between(x, lower, y2=upper, color=c, alpha=0.25)
       return ax
     return plot

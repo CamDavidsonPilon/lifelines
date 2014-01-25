@@ -45,7 +45,7 @@ class NelsonAalenFitter(object):
         """
         
         if censorship is None:
-           self.censorship = np.ones(event_times.shape[0], dtype=bool) #why boolean?
+           self.censorship = np.ones(len(event_times), dtype=bool) #why boolean?
         else:
            self.censorship = np.array(censorship).copy().astype(bool)
         self.event_times = survival_table_from_events(event_times, self.censorship)
@@ -152,7 +152,7 @@ class KaplanMeierFitter(object):
        """
        #set to all observed if censorship is none
        if censorship is None:
-          self.censorship = np.ones(event_times.shape[0], dtype=bool) #why boolean?
+          self.censorship = np.ones(len(event_times), dtype=bool) #why boolean?
        else:
           self.censorship = np.array(censorship).copy()
 
@@ -319,9 +319,12 @@ class AalenAdditiveFitter(object):
 
         #clean up last iteration
         relevant_times = (timeline>time)
-        self.cumulative_hazards_.ix[relevant_times] = cum_v.T
         self.hazards_.iloc[i] = v.T
-        self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
+        try:
+            self.cumulative_hazards_.ix[relevant_times] = cum_v.T
+            self._variance.ix[relevant_times] = dot( V[:,i][:,None], V[:,i][None,:] ).diagonal()
+        except:
+            pass
         self.timeline = timeline
         self.X = X
         self.censorship = censorship
