@@ -286,7 +286,7 @@ class StatisticalTests(unittest.TestCase):
       for i,column in enumerate(coef.columns):
         ax = plt.subplot(d+2,1,i+1)
         ax.plot( timeline[timeline<T_max], cumulative_hazards[timeline<T_max,i])
-        aaf.plot(ax=ax, columns=[column])
+        aaf.plot(ax=ax, columns=[column],  iloc=slice(0,1000))
         ax.legend(loc='lower right')
 
       ax = plt.subplot(d+2,1,d+2)
@@ -444,18 +444,18 @@ class PlottingTests(unittest.TestCase):
       return
 
   def test_naf_plot_cumulative_hazard_bandwidth_2(self):
-      data1 = np.random.exponential(5, size=(200,1))
+      data1 = np.random.exponential(5, size=(2000,1))
       naf = NelsonAalenFitter()
       naf.fit(data1)
-      naf.plot_hazard(c="#A60628", ci_force_lines=True, bandwidth=1.)
+      naf.plot_hazard(c="#A60628", ci_force_lines=True, bandwidth=1., ix=slice(0,7.))
       plt.title('testing smoothing hazard')
       return  
 
   def test_naf_plot_cumulative_hazard_bandwith_1(self):
-      data1 = np.random.exponential(5, size=(200,1))
+      data1 = np.random.exponential(5, size=(2000,1))**2
       naf = NelsonAalenFitter()
       naf.fit(data1)
-      naf.plot_hazard(c="#A60628", bandwidth=5.)
+      naf.plot_hazard(c="#A60628", bandwidth=5., iloc=slice(0,1700))
       plt.title('testing smoothing hazard')
       return
 

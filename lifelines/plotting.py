@@ -48,10 +48,28 @@ def shaded_plot(x, y, y_upper, y_lower, **kwargs):
     return
 
 def plot_regressions(self):
-    def plot(ix=None, columns = [], ci_legend=False, ci_force_lines=False, **kwargs):
+    def plot(ix=None, iloc=None, columns = [], ci_legend=False, ci_force_lines=False, **kwargs):
+        """"
+        A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
-        if ix == None:
-          ix = slice(0,None)
+          flat: a design style with stepped lines and no shading. Similar to R.
+          ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas).
+          ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
+          ix: specify a time-based subsection of the curves to plot, ex:
+                   .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.   
+          iloc: specify a location-based subsection of the curves to plot, ex:
+                   .plot(iloc=slice(0,10)) will plot the first 10 time points. 
+
+        """
+        assert (ix == None or iloc == None), 'Cannot set both ix and iloc in call to .plot'
+
+        get = "ix" if ix != None else "iloc"
+        if iloc == ix == None:
+          user_submitted_ix = slice(0,None)
+        else:
+          user_submitted_ix = ix if ix != None else iloc
+        get_loc = lambda df: getattr(df, get)[user_submitted_ix]
+
 
         if len(columns)==0:
           columns = self.cumulative_hazards_.columns
@@ -61,11 +79,11 @@ def plot_regressions(self):
         else:   
             ax = plt.subplot(111)
 
-        x = self.cumulative_hazards_.ix[ix].index.values.astype(float)
+        x = get_loc(self.cumulative_hazards_).index.values.astype(float)
         for column in columns:
-          y = self.cumulative_hazards_[column].ix[ix].values
-          y_upper = self.confidence_intervals_[column].ix['upper'].ix[ix].values
-          y_lower = self.confidence_intervals_[column].ix['lower'].ix[ix].values
+          y = get_loc(self.cumulative_hazards_[column]).values
+          y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
+          y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
           shaded_plot(x, y, y_upper, y_lower, ax=ax, label=column)
 
         return ax
@@ -75,7 +93,7 @@ def plot_regressions(self):
 def plot_dataframes(self, estimate):
     def plot(c="#348ABD", ix=None, iloc=None, flat=False, ci_legend=False, ci_force_lines=False, bandwidth=None, **kwargs):
       """"
-      A wrapper around plotting lines. Matplotlib plot arguments can be passed in, plus:
+      A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
         flat: a design style with stepped lines and no shading. Similar to R.
         ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas).
