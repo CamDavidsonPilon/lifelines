@@ -79,7 +79,7 @@ Compare two populations using the logrank test:
 ## (Less Quick) Intro to *lifelines* and survival analysis
 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
-I recommend running the IPython notebooks in the `notebooks` dir. 
+I recommend running the IPython notebooks main directory. 
 
 Alternatively, you can **view them online**
 
