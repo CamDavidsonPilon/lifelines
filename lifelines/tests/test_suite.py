@@ -7,11 +7,10 @@ import numpy as np
 import numpy.testing as npt
 from collections import Counter
 import matplotlib.pyplot as plt
-
 import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, median_survival_times
-from ..statistics import logrank_test,multivariate_logrank_test, pairwise_logrank_test
+from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import datetimes_to_durations

@@ -7,7 +7,7 @@ from pandas import to_datetime
 def group_event_series( groups, durations, censorship, limit=-1):
     """
     Joins multiple event series together into dataframes. A generalization of 
-    `survival_table_from_events` to groups.
+    `survival_table_from_events` to data with groups.
 
     Parameters:
         groups: a (n,) array of individuals' group ids.
@@ -53,7 +53,6 @@ def group_event_series( groups, durations, censorship, limit=-1):
         ]
 
     """
-
     unique_groups = np.unique(groups)
 
     #set first group
