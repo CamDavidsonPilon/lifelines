@@ -1,0 +1,13 @@
+Median survival time of democratic: Democratic Regimes    3
+dtype: float64
+Median survival time of non-democratic: Non-democratic Regimes    6
+dtype: float64
+
+   Non-democratic Regimes
+0                1.000000
+1                0.798712
+2                0.715339
+3                0.657841
+4                0.610095
+
+[5 rows x 1 columns]
