@@ -1,4 +1,4 @@
-<img src="http://i.imgur.com/pwGRqiR.png" height=325/>
+<img src="http://i.imgur.com/pwGRqiR.png" height=300 />
 
 lifelines
 ===========
