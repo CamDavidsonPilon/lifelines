@@ -1,7 +1,6 @@
 lifelines
 ===========
-
-![lifelines](http://i.imgur.com/kIfJudU.png)
+<img src="http://i.imgur.com/kIfJudU.png" title="Hosted by imgur.com" height=20/>
 
 [![Downloads](https://pypip.in/d/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 [![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
