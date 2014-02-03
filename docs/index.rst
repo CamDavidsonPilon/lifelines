@@ -5,9 +5,9 @@
 
 lifelines
 =====================================
-Survival Analysis in Python
--------------------------------------
 
+.. image:: icon_25027.png 
+   :height: 200   
 
 The **lifelines**
 library provides a powerful tool to data analysts and scientists
