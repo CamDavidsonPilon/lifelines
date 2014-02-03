@@ -1,7 +1,3 @@
-
-.. raw:: html
-
-
 Introduction to using *lifelines*
 =====================================
 

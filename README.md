@@ -5,7 +5,8 @@ lifelines
 [![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 
  
-[What is survival analysis and why should I learn it?](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Survival%20Analysis%20intro.ipynb) Survival analysis was originally developed and applied heavily by the actuarial and medical community. Its purpose was to answer *why do events occur now versus later* under uncertainity (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
+[What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
+ Survival analysis was originally developed and applied heavily by the actuarial and medical community. Its purpose was to answer *why do events occur now versus later* under uncertainity (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
 
 But outside of medicine and actuarial science, there are many other interesting and exciting applications of this 
 lesser-known technique, for example:
@@ -79,15 +80,12 @@ Compare two populations using the logrank test:
 ## (Less Quick) Intro to *lifelines* and survival analysis
 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
-I recommend running the IPython notebooks main directory. 
+please check out the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
 
-Alternatively, you can **view them online**
+Alternatively, you can **use the IPython notebooks tutorials**, located in the main directory of the repo:
 
 1. [Introduction to survival analysis](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Survival%20Analysis%20intro.ipynb)
 2. [Using lifelines on real data](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Intro%20to%20lifelines.ipynb) 
-3. [Documentation (not fully complete)](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Documentation.ipynb)
-
-classes, methods and data types. You can use the IPython notebook to view it, or [view it online](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/Documentation.ipynb).
 
 
 #### More examples
