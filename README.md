@@ -1,12 +1,8 @@
+<img src="http://i.imgur.com/pwGRqiR.png" height=300 />
+
 lifelines
 ===========
 
-[lifelines](http://i.imgur.com/kIfJudU.png)
-
-[![Downloads](https://pypip.in/d/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
-[![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
-
- 
 [What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
  Survival analysis was originally developed and applied heavily by the actuarial and medical community. Its purpose was to answer *why do events occur now versus later* under uncertainity (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
 
