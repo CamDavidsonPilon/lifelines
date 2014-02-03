@@ -15,15 +15,7 @@ looking for methods to solve a common problem:
 
     How do I predict durations?
 
-This question seems very vague and abstract, but that's only because we
-can be so general in this space. Some more specific questions
-*lifelines* will help you answer are:
-
-    How long can I expect a user to be on my service? Which treatment
-    group takes longer to complete an action? When is the next event
-    likely to happen? Which factors influence durations of events?
-
-The statistical tool that answers these questions is survival analysis.
+The statistical tool that answers this question is survival analysis.
 *lifelines* is a implementation of survival analysis in Python. What
 benefits does *lifelines* offer over other survival analysis
 implementations?
@@ -35,10 +27,14 @@ implementations?
    implentations)
 
 Installation
+------------------------------
 
-``pip install lifelines``
+Install using::
+
+    pip install lifelines
 
 Contents:
+------------------------------
 
 .. toctree::
   :maxdepth: 2

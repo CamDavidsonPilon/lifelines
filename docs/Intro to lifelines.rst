@@ -424,7 +424,7 @@ The function ``datetimes_to_durations`` is very flexible, and has many
 keywords to tinker with.
 
 Estimating hazard rates using Nelson-Aalen
-'''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The survival curve is a great way to summarize and visualize the
 lifetime data, it is not the only way. We showed the relationship
@@ -599,7 +599,7 @@ here.
 
 
 Survival regression
-''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Often we have additional data aside from the durations, and if
 applicable any censorships that occured. In the regime dataset, we have
@@ -630,7 +630,7 @@ models, we attempt to fit the :math:`b` coefficients best to the data --
 notice that in Aalen's additive model has time varying coefficients.
 
 Aalen's Additive model
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``Caution: This is still experimental.``
 
