@@ -1,7 +1,7 @@
 lifelines
 ===========
 
-<img src="http://i.imgur.com/pwGRqiR.png" title="Hosted by imgur.com" height=125/>
+<img src="http://i.imgur.com/pwGRqiR.png" title="Hosted by imgur.com" height=225/>
 
 
 [What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
