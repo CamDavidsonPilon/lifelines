@@ -1,5 +1,7 @@
 lifelines
-=======
+===========
+
+[lifelines](http://i.imgur.com/kIfJudU.png)
 
 [![Downloads](https://pypip.in/d/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 [![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
@@ -124,3 +126,5 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
+*lifelines* logo designed by Pulse designed by TNS from the Noun Project
