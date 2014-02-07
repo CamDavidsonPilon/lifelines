@@ -9,11 +9,11 @@ from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, q
 
 class NelsonAalenFitter(object):
     """
-    Class for fitting the Nelson-Aalen estimate for the cumulative hazard. 
+    Class for fitting the Nelson-Aalen estimate for the cumulative hazard.
 
     NelsonAalenFitter( alpha=0.95, nelson_aalen_smoothing=True)
 
-    alpha: The alpha value associated with the confidence intervals. 
+    alpha: The alpha value associated with the confidence intervals.
     nelson_aalen_smoothing: If the event times are naturally discrete (like discrete years, minutes, etc.)
       then it is advisable to turn this parameter to False. See [1], pg.84.
 
@@ -31,11 +31,11 @@ class NelsonAalenFitter(object):
     def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate'], alpha=None, insert_0=True):
         """
         Parameters:
-          event_times: an (n,1) array of times that the death event occured at 
+          event_times: an (n,1) array of times that the death event occured at
           timeline: return the best estimate at the values in timelines (postively increasing)
           columns: a length 1 array to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
-             alpha for this call to fit only. 
+             alpha for this call to fit only.
           insert_0: add a leading 0 (if not present) in the timeline.
 
 
@@ -43,7 +43,7 @@ class NelsonAalenFitter(object):
           DataFrame with index either event_times or timelines (if not None), with
           values as the NelsonAalen estimate
         """
-        
+
         if censorship is None:
            self.censorship = np.ones(len(event_times), dtype=bool) #why boolean?
         else:
@@ -104,7 +104,7 @@ class NelsonAalenFitter(object):
         hazard_name = "smoothed-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0] )
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth), hazard_.values[C,:]), 
+        return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth), hazard_.values[C,:]),
                 columns=[hazard_name], index=timeline)
 
 
@@ -130,20 +130,20 @@ class NelsonAalenFitter(object):
         return pd.DataFrame(values, index=timeline)
 
 class KaplanMeierFitter(object):
-   
+
   def __init__(self, alpha=0.95):
        self.alpha = alpha
 
   def fit(self, event_times, censorship=None, timeline=None, columns=['KM-estimate'], alpha=None, insert_0=True):
        """
        Parameters:
-         event_times: an (n,1) array of times that the death event occured at 
+         event_times: an (n,1) array of times that the death event occured at
          timeline: return the best estimate at the values in timelines (postively increasing)
-         censorship: an (n,1) array of booleans -- True if the the death was observed, False if the event 
+         censorship: an (n,1) array of booleans -- True if the the death was observed, False if the event
             was lost (right-censored). Defaults all True if censorship==None
          columns: a length 1 array to name the column of the estimate.
          alpha: the alpha value in the confidence intervals. Overrides the initializing
-            alpha for this call to fit only. 
+            alpha for this call to fit only.
          insert_0: add a leading 0 (if not present) in the timeline.
 
        Returns:
@@ -189,10 +189,12 @@ class KaplanMeierFitter(object):
       df["%s_lower_%.2f"%(name,self.alpha)] =  np.exp(-np.exp(np.log(-v)-alpha2*np.sqrt(cumulative_sq_)/v))
       return df
 
-  def _additive_f(self, population,deaths):
-      return np.log(population-deaths) - np.log(population)
+  def _additive_f(self, population, deaths):
+     np.seterr(invalid='ignore')
+     return (np.log(population-deaths) - np.log(population))
 
   def _additive_var(self, population, deaths):
+      np.seterr(divide='ignore')
       return (1.*deaths/(population*(population-deaths))).replace([np.inf],0)
 
 
@@ -201,11 +203,12 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var):
     Called to compute the Kaplan Meier and Nelson-Aalen estimates.
 
     """
+    pdb.set_trace()
     N = events["removed"].sum()
 
     deaths = events['observed']
     population = N - events['removed'].cumsum().shift(1).fillna(0)
-    estimate_ = np.cumsum(_additive_f(population,deaths)) 
+    estimate_ = np.cumsum(_additive_f(population,deaths))
     var_ = np.cumsum(_additive_var(population, deaths))
 
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
@@ -220,11 +223,11 @@ class AalenAdditiveFitter(object):
     hazard(t)  = b_0(t) + b_t(t)*x_1 + ... + b_N(t)*x_N
 
     that is, the hazard rate is a linear function of the covariates. Currently the covariates
-    must be time independent. 
+    must be time independent.
 
     Parameters:
-      fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The 
-        intercept, b_0(t) acts as a baseline hazard. 
+      fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The
+        intercept, b_0(t) acts as a baseline hazard.
       alpha: the level in the confidence intervals.
       penalizer: Attach a L2 penalizer to the regression. This improves stability of the estimates
        and controls high correlation between covariates.
@@ -241,7 +244,7 @@ class AalenAdditiveFitter(object):
         """currently X is a static (n,d) array
 
         event_times: (n,1) array of event times
-        X: (n,d) the design matrix, either a numpy matrix or DataFrame.  
+        X: (n,d) the design matrix, either a numpy matrix or DataFrame.
         timeline: (t,1) timepoints in ascending order
         censorship: (n,1) boolean array of censorships: True if observed, False if right-censored.
                     By default, assuming all are observed.
@@ -266,9 +269,9 @@ class AalenAdditiveFitter(object):
 
         #set the column's names of the dataframe.
         if columns is None:
-          columns = range(d) 
+          columns = range(d)
         else:
-          columns = [c for c in columns] 
+          columns = [c for c in columns]
 
         if self.fit_intercept:
           columns += ['baseline']
@@ -286,16 +289,16 @@ class AalenAdditiveFitter(object):
         timeline = np.unique(timeline.astype(float))
         if timeline[0] > 0:
            timeline = np.insert(timeline,0,0.)
-        
+
         unique_times = np.unique(timeline)
         zeros = np.zeros((timeline.shape[0],d+self.fit_intercept))
         self.cumulative_hazards_ = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
         self.hazards_ = pd.DataFrame(np.zeros((event_times.shape[0],d+self.fit_intercept)), index=event_times[:,0], columns = columns)
         self._variance = pd.DataFrame(zeros.copy(), index=unique_times, columns = columns)
-        
+
         #create the penalizer matrix for L2 regression
         penalizer = self.penalizer*np.eye(d + self.fit_intercept)
-        
+
         t_0 = sorted_event_times[0]
         cum_v = np.zeros((d+self.fit_intercept,1))
         v = cum_v.copy()
@@ -339,7 +342,7 @@ class AalenAdditiveFitter(object):
 
         """
         C = self.censorship.astype(bool)
-        return pd.DataFrame( np.dot(epanechnikov_kernel(self.timeline[:,None], self.timeline[C],bandwith), self.hazards_.values[C,:]), 
+        return pd.DataFrame( np.dot(epanechnikov_kernel(self.timeline[:,None], self.timeline[C],bandwith), self.hazards_.values[C,:]),
                 columns=self.hazards_.columns, index=self.timeline)
 
     def _compute_confidence_intervals(self):
@@ -350,7 +353,7 @@ class AalenAdditiveFitter(object):
         self.confidence_intervals_ = pd.DataFrame(np.zeros((2*n,d)), index=index, columns=self.cumulative_hazards_.columns)
         self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + alpha2*np.sqrt(self._variance.cumsum().values)
         self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - alpha2*np.sqrt(self._variance.cumsum().values)
-        return 
+        return
 
     def predict_cumulative_hazard(self, X, columns=None):
         """
@@ -365,7 +368,7 @@ class AalenAdditiveFitter(object):
           X_ = X.copy()
         X_ = X.copy() if not self.fit_intercept else np.c_[ X.copy(), np.ones((n,1)) ]
         return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=columns )
-      
+
     def predict_survival_function(self,X, columns=None):
         """
         X: a (n,d) covariate matrix

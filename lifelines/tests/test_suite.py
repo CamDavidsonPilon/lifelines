@@ -41,14 +41,14 @@ class MiscTests(unittest.TestCase):
         aaf.fit(t,npX)
         aaf.fit(t, dfX)
         npt.assert_array_equal( c, aaf.cumulative_hazards_.columns[:3] )
-
+    """
     def test_datetimes_to_durations_days(self):
         start_date = ['2013-10-10 0:00:00', '2013-10-09', '2012-10-10']
         end_date = ['2013-10-13', '2013-10-10 0:00:00', '2013-10-15']
         T,C = datetimes_to_durations(start_date, end_date)
         npt.assert_almost_equal(T, np.array([3,1,5+365]) )
         npt.assert_almost_equal(C, np.array([1,1,1], dtype=bool) )
-        return    
+        return
 
     def test_datetimes_to_durations_years(self):
         start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
@@ -56,7 +56,7 @@ class MiscTests(unittest.TestCase):
         T,C = datetimes_to_durations(start_date, end_date, freq='Y')
         npt.assert_almost_equal(T, np.array([0,0,1]) )
         npt.assert_almost_equal(C, np.array([1,1,1], dtype=bool) )
-        return    
+        return
 
     def test_datetimes_to_durations_hours(self):
         start_date = ['2013-10-10 17:00:00', '2013-10-09 0:00:00', '2013-10-10 23:00:00']
@@ -65,7 +65,7 @@ class MiscTests(unittest.TestCase):
         npt.assert_almost_equal(T, np.array([1,24,3]) )
         npt.assert_almost_equal(C, np.array([1,1,1], dtype=bool) )
         return
-
+    """
     def test_datetimes_to_durations_censor(self):
         start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
         end_date = ['2013-10-13', None, '']
@@ -94,17 +94,17 @@ class StatisticalTests(unittest.TestCase):
       kmf = KaplanMeierFitter()
       kmf.fit(LIFETIMES)
       npt.assert_almost_equal(kmf.survival_function_.values, self.km )
-  
+
   def test_nelson_aalen(self):
       naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
       naf.fit(LIFETIMES)
       npt.assert_almost_equal(naf.cumulative_hazard_.values, self.na )
-  
+
   def test_censor_nelson_aalen(self):
       naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
       naf.fit(LIFETIMES, censorship=CENSORSHIP)
       npt.assert_almost_equal(naf.cumulative_hazard_.values, self.nac )
-  
+
   def test_censor_kaplan_meier(self):
       kmf = KaplanMeierFitter()
       kmf.fit(LIFETIMES, censorship = CENSORSHIP)
@@ -166,7 +166,7 @@ class StatisticalTests(unittest.TestCase):
       naf = NelsonAalenFitter()
       naf.fit(T,C)
       naf.smoothed_hazard_(1.)
-      self.assertTrue(True) 
+      self.assertTrue(True)
 
   def test_smoothing_hazard_nontied(self):
       T = np.random.exponential(20, size=300)**2
@@ -176,14 +176,14 @@ class StatisticalTests(unittest.TestCase):
       naf.smoothed_hazard_(1.)
       naf.fit(T)
       naf.smoothed_hazard_(1.)
-      self.assertTrue(True) 
+      self.assertTrue(True)
 
   def test_smoothing_hazard_ties_no_censorship(self):
       T = np.random.binomial(20,0.7, size=300)
       naf = NelsonAalenFitter()
       naf.fit(T)
       naf.smoothed_hazard_(1.)
-      self.assertTrue(True)   
+      self.assertTrue(True)
 
   def test_smoothing_hazard_with_spike_at_time_0(self):
       T = np.random.binomial(20,0.7, size=300)
@@ -222,7 +222,7 @@ class StatisticalTests(unittest.TestCase):
 
   def test_aalen_additive_median_predictions_split_data(self):
       #This tests to make sure that my median predictions statisfy
-      # the prediction are greater than the actual 1/2 the time. 
+      # the prediction are greater than the actual 1/2 the time.
       #generate some hazard rates and a survival data set
       n = 2500
       d = 5
@@ -238,7 +238,7 @@ class StatisticalTests(unittest.TestCase):
       self.assertTrue( abs((T_pred.values > T).mean() - 0.5) < 0.05 )
 
   def test_aalen_additive_fit_no_censor(self):
-      #this is a visual test of the fitting the cumulative 
+      #this is a visual test of the fitting the cumulative
       #hazards.
       n = 2500
       d = 3
@@ -263,10 +263,10 @@ class StatisticalTests(unittest.TestCase):
       ax.plot( (T > np.arange(T_max)).sum(0), c="k", label="number of observations" )
       ax.set_xlabel("time")
       plt.show()
-      return  
+      return
 
   def test_aalen_additive_fit_with_censor(self):
-      #this is a visual test of the fitting the cumulative 
+      #this is a visual test of the fitting the cumulative
       #hazards.
       n = 2500
       d = 3
@@ -285,7 +285,7 @@ class StatisticalTests(unittest.TestCase):
       for i,column in enumerate(coef.columns):
         ax = plt.subplot(d+2,1,i+1)
         ax.plot( timeline[timeline<T_max], cumulative_hazards[timeline<T_max,i])
-        aaf.plot(ax=ax, columns=[column],  iloc=slice(0,1000))
+        aaf.plot(ax=ax, columns=[column],  iloc=slice(0,100))
         ax.legend(loc='lower right')
 
       ax = plt.subplot(d+2,1,d+2)
@@ -310,6 +310,12 @@ class StatisticalTests(unittest.TestCase):
       with_list = naf.fit(T,C).cumulative_hazard_.values
       with_array = naf.fit(np.array(T),np.array(C)).cumulative_hazard_.values
       npt.assert_array_equal(with_list,with_array)
+
+  def test_population_equals_death(self):
+      T = [1,1,1]
+      kmf = KaplanMeierFitter()
+      kmf.fit(T)
+      return
 
   def test_pairwise_allows_dataframes(self):
       N = 100
@@ -374,7 +380,7 @@ class PlottingTests(unittest.TestCase):
       kmf.fit(data2, columns = ['test labe 2'] )
       kmf.plot(ax=ax, c="#A60628")
       plt.title("testing kmf")
-      return 
+      return
 
   def test_naf_plotting(self):
       data1 = np.random.exponential(5, size=(200,1))
@@ -385,13 +391,13 @@ class PlottingTests(unittest.TestCase):
       naf.fit(data2)
       naf.plot(ax=ax, c="#A60628", ci_force_lines=True)
       plt.title('testing naf')
-      return 
+      return
 
   def test_estimators_accept_lists(self):
       data = [1,2,3,4,5]
       NelsonAalenFitter().fit(data)
       KaplanMeierFitter().fit(data)
-      return True  
+      return True
 
   def test_ix_slicing(self):
       naf = NelsonAalenFitter().fit(waltonT)
@@ -413,12 +419,12 @@ class PlottingTests(unittest.TestCase):
       naf.fit(data2)
       naf.plot(ax=ax, c="#A60628", ci_force_lines=True, iloc=slice(100,180))
       plt.title('testing slicing')
-      return 
+      return
 
   def test_plot_lifetimes_calendar(self):
       plt.figure()
       t = np.linspace(0, 20, 1000)
-      hz, coef, covrt =generate_hazard_rates(1,5, t) 
+      hz, coef, covrt =generate_hazard_rates(1,5, t)
       N = 20
       current = 10
       birthtimes = current*np.random.uniform(size=(N,))
@@ -428,7 +434,7 @@ class PlottingTests(unittest.TestCase):
   def test_plot_lifetimes_relative(self):
       plt.figure()
       t = np.linspace(0, 20, 1000)
-      hz, coef, covrt =generate_hazard_rates(1,5, t) 
+      hz, coef, covrt =generate_hazard_rates(1,5, t)
       N = 20
       T, C= generate_random_lifetimes(hz, t, size=N, censor=True )
       plot_lifetimes(T, censorship=C)
@@ -448,7 +454,7 @@ class PlottingTests(unittest.TestCase):
       naf.fit(data1)
       naf.plot_hazard(c="#A60628", ci_force_lines=True, bandwidth=1., ix=slice(0,7.))
       plt.title('testing smoothing hazard')
-      return  
+      return
 
   def test_naf_plot_cumulative_hazard_bandwith_1(self):
       data1 = np.random.exponential(5, size=(2000,1))**2
@@ -511,7 +517,6 @@ waltonT = np.array([  6.,  13.,  13.,  13.,  19.,  19.,  19.,  26.,  26.,  26., 
         69.,  69.,  38.,  38.,  45.,  45.,  45.,  45.,  45.,  45.,  45.,
         45.,  45.,  45.,  53.,  53.,  53.,  53.,  53.,  60.,  60.,  60.,
         60.,  60.,  60.,  60.,  60.,  60.,  60.,  60.,  66.])
-
 
 
 if __name__ == '__main__':
