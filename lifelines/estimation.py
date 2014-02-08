@@ -2,7 +2,6 @@ import numpy as np
 from numpy.linalg import LinAlgError, inv, pinv
 from numpy import dot
 import pandas as pd
-import pdb
 
 from lifelines.plotting import plot_dataframes, plot_regressions
 from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature, epanechnikov_kernel
@@ -203,7 +202,6 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var):
     Called to compute the Kaplan Meier and Nelson-Aalen estimates.
 
     """
-    pdb.set_trace()
     N = events["removed"].sum()
 
     deaths = events['observed']
