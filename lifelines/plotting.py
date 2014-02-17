@@ -39,6 +39,7 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
 
     plt.ylim(-0.5, N)
     plt.show()
+    return
 
 
 def shaded_plot(x, y, y_upper, y_lower, **kwargs):
@@ -65,19 +66,16 @@ def plot_regressions(self):
 
         get = "ix" if ix != None else "iloc"
         if iloc == ix == None:
-          user_submitted_ix = slice(0,None)
+            user_submitted_ix = slice(0,None)
         else:
-          user_submitted_ix = ix if ix != None else iloc
+            user_submitted_ix = ix if ix != None else iloc
         get_loc = lambda df: getattr(df, get)[user_submitted_ix]
 
 
         if len(columns)==0:
           columns = self.cumulative_hazards_.columns
 
-        if "ax" in kwargs:
-            ax = kwargs["ax"]
-        else:   
-            ax = plt.subplot(111)
+        ax  = kwargs.get('ax', plt.subplot(111))
 
         x = get_loc(self.cumulative_hazards_).index.values.astype(float)
         for column in columns:
@@ -91,53 +89,56 @@ def plot_regressions(self):
 
 
 def plot_dataframes(self, estimate):
-    def plot(c="#348ABD", ix=None, iloc=None, flat=False, ci_legend=False, ci_force_lines=False, bandwidth=None, **kwargs):
-      """"
-      A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
+    def plot( ix=None, iloc=None, flat=False, ci_legend=False, ci_force_lines=False, ci_alpha=0.3, bandwidth=None, **kwargs):
+        """"
+        A wrapper around plotting. Matplotlib plot arguments can be passed in, plus
 
-        flat: a design style with stepped lines and no shading. Similar to R.
-        ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas).
-        ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
-        ix: specify a time-based subsection of the curves to plot, ex:
-                 .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.   
-        iloc: specify a location-based subsection of the curves to plot, ex:
-                 .plot(iloc=slice(0,10)) will plot the first 10 time points. 
-        bandwidth: specify the bandwidth of the kernel smoother for the smoothed-hazard rate. Only used 
-         when called 'plot_hazard'
+          flat: a design style with stepped lines and no shading. Similar to R's plotting. Default: False
+          ci_alpha: the transparency level of the confidence interval. Default: 0.3
+          ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas). Default: False
+          ci_legend: if ci_force_lines is True, this is a boolean flag to add the lines' labels to the legend. Default: False
+          ix: specify a time-based subsection of the curves to plot, ex:
+                   .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.   
+          iloc: specify a location-based subsection of the curves to plot, ex:
+                   .plot(iloc=slice(0,10)) will plot the first 10 time points. 
+          bandwidth: specify the bandwidth of the kernel smoother for the smoothed-hazard rate. Only used 
+              when called 'plot_hazard'.
 
-      """
-      assert (ix == None or iloc == None), 'Cannot set both ix and iloc in call to .plot'
+        """
+        assert (ix == None or iloc == None), 'Cannot set both ix and iloc in call to .plot'
 
-      if flat:
-          ci_force_lines=True
-          kwargs["drawstyle"] = "steps-pre"
+        if "ax" not in kwargs:
+            kwargs["ax"] = plt.figure().add_subplot(111)#ax
+        kwargs['color'] = next( s for s in [kwargs.get('c'), kwargs.get('color'), kwargs["ax"]._get_lines.color_cycle.next()] if s )
 
-      if estimate=="hazard_":
-          assert bandwidth != None, 'Must specify a bandwidth parameter in the call to plot_hazard'
-          estimate_ = self.smoothed_hazard_(bandwidth)
-          confidence_interval_ = self.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:,0])
-      else:
-          confidence_interval_ = getattr(self, 'confidence_interval_')
-          estimate_ = getattr(self, estimate)
-                
-      get = "ix" if ix != None else "iloc"
-      if iloc == ix == None:
-        user_submitted_ix = slice(0,None)
-      else:
-        user_submitted_ix = ix if ix != None else iloc
+        if flat:
+            ci_force_lines=True
+            kwargs["drawstyle"] = "steps-pre"
 
-      get_loc = lambda df: getattr(df, get)[user_submitted_ix]
+        if estimate=="hazard_":
+            assert bandwidth != None, 'Must specify a bandwidth parameter in the call to plot_hazard'
+            estimate_ = self.smoothed_hazard_(bandwidth)
+            confidence_interval_ = self.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:,0])
+        else:
+            confidence_interval_ = getattr(self, 'confidence_interval_')
+            estimate_ = getattr(self, estimate)
+                  
+        get_method = "ix" if ix != None else "iloc"
+        if iloc == ix == None:
+            user_submitted_ix = slice(0,None)
+        else:
+            user_submitted_ix = ix if ix != None else iloc
 
-      ax = get_loc(estimate_).plot(c=c, **kwargs)
-      kwargs["ax"]=ax
-      if ci_force_lines:
-        kwargs["legend"]=ci_legend
-        get_loc(confidence_interval_).plot(c=c, linestyle="--", linewidth=1, **kwargs)
-      else:
-        x = get_loc(confidence_interval_).index.values.astype(float)
-        lower = get_loc(confidence_interval_.filter(like='lower')).values[:,0]
-        upper = get_loc(confidence_interval_.filter(like='upper')).values[:,0]
-        plt.fill_between(x, lower, y2=upper, color=c, alpha=0.25)
-      return ax
+        get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
+
+        get_loc(estimate_).plot(**kwargs)
+        if ci_force_lines:
+            get_loc(confidence_interval_).plot(linestyle="--", linewidth=1, c=kwargs['color'], legend=ci_legend, ax=kwargs['ax'])
+        else:
+            x = get_loc(confidence_interval_).index.values.astype(float)
+            lower = get_loc(confidence_interval_.filter(like='lower')).values[:,0]
+            upper = get_loc(confidence_interval_.filter(like='upper')).values[:,0]
+            kwargs['ax'].fill_between(x, lower, y2=upper, alpha=ci_alpha, color=kwargs['color'])
+        return kwargs['ax']
     return plot
 

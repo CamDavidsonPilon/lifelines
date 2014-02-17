@@ -13,7 +13,6 @@ If you have a pandas DataFrame with columns "group", "T", and "C", then somethin
 
     ax = plt.subplot(111)
     kmf = KaplanMeierFitter()
-    color_wheel = ['b', 'c', 'g', 'k'] 
     #group the data by 
     grouped_data = df.groupby("group")
 
@@ -23,6 +22,6 @@ If you have a pandas DataFrame with columns "group", "T", and "C", then somethin
     for i, group in enumerate(unique_groups):
         data = grouped_data.get_group(group)
         kmf.fit(data["T"], data["C"], columns=[group])
-        kmf.plot(ax=ax, c = color_wheel[i%4], alpha = 0.95, lw=1)
+        kmf.plot(ax=ax)
     
 

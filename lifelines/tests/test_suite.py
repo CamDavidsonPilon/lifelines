@@ -3,6 +3,7 @@ python -m lifelines.tests.test_suit
 
 """
 import unittest
+
 import numpy as np
 import numpy.testing as npt
 from collections import Counter
@@ -285,7 +286,7 @@ class StatisticalTests(unittest.TestCase):
       for i,column in enumerate(coef.columns):
         ax = plt.subplot(d+2,1,i+1)
         ax.plot( timeline[timeline<T_max], cumulative_hazards[timeline<T_max,i])
-        aaf.plot(ax=ax, columns=[column],  iloc=slice(0,100))
+        aaf.plot(ax=ax, columns=[column],  iloc=slice(0,500))
         ax.legend(loc='lower right')
 
       ax = plt.subplot(d+2,1,d+2)
@@ -372,25 +373,28 @@ class StatisticalTests(unittest.TestCase):
 class PlottingTests(unittest.TestCase):
 
   def test_kmf_plotting(self):
-      data1 = np.random.exponential(10, size=(200,1))
+      data1 = np.random.exponential(10, size=(100))
       data2 = np.random.exponential(2, size=(200,1))
+      data3 = np.random.exponential(4, size=(500,1))
       kmf = KaplanMeierFitter()
       kmf.fit(data1, columns = ['test label 1'])
       ax = kmf.plot()
-      kmf.fit(data2, columns = ['test labe 2'] )
-      kmf.plot(ax=ax, c="#A60628")
+      kmf.fit(data2, columns = ['test label 2'] )
+      kmf.plot(ax=ax)
+      kmf.fit(data3, columns = ['test label 3'] )
+      kmf.plot(ax=ax)
       plt.title("testing kmf")
       return
 
   def test_naf_plotting(self):
       data1 = np.random.exponential(5, size=(200,1))
-      data2 = np.random.exponential(1, size=(200,1))
+      data2 = np.random.exponential(1, size=(500))
       naf = NelsonAalenFitter()
       naf.fit(data1)
-      ax = naf.plot()
+      ax = naf.plot(color="r")
       naf.fit(data2)
-      naf.plot(ax=ax, c="#A60628", ci_force_lines=True)
-      plt.title('testing naf')
+      naf.plot(ax=ax, c="k")
+      plt.title('testing naf + custom colors')
       return
 
   def test_estimators_accept_lists(self):
@@ -417,7 +421,7 @@ class PlottingTests(unittest.TestCase):
       naf.fit(data1)
       ax = naf.plot(ix=slice(0,None))
       naf.fit(data2)
-      naf.plot(ax=ax, c="#A60628", ci_force_lines=True, iloc=slice(100,180))
+      naf.plot(ax=ax, ci_force_lines=True, iloc=slice(100,180))
       plt.title('testing slicing')
       return
 
@@ -444,7 +448,7 @@ class PlottingTests(unittest.TestCase):
       naf = NelsonAalenFitter()
       naf.fit(data1)
       ax = naf.plot()
-      naf.plot_cumulative_hazard(ax=ax, c="#A60628", ci_force_lines=True)
+      naf.plot_cumulative_hazard(ax=ax, ci_force_lines=True)
       plt.title("I should have plotted the same thing, but different styles + color!")
       return
 
@@ -452,7 +456,7 @@ class PlottingTests(unittest.TestCase):
       data1 = np.random.exponential(5, size=(2000,1))
       naf = NelsonAalenFitter()
       naf.fit(data1)
-      naf.plot_hazard(c="#A60628", ci_force_lines=True, bandwidth=1., ix=slice(0,7.))
+      naf.plot_hazard( bandwidth=1., ix=slice(0,7.))
       plt.title('testing smoothing hazard')
       return
 
@@ -460,7 +464,7 @@ class PlottingTests(unittest.TestCase):
       data1 = np.random.exponential(5, size=(2000,1))**2
       naf = NelsonAalenFitter()
       naf.fit(data1)
-      naf.plot_hazard(c="#A60628", bandwidth=5., iloc=slice(0,1700))
+      naf.plot_hazard( bandwidth=5., iloc=slice(0,1700))
       plt.title('testing smoothing hazard')
       return
 
