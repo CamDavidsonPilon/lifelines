@@ -284,10 +284,10 @@ class StatisticalTests(unittest.TestCase):
       T_max = aaf.timeline[-10]
       #plot baby
       for i,column in enumerate(coef.columns):
-        ax = plt.subplot(d+2,1,i+1)
-        ax.plot( timeline[timeline<T_max], cumulative_hazards[timeline<T_max,i])
-        aaf.plot(ax=ax, columns=[column],  iloc=slice(0,500))
-        ax.legend(loc='lower right')
+          ax = plt.subplot(d+2,1,i+1)
+          ax.plot( timeline[timeline<T_max], cumulative_hazards[timeline<T_max,i])
+          aaf.plot(ax=ax, columns=[column],  iloc=slice(0,500))
+          ax.legend(loc='lower right')
 
       ax = plt.subplot(d+2,1,d+2)
       ax.plot( (T > np.arange(T_max)).sum(0), c="k", label="number of observations" )
@@ -371,6 +371,44 @@ class StatisticalTests(unittest.TestCase):
       return na.reshape(len(na),1)
 
 class PlottingTests(unittest.TestCase):
+
+  def test_aalen_additive_plot(self):
+      #this is a visual test of the fitting the cumulative
+      #hazards.
+      n = 2500
+      d = 3
+      timeline = np.linspace(0,70,5000)
+      hz, coef, X = generate_hazard_rates(n, d, timeline)
+      cumulative_hazards = cumulative_quadrature( coef.values.T, timeline).T
+      T = generate_random_lifetimes(hz, timeline)
+      C = np.random.binomial(1, 0.8, size=n)
+
+      #fit the aaf, no intercept as it is already built into X, X[2] is ones
+      aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+      aaf.fit(T,X, censorship=C, columns = coef.columns)
+      ax=aaf.plot(iloc=slice(0, aaf.cumulative_hazards_.shape[0]-100))
+      ax.set_xlabel("time")
+      ax.set_title('.plot() cumulative hazards')
+      return
+
+  def test_aalen_additive_smoothed_plot(self):
+      #this is a visual test of the fitting the cumulative
+      #hazards.
+      n = 2500
+      d = 3
+      timeline = np.linspace(0,150,5000)
+      hz, coef, X = generate_hazard_rates(n, d, timeline)
+      cumulative_hazards = cumulative_quadrature( coef.values.T, timeline).T
+      T = generate_random_lifetimes(hz, timeline) + 0.1*np.random.uniform(size=(n,1))
+      C = np.random.binomial(1, 0.8, size=n)
+
+      #fit the aaf, no intercept as it is already built into X, X[2] is ones
+      aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+      aaf.fit(T,X, censorship=C, columns = coef.columns)
+      ax=aaf.smoothed_hazards_(1).iloc[0:aaf.cumulative_hazards_.shape[0]-500].plot()
+      ax.set_xlabel("time")
+      ax.set_title('.plot() smoothed hazards')
+      return
 
   def test_kmf_plotting(self):
       data1 = np.random.exponential(10, size=(100))

@@ -64,27 +64,27 @@ def plot_regressions(self):
         """
         assert (ix == None or iloc == None), 'Cannot set both ix and iloc in call to .plot'
 
-        get = "ix" if ix != None else "iloc"
+        get_method = "ix" if ix != None else "iloc"
         if iloc == ix == None:
             user_submitted_ix = slice(0,None)
         else:
             user_submitted_ix = ix if ix != None else iloc
-        get_loc = lambda df: getattr(df, get)[user_submitted_ix]
-
+        get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
 
         if len(columns)==0:
           columns = self.cumulative_hazards_.columns
 
-        ax  = kwargs.get('ax', plt.subplot(111))
-
+        if "ax" not in kwargs:
+            kwargs["ax"] = plt.figure().add_subplot(111)
+            
         x = get_loc(self.cumulative_hazards_).index.values.astype(float)
         for column in columns:
-          y = get_loc(self.cumulative_hazards_[column]).values
-          y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
-          y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
-          shaded_plot(x, y, y_upper, y_lower, ax=ax, label=column)
+            y = get_loc(self.cumulative_hazards_[column]).values
+            y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
+            y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
+            shaded_plot(x, y, y_upper, y_lower, ax=kwargs["ax"] , label=column)
 
-        return ax
+        return kwargs["ax"] 
     return plot
 
 
@@ -108,7 +108,7 @@ def plot_dataframes(self, estimate):
         assert (ix == None or iloc == None), 'Cannot set both ix and iloc in call to .plot'
 
         if "ax" not in kwargs:
-            kwargs["ax"] = plt.figure().add_subplot(111)#ax
+            kwargs["ax"] = plt.figure().add_subplot(111)
         kwargs['color'] = next( s for s in [kwargs.get('c'), kwargs.get('color'), kwargs["ax"]._get_lines.color_cycle.next()] if s )
 
         if flat:
