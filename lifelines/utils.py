@@ -115,7 +115,7 @@ def survival_table_from_events(event_times, censorship, columns=["removed", "obs
     event_times[columns[2]] = event_times[columns[0]] - event_times[columns[1]]
     return event_times
 
-def datetimes_to_durations( start_times, end_times, fill_date = None, freq='D', dayfirst=False, na_values=None ):
+def datetimes_to_durations( start_times, end_times, fill_date=datetime.today(),  freq='D', dayfirst=False, na_values=None ):
     """
     This is a very flexible function for transforming arrays of start_times and end_times 
     to the proper format for lifelines: duration and censorship arrays.
@@ -125,27 +125,28 @@ def datetimes_to_durations( start_times, end_times, fill_date = None, freq='D', 
         end_times: an array, series or dataframe of end times. These can be strings, or datetimes.
                    These values can be None, or an empty string, which corresponds to censorship.
         fill_date: the date to use if end_times is a None or empty string. This corresponds to last date 
-                  of observation.
-        freq: the units of time to use. Default 'D' for days. See pandas freq 
+                  of observation. Anything above this date is also censored. Default: datetime.today()
+        freq: the units of time to use.  See pandas 'freq'. Default 'D' for days.
         day_first: convert assuming European-style dates, i.e. day/month/year. 
-        na_values : Additional string to recognize as NA/NaN. 
+        na_values : Additional string to recognize as NA/NaN. Ex: ['']
 
     Returns:
         T: a array of floats representing the durations with time units given by freq.
         C: a boolean array of censorship: 1 if death observed, 0 else. 
 
     """
-    if not fill_date:
-        fill_date = datetime.today()
-
     freq_string = 'timedelta64[%s]'%freq
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
-
     start_times_ = to_datetime(start_times, dayfirst=dayfirst)
 
-    C = ~( pd.isnull(end_times).values + (end_times=='') + (end_times==na_values) )
+    C = ~( pd.isnull(end_times).values + (end_times=="") + (end_times==na_values) )
     end_times[~C] = fill_date 
+    """
+    c =  (to_datetime(end_times, dayfirst=dayfirst, coerce=True) > fill_date)
+    end_times[c] = fill_date
+    C += c
+    """
     end_times_ = to_datetime(end_times, dayfirst=dayfirst, coerce=True)
 
     T = (end_times_ - start_times_).map(lambda x: x.astype(freq_string).astype(float) )

@@ -266,7 +266,7 @@ an ``axis`` object, that can be used for plotting further estimates:
     kmf.fit(T[dem], censorship=C[dem], columns=["Democratic Regimes"])
     kmf.plot(ax=ax, ci_force_lines=True)
     kmf.fit(T[~dem], censorship=C[~dem], columns=["Non-democratic Regimes"])
-    kmf.plot(ax=ax, c="#A60628", ci_force_lines=True)
+    kmf.plot(ax=ax, ci_force_lines=True)
     
     plt.ylim(0,1);
     plt.title("Lifespans of different global regimes");
@@ -290,7 +290,7 @@ probabilties of survival at those points:
     print "Median survival time of democratic:", kmf.median_
     
     kmf.fit(T[~dem], censorship=C[~dem], timeline=t, columns=["Non-democratic Regimes"])
-    kmf.plot(ax=ax, c="#A60628")
+    kmf.plot(ax=ax )
     plt.ylim(0,1);
     plt.title("Lifespans of different global regimes");
     print "Median survival time of non-democratic:", kmf.median_
@@ -520,7 +520,7 @@ years:
     naf.fit(T[dem], censorship=C[dem], columns=["Democratic Regimes"])
     ax = naf.plot(ix=slice(0,20))
     naf.fit(T[~dem], censorship=C[~dem], columns=["Non-democratic Regimes"])
-    naf.plot(ax=ax, c="#A60628", ix=slice(0,20))
+    naf.plot(ax=ax, ix=slice(0,20))
     plt.title("Cumulative hazard function of different global regimes");
 
 
@@ -559,7 +559,7 @@ intervals, similar to the traditional ``plot`` functionality.
     naf.fit(T[dem], censorship=C[dem], columns=["Democratic Regimes"])
     ax = naf.plot_hazard(bandwidth=b)
     naf.fit(T[~dem], censorship=C[~dem], columns=["Non-democratic Regimes"])
-    naf.plot_hazard(ax=ax, c="#A60628", bandwidth=b)
+    naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
     plt.ylim(0,0.4)
     plt.xlim(0,25);
@@ -581,7 +581,7 @@ here.
     naf.fit(T[dem], censorship=C[dem], columns=["Democratic Regimes"])
     ax = naf.plot_hazard(bandwidth=b)
     naf.fit(T[~dem], censorship=C[~dem], columns=["Non-democratic Regimes"])
-    naf.plot_hazard(ax=ax, c="#A60628", bandwidth=b)
+    naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
     plt.ylim(0,0.4);
     plt.xlim(0,25)
@@ -886,7 +886,7 @@ Prime Minister Stephen Harper.
     ax = plt.subplot(2,1,2)
     plt.ylim(0,1.1)
     plt.xlim(0,15)
-    aaf.predict_survival_function(obama, columns=["Harper's survival function"]).plot(ax=ax, c="#A60628");
+    aaf.predict_survival_function(obama, columns=["Harper's survival function"]).plot(ax=ax);
     print "Median lifespan of PM Harper: ", aaf.predict_median_lifetimes(obama).values
 
 
@@ -906,6 +906,5 @@ relatively small library, by design). If you have any questions, the
 best place to post them is currently in the Issues portion of the Github
 homepage, or ping me on Twitter at @cmrn\_dp.
 
-.. code:: python
 
     

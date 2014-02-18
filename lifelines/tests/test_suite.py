@@ -42,7 +42,7 @@ class MiscTests(unittest.TestCase):
         aaf.fit(t,npX)
         aaf.fit(t, dfX)
         npt.assert_array_equal( c, aaf.cumulative_hazards_.columns[:3] )
-    """
+    
     def test_datetimes_to_durations_days(self):
         start_date = ['2013-10-10 0:00:00', '2013-10-09', '2012-10-10']
         end_date = ['2013-10-13', '2013-10-10 0:00:00', '2013-10-15']
@@ -66,7 +66,7 @@ class MiscTests(unittest.TestCase):
         npt.assert_almost_equal(T, np.array([1,24,3]) )
         npt.assert_almost_equal(C, np.array([1,1,1], dtype=bool) )
         return
-    """
+    
     def test_datetimes_to_durations_censor(self):
         start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
         end_date = ['2013-10-13', None, '']
@@ -81,7 +81,14 @@ class MiscTests(unittest.TestCase):
         npt.assert_almost_equal(C, np.array([1,0,0], dtype=bool) )
         return
 
-
+    """
+    def test_datetimes_to_durations_max_dates(self):
+        start_date = ['2013-10-10', '2013-10-09', '2013-10-08']
+        end_date =  ['2014-10-10', '2014-10-09', '2014-10-08']
+        T,C = datetimes_to_durations(start_date, end_date, fill_date = "2014-10-09" )
+        npt.assert_almost_equal(C, np.array([1,0,0], dtype=bool) )
+        return
+    """
 class StatisticalTests(unittest.TestCase):
 
   def setUp(self):
