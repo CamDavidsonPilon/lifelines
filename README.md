@@ -63,7 +63,9 @@ Non-parametrically fit the *survival curve*:
     # plot the curve with the confidence intervals
     kmf.plot()
 
-![kmf](http://i.imgur.com/Bq73IfNl.png)
+![kmf](http://i.imgur.com/Bq73IfN.png)
+
+It looks like 50% of all individuals are dead before time 7.
 
     print kmf.survival_function_.head()
 
