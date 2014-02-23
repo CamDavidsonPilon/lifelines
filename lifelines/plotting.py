@@ -105,7 +105,7 @@ def plot_dataframes(self, estimate):
               when called 'plot_hazard'.
 
         """
-        assert (ix == None or iloc == None), 'Cannot set both ix and iloc in call to .plot'
+        assert (ix == None or iloc == None), 'Cannot set both ix and iloc in call to .plot().'
 
         if "ax" not in kwargs:
             kwargs["ax"] = plt.figure().add_subplot(111)
@@ -116,7 +116,7 @@ def plot_dataframes(self, estimate):
             kwargs["drawstyle"] = "steps-pre"
 
         if estimate=="hazard_":
-            assert bandwidth != None, 'Must specify a bandwidth parameter in the call to plot_hazard'
+            assert bandwidth != None, 'Must specify a bandwidth parameter in the call to plot_hazard.'
             estimate_ = self.smoothed_hazard_(bandwidth)
             confidence_interval_ = self.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:,0])
         else:

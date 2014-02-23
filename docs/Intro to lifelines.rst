@@ -156,13 +156,14 @@ where :math:`d_i` are the number of death events at time :math:`t` and
 
 
 
-From the ``1ifelines.estimation`` library, we'll need the
+From the ``1ifelines`` library, we'll need the
 ``KaplanMeierFitter`` for this exercise:
 
 .. code:: python
 
-    from lifelines.estimation import KaplanMeierFitter
+    from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
+
 For this estimation, we need the duration each leader was/has been in
 office, and whether or not they were observed to have left office
 (leaders who died in office or were in office in 2008, the latest date
@@ -172,6 +173,7 @@ this data was record at, do not have observed death events)
 
     T = data["duration"] #measure in years
     C = data["observed"] 
+
 Current, all arguments to *lifelines* estimators must be numpy arrays.
 We next use the ``KaplanMeierFitter`` method ``fit`` to fit the model to
 the data. (This is similar to, and was inspired by, another popular
@@ -454,7 +456,7 @@ where :math:`d_i` is the number of deaths at time :math:`t_i` and
 :math:`n_i` is the number of susceptible individuals.
 
 In *lifelines*, this estimator is available as the ``NelsonAalenFitter``
-in ``lifelines.estimation``. Let's use the regime dataset from above:
+in ``lifelines``. Let's use the regime dataset from above:
 
 .. code:: python
 
@@ -462,7 +464,7 @@ in ``lifelines.estimation``. Let's use the regime dataset from above:
     C = data["observed"]
 .. code:: python
 
-    from lifelines.estimation import NelsonAalenFitter
+    from lifelines import NelsonAalenFitter
     naf = NelsonAalenFitter()
 .. code:: python
 
@@ -648,7 +650,7 @@ above). This is important to keep in mind when analzying the output.
 
 .. code:: python
 
-    from lifelines.estimation import AalenAdditiveFitter
+    from lifelines import AalenAdditiveFitter
     data.head()
 
 

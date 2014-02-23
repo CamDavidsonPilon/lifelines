@@ -45,27 +45,34 @@ from the command line.
 ## Intro to *lifelines* and survival analysis
 
     #fake data
-    #T are the durations, C are boolean censorships
+    #T are the durations, C are censorship flags
     T = np.random.exponential(1, size=500)
     C = np.random.binomial(1, 0.5, size=500)
 
-Non-parametrically fit the survival curve:
+Non-parametrically fit the *survival curve*:
 
-    from lifelines.estimation import KaplanMeierFitter
+    from lifelines import KaplanMeierFitter
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, C) 
-    kmf.plot() #plot the curve with the confidence intervals
+    kmf.fit(T, censorship=C) 
+
+    # fitter methods have an internal plotting method.
+    # plot the curve with the confidence intervals
+    kmf.plot()
+
     print kmf.survival_function_.head()
     print kmf.confidence_interval_.head()
 
-Non-parametrically fit the cumulative hazard curve:
+Non-parametrically fit the *cumulative hazard curve*:
 
-    from lifelines.estimation import  NelsonAalenFitter
+    from lifelines import  NelsonAalenFitter
 
     naf = NelsonAalenFitter()
-    naf.fit(T, C) 
+    naf.fit(T, censorship=C) 
+
+    #plot the curve with the confidence intervals
     naf.plot()
+
     print naf.cumulative_hazard_.head()
 
 Compare two populations using the logrank test:
@@ -75,7 +82,7 @@ Compare two populations using the logrank test:
     T2 = np.random.exponential(3, size=500)
 
     summary, p_value, results = logrank_test(T, T2, alpha=0.95)
-    print s
+    print summary
 
 ## (Less Quick) Intro to *lifelines* and survival analysis
 

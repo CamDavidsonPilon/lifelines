@@ -90,7 +90,6 @@ class NelsonAalenFitter(object):
         return df.apply( lambda (N,d): np.sum([1./(N-i) for i in range(int(d))]), axis=1 )
 
     def _additive_f_discrete(self, population, deaths):
-       #check it 0
        return (1.*deaths/population).replace([np.inf],0)
 
     def smoothed_hazard_(self, bandwidth):
