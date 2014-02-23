@@ -44,9 +44,10 @@ class NelsonAalenFitter(object):
         """
 
         if censorship is None:
-           self.censorship = np.ones(len(event_times), dtype=bool) #why boolean?
+           self.censorship = np.ones(len(event_times), dtype=bool)
         else:
            self.censorship = np.array(censorship).copy().astype(bool)
+           
         self.event_times = survival_table_from_events(event_times, self.censorship)
 
         if alpha is None:
@@ -117,7 +118,7 @@ class NelsonAalenFitter(object):
         timeline = self.timeline
         alpha2 = inv_normal_cdf(1 - (1-self.alpha)/2)
         name = "smoothed-" + self.cumulative_hazard_.columns[0]
-        self._cumulative_sq.iloc[0] = 0 #why?
+        self._cumulative_sq.iloc[0] = 0
         var_hazard_ = self._cumulative_sq.diff().fillna( self._cumulative_sq.iloc[0] )
         C = (var_hazard_.values != 0.0) #only consider the points with jumps
         std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:,None], timeline[C][None,:],bandwidth)**2, var_hazard_.values[C]))
@@ -126,6 +127,14 @@ class NelsonAalenFitter(object):
               "%s_lower_%.2f"%(name,self.alpha):hazard_*np.exp(-alpha2*std_hazard_/hazard_)
               }
         return pd.DataFrame(values, index=timeline)
+
+    def __repr__(self):
+      try:
+        s="""<lifelines.NelsonAalenFitter: fitted with %d observations, %d censored. \n"""%(self.censorship.shape[0], (~self.censorship).sum()) 
+        s += self.cumulative_hazard_.head(4).to_string(col_space=15) + "\n... >"
+      except AttributeError as e:
+        s= """<lifelines.NelsonAalenFitter>"""
+      return s
 
 class KaplanMeierFitter(object):
 
@@ -150,9 +159,9 @@ class KaplanMeierFitter(object):
        """
        #set to all observed if censorship is none
        if censorship is None:
-          self.censorship = np.ones(len(event_times), dtype=bool) #why boolean?
+          self.censorship = np.ones(len(event_times), dtype=bool)
        else:
-          self.censorship = np.array(censorship).copy()
+          self.censorship = np.array(censorship).copy().astype(bool)
 
        if not alpha:
           alpha = self.alpha
@@ -195,6 +204,14 @@ class KaplanMeierFitter(object):
       np.seterr(divide='ignore')
       return (1.*deaths/(population*(population-deaths))).replace([np.inf],0)
 
+  def __repr__(self):
+    try:
+      s="""<lifelines.KaplanMeierFitter: fitted with %d observations, %d censored. \n"""%(self.censorship.shape[0], (~self.censorship).sum()) 
+      s += self.survival_function_.head(4).to_string(col_space=15) + "\n... >"
+    except AttributeError as e:
+      s= """<lifelines.KaplanMeierFitter>"""
+    return s
+
 
 def _additive_estimate(events, timeline, _additive_f, _additive_var):
     """
@@ -210,6 +227,9 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var):
 
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
     var_ = var_.reindex(timeline, method='pad')
+    var_.index.name='timeline'
+    estimate_.index.name='timeline'
+    
     return estimate_, var_
 
 
