@@ -43,46 +43,79 @@ from the command line.
 
 
 ## Intro to *lifelines* and survival analysis
-
-    #fake data
-    #T are the durations, C are censorship flags
-    T = np.random.exponential(1, size=500)
-    C = np.random.binomial(1, 0.5, size=500)
+    
+    # Situation: 500 random individuals are born at time 0, currently it is time 12, so 
+    #   we have possibly not observed all death events yet.
+    # Create lifetimes, but censor all lifetimes after time 12
+    # 
+    censor_at = 12
+    actual_lifetimes = np.random.exponential(10, size=500)
+    observed_lifetimes = np.minimum( actual_lifetimes, censor_at*np.ones(500) )
+    C = actual_lifetimes < censor_at
 
 Non-parametrically fit the *survival curve*:
 
     from lifelines import KaplanMeierFitter
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, censorship=C) 
+    kmf.fit(observed_lifetimes, censorship=C) 
 
     # fitter methods have an internal plotting method.
     # plot the curve with the confidence intervals
     kmf.plot()
 
+![kmf](http://i.imgur.com/Bq73IfNl.png)
+
     print kmf.survival_function_.head()
-    print kmf.confidence_interval_.head()
+
+    time            KM-estimate
+    0.000000        1.000
+    0.038912        0.998
+    0.120667        0.996
+    0.125719        0.994
+    0.133778        0.992
 
 Non-parametrically fit the *cumulative hazard curve*:
 
-    from lifelines import  NelsonAalenFitter
+    from lifelines import NelsonAalenFitter
 
     naf = NelsonAalenFitter()
-    naf.fit(T, censorship=C) 
+    naf.fit(observed_lifetimes, censorship=C) 
 
     #plot the curve with the confidence intervals
     naf.plot()
 
+![naf](http://i.imgur.com/2L7arWXl.png)
+
     print naf.cumulative_hazard_.head()
+
+    time       NA-estimate
+    0.000000     0.000000
+    0.038912     0.002000
+    0.120667     0.004004
+    0.125719     0.006012
+    0.133778     0.008024
 
 Compare two populations using the logrank test:
 
     from lifelines.statistics import logrank_test
 
-    T2 = np.random.exponential(3, size=500)
+    other_lifetimes = np.random.exponential(3, size=500)
 
-    summary, p_value, results = logrank_test(T, T2, alpha=0.95)
+    summary, p_value, results = logrank_test(observed_lifetimes, other_lifetimes, alpha=0.95)
     print summary
+
+    """
+    Results
+       df: 1
+       alpha: 0.95
+       t 0: -1
+       test: logrank
+       null distribution: chi squared
+
+       __ p-value ___|__ test statistic __|__ test results __
+             0.00000 |              268.465 |     True    
+    """
 
 ## (Less Quick) Intro to *lifelines* and survival analysis
 

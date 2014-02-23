@@ -7,10 +7,9 @@ lifelines
 =====================================
 
 .. image:: icon_25027.png 
-   :height: 150  
+   :height: 120
 
-The **lifelines**
-library provides a powerful tool for data analysts and scientists
+The **lifelines** library provides a powerful tool for data analysts and scientists
 looking for methods to solve a common problem:
 
     How do I predict lifetimes, or time to events?
@@ -29,9 +28,7 @@ implementations?
 Installation
 ------------------------------
 
-Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and Matplotlib.
-
-Install using::
+Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and Matplotlib. Install using::
 
     pip install lifelines
 
