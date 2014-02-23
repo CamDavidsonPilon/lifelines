@@ -44,14 +44,13 @@ from the command line.
 
 ## Intro to *lifelines* and survival analysis
     
-    # Situation: 500 random individuals are born at time 0, currently it is time 12, so 
-    #   we have possibly not observed all death events yet.
+Situation: 500 random individuals are born at time 0, currently it is time 12, so we have possibly not observed all death events yet.
+
     # Create lifetimes, but censor all lifetimes after time 12
-    # 
-    censor_at = 12
+    censor_after = 12
     actual_lifetimes = np.random.exponential(10, size=500)
-    observed_lifetimes = np.minimum( actual_lifetimes, censor_at*np.ones(500) )
-    C = actual_lifetimes < censor_at
+    observed_lifetimes = np.minimum( actual_lifetimes, censor_after*np.ones(500) )
+    C = (actual_lifetimes < censor_after) #boolean array
 
 Non-parametrically fit the *survival curve*:
 
@@ -85,7 +84,7 @@ Non-parametrically fit the *cumulative hazard curve*:
     #plot the curve with the confidence intervals
     naf.plot()
 
-![naf](http://i.imgur.com/2L7arWXl.png)
+![naf](http://i.imgur.com/2L7arWX.png)
 
     print naf.cumulative_hazard_.head()
 
@@ -99,13 +98,12 @@ Non-parametrically fit the *cumulative hazard curve*:
 Compare two populations using the logrank test:
 
     from lifelines.statistics import logrank_test
-
     other_lifetimes = np.random.exponential(3, size=500)
 
     summary, p_value, results = logrank_test(observed_lifetimes, other_lifetimes, alpha=0.95)
     print summary
 
-    """
+    
     Results
        df: 1
        alpha: 0.95
@@ -115,7 +113,7 @@ Compare two populations using the logrank test:
 
        __ p-value ___|__ test statistic __|__ test results __
              0.00000 |              268.465 |     True    
-    """
+    
 
 ## (Less Quick) Intro to *lifelines* and survival analysis
 
