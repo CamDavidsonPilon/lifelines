@@ -10,9 +10,9 @@ class coeff_func(object):
 
   def __call__(self, *args, **kwargs):
     def __repr__():
-      s = self.f.func_doc.replace("alpha", "%.2f"%kwargs["alpha"]).replace("beta","%.2f"%kwargs["beta"])
+      s = self.f.__doc__.replace("alpha", "%.2f"%kwargs["alpha"]).replace("beta","%.2f"%kwargs["beta"])
       return s
-    self.func_doc = __repr__()
+    self.__doc__ = __repr__()
     self.__repr__ = __repr__
     self.__str__ = __repr__
     return self.f(*args, **kwargs)
@@ -127,7 +127,7 @@ def time_varying_coefficients(d, timelines, constant=False, independent=0, randg
        else:
           beta = randgen((1-constant)*0.5/d)
        coefficients[:,i] = f(timelines,alpha=randgen(2000.0/t), beta=beta)
-       data_generators.append(f.func_doc)
+       data_generators.append(f.__doc__)
 
     df_coefficients = pd.DataFrame( coefficients, columns = data_generators, index = timelines)
     return df_coefficients
@@ -183,7 +183,7 @@ def generate_random_lifetimes(hazard_rates,timelines, size = 1, censor=None):
   survival_times = np.empty((n,size))
   cumulative_hazards = cumulative_quadrature(hazard_rates.values.T, timelines)
 
-  for i in xrange(size):
+  for i in range(size):
      u = random.rand(n,1)
      e = -np.log(u)
      v = (e - cumulative_hazards) < 0
@@ -216,7 +216,7 @@ def cumulative_quadrature(fx, x):
   lower_x = x[0]
   cum_integral = np.empty((fx.shape[0],x.shape[0]))
   cum_integral[:,0] = 0
-  for i in xrange(1,x.shape[0]):
+  for i in range(1,x.shape[0]):
     if (x[i-1]-lower_x) == 0:
         cum_integral[:,i] = 0.5*(fx[:,i-1] + fx[:,i])*(x[i] - lower_x)/i
         continue

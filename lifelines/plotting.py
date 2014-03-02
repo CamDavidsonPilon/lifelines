@@ -115,7 +115,7 @@ def plot_dataframes(self, estimate):
 
         if "ax" not in kwargs:
             kwargs["ax"] = plt.figure().add_subplot(111)
-        kwargs['color'] = next( s for s in [kwargs.get('c'), kwargs.get('color'), kwargs["ax"]._get_lines.color_cycle.next()] if s )
+        kwargs['color'] = next( s for s in [kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle)] if s )
 
         if flat:
             ci_force_lines=True

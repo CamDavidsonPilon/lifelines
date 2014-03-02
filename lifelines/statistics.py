@@ -202,6 +202,6 @@ def pretty_print_summary( test_results, p_value, test_statistic, **kwargs):
 
 def pretty_print_meta_data(dictionary):
     s = ""
-    for k,v in dictionary.iteritems():
+    for k,v in dictionary.items():
         s=  s + "   " + k.__str__().replace('_', ' ') +  ": " + v.__str__() + "\n"
     return s
