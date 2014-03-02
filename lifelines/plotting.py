@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 #plotting 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -16,7 +18,7 @@ def plot_lifetimes(lifetimes, censorship = None, birthtimes=None, order=False):
     """
     N = lifetimes.shape[0]
     if N>100:
-      print "warning: you may want to subsample to less than 100 individuals."
+      print("warning: you may want to subsample to less than 100 individuals.")
 
     if censorship is None:
       censorship = np.ones(N, dtype=bool)

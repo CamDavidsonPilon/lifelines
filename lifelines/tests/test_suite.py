@@ -2,6 +2,8 @@
 python -m lifelines.tests.test_suit
 
 """
+from __future__ import print_function
+
 import unittest
 
 import numpy as np
@@ -130,21 +132,21 @@ class StatisticalTests(unittest.TestCase):
         naf.fit(LIFETIMES)
         self.assertTrue(True)
       except Exception as e:
-        print e
+        print(e)
         self.assertTrue(False)
 
   def test_equal_intensity(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(5, size=(200,1))
       summary, p_value, result = logrank_test(data1, data2)
-      print summary
+      print(summary)
       self.assertTrue(result==None)
 
   def test_unequal_intensity(self):
       data1 = np.random.exponential(5, size=(200,1))
       data2 = np.random.exponential(1, size=(200,1))
       summary, p_value, result = logrank_test(data1, data2)
-      print summary
+      print(summary)
       self.assertTrue(result)
 
   def test_unequal_intensity_censorship(self):
@@ -153,19 +155,19 @@ class StatisticalTests(unittest.TestCase):
       censorA = np.random.binomial(1,0.5, size=(200,1))
       censorB = np.random.binomial(1,0.5, size=(200,1))
       summary, p_value, result = logrank_test(data1, data2, censorship_A = censorA, censorship_B = censorB)
-      print summary
+      print(summary)
       self.assertTrue(result)
 
   def test_integer_times_logrank_test(self):
       data1 = np.random.exponential(5, size=(200,1)).astype(int)
       data2 = np.random.exponential(1, size=(200,1)).astype(int)
       summary, p_value, result = logrank_test(data1, data2)
-      print summary
+      print(summary)
       self.assertTrue(result)
 
   def test_waltons_data(self):
       summary, p_value, result = logrank_test(waltonT1, waltonT2)
-      print summary
+      print(summary)
       self.assertTrue(result)
 
   def test_smoothing_hazard_ties(self):
@@ -206,19 +208,19 @@ class StatisticalTests(unittest.TestCase):
       g = np.random.binomial(2, 0.5, size=300)
       T[g==1] = np.random.exponential(6, size=(g==1).sum())
       s, _, result = multivariate_logrank_test(T, g)
-      print s
+      print(s)
       self.assertTrue(result==True)
 
   def test_multivariate_equal_intensities(self):
       T = np.random.exponential(10, size=300)
       g = np.random.binomial(2, 0.5, size=300)
       s, _, result = multivariate_logrank_test(T, g)
-      print s
+      print(s)
       self.assertTrue(result==None)
 
   def test_pairwise_waltons_data(self):
       _,_,R = pairwise_logrank_test(waltonT, waltonG)
-      print R
+      print(R)
       self.assertTrue(R.values[0,1])
 
   def test_pairwise_logrank_test(self):

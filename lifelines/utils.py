@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from datetime import datetime
 
 import numpy as np
@@ -151,7 +153,7 @@ def datetimes_to_durations( start_times, end_times, fill_date=datetime.today(), 
 
     T = (end_times_ - start_times_).map(lambda x: x.astype(freq_string).astype(float) )
     if (T < 0).sum():
-        print "Warning: some values of start_times are before end_times"
+        print("Warning: some values of start_times are before end_times")
     return T.values, C.values
 
 def inv_normal_cdf(p):
