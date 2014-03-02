@@ -513,6 +513,14 @@ class PlottingTests(unittest.TestCase):
       plt.title('testing smoothing hazard')
       return
 
+  def test_show_censor_with_index_0(self):
+      T = np.random.binomial(20,0.1, size=100)
+      C = np.random.binomial(1, 0.8, size=100)
+      kmf = KaplanMeierFitter()
+      kmf.fit(T,C).plot(show_censors=True)
+      return
+
+
 #some data
 
 LIFETIMES = np.array([2,4,4,4,5,7,10,11,11,12])

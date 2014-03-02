@@ -137,7 +137,7 @@ def plot_dataframes(self, estimate):
         get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
 
         if show_censors:
-            v =  get_loc(estimate_.ix[ ~self.censorship ])
+            v =  get_loc(estimate_.ix[~(self.event_times['censored'] > 0)])
             kwargs['ax'].plot( v.index.values.astype(float), v.values[:,0], marker="o", color=kwargs['color'], linestyle='None', ms=6, mew=0 )
 
         get_loc(estimate_).plot(**kwargs)
