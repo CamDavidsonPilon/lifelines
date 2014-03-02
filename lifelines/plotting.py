@@ -89,13 +89,17 @@ def plot_regressions(self):
 
 
 def plot_dataframes(self, estimate):
-    def plot( ix=None, iloc=None, flat=False, ci_legend=False, ci_force_lines=False, ci_alpha=0.3, bandwidth=None, **kwargs):
+    def plot( ix=None, iloc=None, flat=False, show_censors = False, 
+               ci_legend=False, ci_force_lines=False, ci_alpha=0.3, ci_show=True,
+               bandwidth=None, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus
 
-          flat: a design style with stepped lines and no shading. Similar to R's plotting. Default: False
+          flat: an opiniated design style with stepped lines and no shading. Similar to R's plotting. Default: False
+          show_censors: place markers at censorship events. Default: False
           ci_alpha: the transparency level of the confidence interval. Default: 0.3
           ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas). Default: False
+          ci_show=True: show confidence intervals. Default: True
           ci_legend: if ci_force_lines is True, this is a boolean flag to add the lines' labels to the legend. Default: False
           ix: specify a time-based subsection of the curves to plot, ex:
                    .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.   
@@ -114,6 +118,7 @@ def plot_dataframes(self, estimate):
         if flat:
             ci_force_lines=True
             kwargs["drawstyle"] = "steps-pre"
+            show_censors = True
 
         if estimate=="hazard_":
             assert bandwidth != None, 'Must specify a bandwidth parameter in the call to plot_hazard.'
@@ -131,14 +136,22 @@ def plot_dataframes(self, estimate):
 
         get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
 
+        if show_censors:
+            v =  get_loc(estimate_.ix[ ~self.censorship ])
+            kwargs['ax'].plot( v.index.values.astype(float), v.values[:,0], marker="o", color=kwargs['color'], linestyle='None', ms=6, mew=0 )
+
         get_loc(estimate_).plot(**kwargs)
-        if ci_force_lines:
-            get_loc(confidence_interval_).plot(linestyle="--", linewidth=1, c=kwargs['color'], legend=ci_legend, ax=kwargs['ax'])
-        else:
-            x = get_loc(confidence_interval_).index.values.astype(float)
-            lower = get_loc(confidence_interval_.filter(like='lower')).values[:,0]
-            upper = get_loc(confidence_interval_.filter(like='upper')).values[:,0]
-            kwargs['ax'].fill_between(x, lower, y2=upper, alpha=ci_alpha, color=kwargs['color'])
+
+        if ci_show:
+          if ci_force_lines:
+              get_loc(confidence_interval_).plot(linestyle="--", linewidth=1, 
+                                                 c=kwargs['color'], legend=ci_legend, 
+                                                 drawstyle=kwargs.get('drawstyle','default'), ax=kwargs['ax'])
+          else:
+              x = get_loc(confidence_interval_).index.values.astype(float)
+              lower = get_loc(confidence_interval_.filter(like='lower')).values[:,0]
+              upper = get_loc(confidence_interval_.filter(like='upper')).values[:,0]
+              kwargs['ax'].fill_between(x, lower, y2=upper, alpha=ci_alpha, color=kwargs['color'])
         return kwargs['ax']
     return plot
 
