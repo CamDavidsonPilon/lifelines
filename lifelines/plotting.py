@@ -119,7 +119,7 @@ def plot_dataframes(self, estimate):
 
         if flat:
             ci_force_lines=True
-            kwargs["drawstyle"] = "steps-pre"
+            kwargs["drawstyle"] = "steps-post"
             show_censors = True
 
         if estimate=="hazard_":

@@ -339,6 +339,18 @@ class StatisticalTests(unittest.TestCase):
       except:
         self.assertTrue(False)
 
+  def test_exponential_data_sets_correct_censor(self):
+      N = 20000
+      T, C = exponential_survival_data(N, 0.2, scale=10)
+      self.assertTrue(abs(C.mean()-0.8) < 0.02)
+      
+  def test_exponential_data_sets_fit(self):
+      N = 20000
+      T, C = exponential_survival_data(N, 0.2, scale=10)
+      naf = NelsonAalenFitter()
+      naf.fit(T,C).plot()
+      plt.title("Should be a linear with slope = 0.1")
+
   def kaplan_meier(self, censor=False):
       km = np.zeros((len(self.lifetimes.keys()),1))
       ordered_lifetimes = np.sort( self.lifetimes.keys())

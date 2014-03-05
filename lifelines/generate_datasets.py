@@ -3,6 +3,35 @@ import numpy as np
 from numpy import random
 import pandas as pd
 
+from scipy import stats as stats
+from scipy.optimize import newton
+
+def exponential_survival_data(n, cr=0.05, scale=1.):
+
+    t = stats.expon.rvs(scale=scale, size=n)
+    if cr == 0.0:
+        return t, np.ones(n, dtype=bool)
+
+    def pF(h):
+        v = 1.0*h/scale
+        return v / (np.exp(v)-1) - cr
+
+    #find the threshold:
+    h = newton(pF, 1., maxiter=500)
+
+    #generate truncated data
+    R = (1-np.exp(-h/scale))*stats.uniform.rvs(size=n)
+    entrance = -np.log(1-R)*scale
+
+    C = (t+entrance) < h #should occur 1-cr of the time.
+    T = np.minimum(h-entrance,t)
+    return T,C
+
+
+
+
+### Models with covariates
+
 class coeff_func(object):
   """This is a decorator class used later to construct nice names"""
   def __init__(self, f):
@@ -59,9 +88,6 @@ def right_censor_lifetimes(lifetimes, max_ , min_ = 0):
   u = min_ + (max_-min_)*random.rand(n)
   observations = np.minimum( u, lifetimes)
   return observations, lifetimes == observations
-
-
-### Models with covariates
 
 def generate_covariates(n, d, n_binary=0, p=0.5):
     """
@@ -235,6 +261,5 @@ def construct_survival_curves(hazard_rates, timelines):
   #pdb.set_trace()
   cumulative_hazards = cumulative_quadrature(hazard_rates.values.T, timelines).T
   return pd.DataFrame( np.exp(-cumulative_hazards), index=timelines)
-
 
 
