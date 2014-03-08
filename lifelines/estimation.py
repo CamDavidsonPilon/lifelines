@@ -30,17 +30,18 @@ class NelsonAalenFitter(object):
     def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate'], alpha=None, insert_0=True):
         """
         Parameters:
-          event_times: an (n,1) array of times that the death event occured at
+          event_times: an array, or pd.Series, of length n of times that the death event occured at
           timeline: return the best estimate at the values in timelines (postively increasing)
-          columns: a length 1 array to name the column of the estimate.
+          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if censorship==None
+          columns: a length-1 array to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           insert_0: add a leading 0 (if not present) in the timeline.
 
-
         Returns:
-          DataFrame with index either event_times or timelines (if not None), with
-          values as the NelsonAalen estimate
+          self, with new properties like 'survival_function_'.
+
         """
 
         if censorship is None:
@@ -147,18 +148,18 @@ class KaplanMeierFitter(object):
   def fit(self, event_times, censorship=None, timeline=None, columns=['KM-estimate'], alpha=None, insert_0=True):
        """
        Parameters:
-         event_times: an (n,1) array of times that the death event occured at
-         timeline: return the best estimate at the values in timelines (postively increasing)
-         censorship: an (n,1) array of booleans -- True if the the death was observed, False if the event
-            was lost (right-censored). Defaults all True if censorship==None
-         columns: a length 1 array to name the column of the estimate.
-         alpha: the alpha value in the confidence intervals. Overrides the initializing
-            alpha for this call to fit only.
-         insert_0: add a leading 0 (if not present) in the timeline.
+          event_times: an array, or pd.Series, of length n of times that the death event occured at
+          timeline: return the best estimate at the values in timelines (postively increasing)
+          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if censorship==None
+          columns: a length-1 array to name the column of the estimate.
+          alpha: the alpha value in the confidence intervals. Overrides the initializing
+             alpha for this call to fit only.
+          insert_0: add a leading 0 (if not present) in the timeline.
 
        Returns:
-         DataFrame with index either event_times or timelines (if not None), with
-         values under column_name with the KaplanMeier estimate
+          self, with new properties like 'survival_function_'.
+
        """
        #set to all observed if censorship is none
        if censorship is None:

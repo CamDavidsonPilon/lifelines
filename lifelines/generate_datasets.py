@@ -28,8 +28,6 @@ def exponential_survival_data(n, cr=0.05, scale=1.):
     return T,C
 
 
-
-
 ### Models with covariates
 
 class coeff_func(object):

@@ -169,18 +169,36 @@ office, and whether or not they were observed to have left office
 (leaders who died in office or were in office in 2008, the latest date
 this data was record at, do not have observed death events)
 
-.. code:: python
-
-    T = data["duration"] #measure in years
-    C = data["observed"] 
-
-Current, all arguments to *lifelines* estimators must be numpy arrays.
 We next use the ``KaplanMeierFitter`` method ``fit`` to fit the model to
 the data. (This is similar to, and was inspired by, another popular
 Python library `scikit-learn's <http://scikit-learn.org/stable/>`__
 fit/predict API)
 
+.. code:: 
+
+  KaplanMeierFitter.fit(event_times, censorship=None, timeline=None, columns=['KM-estimate'], alpha=None, insert_0=True)
+  Docstring:
+  Parameters:
+    event_times: an array, or pd.Series, of length n of times that the death event occured at
+    timeline: return the best estimate at the values in timelines (postively increasing)
+    censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+       was lost (right-censored). Defaults all True if censorship==None
+    columns: a length-1 array to name the column of the estimate.
+    alpha: the alpha value in the confidence intervals. Overrides the initializing
+       alpha for this call to fit only.
+    insert_0: add a leading 0 (if not present) in the timeline.
+
+  Returns:
+    self, with new properties like 'survival_function_'.
+
+
+Below we fit our data to the fitter: 
+
+
 .. code:: python
+
+    T = data["duration"] #measure in years
+    C = data["observed"] 
 
     kmf.fit(T, censorship=C )
 
@@ -189,7 +207,6 @@ fit/predict API)
 .. parsed-literal::
 
     <lifelines.estimation.KaplanMeierFitter at 0x109199950>
-
 
 
 After calling the ``fit`` method, the ``KaplanMeierFitter`` has a field
@@ -462,11 +479,9 @@ in ``lifelines``. Let's use the regime dataset from above:
 
     T = data["duration"]
     C = data["observed"]
-.. code:: python
 
     from lifelines import NelsonAalenFitter
     naf = NelsonAalenFitter()
-.. code:: python
 
     naf.fit(T,censorship=C)
 
