@@ -11,39 +11,10 @@ By default, the estimate created is a DataFrame with column ``KM-estimate`` in `
 in ``NelsonAalenFitter``. You change this in the call to ``.fit``:
 
 .. code-block:: python
+
     kmf.fit(T,censorship=C, label='<new label here>')
 
-Note: in versions prior to lifelines 2.3, this was called ``column`` and accepted a 1-length array.
-
-
-
-R-like plotting and plotting opions
-##############################################
-
-There are many styles of lifelines plots you may want, depending on your tastes:
-
-
-
-Standard
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-    kmf.plot()
-
-
-R-style
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-    kmf.plot(flat=True)
-
-Show censorships
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-    kmf.plot(show_censors=True)
-
-
+Note: in versions prior to lifelines 0.2.3, this was called ``column`` and accepted a 1-length array.
 
 Plotting multiple figures on an plot:
 ##############################################
@@ -81,6 +52,59 @@ If you have a pandas `DataFrame` with columns "group", "T", and "C", then someth
         kmf.fit(data["T"], data["C"], label=group)
         kmf.plot(ax=ax)
     
+
+Plotting opions and styles
+##############################################
+
+There are many styles of lifelines plots you may want, depending on your tastes:
+
+
+
+Standard
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+    
+    kmf = KaplanMeierFitter().fit(T,C)
+    kmf.plot()
+
+.. image:: /images/normal_plot.png 
+   :height: 300
+
+
+R-style
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.plot(flat=True)
+
+.. image:: images/flat_plot.png 
+   :height: 300
+
+
+Show censorships
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.plot(show_censors=True)
+
+.. image:: images/show_censors_plot.png 
+   :height: 300
+
+
+Hide confidence intervals
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.plot(ci_show=False)
+
+.. image:: /images/ci_show_plot.png 
+   :height: 300
+
+
 
 Example to set the index for a estimate 
 ##############################################
@@ -121,12 +145,12 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
 
 
 What you would really like is to have a predictable and full index from 40 to 75. (Notice that
-in the above index, the last two points are seperated -- this is caused by observing no lifetimes
+in the above index, the last two time points are not adjacent -- this is caused by observing no lifetimes
 existing for at times 72 or 73) This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a `timeline` argument: 
 
 .. code-block:: python
 
-    naf.fit( T, timeline=arange(40,75))
+    naf.fit( T, timeline=range(40,75))
     print kmf.survival_function_ 
 
         KM-estimate
@@ -167,7 +191,7 @@ existing for at times 72 or 73) This is especially useful for comparing multiple
     74         0.00
 
 
-lifelines will intelligently forward-fill the estimates to time points.
+lifelines will intelligently forward-fill the estimates to unseen time points.
 
 Example SQL query to get data from a table
 ##############################################

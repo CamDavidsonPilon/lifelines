@@ -213,10 +213,10 @@ Below we fit our data to the fitter:
     <lifelines.estimation.KaplanMeierFitter at 0x109199950>
 
 
-After calling the ``fit`` method, the ``KaplanMeierFitter`` has a field
+After calling the ``fit`` method, the ``KaplanMeierFitter`` has a property
 called ``survival_function_``. (Again, we follow the styling of
-scikit-learn, and append an underscore to all estimated properties) The
-property is actually a pandas dataframe, so we can call ``plot`` on it:
+scikit-learn, and append an underscore to all properties that were computational estimated)
+ The property is a Pandas DataFrame, so we can call ``plot`` on it:
 
 .. code:: python
 
@@ -227,7 +227,7 @@ property is actually a pandas dataframe, so we can call ``plot`` on it:
 .. image:: Introtolifelines_files/Introtolifelines_13_0.png
 
 
-What do we see? The y-axis represents the probability a leader is still
+How do we interpret this? The y-axis represents the probability a leader is still
 around after :math:`t` years, where :math:`t` years is on the x-axis. We
 see that very few leaders make it past 20 years in office. Of course,
 like all good stats, we need to report how uncertain we are about these
@@ -236,7 +236,7 @@ the call to ``fit``, and are located under the ``confidence_interval_``
 property.
 
 Alternativly, we can call ``plot`` on the ``KaplanMeierFitter`` itself
-to plot both the KM estimate and it's confidence intervals:
+to plot both the KM estimate and its confidence intervals:
 
 *Note: Don't like the shaded area for confidence intervals? See below
 examples on how to change this*
@@ -808,6 +808,7 @@ covaritate matrix from my original dataframe.
 
     T = data['duration'].values[:,None]
     C = data['observed'].values[:,None] 
+
 Below we create our Fitter class. Since we did not supply an intercept
 column in our patsy we have included the keyword ``fit_intercept=True``
 (``True`` by default) which will append the column of ones to our
@@ -826,6 +827,7 @@ the estimates still appear to be too unstable, try increasing it.
 .. code:: python
 
     aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=True)
+
 Like the API syntax above, an instance of ``AalenAdditiveFitter``
 includes a ``fit`` method. In this method is an additional requirement:
 our covariate matrix.
