@@ -1,8 +1,7 @@
-
 lifelines
 ===========
-
-<img src="http://i.imgur.com/pwGRqiR.png" height=200 />
+[![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
+<img src="http://i.imgur.com/pwGRqiR.png" height=175 />
 
 
 [What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
