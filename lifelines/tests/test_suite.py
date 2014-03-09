@@ -321,12 +321,6 @@ class StatisticalTests(unittest.TestCase):
       with_array = naf.fit(np.array(T),np.array(C)).cumulative_hazard_.values
       npt.assert_array_equal(with_list,with_array)
 
-  def test_population_equals_death(self):
-      T = [1,1,1]
-      kmf = KaplanMeierFitter()
-      kmf.fit(T)
-      return
-
   def test_pairwise_allows_dataframes(self):
       N = 100
       df = pd.DataFrame(np.empty((N,3)), columns=["T", "C", "group"])
@@ -350,6 +344,17 @@ class StatisticalTests(unittest.TestCase):
       naf = NelsonAalenFitter()
       naf.fit(T,C).plot()
       plt.title("Should be a linear with slope = 0.1")
+
+  def test_kmf_naf_insert_0(self):
+      kmf, naf = KaplanMeierFitter(), NelsonAalenFitter()
+      T = [1,2,3,4]
+      kmf.fit(T), naf.fit(T)
+      assert(int(kmf.survival_function_.index[0])==0)
+      assert(int(naf.cumulative_hazard_.index[0])==0)
+
+      kmf.fit(T, insert_0=False), naf.fit(T, insert_0=False)
+      assert(int(kmf.survival_function_.index[0])==1)
+      assert(int(naf.cumulative_hazard_.index[0])==1)
 
   def kaplan_meier(self, censor=False):
       km = np.zeros((len(self.lifetimes.keys()),1))
@@ -527,12 +532,21 @@ class PlottingTests(unittest.TestCase):
       plt.title('testing smoothing hazard')
       return
 
-  def test_show_censor_with_index_0(self):
+  def test_show_censor_with_discrete_date(self):
       T = np.random.binomial(20,0.1, size=100)
       C = np.random.binomial(1, 0.8, size=100)
       kmf = KaplanMeierFitter()
       kmf.fit(T,C).plot(show_censors=True)
       return
+
+  def test_show_censor_with_index_0(self):
+      T = np.random.binomial(20,0.9, size=100) #lifelines should auto put a 0 in.
+      C = np.random.binomial(1, 0.8, size=100)
+      kmf = KaplanMeierFitter()
+      kmf.fit(T,C).plot(show_censors=True)
+      return
+
+
 
 
 #some data

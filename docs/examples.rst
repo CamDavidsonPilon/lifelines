@@ -3,7 +3,28 @@ More examples and recipes
 
 This section goes through some examples.
 
-Putting multiple plots on an figure:
+
+Adding a label to the estimation's DataFrame
+##############################################
+
+
+R-like plotting and plotting opions
+##############################################
+
+There are many styles of lifelines plots you may want, depending on your test:
+
+
+Standard
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+    kmf.plot()
+
+
+
+
+
+Plotting multiple figures on an plot:
 ##############################################
 
 If you have a pandas `DataFrame` with columns "group", "T", and "C", then something like the following would work:
@@ -119,14 +140,14 @@ lifelines will intelligently forward-fill the estimates to time points.
 Example SQL query to get data from a table
 ##############################################
 
-Below is a way to get an example dataset from a relation database (this may vary depending on your database schema):
+Below is a way to get an example dataset from a relation database (this may vary depending on your database):
 
 .. code-block:: mysql
 
     SELECT 
       id, 
       DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE) ) AS "T", 
-      (ended_at IS NULL) AS "C" 
+      (ended_at IS NOT NULL) AS "C" 
     FROM some_tables
 
 Explaination

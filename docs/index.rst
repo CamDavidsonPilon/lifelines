@@ -7,7 +7,7 @@ lifelines
 =====================================
 
 .. image:: icon_25027.png 
-   :height: 120
+   :height: 80
 
 The **lifelines** library provides a powerful tool for data analysts and scientists
 looking for methods to solve a common problem:

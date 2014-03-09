@@ -65,6 +65,7 @@ class NelsonAalenFitter(object):
                                                                      self._additive_f, self._variance_f )
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=columns)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
+        self.predict = _predict(self, "cumulative_hazard_", columns)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
         self.plot_cumulative_hazard = self.plot
         self.plot_hazard = plot_dataframes(self, 'hazard_')
@@ -82,17 +83,15 @@ class NelsonAalenFitter(object):
 
     def _variance_f_smooth(self, population, deaths):
         """TODO: speed this up"""
-        df = pd.DataFrame( {'N':population, 'd':deaths})
-        return df.apply( lambda N_d: np.sum( [1./(N_d[0]-i)**2 for i in range(int(N_d[1]))]), axis=1 )
-        #return df.apply( lambda (N,d): np.sum([1./(N-i)**2 for i in xrange(int(d))]), axis=1 )
+        df = pd.DataFrame( {'N':population, 'd':deaths.astype(int)})
+        return df.apply( lambda N_d: np.sum((1./(N_d[0]-i)**2 for i in range(N_d[1]))), axis=1 )
 
     def _variance_f_discrete(self, population, deaths):
         return 1.*(population-deaths)*deaths/population**3
 
     def _additive_f_smooth(self, population, deaths):
-        df = pd.DataFrame( {'N':population, 'd':deaths})
-        return df.apply( lambda N_d: np.sum([1./(N_d[0]-i) for i in range(int(N_d[1]))]), axis=1 )
-        #return df.apply( lambda (N,d): np.sum([1./(N-i) for i in xrange(int(d))]), axis=1 )
+        df = pd.DataFrame( {'N':population, 'd':deaths.astype(int)})
+        return df.apply( lambda N_d: np.sum((1./(N_d[0]-i) for i in range(N_d[1]))), axis=1 )
 
     def _additive_f_discrete(self, population, deaths):
        return (1.*deaths/population).replace([np.inf],0)
@@ -134,8 +133,7 @@ class NelsonAalenFitter(object):
 
     def __repr__(self):
       try:
-        s="""<lifelines.NelsonAalenFitter: fitted with %d observations, %d censored. \n"""%(self.censorship.shape[0], (~self.censorship).sum()) 
-        s += self.cumulative_hazard_.head(4).to_string(col_space=15) + "\n... >"
+        s="""<lifelines.NelsonAalenFitter: fitted with %d observations, %d censored.>"""%(self.censorship.shape[0], (~self.censorship).sum()) 
       except AttributeError as e:
         s= """<lifelines.NelsonAalenFitter>"""
       return s
@@ -183,8 +181,8 @@ class KaplanMeierFitter(object):
                                                                   self._additive_f, self._additive_var)
 
        self.survival_function_ = pd.DataFrame(np.exp(log_survival_function), columns=columns)
-       #self.median_ = median_survival_times(self.survival_function_)
        self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
+       self.predict = _predict(self, "survival_function_", columns)
        self.plot = plot_dataframes(self, "survival_function_")
        self.plot_survival_function = self.plot
        self.median_ = median_survival_times(self.survival_function_)
@@ -209,12 +207,23 @@ class KaplanMeierFitter(object):
       return (1.*deaths/(population*(population-deaths))).replace([np.inf],0)
 
   def __repr__(self):
-    try:
-      s="""<lifelines.KaplanMeierFitter: fitted with %d observations, %d censored. \n"""%(self.censorship.shape[0], (~self.censorship).sum()) 
-      s += self.survival_function_.head(4).to_string(col_space=15) + "\n... >"
-    except AttributeError as e:
-      s= """<lifelines.KaplanMeierFitter>"""
-    return s
+      try:
+        s="""<lifelines.KaplanMeierFitter: fitted with %d observations, %d censored>"""%(self.censorship.shape[0], (~self.censorship).sum()) 
+      except AttributeError as e:
+        s= """<lifelines.KaplanMeierFitter>"""
+      return s
+
+
+def _predict(self, estimate, columns):
+    def predict(time):
+      """
+      Predict the estimate at certain times
+
+      Parameters:
+        time: an array of times to predict the estimate at 
+      """
+      return map(lambda t: getattr(self,estimate).ix[:t].iloc[-1][columns[0]], time)
+    return predict
 
 
 def _additive_estimate(events, timeline, _additive_f, _additive_var):
