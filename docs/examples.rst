@@ -105,8 +105,62 @@ Hide confidence intervals
    :height: 300
 
 
+Compare two Kaplan-Meier Estimates
+##############################################
 
-Example to set the index for a estimate 
+(though this applies just as well to Nelson-Aalen estimates). Often researchers want to compare
+survival curves between different populations. Here are some techniques to do that: 
+
+Subtract the difference between survival curves
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you are interested in taking the difference between two survival curves, simply trying to 
+subtract the ``survival_function_`` will likely fail if the timelines are not equal. Fortunately, 
+the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built in ``subtract`` method: 
+
+.. code-block:: python
+    
+    kmf1.subtract(kmf2)
+
+will produce the difference at every relevant time point. A similar function exists for division: ``divide``.
+
+Compare using a hypothesis test
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For rigorous testing of differences, lifelines comes with a statistics library. The ``logrank_test`` function
+compares whether the "death" generation process of the two populations are equal:
+
+.. code-block:: python
+    
+    from lifelines.statistics import logrank_test
+
+    summary, p_value, test_result = logrank_test(T1, T2, censorship_A=C1, censorship_B=C2)
+
+    print summary
+
+    """
+    Results
+        df: 1
+       alpha: 0.95
+       t 0: -1
+       test: logrank
+       null distribution: chi squared
+
+       __ p-value ___|__ test statistic __|__ test results __
+             0.46759 |              0.528 |     None
+   """
+
+   print p_value     # 0.46759 
+   print test_result # None
+
+
+If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares
+each pair in the same manner as above), or ``multivariate_logrank_test`` (which tests the 
+hypothesis that all the populations have the same "death" generation process).
+
+
+
+Example to set the index for an estimate 
 ##############################################
 
 Suppose your dataset has lifetimes grouped near time 60, thus after fitting

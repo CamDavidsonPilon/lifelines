@@ -33,6 +33,7 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
       test result: True if reject the null, (pendantically None if inconclusive)
     """
 
+    event_times_A, event_times_B = np.array(event_times_A), np.array(event_times_B)
     if censorship_A is None:
       censorship_A = np.ones(event_times_A.shape[0])  
     if censorship_B is None:
@@ -68,18 +69,18 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
       P: a (n,n) dataframe of p-values (np.nan on the diagonal).
       T: a (n,n) dataframe of test results (True is significant, None if not) (np.nan on the diagonal).
 
-      Example:
-        P:
-                  a         b         c
-        a       NaN  0.711136  0.401462
-        b  0.711136       NaN  0.734605
-        c  0.401462  0.734605       NaN
+    Example:
+      P:
+                a         b         c
+      a       NaN  0.711136  0.401462
+      b  0.711136       NaN  0.734605
+      c  0.401462  0.734605       NaN
 
-        T: 
-              a     b     c
-        a   NaN  None  None
-        b  None   NaN  None
-        c  None  None   NaN
+      T: 
+            a     b     c
+      a   NaN  None  None
+      b  None   NaN  None
+      c  None  None   NaN
 
     """
     

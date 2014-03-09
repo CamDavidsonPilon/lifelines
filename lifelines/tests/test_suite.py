@@ -358,12 +358,27 @@ class StatisticalTests(unittest.TestCase):
       kmf, naf = KaplanMeierFitter(), NelsonAalenFitter()
       T = [1,2,3,4]
       kmf.fit(T), naf.fit(T)
-      assert(int(kmf.survival_function_.index[0])==0)
-      assert(int(naf.cumulative_hazard_.index[0])==0)
+      self.assertTrue(int(kmf.survival_function_.index[0])==0)
+      self.assertTrue(int(naf.cumulative_hazard_.index[0])==0)
 
       kmf.fit(T, insert_0=False), naf.fit(T, insert_0=False)
-      assert(int(kmf.survival_function_.index[0])==1)
-      assert(int(naf.cumulative_hazard_.index[0])==1)
+      self.assertTrue(int(kmf.survival_function_.index[0])==1)
+      self.assertTrue(int(naf.cumulative_hazard_.index[0])==1)
+
+  def test_subtraction_function(self):
+      
+      kmf = KaplanMeierFitter()
+      kmf.fit(waltonT)
+      npt.assert_array_almost_equal( kmf.subtract(kmf).sum().values, 0.0 )
+  
+  def test_divide_function(self):
+      
+      kmf = KaplanMeierFitter()
+      kmf.fit(waltonT)
+      npt.assert_array_almost_equal( np.log(kmf.divide(kmf)).sum().values, 0.0 )
+
+
+
 
   def kaplan_meier(self, censor=False):
       km = np.zeros((len(self.lifetimes.keys()),1))

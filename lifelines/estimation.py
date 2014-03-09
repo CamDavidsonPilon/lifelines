@@ -20,7 +20,7 @@ class NelsonAalenFitter(object):
     def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
-        if nelson_aalen_smoothing:
+        if self.nelson_aalen_smoothing:
           self._variance_f = self._variance_f_smooth
           self._additive_f = self._additive_f_smooth
         else:
@@ -63,13 +63,21 @@ class NelsonAalenFitter(object):
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
                                                                      self._additive_f, self._variance_f )
+        
+        #esimates
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[label])
         self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
+        self._cumulative_sq = cumulative_sq_
+        
+        #estimation functions
         self.predict = _predict(self, "cumulative_hazard_", label)
+        self.subtract = _subtract(self, "cumulative_hazard_")
+        self.divide = _divide(self, "cumulative_hazard_")
+
+        #plotting
         self.plot = plot_dataframes(self, "cumulative_hazard_")
         self.plot_cumulative_hazard = self.plot
         self.plot_hazard = plot_dataframes(self, 'hazard_')
-        self._cumulative_sq = cumulative_sq_
 
         return self
 
@@ -82,7 +90,6 @@ class NelsonAalenFitter(object):
         return df
 
     def _variance_f_smooth(self, population, deaths):
-        """TODO: speed this up"""
         df = pd.DataFrame( {'N':population, 'd':deaths})
         return df.apply( lambda N_d: np.sum((1./(N_d[0]-i)**2 for i in range(int(N_d[1])))), axis=1 )
 
@@ -98,8 +105,11 @@ class NelsonAalenFitter(object):
 
     def smoothed_hazard_(self, bandwidth):
         """
-        bandwidth: the bandwith used in the Epanechnikov kernel.
+        Parameters:
+          bandwidth: the bandwith used in the Epanechnikov kernel.
 
+        Returns:
+          a DataFrame of the smoothed hazard
         """
         timeline = self.timeline
         cumulative_hazard_name =  self.cumulative_hazard_.columns[0]
@@ -112,8 +122,9 @@ class NelsonAalenFitter(object):
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
         """
-        bandwidth: the bandwith to use in the Epanechnikov kernel.
-        hazard_: a computed (n,) numpy array of estimated hazard rates. If none, uses naf.smoothed_hazard_
+        Parameter:
+          bandwidth: the bandwith to use in the Epanechnikov kernel.
+          hazard_: a computed (n,) numpy array of estimated hazard rates. If none, uses naf.smoothed_hazard_
         """
         if hazard_==None:
           hazard_ = self.smoothed_hazard_(bandwidth).values[:,0]
@@ -137,6 +148,7 @@ class NelsonAalenFitter(object):
       except AttributeError as e:
         s= """<lifelines.NelsonAalenFitter>"""
       return s
+
 
 class KaplanMeierFitter(object):
 
@@ -180,12 +192,19 @@ class KaplanMeierFitter(object):
        log_survival_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
                                                                   self._additive_f, self._additive_var)
 
+       # estimation
        self.survival_function_ = pd.DataFrame(np.exp(log_survival_function), columns=[label])
        self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
+       self.median_ = median_survival_times(self.survival_function_)
+
+       #estimation methods        
        self.predict = _predict(self, "survival_function_", label)
+       self.subtract = _subtract(self, "survival_function_")
+       self.divide = _divide(self, "survival_function_")
+       
+       #plotting functions
        self.plot = plot_dataframes(self, "survival_function_")
        self.plot_survival_function = self.plot
-       self.median_ = median_survival_times(self.survival_function_)
        return self
 
   def _bounds(self, cumulative_sq_, alpha):
@@ -212,38 +231,6 @@ class KaplanMeierFitter(object):
       except AttributeError as e:
         s= """<lifelines.KaplanMeierFitter>"""
       return s
-
-
-def _predict(self, estimate, label):
-    def predict(time):
-      """
-      Predict the estimate at certain times
-
-      Parameters:
-        time: an array of times to predict the estimate at 
-      """
-      return map(lambda t: getattr(self,estimate).ix[:t].iloc[-1][label], time)
-    return predict
-
-
-def _additive_estimate(events, timeline, _additive_f, _additive_var):
-    """
-    Called to compute the Kaplan Meier and Nelson-Aalen estimates.
-
-    """
-    N = events["removed"].sum()
-
-    deaths = events['observed']
-    population = N - events['removed'].cumsum().shift(1).fillna(0)
-    estimate_ = np.cumsum(_additive_f(population,deaths))
-    var_ = np.cumsum(_additive_var(population, deaths))
-
-    estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
-    var_ = var_.reindex(timeline, method='pad')
-    var_.index.name='timeline'
-    estimate_.index.name='timeline'
-    
-    return estimate_, var_
 
 
 class AalenAdditiveFitter(object):
@@ -422,6 +409,81 @@ class AalenAdditiveFitter(object):
         return quadrature(self.predict_survival_function(X).values.T, t)
 
 #utils
+def _subtract(self, estimate):
+    class_name = self.__class__.__name__
+    doc_string = """
+        Subtract the %s of two %s objects.
+
+        Parameters:
+          other: an %s fitted instance.
+
+        """%(estimate, class_name,class_name)
+
+    def subtract(other):
+        self_estimate = getattr(self, estimate)
+        other_estimate = getattr(other, estimate)
+        return self_estimate.reindex(other_estimate.index, method='ffill') - \
+               other_estimate.reindex(self_estimate.index, method='ffill')
+
+    subtract.__doc__ = doc_string
+    return subtract
+
+
+def _divide(self, estimate):
+    class_name = self.__class__.__name__
+    doc_string = """
+        Divide the %s of two %s objects.
+
+        Parameters:
+          other: an %s fitted instance.
+
+        """%(estimate, class_name,class_name)
+
+    def divide(other):
+        self_estimate = getattr(self, estimate)
+        other_estimate = getattr(other, estimate)
+        return self_estimate.reindex(other_estimate.index, method='ffill') / \
+               other_estimate.reindex(self_estimate.index, method='ffill')
+
+    divide.__doc__ = doc_string
+    return divide
+
+
+def _predict(self, estimate, label):
+    doc_string =       """
+      Predict the %s at certain times
+
+      Parameters:
+        time: an array of times to predict the value of %s at 
+      """%(estimate, estimate)
+      
+    def predict(time):
+        return map(lambda t: getattr(self,estimate).ix[:t].iloc[-1][label], time)
+
+    predict.__doc__ = doc_string
+    return predict
+
+
+def _additive_estimate(events, timeline, _additive_f, _additive_var):
+    """
+    Called to compute the Kaplan Meier and Nelson-Aalen estimates.
+
+    """
+    N = events["removed"].sum()
+
+    deaths = events['observed']
+    population = N - events['removed'].cumsum().shift(1).fillna(0)
+    estimate_ = np.cumsum(_additive_f(population,deaths))
+    var_ = np.cumsum(_additive_var(population, deaths))
+
+    estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
+    var_ = var_.reindex(timeline, method='pad')
+    var_.index.name='timeline'
+    estimate_.index.name='timeline'
+    
+    return estimate_, var_
+
+
 def qth_survival_times(q, survival_functions):
     """
     This can be done much better.
@@ -446,8 +508,10 @@ def qth_survival_times(q, survival_functions):
         v[sv_b[-1,:]==0] = np.inf
     return v
 
+
 def median_survival_times(survival_functions):
     return qth_survival_times(0.5, survival_functions)
+
 
 def asymmetric_epanechnikov_kernel(q, x):
     return (64*(2 - 4*q + 6*q*q - 3*q**3) + 240*(1-q)**2*x)/((1+q)**4*(19 - 18*q + 3*q**2))
