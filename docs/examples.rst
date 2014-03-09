@@ -7,11 +7,21 @@ This section goes through some examples.
 Adding a label to the estimation's DataFrame
 ##############################################
 
+By default, the estimate created is a DataFrame with column ``KM-estimate`` in ``KaplanMeierFitter`` and ``NA-esimate`` 
+in ``NelsonAalenFitter``. You change this in the call to ``.fit``:
+
+.. code-block:: python
+    kmf.fit(T,censorship=C, label='<new label here>')
+
+Note: in versions prior to lifelines 2.3, this was called ``column`` and accepted a 1-length array.
+
+
 
 R-like plotting and plotting opions
 ##############################################
 
-There are many styles of lifelines plots you may want, depending on your test:
+There are many styles of lifelines plots you may want, depending on your tastes:
+
 
 
 Standard
@@ -21,11 +31,33 @@ Standard
     kmf.plot()
 
 
+R-style
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+    kmf.plot(flat=True)
+
+Show censorships
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+    kmf.plot(show_censors=True)
 
 
 
 Plotting multiple figures on an plot:
 ##############################################
+
+When `.plot` is called, an `axis` object is returned which can be passed into future calls of `.plot`:
+
+.. code-block:: python
+    
+    kmf.fit(data1)
+    ax = kmf.plot()
+
+    kmf.fit(data2)
+    ax = kmf.plot(ax=ax)
+
 
 If you have a pandas `DataFrame` with columns "group", "T", and "C", then something like the following would work:
 
@@ -46,7 +78,7 @@ If you have a pandas `DataFrame` with columns "group", "T", and "C", then someth
     kmf = KaplanMeierFitter()
     for i, group in enumerate(unique_groups):
         data = grouped_data.get_group(group)
-        kmf.fit(data["T"], data["C"], columns=[group])
+        kmf.fit(data["T"], data["C"], label=group)
         kmf.plot(ax=ax)
     
 

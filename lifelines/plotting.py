@@ -117,6 +117,7 @@ def plot_dataframes(self, estimate):
             kwargs["ax"] = plt.figure().add_subplot(111)
         kwargs['color'] = next( s for s in [kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle)] if s )
 
+        # R-style graphics
         if flat:
             ci_force_lines=True
             kwargs["drawstyle"] = "steps-post"
@@ -129,22 +130,26 @@ def plot_dataframes(self, estimate):
         else:
             confidence_interval_ = getattr(self, 'confidence_interval_')
             estimate_ = getattr(self, estimate)
-                  
-        get_method = "ix" if ix != None else "iloc"
+        
+        #did user specify certain indexes or locations?
         if iloc == ix == None:
             user_submitted_ix = slice(0,None)
         else:
             user_submitted_ix = ix if ix != None else iloc
 
+        get_method = "ix" if ix != None else "iloc"
         get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
 
+        #plot censors
         if show_censors:
             times = get_loc(self.event_times.ix[(self.event_times['censored'] > 0)]).index.values.astype(float)
             v =  self.predict(times)
             kwargs['ax'].plot( times, v, marker="o", color=kwargs['color'], linestyle='None', ms=6, mew=0 )
 
+        #plot esimate
         get_loc(estimate_).plot(**kwargs)
 
+        #plot confidence intervals
         if ci_show:
           if ci_force_lines:
               get_loc(confidence_interval_).plot(linestyle="--", linewidth=1, 
@@ -155,6 +160,7 @@ def plot_dataframes(self, estimate):
               lower = get_loc(confidence_interval_.filter(like='lower')).values[:,0]
               upper = get_loc(confidence_interval_.filter(like='upper')).values[:,0]
               kwargs['ax'].fill_between(x, lower, y2=upper, alpha=ci_alpha, color=kwargs['color'])
+
         return kwargs['ax']
     return plot
 

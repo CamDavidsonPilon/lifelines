@@ -27,14 +27,14 @@ class NelsonAalenFitter(object):
           self._variance_f = self._variance_f_discrete
           self._additive_f = self._additive_f_discrete
 
-    def fit(self, event_times,censorship=None, timeline=None, columns=['NA-estimate'], alpha=None, insert_0=True):
+    def fit(self, event_times,censorship=None, timeline=None, label='NA-estimate', alpha=None, insert_0=True):
         """
         Parameters:
           event_times: an array, or pd.Series, of length n of times that the death event occured at
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          columns: a length-1 array to name the column of the estimate.
+          label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           insert_0: add a leading 0 (if not present) in the timeline.
@@ -63,9 +63,9 @@ class NelsonAalenFitter(object):
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
                                                                      self._additive_f, self._variance_f )
-        self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=columns)
+        self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[label])
         self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
-        self.predict = _predict(self, "cumulative_hazard_", columns)
+        self.predict = _predict(self, "cumulative_hazard_", label)
         self.plot = plot_dataframes(self, "cumulative_hazard_")
         self.plot_cumulative_hazard = self.plot
         self.plot_hazard = plot_dataframes(self, 'hazard_')
@@ -83,15 +83,15 @@ class NelsonAalenFitter(object):
 
     def _variance_f_smooth(self, population, deaths):
         """TODO: speed this up"""
-        df = pd.DataFrame( {'N':population, 'd':deaths.astype(int)})
-        return df.apply( lambda N_d: np.sum((1./(N_d[0]-i)**2 for i in range(N_d[1]))), axis=1 )
+        df = pd.DataFrame( {'N':population, 'd':deaths})
+        return df.apply( lambda N_d: np.sum((1./(N_d[0]-i)**2 for i in range(int(N_d[1])))), axis=1 )
 
     def _variance_f_discrete(self, population, deaths):
         return 1.*(population-deaths)*deaths/population**3
 
     def _additive_f_smooth(self, population, deaths):
-        df = pd.DataFrame( {'N':population, 'd':deaths.astype(int)})
-        return df.apply( lambda N_d: np.sum((1./(N_d[0]-i) for i in range(N_d[1]))), axis=1 )
+        df = pd.DataFrame( {'N':population, 'd':deaths})
+        return df.apply( lambda N_d: np.sum((1./(N_d[0]-i) for i in range(int(N_d[1])))), axis=1 )
 
     def _additive_f_discrete(self, population, deaths):
        return (1.*deaths/population).replace([np.inf],0)
@@ -143,14 +143,14 @@ class KaplanMeierFitter(object):
   def __init__(self, alpha=0.95):
        self.alpha = alpha
 
-  def fit(self, event_times, censorship=None, timeline=None, columns=['KM-estimate'], alpha=None, insert_0=True):
+  def fit(self, event_times, censorship=None, timeline=None, label='KM-estimate', alpha=None, insert_0=True):
        """
        Parameters:
           event_times: an array, or pd.Series, of length n of times that the death event occured at
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          columns: a length-1 array to name the column of the estimate.
+          label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           insert_0: add a leading 0 (if not present) in the timeline.
@@ -180,9 +180,9 @@ class KaplanMeierFitter(object):
        log_survival_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
                                                                   self._additive_f, self._additive_var)
 
-       self.survival_function_ = pd.DataFrame(np.exp(log_survival_function), columns=columns)
+       self.survival_function_ = pd.DataFrame(np.exp(log_survival_function), columns=[label])
        self.confidence_interval_ = self._bounds(cumulative_sq_[:,None],alpha)
-       self.predict = _predict(self, "survival_function_", columns)
+       self.predict = _predict(self, "survival_function_", label)
        self.plot = plot_dataframes(self, "survival_function_")
        self.plot_survival_function = self.plot
        self.median_ = median_survival_times(self.survival_function_)
@@ -214,7 +214,7 @@ class KaplanMeierFitter(object):
       return s
 
 
-def _predict(self, estimate, columns):
+def _predict(self, estimate, label):
     def predict(time):
       """
       Predict the estimate at certain times
@@ -222,7 +222,7 @@ def _predict(self, estimate, columns):
       Parameters:
         time: an array of times to predict the estimate at 
       """
-      return map(lambda t: getattr(self,estimate).ix[:t].iloc[-1][columns[0]], time)
+      return map(lambda t: getattr(self,estimate).ix[:t].iloc[-1][label], time)
     return predict
 
 

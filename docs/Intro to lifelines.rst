@@ -177,7 +177,7 @@ fit/predict API)
 .. code:: 
 
   KaplanMeierFitter.fit(event_times, censorship=None, 
-                        timeline=None, columns=['KM-estimate'], 
+                        timeline=None, label='KM-estimate', 
                         alpha=None, insert_0=True)
   Parameters:
     event_times: an array, or pd.Series, of length n of times that
@@ -187,7 +187,7 @@ fit/predict API)
           (right-censored). Defaults all True if censorship==None
     timeline: return the best estimate at the values 
             in timelines (postively increasing)
-    columns: a length-1 array to name the column of the estimate.
+    label: a string to name the column of the estimate.
     alpha: the alpha value in the confidence intervals.
            Overrides the initializing alpha for this call to fit only.
     insert_0: add a leading 0 (if not present) in the timeline.
@@ -279,9 +279,9 @@ an ``axis`` object, that can be used for plotting further estimates:
     ax = plt.subplot(111)
     
     dem = data["democracy"] == "Democracy"
-    kmf.fit(T[dem], censorship=C[dem], columns=["Democratic Regimes"])
+    kmf.fit(T[dem], censorship=C[dem], label="Democratic Regimes")
     kmf.plot(ax=ax, ci_force_lines=True)
-    kmf.fit(T[~dem], censorship=C[~dem], columns=["Non-democratic Regimes"])
+    kmf.fit(T[~dem], censorship=C[~dem], label="Non-democratic Regimes")
     kmf.plot(ax=ax, ci_force_lines=True)
     
     plt.ylim(0,1);
@@ -301,11 +301,11 @@ probabilties of survival at those points:
     ax = subplot(111)
     
     t = np.linspace(0,50,51)
-    kmf.fit(T[dem], censorship=C[dem], timeline=t, columns=["Democratic Regimes"])
+    kmf.fit(T[dem], censorship=C[dem], timeline=t, label="Democratic Regimes")
     ax = kmf.plot(ax=ax)
     print "Median survival time of democratic:", kmf.median_
     
-    kmf.fit(T[~dem], censorship=C[~dem], timeline=t, columns=["Non-democratic Regimes"])
+    kmf.fit(T[~dem], censorship=C[~dem], timeline=t, label="Non-democratic Regimes")
     kmf.plot(ax=ax )
     plt.ylim(0,1);
     plt.title("Lifespans of different global regimes");
@@ -383,7 +383,7 @@ Lets compare the different *types* of regimes present in the dataset:
     for i,regime_type in enumerate(regime_types):
         ax = plt.subplot(2,3,i+1)
         ix = data['regime'] == regime_type
-        kmf.fit( T[ix], C[ix], columns=[regime_type] )
+        kmf.fit( T[ix], C[ix], label=regime_type )
         kmf.plot(ax=ax, legend=False)
         plt.title(regime_type)
         plt.xlim(0,50)
@@ -531,9 +531,9 @@ years:
 
 .. code:: python
 
-    naf.fit(T[dem], censorship=C[dem], columns=["Democratic Regimes"])
+    naf.fit(T[dem], censorship=C[dem], label="Democratic Regimes")
     ax = naf.plot(ix=slice(0,20))
-    naf.fit(T[~dem], censorship=C[~dem], columns=["Non-democratic Regimes"])
+    naf.fit(T[~dem], censorship=C[~dem], label="Non-democratic Regimes")
     naf.plot(ax=ax, ix=slice(0,20))
     plt.title("Cumulative hazard function of different global regimes");
 
@@ -570,9 +570,9 @@ intervals, similar to the traditional ``plot`` functionality.
 .. code:: python
 
     b = 3.
-    naf.fit(T[dem], censorship=C[dem], columns=["Democratic Regimes"])
+    naf.fit(T[dem], censorship=C[dem], label="Democratic Regimes")
     ax = naf.plot_hazard(bandwidth=b)
-    naf.fit(T[~dem], censorship=C[~dem], columns=["Non-democratic Regimes"])
+    naf.fit(T[~dem], censorship=C[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
     plt.ylim(0,0.4)
@@ -592,9 +592,9 @@ here.
 .. code:: python
 
     b = 8.
-    naf.fit(T[dem], censorship=C[dem], columns=["Democratic Regimes"])
+    naf.fit(T[dem], censorship=C[dem], label="Democratic Regimes")
     ax = naf.plot_hazard(bandwidth=b)
-    naf.fit(T[~dem], censorship=C[~dem], columns=["Non-democratic Regimes"])
+    naf.fit(T[~dem], censorship=C[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
     plt.ylim(0,0.4);
