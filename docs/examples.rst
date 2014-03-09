@@ -150,7 +150,7 @@ existing for at times 72 or 73) This is especially useful for comparing multiple
 
 .. code-block:: python
 
-    naf.fit( T, timeline=np.arange(40,75))
+    naf.fit( T, timeline=range(40,75))
     print kmf.survival_function_ 
 
         KM-estimate
