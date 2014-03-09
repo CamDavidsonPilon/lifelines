@@ -321,6 +321,15 @@ class StatisticalTests(unittest.TestCase):
       with_array = naf.fit(np.array(T),np.array(C)).cumulative_hazard_.values
       npt.assert_array_equal(with_list,with_array)
 
+  def test_timeline_to_NelsonAalenFitter(self):
+      T = [2,3,1.,6,5.]
+      C = [1,0,0,1,1]
+      timeline = [2,3,4.,1.,6,5.]
+      naf = NelsonAalenFitter()
+      with_list = naf.fit(T,C,timeline=timeline).cumulative_hazard_.values
+      with_array = naf.fit(T,C,timeline=np.array(timeline)).cumulative_hazard_.values
+      npt.assert_array_equal(with_list,with_array)
+
   def test_pairwise_allows_dataframes(self):
       N = 100
       df = pd.DataFrame(np.empty((N,3)), columns=["T", "C", "group"])
