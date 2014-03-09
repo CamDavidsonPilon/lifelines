@@ -59,6 +59,8 @@ class NelsonAalenFitter(object):
            if insert_0 and self.timeline[0]>0:
                self.timeline = np.insert(self.timeline,0,0.)
         else:
+           if isinstance(timeline, (list, tuple)):
+               timeline = np.array(timeline)
            self.timeline = timeline.astype(float)
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
