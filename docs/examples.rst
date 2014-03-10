@@ -88,7 +88,7 @@ If you have a pandas `DataFrame` with columns "group", "T", and "C", then someth
         kmf.plot(ax=ax)
     
 
-Plotting opions and styles
+Plotting options and styles
 ##############################################
 
 There are many styles of lifelines plots you may want, depending on your tastes:

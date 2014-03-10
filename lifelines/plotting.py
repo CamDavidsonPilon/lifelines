@@ -156,7 +156,7 @@ def plot_dataframes(self, estimate):
         # plot confidence intervals
         if ci_show:
             if ci_force_lines:
-                get_loc(confidence_interval_).plot(linestyle="--", linewidth=1,
+                get_loc(confidence_interval_).plot(linestyle="-", linewidth=1,
                                                    c=kwargs['color'], legend=ci_legend,
                                                    drawstyle=kwargs.get('drawstyle', 'default'), 
                                                    ax=kwargs['ax'])
