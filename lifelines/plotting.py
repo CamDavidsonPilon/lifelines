@@ -92,6 +92,9 @@ def plot_regressions(self):
     return plot
 
 
+def coalesce(*args):
+  return next( s for s in args if s)
+
 def plot_dataframes(self, estimate):
     def plot(ix=None, iloc=None, flat=False, show_censors=False,
              ci_legend=False, ci_force_lines=False, ci_alpha=0.3, ci_show=True,
@@ -119,7 +122,7 @@ def plot_dataframes(self, estimate):
 
         if "ax" not in kwargs:
             kwargs["ax"] = plt.figure().add_subplot(111)
-        kwargs['color'] = next(s for s in [kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle)] if s)
+        kwargs['color'] = coalesce( kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle) )
 
         # R-style graphics
         if flat:
@@ -148,7 +151,11 @@ def plot_dataframes(self, estimate):
         if show_censors:
             times = get_loc(self.event_times.ix[(self.event_times['censored'] > 0)]).index.values.astype(float)
             v = self.predict(times)
-            kwargs['ax'].plot(times, v, marker="o", color=kwargs['color'], linestyle='None', ms=6, mew=0)
+            kwargs['ax'].plot(times, v, marker=kwargs.get('marker', 'o'), 
+                                        color=kwargs['color'], 
+                                        linestyle='None', 
+                                        ms=coalesce( kwargs.get('ms'), kwargs.get('marker'), 6), 
+                                        mew=0)
 
         # plot esimate
         get_loc(estimate_).plot(**kwargs)
