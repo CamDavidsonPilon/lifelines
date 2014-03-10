@@ -216,7 +216,7 @@ Below we fit our data to the fitter:
 After calling the ``fit`` method, the ``KaplanMeierFitter`` has a property
 called ``survival_function_``. (Again, we follow the styling of
 scikit-learn, and append an underscore to all properties that were computational estimated)
- The property is a Pandas DataFrame, so we can call ``plot`` on it:
+The property is a Pandas DataFrame, so we can call ``plot`` on it:
 
 .. code:: python
 

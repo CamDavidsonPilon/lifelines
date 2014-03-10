@@ -12,7 +12,7 @@ def read(fname):
 
 setup(
     name="lifelines",
-    version="0.2.3.0.4",
+    version="0.2.3.0.5",
     author="Cameron Davidson-Pilon",
     author_email="cam.davidson.pilon@gmail.com",
     description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
@@ -30,17 +30,17 @@ setup(
     install_requires=[
         "numpy",
         "scipy",
-	"matplotlib",
-	"pandas>=0.12"
+        "matplotlib",
+        "pandas>=0.12"
     ],
     package_data = {
         "lifelines": [
             "../README.md",
+            "../README.txt",
             "../LICENSE",
             "../MANIFEST.in",
             "../*.ipynb",
             "../datasets/*",
-            "../styles/*",
         ]
     }
 )

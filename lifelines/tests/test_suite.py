@@ -16,7 +16,7 @@ from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitt
 from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
-from ..utils import datetimes_to_durations
+from ..utils import datetimes_to_durations, survival_events_from_table, survival_table_from_events
 
 class MiscTests(unittest.TestCase):
 
@@ -91,6 +91,15 @@ class MiscTests(unittest.TestCase):
         npt.assert_almost_equal(C, np.array([1,0,0], dtype=bool) )
         return
     """
+
+    def test_survival_table_to_events(self):
+      T, C = np.array([1,2,3,4,4,5]), np.array([1,0,1,1,1,1])
+      d = survival_table_from_events( T,C )
+      T_, C_ = survival_events_from_table(d)
+      npt.assert_array_equal(T, T_)
+      npt.assert_array_equal(C, C_)
+
+
 class StatisticalTests(unittest.TestCase):
 
   def setUp(self):

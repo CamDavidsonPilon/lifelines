@@ -1,7 +1,42 @@
 More examples and recipes
 ==================================
 
-This section goes through some examples.
+This section goes through some examples. 
+
+Getting survival-table data into *lifelines* format
+#####################################################
+
+*lifelines* estimation classes like arrays that represent one individual for each element. If you instead have data in 
+a *survival table*, there exists a utility method to get it into lifelines format.
+
+**Example:** Suppose you have a csv file with data that looks like this:
+
+=========================   ==================    ============
+time (months, days, ...)      observed deaths        missing                      
+=========================   ==================    ============
+0                               7                    0 
+1                               1                    1
+2                               2                    0
+3                               1                    2
+4                               5                    2
+...                             ...                 ...
+=========================   ==================    ============
+
+
+.. code-block:: python
+    
+    import pandas as pd
+    
+    # your argument in the function call below will be different
+    df = pd.read_csv('file.csv', index_cols=[0], columns = ['observed deaths', 'missing'] )
+
+    from lifelines.utils import survival_events_from_table
+
+    T,C = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='missing')
+    print T # np.array([0,0,0,0,0,0,0,1,2,2, ...])
+    print C # np.array([1,1,1,1,1,1,1,0,1,1, ...])
+
+
 
 
 Adding a label to the estimation's DataFrame

@@ -113,9 +113,50 @@ def survival_table_from_events(event_times, censorship, columns=["removed", "obs
     df = pd.DataFrame( event_times.astype(float), columns=["event_at"] )
     df[columns[0]] = 1 if weights == None else weights
     df[columns[1]] = censorship
-    event_times = df.groupby("event_at").sum().sort_index()
-    event_times[columns[2]] = event_times[columns[0]] - event_times[columns[1]]
-    return event_times
+    event_table = df.groupby("event_at").sum().sort_index()
+    event_table[columns[2]] = event_table[columns[0]] - event_table[columns[1]]
+    return event_table
+
+def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
+    """
+    This is the inverse of the function ``survival_table_from_events``. 
+
+    Parameters
+        event_table: a pandas DataFrame with index as the durations (!!) and columns "observed" and "censored", referring to 
+           the number of individuals that died and were censored at time t.
+
+    Returns
+        T: a np.array of durations of observation -- one element for each individual in the population.
+        C: a np.array of censorships -- one element for each individual in the population. 1 if observed, 0 else.
+
+    Ex: The survival table, as a pandas DataFrame: 
+
+                      observed  censored
+        index
+        1                1         0
+        2                0         1
+        3                1         0
+        4                1         1
+        5                0         1
+
+    would return 
+        T = np.array([ 1.,  2.,  3.,  4.,  4.,  5.]), 
+        C = np.array([ 1.,  0.,  1.,  1.,  0.,  0.])
+
+    """
+    columns = [observed_deaths_col, censored_col]
+    N = event_table[columns].sum().sum()
+    T = np.empty(N)
+    C = np.empty(N)
+    i = 0
+    for event_time, row in event_table.iterrows():
+        n = row[columns].sum()
+        T[i:i+n] = event_time
+        C[i:i+n] = np.r_[np.ones(row[columns[0]]), np.zeros(row[columns[1]])]
+        i+=n
+
+    return T,C
+
 
 def datetimes_to_durations( start_times, end_times, fill_date=datetime.today(),  freq='D', dayfirst=False, na_values=None ):
     """
