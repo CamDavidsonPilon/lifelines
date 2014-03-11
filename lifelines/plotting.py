@@ -149,7 +149,7 @@ def plot_dataframes(self, estimate):
         get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
 
         # plot censors
-        if show_censors:
+        if show_censors and self.event_times['censored'].sum() > 0:
             cs = {'marker':'+'}
             cs.update(censor_styles)
             times = get_loc(self.event_times.ix[(self.event_times['censored'] > 0)]).index.values.astype(float)
