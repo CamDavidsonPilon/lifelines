@@ -578,6 +578,20 @@ class PlottingTests(unittest.TestCase):
         kmf.fit(T, C).plot(show_censors=True)
         return
 
+    def test_flat_style_and_marker(self):
+        data1 = np.random.exponential(10, size=200)
+        data2 = np.random.exponential(2, size=200)
+        C1 = np.random.binomial(1, 0.9, size=200)
+        C2 = np.random.binomial(1, 0.95, size=200)
+        kmf = KaplanMeierFitter()
+        kmf.fit(data1, C1, label='test label 1')
+        ax = kmf.plot(flat=True, censor_styles={'marker':'+', 'mew':2, 'ms':7})
+        kmf.fit(data2, C2, label='test label 2')
+        kmf.plot(ax=ax, censor_styles={'marker':'o', 'ms':7}, flat=True)
+        plt.title("testing kmf flat styling + marker")
+        return
+
+
 
 # some data
 LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])

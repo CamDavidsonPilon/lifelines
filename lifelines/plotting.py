@@ -96,7 +96,7 @@ def coalesce(*args):
   return next( s for s in args if s)
 
 def plot_dataframes(self, estimate):
-    def plot(ix=None, iloc=None, flat=False, show_censors=False,
+    def plot(ix=None, iloc=None, flat=False, show_censors=False, censor_styles={},
              ci_legend=False, ci_force_lines=False, ci_alpha=0.3, ci_show=True,
              bandwidth=None, **kwargs):
         """"
@@ -105,6 +105,7 @@ def plot_dataframes(self, estimate):
         Parameters:
           flat: an opiniated design style with stepped lines and no shading. Similar to R's plotting. Default: False
           show_censors: place markers at censorship events. Default: False
+          censor_styles: If show_censors, this dictionary will be passed into the plot call. 
           ci_alpha: the transparency level of the confidence interval. Default: 0.3
           ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas). Default: False
           ci_show=True: show confidence intervals. Default: True
@@ -149,14 +150,12 @@ def plot_dataframes(self, estimate):
 
         # plot censors
         if show_censors:
+            cs = {'marker':'+'}
+            cs.update(censor_styles)
             times = get_loc(self.event_times.ix[(self.event_times['censored'] > 0)]).index.values.astype(float)
             v = self.predict(times)
-            kwargs['ax'].plot(times, v, marker=kwargs.get('marker', 'o'), 
-                                        color=kwargs['color'], 
-                                        linestyle='None', 
-                                        ms=coalesce( kwargs.get('ms'), kwargs.get('marker'), 6), 
-                                        mew=0)
-
+            kwargs['ax'].plot(times, v, linestyle='None', color=kwargs['color'], **cs )
+                                        
         # plot esimate
         get_loc(estimate_).plot(**kwargs)
 
