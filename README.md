@@ -4,6 +4,8 @@ lifelines
 
 [![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 
+*send feature requests to [@cmrn_dp](https://twitter.com/Cmrn_DP)!*
+
 [What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
  Survival analysis was originally developed and applied heavily by the actuarial and medical community. Its purpose was to answer *why do events occur now versus later* under uncertainity (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
 
@@ -31,9 +33,6 @@ You can install *lifelines* using
 
 Or getting the bleeding edge version with:
 
-       pip install git+https://github.com/CamDavidsonPilon/lifelines.git
-
-or upgrade with 
 
        pip install --upgrade git+https://github.com/CamDavidsonPilon/lifelines.git
 
@@ -125,14 +124,6 @@ Alternatively, you can **use the IPython notebooks tutorials**, located in the m
 
 1. [Introduction to survival analysis](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Survival%20Analysis%20intro.ipynb)
 2. [Using lifelines on real data](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Intro%20to%20lifelines.ipynb) 
-
-
-#### More examples
-
-There are some IPython notebook files in the repo, and you can view them online here.
-
-- [Divorce data](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/Divorces%2520Rates.ipynb)
-- [Gehan's survival dataset](http://nbviewer.ipython.org/urls/raw.github.com/CamDavidsonPilon/lifelines/master/datasets/The%2520Gehan%2520Survival%2520Data.ipynb)
 
 
 ![lifelines](http://i.imgur.com/QXW71zA.png)
