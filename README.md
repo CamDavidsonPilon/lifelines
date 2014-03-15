@@ -61,7 +61,7 @@ Non-parametrically fit the *survival curve*:
     # plot the curve with the confidence intervals
     kmf.plot()
 
-![kmf](http://i.imgur.com/Bq73IfN.png)
+![kmf](http://i.imgur.com/zQquwJRl.png)
 
 It looks like 50% of all individuals are dead before time 7.
 
@@ -84,7 +84,7 @@ Non-parametrically fit the *cumulative hazard curve*:
     #plot the curve with the confidence intervals
     naf.plot()
 
-![naf](http://i.imgur.com/2L7arWX.png)
+![naf](http://i.imgur.com/mbc5wStl.png)
 
     print naf.cumulative_hazard_.head()
 
@@ -98,12 +98,12 @@ Non-parametrically fit the *cumulative hazard curve*:
 Compare two populations using the logrank test:
 
     from lifelines.statistics import logrank_test
-    other_lifetimes = np.random.exponential(3, size=500)
+    other_lifetimes = np.random.exponential(8, size=500)
 
     summary, p_value, results = logrank_test(observed_lifetimes, other_lifetimes, alpha=0.95)
     print summary
 
-    
+    """
     Results
        df: 1
        alpha: 0.95
@@ -112,8 +112,14 @@ Compare two populations using the logrank test:
        null distribution: chi squared
 
        __ p-value ___|__ test statistic __|__ test results __
-             0.00000 |              268.465 |     True    
+             0.89039 |              0.019 |     None
+    """
+
+    ax = kmf.plot()
+    kmf.fit(other_lifetimes)
+    ax = kmf.plot(ax=ax)
     
+![both](http://i.imgur.com/yGmKZr4l.png)
 
 ## (Less Quick) Intro to *lifelines* and survival analysis
 

@@ -100,7 +100,8 @@ Standard
 
 .. code-block:: python
     
-    kmf = KaplanMeierFitter().fit(T,C)
+    kmf = KaplanMeierFitter()
+    kmf.fit(T,C,label="kmf.plot()")
     kmf.plot()
 
 .. image:: /images/normal_plot.png 
@@ -112,6 +113,7 @@ R-style
 
 .. code-block:: python
 
+    kmf.fit(T,C,label="kmf.plot(flat=True)")
     kmf.plot(flat=True)
 
 .. image:: images/flat_plot.png 
@@ -123,6 +125,7 @@ Show censorships
 
 .. code-block:: python
 
+    kmf.fit(T,C,label="kmf.plot(show_censors=True)")
     kmf.plot(show_censors=True)
 
 .. image:: images/show_censors_plot.png 
@@ -134,6 +137,7 @@ Hide confidence intervals
 
 .. code-block:: python
 
+    kmf.fit(T,C,label="kmf.plot(ci_show=False)")
     kmf.plot(ci_show=False)
 
 .. image:: /images/ci_show_plot.png 
