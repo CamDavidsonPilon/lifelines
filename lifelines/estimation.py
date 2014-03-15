@@ -515,7 +515,7 @@ def qth_survival_times(q, survival_functions):
     sv_b = (1.0 * (survival_functions < q)).cumsum() > 0
     try:
         v = sv_b.idxmax(0)
-        v[sv_b.iloc[-1,:] == 0] = -1
+        v[sv_b.iloc[-1,:] == 0] = np.inf
     except:
         v = sv_b.argmax(0)
         v[sv_b[-1,:] == 0] = np.inf

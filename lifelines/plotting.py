@@ -97,7 +97,7 @@ def coalesce(*args):
 
 def plot_dataframes(self, estimate):
     def plot(ix=None, iloc=None, flat=False, show_censors=False, censor_styles={},
-             ci_legend=False, ci_force_lines=False, ci_alpha=0.3, ci_show=True,
+             ci_legend=False, ci_force_lines=False, ci_alpha=0.25, ci_show=True,
              bandwidth=None, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus
@@ -150,7 +150,7 @@ def plot_dataframes(self, estimate):
 
         # plot censors
         if show_censors and self.event_times['censored'].sum() > 0:
-            cs = {'marker':'+'}
+            cs = {'marker':'+','ms':12, 'mew':1}
             cs.update(censor_styles)
             times = get_loc(self.event_times.ix[(self.event_times['censored'] > 0)]).index.values.astype(float)
             v = self.predict(times)
@@ -162,15 +162,15 @@ def plot_dataframes(self, estimate):
         # plot confidence intervals
         if ci_show:
             if ci_force_lines:
-                get_loc(confidence_interval_).plot(linestyle="-", linewidth=1,
-                                                   c=kwargs['color'], legend=ci_legend,
+               get_loc(confidence_interval_).plot(linestyle="-", linewidth=1,
+                                                   c=kwargs['color'], legend=True,
                                                    drawstyle=kwargs.get('drawstyle', 'default'), 
-                                                   ax=kwargs['ax'])
+                                                   ax=kwargs['ax'], alpha=0.6)
             else:
                 x = get_loc(confidence_interval_).index.values.astype(float)
                 lower = get_loc(confidence_interval_.filter(like='lower')).values[:, 0]
                 upper = get_loc(confidence_interval_.filter(like='upper')).values[:, 0]
-                kwargs['ax'].fill_between(x, lower, y2=upper, alpha=ci_alpha, color=kwargs['color'])
+                kwargs['ax'].fill_between(x, lower, y2=upper, alpha=ci_alpha, color=kwargs['color'], linewidth=2.0)
 
         return kwargs['ax']
     return plot
