@@ -148,8 +148,8 @@ class NelsonAalenFitter(object):
 
     def __repr__(self):
         try:
-            s = """<lifelines.NelsonAalenFitter: fitted with %d observations, %d censored.>""" % (
-                self.censorship.shape[0], (~self.censorship).sum())
+	    s = """<lifelines.NelsonAalenFitter: fitted with %d observations, %d censored>""" % (
+		self.censorship.shape[0], (1-self.censorship).sum())
         except AttributeError as e:
             s = """<lifelines.NelsonAalenFitter>"""
         return s
@@ -233,7 +233,7 @@ class KaplanMeierFitter(object):
     def __repr__(self):
         try:
             s = """<lifelines.KaplanMeierFitter: fitted with %d observations, %d censored>""" % (
-                self.censorship.shape[0], (~self.censorship).sum())
+		self.censorship.shape[0], (1-self.censorship).sum())
         except AttributeError as e:
             s = """<lifelines.KaplanMeierFitter>"""
         return s
