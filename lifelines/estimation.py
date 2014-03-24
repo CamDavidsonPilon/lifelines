@@ -482,10 +482,9 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var):
     Called to compute the Kaplan Meier and Nelson-Aalen estimates.
 
     """
-    N = events["removed"].sum()
 
     deaths = events['observed']
-    population = N - events['removed'].cumsum().shift(1).fillna(0)
+    population = events['entrance'].cumsum() - events['removed'].cumsum().shift(1).fillna(0)
     estimate_ = np.cumsum(_additive_f(population, deaths))
     var_ = np.cumsum(_additive_var(population, deaths))
 
