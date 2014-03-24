@@ -95,8 +95,8 @@ class MiscTests(unittest.TestCase):
 
     def test_survival_table_to_events(self):
         T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([1, 0, 1, 1, 1, 1])
-        d = survival_table_from_events(T, C)
-        T_, C_ = survival_events_from_table(d)
+        d = survival_table_from_events(T, C, np.zeros_like(T))
+        T_, C_ = survival_events_from_table(d[['censored', 'observed']])
         npt.assert_array_equal(T, T_)
         npt.assert_array_equal(C, C_)
 
@@ -364,28 +364,25 @@ class StatisticalTests(unittest.TestCase):
         naf.fit(T, C).plot()
         plt.title("Should be a linear with slope = 0.1")
 
-    def test_kmf_naf_insert_0(self):
-        kmf, naf = KaplanMeierFitter(), NelsonAalenFitter()
-        T = [1, 2, 3, 4]
-        kmf.fit(T), naf.fit(T)
-        self.assertTrue(int(kmf.survival_function_.index[0]) == 0)
-        self.assertTrue(int(naf.cumulative_hazard_.index[0]) == 0)
-
-        kmf.fit(T, insert_0=False), naf.fit(T, insert_0=False)
-        self.assertTrue(int(kmf.survival_function_.index[0]) == 1)
-        self.assertTrue(int(naf.cumulative_hazard_.index[0]) == 1)
-
     def test_subtraction_function(self):
-
         kmf = KaplanMeierFitter()
         kmf.fit(waltonT)
         npt.assert_array_almost_equal(kmf.subtract(kmf).sum().values, 0.0)
 
     def test_divide_function(self):
-
         kmf = KaplanMeierFitter()
         kmf.fit(waltonT)
         npt.assert_array_almost_equal(np.log(kmf.divide(kmf)).sum().values, 0.0)
+
+    def test_kmf_minimum_observation_bias(self):
+        N = 250
+        kmf = KaplanMeierFitter()
+        T, C = exponential_survival_data(N, 0.2, scale=10)
+        B, _ = exponential_survival_data(N, 0.0, scale=2)
+        kmf.fit(T,C, min_observations=B)
+        kmf.plot()
+        plt.title("Should have larger variances in the tails")
+
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(self.lifetimes.keys()), 1))
@@ -433,13 +430,13 @@ class PlottingTests(unittest.TestCase):
     def test_aalen_additive_plot(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 2500
-        d = 3
-        timeline = np.linspace(0, 70, 5000)
+        n = 50
+        d = 2
+        timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
         T = generate_random_lifetimes(hz, timeline)
-        C = np.random.binomial(1, 0.8, size=n)
+        C = np.random.binomial(1, 1., size=n)
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
@@ -605,8 +602,8 @@ LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 CENSORSHIP = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
 N = len(LIFETIMES)
 
-waltonT = np.array([6.,13.,13.,13.,19.,19.,19.,26.,26.,26.,26.,26.,33.,33.,47.,62.,62.,9.,9.,9.,15.,15.,22.,22.,22.,22.,29.,29.,29.,29.,29.,36.,36.,43.])
-waltonT = np.array([33.,54.,54.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,32.,53.,53.,60.,60.,60.,60.,60.,
+waltonT1 = np.array([6.,13.,13.,13.,19.,19.,19.,26.,26.,26.,26.,26.,33.,33.,47.,62.,62.,9.,9.,9.,15.,15.,22.,22.,22.,22.,29.,29.,29.,29.,29.,36.,36.,43.])
+waltonT2 = np.array([33.,54.,54.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,32.,53.,53.,60.,60.,60.,60.,60.,
                         68.,68.,68.,68.,68.,68.,68.,68.,68.,68.,75.,17.,51.,51.,51.,58.,58.,58.,58.,66.,66.,7.,7.,41.,41.,41.,41.,41.,41.,41.,48.,48.,48.,
                         48.,48.,48.,48.,48.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,63.,63.,63.,63.,63.,63.,63.,63.,63.,69.,
                         69.,38.,38.,45.,45.,45.,45.,45.,45.,45.,45.,45.,45.,53.,53.,53.,53.,53.,60.,60.,60.,60.,60.,60.,60.,60.,60.,60.,60.,66.])

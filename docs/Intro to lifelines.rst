@@ -44,6 +44,7 @@ where :math:`d_i` are the number of death events at time :math:`t` and
 
     import pandas as pd
     data = pd.read_csv('datasets/dd.csv', header = 0, index_col=0 )
+
 .. code:: python
 
     data.head()
@@ -204,13 +205,13 @@ Below we fit our data to the fitter:
     T = data["duration"] #measure in years
     C = data["observed"] 
 
-    kmf.fit(T, censorship=C )
+    kmf.fit(T, censorship=C ) #returns self
 
 
 
 .. parsed-literal::
 
-    <lifelines.estimation.KaplanMeierFitter at 0x109199950>
+   <lifelines.KaplanMeierFitter: fitted with 1808 observations, 340 censored>
 
 
 After calling the ``fit`` method, the ``KaplanMeierFitter`` has a property

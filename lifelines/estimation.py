@@ -30,46 +30,34 @@ class NelsonAalenFitter(object):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
-    def fit(self, event_times, censorship=None, timeline=None, label='NA-estimate', alpha=None, insert_0=True):
+    def fit(self, durations, censorship=None, timeline=None, min_observations=None, label='NA-estimate', alpha=None):
         """
         Parameters:
-          event_times: an array, or pd.Series, of length n of times that the death event occured at
+          duration: an array, or pd.Series, of length n -- duration subject was observed for
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
+          min_observations: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
+             useful for left-truncated observations, i.e the birth event was not observed. 
+             If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
-          insert_0: add a leading 0 (if not present) in the timeline.
 
         Returns:
-          self, with new properties like 'survival_function_'.
+          self, with new properties like 'cumulative_hazard_'.
 
         """
 
-        if censorship is None:
-            self.censorship = np.ones(len(event_times), dtype=bool)
-        else:
-            self.censorship = np.array(censorship).copy().astype(bool)
+        v = preprocess_inputs(durations, censorship, timeline, min_observations)
+        self.durations, self.censorship, self.timeline, self.min_observations, self.event_table = v
 
-        self.event_times = survival_table_from_events(event_times, self.censorship)
-
-        if alpha is None:
-            alpha = self.alpha
-
-        if timeline is None:
-            self.timeline = self.event_times.index.values.copy().astype(float)
-            if insert_0 and self.timeline[0] > 0:
-                self.timeline = np.insert(self.timeline, 0, 0.)
-        else:
-            self.timeline = np.array(timeline).copy().astype(float)
-
-        cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
+        cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                 self._additive_f, self._variance_f)
 
         # esimates
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[label])
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha)
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha)
         self._cumulative_sq = cumulative_sq_
 
         # estimation functions
@@ -148,58 +136,70 @@ class NelsonAalenFitter(object):
 
     def __repr__(self):
         try:
-	    s = """<lifelines.NelsonAalenFitter: fitted with %d observations, %d censored>""" % (
-		self.censorship.shape[0], (1-self.censorship).sum())
+            s = """<lifelines.NelsonAalenFitter: fitted with %d observations, %d censored>""" % (
+                self.censorship.shape[0], (1-self.censorship).sum())
         except AttributeError as e:
             s = """<lifelines.NelsonAalenFitter>"""
         return s
 
+
+def preprocess_inputs(durations, censorship, timeline, min_observations ):
+
+    n = len(durations)
+    durations = np.asarray(durations).reshape((n,))
+
+    # set to all observed if censorship is none
+    if censorship is None:
+        censorship = np.ones(n, dtype=int)
+    else:
+        censorship = np.asarray(censorship).reshape((n,)).copy().astype(int)
+
+    if min_observations is None:
+        min_observations = np.zeros(n)
+    else:
+        min_observations = np.asarray(min_observations).reshape((n,))
+
+    event_table = survival_table_from_events(durations, censorship, min_observations)
+
+    if timeline is None:
+        timeline = event_table.index.values.copy()
+    else:
+        timeline = np.asarray(timeline)
+
+    return durations, censorship, timeline.astype(float), min_observations, event_table
 
 class KaplanMeierFitter(object):
 
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, event_times, censorship=None, timeline=None, label='KM-estimate', alpha=None, insert_0=True):
+    def fit(self, durations, censorship=None, timeline=None, min_observations=None, label='KM-estimate', alpha=None):
         """
         Parameters:
-           event_times: an array, or pd.Series, of length n of times that the death event occured at
-           timeline: return the best estimate at the values in timelines (postively increasing)
-           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-              was lost (right-censored). Defaults all True if censorship==None
-           label: a string to name the column of the estimate.
-           alpha: the alpha value in the confidence intervals. Overrides the initializing
-              alpha for this call to fit only.
-           insert_0: add a leading 0 (if not present) in the timeline.
+          duration: an array, or pd.Series, of length n -- duration subject was observed for
+          timeline: return the best estimate at the values in timelines (postively increasing)
+          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if censorship==None
+          min_observations: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
+             useful for left-truncated observations, i.e the birth event was not observed. 
+             If None, defaults to all 0 (all birth events observed.)
+          label: a string to name the column of the estimate.
+          alpha: the alpha value in the confidence intervals. Overrides the initializing
+             alpha for this call to fit only.
 
         Returns:
-           self, with new properties like 'survival_function_'.
+          self, with new properties like 'survival_function_'.
 
         """
-        # set to all observed if censorship is none
-        if censorship is None:
-            self.censorship = np.ones(len(event_times), dtype=bool)
-        else:
-            self.censorship = np.array(censorship).copy().astype(bool)
+        v = preprocess_inputs(durations, censorship, timeline, min_observations)
+        self.durations, self.censorship, self.timeline, self.min_observations, self.event_table = v
 
-        if not alpha:
-            alpha = self.alpha
-
-        self.event_times = survival_table_from_events(event_times, self.censorship)
-
-        if timeline is None:
-            self.timeline = self.event_times.index.values.copy().astype(float)
-            if insert_0 and self.timeline[0] > 0:
-                self.timeline = np.insert(self.timeline, 0, 0.)
-        else:
-            self.timeline = timeline.astype(float)
-
-        log_survival_function, cumulative_sq_ = _additive_estimate(self.event_times, self.timeline,
+        log_survival_function, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                    self._additive_f, self._additive_var)
 
         # estimation
         self.survival_function_ = pd.DataFrame(np.exp(log_survival_function), columns=[label])
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha)
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha)
         self.median_ = median_survival_times(self.survival_function_)
 
         # estimation methods
@@ -233,7 +233,7 @@ class KaplanMeierFitter(object):
     def __repr__(self):
         try:
             s = """<lifelines.KaplanMeierFitter: fitted with %d observations, %d censored>""" % (
-		self.censorship.shape[0], (1-self.censorship).sum())
+                self.censorship.shape[0], (1-self.censorship).sum())
         except AttributeError as e:
             s = """<lifelines.KaplanMeierFitter>"""
         return s

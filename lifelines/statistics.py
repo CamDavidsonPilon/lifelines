@@ -151,7 +151,7 @@ def multivariate_logrank_test(event_durations, groups, censorship=None, alpha=0.
     if censorship is None:
         censorship = np.ones((event_durations.shape[0], 1))
 
-    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, censorship, t_0)
+    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, censorship, np.zeros_like(event_durations), t_0)
     n_groups = unique_groups.shape[0]
 
     # compute the factors needed
