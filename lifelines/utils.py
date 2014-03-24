@@ -7,15 +7,18 @@ import pandas as pd
 from pandas import to_datetime
 
 
-def group_survival_table_from_events(groups, durations, censorship, limit=-1):
+def group_survival_table_from_events(groups, durations, censorship, min_observations, limit=-1):
     """
     Joins multiple event series together into dataframes. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
 
     Parameters:
-        groups: a (n,) array of individuals' group ids.
-        durations: a (n,) array of durations of each individual
-        censorship: a (n,) array of censorship, 1 if observed, 0 else.
+        groups: a (n,) numpy array of individuals' group ids.
+        durations: a (n,) numpy array of durations of each individual
+        censorship: a (n,) numpy array of censorship, 1 if observed, 0 else.
+        censorship: a (n,) numpy array of times individual entered study. This is most applicable in 
+                    cases where there is left-truncation, i.e. a individual might enter the 
+                    study late. If not the case, normally set to all zeros. 
 
     Output:
         - np.array of unique groups
@@ -63,15 +66,20 @@ def group_survival_table_from_events(groups, durations, censorship, limit=-1):
     ix = groups == g
     T = durations[ix]
     C = censorship[ix]
+    B = min_observations[ix]
 
     g_name = str(g)
-    data = survival_table_from_events(T, C, columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name])
+    data = survival_table_from_events(T, C, B, 
+                columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name])
     for g in unique_groups[1:]:
         ix = groups == g
         T = durations[ix]
         C = censorship[ix]
+        B = min_observations[ix]
         g_name = str(g)
-        data = data.join(survival_table_from_events(T, C, columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name]), how='outer')
+        data = data.join(survival_table_from_events(T, C, B, 
+                    columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
+                    how='outer')
     data = data.fillna(0)
     # hmmm pandas...its too bad I can't do data.ix[:limit] and leave out the if.
     if int(limit) != -1:
@@ -79,11 +87,15 @@ def group_survival_table_from_events(groups, durations, censorship, limit=-1):
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
 
-def survival_table_from_events(event_times, censorship, columns=["removed", "observed", "censored"], weights=None):
+def survival_table_from_events(durations, censorship, min_observations,
+                              columns=["removed", "observed", "censored", 'entrance'], weights=None):
     """
     Parameters:
-        event_times: (n,1) array of event times
-        censorship: if not None, (n,1) boolean array, 1 if observed event, 0 is censored
+        durations: (n,1) array of event times (durations individual was observed for)
+        censorship: (n,1) boolean array, 1 if observed event, 0 is censored event.
+        min_observations: used for left truncation data. Sometimes subjects will show 
+          up late in the study. min_observations is a (n,1) array of positive numbers representing
+          when the subject was first observed. A subject's life is then [min observation + duration observed]
         columns: a 3-length array to call the, in order, removed individuals, observed deaths
           and censorships.
 
@@ -110,12 +122,21 @@ def survival_table_from_events(event_times, censorship, columns=["removed", "obs
         15              2         2         0
 
     """
-    event_times = np.array(event_times)
-    df = pd.DataFrame(event_times.astype(float), columns=["event_at"])
+    #deal with deaths and censorships
+    durations = np.asarray(durations) + min_observations
+    df = pd.DataFrame(durations.astype(float), columns=["event_at"])
     df[columns[0]] = 1 if weights is None else weights
     df[columns[1]] = censorship
-    event_table = df.groupby("event_at").sum().sort_index()
-    event_table[columns[2]] = event_table[columns[0]] - event_table[columns[1]]
+    death_table = df.groupby("event_at").sum()
+    death_table[columns[2]] = (death_table[columns[0]] - death_table[columns[1]]).astype(int)
+
+    #deal with late births
+    births = pd.DataFrame( min_observations, columns=['event_at'])
+    births[columns[3]] = 1
+    births_table = births.groupby('event_at').sum()
+ 
+    event_table = death_table.join(births_table, how='outer', sort=True).fillna(0) #http://wesmckinney.com/blog/?p=414
+
     return event_table
 
 
