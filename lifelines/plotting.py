@@ -95,12 +95,11 @@ def plot_regressions(self):
 def coalesce(*args):
   return next( s for s in args if s)
 
-def plot_dataframes(self, estimate):
-    def plot(ix=None, iloc=None, flat=False, show_censors=False, censor_styles={},
-             ci_legend=False, ci_force_lines=False, ci_alpha=0.25, ci_show=True,
-             bandwidth=None, **kwargs):
-        """"
-        A wrapper around plotting. Matplotlib plot arguments can be passed in, plus
+def plot_estimate(self, estimate):
+    doc_string = """"
+        Plots a pretty version of the fitted %s. 
+        
+        Matplotlib plot arguments can be passed in inside the kwargs, plus
 
         Parameters:
           flat: an opiniated design style with stepped lines and no shading. Similar to R's plotting. Default: False
@@ -116,19 +115,25 @@ def plot_dataframes(self, estimate):
                    .plot(iloc=slice(0,10)) will plot the first 10 time points.
           bandwidth: specify the bandwidth of the kernel smoother for the smoothed-hazard rate. Only used
               when called 'plot_hazard'.
+
         Returns:
           ax: a pyplot axis object
-        """
+        """%estimate
+
+    def plot(ix=None, iloc=None, flat=False, show_censors=False, censor_styles={},
+             ci_legend=False, ci_force_lines=False, ci_alpha=0.25, ci_show=True,
+             bandwidth=None, **kwargs):
+
         assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot().'
 
         if "ax" not in kwargs:
             kwargs["ax"] = plt.figure().add_subplot(111)
         kwargs['color'] = coalesce( kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle) )
+        kwargs['drawstyle'] = coalesce( kwargs.get('drawstyle'), 'steps-post')
 
         # R-style graphics
         if flat:
             ci_force_lines = True
-            kwargs["drawstyle"] = "steps-post"
             show_censors = True
 
         if estimate == "hazard_":
@@ -170,7 +175,53 @@ def plot_dataframes(self, estimate):
                 x = get_loc(confidence_interval_).index.values.astype(float)
                 lower = get_loc(confidence_interval_.filter(like='lower')).values[:, 0]
                 upper = get_loc(confidence_interval_.filter(like='upper')).values[:, 0]
-                kwargs['ax'].fill_between(x, lower, y2=upper, alpha=ci_alpha, color=kwargs['color'], linewidth=2.0)
+                fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'], alpha=ci_alpha, color=kwargs['color'], linewidth=2.0)
 
         return kwargs['ax']
+    plot.__doc__ = doc_string
     return plot
+
+
+def fill_between_steps(x, y1, y2=0, h_align='mid', ax=None, **kwargs):
+    ''' Fills a hole in matplotlib: Fill_between for step plots.
+    https://gist.github.com/thriveth/8352565
+ 
+    Parameters :
+    ------------
+ 
+    x : array-like
+        Array/vector of index values. These are assumed to be equally-spaced.
+        If not, the result will probably look weird...
+    y1 : array-like
+        Array/vector of values to be filled under.
+    y2 : array-Like
+        Array/vector or bottom values for filled area. Default is 0.
+ 
+    **kwargs will be passed to the matplotlib fill_between() function.
+ 
+    '''
+    # If no Axes opject given, grab the current one:
+    if ax is None:
+        ax = plt.gca()
+    # First, duplicate the x values
+    xx = x.repeat(2)[1:]
+    # Now: the average x binwidth
+    xstep = (x[1:] - x[:-1]).mean()
+    # Now: add one step at end of row.
+    xx = np.append(xx, xx.max() + xstep)
+ 
+    # Make it possible to change step alignment.
+    if h_align == 'mid':
+        xx -= xstep / 2.
+    elif h_align == 'right':
+        xx -= xstep
+ 
+    # Also, duplicate each y coordinate in both arrays
+    y1 = y1.repeat(2)
+    if type(y2) == np.ndarray:
+        y2 = y2.repeat(2)
+ 
+    # now to the plotting part:
+    ax.fill_between(xx, y1, y2=y2, **kwargs)
+ 
+    return ax

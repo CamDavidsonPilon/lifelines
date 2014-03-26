@@ -41,7 +41,7 @@ def group_survival_table_from_events(groups, durations, censorship, min_observat
             9                       0                3
             13                      0                3
             15                      0                2
-            ...,
+            ,
                       observed:control  observed:miR-137
             event_at
             6                        0                 1
@@ -49,13 +49,13 @@ def group_survival_table_from_events(groups, durations, censorship, min_observat
             9                        0                 3
             13                       0                 3
             15                       0                 2
-            ...,
+            ,
                       censored:control  censored:miR-137
             event_at
             6                        0                 0
             7                        0                 0
             9                        0                 0
-            ...,
+            ,
         ]
 
     """
@@ -81,7 +81,7 @@ def group_survival_table_from_events(groups, durations, censorship, min_observat
                     columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
                     how='outer')
     data = data.fillna(0)
-    # hmmm pandas...its too bad I can't do data.ix[:limit] and leave out the if.
+    # hmmm pandasits too bad I can't do data.ix[:limit] and leave out the if.
     if int(limit) != -1:
         data = data.ix[:limit]
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
@@ -123,6 +123,7 @@ def survival_table_from_events(durations, censorship, min_observations,
 
     """
     #deal with deaths and censorships
+
     durations = np.asarray(durations) + min_observations
     df = pd.DataFrame(durations.astype(float), columns=["event_at"])
     df[columns[0]] = 1 if weights is None else weights
@@ -135,6 +136,7 @@ def survival_table_from_events(durations, censorship, min_observations,
     births[columns[3]] = 1
     births_table = births.groupby('event_at').sum()
  
+    #this next line can be optimized for when min_observerations is all zeros.     
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0) #http://wesmckinney.com/blog/?p=414
 
     return event_table
@@ -219,6 +221,13 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
     if (T < 0).sum():
         print("Warning: some values of start_times are before end_times")
     return T.values, C.values
+
+
+class StatError(Exception):
+     def __init__(self, msg):
+         self.msg = msg
+     def __str__(self):
+         return repr(self.msg)
 
 
 def inv_normal_cdf(p):

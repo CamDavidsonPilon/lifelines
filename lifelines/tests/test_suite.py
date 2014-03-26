@@ -12,11 +12,12 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, median_survival_times
+from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, \
+                         median_survival_times, BreslowFlemingHarringtonFitter
 from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
-from ..utils import datetimes_to_durations, survival_events_from_table, survival_table_from_events
+from ..utils import datetimes_to_durations, survival_events_from_table, survival_table_from_events,StatError
 
 
 class MiscTests(unittest.TestCase):
@@ -257,6 +258,8 @@ class StatisticalTests(unittest.TestCase):
         T_pred = aaf.predict_median(X)
         self.assertTrue(abs((T_pred.values > T).mean() - 0.5) < 0.05)
 
+    """
+    #I'm redoing this estimator
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
@@ -314,6 +317,7 @@ class StatisticalTests(unittest.TestCase):
         plt.suptitle("aalen fit with 0.8 observations, d = %d" % d)
         plt.show()
         return
+    """
 
     def test_lists_to_KaplanMeierFitter(self):
         T = [2, 3, 4., 1., 6, 5.]
@@ -379,9 +383,29 @@ class StatisticalTests(unittest.TestCase):
         kmf = KaplanMeierFitter()
         T, C = exponential_survival_data(N, 0.2, scale=10)
         B, _ = exponential_survival_data(N, 0.0, scale=2)
-        kmf.fit(T,C, min_observations=B)
+        kmf.fit(T,C, entry=B)
         kmf.plot()
         plt.title("Should have larger variances in the tails")
+
+    def test_stat_error(self):
+        births = np.array([51, 58, 55, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30, \
+            41, 43, 45, 35, 29, 35, 32, 36, 32, 10])
+        observations = np.array([ 1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31, \
+            22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
+        kmf = KaplanMeierFitter()
+        with self.assertRaises(StatError):
+            kmf.fit(observations, entry=births)
+
+    def test_BHF_fit(self):
+        bfh = BreslowFlemingHarringtonFitter()
+        births = np.array([51, 58, 55, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30, \
+           41, 43, 45, 35, 29, 35, 32, 36, 32, 10])
+        observations = np.array([ 1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31, \
+           22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
+        bfh.fit(observations, entry=births)
+        return 
+
+
 
 
     def kaplan_meier(self, censor=False):
@@ -652,6 +676,7 @@ waltonT = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26.,
                     69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45.,
                     45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60.,
                     60., 60., 60., 60., 60., 60., 60., 60., 66.])
+
 
 
 if __name__ == '__main__':

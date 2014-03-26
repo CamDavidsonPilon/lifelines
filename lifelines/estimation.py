@@ -3,8 +3,8 @@ from numpy.linalg import LinAlgError, inv, pinv
 from numpy import dot
 import pandas as pd
 
-from lifelines.plotting import plot_dataframes, plot_regressions
-from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature, epanechnikov_kernel
+from lifelines.plotting import plot_estimate, plot_regressions
+from lifelines.utils import survival_table_from_events, basis, inv_normal_cdf, quadrature, epanechnikov_kernel, StatError
 
 
 class NelsonAalenFitter(object):
@@ -30,14 +30,14 @@ class NelsonAalenFitter(object):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
-    def fit(self, durations, censorship=None, timeline=None, min_observations=None, label='NA-estimate', alpha=None):
+    def fit(self, durations, censorship=None, timeline=None, entry=None, label='NA-estimate', alpha=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          min_observations: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
              useful for left-truncated observations, i.e the birth event was not observed. 
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
@@ -49,8 +49,8 @@ class NelsonAalenFitter(object):
 
         """
 
-        v = preprocess_inputs(durations, censorship, timeline, min_observations)
-        self.durations, self.censorship, self.timeline, self.min_observations, self.event_table = v
+        v = preprocess_inputs(durations, censorship, timeline, entry)
+        self.durations, self.censorship, self.timeline, self.entry, self.event_table = v
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                 self._additive_f, self._variance_f)
@@ -66,9 +66,9 @@ class NelsonAalenFitter(object):
         self.divide = _divide(self, "cumulative_hazard_")
 
         # plotting
-        self.plot = plot_dataframes(self, "cumulative_hazard_")
+        self.plot = plot_estimate(self, "cumulative_hazard_")
         self.plot_cumulative_hazard = self.plot
-        self.plot_hazard = plot_dataframes(self, 'hazard_')
+        self.plot_hazard = plot_estimate(self, 'hazard_')
 
         return self
 
@@ -143,44 +143,29 @@ class NelsonAalenFitter(object):
         return s
 
 
-def preprocess_inputs(durations, censorship, timeline, min_observations ):
-
-    n = len(durations)
-    durations = np.asarray(durations).reshape((n,))
-
-    # set to all observed if censorship is none
-    if censorship is None:
-        censorship = np.ones(n, dtype=int)
-    else:
-        censorship = np.asarray(censorship).reshape((n,)).copy().astype(int)
-
-    if min_observations is None:
-        min_observations = np.zeros(n)
-    else:
-        min_observations = np.asarray(min_observations).reshape((n,))
-
-    event_table = survival_table_from_events(durations, censorship, min_observations)
-
-    if timeline is None:
-        timeline = event_table.index.values.copy()
-    else:
-        timeline = np.asarray(timeline)
-
-    return durations, censorship, timeline.astype(float), min_observations, event_table
-
 class KaplanMeierFitter(object):
+
+    """
+    Class for fitting the Kaplan-Meier estimate for the survival function.
+
+    KaplanMeierFitter( alpha=0.95)
+
+    alpha: The alpha value associated with the confidence intervals.
+
+    """
+
 
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, durations, censorship=None, timeline=None, min_observations=None, label='KM-estimate', alpha=None):
+    def fit(self, durations, censorship=None, timeline=None, entry=None, label='KM-estimate', alpha=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          min_observations: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
              useful for left-truncated observations, i.e the birth event was not observed. 
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
@@ -191,11 +176,22 @@ class KaplanMeierFitter(object):
           self, with new properties like 'survival_function_'.
 
         """
-        v = preprocess_inputs(durations, censorship, timeline, min_observations)
-        self.durations, self.censorship, self.timeline, self.min_observations, self.event_table = v
+        v = preprocess_inputs(durations, censorship, timeline, entry)
+        self.durations, self.censorship, self.timeline, self.entry, self.event_table = v
 
         log_survival_function, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                    self._additive_f, self._additive_var)
+
+        if entry is not None:
+            #a serious problem with KM is that when the sample size is small and there are too few early 
+            # truncation times, it may happen that is the number of patients at risk and the number of deaths is the same.
+            # we adjust for this using the Breslow-Fleming-Harrington estimator 
+            n = self.event_table.shape[0]
+            net_population = (self.event_table['entrance'] - self.event_table['removed']).cumsum()
+            if net_population.iloc[:int(n/2)].min() == 0:
+                ix = net_population.iloc[:int(n/2)].argmin()
+                raise StatError("""There are too few early truncation times and too many events. S(t)==0 for all t>%.1f. Recommend BFH estimator."""%ix)
+
 
         # estimation
         self.survival_function_ = pd.DataFrame(np.exp(log_survival_function), columns=[label])
@@ -208,7 +204,7 @@ class KaplanMeierFitter(object):
         self.divide = _divide(self, "survival_function_")
 
         # plotting functions
-        self.plot = plot_dataframes(self, "survival_function_")
+        self.plot = plot_estimate(self, "survival_function_")
         self.plot_survival_function = self.plot
         return self
 
@@ -237,6 +233,47 @@ class KaplanMeierFitter(object):
         except AttributeError as e:
             s = """<lifelines.KaplanMeierFitter>"""
         return s
+
+
+class BreslowFlemingHarringtonFitter(object):
+
+    """
+    Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator 
+    is a biased estimator of the survival function but is more stable when the popualtion is small and 
+    there are too few early truncation times, it may happen that is the number of patients at risk and 
+    the number of deaths is the same.
+
+    Mathematically, the NAF estimator is the negative logarithm of the BFH estimator.
+
+    BreslowFlemingHarringtonFitter(alpha=0.95)
+
+    alpha: The alpha value associated with the confidence intervals.
+
+    """
+
+    def __init__(self, alpha=0.95):
+        self.alpha = alpha
+
+    def fit(self, durations, censorship=None, timeline=None, entry=None, label='BFH-estimate', alpha=None):
+        naf = NelsonAalenFitter(self.alpha)
+        naf.fit(durations, censorship=censorship, timeline=timeline, label=label, entry=entry)
+        self.durations, self.censorship, self.timeline, self.entry, self.event_table = \
+                naf.durations, naf.censorship, naf.timeline, naf.entry, naf.event_table
+
+        # estimation
+        self.survival_function_ = np.exp(-naf.cumulative_hazard_)
+        self.confidence_interval_ = np.exp(-naf.confidence_interval_)
+        self.median_ = median_survival_times(self.survival_function_)
+
+        # estimation methods
+        self.predict = _predict(self, "survival_function_", label)
+        self.subtract = _subtract(self, "survival_function_")
+        self.divide = _divide(self, "survival_function_")
+
+        # plotting functions
+        self.plot = plot_estimate(self, "survival_function_")
+        self.plot_survival_function = self.plot
+        return self
 
 
 class AalenAdditiveFitter(object):
@@ -476,6 +513,31 @@ def _predict(self, estimate, label):
     predict.__doc__ = doc_string
     return predict
 
+def preprocess_inputs(durations, censorship, timeline, entry ):
+
+    n = len(durations)
+    durations = np.asarray(durations).reshape((n,))
+
+    # set to all observed if censorship is none
+    if censorship is None:
+        censorship = np.ones(n, dtype=int)
+    else:
+        censorship = np.asarray(censorship).reshape((n,)).copy().astype(int)
+
+    if entry is None:
+        entry = np.zeros(n)
+    else:
+        entry = np.asarray(entry).reshape((n,))
+
+    event_table = survival_table_from_events(durations, censorship, entry)
+
+    if timeline is None:
+        timeline = event_table.index.values.copy()
+    else:
+        timeline = np.asarray(timeline)
+
+    return durations, censorship, timeline.astype(float), entry, event_table
+
 
 def _additive_estimate(events, timeline, _additive_f, _additive_var):
     """
@@ -519,6 +581,7 @@ def qth_survival_times(q, survival_functions):
         v = sv_b.argmax(0)
         v[sv_b[-1,:] == 0] = np.inf
     return v
+
 
 
 def median_survival_times(survival_functions):
