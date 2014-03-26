@@ -182,7 +182,7 @@ def plot_estimate(self, estimate):
     return plot
 
 
-def fill_between_steps(x, y1, y2=0, h_align='mid', ax=None, **kwargs):
+def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
     ''' Fills a hole in matplotlib: Fill_between for step plots.
     https://gist.github.com/thriveth/8352565
  

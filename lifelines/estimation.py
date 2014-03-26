@@ -255,6 +255,23 @@ class BreslowFlemingHarringtonFitter(object):
         self.alpha = alpha
 
     def fit(self, durations, censorship=None, timeline=None, entry=None, label='BFH-estimate', alpha=None):
+        """
+        Parameters:
+          duration: an array, or pd.Series, of length n -- duration subject was observed for
+          timeline: return the best estimate at the values in timelines (postively increasing)
+          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if censorship==None
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
+             useful for left-truncated observations, i.e the birth event was not observed. 
+             If None, defaults to all 0 (all birth events observed.)
+          label: a string to name the column of the estimate.
+          alpha: the alpha value in the confidence intervals. Overrides the initializing
+             alpha for this call to fit only.
+
+        Returns:
+          self, with new properties like 'survival_function_'.
+
+        """
         naf = NelsonAalenFitter(self.alpha)
         naf.fit(durations, censorship=censorship, timeline=timeline, label=label, entry=entry)
         self.durations, self.censorship, self.timeline, self.entry, self.event_table = \
