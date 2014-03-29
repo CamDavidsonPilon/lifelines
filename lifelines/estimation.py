@@ -294,7 +294,6 @@ class BreslowFlemingHarringtonFitter(object):
 
 
 class AalenAdditiveFitter(object):
-
     """
     This class fits the regression model:
 
@@ -316,101 +315,86 @@ class AalenAdditiveFitter(object):
         self.fit_intercept = fit_intercept
         self.alpha = alpha
         self.penalizer = penalizer
-        assert penalizer >= 0, "penalizer keyword must be >= 0."
+        assert penalizer >= 0, "penalizer must be >= 0."
 
-    def fit(self, event_times, X, timeline=None, censorship=None, columns=None):
-        """currently X is a static (n,d) array
 
-        event_times: (n,1) array of event times
-        X: (n,d) the design matrix, either a numpy matrix or DataFrame.
-        timeline: (t,1) timepoints in ascending order
-        censorship: (n,1) boolean array of censorships: True if observed, False if right-censored.
-                    By default, assuming all are observed.
+    def fit(self, dataframe, duration_col="T", event_col="E", timeline=None, id_col=None):
+        """
+        df: looks like above
 
-        Fits: self.cumulative_hazards_: a (t,d+1) dataframe of cumulative hazard coefficients
-              self.hazards_: a (t,d+1) dataframe of hazard coefficients
+
+        time-varying coefficients:
+            id: a unique identifier of the individual
+            time: the index measurements were taken at
+
 
         """
-        # deal with the covariate matrix. Check if it is a dataframe or numpy array
-        n, d = X.shape
-        if type(X) == pd.core.frame.DataFrame:
-            X_ = X.values.copy()
-            if columns is None:
-                columns = X.columns
-        else:
-            X_ = X.copy()
 
-        # append a columns of ones for the baseline hazard
-        ix = event_times.argsort(0)[:, 0].copy()
-        X_ = X_[ix,:].copy() if not self.fit_intercept else np.c_[ X_[ix,:].copy(), np.ones((n, 1)) ]
-        sorted_event_times = event_times[ix, 0].copy()
-
-        # set the column's names of the dataframe.
-        if columns is None:
-            columns = range(d)
-        else:
-            columns = [c for c in columns]
+        df = dataframe.copy()
+        if id_col is None:
+            #only for time-indp. covariates
+            df['id'] = np.arange(df.shape[0])
+            id_col = 'id'
 
         if self.fit_intercept:
-            columns += ['baseline']
+            df['baseline'] = 1.
 
-        # set the censorship events. 1 if the death was observed.
-        if censorship is None:
-            observed = np.ones(n, dtype=bool)
-        else:
-            observed = censorship[ix].reshape(n)
+        df = df.set_index([id_col, duration_col])
+  
+        C_panel = df[[event_col]].to_panel().transpose(1,2,0)
+        C = C_panel.minor_xs(event_col).sum().astype(bool)
+        T = (C_panel.minor_xs(event_col).notnull()).cumsum().idxmax()
 
-        # set the timeline -- this is used as DataFrame index in the results
-        if timeline is None:
-            timeline = sorted_event_times.copy()
+        del df[event_col]
+        n,d = df.shape
 
-        timeline = np.unique(timeline.astype(float))
-        if timeline[0] > 0:
-            timeline = np.insert(timeline, 0, 0.)
+        from_tuples = pd.MultiIndex.from_tuples
+        wp = df.to_panel().transpose(1,2,0).bfill().fillna(0) #bfill will cause problems later
 
-        unique_times = np.unique(timeline)
-        zeros = np.zeros((timeline.shape[0], d + self.fit_intercept))
-        self.cumulative_hazards_ = pd.DataFrame(zeros.copy(), index=unique_times, columns=columns)
-        self.hazards_ = pd.DataFrame(
-            np.zeros((event_times.shape[0], d + self.fit_intercept)), index=event_times[:, 0], columns=columns)
-        self._variance = pd.DataFrame(zeros.copy(), index=unique_times, columns=columns)
+        non_censorsed_times = T[C].iteritems()
+        hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
+                        columns = df.columns, index = from_tuples(non_censorsed_times))
 
-        # create the penalizer matrix for L2 regression
-        penalizer = self.penalizer * np.eye(d + self.fit_intercept)
+        variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
+                        columns = df.columns, index = from_tuples(non_censorsed_times))
+        
+        ids = wp.items
+        penalizer = self.penalizer*np.eye(d)
+        
+        for i,(id, time) in enumerate(non_censorsed_times): 
 
-        t_0 = sorted_event_times[0]
-        cum_v = np.zeros((d + self.fit_intercept, 1))
-        v = cum_v.copy()
-        for i, time in enumerate(sorted_event_times):
-            relevant_times = (t_0 < timeline) * (timeline <= time)
-            if observed[i] == 0:
-                X_[i,:] = 0
+            relevant_individuals = (ids==id)
+            assert relevant_individuals.sum() == 1.
+
+            X = wp.major_xs(time).T.values
+
+            #perform linear regression step.
             try:
-                V = dot(inv(dot(X_.T, X_) + penalizer), X_.T)
+                V = np.dot(pinv(np.dot(X.T, X) + penalizer), X.T)
             except LinAlgError:
-                # if penalizer > 0, this should not occur. But sometimes it does...
-                V = dot(pinv(dot(X_.T, X_) + penalizer), X_.T)
+                print "Linear regression error. Try increasing the penalizer."
+            v = np.dot(V, 1.0*relevant_individuals )
 
-            v = dot(V, basis(n, i))
-            cum_v = cum_v + v
-            self.cumulative_hazards_.ix[relevant_times] = self.cumulative_hazards_.ix[relevant_times].values + cum_v.T
-            self.hazards_.iloc[i] = self.hazards_.iloc[i].values + v.T
-            self._variance.ix[relevant_times] = self._variance.ix[relevant_times].values + dot( V[:, i][:, None], V[:, i][None,:] ).diagonal()
-            t_0 = time
-            X_[i,:] = 0
+            hazards_.ix[id, time]  = v.T
+            variance_.ix[id, time] = np.dot( V[:, relevant_individuals], V[:, relevant_individuals].T ).diagonal()
 
-        # clean up last iteration
-        relevant_times = (timeline > time)
-        self.hazards_.iloc[i] = v.T
-        try:
-            self.cumulative_hazards_.ix[relevant_times] = cum_v.T
-            self._variance.ix[relevant_times] = dot( V[:, i][:, None], V[:, i][None,:] ).diagonal()
-        except:
-            pass
-        self.timeline = timeline
-        self.X = X
-        self.censorship = censorship
-        self.event_times = event_times
+        #not sure this is the correct thing to do.
+        self.hazards_ = hazards_.groupby(level=1).sum()
+        self.cumulative_hazards_= self.hazards_.cumsum()
+        self.variance_ = variance_.groupby(level=1).sum()
+
+        if timeline is not None:
+            self.hazards_ = self.hazards_.reindex(timeline, method='ffill')
+            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(timeline, method='ffill')
+            self.variance_= self.variance_.reindex(timeline, method='ffill')
+            self.timeline = timeline
+        else:
+            self.timeline = self.hazards_.index.values.astype(float)
+
+        self.data = wp
+
+        self.durations = T
+        self.event_occured = C
         self._compute_confidence_intervals()
         self.plot = plot_regressions(self)
         return self
@@ -420,7 +404,9 @@ class AalenAdditiveFitter(object):
         Using the epanechnikov kernel to smooth the hazard function, with sigma/bandwith
 
         """
-        C = self.censorship.astype(bool)
+        raise NotImplementedError
+
+        C = self.event_occured
         return pd.DataFrame( np.dot(epanechnikov_kernel(self.timeline[:, None], self.timeline[C], bandwith), self.hazards_.values[C,:]),
                              columns=self.hazards_.columns, index=self.timeline)
 
@@ -429,12 +415,17 @@ class AalenAdditiveFitter(object):
         n = self.timeline.shape[0]
         d = self.cumulative_hazards_.shape[1]
         index = [['upper'] * n + ['lower'] * n, np.concatenate([self.timeline, self.timeline])]
-        self.confidence_intervals_ = pd.DataFrame(
-            np.zeros((2 * n, d)), index=index, columns=self.cumulative_hazards_.columns)
+
+        self.confidence_intervals_ = pd.DataFrame( np.zeros((2 * n, d)), 
+                                                    index=index, 
+                                                    columns=self.cumulative_hazards_.columns
+                                                  )
+
         self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + \
-            alpha2 * np.sqrt(self._variance.cumsum().values)
+                alpha2 * np.sqrt(self.variance_.cumsum().values)
+
         self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - \
-            alpha2 * np.sqrt(self._variance.cumsum().values)
+                alpha2 * np.sqrt(self.variance_.cumsum().values)
         return
 
     def predict_cumulative_hazard(self, X, columns=None):
@@ -443,6 +434,8 @@ class AalenAdditiveFitter(object):
 
         Returns the hazard rates for the individuals
         """
+        raise NotImplementedError
+        
         n, d = X.shape
         try:
             X_ = X.values.copy()

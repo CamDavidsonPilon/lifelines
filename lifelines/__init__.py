@@ -1,1 +1,1 @@
-from .estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter
+from .estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, BreslowFlemingHarringtonFitter
