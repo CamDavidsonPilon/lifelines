@@ -320,14 +320,43 @@ class AalenAdditiveFitter(object):
 
     def fit(self, dataframe, duration_col="T", event_col="E", timeline=None, id_col=None):
         """
-        df: looks like above
+        Perform inference on the coefficients of the Aalen additive model. 
+
+        Parameters:
+            dataframe: a pandas dataframe, with covariates and a duration_col and a event_col.
+
+                static covariates:
+                    one row per individual. duration_col refers to how long the individual was 
+                      observed for. event_col is a boolean: 1 if individual 'died', 0 else. id_col 
+                      should be left as None.
+
+                time-varying covariates:
+                    For time-varying covariates, an id_col is required to keep track of individuals'
+                    changing covariates. individual should have a unique id. duration_col refers to how 
+                    long the individual has been  observed to up to that point. event_col refers to if 
+                    the event (death) occured in that  period. Censored individuals will not have a 1. 
+                    For example:
+
+                        +----+---+---+------+------+
+                        | id | T | E | var1 | var2 |
+                        +----+---+---+------+------+
+                        |  1 | 1 | 0 |    0 |    1 |
+                        |  1 | 2 | 0 |    0 |    1 |
+                        |  1 | 3 | 0 |    4 |    3 |
+                        |  1 | 4 | 1 |    8 |    4 |
+                        |  2 | 1 | 0 |    1 |    1 |
+                        |  2 | 2 | 0 |    1 |    2 |
+                        |  2 | 3 | 0 |    1 |    2 |
+                        +----+---+---+------+------+
+
+            duration_col: specify what the duration column is called in the dataframe 
+            event_col: specify what the event occurred column is called in the dataframe 
+            timeline: reformat the estimates index to a new timeline.
+            id_col: (only for time-varying covariates) name of the id column in the dataframe
 
 
-        time-varying coefficients:
-            id: a unique identifier of the individual
-            time: the index measurements were taken at
-
-
+        Returns:
+          self, with new methods like plot, smoothed_hazards_ and properties like cumulative_hazards_
         """
 
         df = dataframe.copy()
