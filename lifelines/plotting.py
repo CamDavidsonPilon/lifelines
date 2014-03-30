@@ -53,17 +53,16 @@ def shaded_plot(x, y, y_upper, y_lower, **kwargs):
 
 
 def plot_regressions(self):
-    def plot(ix=None, iloc=None, columns=[], ci_legend=False, ci_force_lines=False, **kwargs):
+    def plot(ix=None, iloc=None, columns=[], legend=True, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
-          flat: a design style with stepped lines and no shading. Similar to R.
-          ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas).
-          ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
           ix: specify a time-based subsection of the curves to plot, ex:
                    .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.
           iloc: specify a location-based subsection of the curves to plot, ex:
                    .plot(iloc=slice(0,10)) will plot the first 10 time points.
+          columns: If not empty, plot a subset of columns from the cumulative_hazards_. Default all.
+          legend: show legend in figure.
 
         """
         assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot'
@@ -87,6 +86,9 @@ def plot_regressions(self):
             y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
             y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
             shaded_plot(x, y, y_upper, y_lower, ax=kwargs["ax"], label=column)
+
+        if legend:
+            kwargs["ax"].legend()
 
         return kwargs["ax"]
     return plot
