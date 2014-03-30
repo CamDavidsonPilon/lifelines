@@ -175,7 +175,7 @@ def plot_estimate(self, estimate):
                 x = get_loc(confidence_interval_).index.values.astype(float)
                 lower = get_loc(confidence_interval_.filter(like='lower')).values[:, 0]
                 upper = get_loc(confidence_interval_.filter(like='upper')).values[:, 0]
-                fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'], alpha=ci_alpha, color=kwargs['color'], linewidth=2.0)
+                fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'], alpha=ci_alpha, color=kwargs['color'], linewidth=1.0)
 
         return kwargs['ax']
     plot.__doc__ = doc_string

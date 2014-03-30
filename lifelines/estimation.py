@@ -399,15 +399,12 @@ class AalenAdditiveFitter(object):
         self.plot = plot_regressions(self)
         return self
 
-    def smoothed_hazards_(self, bandwith=1):
+    def smoothed_hazards_(self, bandwidth=1):
         """
-        Using the epanechnikov kernel to smooth the hazard function, with sigma/bandwith
+        Using the epanechnikov kernel to smooth the hazard function, with sigma/bandwidth
 
         """
-        raise NotImplementedError
-
-        C = self.event_occured
-        return pd.DataFrame( np.dot(epanechnikov_kernel(self.timeline[:, None], self.timeline[C], bandwith), self.hazards_.values[C,:]),
+        return pd.DataFrame( np.dot(epanechnikov_kernel(self.timeline[:, None], self.timeline, bandwidth), self.hazards_.values),
                              columns=self.hazards_.columns, index=self.timeline)
 
     def _compute_confidence_intervals(self):
@@ -428,14 +425,16 @@ class AalenAdditiveFitter(object):
                 alpha2 * np.sqrt(self.variance_.cumsum().values)
         return
 
-    def predict_cumulative_hazard(self, X, columns=None):
+    def predict_cumulative_hazard(self, X, columns=None, id_col=None):
         """
         X: a (n,d) covariate matrix
 
         Returns the hazard rates for the individuals
         """
-        raise NotImplementedError
-        
+        if id_col is not None:
+            #see https://github.com/CamDavidsonPilon/lifelines/issues/38
+            raise NotImplementedError
+
         n, d = X.shape
         try:
             X_ = X.values.copy()
