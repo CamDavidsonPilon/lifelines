@@ -125,11 +125,11 @@ def survival_table_from_events(durations, censorship, min_observations,
     #deal with deaths and censorships
 
     durations = np.asarray(durations) + min_observations
-    df = pd.DataFrame(durations.astype(float), columns=["event_at"])
+    df = pd.DataFrame(durations, columns=["event_at"])
     df[columns[0]] = 1 if weights is None else weights
     df[columns[1]] = censorship
-    death_table = df.groupby("event_at").sum()
-    death_table[columns[2]] = (death_table[columns[0]] - death_table[columns[1]]).astype(int)
+    death_table = df.groupby("event_at").sum() #slowest line 
+    death_table[columns[2]] = (death_table[columns[0]] - death_table[columns[1]]) #second slowest
 
     #deal with late births
     births = pd.DataFrame( min_observations, columns=['event_at'])

@@ -5,6 +5,7 @@ python -m lifelines.tests.test_suit
 from __future__ import print_function
 
 import unittest
+from StringIO import StringIO
 
 import numpy as np
 import numpy.testing as npt
@@ -399,12 +400,16 @@ class StatisticalTests(unittest.TestCase):
         bfh.fit(observations, entry=births)
         return 
 
-
-
+    def test_aaf_panel_dataset(self):
+        aaf = AalenAdditiveFitter()
+        aaf.fit(panel_dataset, id_col='id',duration_col='t', event_col='E')
+        aaf.plot()
+        return
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(self.lifetimes.keys()), 1))
         ordered_lifetimes = np.sort(self.lifetimes.keys())
+        N = len(LIFETIMES)
         v = 1.
         n = N * 1.0
         for i, t in enumerate(ordered_lifetimes):
@@ -425,6 +430,7 @@ class StatisticalTests(unittest.TestCase):
     def nelson_aalen(self, censor=False):
         na = np.zeros((len(self.lifetimes.keys()), 1))
         ordered_lifetimes = np.sort(self.lifetimes.keys())
+        N = len(LIFETIMES)
         v = 0.
         n = N * 1.0
         for i, t in enumerate(ordered_lifetimes):
@@ -622,7 +628,6 @@ class PlottingTests(unittest.TestCase):
 # some data
 LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 CENSORSHIP = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
-N = len(LIFETIMES)
 
 waltonT1 = np.array([6.,13.,13.,13.,19.,19.,19.,26.,26.,26.,26.,26.,33.,33.,47.,62.,62.,9.,9.,9.,15.,15.,22.,22.,22.,22.,29.,29.,29.,29.,29.,36.,36.,43.])
 waltonT2 = np.array([33.,54.,54.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,32.,53.,53.,60.,60.,60.,60.,60.,
@@ -674,6 +679,39 @@ waltonT = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26.,
                     69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45.,
                     45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60.,
                     60., 60., 60., 60., 60., 60., 60., 60., 66.])
+
+
+panel_dataset = pd.read_csv(
+    StringIO("""id,t,E,var1,var2
+1,1,0,0,1
+1,2,0,0,1
+1,3,0,4,3
+1,4,1,8,4
+2,1,0,1.2,1
+2,2,0,1.2,2
+2,3,0,1.2,2
+3,1,0,0,1
+3,2,1,1,2
+4,1,0,0,1
+4,2,0,1,2
+4,3,0,1,3
+4,4,0,2,4
+4,5,1,2,5
+5,1,0,1,-1
+5,2,0,2,-1
+5,3,0,3,-1
+6,1,1,3,0
+7,1,0,1,0
+7,2,0,2,1
+7,3,0,3,0
+7,4,0,3,1
+7,5,0,3,0
+7,6,1,3,1
+8,1,0,-1,0
+8,2,1,1,0
+9,1,0,1,1
+9,2,0,2,2
+"""))
 
 
 

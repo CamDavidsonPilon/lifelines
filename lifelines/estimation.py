@@ -176,7 +176,7 @@ class KaplanMeierFitter(object):
           self, with new properties like 'survival_function_'.
 
         """
-        v = preprocess_inputs(durations, censorship, timeline, entry)
+        v = preprocess_inputs(durations, censorship, timeline, entry) #half the time is spent in here.
         self.durations, self.censorship, self.timeline, self.entry, self.event_table = v
 
         log_survival_function, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
@@ -378,7 +378,7 @@ class AalenAdditiveFitter(object):
         n,d = df.shape
 
         from_tuples = pd.MultiIndex.from_tuples
-        wp = df.to_panel().transpose(1,2,0).bfill().fillna(0) #bfill will cause problems later
+        wp = df.to_panel().transpose(1,2,0).bfill().fillna(0) #bfill will cause problems later, plus it is slow.
 
         non_censorsed_times = T[C].iteritems()
         hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
@@ -395,7 +395,7 @@ class AalenAdditiveFitter(object):
             relevant_individuals = (ids==id)
             assert relevant_individuals.sum() == 1.
 
-            X = wp.major_xs(time).T.values
+            X = wp.major_xs(time).values.T
 
             #perform linear regression step.
             try:
@@ -560,7 +560,7 @@ def preprocess_inputs(durations, censorship, timeline, entry ):
     if censorship is None:
         censorship = np.ones(n, dtype=int)
     else:
-        censorship = np.asarray(censorship).reshape((n,)).copy().astype(int)
+        censorship = np.asarray(censorship).reshape((n,)).astype(int)
 
     if entry is None:
         entry = np.zeros(n)
@@ -570,7 +570,7 @@ def preprocess_inputs(durations, censorship, timeline, entry ):
     event_table = survival_table_from_events(durations, censorship, entry)
 
     if timeline is None:
-        timeline = event_table.index.values.copy()
+        timeline = event_table.index.values
     else:
         timeline = np.asarray(timeline)
 
@@ -584,7 +584,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var):
     """
 
     deaths = events['observed']
-    population = events['entrance'].cumsum() - events['removed'].cumsum().shift(1).fillna(0)
+    population = events['entrance'].cumsum() - events['removed'].cumsum().shift(1).fillna(0) #slowest line here.
     estimate_ = np.cumsum(_additive_f(population, deaths))
     var_ = np.cumsum(_additive_var(population, deaths))
 
