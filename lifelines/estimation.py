@@ -1,4 +1,4 @@
-import numpy as np
+    import numpy as np
 from numpy.linalg import LinAlgError, inv, pinv
 from scipy.sparse.linalg import inv
 from scipy import sparse
@@ -39,8 +39,8 @@ class NelsonAalenFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -56,7 +56,7 @@ class NelsonAalenFitter(object):
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline,
-                                                                self._additive_f, self._variance_f)
+            self._additive_f, self._variance_f)
 
         # esimates
         self.cumulative_hazard_ = pd.DataFrame(
@@ -121,8 +121,8 @@ class NelsonAalenFitter(object):
             1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(
                 timeline[
                     :, None], timeline[
-                        C][None,:], bandwidth), hazard_.values[C,:]),
-                             columns=[hazard_name], index=timeline)
+                        C][None, :], bandwidth), hazard_.values[C, :]),
+            columns=[hazard_name], index=timeline)
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
         """
@@ -141,7 +141,7 @@ class NelsonAalenFitter(object):
             self._cumulative_sq.iloc[0])
         C = (var_hazard_.values != 0.0)  # only consider the points with jumps
         std_hazard_ = np.sqrt(1. / (2 * bandwidth ** 2) * np.dot(
-            epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth) ** 2, var_hazard_.values[C]))
+            epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C]))
         values = {
             "%s_upper_%.2f" % (name, self.alpha): hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
             "%s_lower_%.2f" % (name, self.alpha): hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_)
@@ -178,8 +178,8 @@ class KaplanMeierFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -194,7 +194,7 @@ class KaplanMeierFitter(object):
 
         log_survival_function, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline,
-                                                                   self._additive_f, self._additive_var)
+            self._additive_f, self._additive_var)
 
         if entry is not None:
             # a serious problem with KM is that when the sample size is small and there are too few early
@@ -258,9 +258,9 @@ class KaplanMeierFitter(object):
 class BreslowFlemingHarringtonFitter(object):
 
     """
-    Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator 
-    is a biased estimator of the survival function but is more stable when the popualtion is small and 
-    there are too few early truncation times, it may happen that is the number of patients at risk and 
+    Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator
+    is a biased estimator of the survival function but is more stable when the popualtion is small and
+    there are too few early truncation times, it may happen that is the number of patients at risk and
     the number of deaths is the same.
 
     Mathematically, the NAF estimator is the negative logarithm of the BFH estimator.
@@ -281,8 +281,8 @@ class BreslowFlemingHarringtonFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -296,7 +296,7 @@ class BreslowFlemingHarringtonFitter(object):
         naf.fit(durations, censorship=censorship,
                 timeline=timeline, label=label, entry=entry)
         self.durations, self.censorship, self.timeline, self.entry, self.event_table = \
-                naf.durations, naf.censorship, naf.timeline, naf.entry, naf.event_table
+            naf.durations, naf.censorship, naf.timeline, naf.entry, naf.event_table
 
         # estimation
         self.survival_function_ = np.exp(-naf.cumulative_hazard_)
@@ -357,10 +357,10 @@ class AalenAdditiveFitter(object):
         n, d = X.shape
 
         # append a columns of ones for the baseline hazard
-        ix = event_times.argsort(0)[:, 0].copy()
+        ix = event_times.argsort(0)[:, 0]
         baseline = sparse.csc_matrix(np.ones((n, 1)))
         X = X.tocsc()
-        X = sparse.hstack([ X_[ix,:], baseline ])
+        X = sparse.hstack([X_[ix, :], baseline])
         sorted_event_times = event_times[ix, 0]
 
         # set the column's names of the dataframe.
@@ -405,7 +405,7 @@ class AalenAdditiveFitter(object):
         for i, time in enumerate(sorted_event_times):
             relevant_times = (t_0 < timeline) * (timeline <= time)
             if observed[i] == 0:
-                X_[i,:] = 0
+                X_[i, :] = 0
             try:
                 V = inv((X.T.dot(X)) + penalizer).dot(X.T)
             except LinAlgError:
@@ -417,9 +417,9 @@ class AalenAdditiveFitter(object):
                 relevant_times].values + cum_v.T
             self.hazards_.iloc[i] = self.hazards_.iloc[i].values + v.T
             self._variance.ix[relevant_times] = self._variance.ix[
-                relevant_times].values + dot( V[:, i][:, None], V[:, i][None,:] ).diagonal()
+                relevant_times].values + dot(V[:, i][:, None], V[:, i][None, :]).diagonal()
             t_0 = time
-            X[i,:] = 0
+            X[i, :] = 0
 
         # clean up last iteration
         relevant_times = (timeline > time)
@@ -427,7 +427,7 @@ class AalenAdditiveFitter(object):
         try:
             self.cumulative_hazards_.ix[relevant_times] = cum_v.T
             self._variance.ix[relevant_times] = dot(
-                V[:, i][:, None], V[:, i][None,:] ).diagonal()
+                V[:, i][:, None], V[:, i][None, :]).diagonal()
         except:
             pass
         self.timeline = timeline
@@ -448,15 +448,15 @@ class AalenAdditiveFitter(object):
             np.dot(epanechnikov_kernel(
                 self.timeline[
                     :, None], self.timeline[
-                        C], bandwith), self.hazards_.values[C,:]),
-                             columns=self.hazards_.columns, index=self.timeline)
+                        C], bandwith), self.hazards_.values[C, :]),
+            columns=self.hazards_.columns, index=self.timeline)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
         n = self.timeline.shape[0]
         d = self.cumulative_hazards_.shape[1]
         index = [['upper'] * n + ['lower'] * n,
-            np.concatenate([self.timeline, self.timeline])]
+                 np.concatenate([self.timeline, self.timeline])]
         self.confidence_intervals_ = pd.DataFrame(
             np.zeros((2 * n, d)), index=index, columns=self.cumulative_hazards_.columns)
         self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + \
@@ -477,7 +477,7 @@ class AalenAdditiveFitter(object):
         except:
             X_ = X.copy()
         X_ = X.copy() if not self.fit_intercept else np.c_[
-                    X.copy(), np.ones((n, 1))]
+            X.copy(), np.ones((n, 1))]
         return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=columns)
 
     def predict_survival_function(self, X, columns=None):
@@ -594,7 +594,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var):
 
     deaths = events['observed']
     population = events['entrance'].cumsum() - events[
-                                           'removed'].cumsum().shift(1).fillna(0)
+        'removed'].cumsum().shift(1).fillna(0)
     estimate_ = np.cumsum(_additive_f(population, deaths))
     var_ = np.cumsum(_additive_var(population, deaths))
 
@@ -624,10 +624,10 @@ def qth_survival_times(q, survival_functions):
     sv_b = (1.0 * (survival_functions < q)).cumsum() > 0
     try:
         v = sv_b.idxmax(0)
-        v[sv_b.iloc[-1,:] == 0] = np.inf
+        v[sv_b.iloc[-1, :] == 0] = np.inf
     except:
         v = sv_b.argmax(0)
-        v[sv_b[-1,:] == 0] = np.inf
+        v[sv_b[-1, :] == 0] = np.inf
     return v
 
 
