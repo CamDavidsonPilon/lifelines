@@ -47,7 +47,7 @@ in ``NelsonAalenFitter``. You change this in the call to ``.fit``:
 
 .. code-block:: python
 
-    kmf.fit(T,censorship=C, label='<new label here>')
+    kmf.fit(T,censorship=C, label='<label here>')
 
 Note: in versions prior to lifelines 0.2.3, this was called ``column`` and accepted a 1-length array.
 

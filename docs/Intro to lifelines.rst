@@ -667,7 +667,6 @@ above). This is important to keep in mind when analzying the output.
     data.head()
 
 
-
 .. raw:: html
 
     <div style="max-height:1000px;max-width:1500px;overflow:auto;">
@@ -782,10 +781,11 @@ covaritate matrix from my original dataframe.
     # the '-1' term 
     # refers to not adding an intercept column (a column of all 1s).
     # It can be added to the Fitter class.
-    X = patsy.dmatrix('un_continent_name + regime + start_year -1', data) 
+    X = patsy.dmatrix('un_continent_name + regime + start_year -1', data, return_type='dataframe') 
+
 .. code:: python
 
-    X.design_info.column_names
+    X.columns
 
 
 
@@ -804,39 +804,38 @@ covaritate matrix from my original dataframe.
      'start_year']
 
 
-
-.. code:: python
-
-    T = data['duration'].values[:,None]
-    C = data['observed'].values[:,None] 
-
 Below we create our Fitter class. Since we did not supply an intercept
 column in our patsy we have included the keyword ``fit_intercept=True``
 (``True`` by default) which will append the column of ones to our
-matrix. (Sidenote: the intercept term, :math:`b_0(t)` in surival
+matrix. (Sidenote: the intercept term, :math:`b_0(t)` in survival
 regression is often referred to as the *baseline* hazard.)
 
 We have also included the ``penalizer`` option. During the estimation, a
 linear regression is computed at each step. Often the regression can be
 unstable (due to high
 `co-linearity <http://camdp.com/blogs/machine-learning-counter-examples-pt1>`__
-or small sample sizes) -- adding a penalizer term controls the stability
-(though it introduces a small bias -- think of it as a the bias-variance
-tradeoff). I recommend alway starting with a small penalizer term -- if
+or small sample sizes) -- adding a penalizer term controls the stability. I recommend alway starting with a small penalizer term -- if
 the estimates still appear to be too unstable, try increasing it.
 
 .. code:: python
 
-    aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=True)
+    aaf = AalenAdditiveFitter(penalizer=1.0, fit_intercept=True)
 
 Like the API syntax above, an instance of ``AalenAdditiveFitter``
-includes a ``fit`` method. In this method is an additional requirement:
-our covariate matrix.
+includes a ``fit`` method that performs the inference on the coefficients. This method accepts a pandas DataFrame: each row is an individual and columns are the covarites and 
+two special columns: a *duration* column and a boolean *event occured* column (where event occured refers to the event of interest - expulsion from government in this case)
+
 
 .. code:: python
 
-    aaf.fit(T, X, columns=X.design_info.column_names)
+    X['T'] = data['duration']
+    X['E'] = data['observed'] 
 
+**The api for .fit was different prior to lifelines 0.3, below refers to the 0.3+ versions**
+
+.. code:: python
+
+    aaf.fit(X, duration_col='T', event_col='E')
 
 
 .. parsed-literal::
@@ -851,18 +850,119 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
 .. code:: python
 
     figsize(12.5,8)
-    aaf.cumulative_hazards_.plot(legend=True)
+    aaf.cumulative_hazards_.head()
 
 
+.. raw:: html
 
-.. parsed-literal::
+    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
+    <table border="1" class="dataframe">
+      <thead>
+        <tr style="text-align: right;">
+          <th></th>
+          <th>un_continent_name[Africa]</th>
+          <th>un_continent_name[Americas]</th>
+          <th>un_continent_name[Asia]</th>
+          <th>un_continent_name[Europe]</th>
+          <th>un_continent_name[Oceania]</th>
+          <th>regime[T.Military Dict]</th>
+          <th>regime[T.Mixed Dem]</th>
+          <th>regime[T.Monarchy]</th>
+          <th>regime[T.Parliamentary Dem]</th>
+          <th>regime[T.Presidential Dem]</th>
+          <th>start_year</th>
+          <th>baseline</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>1</th>
+          <td>-0.051595</td>
+          <td>-0.082406</td>
+          <td> 0.010666</td>
+          <td> 0.154493</td>
+          <td>-0.060438</td>
+          <td> 0.075333</td>
+          <td> 0.086274</td>
+          <td>-0.133938</td>
+          <td> 0.048077</td>
+          <td> 0.127171</td>
+          <td> 0.000116</td>
+          <td>-0.029280</td>
+        </tr>
+        <tr>
+          <th>2</th>
+          <td>-0.014713</td>
+          <td>-0.039471</td>
+          <td> 0.095668</td>
+          <td> 0.194251</td>
+          <td>-0.092696</td>
+          <td> 0.115033</td>
+          <td> 0.358702</td>
+          <td>-0.226233</td>
+          <td> 0.168783</td>
+          <td> 0.121862</td>
+          <td> 0.000053</td>
+          <td> 0.143039</td>
+        </tr>
+        <tr>
+          <th>3</th>
+          <td> 0.007389</td>
+          <td>-0.064758</td>
+          <td> 0.115121</td>
+          <td> 0.170549</td>
+          <td> 0.069371</td>
+          <td> 0.161490</td>
+          <td> 0.677347</td>
+          <td>-0.271183</td>
+          <td> 0.328483</td>
+          <td> 0.146234</td>
+          <td> 0.000004</td>
+          <td> 0.297672</td>
+        </tr>
+        <tr>
+          <th>4</th>
+          <td>-0.058418</td>
+          <td> 0.011399</td>
+          <td> 0.091784</td>
+          <td> 0.205824</td>
+          <td> 0.125722</td>
+          <td> 0.220028</td>
+          <td> 0.932674</td>
+          <td>-0.294900</td>
+          <td> 0.365604</td>
+          <td> 0.422617</td>
+          <td> 0.000002</td>
+          <td> 0.376311</td>
+        </tr>
+        <tr>
+          <th>5</th>
+          <td>-0.099282</td>
+          <td> 0.106641</td>
+          <td> 0.112083</td>
+          <td> 0.150708</td>
+          <td> 0.091900</td>
+          <td> 0.241575</td>
+          <td> 1.123860</td>
+          <td>-0.391103</td>
+          <td> 0.536185</td>
+          <td> 0.743913</td>
+          <td> 0.000057</td>
+          <td> 0.362049</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
 
-    <matplotlib.axes.AxesSubplot at 0x109546550>
+
+``AalenAdditiveFitter`` also has built in plotting:
+
+.. code:: python
+
+  aaf.plot( columns=[ 'regime[T.Presidential Dem]', 'baseline', 'un_continent_name[Europe]' ], ix=slice(1,15) )
 
 
-
-
-.. image:: Introtolifelines_files/Introtolifelines_54_1.png
+.. image:: images/cumulative_hazards_.png
 
 
 Regression is most interesting if we use it on data we have not yet
@@ -875,8 +975,8 @@ Prime Minister Stephen Harper.
 .. code:: python
 
     ix = (data['ctryname'] == 'Canada')
-    obama = X[ix,:][-1,:][None,:]
-    obama[0,-1] = 2003
+    harper = X[ix,:][-1,:][None,:]
+    harper[0,-1] = 2003
     print "Harper's unique data point"
     obama
 
@@ -899,7 +999,7 @@ Prime Minister Stephen Harper.
     figsize(12.5,6)
     ax = plt.subplot(2,1,1)
     plt.xlim(0,15)
-    aaf.predict_cumulative_hazard(obama, columns=["Harper's hazard rate"]).plot(ax = ax)
+    aaf.predict_cumulative_hazard(harper, columns=["Harper's hazard rate"]).plot(ax = ax)
     ax = plt.subplot(2,1,2)
     plt.ylim(0,1.1)
     plt.xlim(0,15)

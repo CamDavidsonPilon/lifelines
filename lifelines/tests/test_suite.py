@@ -5,6 +5,7 @@ python -m lifelines.tests.test_suit
 from __future__ import print_function
 
 import unittest
+from StringIO import StringIO
 
 import numpy as np
 import numpy.testing as npt
@@ -13,7 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, \
-                         median_survival_times, BreslowFlemingHarringtonFitter
+                         median_survival_times, BreslowFlemingHarringtonFitter, BayesianFitter
 from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
@@ -34,18 +35,7 @@ class MiscTests(unittest.TestCase):
         x = np.linspace(0, 4, 1000)[:, None]
         answer = np.exp(x) - 1.
         approx_answer = cumulative_quadrature(np.exp(x).T, x).T
-        # pdb.set_trace()
         npt.assert_almost_equal(answer, approx_answer, decimal=4)
-
-    def test_aalen_additive_allows_numpy_or_df(self):
-        t = np.random.random((10, 1))
-        dfX = pd.DataFrame(np.random.random((10, 3)), columns=["A", "B", "C"])
-        c = dfX.columns
-        npX = np.random.random((10, 5))
-        aaf = AalenAdditiveFitter()
-        aaf.fit(t, npX)
-        aaf.fit(t, dfX)
-        npt.assert_array_equal(c, aaf.cumulative_hazards_.columns[:3])
 
     def test_datetimes_to_durations_days(self):
         start_date = ['2013-10-10 0:00:00', '2013-10-09', '2012-10-10']
@@ -250,41 +240,39 @@ class StatisticalTests(unittest.TestCase):
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         T = generate_random_lifetimes(hz, timeline)
+        X['T'] = T
+        X['E'] = 1
         # fit it to Aalen's model
         aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
-        aaf.fit(T, X, censorship=None)
+        aaf.fit(X)
 
         # predictions
-        T_pred = aaf.predict_median(X)
+        T_pred = aaf.predict_median(X[range(6)])
         self.assertTrue(abs((T_pred.values > T).mean() - 0.5) < 0.05)
 
-    """
-    #I'm redoing this estimator
+
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 2500
-        d = 3
+        n = 250
+        d = 2
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
-        cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
+        X.columns = coef.columns
+        cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
+                                          index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
+        X['T'] = T
+        X['E'] = 1
+        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
+        aaf.fit(X)
 
-        # fit the aaf, no intercept as it is already built into X, X[2] is ones
-        aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
-        aaf.fit(T, X, censorship=None, columns=coef.columns)
 
-        T_max = aaf.timeline[-10]
-        # plot baby
-        for i, column in enumerate(coef.columns):
-            ax = plt.subplot(d + 2, 1, i + 1)
-            ax.plot(timeline[timeline < T_max], cumulative_hazards[timeline < T_max, i])
-            aaf.cumulative_hazards_[column].plot(ax=ax)
-            ax.legend(loc='lower right')
-
-        ax = plt.subplot(d + 2, 1, d + 2)
-        ax.plot((T > np.arange(T_max)).sum(0), c="k", label="number of observations")
-        ax.set_xlabel("time")
+        for i in range(d+1):
+            ax = plt.subplot(d+1,1,i+1)
+            col = cumulative_hazards.columns[i]
+            ax = cumulative_hazards[col].ix[:15].plot(legend=False,ax=ax)
+            ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
         plt.show()
         return
 
@@ -292,33 +280,27 @@ class StatisticalTests(unittest.TestCase):
         # this is a visual test of the fitting the cumulative
         # hazards.
         n = 2500
-        d = 3
+        d = 5
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
-        cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
+        X.columns = coef.columns
+        cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
+                                          index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
-        C = np.random.binomial(1, 0.8, size=n)
+        X['T'] = T
+        X['E'] = np.random.binomial(1,0.99,n)
+        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
+        aaf.fit(X)
 
-        # fit the aaf, no intercept as it is already built into X, X[2] is ones
-        aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
-        aaf.fit(T, X, censorship=C, columns=coef.columns)
 
-        T_max = aaf.timeline[-10]
-        # plot baby
-        for i, column in enumerate(coef.columns):
-            ax = plt.subplot(d + 2, 1, i + 1)
-            ax.plot(timeline[timeline < T_max], cumulative_hazards[timeline < T_max, i])
-            aaf.plot(ax=ax, columns=[column], iloc=slice(0, 200))
-            ax.legend(loc='lower right')
-
-        ax = plt.subplot(d + 2, 1, d + 2)
-        ax.plot((T > np.arange(T_max)).sum(0), c="k", label="number of observations")
-        ax.set_xlabel("time")
-        plt.suptitle("aalen fit with 0.8 observations, d = %d" % d)
+        for i in range(d+1):
+            ax = plt.subplot(d+1,1,i+1)
+            col = cumulative_hazards.columns[i]
+            ax = cumulative_hazards[col].ix[:15].plot(legend=False,ax=ax)
+            ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
         plt.show()
-        return
-    """
-
+        return  
+    
     def test_lists_to_KaplanMeierFitter(self):
         T = [2, 3, 4., 1., 6, 5.]
         C = [1, 0, 0, 0, 1, 1]
@@ -405,12 +387,32 @@ class StatisticalTests(unittest.TestCase):
         bfh.fit(observations, entry=births)
         return 
 
+    def test_aaf_panel_dataset(self):
+        aaf = AalenAdditiveFitter()
+        aaf.fit(panel_dataset, id_col='id',duration_col='t', event_col='E')
+        aaf.plot()
+        return
 
+    def test_bayesian_fitter_low_data(self):
+        bf = BayesianFitter(samples=10)
+        bf.fit(waltonT1)
+        ax = bf.plot()
+
+        bf.fit(waltonT2)
+        bf.plot(ax=ax,c='#A60628')
+        return
+
+    def test_bayesian_fitter_large_data(self):
+        bf = BayesianFitter()
+        bf.fit(np.random.exponential(10,size=1000))
+        bf.plot()
+        return
 
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(self.lifetimes.keys()), 1))
         ordered_lifetimes = np.sort(self.lifetimes.keys())
+        N = len(LIFETIMES)
         v = 1.
         n = N * 1.0
         for i, t in enumerate(ordered_lifetimes):
@@ -431,6 +433,7 @@ class StatisticalTests(unittest.TestCase):
     def nelson_aalen(self, censor=False):
         na = np.zeros((len(self.lifetimes.keys()), 1))
         ordered_lifetimes = np.sort(self.lifetimes.keys())
+        N = len(LIFETIMES)
         v = 0.
         n = N * 1.0
         for i, t in enumerate(ordered_lifetimes):
@@ -454,17 +457,19 @@ class PlottingTests(unittest.TestCase):
     def test_aalen_additive_plot(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 50
-        d = 2
+        n = 2500
+        d = 3
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
         T = generate_random_lifetimes(hz, timeline)
         C = np.random.binomial(1, 1., size=n)
+        X['T'] = T
+        X['E'] = C
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
-        aaf.fit(T, X, censorship=C, columns=coef.columns)
+        aaf.fit(X)
         ax = aaf.plot(iloc=slice(0, aaf.cumulative_hazards_.shape[0] - 100))
         ax.set_xlabel("time")
         ax.set_title('.plot() cumulative hazards')
@@ -480,10 +485,12 @@ class PlottingTests(unittest.TestCase):
         cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
         T = generate_random_lifetimes(hz, timeline) + 0.1 * np.random.uniform(size=(n, 1))
         C = np.random.binomial(1, 0.8, size=n)
+        X['T'] = T
+        X['E'] = C
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
-        aaf.fit(T, X, censorship=C, columns=coef.columns)
+        aaf.fit(X)
         ax = aaf.smoothed_hazards_(1).iloc[0:aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
         ax.set_title('.plot() smoothed hazards')
@@ -624,7 +631,6 @@ class PlottingTests(unittest.TestCase):
 # some data
 LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 CENSORSHIP = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
-N = len(LIFETIMES)
 
 waltonT1 = np.array([6.,13.,13.,13.,19.,19.,19.,26.,26.,26.,26.,26.,33.,33.,47.,62.,62.,9.,9.,9.,15.,15.,22.,22.,22.,22.,29.,29.,29.,29.,29.,36.,36.,43.])
 waltonT2 = np.array([33.,54.,54.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,32.,53.,53.,60.,60.,60.,60.,60.,
@@ -676,6 +682,39 @@ waltonT = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26.,
                     69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45.,
                     45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60.,
                     60., 60., 60., 60., 60., 60., 60., 60., 66.])
+
+
+panel_dataset = pd.read_csv(
+    StringIO("""id,t,E,var1,var2
+1,1,0,0,1
+1,2,0,0,1
+1,3,0,4,3
+1,4,1,8,4
+2,1,0,1.2,1
+2,2,0,1.2,2
+2,3,0,1.2,2
+3,1,0,0,1
+3,2,1,1,2
+4,1,0,0,1
+4,2,0,1,2
+4,3,0,1,3
+4,4,0,2,4
+4,5,1,2,5
+5,1,0,1,-1
+5,2,0,2,-1
+5,3,0,3,-1
+6,1,1,3,0
+7,1,0,1,0
+7,2,0,2,1
+7,3,0,3,0
+7,4,0,3,1
+7,5,0,3,0
+7,6,1,3,1
+8,1,0,-1,0
+8,2,1,1,0
+9,1,0,1,1
+9,2,0,2,2
+"""))
 
 
 

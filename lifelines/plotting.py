@@ -4,6 +4,7 @@ from __future__ import print_function
 import numpy as np
 from matplotlib import pyplot as plt
 
+from lifelines.utils import coalesce
 
 def plot_lifetimes(lifetimes, censorship=None, birthtimes=None, order=False):
     """
@@ -53,17 +54,16 @@ def shaded_plot(x, y, y_upper, y_lower, **kwargs):
 
 
 def plot_regressions(self):
-    def plot(ix=None, iloc=None, columns=[], ci_legend=False, ci_force_lines=False, **kwargs):
+    def plot(ix=None, iloc=None, columns=[], legend=True, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
-          flat: a design style with stepped lines and no shading. Similar to R.
-          ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas).
-          ci_legend: if ci_force_lines, boolean flag to add the line's label to the legend.
           ix: specify a time-based subsection of the curves to plot, ex:
                    .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.
           iloc: specify a location-based subsection of the curves to plot, ex:
                    .plot(iloc=slice(0,10)) will plot the first 10 time points.
+          columns: If not empty, plot a subset of columns from the cumulative_hazards_. Default all.
+          legend: show legend in figure.
 
         """
         assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot'
@@ -88,12 +88,11 @@ def plot_regressions(self):
             y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
             shaded_plot(x, y, y_upper, y_lower, ax=kwargs["ax"], label=column)
 
+        if legend:
+            kwargs["ax"].legend()
+
         return kwargs["ax"]
     return plot
-
-
-def coalesce(*args):
-  return next( s for s in args if s)
 
 def plot_estimate(self, estimate):
     doc_string = """"
@@ -175,7 +174,7 @@ def plot_estimate(self, estimate):
                 x = get_loc(confidence_interval_).index.values.astype(float)
                 lower = get_loc(confidence_interval_.filter(like='lower')).values[:, 0]
                 upper = get_loc(confidence_interval_.filter(like='upper')).values[:, 0]
-                fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'], alpha=ci_alpha, color=kwargs['color'], linewidth=2.0)
+                fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'], alpha=ci_alpha, color=kwargs['color'], linewidth=1.0)
 
         return kwargs['ax']
     plot.__doc__ = doc_string
