@@ -1,4 +1,4 @@
-    import numpy as np
+import numpy as np
 from numpy.linalg import LinAlgError, inv, pinv
 from scipy.sparse.linalg import inv
 from scipy import sparse
@@ -472,13 +472,13 @@ class AalenAdditiveFitter(object):
         Returns the hazard rates for the individuals
         """
         n, d = X.shape
-        try:
-            X_ = X.values.copy()
-        except:
-            X_ = X.copy()
-        X_ = X.copy() if not self.fit_intercept else np.c_[
-            X.copy(), np.ones((n, 1))]
-        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=columns)
+
+        baseline = sparse.csc_matrix(np.ones((n, 1)))
+        X = X.tocsc()
+        X = sparse.hstack([X_[ix, :], baseline])
+        sparse_hazards = sparse.csr_matrix(self.cumulative_hazards_)
+        pred_hazards = pred_hazards.dot(X.T)
+        return pd.DataFrame(pred_hazards.A, index=self.timeline, columns=columns)
 
     def predict_survival_function(self, X, columns=None):
         """
