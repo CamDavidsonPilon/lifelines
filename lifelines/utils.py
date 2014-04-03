@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from pandas import to_datetime
 
+def coalesce(*args):
+  return next( s for s in args if s)
 
 def group_survival_table_from_events(groups, durations, censorship, min_observations, limit=-1):
     """
@@ -283,12 +285,6 @@ def yaun_loss(fitter, T_true, T_pred, X_train, T_train, censorship=None):
 def quadrature(fx, x):
     t = x.shape[0]
     return (0.5 * fx[:, 0] + fx[:, 1:-1].sum(1) + 0.5 * fx[:, -1]) * (x[-1] - x[0]) * 1.0 / t
-
-
-def basis(n, i):
-    x = np.zeros((n, 1))
-    x[i] = 1
-    return x
 
 
 def epanechnikov_kernel(t, T, bandwidth=1.):

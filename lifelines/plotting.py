@@ -4,6 +4,7 @@ from __future__ import print_function
 import numpy as np
 from matplotlib import pyplot as plt
 
+from lifelines.utils import coalesce
 
 def plot_lifetimes(lifetimes, censorship=None, birthtimes=None, order=False):
     """
@@ -92,10 +93,6 @@ def plot_regressions(self):
 
         return kwargs["ax"]
     return plot
-
-
-def coalesce(*args):
-  return next( s for s in args if s)
 
 def plot_estimate(self, estimate):
     doc_string = """"

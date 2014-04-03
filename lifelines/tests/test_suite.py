@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, \
-                         median_survival_times, BreslowFlemingHarringtonFitter
+                         median_survival_times, BreslowFlemingHarringtonFitter, BayesianFitter
 from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
@@ -254,30 +254,25 @@ class StatisticalTests(unittest.TestCase):
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 2500
-        d = 3
+        n = 250
+        d = 2
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
-        cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
+        cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
+                                          index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
         X['E'] = 1
-        # fit the aaf, no intercept as it is already built into X, X[2] is ones
-        aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
 
-        T_max = aaf.timeline[-10]
-        # plot baby
-        for i, column in enumerate(coef.columns):
-            ax = plt.subplot(d + 2, 1, i + 1)
-            ax.plot(timeline[timeline < T_max], cumulative_hazards[timeline < T_max, i])
-            aaf.cumulative_hazards_[column].plot(ax=ax)
-            ax.legend(loc='lower right')
 
-        ax = plt.subplot(d + 2, 1, d + 2)
-        ax.plot((T > np.arange(T_max)).sum(0), c="k", label="number of observations")
-        ax.set_xlabel("time")
+        for i in range(d+1):
+            ax = plt.subplot(d+1,1,i+1)
+            col = cumulative_hazards.columns[i]
+            ax = cumulative_hazards[col].ix[:15].plot(legend=False,ax=ax)
+            ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
         plt.show()
         return
 
@@ -285,34 +280,26 @@ class StatisticalTests(unittest.TestCase):
         # this is a visual test of the fitting the cumulative
         # hazards.
         n = 2500
-        d = 3
+        d = 5
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
-        cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
+        cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
+                                          index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
-        C = np.random.binomial(1, 0.95, size=n)
         X['T'] = T
-        X['E'] = 1
-
-        # fit the aaf, no intercept as it is already built into X, X[2] is ones
-        aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+        X['E'] = np.random.binomial(1,0.99,n)
+        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
 
-        T_max = aaf.timeline[-10]
-        # plot baby
-        for i, column in enumerate(coef.columns):
-            ax = plt.subplot(d + 2, 1, i + 1)
-            ax.plot(timeline[timeline < T_max], cumulative_hazards[timeline < T_max, i])
-            aaf.plot(ax=ax, columns=[column], iloc=slice(0, 200))
-            ax.legend(loc='lower right')
 
-        ax = plt.subplot(d + 2, 1, d + 2)
-        ax.plot((T > np.arange(T_max)).sum(0), c="k", label="number of observations")
-        ax.set_xlabel("time")
-        plt.suptitle("aalen fit with 0.8 observations, d = %d" % d)
+        for i in range(d+1):
+            ax = plt.subplot(d+1,1,i+1)
+            col = cumulative_hazards.columns[i]
+            ax = cumulative_hazards[col].ix[:15].plot(legend=False,ax=ax)
+            ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
         plt.show()
-        return
+        return  
     
     def test_lists_to_KaplanMeierFitter(self):
         T = [2, 3, 4., 1., 6, 5.]
@@ -405,6 +392,22 @@ class StatisticalTests(unittest.TestCase):
         aaf.fit(panel_dataset, id_col='id',duration_col='t', event_col='E')
         aaf.plot()
         return
+
+    def test_bayesian_fitter_low_data(self):
+        bf = BayesianFitter(samples=10)
+        bf.fit(waltonT1)
+        ax = bf.plot()
+
+        bf.fit(waltonT2)
+        bf.plot(ax=ax,c='#A60628')
+        return
+
+    def test_bayesian_fitter_large_data(self):
+        bf = BayesianFitter()
+        bf.fit(np.random.exponential(10,size=1000))
+        bf.plot()
+        return
+
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(self.lifetimes.keys()), 1))
