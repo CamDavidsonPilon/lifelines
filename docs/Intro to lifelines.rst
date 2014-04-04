@@ -177,15 +177,15 @@ fit/predict API)
 
 .. code:: 
 
-  KaplanMeierFitter.fit(event_times, censorship=None, 
+  KaplanMeierFitter.fit(event_times, event_observed=None, 
                         timeline=None, label='KM-estimate', 
                         alpha=None, insert_0=True)
   Parameters:
     event_times: an array, or pd.Series, of length n of times that
            the death event occured at
-    censorship: an array, or pd.Series, of length n -- True if 
+    event_observed: an array, or pd.Series, of length n -- True if 
           the death was observed, False if the event was lost 
-          (right-censored). Defaults all True if censorship==None
+          (right-censored). Defaults all True if event_observed==None
     timeline: return the best estimate at the values 
             in timelines (postively increasing)
     label: a string to name the column of the estimate.
@@ -205,7 +205,7 @@ Below we fit our data to the fitter:
     T = data["duration"] #measure in years
     C = data["observed"] 
 
-    kmf.fit(T, censorship=C ) #returns self
+    kmf.fit(T, event_observed=C ) #returns self
 
 
 
@@ -280,9 +280,9 @@ an ``axis`` object, that can be used for plotting further estimates:
     ax = plt.subplot(111)
     
     dem = data["democracy"] == "Democracy"
-    kmf.fit(T[dem], censorship=C[dem], label="Democratic Regimes")
+    kmf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
     kmf.plot(ax=ax, ci_force_lines=True)
-    kmf.fit(T[~dem], censorship=C[~dem], label="Non-democratic Regimes")
+    kmf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
     kmf.plot(ax=ax, ci_force_lines=True)
     
     plt.ylim(0,1);
@@ -302,11 +302,11 @@ probabilties of survival at those points:
     ax = subplot(111)
     
     t = np.linspace(0,50,51)
-    kmf.fit(T[dem], censorship=C[dem], timeline=t, label="Democratic Regimes")
+    kmf.fit(T[dem], event_observed=C[dem], timeline=t, label="Democratic Regimes")
     ax = kmf.plot(ax=ax)
     print "Median survival time of democratic:", kmf.median_
     
-    kmf.fit(T[~dem], censorship=C[~dem], timeline=t, label="Non-democratic Regimes")
+    kmf.fit(T[~dem], event_observed=C[~dem], timeline=t, label="Non-democratic Regimes")
     kmf.plot(ax=ax )
     plt.ylim(0,1);
     plt.title("Lifespans of different global regimes");
@@ -405,14 +405,14 @@ Getting data into the right format
 
 *lifelines* data format is consistent across all estimator class and
 functions: an array of individual durations, and the individuals
-censorship (if any). These are often denoted ``T`` and ``C``
+event observation (if any). These are often denoted ``T`` and ``C``
 respectively. For example:
 
 ::
 
     T = [0,3,3,2,1,2]
     C = [1,1,0,0,1,1]
-    kmf.fit(T, censorship=C )
+    kmf.fit(T, event_observed=C )
 
 The raw data is not always available in this format -- *lifelines*
 includes some helper functions to transform data formats to *lifelines*
@@ -429,12 +429,12 @@ end times/dates (or ``None`` if not observed):
     end_date = ['2013-10-13', '2013-10-10', None]
     T,C = datetimes_to_durations(start_date, end_date, fill_date='2013-10-15')
     print 'T (durations): ', T
-    print 'C (censorship): ',C
+    print 'C (event_observed): ',C
 
 .. parsed-literal::
 
     T (durations):  [ 3.  1.  5.]
-    C (censorship):  [ True  True False]
+    C (event_observed):  [ True  True False]
 
 
 The function ``datetimes_to_durations`` is very flexible, and has many
@@ -481,7 +481,7 @@ in ``lifelines``. Let's use the regime dataset from above:
     from lifelines import NelsonAalenFitter
     naf = NelsonAalenFitter()
 
-    naf.fit(T,censorship=C)
+    naf.fit(T,event_observed=C)
 
 
 
@@ -532,9 +532,9 @@ years:
 
 .. code:: python
 
-    naf.fit(T[dem], censorship=C[dem], label="Democratic Regimes")
+    naf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
     ax = naf.plot(ix=slice(0,20))
-    naf.fit(T[~dem], censorship=C[~dem], label="Non-democratic Regimes")
+    naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
     naf.plot(ax=ax, ix=slice(0,20))
     plt.title("Cumulative hazard function of different global regimes");
 
@@ -571,9 +571,9 @@ intervals, similar to the traditional ``plot`` functionality.
 .. code:: python
 
     b = 3.
-    naf.fit(T[dem], censorship=C[dem], label="Democratic Regimes")
+    naf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
     ax = naf.plot_hazard(bandwidth=b)
-    naf.fit(T[~dem], censorship=C[~dem], label="Non-democratic Regimes")
+    naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
     plt.ylim(0,0.4)
@@ -593,9 +593,9 @@ here.
 .. code:: python
 
     b = 8.
-    naf.fit(T[dem], censorship=C[dem], label="Democratic Regimes")
+    naf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
     ax = naf.plot_hazard(bandwidth=b)
-    naf.fit(T[~dem], censorship=C[~dem], label="Non-democratic Regimes")
+    naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
     plt.ylim(0,0.4);

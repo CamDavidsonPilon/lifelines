@@ -32,13 +32,13 @@ class NelsonAalenFitter(object):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
-    def fit(self, durations, censorship=None, timeline=None, entry=None, label='NA-estimate', alpha=None):
+    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='NA-estimate', alpha=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
           timeline: return the best estimate at the values in timelines (postively increasing)
-          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if censorship==None
+          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if event_observed==None
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
              useful for left-truncated observations, i.e the birth event was not observed. 
              If None, defaults to all 0 (all birth events observed.)
@@ -51,8 +51,8 @@ class NelsonAalenFitter(object):
 
         """
 
-        v = preprocess_inputs(durations, censorship, timeline, entry)
-        self.durations, self.censorship, self.timeline, self.entry, self.event_table = v
+        v = preprocess_inputs(durations, event_observed, timeline, entry)
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                 self._additive_f, self._variance_f)
@@ -139,7 +139,7 @@ class NelsonAalenFitter(object):
     def __repr__(self):
         try:
             s = """<lifelines.NelsonAalenFitter: fitted with %d observations, %d censored>""" % (
-                self.censorship.shape[0], (1-self.censorship).sum())
+                self.event_observed.shape[0], (1-self.event_observed).sum())
         except AttributeError as e:
             s = """<lifelines.NelsonAalenFitter>"""
         return s
@@ -160,13 +160,13 @@ class KaplanMeierFitter(object):
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, durations, censorship=None, timeline=None, entry=None, label='KM-estimate', alpha=None):
+    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM-estimate', alpha=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
           timeline: return the best estimate at the values in timelines (postively increasing)
-          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if censorship==None
+          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if event_observed==None
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
              useful for left-truncated observations, i.e the birth event was not observed. 
              If None, defaults to all 0 (all birth events observed.)
@@ -178,8 +178,8 @@ class KaplanMeierFitter(object):
           self, with new properties like 'survival_function_'.
 
         """
-        v = preprocess_inputs(durations, censorship, timeline, entry) #half the time is spent in here.
-        self.durations, self.censorship, self.timeline, self.entry, self.event_table = v
+        v = preprocess_inputs(durations, event_observed, timeline, entry)
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
         log_survival_function, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                    self._additive_f, self._additive_var)
@@ -231,7 +231,7 @@ class KaplanMeierFitter(object):
     def __repr__(self):
         try:
             s = """<lifelines.KaplanMeierFitter: fitted with %d observations, %d censored>""" % (
-                self.censorship.shape[0], (1-self.censorship).sum())
+                self.event_observed.shape[0], (1-self.event_observed).sum())
         except AttributeError as e:
             s = """<lifelines.KaplanMeierFitter>"""
         return s
@@ -256,13 +256,13 @@ class BreslowFlemingHarringtonFitter(object):
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, durations, censorship=None, timeline=None, entry=None, label='BFH-estimate', alpha=None):
+    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='BFH-estimate', alpha=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
           timeline: return the best estimate at the values in timelines (postively increasing)
-          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if censorship==None
+          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if event_observed==None
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
              useful for left-truncated observations, i.e the birth event was not observed. 
              If None, defaults to all 0 (all birth events observed.)
@@ -275,9 +275,9 @@ class BreslowFlemingHarringtonFitter(object):
 
         """
         naf = NelsonAalenFitter(self.alpha)
-        naf.fit(durations, censorship=censorship, timeline=timeline, label=label, entry=entry)
-        self.durations, self.censorship, self.timeline, self.entry, self.event_table = \
-                naf.durations, naf.censorship, naf.timeline, naf.entry, naf.event_table
+        naf.fit(durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry)
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = \
+                naf.durations, naf.event_observed, naf.timeline, naf.entry, naf.event_table
 
         # estimation
         self.survival_function_ = np.exp(-naf.cumulative_hazard_)
@@ -612,30 +612,30 @@ def _predict(self, estimate, label):
     predict.__doc__ = doc_string
     return predict
 
-def preprocess_inputs(durations, censorship, timeline, entry ):
+def preprocess_inputs(durations, event_observed, timeline, entry ):
 
     n = len(durations)
     durations = np.asarray(durations).reshape((n,))
 
-    # set to all observed if censorship is none
-    if censorship is None:
-        censorship = np.ones(n, dtype=int)
+    # set to all observed if event_observed is none
+    if event_observed is None:
+        event_observed = np.ones(n, dtype=int)
     else:
-        censorship = np.asarray(censorship).reshape((n,)).astype(int)
+        event_observed = np.asarray(event_observed).reshape((n,)).copy().astype(int)
 
     if entry is None:
         entry = np.zeros(n)
     else:
         entry = np.asarray(entry).reshape((n,))
 
-    event_table = survival_table_from_events(durations, censorship, entry)
+    event_table = survival_table_from_events(durations, event_observed, entry)
 
     if timeline is None:
         timeline = event_table.index.values
     else:
         timeline = np.asarray(timeline)
 
-    return durations, censorship, timeline.astype(float), entry, event_table
+    return durations, event_observed, timeline.astype(float), entry, event_table
 
 
 def _additive_estimate(events, timeline, _additive_f, _additive_var):
