@@ -7,7 +7,7 @@ import pandas as pd
 from pandas import to_datetime
 
 
-def group_survival_table_from_events(groups, durations, censorship, min_observations, limit=-1):
+def group_survival_table_from_events(groups, durations, event_observed, min_observations, limit=-1):
     """
     Joins multiple event series together into dataframes. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
@@ -15,8 +15,8 @@ def group_survival_table_from_events(groups, durations, censorship, min_observat
     Parameters:
         groups: a (n,) numpy array of individuals' group ids.
         durations: a (n,) numpy array of durations of each individual
-        censorship: a (n,) numpy array of censorship, 1 if observed, 0 else.
-        censorship: a (n,) numpy array of times individual entered study. This is most applicable in 
+        event_observed: a (n,) numpy array of event observations, 1 if observed, 0 else.
+        event_observed: a (n,) numpy array of times individual entered study. This is most applicable in 
                     cases where there is left-truncation, i.e. a individual might enter the 
                     study late. If not the case, normally set to all zeros. 
 
@@ -65,7 +65,7 @@ def group_survival_table_from_events(groups, durations, censorship, min_observat
     g = unique_groups[0]
     ix = groups == g
     T = durations[ix]
-    C = censorship[ix]
+    C = event_observed[ix]
     B = min_observations[ix]
 
     g_name = str(g)
@@ -74,7 +74,7 @@ def group_survival_table_from_events(groups, durations, censorship, min_observat
     for g in unique_groups[1:]:
         ix = groups == g
         T = durations[ix]
-        C = censorship[ix]
+        C = event_observed[ix]
         B = min_observations[ix]
         g_name = str(g)
         data = data.join(survival_table_from_events(T, C, B, 
@@ -87,12 +87,12 @@ def group_survival_table_from_events(groups, durations, censorship, min_observat
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
 
-def survival_table_from_events(durations, censorship, min_observations,
+def survival_table_from_events(durations, event_observed, min_observations,
                               columns=["removed", "observed", "censored", 'entrance'], weights=None):
     """
     Parameters:
         durations: (n,1) array of event times (durations individual was observed for)
-        censorship: (n,1) boolean array, 1 if observed event, 0 is censored event.
+        event_observed: (n,1) boolean array, 1 if observed event, 0 is censored event.
         min_observations: used for left truncation data. Sometimes subjects will show 
           up late in the study. min_observations is a (n,1) array of positive numbers representing
           when the subject was first observed. A subject's life is then [min observation + duration observed]
@@ -105,7 +105,7 @@ def survival_table_from_events(durations, censorship, min_observations,
         by the end of the period. The column 'observed' refers to the number of removed
         individuals who were observed to have died (i.e. not censored.) The column
         'censored' is defined as 'removed' - 'observed' (the number of individuals who
-         left the population due to censorship)
+         left the population due to event_observed)
 
     Example:
         #input
@@ -127,7 +127,7 @@ def survival_table_from_events(durations, censorship, min_observations,
     durations = np.asarray(durations) + min_observations
     df = pd.DataFrame(durations.astype(float), columns=["event_at"])
     df[columns[0]] = 1 if weights is None else weights
-    df[columns[1]] = censorship
+    df[columns[1]] = event_observed
     death_table = df.groupby("event_at").sum()
     death_table[columns[2]] = (death_table[columns[0]] - death_table[columns[1]]).astype(int)
 
@@ -152,7 +152,7 @@ def survival_events_from_table(event_table, observed_deaths_col="observed", cens
 
     Returns
         T: a np.array of durations of observation -- one element for each individual in the population.
-        C: a np.array of censorships -- one element for each individual in the population. 1 if observed, 0 else.
+        C: a np.array of event observations -- one element for each individual in the population. 1 if observed, 0 else.
 
     Ex: The survival table, as a pandas DataFrame:
 
@@ -186,7 +186,7 @@ def survival_events_from_table(event_table, observed_deaths_col="observed", cens
 def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), freq='D', dayfirst=False, na_values=None):
     """
     This is a very flexible function for transforming arrays of start_times and end_times
-    to the proper format for lifelines: duration and censorship arrays.
+    to the proper format for lifelines: duration and event observation arrays.
 
     Parameters:
         start_times: an array, series or dataframe of start times. These can be strings, or datetimes.
@@ -200,7 +200,7 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
 
     Returns:
         T: a array of floats representing the durations with time units given by freq.
-        C: a boolean array of censorship: 1 if death observed, 0 else.
+        C: a boolean array of event observations: 1 if death observed, 0 else.
 
     """
     freq_string = 'timedelta64[%s]' % freq
@@ -257,7 +257,7 @@ def median_loss(T, T_pred):
     return np.abs(T - T_pred).mean()
 
 
-def cross_validation(fitter, T, X, censorship=None, k=5, loss_function="median"):
+def cross_validation(fitter, T, X, event_observed=None, k=5, loss_function="median"):
     """
     This implements the censor-sensative loss function as given in
     'Prediction Performance of Survival Models', Yan Yuan, 2008
@@ -265,19 +265,19 @@ def cross_validation(fitter, T, X, censorship=None, k=5, loss_function="median")
     pass
 
 
-def yaun_loss(fitter, T_true, T_pred, X_train, T_train, censorship=None):
+def yaun_loss(fitter, T_true, T_pred, X_train, T_train, event_observed=None):
     "[WIP]"
-    if censorship is None:
+    if event_observed is None:
         t = T_pred.shape[0]
         sC = np.ones((t, 1))
-        censorship = np.ones((t, 1))
+        event_observed = np.ones((t, 1))
     else:
         # We are estimating S_c(*|z),is the probability that the
         # jth individual survived to time yj without being censored
-        fitter.fit(T_train, X_train, censorship=1 - censorship, timeline=T_true)
+        fitter.fit(T_train, X_train, event_observed=1 - event_observed, timeline=T_true)
         sC = fitter.predict_survival_function(X_train).ix[T_true[:, 0]].values.diagonal()[:, None]  # dirty way to get this
 
-    return (censorship * (T_pred - T_true) ** 2 / sC).mean()
+    return (event_observed * (T_pred - T_true) ** 2 / sC).mean()
 
 
 def quadrature(fx, x):

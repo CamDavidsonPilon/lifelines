@@ -93,7 +93,7 @@ situation.
     plt.vlines(10,0,30,lw=2, linestyles="--")
     plt.xlabel('time')
     plt.title('Births and deaths of our population, at $t=10$')
-    plot_lifetimes(observed_lifetimes, censorship=observed)
+    plot_lifetimes(observed_lifetimes, event_observed=observed)
     print "Observed lifetimes at time %d:\n"%(current_time), observed_lifetimes
 
 
@@ -125,7 +125,7 @@ information at :math:`t=10`).
 
     plt.xlim(0,25)
     plt.vlines(10,0,30,lw=2,linestyles="--")
-    plot_lifetimes(actual_lifetimes, censorship=observed)
+    plot_lifetimes(actual_lifetimes, event_observed=observed)
 
 
 .. image:: Survival Analysis intro_files/Survival Analysis intro_6_0.png

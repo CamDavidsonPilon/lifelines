@@ -75,7 +75,7 @@ Non-parametrically fit the *survival curve*:
     from lifelines import KaplanMeierFitter
 
     kmf = KaplanMeierFitter()
-    kmf.fit(observed_lifetimes, censorship=C) 
+    kmf.fit(observed_lifetimes, event_observed=C) 
 
     # fitter methods have an internal plotting method.
     # plot the curve with the confidence intervals
@@ -105,7 +105,7 @@ Non-parametrically fit the *cumulative hazard curve*:
     from lifelines import NelsonAalenFitter
 
     naf = NelsonAalenFitter()
-    naf.fit(observed_lifetimes, censorship=C) 
+    naf.fit(observed_lifetimes, event_observed=C) 
 
     #plot the curve with the confidence intervals
     naf.plot()
