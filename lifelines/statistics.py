@@ -7,7 +7,7 @@ import pandas as pd
 from lifelines.utils import group_survival_table_from_events
 
 
-def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1, **kwargs):
+def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -35,18 +35,18 @@ def logrank_test(event_times_A, event_times_B, censorship_A=None, censorship_B=N
     """
 
     event_times_A, event_times_B = np.array(event_times_A), np.array(event_times_B)
-    if censorship_A is None:
-        censorship_A = np.ones(event_times_A.shape[0])
-    if censorship_B is None:
-        censorship_B = np.ones(event_times_B.shape[0])
+    if event_observed_A is None:
+        event_observed_A = np.ones(event_times_A.shape[0])
+    if event_observed_B is None:
+        event_observed_B = np.ones(event_times_B.shape[0])
 
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
-    censorship = np.r_[censorship_A, censorship_B]
-    return multivariate_logrank_test(event_times, groups, censorship, alpha=alpha, t_0=t_0, **kwargs)
+    event_observed = np.r_[event_observed_A, event_observed_B]
+    return multivariate_logrank_test(event_times, groups, event_observed, alpha=alpha, t_0=t_0, **kwargs)
 
 
-def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs):
+def pairwise_logrank_test(event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs):
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
     We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase
@@ -57,7 +57,7 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
     Parameters:
       event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
       groups: a (n,) numpy array of unique group labels for each individual.
-      censorship: a (n,) numpy array of censorship events: 1 if observed death, 0 if censored. Defaults
+      event_observed: a (n,) numpy array of event_observed events: 1 if observed death, 0 if censored. Defaults
           to all observed.
       alpha: the level of signifiance desired.
       t_0: the final time to compare the series' up to. Defaults to all.
@@ -85,8 +85,8 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
 
     """
 
-    if censorship is None:
-        censorship = np.ones((event_durations.shape[0], 1))
+    if event_observed is None:
+        event_observed = np.ones((event_durations.shape[0], 1))
 
     # if they pass in a dataframe
     try:
@@ -113,7 +113,7 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
         ix1, ix2 = (groups == g1), (groups == g2)
         test_name = str(g1) + " vs. " + str(g2)
         summary, p_value, result = logrank_test(event_durations[ix1], event_durations[ix2],
-                                                censorship[ix1], censorship[ix2],
+                                                event_observed[ix1], event_observed[ix2],
                                                 alpha=alpha, t_0=t_0, use_bonferroni=bonferroni,
                                                 test_name=test_name, **kwargs)
         T[i1, i2], T[i2, i1] = result, result
@@ -123,7 +123,7 @@ def pairwise_logrank_test(event_durations, groups, censorship=None, alpha=0.95, 
     return [pd.DataFrame(x, columns=unique_groups, index=unique_groups) for x in [S, P, T]]
 
 
-def multivariate_logrank_test(event_durations, groups, censorship=None, alpha=0.95, t_0=-1, **kwargs):
+def multivariate_logrank_test(event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs):
     """
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
       be equal when n=2):
@@ -134,7 +134,7 @@ def multivariate_logrank_test(event_durations, groups, censorship=None, alpha=0.
     Parameters:
       event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
       groups: a (n,) numpy array of unique group labels for each individual.
-      censorship: a (n,) numpy array of censorship events: 1 if observed death, 0 if censored. Defaults
+      event_observed: a (n,) numpy array of event observations: 1 if observed death, 0 if censored. Defaults
           to all observed.
       alpha: the level of signifiance desired.
       t_0: the final time to compare the series' up to. Defaults to all.
@@ -148,10 +148,10 @@ def multivariate_logrank_test(event_durations, groups, censorship=None, alpha=0.
     """
     assert event_durations.shape[0] == groups.shape[0], "event_durations must be the same shape as groups"
 
-    if censorship is None:
-        censorship = np.ones((event_durations.shape[0], 1))
+    if event_observed is None:
+        event_observed = np.ones((event_durations.shape[0], 1))
 
-    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, censorship, np.zeros_like(event_durations), t_0)
+    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, np.zeros_like(event_durations), t_0)
     n_groups = unique_groups.shape[0]
 
     # compute the factors needed

@@ -47,7 +47,7 @@ in ``NelsonAalenFitter``. You change this in the call to ``.fit``:
 
 .. code-block:: python
 
-    kmf.fit(T,censorship=C, label='<new label here>')
+    kmf.fit(T,event_observed=C, label='<new label here>')
 
 Note: in versions prior to lifelines 0.2.3, this was called ``column`` and accepted a 1-length array.
 
@@ -173,7 +173,7 @@ compares whether the "death" generation process of the two populations are equal
     
     from lifelines.statistics import logrank_test
 
-    summary, p_value, test_result = logrank_test(T1, T2, censorship_A=C1, censorship_B=C2)
+    summary, p_value, test_result = logrank_test(T1, T2, event_observed_A=C1, event_observed_B=C2)
 
     print summary
 

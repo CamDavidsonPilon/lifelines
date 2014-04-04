@@ -123,12 +123,12 @@ class StatisticalTests(unittest.TestCase):
 
     def test_censor_nelson_aalen(self):
         naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
-        naf.fit(LIFETIMES, censorship=CENSORSHIP)
+        naf.fit(LIFETIMES, event_observed=OBSERVED)
         npt.assert_almost_equal(naf.cumulative_hazard_.values, self.nac)
 
     def test_censor_kaplan_meier(self):
         kmf = KaplanMeierFitter()
-        kmf.fit(LIFETIMES, censorship=CENSORSHIP)
+        kmf.fit(LIFETIMES, event_observed=OBSERVED)
         npt.assert_almost_equal(kmf.survival_function_.values, self.kmc)
 
     def test_median(self):
@@ -160,12 +160,12 @@ class StatisticalTests(unittest.TestCase):
         print(summary)
         self.assertTrue(result)
 
-    def test_unequal_intensity_censorship(self):
+    def test_unequal_intensity_event_observed(self):
         data1 = np.random.exponential(5, size=(200, 1))
         data2 = np.random.exponential(1, size=(200, 1))
-        censorA = np.random.binomial(1, 0.5, size=(200, 1))
-        censorB = np.random.binomial(1, 0.5, size=(200, 1))
-        summary, p_value, result = logrank_test(data1, data2, censorship_A=censorA, censorship_B=censorB)
+        eventA = np.random.binomial(1, 0.5, size=(200, 1))
+        eventB = np.random.binomial(1, 0.5, size=(200, 1))
+        summary, p_value, result = logrank_test(data1, data2, event_observed_A=eventA, event_observed_B=eventB)
         print(summary)
         self.assertTrue(result)
 
@@ -199,7 +199,7 @@ class StatisticalTests(unittest.TestCase):
         naf.smoothed_hazard_(1.)
         self.assertTrue(True)
 
-    def test_smoothing_hazard_ties_no_censorship(self):
+    def test_smoothing_hazard_ties_no_event_observed(self):
         T = np.random.binomial(20, 0.7, size=300)
         naf = NelsonAalenFitter()
         naf.fit(T)
@@ -252,7 +252,7 @@ class StatisticalTests(unittest.TestCase):
         T = generate_random_lifetimes(hz, timeline)
         # fit it to Aalen's model
         aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
-        aaf.fit(T, X, censorship=None)
+        aaf.fit(T, X, event_observed=None)
 
         # predictions
         T_pred = aaf.predict_median(X)
@@ -351,7 +351,7 @@ class StatisticalTests(unittest.TestCase):
         df["C"] = np.random.binomial(1, 0.6, size=N)
         df["group"] = np.random.binomial(2, 0.5, size=N)
         try:
-            pairwise_logrank_test(df['T'], df["group"], censorship=df["C"])
+            pairwise_logrank_test(df['T'], df["group"], event_observed=df["C"])
             self.assertTrue(True)
         except:
             self.assertTrue(False)
@@ -416,7 +416,7 @@ class StatisticalTests(unittest.TestCase):
         for i, t in enumerate(ordered_lifetimes):
             if censor:
                 ix = LIFETIMES == t
-                c = sum(1 - CENSORSHIP[ix])
+                c = sum(1 - OBSERVED[ix])
                 if n != 0:
                     v *= (1 - (self.lifetimes.get(t) - c) / n)
                 n -= self.lifetimes.get(t)
@@ -436,7 +436,7 @@ class StatisticalTests(unittest.TestCase):
         for i, t in enumerate(ordered_lifetimes):
             if censor:
                 ix = LIFETIMES == t
-                c = sum(1 - CENSORSHIP[ix])
+                c = sum(1 - OBSERVED[ix])
                 if n != 0:
                     v += ((self.lifetimes.get(t) - c) / n)
                 n -= self.lifetimes.get(t)
@@ -464,7 +464,7 @@ class PlottingTests(unittest.TestCase):
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
-        aaf.fit(T, X, censorship=C, columns=coef.columns)
+        aaf.fit(T, X, event_observed=C, columns=coef.columns)
         ax = aaf.plot(iloc=slice(0, aaf.cumulative_hazards_.shape[0] - 100))
         ax.set_xlabel("time")
         ax.set_title('.plot() cumulative hazards')
@@ -483,7 +483,7 @@ class PlottingTests(unittest.TestCase):
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
-        aaf.fit(T, X, censorship=C, columns=coef.columns)
+        aaf.fit(T, X, event_observed=C, columns=coef.columns)
         ax = aaf.smoothed_hazards_(1).iloc[0:aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
         ax.set_title('.plot() smoothed hazards')
@@ -550,7 +550,7 @@ class PlottingTests(unittest.TestCase):
         current = 10
         birthtimes = current * np.random.uniform(size=(N,))
         T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
-        plot_lifetimes(T, censorship=C, birthtimes=birthtimes)
+        plot_lifetimes(T, event_observed=C, birthtimes=birthtimes)
 
     def test_plot_lifetimes_relative(self):
         plt.figure()
@@ -558,7 +558,7 @@ class PlottingTests(unittest.TestCase):
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
         N = 20
         T, C = generate_random_lifetimes(hz, t, size=N, censor=True)
-        plot_lifetimes(T, censorship=C)
+        plot_lifetimes(T, event_observed=C)
 
     def test_naf_plot_cumulative_hazard(self):
         data1 = np.random.exponential(5, size=(200, 1))
@@ -623,7 +623,7 @@ class PlottingTests(unittest.TestCase):
 
 # some data
 LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
-CENSORSHIP = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
+OBSERVED = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
 N = len(LIFETIMES)
 
 waltonT1 = np.array([6.,13.,13.,13.,19.,19.,19.,26.,26.,26.,26.,26.,33.,33.,47.,62.,62.,9.,9.,9.,15.,15.,22.,22.,22.,22.,29.,29.,29.,29.,29.,36.,36.,43.])

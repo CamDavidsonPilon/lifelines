@@ -1,2 +1,2 @@
 T (durations):  [ 3.  1.  5.]
-C (censorship):  [ True  True False]
+C (event_observed):  [ True  True False]
