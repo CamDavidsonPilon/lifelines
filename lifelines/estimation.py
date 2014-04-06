@@ -5,6 +5,7 @@ from numpy.linalg import LinAlgError, inv
 from numpy import dot
 import pandas as pd
 from numpy.random import beta
+from scipy import stats
 
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, quadrature, \
@@ -42,8 +43,8 @@ class NelsonAalenFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -170,8 +171,8 @@ class KaplanMeierFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -188,9 +189,9 @@ class KaplanMeierFitter(object):
                                                                    self._additive_f, self._additive_var)
 
         if entry is not None:
-            #a serious problem with KM is that when the sample size is small and there are too few early 
+            #a serious problem with KM is that when the sample size is small and there are too few early
             # truncation times, it may happen that is the number of patients at risk and the number of deaths is the same.
-            # we adjust for this using the Breslow-Fleming-Harrington estimator 
+            # we adjust for this using the Breslow-Fleming-Harrington estimator
             n = self.event_table.shape[0]
             net_population = (self.event_table['entrance'] - self.event_table['removed']).cumsum()
             if net_population.iloc[:int(n/2)].min() == 0:
@@ -243,9 +244,9 @@ class KaplanMeierFitter(object):
 class BreslowFlemingHarringtonFitter(object):
 
     """
-    Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator 
-    is a biased estimator of the survival function but is more stable when the popualtion is small and 
-    there are too few early truncation times, it may happen that is the number of patients at risk and 
+    Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator
+    is a biased estimator of the survival function but is more stable when the popualtion is small and
+    there are too few early truncation times, it may happen that is the number of patients at risk and
     the number of deaths is the same.
 
     Mathematically, the NAF estimator is the negative logarithm of the BFH estimator.
@@ -266,8 +267,8 @@ class BreslowFlemingHarringtonFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -309,13 +310,13 @@ class BreslowFlemingHarringtonFitter(object):
 
 class BayesianFitter(object):
     """
-    If you have small data, and KM feels too uncertain, you can use the BayesianFitter to 
+    If you have small data, and KM feels too uncertain, you can use the BayesianFitter to
     generate sample survival functions. The algorithm is:
 
     S_i(T) = \Prod_{t=0}^T (1 - p_t)
 
-    where p_t ~ Beta( 0.01 + d_t, 0.01 + n_t - d_t), d_t is the number of deaths and n_t is the size of the 
-    population at risk at time t. The prior is a Beta(0.01, 0.01) for each time point (high values led to a 
+    where p_t ~ Beta( 0.01 + d_t, 0.01 + n_t - d_t), d_t is the number of deaths and n_t is the size of the
+    population at risk at time t. The prior is a Beta(0.01, 0.01) for each time point (high values led to a
     high bias).
 
     Parameters:
@@ -334,8 +335,8 @@ class BayesianFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
 
         Returns:
@@ -365,7 +366,6 @@ class BayesianFitter(object):
         return sample_paths
 
 
-
 class AalenAdditiveFitter(object):
     """
     This class fits the regression model:
@@ -393,21 +393,21 @@ class AalenAdditiveFitter(object):
 
     def fit(self, dataframe, duration_col="T", event_col="E", timeline=None, id_col=None, show_progress=True):
         """
-        Perform inference on the coefficients of the Aalen additive model. 
+        Perform inference on the coefficients of the Aalen additive model.
 
         Parameters:
             dataframe: a pandas dataframe, with covariates and a duration_col and a event_col.
 
                 static covariates:
-                    one row per individual. duration_col refers to how long the individual was 
-                      observed for. event_col is a boolean: 1 if individual 'died', 0 else. id_col 
+                    one row per individual. duration_col refers to how long the individual was
+                      observed for. event_col is a boolean: 1 if individual 'died', 0 else. id_col
                       should be left as None.
 
                 time-varying covariates:
                     For time-varying covariates, an id_col is required to keep track of individuals'
-                    changing covariates. individual should have a unique id. duration_col refers to how 
-                    long the individual has been  observed to up to that point. event_col refers to if 
-                    the event (death) occured in that  period. Censored individuals will not have a 1. 
+                    changing covariates. individual should have a unique id. duration_col refers to how
+                    long the individual has been  observed to up to that point. event_col refers to if
+                    the event (death) occured in that  period. Censored individuals will not have a 1.
                     For example:
 
                         +----+---+---+------+------+
@@ -422,8 +422,8 @@ class AalenAdditiveFitter(object):
                         |  2 | 3 | 0 |    1 |    2 |
                         +----+---+---+------+------+
 
-            duration_col: specify what the duration column is called in the dataframe 
-            event_col: specify what the event occurred column is called in the dataframe 
+            duration_col: specify what the duration column is called in the dataframe
+            event_col: specify what the event occurred column is called in the dataframe
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
             progress_bar: include a fancy progress bar!
@@ -446,7 +446,7 @@ class AalenAdditiveFitter(object):
 
         #each individual should have an ID of time of leaving study
         df = df.set_index([id_col, duration_col])
-  
+
         C_panel = df[[event_col]].to_panel().transpose(1,2,0)
         C = C_panel.minor_xs(event_col).sum().astype(bool)
         T = (C_panel.minor_xs(event_col).notnull()).cumsum().idxmax()
@@ -454,16 +454,15 @@ class AalenAdditiveFitter(object):
         del df[event_col]
         n,d = df.shape
 
-        
+
         wp = df.to_panel().transpose(1,2,0).bfill().fillna(0) #bfill will cause problems later, plus it is slow.
 
         non_censorsed_times = T[C].iteritems()
 
-        #initialize dataframe to store estimates
-        hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
+        hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)),
                         columns = df.columns, index = from_tuples(non_censorsed_times))
 
-        variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
+        variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)),
                         columns = df.columns, index = from_tuples(non_censorsed_times))
 
         #initializes the penalizer matrix
@@ -472,7 +471,7 @@ class AalenAdditiveFitter(object):
         progress = progress_bar(len(non_censorsed_times))
         #wp = wp.transpose(1,0,2)
 
-        for i,(id, time) in enumerate(non_censorsed_times): 
+        for i,(id, time) in enumerate(non_censorsed_times):
 
             relevant_individuals = (ids==id)
             assert relevant_individuals.sum() == 1.
@@ -485,7 +484,7 @@ class AalenAdditiveFitter(object):
                 V = dot(inv(dot(X.T, X) + penalizer), X.T)
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
-                
+
             v = dot(V, 1.0*relevant_individuals )
 
             hazards_.ix[id, time]  = v.T
@@ -535,8 +534,8 @@ class AalenAdditiveFitter(object):
         d = self.cumulative_hazards_.shape[1]
         index = [['upper'] * n + ['lower'] * n, np.concatenate([self.timeline, self.timeline])]
 
-        self.confidence_intervals_ = pd.DataFrame( np.zeros((2 * n, d)), 
-                                                    index=index, 
+        self.confidence_intervals_ = pd.DataFrame( np.zeros((2 * n, d)),
+                                                    index=index,
                                                     columns=self.cumulative_hazards_.columns
                                                   )
 
@@ -596,6 +595,297 @@ class AalenAdditiveFitter(object):
         return s
 
 
+class RobustROS(object):
+    '''
+    ROS = ranked-order statistics
+    This class implements the Robust ROS method outlined in Nondetects and
+    Data Analysis by Dennis R. Helsel (John Wiley, 2005) to estimate the
+    left-censored (non-detect) values of a dataset.
+
+    Parameters
+    ----------
+    data : pandas DataFrame
+        The censored dataset for which the non-detect values need to be
+        estimated.
+
+    rescol : optional string (default='res')
+        The name of the column containing the numerical values of the
+        dataset. Left-censored values should be set to the detection limit.
+
+    cencol : optional string (default='cen')
+        The name of the column containing indicating which observations are
+        censored. `True` implies Left-censorship. `False` -> uncensored.
+
+    Attributes
+    ----------
+    N_obs : int
+        Total number of results in the dataset
+
+    N_cen : int
+        Total number of non-detect results in the dataset.
+
+    cohn : pandas DataFrame
+        A DataFrame of the unique detection limits found in `data` along
+        with the `A`, `B`, `C`, and `PE` quantities computed by the
+        estimation.
+
+    data : pandas DataFrame
+        An expanded version of the original dataset `data` passed the
+        constructor included in the `modeled` column.
+
+    debug : pandas DataFrame
+        A full version of the `data` DataFrame that includes preliminary
+        quantities.
+
+    Example
+    -------
+    >>> from lifelines.estimation import RobustROS
+    >>> ros = RobustROS(myDataFrame, rescol='conc', cencol='censored')
+    >>> ros.fit()
+    >>> print(ros.data)
+
+    Notes
+    -----
+    It is inappropriate to replace specific left-censored values with the
+    estimated values from this method. The estimated values
+    (self.data['modeled']) should instead be used to refine descriptive
+    statistics of the dataset as a whole.
+
+    '''
+    def __init__(self, data, rescol='res', cencol='cen'):
+
+        if not isinstance(data, pandas.DataFrame):
+            raise ValueError("Input `data` must be a pandas.DataFrame")
+
+        if not data.index.is_unique:
+            raise ValueError("Index of input DataFrame `data` must be unique")
+
+        if data[rescol].min() <= 0:
+            raise ValueError('All result values of `data` must be positive')
+
+        # rename the dataframe columns to the standard names
+        # these will be used throughout ros.py when convenient
+        newdata = data.rename(columns={rescol: 'res', cencol: 'cen'})
+
+        # confirm a datatype real quick
+        try:
+            newdata.res = np.float64(newdata.res)
+        except ValueError:
+            raise ValueError('Result data is not uniformly numeric')
+
+        # and get the basic info
+        self.N_obs = newdata.shape[0]
+        self.N_cen = newdata[newdata.cen].shape[0]
+
+        # sort the data
+        self.data = _ros_sort(newdata, rescol='res', cencol='cen')
+
+        # create a dataframe of detection limits and their parameters
+        # used in the ROS estimation
+        self.cohn = self._get_cohn_numbers()
+
+    def _get_cohn_numbers(self):
+        '''
+        Computes the Cohn numbers for the delection limits in the dataset.
+        '''
+
+        def _A(row):
+            '''
+            Helper function to compute the `A` quantity.
+            '''
+            # index of results above the lower DL
+            above = self.data.res >= row['lower']
+
+            # index of results below the upper DL
+            below = self.data.res < row['upper']
+
+            # index of non-detect results
+            detect = self.data.cen == False
+
+            # return the number of results where all condictions are True
+            return self.data[above & below & detect].shape[0]
+
+        def _B(row):
+            '''
+            Helper function to compute the `B` quantity
+            '''
+            # index of data less than the lower DL
+            less_than = self.data.res < row['lower']
+
+            # index of data less than or equal to the lower DL
+            less_thanequal = self.data.res <= row['lower']
+
+            # index of detects, non-detects
+            detect = self.data.cen == False
+            nondet = self.data.cen == True
+
+            # number results less than or equal to lower DL and non-detect
+            LTE_nondets = self.data[less_thanequal & nondet].shape[0]
+
+            # number of results less than lower DL and detected
+            LT_detects = self.data[less_than & detect].shape[0]
+
+            # return the sum
+            return LTE_nondets + LT_detects
+
+        def _C(row):
+            '''
+            Helper function to compute the `C` quantity
+            '''
+            censored_below = self.data.res[self.data.cen] == row['lower']
+            return censored_below.sum()
+
+        # unique values
+        cohn = pandas.unique(self.data.res[self.data.cen])
+
+        # if there is a results smaller than the minimum detection limit,
+        # add that value to the array
+        if cohn.shape[0] > 0:
+            if self.data.res.min() < cohn.min():
+                cohn = np.hstack([self.data.res.min(), cohn])
+
+            # create a dataframe
+            cohn = pandas.DataFrame(cohn, columns=['DL'])
+
+            # copy the cohn in two columns. offset the 2nd (upper) column
+            cohn['lower'] = cohn['DL']
+            if cohn.shape[0] > 1:
+                cohn['upper'] = cohn.DL.shift(-1).fillna(value=np.inf)
+            else:
+                cohn['upper'] = np.inf
+
+            # compute A, B, and C
+            cohn['A'] = cohn.apply(_A, axis=1)
+            cohn['B'] = cohn.apply(_B, axis=1)
+            cohn['C'] = cohn.apply(_C, axis=1)
+
+            # add an extra row
+            cohn = cohn.reindex(range(cohn.shape[0]+1))
+
+            # add the 'PE' column, initialize with zeros
+            cohn['PE'] = 0.0
+
+        else:
+            dl_cols = ['DL', 'lower', 'upper', 'A', 'B', 'C', 'PE']
+            cohn = pandas.DataFrame(np.empty((0,7)), columns=dl_cols)
+
+        return cohn
+
+    def fit(self):
+        '''
+        Estimates the values of the censored data
+        '''
+        def _ros_DL_index(row):
+            '''
+            Helper function to create an array of indices for the detection
+            limits (self.cohn) corresponding to each data point
+            '''
+            DLIndex = np.zeros(len(self.data.res))
+            if self.cohn.shape[0] > 0:
+                index, = np.where(self.cohn['DL'] <= row['res'])
+                DLIndex = index[-1]
+            else:
+                DLIndex = 0
+
+            return DLIndex
+
+        def _ros_plotting_pos(row):
+            '''
+            Helper function to compute the ROS'd plotting position
+            '''
+            dl_1 = self.cohn.iloc[row['DLIndex']]
+            dl_2 = self.cohn.iloc[row['DLIndex']+1]
+            if row['cen']:
+                return (1 - dl_1['PE']) * row['Rank']/(dl_1['C']+1)
+            else:
+                return (1 - dl_1['PE']) + (dl_1['PE'] - dl_2['PE']) * \
+                        row['Rank'] / (dl_1['A']+1)
+
+        def _select_modeled(row):
+            '''
+            Helper fucntion to select "final" data from original detects
+            and estimated non-detects
+            '''
+            if row['cen']:
+                return row['modeled_data']
+            else:
+                return row['res']
+
+        def _select_half_DL(row):
+            '''
+            Helper function to select half cohn when there are too few detections
+            '''
+            if row['cen']:
+                return 0.5 * row['res']
+            else:
+                return row['res']
+
+        # create a DLIndex column that references self.cohn
+        self.data['DLIndex'] = self.data.apply(_ros_DL_index, axis=1)
+
+        # compute the ranks of the data
+        self.data['Rank'] = 1
+        groupcols = ['DLIndex', 'cen', 'Rank']
+        rankgroups = self.data[groupcols].groupby(by=['DLIndex', 'cen'])
+        self.data['Rank'] = rankgroups.transform(lambda x: x.cumsum())
+
+        # detect/non-detect selectors
+        detect_selector = self.data.cen == False
+        nondet_selector = self.data.cen == True
+
+        # if there are no non-detects, just spit everything back out
+        if self.N_cen == 0:
+            self.data['modeled'] = self.data['res']
+
+        # if there are too few detects, use half DL
+        elif self.N_obs - self.N_cen < 2 or self.N_cen/self.N_obs > 0.8:
+            self.data['modeled'] = self.data.apply(_select_half_DL, axis=1)
+
+        # in most cases, actually use the MR method to estimate NDs
+        else:
+            # compute the PE values
+            for j in self.cohn.index[:-1][::-1]:
+                self.cohn.iloc[j]['PE'] = self.cohn.iloc[j+1]['PE'] + \
+                   self.cohn.iloc[j]['A'] / \
+                   (self.cohn.iloc[j]['A'] + self.cohn.iloc[j]['B']) * \
+                   (1 - self.cohn.loc[j+1]['PE'])
+
+            # compute the plotting position of the data (uses the PE stuff)
+            self.data['plot_pos'] = self.data.apply(_ros_plotting_pos, axis=1)
+
+            # correctly sort the plotting positions of the ND data:
+            ND_plotpos = self.data['plot_pos'][self.data.cen]
+            ND_plotpos.values.sort()
+            self.data['plot_pos'][self.data.cen] = ND_plotpos
+
+            # estimate a preliminary value of the Z-scores
+            self.data['Zprelim'] = stats.distributions.norm.ppf(self.data['plot_pos'])
+
+            # fit a line to the logs of the detected data
+            fit = stats.linregress(self.data['Zprelim'][detect_selector],
+                                   np.log(self.data['res'][detect_selector]))
+
+            # save the fit params to an attribute
+            self.fit = fit
+
+            # pull out the slope and intercept for use later
+            slope, intercept = fit[:2]
+
+            # model the data based on the best-fit curve
+            self.data['modeled_data'] = np.exp(slope*self.data['Zprelim'][nondet_selector] + intercept)
+
+            # select out the final data
+            self.data['modeled'] = self.data.apply(_select_modeled, axis=1)
+
+        # create the debug attribute as a copy of the self.data attribute
+        self.debug = self.data.copy(deep=True)
+
+        # select out only the necessary columns for data
+        self.data = self.data[['modeled', 'res', 'cen']]
+
+        return self
+>>>>>>> add RobustROS (left censorship) class to estimation methods
+
 #### Utils ####
 
 def _subtract(self, estimate):
@@ -643,7 +933,7 @@ def _predict(self, estimate, label):
       Predict the %s at certain times
 
       Parameters:
-        time: an array of times to predict the value of %s at 
+        time: an array of times to predict the value of %s at
       """ % (estimate, estimate)
 
     def predict(time):
@@ -651,6 +941,7 @@ def _predict(self, estimate, label):
 
     predict.__doc__ = doc_string
     return predict
+
 
 def preprocess_inputs(durations, event_observed, timeline, entry ):
 
@@ -722,13 +1013,39 @@ def qth_survival_times(q, survival_functions):
     return v
 
 
-
 def median_survival_times(survival_functions):
     return qth_survival_times(0.5, survival_functions)
 
 
 def asymmetric_epanechnikov_kernel(q, x):
     return (64 * (2 - 4 * q + 6 * q * q - 3 * q ** 3) + 240 * (1 - q) ** 2 * x) / ((1 + q) ** 4 * (19 - 18 * q + 3 * q ** 2))
+
+
+def _ros_sort(dataframe, rescol='res', cencol='cen'):
+    '''
+    This function prepares a dataframe for ROS. It sorts ascending with
+    non-detects on top. something like this:
+        [2, 4, 4, 10, 3, 5, 6, 10, 12, 40, 78, 120]
+    where [2, 4, 4, 10] being the ND reults (masked the output).
+
+    Input:
+        dataframe : a pandas dataframe with results and qualifiers.
+            The qualifiers of the dataframe must have two states:
+            detect and non-detect.
+        rescol (default = 'res') : name of the column in the dataframe
+            that contains result values.
+        qualcol (default = 'qual') : name of the column in the dataframe
+            that containes qualifiers. There must be a single, unique
+            qualifer that indicates that a result is non-detect.
+
+    Output:
+        Sorted dataframe with a dropped index.
+    '''
+    # separate detects from non-detects
+    nondetects = dataframe[dataframe[cencol]].sort(columns=rescol)
+    detects = dataframe[~dataframe[cencol]].sort(columns=rescol)
+
+    return nondetects.append(detects)
 
 """
 References:
