@@ -384,7 +384,7 @@ class AalenAdditiveFitter(object):
 
     """
 
-    def __init__(self, fit_intercept=True, alpha=0.95, penalizer=0.0):
+    def __init__(self, fit_intercept=True, alpha=0.95, penalizer=0.5):
         self.fit_intercept = fit_intercept
         self.alpha = alpha
         self.penalizer = penalizer
@@ -470,24 +470,26 @@ class AalenAdditiveFitter(object):
         penalizer = self.penalizer*np.eye(d)
         ids = wp.items
         progress = progress_bar(len(non_censorsed_times))
+        #wp = wp.transpose(1,0,2)
 
         for i,(id, time) in enumerate(non_censorsed_times): 
 
             relevant_individuals = (ids==id)
             assert relevant_individuals.sum() == 1.
 
+            #X = wp[time].values
             X = wp.major_xs(time).values.T
 
             #perform linear regression step.
             try:
-                V = np.dot(inv(np.dot(X.T, X) + penalizer), X.T)
+                V = dot(inv(dot(X.T, X) + penalizer), X.T)
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
                 
-            v = np.dot(V, 1.0*relevant_individuals )
+            v = dot(V, 1.0*relevant_individuals )
 
             hazards_.ix[id, time]  = v.T
-            variance_.ix[id, time] = np.dot( V[:, relevant_individuals], V[:, relevant_individuals].T ).diagonal()
+            variance_.ix[id, time] = V[:, relevant_individuals][:,0]**2
 
             #update progress bar
             if show_progress:
