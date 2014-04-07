@@ -595,12 +595,11 @@ class AalenAdditiveFitter(object):
         return s
 
 
-class RobustROS(object):
+class RobustROSFitter(object):
     '''
-    ROS = ranked-order statistics
-    This class implements the Robust ROS method outlined in Nondetects and
-    Data Analysis by Dennis R. Helsel (John Wiley, 2005) to estimate the
-    left-censored (non-detect) values of a dataset.
+    This class implements the Robust regression-on-order statistics (ROS)
+    method outlined in Nondetects and Data Analysis by Dennis R. Helsel (2005)
+    to estimate the left-censored (non-detect) values of a dataset.
 
     Parameters
     ----------
@@ -608,11 +607,11 @@ class RobustROS(object):
         The censored dataset for which the non-detect values need to be
         estimated.
 
-    rescol : optional string (default='res')
+    result_col : optional string (default='res')
         The name of the column containing the numerical values of the
         dataset. Left-censored values should be set to the detection limit.
 
-    cencol : optional string (default='cen')
+    censorship_col : optional string (default='cen')
         The name of the column containing indicating which observations are
         censored. `True` implies Left-censorship. `False` -> uncensored.
 
@@ -640,7 +639,8 @@ class RobustROS(object):
     Example
     -------
     >>> from lifelines.estimation import RobustROS
-    >>> ros = RobustROS(myDataFrame, rescol='conc', cencol='censored')
+    >>> ros = RobustROSFitter(myDataFrame, result_col='conc',
+                              censorship_col='censored')
     >>> ros.fit()
     >>> print(ros.data)
 
@@ -652,20 +652,20 @@ class RobustROS(object):
     statistics of the dataset as a whole.
 
     '''
-    def __init__(self, data, rescol='res', cencol='cen'):
+    def __init__(self, data, result_col='res', censorship_col='cen'):
 
-        if not isinstance(data, pandas.DataFrame):
-            raise ValueError("Input `data` must be a pandas.DataFrame")
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("Input `data` must be a pandas DataFrame")
 
         if not data.index.is_unique:
             raise ValueError("Index of input DataFrame `data` must be unique")
 
-        if data[rescol].min() <= 0:
+        if data[result_col].min() <= 0:
             raise ValueError('All result values of `data` must be positive')
 
         # rename the dataframe columns to the standard names
         # these will be used throughout ros.py when convenient
-        newdata = data.rename(columns={rescol: 'res', cencol: 'cen'})
+        newdata = data.rename(columns={result_col: 'res', censorship_col: 'cen'})
 
         # confirm a datatype real quick
         try:
@@ -678,7 +678,7 @@ class RobustROS(object):
         self.N_cen = newdata[newdata.cen].shape[0]
 
         # sort the data
-        self.data = _ros_sort(newdata, rescol='res', cencol='cen')
+        self.data = _ros_sort(newdata, result_col='res', censorship_col='cen')
 
         # create a dataframe of detection limits and their parameters
         # used in the ROS estimation
@@ -736,7 +736,7 @@ class RobustROS(object):
             return censored_below.sum()
 
         # unique values
-        cohn = pandas.unique(self.data.res[self.data.cen])
+        cohn = pd.unique(self.data.res[self.data.cen])
 
         # if there is a results smaller than the minimum detection limit,
         # add that value to the array
@@ -745,7 +745,7 @@ class RobustROS(object):
                 cohn = np.hstack([self.data.res.min(), cohn])
 
             # create a dataframe
-            cohn = pandas.DataFrame(cohn, columns=['DL'])
+            cohn = pd.DataFrame(cohn, columns=['DL'])
 
             # copy the cohn in two columns. offset the 2nd (upper) column
             cohn['lower'] = cohn['DL']
@@ -767,7 +767,7 @@ class RobustROS(object):
 
         else:
             dl_cols = ['DL', 'lower', 'upper', 'A', 'B', 'C', 'PE']
-            cohn = pandas.DataFrame(np.empty((0,7)), columns=dl_cols)
+            cohn = pd.DataFrame(np.empty((0,7)), columns=dl_cols)
 
         return cohn
 
@@ -1021,29 +1021,31 @@ def asymmetric_epanechnikov_kernel(q, x):
     return (64 * (2 - 4 * q + 6 * q * q - 3 * q ** 3) + 240 * (1 - q) ** 2 * x) / ((1 + q) ** 4 * (19 - 18 * q + 3 * q ** 2))
 
 
-def _ros_sort(dataframe, rescol='res', cencol='cen'):
+def _ros_sort(dataframe, result_col='res', censorship_col='cen'):
     '''
     This function prepares a dataframe for ROS. It sorts ascending with
     non-detects on top. something like this:
         [2, 4, 4, 10, 3, 5, 6, 10, 12, 40, 78, 120]
     where [2, 4, 4, 10] being the ND reults (masked the output).
 
-    Input:
+    Parameters
+    ----------
         dataframe : a pandas dataframe with results and qualifiers.
             The qualifiers of the dataframe must have two states:
             detect and non-detect.
-        rescol (default = 'res') : name of the column in the dataframe
+        result_col (default = 'res') : name of the column in the dataframe
             that contains result values.
-        qualcol (default = 'qual') : name of the column in the dataframe
-            that containes qualifiers. There must be a single, unique
-            qualifer that indicates that a result is non-detect.
+        censorship_col(default = 'cen') : name of the column in the dataframe
+            that indicates that a result is left-censored.
+            (i.e., True -> censored, False -> uncensored)
 
-    Output:
-        Sorted dataframe with a dropped index.
+    Output
+    ------
+        Sorted pandas DataFrame.
     '''
     # separate detects from non-detects
-    nondetects = dataframe[dataframe[cencol]].sort(columns=rescol)
-    detects = dataframe[~dataframe[cencol]].sort(columns=rescol)
+    nondetects = dataframe[dataframe[censorship_col]].sort(columns=result_col)
+    detects = dataframe[~dataframe[censorship_col]].sort(columns=result_col)
 
     return nondetects.append(detects)
 
