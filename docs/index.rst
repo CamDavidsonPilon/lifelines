@@ -37,6 +37,7 @@ Contents:
 
   Survival Analysis intro
   Intro to lifelines
+  survival_regression
   examples
 
 

@@ -1,18 +1,18 @@
 More examples and recipes
 ==================================
 
-This section goes through some examples. 
+This section goes through some examples and recipes to help you use *lifelines*. 
 
 Getting survival-table data into *lifelines* format
 #####################################################
 
-*lifelines* estimation classes like arrays that represent one individual for each element. If you instead have data in 
-a *survival table*, there exists a utility method to get it into lifelines format.
+*lifelines* classes are designed for lists or arrays that represent one individual per element. If you instead have data in 
+a *survival table* format, there exists a utility method to get it into *lifelines* format.
 
 **Example:** Suppose you have a csv file with data that looks like this:
 
 =========================   ==================    ============
-time (months, days, ...)      observed deaths        missing                      
+time (months, days, ...)      observed deaths       censored                      
 =========================   ==================    ============
 0                               7                    0 
 1                               1                    1
@@ -28,28 +28,15 @@ time (months, days, ...)      observed deaths        missing
     import pandas as pd
     
     # your argument in the function call below will be different
-    df = pd.read_csv('file.csv', index_cols=[0], columns = ['observed deaths', 'missing'] )
+    df = pd.read_csv('file.csv', index_cols=[0], columns = ['observed deaths', 'censored'] )
 
     from lifelines.utils import survival_events_from_table
 
-    T,C = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='missing')
+    T,C = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censoreds')
     print T # np.array([0,0,0,0,0,0,0,1,2,2, ...])
     print C # np.array([1,1,1,1,1,1,1,0,1,1, ...])
 
 
-
-
-Adding a label to the estimation's DataFrame
-##############################################
-
-By default, the estimate created is a DataFrame with column ``KM-estimate`` in ``KaplanMeierFitter`` and ``NA-esimate`` 
-in ``NelsonAalenFitter``. You change this in the call to ``.fit``:
-
-.. code-block:: python
-
-    kmf.fit(T,event_observed=C, label='<new label here>')
-
-Note: in versions prior to lifelines 0.2.3, this was called ``column`` and accepted a 1-length array.
 
 Plotting multiple figures on an plot:
 ##############################################
@@ -199,7 +186,7 @@ hypothesis that all the populations have the same "death" generation process).
 
 
 
-Example to set the index for an estimate 
+Set the index/timeline of a estimate
 ##############################################
 
 Suppose your dataset has lifetimes grouped near time 60, thus after fitting
@@ -314,6 +301,8 @@ id                   T                      C
 13                   36                 True
 14                   33                 True
 ==================   ============   ============
+
+
 
 
 

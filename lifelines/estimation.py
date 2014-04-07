@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import numpy as np
-from numpy.linalg import LinAlgError, inv, pinv
+from numpy.linalg import LinAlgError, inv
 from numpy import dot
 import pandas as pd
 from numpy.random import beta
@@ -480,16 +480,20 @@ class AalenAdditiveFitter(object):
 
             #perform linear regression step.
             try:
-                V = np.dot(pinv(np.dot(X.T, X) + penalizer), X.T)
+                V = np.dot(inv(np.dot(X.T, X) + penalizer), X.T)
             except LinAlgError:
-                print("Linear regression error. Try increasing the penalizer.")
+                print("Linear regression error. Try increasing the penalizer term.")
+                
             v = np.dot(V, 1.0*relevant_individuals )
 
             hazards_.ix[id, time]  = v.T
             variance_.ix[id, time] = np.dot( V[:, relevant_individuals], V[:, relevant_individuals].T ).diagonal()
+
+            #update progress bar
             if show_progress:
                 progress.update(i)
 
+        #print a new line so the console displays well
         if show_progress:
             print()
 
