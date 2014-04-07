@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 from numpy.linalg import LinAlgError, inv, pinv
 from numpy import dot
@@ -7,6 +9,7 @@ from numpy.random import beta
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, quadrature, \
                             epanechnikov_kernel, StatError, coalesce
+from lifelines.progress_bar import progress_bar
 
 
 class NelsonAalenFitter(object):
@@ -294,6 +297,15 @@ class BreslowFlemingHarringtonFitter(object):
         self.plot_survival_function = self.plot
         return self
 
+    def __repr__(self):
+        try:
+            s = """<lifelines.BreslowFlemingHarringtonFitter: fitted with %d observations, %d censored>""" % (
+                self.event_observed.shape[0], (1-self.event_observed).sum())
+        except AttributeError as e:
+            s = """<lifelines.BreslowFlemingHarringtonFitter>"""
+        return s
+
+
 
 class BayesianFitter(object):
     """
@@ -379,7 +391,7 @@ class AalenAdditiveFitter(object):
         assert penalizer >= 0, "penalizer must be >= 0."
 
 
-    def fit(self, dataframe, duration_col="T", event_col="E", timeline=None, id_col=None):
+    def fit(self, dataframe, duration_col="T", event_col="E", timeline=None, id_col=None, show_progress=True):
         """
         Perform inference on the coefficients of the Aalen additive model. 
 
@@ -414,21 +426,25 @@ class AalenAdditiveFitter(object):
             event_col: specify what the event occurred column is called in the dataframe 
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
+            progress_bar: include a fancy progress bar!
 
 
         Returns:
           self, with new methods like plot, smoothed_hazards_ and properties like cumulative_hazards_
         """
-
+        from_tuples = pd.MultiIndex.from_tuples
         df = dataframe.copy()
+
+        #only for time-indp. covariates
         if id_col is None:
-            #only for time-indp. covariates
             df['id'] = np.arange(df.shape[0])
             id_col = 'id'
 
+        #if the regression should fit an intercept
         if self.fit_intercept:
             df['baseline'] = 1.
 
+        #each individual should have an ID of time of leaving study
         df = df.set_index([id_col, duration_col])
   
         C_panel = df[[event_col]].to_panel().transpose(1,2,0)
@@ -438,19 +454,23 @@ class AalenAdditiveFitter(object):
         del df[event_col]
         n,d = df.shape
 
-        from_tuples = pd.MultiIndex.from_tuples
+        
         wp = df.to_panel().transpose(1,2,0).bfill().fillna(0) #bfill will cause problems later, plus it is slow.
 
         non_censorsed_times = T[C].iteritems()
+
+        #initialize dataframe to store estimates
         hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
                         columns = df.columns, index = from_tuples(non_censorsed_times))
 
         variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
                         columns = df.columns, index = from_tuples(non_censorsed_times))
-        
-        ids = wp.items
+
+        #initializes the penalizer matrix
         penalizer = self.penalizer*np.eye(d)
-        
+        ids = wp.items
+        progress = progress_bar(len(non_censorsed_times))
+
         for i,(id, time) in enumerate(non_censorsed_times): 
 
             relevant_individuals = (ids==id)
@@ -462,11 +482,16 @@ class AalenAdditiveFitter(object):
             try:
                 V = np.dot(pinv(np.dot(X.T, X) + penalizer), X.T)
             except LinAlgError:
-                print "Linear regression error. Try increasing the penalizer."
+                print("Linear regression error. Try increasing the penalizer.")
             v = np.dot(V, 1.0*relevant_individuals )
 
             hazards_.ix[id, time]  = v.T
             variance_.ix[id, time] = np.dot( V[:, relevant_individuals], V[:, relevant_individuals].T ).diagonal()
+            if show_progress:
+                progress.update(i)
+
+        if show_progress:
+            print()
 
         #not sure this is the correct thing to do.
         self.hazards_ = hazards_.groupby(level=1).sum()
@@ -484,9 +509,10 @@ class AalenAdditiveFitter(object):
         self.data = wp
 
         self.durations = T
-        self.event_occured = C
+        self.event_observed = C
         self._compute_confidence_intervals()
         self.plot = plot_regressions(self)
+
         return self
 
     def smoothed_hazards_(self, bandwidth=1):
@@ -555,8 +581,16 @@ class AalenAdditiveFitter(object):
         t = self.cumulative_hazards_.index
         return quadrature(self.predict_survival_function(X).values.T, t)
 
-# utils
+    def __repr__(self):
+        try:
+            s = """<lifelines.AalenAdditiveFitter: fitted with %d observations, %d censored>""" % (
+                self.event_observed.shape[0], (1.-self.event_observed).sum())
+        except AttributeError as e:
+            s = """<lifelines.AalenAdditiveFitter>"""
+        return s
 
+
+#### Utils ####
 
 def _subtract(self, estimate):
     class_name = self.__class__.__name__
