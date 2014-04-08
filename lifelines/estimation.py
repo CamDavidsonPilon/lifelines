@@ -457,16 +457,14 @@ class AalenAdditiveFitter(object):
         #import pdb
         #pdb.set_trace()
         wp = df.to_panel().bfill().fillna(0) #bfill will cause problems later, plus it is slow.
-
         non_censorsed_times = T[C].iteritems()
-
+        columns = wp.items
         #initialize dataframe to store estimates
         hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
-                        columns = df.columns, index = from_tuples(non_censorsed_times))
+                        columns = columns, index = from_tuples(non_censorsed_times))
 
         variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
-                        columns = df.columns, index = from_tuples(non_censorsed_times))
-
+                        columns = columns, index = from_tuples(non_censorsed_times))
         #initializes the penalizer matrix
         penalizer = self.penalizer*np.eye(d)
         ids = wp.minor_axis.values
@@ -500,10 +498,11 @@ class AalenAdditiveFitter(object):
         if show_progress:
             print()
 
+        ordered_cols = df.columns #to_panel() mixes up my columns
         #not sure this is the correct thing to do.
-        self.hazards_ = hazards_.groupby(level=1).sum()
-        self.cumulative_hazards_= self.hazards_.cumsum()
-        self.variance_ = variance_.groupby(level=1).sum()
+        self.hazards_ = hazards_.groupby(level=1).sum()[ordered_cols]
+        self.cumulative_hazards_= self.hazards_.cumsum()[ordered_cols]
+        self.variance_ = variance_.groupby(level=1).sum()[ordered_cols]
 
         if timeline is not None:
             self.hazards_ = self.hazards_.reindex(timeline, method='ffill')
