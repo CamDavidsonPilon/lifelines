@@ -1,1 +1,3 @@
-from .estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, BreslowFlemingHarringtonFitter
+from .estimation import (KaplanMeierFitter, NelsonAalenFitter,
+                         AalenAdditiveFitter, BreslowFlemingHarringtonFitter,
+                         RobustROSFitter)

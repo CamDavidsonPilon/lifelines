@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
+import matplotlib.pyplot as plt
+
 import pandas as pd
 
 from ..estimation import RobustROSFitter
@@ -90,6 +92,14 @@ class _base_ROS_Mixin(unittest.TestCase):
     def test_non_dataframe_error(self):
         data = self.data.values
         npt.assert_raises(ValueError, RobustROSFitter, data)
+
+    def test_plot_default(self):
+        ax = self.ros.plot()
+        self.assertTrue(isinstance(ax, plt.Axes))
+
+    def test_plot_ylogFalse_withAx(self):
+        fig, ax = plt.subplots()
+        ax = self.ros.plot(ylog=False, ax=ax)
 
 
 class test_ROS_Helsel_Arsenic(_base_ROS_Mixin):

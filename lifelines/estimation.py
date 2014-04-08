@@ -3,6 +3,7 @@ from __future__ import print_function
 import numpy as np
 from numpy.linalg import LinAlgError, inv
 from numpy import dot
+import matplotlib.pyplot as plt
 import pandas as pd
 from numpy.random import beta
 from scipy import stats
@@ -305,7 +306,6 @@ class BreslowFlemingHarringtonFitter(object):
         except AttributeError as e:
             s = """<lifelines.BreslowFlemingHarringtonFitter>"""
         return s
-
 
 
 class BayesianFitter(object):
@@ -872,7 +872,9 @@ class RobustROSFitter(object):
             slope, intercept = fit[:2]
 
             # model the data based on the best-fit curve
-            self.data['modeled_data'] = np.exp(slope*self.data['Zprelim'][nondet_selector] + intercept)
+            self.data['modeled_data'] = np.exp(
+                slope*self.data['Zprelim'][nondet_selector] + intercept
+            )
 
             # select out the final data
             self.data['modeled'] = self.data.apply(_select_modeled, axis=1)
@@ -884,10 +886,95 @@ class RobustROSFitter(object):
         self.data = self.data[['modeled', 'res', 'cen']]
 
         return self
->>>>>>> add RobustROS (left censorship) class to estimation methods
+
+    def plot(self, ax=None, show_raw=True, raw_kwds={}, model_kwds={},
+             leg_kwds={}, ylog=True):
+        '''
+        Generate a QQ plot of the raw (censored) and modeled data.
+
+        Parameters
+        ----------
+        ax : optional matplotlib Axes
+            The axis on which the figure will be drawn. If no specified a new
+            one is created.
+
+        show_raw : optional boolean (default = True)
+            Toggles on (True) or off (False) the drawing of the censored
+            quantiles.
+
+        raw_kwds : optional dict
+            Plotting parameters for the censored data. Passed directly to
+            `ax.plot`.
+
+        model_kwds : optional dict
+            Plotting parameters for the modeled data. Passed directly to
+            `ax.plot`.
+
+        leg_kwds : optional dict
+            Optional kwargs for the legend, which is only drawn if `show_raw`
+            is True. Passed directly to `ax.legend`.
+
+        ylog : optional boolean (default = True)
+            Toggles the logarthmic scale of the y-axis.
+
+        Returns
+        -------
+        ax : matplotlib Axes
+
+        '''
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.figure
+
+        # legend options
+        leg_params = {
+            'loc': 'upper left',
+            'fontsize': 8
+        }
+        leg_params.update(leg_kwds)
+
+        # modeled data
+        mod_symbols = {
+            'marker': 'o',
+            'markersize': 6,
+            'markeredgewidth': 1.0,
+            'markeredgecolor': 'none',
+            'markerfacecolor': 'CornflowerBlue',
+            'linestyle': 'none',
+            'label': 'Modeled data',
+            'alpha': 0.87
+        }
+        mod_symbols.update(model_kwds)
+        osm_mod, osr_mod = stats.probplot(self.data['modeled'], fit=False)
+        ax.plot(osm_mod, osr_mod, **mod_symbols)
+
+        # raw data
+        if show_raw:
+            raw_symbols = {
+                'marker': 's',
+                'markersize': 6,
+                'markeredgewidth': 1.0,
+                'markeredgecolor': '0.35',
+                'markerfacecolor': 'none',
+                'linestyle': 'none',
+                'label': 'Censored data',
+                'alpha': 0.70
+            }
+            raw_symbols.update(raw_kwds)
+            osm_raw, osr_raw = stats.probplot(self.data['res'], fit=False)
+            ax.plot(osm_raw, osr_raw, **raw_symbols)
+            ax.legend(**leg_params)
+
+        ax.set_xlabel('Theoretical Quantiles')
+        ax.set_ylabel('Observations')
+        if ylog:
+            ax.set_yscale('log')
+
+        return ax
+
 
 #### Utils ####
-
 def _subtract(self, estimate):
     class_name = self.__class__.__name__
     doc_string = """
@@ -1024,24 +1111,22 @@ def asymmetric_epanechnikov_kernel(q, x):
 def _ros_sort(dataframe, result_col='res', censorship_col='cen'):
     '''
     This function prepares a dataframe for ROS. It sorts ascending with
-    non-detects on top. something like this:
-        [2, 4, 4, 10, 3, 5, 6, 10, 12, 40, 78, 120]
-    where [2, 4, 4, 10] being the ND reults (masked the output).
+    left-censored observations on top.
 
     Parameters
     ----------
-        dataframe : a pandas dataframe with results and qualifiers.
-            The qualifiers of the dataframe must have two states:
-            detect and non-detect.
-        result_col (default = 'res') : name of the column in the dataframe
-            that contains result values.
-        censorship_col(default = 'cen') : name of the column in the dataframe
-            that indicates that a result is left-censored.
-            (i.e., True -> censored, False -> uncensored)
+    dataframe : a pandas dataframe with results and qualifiers.
+        The qualifiers of the dataframe must have two states:
+        detect and non-detect.
+    result_col (default = 'res') : name of the column in the dataframe
+        that contains result values.
+    censorship_col(default = 'cen') : name of the column in the dataframe
+        that indicates that a result is left-censored.
+        (i.e., True -> censored, False -> uncensored)
 
     Output
     ------
-        Sorted pandas DataFrame.
+    Sorted pandas DataFrame.
     '''
     # separate detects from non-detects
     nondetects = dataframe[dataframe[censorship_col]].sort(columns=result_col)
