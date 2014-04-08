@@ -445,17 +445,18 @@ class AalenAdditiveFitter(object):
             df['baseline'] = 1.
 
         #each individual should have an ID of time of leaving study
-        df = df.set_index([id_col, duration_col])
+        df = df.set_index([duration_col, id_col])
   
-        C_panel = df[[event_col]].to_panel().transpose(1,2,0)
+        C_panel = df[[event_col]].to_panel().transpose(2,1,0)
         C = C_panel.minor_xs(event_col).sum().astype(bool)
         T = (C_panel.minor_xs(event_col).notnull()).cumsum().idxmax()
 
         del df[event_col]
         n,d = df.shape
 
-        
-        wp = df.to_panel().transpose(1,2,0).bfill().fillna(0) #bfill will cause problems later, plus it is slow.
+        #import pdb
+        #pdb.set_trace()
+        wp = df.to_panel().bfill().fillna(0) #bfill will cause problems later, plus it is slow.
 
         non_censorsed_times = T[C].iteritems()
 
@@ -468,9 +469,9 @@ class AalenAdditiveFitter(object):
 
         #initializes the penalizer matrix
         penalizer = self.penalizer*np.eye(d)
-        ids = wp.items
+        ids = wp.minor_axis.values
         progress = progress_bar(len(non_censorsed_times))
-        #wp = wp.transpose(1,0,2)
+        wp = wp.swapaxes(0,1, copy=False).swapaxes(1,2,copy=False)
 
         for i,(id, time) in enumerate(non_censorsed_times): 
 
@@ -478,7 +479,7 @@ class AalenAdditiveFitter(object):
             assert relevant_individuals.sum() == 1.
 
             #X = wp[time].values
-            X = wp.major_xs(time).values.T
+            X = wp[time].values
 
             #perform linear regression step.
             try:

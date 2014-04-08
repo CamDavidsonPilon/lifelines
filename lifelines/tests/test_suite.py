@@ -243,7 +243,7 @@ class StatisticalTests(unittest.TestCase):
         X['T'] = T
         X['E'] = 1
         # fit it to Aalen's model
-        aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+        aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
         aaf.fit(X)
 
         # predictions
@@ -280,7 +280,7 @@ class StatisticalTests(unittest.TestCase):
         # this is a visual test of the fitting the cumulative
         # hazards.
         n = 2500
-        d = 5
+        d = 10
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
@@ -468,7 +468,7 @@ class PlottingTests(unittest.TestCase):
         X['E'] = C
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
-        aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+        aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
 
         aaf.fit(X)
         ax = aaf.plot(iloc=slice(0, aaf.cumulative_hazards_.shape[0] - 100))
@@ -490,7 +490,7 @@ class PlottingTests(unittest.TestCase):
         X['E'] = C
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
-        aaf = AalenAdditiveFitter(penalizer=0., fit_intercept=False)
+        aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
         aaf.fit(X)
         ax = aaf.smoothed_hazards_(1).iloc[0:aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
