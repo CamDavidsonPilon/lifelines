@@ -597,9 +597,10 @@ class AalenAdditiveFitter(object):
 
 class RobustROSFitter(object):
     '''
-    This class implements the Robust regression-on-order statistics (ROS)
-    method outlined in Nondetects and Data Analysis by Dennis R. Helsel (2005)
-    to estimate the left-censored (non-detect) values of a dataset.
+    Class to implement the Robust regression-on-order statistics (ROS)
+    method outlined in Nondetects and Data Analysis by Dennis R. Helsel
+    (2005) to estimate the left-censored (non-detect) values of a
+    dataset.
 
     Parameters
     ----------
@@ -609,11 +610,13 @@ class RobustROSFitter(object):
 
     result_col : optional string (default='res')
         The name of the column containing the numerical values of the
-        dataset. Left-censored values should be set to the detection limit.
+        dataset. Left-censored values should be set to the detection
+        limit.
 
     censorship_col : optional string (default='cen')
-        The name of the column containing indicating which observations are
-        censored. `True` implies Left-censorship. `False` -> uncensored.
+        The name of the column containing indicating which observations
+        are censored.
+        `True` implies Left-censorship. `False` -> uncensored.
 
     Attributes
     ----------
@@ -646,8 +649,8 @@ class RobustROSFitter(object):
 
     Notes
     -----
-    It is inappropriate to replace specific left-censored values with the
-    estimated values from this method. The estimated values
+    It is inappropriate to replace specific left-censored values with
+    the estimated values from this method. The estimated values
     (self.data['modeled']) should instead be used to refine descriptive
     statistics of the dataset as a whole.
 
@@ -665,7 +668,9 @@ class RobustROSFitter(object):
 
         # rename the dataframe columns to the standard names
         # these will be used throughout ros.py when convenient
-        newdata = data.rename(columns={result_col: 'res', censorship_col: 'cen'})
+        newdata = data.rename(columns={
+            result_col: 'res', censorship_col: 'cen'
+        })
 
         # confirm a datatype real quick
         try:
@@ -777,8 +782,9 @@ class RobustROSFitter(object):
         '''
         def _ros_DL_index(row):
             '''
-            Helper function to create an array of indices for the detection
-            limits (self.cohn) corresponding to each data point
+            Helper function to create an array of indices for the
+            detection  limits (self.cohn) corresponding to each
+            data point
             '''
             DLIndex = np.zeros(len(self.data.res))
             if self.cohn.shape[0] > 0:
@@ -813,7 +819,8 @@ class RobustROSFitter(object):
 
         def _select_half_DL(row):
             '''
-            Helper function to select half cohn when there are too few detections
+            Helper function to select half cohn when there are
+            too few detections
             '''
             if row['cen']:
                 return 0.5 * row['res']
@@ -859,7 +866,7 @@ class RobustROSFitter(object):
             self.data['plot_pos'][self.data.cen] = ND_plotpos
 
             # estimate a preliminary value of the Z-scores
-            self.data['Zprelim'] = stats.distributions.norm.ppf(self.data['plot_pos'])
+            self.data['Zprelim'] = stats.norm.ppf(self.data['plot_pos'])
 
             # fit a line to the logs of the detected data
             fit = stats.linregress(self.data['Zprelim'][detect_selector],
@@ -895,24 +902,24 @@ class RobustROSFitter(object):
         Parameters
         ----------
         ax : optional matplotlib Axes
-            The axis on which the figure will be drawn. If no specified a new
-            one is created.
+            The axis on which the figure will be drawn. If no specified
+            a new one is created.
 
         show_raw : optional boolean (default = True)
             Toggles on (True) or off (False) the drawing of the censored
             quantiles.
 
         raw_kwds : optional dict
-            Plotting parameters for the censored data. Passed directly to
-            `ax.plot`.
+            Plotting parameters for the censored data. Passed directly
+            to `ax.plot`.
 
         model_kwds : optional dict
             Plotting parameters for the modeled data. Passed directly to
             `ax.plot`.
 
         leg_kwds : optional dict
-            Optional kwargs for the legend, which is only drawn if `show_raw`
-            is True. Passed directly to `ax.legend`.
+            Optional kwargs for the legend, which is only drawn if
+            `show_raw` is True. Passed directly to `ax.legend`.
 
         ylog : optional boolean (default = True)
             Toggles the logarthmic scale of the y-axis.
