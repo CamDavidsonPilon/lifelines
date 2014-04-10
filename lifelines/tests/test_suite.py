@@ -382,16 +382,16 @@ class AalenAdditiveModelTests(unittest.TestCase):
         self.aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
 
     def test_large_dimensions_for_recursion_error(self):
-        n = 2000
+        n = 2500
         d = 22
-        timeline = np.linspace(0, 70, 5000)
+        timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
         cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
-        X['E'] = np.random.binomial(1,0.99,n)
+        X['E'] = 1
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
         return True
@@ -438,7 +438,6 @@ class AalenAdditiveModelTests(unittest.TestCase):
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
 
-
         for i in range(d+1):
             ax = plt.subplot(d+1,1,i+1)
             col = cumulative_hazards.columns[i]
@@ -450,7 +449,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
     def test_aalen_additive_fit_with_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 5000
+        n = 2500
         d = 6
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
@@ -469,6 +468,26 @@ class AalenAdditiveModelTests(unittest.TestCase):
             ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
         plt.show()
         return  
+
+    def test_aaf_binning(self):
+        n = 8000
+        d = 1
+        timeline = np.linspace(0, 70, 10000)
+        hz, coef, X = generate_hazard_rates(n, d, timeline)
+        X.columns = coef.columns
+        cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
+                                          index=timeline, columns=coef.columns)
+        T = generate_random_lifetimes(hz, timeline)
+        X['T'] = T
+        X['E'] = 1
+        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
+        aaf.fit(X)
+        self.assertTrue(aaf.data.shape[0] < 2500)
+        ax=aaf.plot()
+
+        aaf.fit(X, max_unique_durations=10000)
+        aaf.plot(ax=ax)
+        plt.show()
 
 
 class PlottingTests(unittest.TestCase):

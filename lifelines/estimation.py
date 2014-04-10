@@ -391,7 +391,17 @@ class AalenAdditiveFitter(object):
         assert penalizer >= 0, "penalizer must be >= 0."
 
 
-    def fit(self, dataframe, duration_col="T", event_col="E", timeline=None, id_col=None, show_progress=True):
+    def preprocess_durations(self, durations_series, max_unique_durations):
+        if durations_series.unique().shape[0] < max_unique_durations:
+            return durations_series
+
+        bins = np.linspace( durations_series.min(), durations_series.max(), max_unique_durations )
+        ibins = np.digitize( durations_series, bins )
+        return pd.Series( bins[ibins-1], index=durations_series.index )
+
+
+    def fit(self, dataframe, duration_col="T", event_col="E", 
+                 timeline=None, id_col=None, show_progress=True, max_unique_durations=500):
         """
         Perform inference on the coefficients of the Aalen additive model. 
 
@@ -427,13 +437,20 @@ class AalenAdditiveFitter(object):
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
             progress_bar: include a fancy progress bar!
-
+            max_unique_durations: memory can be an issue if there are too many
+              unique durations. If the max is surpassed, max_unique_durations bins 
+              will be used.
 
         Returns:
           self, with new methods like plot, smoothed_hazards_ and properties like cumulative_hazards_
         """
+
         from_tuples = pd.MultiIndex.from_tuples
         df = dataframe.copy()
+
+        #if the 'T' column has too many distinct values, it will cause memory errors later.
+        df[duration_col] = self.preprocess_durations(df[duration_col], max_unique_durations)
+        print(df[duration_col].unique().shape)
 
         #only for time-indp. covariates
         if id_col is None:
@@ -451,24 +468,30 @@ class AalenAdditiveFitter(object):
         C = C_panel.minor_xs(event_col).sum().astype(bool)
         T = (C_panel.minor_xs(event_col).notnull()).cumsum().idxmax()
 
+
         del df[event_col]
         n,d = df.shape
 
-        #import pdb
-        #pdb.set_trace()
-        wp = df.to_panel().bfill().fillna(0) #bfill will cause problems later, plus it is slow.
+        #so this is a problem line. bfill performs a recursion which is 
+        #really not scalable. Plus even for modest datasets, this eats a lot of memory.
+        wp = df.to_panel().bfill().fillna(0)
+        
+        #initialize dataframe to store estimates
         non_censorsed_times = T[C].iteritems()
         columns = wp.items
-        #initialize dataframe to store estimates
         hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
                         columns = columns, index = from_tuples(non_censorsed_times))
 
         variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
                         columns = columns, index = from_tuples(non_censorsed_times))
+
         #initializes the penalizer matrix
         penalizer = self.penalizer*np.eye(d)
+
         ids = wp.minor_axis.values
         progress = progress_bar(len(non_censorsed_times))
+
+        #this makes indexing times much faster
         wp = wp.swapaxes(0,1, copy=False).swapaxes(1,2,copy=False)
 
         for i,(id, time) in enumerate(non_censorsed_times): 
