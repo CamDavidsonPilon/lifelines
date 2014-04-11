@@ -372,15 +372,14 @@ class AalenAdditiveFitter(object):
 
     hazard(t)  = b_0(t) + b_t(t)*x_1 + ... + b_N(t)*x_N
 
-    that is, the hazard rate is a linear function of the covariates. Currently the covariates
-    must be time independent.
+    that is, the hazard rate is a linear function of the covariates. 
 
     Parameters:
       fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The
         intercept, b_0(t) acts as a baseline hazard.
       alpha: the level in the confidence intervals.
       penalizer: Attach a L2 penalizer to the regression. This improves stability of the estimates
-       and controls high correlation between covariates.
+       and controls high correlation between covariates. Recommended, even if a small value.
 
     """
 
@@ -390,8 +389,8 @@ class AalenAdditiveFitter(object):
         self.penalizer = penalizer
         assert penalizer >= 0, "penalizer must be >= 0."
 
-
-    def fit(self, dataframe, duration_col="T", event_col="E", timeline=None, id_col=None, show_progress=True):
+    def fit(self, dataframe, duration_col="T", event_col="E", 
+                 timeline=None, id_col=None, show_progress=True):
         """
         Perform inference on the coefficients of the Aalen additive model. 
 
@@ -426,19 +425,149 @@ class AalenAdditiveFitter(object):
             event_col: specify what the event occurred column is called in the dataframe 
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
-            progress_bar: include a fancy progress bar!
-
+            progress_bar: include a fancy progress bar =)
+            max_unique_durations: memory can be an issue if there are too many
+              unique durations. If the max is surpassed, max_unique_durations bins 
+              will be used.
 
         Returns:
           self, with new methods like plot, smoothed_hazards_ and properties like cumulative_hazards_
         """
+
+        if id_col is None:
+            self._fit_static(dataframe,duration_col,event_col,timeline,show_progress)
+        else:
+            self._fit_varying(dataframe,duration_col,event_col,id_col,timeline,show_progress)
+
+        return self
+
+    def _fit_static(self, dataframe, duration_col="T", event_col="E", 
+                 timeline=None, show_progress=True):
+        """
+        Perform inference on the coefficients of the Aalen additive model. 
+
+        Parameters:
+            dataframe: a pandas dataframe, with covariates and a duration_col and a event_col.
+                      one row per individual. duration_col refers to how long the individual was 
+                      observed for. event_col is a boolean: 1 if individual 'died', 0 else. id_col 
+                      should be left as None.
+
+            duration_col: specify what the duration column is called in the dataframe 
+            event_col: specify what the event occurred column is called in the dataframe 
+            timeline: reformat the estimates index to a new timeline.
+            progress_bar: include a fancy progress bar!
+
+        Returns:
+          self, with new methods like plot, smoothed_hazards_ and properties like cumulative_hazards_
+        """
+
         from_tuples = pd.MultiIndex.from_tuples
         df = dataframe.copy()
 
-        #only for time-indp. covariates
-        if id_col is None:
-            df['id'] = np.arange(df.shape[0])
-            id_col = 'id'
+        #set unique ids for individuals
+        id_col = 'id'
+        ids = np.arange(df.shape[0])
+        df[id_col] = ids 
+
+        #if the regression should fit an intercept
+        if self.fit_intercept:
+            df['baseline'] = 1.
+
+        #each individual should have an ID of time of leaving study
+        C = df[event_col].astype(bool)
+        T = df[duration_col]
+        df = df.set_index([duration_col, id_col])
+
+        ix = T.argsort()
+        T, C = T[ix], C[ix]
+
+        del df[event_col]
+        n,d = df.shape
+        columns = df.columns
+        
+        #initialize dataframe to store estimates
+        non_censorsed_times = T[C].iteritems()
+        n_deaths = len(non_censorsed_times)
+
+        hazards_ = pd.DataFrame( np.zeros((n_deaths,d)), columns = columns,
+                                 index = from_tuples(non_censorsed_times)).swaplevel(1,0)
+
+        variance_  = pd.DataFrame( np.zeros((n_deaths,d)), columns = columns, 
+                                    index = from_tuples(non_censorsed_times)).swaplevel(1,0)
+
+        #initializes the penalizer matrix
+        penalizer = self.penalizer*np.eye(d)
+
+        #initialize loop variables.
+        progress =  progress_bar(n_deaths)
+        to_remove = []
+        t = T.iloc[0]
+        i = 0
+
+        for id, time in T.iteritems():  #should be sorted.
+
+            if t != time:
+                assert t < time
+                #remove the individuals from the previous loop.
+                df.ix[to_remove] = 0.
+                to_remove = []
+                t = time
+
+            to_remove.append(id)    
+            if C[id] == 0:
+                continue
+
+            relevant_individuals = (ids==id)
+            assert relevant_individuals.sum() == 1.
+
+            #perform linear regression step.
+            X = df.values
+            try:
+                V = dot(inv(dot(X.T, X) + penalizer), X.T)
+            except LinAlgError:
+                print("Linear regression error. Try increasing the penalizer term.")
+                
+            v = dot(V, 1.0*relevant_individuals )
+
+            hazards_.ix[time,id]  = v.T
+            variance_.ix[time,id] = V[:, relevant_individuals][:,0]**2
+
+            #update progress bar
+            if show_progress:
+                i+=1
+                progress.update(i)
+
+        #print a new line so the console displays well
+        if show_progress:
+            print()
+
+        #not sure this is the correct thing to do.
+        self.hazards_ = hazards_.groupby(level=0).sum()
+        self.cumulative_hazards_= self.hazards_.cumsum()
+        self.variance_ = variance_.groupby(level=0).sum()
+
+        if timeline is not None:
+            self.hazards_ = self.hazards_.reindex(timeline, method='ffill')
+            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(timeline, method='ffill')
+            self.variance_= self.variance_.reindex(timeline, method='ffill')
+            self.timeline = timeline
+        else:
+            self.timeline = self.hazards_.index.values.astype(float)
+
+        self.data = dataframe
+        self.durations = T
+        self.event_observed = C
+        self._compute_confidence_intervals()
+        self.plot = plot_regressions(self)
+
+        return 
+
+    def _fit_varying(self, dataframe, duration_col="T", event_col="E", 
+                 id_col=None, timeline=None, show_progress=True):
+
+
+        from_tuples = pd.MultiIndex.from_tuples
+        df = dataframe.copy()
 
         #if the regression should fit an intercept
         if self.fit_intercept:
@@ -454,21 +583,26 @@ class AalenAdditiveFitter(object):
         del df[event_col]
         n,d = df.shape
 
-        #import pdb
-        #pdb.set_trace()
-        wp = df.to_panel().bfill().fillna(0) #bfill will cause problems later, plus it is slow.
+        #so this is a problem line. bfill performs a recursion which is 
+        #really not scalable. Plus even for modest datasets, this eats a lot of memory.
+        wp = df.to_panel().bfill().fillna(0)
+        
+        #initialize dataframe to store estimates
         non_censorsed_times = T[C].iteritems()
         columns = wp.items
-        #initialize dataframe to store estimates
         hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
                         columns = columns, index = from_tuples(non_censorsed_times))
 
         variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
                         columns = columns, index = from_tuples(non_censorsed_times))
+
         #initializes the penalizer matrix
         penalizer = self.penalizer*np.eye(d)
+
         ids = wp.minor_axis.values
         progress = progress_bar(len(non_censorsed_times))
+
+        #this makes indexing times much faster
         wp = wp.swapaxes(0,1, copy=False).swapaxes(1,2,copy=False)
 
         for i,(id, time) in enumerate(non_censorsed_times): 
@@ -476,7 +610,6 @@ class AalenAdditiveFitter(object):
             relevant_individuals = (ids==id)
             assert relevant_individuals.sum() == 1.
 
-            #X = wp[time].values
             X = wp[time].values
 
             #perform linear regression step.
@@ -519,7 +652,7 @@ class AalenAdditiveFitter(object):
         self._compute_confidence_intervals()
         self.plot = plot_regressions(self)
 
-        return self
+        return 
 
     def smoothed_hazards_(self, bandwidth=1):
         """

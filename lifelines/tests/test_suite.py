@@ -382,25 +382,35 @@ class AalenAdditiveModelTests(unittest.TestCase):
         self.aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
 
     def test_large_dimensions_for_recursion_error(self):
-        n = 2000
-        d = 22
-        timeline = np.linspace(0, 70, 5000)
-        hz, coef, X = generate_hazard_rates(n, d, timeline)
-        X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
-                                          index=timeline, columns=coef.columns)
-        T = generate_random_lifetimes(hz, timeline)
+        n = 500
+        d = 50
+        X = pd.DataFrame(np.random.randn(n,d))
+        T = np.random.exponential(size=n)
         X['T'] = T
-        X['E'] = np.random.binomial(1,0.99,n)
+        X['E'] = 1
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
+
         return True
 
+    def test_tall_data_points(self):
+        n = 25000
+        d = 2
+        X = pd.DataFrame(np.random.randn(n,d))
+        T = np.random.exponential(size=n)
+        X['T'] = T
+        X['E'] = 1
+        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
+        aaf.fit(X)
+
+        return True
+    
     def test_aaf_panel_dataset(self):
         aaf = AalenAdditiveFitter()
         aaf.fit(panel_dataset, id_col='id',duration_col='t', event_col='E')
         aaf.plot()
         return
+    
 
     def test_aalen_additive_median_predictions_split_data(self):
         # This tests to make sure that my median predictions statisfy
@@ -425,9 +435,9 @@ class AalenAdditiveModelTests(unittest.TestCase):
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 250
-        d = 7
-        timeline = np.linspace(0, 70, 5000)
+        n = 2000
+        d = 6
+        timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
         cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
@@ -437,7 +447,6 @@ class AalenAdditiveModelTests(unittest.TestCase):
         X['E'] = 1
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
-
 
         for i in range(d+1):
             ax = plt.subplot(d+1,1,i+1)
@@ -450,7 +459,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
     def test_aalen_additive_fit_with_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 5000
+        n = 2500
         d = 6
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
@@ -469,7 +478,6 @@ class AalenAdditiveModelTests(unittest.TestCase):
             ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
         plt.show()
         return  
-
 
 class PlottingTests(unittest.TestCase):
 
