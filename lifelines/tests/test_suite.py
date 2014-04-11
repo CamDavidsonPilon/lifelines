@@ -461,23 +461,24 @@ class AalenAdditiveModelTests(unittest.TestCase):
         # hazards.
         n = 2500
         d = 6
-        timeline = np.linspace(0, 70, 5000)
+        timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
         cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
-        X['E'] = np.random.binomial(1,.99,n)
+        X['E'] = np.random.binomial(1,0.99,n)
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
+
         for i in range(d+1):
             ax = plt.subplot(d+1,1,i+1)
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False,ax=ax)
             ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
         plt.show()
-        return  
+        return
 
 class PlottingTests(unittest.TestCase):
 
