@@ -1,4 +1,4 @@
-.. _ipython_directive:
+.. _code_directive:
 
 Quickstart
 '''''''''''''''''''''''''''''''''''''''
@@ -11,7 +11,7 @@ Kaplan-Meier and Nelson-Aalen
 
 Let's start by importing some data. We need the durations that individuals are observed for, and whether they "died" or not. 
 
-.. ipython:: python
+.. code:: python
 
     from lifelines.datasets import waltons_data    
 
@@ -23,7 +23,7 @@ Let's start by importing some data. We need the durations that individuals are o
 .. note:: By default, *lifelines* assumes all "deaths" are observed. 
 
 
-.. ipython:: python
+.. code:: python
 
     from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
@@ -31,7 +31,7 @@ Let's start by importing some data. We need the durations that individuals are o
 
 After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Pandas internal plotting library (see `here <http://lifelines.readthedocs.org/en/latest/examples.html#plotting-options-and-styles>`__ for examples). 
 
-.. ipython:: python
+.. code:: python
     
     kmf.plot()
 
@@ -42,7 +42,7 @@ After calling the ``fit`` method, we have access to new properties like ``surviv
 Multiple groups
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. ipython:: python
+.. code:: python
     
     groups = waltons_data['group']
     ix = groups == 'control'
@@ -58,7 +58,7 @@ Multiple groups
 Similar functionality exists for the ``NelsonAalenFitter``:
 
 
-.. ipython:: python
+.. code:: python
 
     from lifelines import NelsonAalenFitter
     naf = NelsonAalenFitter()
@@ -73,7 +73,7 @@ Survival Regression
 
 While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter``.
 
-.. ipython:: python
+.. code:: python
     
     from lifelines.datasets import regression_data
 
@@ -83,7 +83,7 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
 
 The input of the ``fit`` method's API on ``AalenAdditiveFitter`` is different than above. All the data, including durations, censorships and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occured column must be specified in the call to ``fit``. 
 
-.. ipython:: python
+.. code:: python
     
     from lifelines import AalenAdditiveFitter
 
@@ -93,7 +93,7 @@ The input of the ``fit`` method's API on ``AalenAdditiveFitter`` is different th
 
 After fitting, you'll have access to properties like ``cumulative_hazards_`` and methods like ``plot``, ``predict_cumulative_hazards``, and ``predict_survival_function``. The latter two methods require an additional argument of individual covariates:
 
-.. ipython:: python
+.. code:: python
     
     x = regression_data[regression_data.columns - ['E','T']]
     aaf.predict_survival_function(x.ix[10:12]).plot() #get the unique survival functions of the first two subjects 
@@ -101,7 +101,7 @@ After fitting, you'll have access to properties like ``cumulative_hazards_`` and
 
 Like the above estimators, there is also a built-in plotting method:
 
-.. ipython:: python
+.. code:: python
 
     aaf.plot()
 

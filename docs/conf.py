@@ -15,11 +15,6 @@
 import sys
 import os
 
-import mock
- 
-MOCK_MODULES = ['matplotlib', 'matplotlib.pyplot']
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
 
 # use RTFD theme locally
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
