@@ -1,35 +1,10 @@
 Introduction to Survival Analysis
 '''''''''''''''''''''''''''''''''
 
-The **lifelines**
-library provides a powerful tool to data analysts and statisticians
-looking for methods to solve a common problem:
-
-    How do I predict durations?
-
-This question seems very vague and abstract, but that's only because we
-can be so general in this space. Some more specific questions
-*lifelines* will help you answer are:
-
-    How long can I expect a user to be on my service? Which treatment
-    group takes longer to complete an action? When is the next event
-    likely to happen? Which factors influence durations of events?
-
-The statistical tool that answers these questions is survival analysis.
-*lifelines* is a implementation of survival analysis in Python. What
-benefits does *lifelines* offer over other survival analysis
-implementations:
-
--  built ontop of Pandas
--  internal plotting library
--  simple and intuitive classes and functions (*designed for humans*)
--  only does surival analysis! (No unnecessary features or second-class
-   implentations)
-
-Below is an example of what we can produce with *lifelines*:
-
-Quick intro to Survival Analysis
+Applications
 --------------------------------
+
+
 
 Traditionally, survival analysis was developed to measure lifespans of
 individuals. An actuary or health professional would ask questions like
@@ -48,7 +23,8 @@ is users subscribing to a service: a birth is a user who joins the
 service, and a death is when the user leaves the service.
 
 Censorship
-~~~~~~~~~~
+--------------------------------
+
 
 What makes measuring durations difficult is the time itself. At the time
 you want to make inferences about durations, it is possible, likely
@@ -62,9 +38,7 @@ event are labeled as *right-censored*: all the information we have on
 these individuals are their current lifetime durations (which is
 naturally *less* than their actual lifetimes).
 
-    Note: there is also left-censorship, where an individuals birth
-    event is not seen. *lifelines* only has estimators for the
-    right-censorship case.
+.. note:: There is also left-censorship, where an individuals birth event is not seen. *lifelines* only has estimators for the right-censorship case.
 
 A common mistake data analysts make is simply choosing to ignore the
 right-censored individuals. We'll shall see why this is a mistake next:
@@ -152,7 +126,8 @@ We next introduce the two fundamental objects in survival analysis, the
 --------------
 
 Survival function
-~~~~~~~~~~~~~~~~~
+--------------------------------
+
 
 Let :math:`T` be the (possibly infinite, but always positive) random
 duration taken from the population under observation. For example, the
@@ -173,7 +148,8 @@ i.e., the probability the death event has not occured yet at time
 5. :math:`f_T(t) = -S'(t) `
 
 Hazard curve
-~~~~~~~~~~~~
+--------------------------------
+
 
 We are also interested in the probability of dying in the next instant,
 given we haven't expired yet. Mathematically, that is:

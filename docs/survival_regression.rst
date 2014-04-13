@@ -33,7 +33,7 @@ notice that in Aalen's additive model has time varying coefficients.
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``Caution: This is still experimental.``
+.. warning:: This is still experimental.
 
 The estimator to fit unknown coefficients in Aalen's additive model is
 located in ``estimators`` under ``AalenAdditiveFitter``. For this
@@ -157,8 +157,7 @@ above). This is important to keep in mind when analzying the output.
 
 
 
-I'm using the lovely library
-```patsy`` <https://github.com/pydata/patsy>`__ here to create a
+I'm using the lovely library ``patsy`` <https://github.com/pydata/patsy>`__ here to create a
 covaritate matrix from my original dataframe.
 
 .. code:: python
@@ -224,11 +223,6 @@ two special columns: a *duration* column and a boolean *event occured* column (w
 .. code:: python
 
     aaf.fit(X, duration_col='T', event_col='E')
-
-
-.. parsed-literal::
-
-    <lifelines.estimation.AalenAdditiveFitter at 0x1091c2710>
 
 
 
@@ -366,7 +360,6 @@ Prime Minister Stephen Harper.
     harper = X[ix,:][-1,:][None,:]
     harper[0,-1] = 2003
     print "Harper's unique data point"
-    obama
 
 .. parsed-literal::
 
@@ -384,20 +377,12 @@ Prime Minister Stephen Harper.
 
 .. code:: python
 
-    figsize(12.5,6)
     ax = plt.subplot(2,1,1)
-    plt.xlim(0,15)
-    aaf.predict_cumulative_hazard(harper, columns=["Harper's hazard rate"]).plot(ax = ax)
+
+    aaf.predict_cumulative_hazard(harper, columns=["Harper's hazard rate"]).plot(ax=ax)
     ax = plt.subplot(2,1,2)
-    plt.ylim(0,1.1)
-    plt.xlim(0,15)
-    aaf.predict_survival_function(obama, columns=["Harper's survival function"]).plot(ax=ax);
-    print "Median lifespan of PM Harper: ", aaf.predict_median_lifetimes(obama).values
 
-
-.. parsed-literal::
-
-    Median lifespan of PM Harper: 
+    aaf.predict_survival_function(harper, columns=["Harper's survival function"]).plot(ax=ax);
 
 
 .. image:: Introtolifelines_files/Introtolifelines_57_2.png

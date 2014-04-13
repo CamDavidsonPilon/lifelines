@@ -2,4 +2,3 @@ numpy
 scipy
 matplotlib
 pandas>=0.12
-ipython

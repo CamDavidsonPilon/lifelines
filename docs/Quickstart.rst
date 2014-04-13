@@ -7,8 +7,6 @@ Kaplan-Meier and Nelson-Aalen
 ---------------------------------------
 
 
-.. note:: If you are looking for a more detailed introduction, including an introduction to survival analysis, it's recommend you start at out `Survival Analysis intro <http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html>`_.
-
 Let's start by importing some data. We need the durations that individuals are observed for, and whether they "died" or not. 
 
 .. code:: python

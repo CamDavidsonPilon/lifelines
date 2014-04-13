@@ -1,7 +1,7 @@
 Introduction to using *lifelines*
 =====================================
 
-In the :doc:`section</Survival Analysis intro>`.
+In the previous :doc:`section</Survival Analysis intro>`,
 we introduced how survival analysis is used, and needed, and the
 mathematical objects that it relies on. In this notebook, we will work
 with real data and *lifelines* to estimate these mathematical objects.
@@ -526,8 +526,7 @@ gets smaller (as seen by the decreasing rate of change). Let's break the
 regimes down between democratic and non-democratic, during the first 20
 years:
 
-    We are using the ``ix`` argument in plotting here: it accepts a
-    ``slice`` and plots only points within that slice.
+.. note::  We are using the ``ix`` argument in plotting here: it accepts a ``slice`` and plots only points within that slice.
 
 .. code:: python
 
@@ -597,15 +596,6 @@ here.
     naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
-    plt.ylim(0,0.4);
-    plt.xlim(0,25)
-
-
-
-.. parsed-literal::
-
-    (0, 25)
-
 
 
 
