@@ -217,7 +217,9 @@ two special columns: a *duration* column and a boolean *event occured* column (w
     X['T'] = data['duration']
     X['E'] = data['observed'] 
 
+
 **The api for .fit was different prior to lifelines 0.3, below refers to the 0.3+ versions**
+
 
 .. code:: python
 

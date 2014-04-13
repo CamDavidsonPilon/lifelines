@@ -225,8 +225,7 @@ The property is a Pandas DataFrame, so we can call ``plot`` on it:
     plt.title('Survival function of political regimes');
 
 
-.. image:: Introtolifelines_files/Introtolifelines_13_0.png
-
+   
 
 How do we interpret this? The y-axis represents the probability a leader is still
 around after :math:`t` years, where :math:`t` years is on the x-axis. We

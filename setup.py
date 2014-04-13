@@ -12,7 +12,7 @@ def read(fname):
 
 setup(
     name="lifelines",
-    version="0.3.1.2",
+    version="0.3.1.3",
     author="Cameron Davidson-Pilon",
     author_email="cam.davidson.pilon@gmail.com",
     description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
@@ -31,7 +31,8 @@ setup(
         "numpy",
         "scipy",
         "matplotlib",
-        "pandas>=0.12"
+        "pandas>=0.12",
+        "ipython"
     ],
     package_data = {
         "lifelines": [

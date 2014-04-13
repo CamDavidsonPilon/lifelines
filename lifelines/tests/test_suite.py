@@ -394,7 +394,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         return True
 
     def test_tall_data_points(self):
-        n = 25000
+        n = 20000
         d = 2
         X = pd.DataFrame(np.random.randn(n,d))
         T = np.random.exponential(size=n)
