@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from StringIO import StringIO
 
+__all__ = ['waltons_data', 'regression_data']
 
 def generate_waltons_data():
     waltonG = np.array(['miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',

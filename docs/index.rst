@@ -22,12 +22,6 @@ implementations?
 -  only does survival analysis (No unnecessary features or second-class
    implentations)
 
-Installation
-------------------------------
-
-Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and Matplotlib. Install using::
-
-    pip install lifelines
 
 Contents:
 ------------------------------
@@ -35,10 +29,26 @@ Contents:
 .. toctree::
   :maxdepth: 2
 
+  Quickstart
   Survival Analysis intro
   Intro to lifelines
   survival_regression
   examples
+
+
+Installation
+------------------------------
+
+Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and Matplotlib. Install using::
+
+    pip install lifelines
+
+
+Source code and Issue Tracker
+------------------------------
+
+Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_
+Please report bugs, issues and feature extensions there. 
 
 
 Indices and tables
