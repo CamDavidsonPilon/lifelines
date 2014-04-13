@@ -15,6 +15,12 @@
 import sys
 import os
 
+import mock
+ 
+MOCK_MODULES = ['matplotlib', 'matplotlib.pyplot']
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
+
 # use RTFD theme locally
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
@@ -42,7 +48,7 @@ extensions = [
     'sphinx.ext.pngmath',
     'sphinx.ext.mathjax',
     'IPython.sphinxext.ipython_console_highlighting',
-              'IPython.sphinxext.ipython_directive'
+    'IPython.sphinxext.ipython_directive'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
