@@ -38,7 +38,7 @@ time (months, days, ...)      observed deaths       censored
 
 
 
-Plotting multiple figures on an plot:
+Plotting multiple figures on an plot
 ##############################################
 
 When `.plot` is called, an `axis` object is returned which can be passed into future calls of `.plot`:

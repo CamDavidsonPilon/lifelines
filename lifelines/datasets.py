@@ -62,7 +62,7 @@ def generate_waltons_data():
 
     waltons_data = pd.DataFrame(waltonT, columns=['T'])
     waltons_data['E'] = waltonC
-    waltons_data['group'] = waltonC
+    waltons_data['group'] = waltonG
     return waltons_data
 
 
