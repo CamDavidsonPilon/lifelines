@@ -114,10 +114,8 @@ too to understand times and durations.
 The observations need not always start at zero, either. This was done
 only for understanding in the above example. In the service example,
 where a customer joining is a birth, a customer can enter observation at
-any time, and not necessarily at time zero. In survival analysis, all
-times are relative: although individuals may start at different times,
-we set them all to start at a single time and record durations from
-there. (We actually only need to *duration* of the observation, and not
+any time, and not necessarily at time zero. In survival analysis, durations
+are relative: individuals may start at different times. (We actually only need the *duration* of the observation, and not
 the start and end time.)
 
 We next introduce the two fundamental objects in survival analysis, the
@@ -143,9 +141,8 @@ i.e., the probability the death event has not occured yet at time
 
 2. :math:`0 \le S(t) \le 1`
 3. :math:`S(0) = 1`
-4. :math:`F_T(t) = 1 - S(t)`, where :math:`F_T(t)` is the cumulative
-   density function of :math:`T`, which implies
-5. :math:`f_T(t) = -S'(t) `
+4. :math:`F_T(t) = 1 - S(t)`, where :math:`F_T(t)` is the CDF of :math:`T`, which implies
+5. :math:`f_T(t) = -S'(t)`
 
 Hazard curve
 --------------------------------
@@ -177,10 +174,10 @@ no parametric form), the entire function is non-parametric (this allows
 for very flexible curves). Notice that we can now speak either about the
 survival function, :math:`S(t)`, or the hazard function,
 :math:`\lambda(t)`, and we can convert back and forth quite easily. It
-also gives us another, albeit not very useful, expression for :math:`T`:
+also gives us another, albeit less useful, expression for :math:`T`:
 Upon differentiation and some algebra, we recover:
 
-.. math:: f_T(t) = \lambda(t)\exp\left( \int_0^t \lambda(z) dz \right)
+.. math:: f_T(t) = \lambda(t)\exp\left( -\int_0^t \lambda(z) dz \right)
 
 Of course, we do not observe the true survival curve of a population. We
 must use the observed data to estimate it. We also want to continue to

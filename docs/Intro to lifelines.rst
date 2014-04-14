@@ -179,19 +179,17 @@ fit/predict API)
 
   KaplanMeierFitter.fit(event_times, event_observed=None, 
                         timeline=None, label='KM-estimate', 
-                        alpha=None, insert_0=True)
+                        alpha=None)
   Parameters:
     event_times: an array, or pd.Series, of length n of times that
            the death event occured at
     event_observed: an array, or pd.Series, of length n -- True if 
           the death was observed, False if the event was lost 
           (right-censored). Defaults all True if event_observed==None
-    timeline: return the best estimate at the values 
-            in timelines (postively increasing)
+    timeline: set the index of the survival curve to this postively increasing array.
     label: a string to name the column of the estimate.
     alpha: the alpha value in the confidence intervals.
            Overrides the initializing alpha for this call to fit only.
-    insert_0: add a leading 0 (if not present) in the timeline.
 
   Returns:
     self, with new properties like 'survival_function_'.
@@ -257,12 +255,8 @@ average 1/2 of the population has expired, is a property:
 
     kmf.median_
 
-
-
-.. parsed-literal::
-
-    KM-estimate    4
-    dtype: float64
+    #   4
+    #
 
 
 
@@ -443,34 +437,25 @@ Estimating hazard rates using Nelson-Aalen
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The survival curve is a great way to summarize and visualize the
-lifetime data, it is not the only way. We showed the relationship
-earlier between the survival function, :math:`S(t)`, and the hazard
-function, :math:`\lambda(t)`, repeated here:
-
-.. math:: S(t) = \exp\left( -\int_0^t \lambda(z) dz \right) 
-
-Often we denote the integral simpler:
+lifetime data, it is not the only way. If we are curious about the hazard function :math:`\lambda(t)` of a
+population, we unfortunatly cannot transform the Kaplan Meier estimate
+-- statistics doesn't work quite that well. Fortunately, there is a
+proper estimator of the *cumulative* hazard function:
 
 .. math::  \Lambda(t) =  \int_0^t \lambda(z) \;dz
 
-We call :math:`\Lambda(t)` the cumulative hazard function. From above,
-the following relationship should be understood:
 
-.. math::  \frac{d \Lambda(t)}{dt} = \lambda(t)
 
-If we are curious about the hazard function :math:`\lambda(t)` of a
-population, we unfortunatly cannot transform the Kaplan Meier estimate
--- statistics doesn't work quite that well. Fortunately, there is a
-proper estimator of the *cumulative* hazard function, called the
-Nelson-Aalen estimator:
+The estimator for this quantity is called the Nelson Aalen estimator:
+
+
 
 .. math:: \hat{\Lambda}(t) = \sum_{t_i \le t} \frac{d_i}{n_i} 
 
 where :math:`d_i` is the number of deaths at time :math:`t_i` and
 :math:`n_i` is the number of susceptible individuals.
 
-In *lifelines*, this estimator is available as the ``NelsonAalenFitter``
-in ``lifelines``. Let's use the regime dataset from above:
+In *lifelines*, this estimator is available as the ``NelsonAalenFitter``. Let's use the regime dataset from above:
 
 .. code:: python
 
@@ -483,20 +468,13 @@ in ``lifelines``. Let's use the regime dataset from above:
     naf.fit(T,event_observed=C)
 
 
-
-.. parsed-literal::
-
-    <lifelines.estimation.NelsonAalenFitter at 0x109492050>
-
-
-
 After fitting, the class exposes the property ``cumulative_hazard_`` as
 a DataFrame:
 
 .. code:: python
 
     print naf.cumulative_hazard_.head()
-    naf.plot();
+    naf.plot()
 
 .. parsed-literal::
 
@@ -526,7 +504,7 @@ gets smaller (as seen by the decreasing rate of change). Let's break the
 regimes down between democratic and non-democratic, during the first 20
 years:
 
-.. note::  We are using the ``ix`` argument in plotting here: it accepts a ``slice`` and plots only points within that slice.
+.. note::  We are using the ``ix`` argument in the call to ``plot`` here: it accepts a ``slice`` and plots only points within that slice.
 
 .. code:: python
 
@@ -584,9 +562,9 @@ intervals, similar to the traditional ``plot`` functionality.
 It is more clear here which group has the higher hazard, and like
 hypothesized above, both hazard rates are close to being constant.
 
-Choosing an appropriate bandwidth to use is difficult, and different
+There is no obvious way to choose a bandwith, and different
 bandwidth can produce different inferences, so best to be very careful
-here.
+here. (My advice: stick with the cumulative hazard function.)
 
 .. code:: python
 
