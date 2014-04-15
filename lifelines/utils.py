@@ -7,7 +7,7 @@ import pandas as pd
 from pandas import to_datetime
 
 def coalesce(*args):
-  return next( s for s in args if s)
+  return next( s for s in args if s is not None)
 
 def group_survival_table_from_events(groups, durations, event_observed, min_observations, limit=-1):
     """

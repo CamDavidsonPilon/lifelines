@@ -86,6 +86,8 @@ def plot_regressions(self):
             y = get_loc(self.cumulative_hazards_[column]).values
             y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
             y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
+            print(kwargs.get('label'))
+            print(column)
             shaded_plot(x, y, y_upper, y_lower, ax=kwargs["ax"], label=coalesce(kwargs.get('label'),column))
 
         if legend:
