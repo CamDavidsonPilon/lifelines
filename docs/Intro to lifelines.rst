@@ -2,19 +2,19 @@ Introduction to using *lifelines*
 =====================================
 
 In the previous :doc:`section</Survival Analysis intro>`,
-we introduced how survival analysis is used, and needed, and the
-mathematical objects that it relies on. In this notebook, we will work
-with real data and *lifelines* to estimate these mathematical objects.
+we introduced how survival analysis is used, needed, and the
+mathematical objects that it relies on. In this article, we will work
+with real data and the *lifelines* library to estimate these mathematical objects.
 
 Estimating the Survival function using Kaplan-Meier
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 For this example, we will be investigating the lifetimes of political
-regimes around the world. A regime in this case is defined by a single
-individual's time in office who controls the regime. This could be an
+leaders around the world. A political leader in this case is defined by a single
+individual's time in office who controls the ruling regime. This could be an
 elected president, unelected dictator, monarch, etc. The birth event is
-the start of the regime, and the death event is the retirement of the
-individual. Censorship can occur if they are a) still in offices are the
+the start of the individual's tenor, and the death event is the retirement of the
+individual. Censorship can occur if they are a) still in offices at the
 time of dataset complilation (2008), or b) die while in office (this
 includes assassinations).
 
@@ -27,8 +27,8 @@ not* observed -- JFK died before his official retirement.
 (This is an example that has gladly redefined the birth and death
 events, and infact completely flips the idea upside down by using deaths
 as the censorship event. This is also an example where the current time
-is not the impeidment for complete observation -- there are alternative
-events (eg: death in office) that can end a regime.)
+is not the only cause of censorship -- there are alternative
+events (eg: death in office) that can censor.)
 
 To estimate the survival function, we use the `Kaplan-Meier
 Estimate <http://en.wikipedia.org/wiki/Kaplan%E2%80%93Meier_estimator>`__,
@@ -39,6 +39,8 @@ defined:
 where :math:`d_i` are the number of death events at time :math:`t` and
 :math:`n_i` is the number of subjects at risk of death at time
 :math:`t`.
+
+Let's bring in our dataset. 
 
 .. code:: python
 
@@ -233,7 +235,7 @@ point estimates, i.e. we need confidence intervals. They are computed on
 the call to ``fit``, and are located under the ``confidence_interval_``
 property.
 
-Alternativly, we can call ``plot`` on the ``KaplanMeierFitter`` itself
+Alternatively, we can call ``plot`` on the ``KaplanMeierFitter`` itself
 to plot both the KM estimate and its confidence intervals:
 
 *Note: Don't like the shaded area for confidence intervals? See below

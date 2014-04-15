@@ -8,8 +8,7 @@ Applications
 
 Traditionally, survival analysis was developed to measure lifespans of
 individuals. An actuary or health professional would ask questions like
-"how long does this population live for, that is, how long between birth
-and death?", and answer it using survival analysis. For example, the
+"how long does this population live for?", and answer it using survival analysis. For example, the
 population may be a nation's population (for actuaries), or a population
 sticken by a disease (in the medical professional's case).
 Traditionally, sort of a morbid subject.
@@ -26,28 +25,28 @@ Censorship
 --------------------------------
 
 
-What makes measuring durations difficult is the time itself. At the time
-you want to make inferences about durations, it is possible, likely
+At the time you want to make inferences about durations, it is possible, likely
 true, that not all the death events have occured yet. For example, a
 medical professional will not wait 50 years for each individual in the
 study to pass away before investigating -- he or she is interested in
-the effectiveness of improving lifetimes after only a few years.
+the effectiveness of improving lifetimes after only a few years, or months possibly.
 
 The individuals in a population who have not been subject to the death
-event are labeled as *right-censored*: all the information we have on
+event are labeled as *right-censored*, i.e. we did not (or can not) view the rest of their life history 
+due to some external circumstances. All the information we have on
 these individuals are their current lifetime durations (which is
 naturally *less* than their actual lifetimes).
 
 .. note:: There is also left-censorship, where an individuals birth event is not seen. *lifelines* only has estimators for the right-censorship case.
 
-A common mistake data analysts make is simply choosing to ignore the
+A common mistake data analysts make is  choosing to ignore the
 right-censored individuals. We'll shall see why this is a mistake next:
 
 Consider a case where the population is actually made up of two
 subpopulations, :math:`A` and :math:`B`. Population :math:`A` has a very
-low lifespan, say 2 time intervals on average, and population :math:`B`
-enjoys a much large lifespan, say 12 time intervals on average. Of
-course, we do not know this distinction before hand. At :math:`t=10`, we
+small lifespan, say 2 months on average, and population :math:`B`
+enjoys a much large lifespan, say 12 months on average. We might
+ not know this distinction before hand. At :math:`t=10`, we
 wish to investigate the average lifespan. Below is an example of such a
 situation.
 
@@ -107,16 +106,16 @@ information at :math:`t=10`).
 
 Survival analysis was originally developed to solve this type of
 problem, that is, to deal with estimation when our data is
-right-censored. But even in the case where all events have been
-observed, i.e. no censorship, survival analysis is also a very useful
-too to understand times and durations.
+right-censored. Even in the case where all events have been
+observed, i.e. no censorship, survival analysis is still a very useful
+to understand durations.
 
 The observations need not always start at zero, either. This was done
-only for understanding in the above example. In the service example,
-where a customer joining is a birth, a customer can enter observation at
+only for understanding in the above example. Consider the example of
+a customer entering a store is a birth: a customer can enter at
 any time, and not necessarily at time zero. In survival analysis, durations
 are relative: individuals may start at different times. (We actually only need the *duration* of the observation, and not
-the start and end time.)
+the necessarily the start and end time.)
 
 We next introduce the two fundamental objects in survival analysis, the
 *survival function* and the *hazard function*.
@@ -127,22 +126,22 @@ Survival function
 --------------------------------
 
 
-Let :math:`T` be the (possibly infinite, but always positive) random
-duration taken from the population under observation. For example, the
+Let :math:`T` be a (possibly infinite, but always non-negative) random
+lifetime taken from the population under study. For example, the
 amount of time a couple is married. Or the time it takes a user to enter
-a webpage (and infinite time if they never do). The survival function,
+a webpage (an infinite time if they never do). The survival function,
 :math:`S(t)`, of a population is defined as
 
 .. math::  S(t) = Pr( T > t) 
 
-i.e., the probability the death event has not occured yet at time
-:math:`t`, or equivalently, the probability of surviving until time
+The huamn language: the survival function defines the probability the death event has not occured yet at time
+:math:`t`, or equivalently, the probability of surviving until atleast time
 :math:`T`. Note the following properties of the survival function:
 
-2. :math:`0 \le S(t) \le 1`
-3. :math:`S(0) = 1`
-4. :math:`F_T(t) = 1 - S(t)`, where :math:`F_T(t)` is the CDF of :math:`T`, which implies
-5. :math:`f_T(t) = -S'(t)`
+1. :math:`0 \le S(t) \le 1`
+2. :math:`F_T(t) = 1 - S(t)`, where :math:`F_T(t)` is the CDF of :math:`T`, which implies
+3. :math:`S(t)` is a non-increasing function of :math:`t`.
+
 
 Hazard curve
 --------------------------------
@@ -154,7 +153,7 @@ given we haven't expired yet. Mathematically, that is:
 .. math::  \lim_{\delta t \rightarrow 0 } \; Pr( t \le T \le t + \delta t | T > t) 
 
 This quantity goes to 0 as :math:`\delta t` shrinks, so we divide this
-by the interval :math:`\delta t` (sorta like we do in calculus). This
+by the interval :math:`\delta t` (like we might do in calculus). This
 defines the hazard function at time :math:`t`, :math:`\lambda(t)`:
 
 .. math:: \lambda(t) =  \lim_{\delta t \rightarrow 0 } \; \frac{Pr( t \le T \le t + \delta t | T > t)}{\delta t} 
@@ -181,7 +180,7 @@ Upon differentiation and some algebra, we recover:
 
 Of course, we do not observe the true survival curve of a population. We
 must use the observed data to estimate it. We also want to continue to
-be non-parametric, that is not assume anything more about how the
+be non-parametric, that is not assume anything about how the
 survival curve looks. The *best* method to recreate the survival
 function non-parametrically from the data is known as the Kaplan-Meier
 estimate, which brings us to :doc:`estimation using lifelines</Intro to lifelines>`.
