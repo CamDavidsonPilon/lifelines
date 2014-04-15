@@ -479,7 +479,7 @@ class AalenAdditiveFitter(object):
         df = df.set_index([duration_col, id_col])
 
         ix = T.argsort()
-        T, C = T[ix], C[ix]
+        T, C = T.iloc[ix], C.iloc[ix]
 
         del df[event_col]
         n,d = df.shape
