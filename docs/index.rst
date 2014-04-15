@@ -6,12 +6,6 @@
 lifelines
 =====================================
 
-The **lifelines** library provides a powerful tool for data analysts and scientists
-looking for methods to solve a common problem:
-
-    How do I predict lifetimes, or time to events?
-
-The statistical tool that answers this question is *survival analysis*.
 *lifelines* is a implementation of survival analysis in Python. What
 benefits does *lifelines* offer over other survival analysis
 implementations?

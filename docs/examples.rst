@@ -78,8 +78,6 @@ If you have a pandas `DataFrame` with columns "group", "T", and "C", then someth
 Plotting options and styles
 ##############################################
 
-There are many styles of lifelines plots you may want, depending on your tastes:
-
 
 
 Standard
@@ -153,7 +151,7 @@ will produce the difference at every relevant time point. A similar function exi
 Compare using a hypothesis test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For rigorous testing of differences, lifelines comes with a statistics library. The ``logrank_test`` function
+For rigorous testing of differences, *lifelines* comes with a statistics library. The ``logrank_test`` function
 compares whether the "death" generation process of the two populations are equal:
 
 .. code-block:: python
@@ -271,7 +269,7 @@ existing for at times 72 or 73) This is especially useful for comparing multiple
     74         0.00
 
 
-lifelines will intelligently forward-fill the estimates to unseen time points.
+*lifelines* will intelligently forward-fill the estimates to unseen time points.
 
 Example SQL query to get data from a table
 ##############################################

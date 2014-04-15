@@ -3,6 +3,18 @@
 Quickstart
 '''''''''''''''''''''''''''''''''''''''
 
+
+Installation
+---------------------------------------
+
+Install via ``pip``:
+
+.. code:: 
+
+    pip install lifelines 
+
+
+
 Kaplan-Meier and Nelson-Aalen
 ---------------------------------------
 
@@ -64,7 +76,7 @@ Similar functionality exists for the ``NelsonAalenFitter``:
 
 but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` is. 
 
-.. note:: Similar to Scikit-Learn, all estimated quanities in lifelines appends an underscore to the name. 
+.. note:: Similar to Scikit-Learn, all statistically estimated quanities append an underscore to the property name. 
 
 Survival Regression
 ---------------------------------
