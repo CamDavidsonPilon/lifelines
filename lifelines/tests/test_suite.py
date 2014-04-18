@@ -318,11 +318,11 @@ class StatisticalTests(unittest.TestCase):
         return 
 
     def test_bayesian_fitter_low_data(self):
-        bf = BayesianFitter(samples=10)
+        bf = BayesianFitter(samples=15)
         bf.fit(waltonT1)
-        ax = bf.plot()
+        ax = bf.plot(alpha=.2)
         bf.fit(waltonT2)
-        bf.plot(ax=ax,c='#A60628')
+        bf.plot(ax=ax, alpha=0.2, c='k')
         plt.show()
         return
 
@@ -332,6 +332,17 @@ class StatisticalTests(unittest.TestCase):
         bf.plot()
         plt.show()
         return
+
+    def test_kmf_left_censorship(self):
+        kmf = KaplanMeierFitter()
+        kmf.fit(lcd['alluvial_fan']['T'], lcd['alluvial_fan']['C'], left_censorship=True, label='alluvial_fan')
+        ax = kmf.plot()
+
+        kmf.fit(lcd['basin_trough']['T'], lcd['basin_trough']['C'], left_censorship=True, label='basin_trough')
+        ax = kmf.plot(ax=ax)
+        plt.show()
+        return
+
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(self.lifetimes.keys()), 1))
@@ -712,6 +723,26 @@ waltonT = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26.,
                     69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45.,
                     45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60.,
                     60., 60., 60., 60., 60., 60., 60., 60., 66.])
+
+#left-censorted-dataset
+lcd = {  
+            'alluvial_fan': {
+                            'T':[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 
+                                2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 
+                                3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 7.0, 
+                                7.0, 7.0, 8.0, 9.0],
+                            'C':[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+                                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]
+            },
+            'basin_trough': {
+                    'T': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0,
+                         3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 6.0, 6.0, 8.0, 9.0, 
+                         9.0, 10.0, 10.0, 10.0, 10.0, 12.0, 14.0, 15.0, 15.0, 17.0, 23.0],
+                    'C': [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 
+                          0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1]
+            }
+}
+
 
 
 panel_dataset = pd.read_csv(
