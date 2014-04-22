@@ -19,7 +19,7 @@ from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logra
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import datetimes_to_durations, survival_events_from_table, survival_table_from_events,StatError
-
+from ..datasets import lcd_dataset
 
 class MiscTests(unittest.TestCase):
 
@@ -333,15 +333,22 @@ class StatisticalTests(unittest.TestCase):
         plt.show()
         return
 
-    def test_kmf_left_censorship(self):
+    def test_kmf_left_censorship_plots(self):
         kmf = KaplanMeierFitter()
-        kmf.fit(lcd['alluvial_fan']['T'], lcd['alluvial_fan']['C'], left_censorship=True, label='alluvial_fan')
+        kmf.fit(lcd_dataset['alluvial_fan']['T'], lcd_dataset['alluvial_fan']['C'], left_censorship=True, label='alluvial_fan')
         ax = kmf.plot()
 
-        kmf.fit(lcd['basin_trough']['T'], lcd['basin_trough']['C'], left_censorship=True, label='basin_trough')
+        kmf.fit(lcd_dataset['basin_trough']['T'], lcd_dataset['basin_trough']['C'], left_censorship=True, label='basin_trough')
         ax = kmf.plot(ax=ax)
         plt.show()
         return
+
+    def test_kmf_left_censorship_stats(self):
+        T = [3, 5, 5, 5, 6, 6, 10, 12]
+        C = [1,0,0,1,1,1,0,1]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T,C, left_censorship=True)
+
 
 
     def kaplan_meier(self, censor=False):
@@ -723,25 +730,6 @@ waltonT = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26.,
                     69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45.,
                     45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60.,
                     60., 60., 60., 60., 60., 60., 60., 60., 66.])
-
-#left-censorted-dataset
-lcd = {  
-            'alluvial_fan': {
-                            'T':[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 
-                                2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 
-                                3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 7.0, 
-                                7.0, 7.0, 8.0, 9.0],
-                            'C':[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-                                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]
-            },
-            'basin_trough': {
-                    'T': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0,
-                         3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 6.0, 6.0, 8.0, 9.0, 
-                         9.0, 10.0, 10.0, 10.0, 10.0, 12.0, 14.0, 15.0, 15.0, 17.0, 23.0],
-                    'C': [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 
-                          0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1]
-            }
-}
 
 
 
