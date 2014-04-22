@@ -493,7 +493,7 @@ class AalenAdditiveFitter(object):
         columns = df.columns
         
         #initialize dataframe to store estimates
-        non_censorsed_times = T[C].iteritems()
+        non_censorsed_times = T[C].items()
         n_deaths = len(non_censorsed_times)
 
         hazards_ = pd.DataFrame( np.zeros((n_deaths,d)), columns = columns,
@@ -511,7 +511,7 @@ class AalenAdditiveFitter(object):
         t = T.iloc[0]
         i = 0
 
-        for id, time in T.iteritems():  #should be sorted.
+        for id, time in T.items():  #should be sorted.
 
             if t != time:
                 assert t < time
@@ -595,7 +595,7 @@ class AalenAdditiveFitter(object):
         wp = df.to_panel().bfill().fillna(0)
         
         #initialize dataframe to store estimates
-        non_censorsed_times = T[C].iteritems()
+        non_censorsed_times = T[C].items()
         columns = wp.items
         hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
                         columns = columns, index = from_tuples(non_censorsed_times))
@@ -787,7 +787,7 @@ def _predict(self, estimate, label):
       """ % (estimate, estimate)
 
     def predict(time):
-        return map(lambda t: getattr(self, estimate).ix[:t].iloc[-1][label], time)
+        return [getattr(self, estimate).ix[:t].iloc[-1][label] for t in time]
 
     predict.__doc__ = doc_string
     return predict

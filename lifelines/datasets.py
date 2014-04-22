@@ -1,4 +1,4 @@
-#sample dataset
+# -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
 from io import StringIO
@@ -88,8 +88,8 @@ def generate_waltons_data():
 
 def generate_dd_dataset():
     return pd.read_csv(
-    StringIO("""
-"","ctryname","cowcode2","politycode","un_region_name","un_continent_name","ehead","leaderspellreg","democracy","regime","start_year","duration","observed"
+    StringIO(u"""
+"id","ctryname","cowcode2","politycode","un_region_name","un_continent_name","ehead","leaderspellreg","democracy","regime","start_year","duration","observed"
 "1","Afghanistan",700,700,"Southern Asia","Asia","Mohammad Zahir Shah","Mohammad Zahir Shah.Afghanistan.1946.1952.Monarchy","Non-democracy","Monarchy",1946,7,1
 "2","Afghanistan",700,700,"Southern Asia","Asia","Sardar Mohammad Daoud","Sardar Mohammad Daoud.Afghanistan.1953.1962.Civilian Dict","Non-democracy","Civilian Dict",1953,10,1
 "3","Afghanistan",700,700,"Southern Asia","Asia","Mohammad Zahir Shah","Mohammad Zahir Shah.Afghanistan.1963.1972.Monarchy","Non-democracy","Monarchy",1963,10,1
@@ -1898,12 +1898,12 @@ def generate_dd_dataset():
 "1806","Zimbabwe",552,552,"Eastern Africa","Africa","Ian Smith","Ian Smith.Zimbabwe.1965.1978.Civilian Dict","Non-democracy","Civilian Dict",1965,14,1
 "1807","Zimbabwe",552,552,"Eastern Africa","Africa","Abel Muzorewa","Abel Muzorewa.Zimbabwe.1979.1979.Civilian Dict","Non-democracy","Civilian Dict",1979,1,1
 "1808","Zimbabwe",552,552,"Eastern Africa","Africa","Robert Mugabe","Robert Mugabe.Zimbabwe.1980.2008.Civilian Dict","Non-democracy","Civilian Dict",1980,29,0"""),
-index_col=[0])
+index_col=[0], header=1)
 
 
 def generate_regression_dataset():
     return pd.read_csv(
-    StringIO("""
+    StringIO(u"""
 var1,var2,var3,var4,T,E
 0.5951697438546901,1.14347169375119,1.5710788740267934,1.0,14.785478547854785,1
 0.20932541672176813,0.18467669526521932,0.356980285734657,1.0,7.336733673367337,1
