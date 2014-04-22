@@ -28,6 +28,7 @@ class NelsonAalenFitter(object):
     def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
+
         if self.nelson_aalen_smoothing:
             self._variance_f = self._variance_f_smooth
             self._additive_f = self._additive_f_smooth
@@ -825,7 +826,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     if reverse:
         events = events.sort_index(ascending=False)
         population = events['entrance'].sum() - events['removed'].cumsum().shift(1).fillna(0)
-        deaths = events['observed']
+        deaths = events['observed'].shift(1).fillna(0)
         estimate_ = np.cumsum(_additive_f(population, deaths)).ffill().sort_index()
         var_ = np.cumsum(_additive_var(population, deaths)).ffill().sort_index()
     else:
@@ -838,9 +839,6 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     var_ = var_.reindex(timeline, method='pad')
     var_.index.name = 'timeline'
     estimate_.index.name = 'timeline'
-
-    #import pdb
-    #pdb.set_trace()
 
     return estimate_, var_
 
