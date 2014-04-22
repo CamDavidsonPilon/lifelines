@@ -23,10 +23,10 @@ Let's start by importing some data. We need the durations that individuals are o
 
 .. code:: python
 
-    from lifelines.datasets import waltons_data    
+    from lifelines.datasets import waltons_dataset    
 
-    T = waltons_data['T']
-    E = waltons_data['E']
+    T = waltons_dataset['T']
+    E = waltons_dataset['E']
 
 ``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed (alternatively an individual can be censored). 
 
@@ -54,7 +54,7 @@ Multiple groups
 
 .. code:: python
     
-    groups = waltons_data['group']
+    groups = waltons_dataset['group']
     ix = groups == 'control'
 
     kmf.fit(T[ix], E[ix], label='control')
