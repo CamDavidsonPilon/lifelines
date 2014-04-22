@@ -453,7 +453,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 2000
+        n = 2500
         d = 6
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
@@ -462,7 +462,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
-        X['E'] = 1
+        X['E'] = np.random.binomial(1,1,n)
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
 
