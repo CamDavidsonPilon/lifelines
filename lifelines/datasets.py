@@ -3,7 +3,28 @@ import pandas as pd
 import numpy as np
 from io import StringIO
 
-__all__ = ['waltons_data', 'regression_data']
+__all__ = ['waltons_dataset', 'regression_dataset', 'lcd_dataset', 'dd_dataset']
+
+
+def generate_left_censored_data():
+    return {  
+            'alluvial_fan': {
+                    'T':[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 
+                        2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 
+                        3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 7.0, 
+                        7.0, 7.0, 8.0, 9.0],
+                    'C':[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+                         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]
+            },
+            'basin_trough': {
+                    'T': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0,
+                         3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 6.0, 6.0, 8.0, 9.0, 
+                         9.0, 10.0, 10.0, 10.0, 10.0, 12.0, 14.0, 15.0, 15.0, 17.0, 23.0],
+                    'C': [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 
+                          0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1]
+            }
+    }
+
 
 def generate_waltons_data():
     waltonG = np.array(['miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
@@ -2088,5 +2109,7 @@ var1,var2,var3,var4,T,E
 
 
 
-waltons_data = generate_waltons_data()
-regression_data = generate_regression_dataset()
+waltons_dataset = generate_waltons_data()
+regression_dataset = generate_regression_dataset()
+dd_dataset = generate_dd_dataset()
+lcd_dataset = generate_left_censored_data()
