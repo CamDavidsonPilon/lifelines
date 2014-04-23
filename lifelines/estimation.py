@@ -28,6 +28,7 @@ class NelsonAalenFitter(object):
     def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
+
         if self.nelson_aalen_smoothing:
             self._variance_f = self._variance_f_smooth
             self._additive_f = self._additive_f_smooth
@@ -58,7 +59,7 @@ class NelsonAalenFitter(object):
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
-                                                                self._additive_f, self._variance_f)
+                                                                self._additive_f, self._variance_f, False)
 
         # esimates
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[label])
@@ -163,7 +164,8 @@ class KaplanMeierFitter(object):
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM-estimate', alpha=None):
+    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM-estimate', 
+                  alpha=None, left_censorship=False):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -176,16 +178,21 @@ class KaplanMeierFitter(object):
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
+          left_censorship: True if durations and event_observed refer to left censorship events. Default False
 
         Returns:
           self, with new properties like 'survival_function_'.
 
         """
+        #if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
+        estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_' 
+
         v = preprocess_inputs(durations, event_observed, timeline, entry)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
         log_survival_function, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
-                                                                   self._additive_f, self._additive_var)
+                                                                   self._additive_f, self._additive_var,
+                                                                   left_censorship)
 
         if entry is not None:
             #a serious problem with KM is that when the sample size is small and there are too few early 
@@ -199,26 +206,27 @@ class KaplanMeierFitter(object):
 
 
         # estimation
-        self.survival_function_ = pd.DataFrame(np.exp(log_survival_function), columns=[label])
+        setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[label]))
+        self.__estimate = getattr(self,estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha)
-        self.median_ = median_survival_times(self.survival_function_)
+        self.median_ = median_survival_times(self.__estimate)
 
         # estimation methods
-        self.predict = _predict(self, "survival_function_", label)
-        self.subtract = _subtract(self, "survival_function_")
-        self.divide = _divide(self, "survival_function_")
+        self.predict = _predict(self, estimate_name, label)
+        self.subtract = _subtract(self, estimate_name)
+        self.divide = _divide(self, estimate_name)
 
         # plotting functions
-        self.plot = plot_estimate(self, "survival_function_")
-        self.plot_survival_function = self.plot
+        self.plot = plot_estimate(self, estimate_name)
+        setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
     def _bounds(self, cumulative_sq_, alpha):
         # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdfg
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
-        name = self.survival_function_.columns[0]
-        v = np.log(self.survival_function_.values)
+        name = self.__estimate.columns[0]
+        v = np.log(self.__estimate.values)
         df["%s_upper_%.2f" % (name, self.alpha)] = np.exp(-np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v))
         df["%s_lower_%.2f" % (name, self.alpha)] = np.exp(-np.exp(np.log(-v) - alpha2 * np.sqrt(cumulative_sq_) / v))
         return df
@@ -323,7 +331,7 @@ class BayesianFitter(object):
 
     """
 
-    def __init__(self, samples = 100):
+    def __init__(self, samples = 300):
         self.beta = beta
         self.samples = samples
 
@@ -349,14 +357,13 @@ class BayesianFitter(object):
         return self
 
     def plot(self, **kwargs):
-        kwargs['alpha'] = coalesce(kwargs.get('alpha'), 15./self.samples)
+        kwargs['alpha'] = coalesce(kwargs.pop('alpha', None), 0.05)
         kwargs['legend'] = False
-        kwargs['c'] = coalesce( kwargs.get('c'), kwargs.get('color'), '#348ABD')
+        kwargs['c'] = coalesce( kwargs.pop('c', None), kwargs.pop('color', None), '#348ABD')
         ax = self.sample_survival_functions_.plot(**kwargs)
         return ax
 
     def generate_sample_path(self, n=1):
-
         deaths = self.event_table['observed']
         population = self.event_table['entrance'].cumsum() - self.event_table['removed'].cumsum().shift(1).fillna(0)
         d = deaths.shape[0]
@@ -780,7 +787,7 @@ def _predict(self, estimate, label):
       """ % (estimate, estimate)
 
     def predict(time):
-        return map(lambda t: getattr(self, estimate).ix[:t].iloc[-1][label], time)
+        return [getattr(self, estimate).ix[:t].iloc[-1][label] for t in time]
 
     predict.__doc__ = doc_string
     return predict
@@ -811,16 +818,22 @@ def preprocess_inputs(durations, event_observed, timeline, entry ):
     return durations, event_observed, timeline.astype(float), entry, event_table
 
 
-def _additive_estimate(events, timeline, _additive_f, _additive_var):
+def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     """
     Called to compute the Kaplan Meier and Nelson-Aalen estimates.
 
     """
-
-    deaths = events['observed']
-    population = events['entrance'].cumsum() - events['removed'].cumsum().shift(1).fillna(0) #slowest line here.
-    estimate_ = np.cumsum(_additive_f(population, deaths))
-    var_ = np.cumsum(_additive_var(population, deaths))
+    if reverse:
+        events = events.sort_index(ascending=False)
+        population = events['entrance'].sum() - events['removed'].cumsum().shift(1).fillna(0)
+        deaths = events['observed'].shift(1).fillna(0)
+        estimate_ = np.cumsum(_additive_f(population, deaths)).ffill().sort_index()
+        var_ = np.cumsum(_additive_var(population, deaths)).ffill().sort_index()
+    else:
+        deaths = events['observed']
+        population = events['entrance'].cumsum() - events['removed'].cumsum().shift(1).fillna(0) #slowest line here.
+        estimate_ = np.cumsum(_additive_f(population, deaths))
+        var_ = np.cumsum(_additive_var(population, deaths))
 
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
     var_ = var_.reindex(timeline, method='pad')

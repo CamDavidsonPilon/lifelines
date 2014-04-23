@@ -139,7 +139,7 @@ Subtract the difference between survival curves
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you are interested in taking the difference between two survival curves, simply trying to 
-subtract the ``survival_function_`` will likely fail if the timelines are not equal. Fortunately, 
+subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately, 
 the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built in ``subtract`` method: 
 
 .. code-block:: python

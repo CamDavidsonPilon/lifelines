@@ -238,16 +238,13 @@ property.
 Alternatively, we can call ``plot`` on the ``KaplanMeierFitter`` itself
 to plot both the KM estimate and its confidence intervals:
 
-*Note: Don't like the shaded area for confidence intervals? See below
-examples on how to change this*
-
 .. code:: python
 
     kmf.plot()
 
-
-
 .. image:: Introtolifelines_files/Introtolifelines_15_1.png
+
+.. note::  Don't like the shaded area for confidence intervals? See below for examples on how to change this
 
 
 The median time in office, which defines the point in time where on
@@ -302,12 +299,11 @@ probabilties of survival at those points:
     print "Median survival time of democratic:", kmf.median_
     
     kmf.fit(T[~dem], event_observed=C[~dem], timeline=t, label="Non-democratic Regimes")
-    kmf.plot(ax=ax )
-    plt.ylim(0,1);
-    plt.title("Lifespans of different global regimes");
+    ax = kmf.plot(ax=ax)
     print "Median survival time of non-democratic:", kmf.median_
-    print
-    print kmf.survival_function_.head()
+
+    plt.ylim(0,1)
+    plt.title("Lifespans of different global regimes");
 
 .. parsed-literal::
 
@@ -315,16 +311,6 @@ probabilties of survival at those points:
     dtype: float64
     Median survival time of non-democratic: Non-democratic Regimes    6
     dtype: float64
-    
-       Non-democratic Regimes
-    0                1.000000
-    1                0.798712
-    2                0.715339
-    3                0.657841
-    4                0.610095
-    
-    [5 rows x 1 columns]
-
 
 
 .. image:: Introtolifelines_files/Introtolifelines_21_1.png
@@ -580,3 +566,53 @@ here. (My advice: stick with the cumulative hazard function.)
 
 
 .. image:: Introtolifelines_files/Introtolifelines_41_1.png
+
+
+
+Other types of censorship
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+Left Censored Data
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We've mainly been focusing on *right-censorship*, which describes cases where we do not observe the death event.
+This situation is the most common one. Alternatively, there are situations where we do not observe the *birth* event
+occuring. Consider the case where a doctor sees a delayed onset of symptoms of an underlying disease. The doctor
+is unsure *when* the disease was contracted (birth), but know it was before the discovery. 
+
+Another situation where we have left censored data is when measurements have only an upperbound, that is, the measurements
+instruments could only detect the measurement was *less* than some upperbound.
+
+*lifelines* has support for left-censored datasets in the ``KaplanMeierFitter`` class, by adding the keyword ``left_censorship=True`` (default ``False``) to the call to ``fit``. 
+
+.. code:: python
+
+    from lifelines.datasets import lcd_dataset
+
+    T = lcd_dataset['alluvial_fan']['T']
+    C = lcd_dataset['alluvial_fan']['C'] #boolean array, True if observed.
+
+    kmf = KaplanMeierFitter()
+    kmf.fit(T,C, left_censorship=True)  
+
+Instead of producing a survival function, left-censored data is more interested in the cumulative density function
+of time to birth. This is available as the ``cumulative_density_`` property aftering fitting the data.
+
+.. code:: python
+    
+    kmf.cumulative_density_
+    kmf.plot() #will plot the CDF
+
+
+Left Truncated Data
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Another form of bias that can be introduced into a dataset is called left-truncation. (Also a form of censorship). 
+This occurs when individuals may die before ever entrying into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional arugment for ``entry``, which is of equal size to the duration array.
+It describes the offset from birth to entering the study. This is also useful when subjects enter the study at different
+points in their lifetime. For example, if you are measuring time to death of prisoners in 
+prison, the prisoners will enter the study at different ages. 
+
+ .. note:: Nothing changes in the duration array: it still measures time from entry of study to time left study (either by death or censorship)
+
+ .. note:: Other types of censorship, like interval-censorship, are not implemented in *lifelines* yet.

@@ -19,7 +19,7 @@ from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logra
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import datetimes_to_durations, survival_events_from_table, survival_table_from_events,StatError
-
+from ..datasets import lcd_dataset
 
 class MiscTests(unittest.TestCase):
 
@@ -318,11 +318,11 @@ class StatisticalTests(unittest.TestCase):
         return 
 
     def test_bayesian_fitter_low_data(self):
-        bf = BayesianFitter(samples=10)
+        bf = BayesianFitter(samples=15)
         bf.fit(waltonT1)
-        ax = bf.plot()
+        ax = bf.plot(alpha=.2)
         bf.fit(waltonT2)
-        bf.plot(ax=ax,c='#A60628')
+        bf.plot(ax=ax, alpha=0.2, c='k')
         plt.show()
         return
 
@@ -332,6 +332,24 @@ class StatisticalTests(unittest.TestCase):
         bf.plot()
         plt.show()
         return
+
+    def test_kmf_left_censorship_plots(self):
+        kmf = KaplanMeierFitter()
+        kmf.fit(lcd_dataset['alluvial_fan']['T'], lcd_dataset['alluvial_fan']['C'], left_censorship=True, label='alluvial_fan')
+        ax = kmf.plot()
+
+        kmf.fit(lcd_dataset['basin_trough']['T'], lcd_dataset['basin_trough']['C'], left_censorship=True, label='basin_trough')
+        ax = kmf.plot(ax=ax)
+        plt.show()
+        return
+
+    def test_kmf_left_censorship_stats(self):
+        T = [3, 5, 5, 5, 6, 6, 10, 12]
+        C = [1,0,0,1,1,1,0,1]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T,C, left_censorship=True)
+
+
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(self.lifetimes.keys()), 1))
@@ -435,7 +453,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
-        n = 2000
+        n = 2500
         d = 6
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
@@ -444,7 +462,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
-        X['E'] = 1
+        X['E'] = np.random.binomial(1,1,n)
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
 
@@ -712,6 +730,7 @@ waltonT = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26.,
                     69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45.,
                     45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60.,
                     60., 60., 60., 60., 60., 60., 60., 60., 66.])
+
 
 
 panel_dataset = pd.read_csv(
