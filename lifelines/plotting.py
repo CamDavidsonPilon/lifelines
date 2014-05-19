@@ -49,7 +49,7 @@ def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None, order=False)
 def shaded_plot(x, y, y_upper, y_lower, **kwargs):
     ax = kwargs.pop('ax', plt.gca())
     base_line, = ax.plot(x, y, drawstyle='steps-post', **kwargs)
-    ax.fill_between(x, y_lower, y_upper, facecolor=base_line.get_color(), alpha=0.25)
+    fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25, color=base_line.get_color(), linewidth=1.0)
     return
 
 
