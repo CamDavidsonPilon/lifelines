@@ -85,9 +85,9 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
 
 .. code:: python
     
-    from lifelines.datasets import regression_data
+    from lifelines.datasets import regression_dataset
 
-    regression_data.head()
+    regression_dataset.head()
 
 
 
@@ -98,14 +98,14 @@ The input of the ``fit`` method's API on ``AalenAdditiveFitter`` is different th
     from lifelines import AalenAdditiveFitter
 
     aaf = AalenAdditiveFitter(fit_intercept=False)
-    aaf.fit(regression_data, duration_col='T', event_col='E')
+    aaf.fit(regression_dataset, duration_col='T', event_col='E')
 
 
 After fitting, you'll have access to properties like ``cumulative_hazards_`` and methods like ``plot``, ``predict_cumulative_hazards``, and ``predict_survival_function``. The latter two methods require an additional argument of individual covariates:
 
 .. code:: python
     
-    x = regression_data[regression_data.columns - ['E','T']]
+    x = regression_dataset[regression_dataset.columns - ['E','T']]
     aaf.predict_survival_function(x.ix[10:12]).plot() #get the unique survival functions of the first two subjects 
 
 
