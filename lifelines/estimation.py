@@ -481,8 +481,9 @@ class AalenAdditiveFitter(object):
             df['baseline'] = 1.
 
         #each individual should have an ID of time of leaving study
-        C = df[event_col].astype(bool)
-        T = df[duration_col]
+        C = pd.Series(df[event_col].values, dtype=bool, index=ids)
+        T = pd.Series(df[duration_col].values, index=ids)
+
         df = df.set_index([duration_col, id_col])
 
         ix = T.argsort()

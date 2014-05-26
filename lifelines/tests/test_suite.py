@@ -498,6 +498,16 @@ class AalenAdditiveModelTests(unittest.TestCase):
         plt.show()
         return
 
+    def test_dataframe_input_with_nonstandard_index(self):
+
+        df = pd.DataFrame([(16,True,True), (1,True,True), (4,False,True)], 
+                          columns=['duration', 'done_feeding', 'white'],
+                          index=['a','b','c'])
+        aaf = AalenAdditiveFitter()
+        aaf.fit(df, duration_col='duration', event_col='done_feeding')
+        return 
+
+
 class PlottingTests(unittest.TestCase):
 
     def test_aalen_additive_plot(self):
