@@ -126,8 +126,8 @@ please check out the [Documentation and Tutorials page](http://lifelines.readthe
 
 Alternatively, you can **use the IPython notebooks tutorials**, located in the main directory of the repo:
 
-1. [Introduction to survival analysis](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Survival%20Analysis%20intro.ipynb)
-2. [Using lifelines on real data](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/Intro%20to%20lifelines.ipynb) 
+1. [Introduction to survival analysis](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/docs/Survival%20Analysis%20intro.ipynb)
+2. [Using lifelines on real data](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/docs/Intro%20to%20lifelines.ipynb) 
 
 
 ![lifelines](http://i.imgur.com/QXW71zA.png)
