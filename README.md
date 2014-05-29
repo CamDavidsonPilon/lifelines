@@ -32,7 +32,7 @@ You can install *lifelines* using
 Or getting the bleeding edge version with:
 
 
-       pip install --upgrade git+https://github.com/CamDavidsonPilon/lifelines.git
+       pip install --upgrade --no-deps git+https://github.com/CamDavidsonPilon/lifelines.git
 
 
 from the command line. 
