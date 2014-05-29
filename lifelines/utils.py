@@ -15,10 +15,10 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
 
     Parameters:
-        groups: a (n,) numpy array of individuals' group ids.
-        durations: a (n,) numpy array of durations of each individual
-        event_observed: a (n,) numpy array of event observations, 1 if observed, 0 else.
-        event_observed: a (n,) numpy array of times individual entered study. This is most applicable in 
+        groups: a (n,) array of individuals' group ids.
+        durations: a (n,)  array of durations of each individual
+        event_observed: a (n,) array of event observations, 1 if observed, 0 else.
+        event_observed: a (n,) array of times individual entered study. This is most applicable in 
                     cases where there is left-truncation, i.e. a individual might enter the 
                     study late. If not the case, normally set to all zeros. 
 
@@ -62,7 +62,8 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
 
     """
     n = max(groups.shape)
-    groups, durations, event_observed, min_observations = map(lambda x: pd.Series(x.reshape(n)),[groups, durations, event_observed, min_observations])
+    assert n == max(durations.shape) == max(event_observed.shape) == max(min_observations.shape), "inputs must be of the same length."
+    groups, durations, event_observed, min_observations = map(lambda x: pd.Series(np.reshape(x, (n,))),[groups, durations, event_observed, min_observations])
     unique_groups = groups.unique()
 
     # set first group
