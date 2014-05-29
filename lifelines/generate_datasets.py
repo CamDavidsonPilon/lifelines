@@ -5,6 +5,7 @@ import pandas as pd
 
 from scipy import stats as stats
 from scipy.optimize import newton
+from scipy.integrate import cumtrapz
 
 
 def exponential_survival_data(n, cr=0.05, scale=1.):
@@ -217,7 +218,7 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
     """
     n = hazard_rates.shape[1]
     survival_times = np.empty((n, size))
-    cumulative_hazards = cumulative_quadrature(hazard_rates.values.T, timelines)
+    cumulative_hazards = cumulative_integral(hazard_rates.values, timelines).T
 
     for i in range(size):
         u = random.rand(n, 1)
@@ -245,26 +246,19 @@ def generate_observational_matrix(n, d, timelines, constant=False, independent=0
     hz, coeff, covariates = generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen")
     R = generate_random_lifetimes(hz, timelines)
     covariates["event_at"] = R.T
-    return covariates.sort("event_at"), pd.DataFrame(cumulative_quadrature(coeff.values.T, timelines).T, columns=coeff.columns, index=timelines)
+    return covariates.sort("event_at"), pd.DataFrame(cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines)
 
 
-def cumulative_quadrature(fx, x):
-    """Boss algo"""
+def cumulative_integral(fx, x):
+    """
+    Return the cumulative integral of arrays, initial value is 0.
 
-    lower_x = x[0]
-    cum_integral = np.empty((fx.shape[0], x.shape[0]))
-    cum_integral[:, 0] = 0
-    for i in range(1, x.shape[0]):
-        if (x[i - 1] - lower_x) == 0:
-            cum_integral[:, i] = 0.5 * (fx[:, i - 1] + fx[:, i]) * (x[i] - lower_x) / i
-            continue
-        cum_integral[:,
-                     i] = (cum_integral[:,
-                                        i - 1] * ((i - 1) / (x[i - 1] - lower_x)) + 0.5 * fx[:,
-                                                                                             i - 1] + 0.5 * fx[:,
-                                                                                                               i]) * ((x[i] - lower_x) / i)
-    return cum_integral
+    Parameters:
 
+        fx: (n,d) numpy array, what you want to integral of
+        x: (n,) numpy array, location to integrate over.
+    """
+    return cumtrapz(fx.T, x, initial = 0 ).T
 
 def construct_survival_curves(hazard_rates, timelines):
     """
@@ -276,5 +270,5 @@ def construct_survival_curves(hazard_rates, timelines):
       survial curves, (n,t) array
     """
     # pdb.set_trace()
-    cumulative_hazards = cumulative_quadrature(hazard_rates.values.T, timelines).T
+    cumulative_hazards = cumulative_integral(hazard_rates.values, timelines)
     return pd.DataFrame(np.exp(-cumulative_hazards), index=timelines)

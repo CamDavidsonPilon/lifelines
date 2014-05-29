@@ -23,20 +23,6 @@ from ..datasets import lcd_dataset
 
 class MiscTests(unittest.TestCase):
 
-    def test_quadrature_integration_for_identity_fuction(self):
-        # integrate x between 0 and 10:
-        x = np.linspace(0, 10, 1000)[:, None]
-        answer = 0.5 * x ** 2
-        approx_answer = cumulative_quadrature(x.T, x).T
-        npt.assert_almost_equal(answer, approx_answer, decimal=5)
-
-    def test_quadrature_integration_for_exp_function(self):
-        # integrate exp(x) between 0 and 4:
-        x = np.linspace(0, 4, 1000)[:, None]
-        answer = np.exp(x) - 1.
-        approx_answer = cumulative_quadrature(np.exp(x).T, x).T
-        npt.assert_almost_equal(answer, approx_answer, decimal=4)
-
     def test_datetimes_to_durations_days(self):
         start_date = ['2013-10-10 0:00:00', '2013-10-09', '2012-10-10']
         end_date = ['2013-10-13', '2013-10-10 0:00:00', '2013-10-15']
@@ -472,7 +458,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
+        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline), 
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
@@ -496,7 +482,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_quadrature(coef.values.T, timeline).T, 
+        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline), 
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
@@ -531,7 +517,6 @@ class PlottingTests(unittest.TestCase):
         d = 3
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
-        cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
         T = generate_random_lifetimes(hz, timeline)
         C = np.random.binomial(1, 1., size=n)
         X['T'] = T
@@ -553,7 +538,6 @@ class PlottingTests(unittest.TestCase):
         d = 3
         timeline = np.linspace(0, 150, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
-        cumulative_hazards = cumulative_quadrature(coef.values.T, timeline).T
         T = generate_random_lifetimes(hz, timeline) + 0.1 * np.random.uniform(size=(n, 1))
         C = np.random.binomial(1, 0.8, size=n)
         X['T'] = T
