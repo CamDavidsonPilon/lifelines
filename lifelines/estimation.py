@@ -36,7 +36,8 @@ class NelsonAalenFitter(object):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='NA-estimate', alpha=None):
+    def fit(self, durations, event_observed=None, timeline=None, entry=None, 
+                  label='NA-estimate', alpha=None, ci_labels=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -49,6 +50,8 @@ class NelsonAalenFitter(object):
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
+          ci_labels: add custom column names to the generated confidence intervals
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
 
         Returns:
           self, with new properties like 'cumulative_hazard_'.
@@ -63,7 +66,7 @@ class NelsonAalenFitter(object):
 
         # esimates
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[label])
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha)
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
         self._cumulative_sq = cumulative_sq_
 
         # estimation functions
@@ -78,13 +81,19 @@ class NelsonAalenFitter(object):
 
         return self
 
-    def _bounds(self, cumulative_sq_, alpha):
+    def _bounds(self, cumulative_sq_, alpha, ci_labels):
         alpha2 = inv_normal_cdf(1 - (1 - alpha) / 2)
         df = pd.DataFrame(index=self.timeline)
         name = self.cumulative_hazard_.columns[0]
-        df["%s_upper_%.2f" % (name, self.alpha)] = self.cumulative_hazard_.values * \
+
+        if ci_labels is None:
+            ci_labels = ["%s_upper_%.2f" % (name, self.alpha), "%s_lower_%.2f" % (name, self.alpha)]
+        assert len(ci_labels)==2, "ci_labels should be a length 2 array."
+        self.ci_labels = ci_labels
+
+        df[ci_labels[0]] = self.cumulative_hazard_.values * \
             np.exp(alpha2 * np.sqrt(cumulative_sq_) / self.cumulative_hazard_.values)
-        df["%s_lower_%.2f" % (name, self.alpha)] = self.cumulative_hazard_.values * \
+        df[ci_labels[1]] = self.cumulative_hazard_.values * \
             np.exp(-alpha2 * np.sqrt(cumulative_sq_) / self.cumulative_hazard_.values)
         return df
 
@@ -135,8 +144,8 @@ class NelsonAalenFitter(object):
         C = (var_hazard_.values != 0.0)  # only consider the points with jumps
         std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth)**2, var_hazard_.values[C]))
         values = {
-            "%s_upper_%.2f" % (name, self.alpha): hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
-            "%s_lower_%.2f" % (name, self.alpha): hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_)
+            self.ci_labels[0]: hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
+            self.ci_labels[1]: hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_)
         }
         return pd.DataFrame(values, index=timeline)
 
@@ -165,7 +174,7 @@ class KaplanMeierFitter(object):
         self.alpha = alpha
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM-estimate', 
-                  alpha=None, left_censorship=False):
+                  alpha=None, left_censorship=False, ci_labels=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -179,6 +188,9 @@ class KaplanMeierFitter(object):
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           left_censorship: True if durations and event_observed refer to left censorship events. Default False
+          ci_labels: add custom column names to the generated confidence intervals
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+
 
         Returns:
           self, with new properties like 'survival_function_'.
@@ -208,7 +220,7 @@ class KaplanMeierFitter(object):
         # estimation
         setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[label]))
         self.__estimate = getattr(self,estimate_name)
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha)
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
         self.median_ = median_survival_times(self.__estimate)
 
         # estimation methods
@@ -221,12 +233,17 @@ class KaplanMeierFitter(object):
         setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
-    def _bounds(self, cumulative_sq_, alpha):
+    def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdfg
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
         name = self.__estimate.columns[0]
         v = np.log(self.__estimate.values)
+
+        if ci_labels is None:
+            ci_labels = ["%s_upper_%.2f" % (name, self.alpha), "%s_lower_%.2f" % (name, self.alpha)]
+        assert len(ci_labels)==2, "ci_labels should be a length 2 array."
+
         df["%s_upper_%.2f" % (name, self.alpha)] = np.exp(-np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v))
         df["%s_lower_%.2f" % (name, self.alpha)] = np.exp(-np.exp(np.log(-v) - alpha2 * np.sqrt(cumulative_sq_) / v))
         return df
@@ -267,7 +284,8 @@ class BreslowFlemingHarringtonFitter(object):
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='BFH-estimate', alpha=None):
+    def fit(self, durations, event_observed=None, timeline=None, entry=None, 
+                    label='BFH-estimate', alpha=None, ci_labels=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -280,13 +298,16 @@ class BreslowFlemingHarringtonFitter(object):
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
+          ci_labels: add custom column names to the generated confidence intervals
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+
 
         Returns:
           self, with new properties like 'survival_function_'.
 
         """
         naf = NelsonAalenFitter(self.alpha)
-        naf.fit(durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry)
+        naf.fit(durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = \
                 naf.durations, naf.event_observed, naf.timeline, naf.entry, naf.event_table
 

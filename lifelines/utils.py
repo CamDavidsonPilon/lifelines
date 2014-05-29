@@ -61,11 +61,12 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         ]
 
     """
-    unique_groups = np.unique(groups)
+    groups, durations, event_observed, min_observations = map(pd.Series,[groups, durations, event_observed, min_observations])
+    unique_groups = groups.unique()
 
     # set first group
     g = unique_groups[0]
-    ix = groups == g
+    ix = (groups == g)
     T = durations[ix]
     C = event_observed[ix]
     B = min_observations[ix]
@@ -83,7 +84,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
                     columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
                     how='outer')
     data = data.fillna(0)
-    # hmmm pandasits too bad I can't do data.ix[:limit] and leave out the if.
+    # hmmm pandas its too bad I can't do data.ix[:limit] and leave out the if.
     if int(limit) != -1:
         data = data.ix[:limit]
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')

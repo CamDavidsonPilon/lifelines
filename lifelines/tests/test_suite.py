@@ -18,7 +18,7 @@ from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitt
 from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logrank_test
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
-from ..utils import datetimes_to_durations, survival_events_from_table, survival_table_from_events,StatError
+from ..utils import *
 from ..datasets import lcd_dataset
 
 class MiscTests(unittest.TestCase):
@@ -91,6 +91,17 @@ class MiscTests(unittest.TestCase):
         npt.assert_array_equal(T, T_)
         npt.assert_array_equal(C, C_)
 
+    def test_ci_labels(self):
+        naf = NelsonAalenFitter()
+        expected = ['upper', 'lower']
+        naf.fit(LIFETIMES, ci_labels=expected)
+        naf.confidence_interval_.columns = expected
+
+    def test_group_survival_table_from_events_works_with_series(self):
+        df = pd.DataFrame([[1,True,3],[1,True,3],[4,False,2]], columns = ['T', 'E', 'G'])
+        ug,_,_,_ = group_survival_table_from_events(df.G, df.T, df.E, [0,0,0])
+        npt.assert_array_equal(ug, np.array([3,2]))
+        
 
 class StatisticalTests(unittest.TestCase):
 
@@ -682,7 +693,6 @@ class PlottingTests(unittest.TestCase):
         kmf.fit(data1,label='test label 1')
         ax = kmf.plot(flat=True, censor_styles={'marker':'+', 'mew':2, 'ms':7})
         return
-
 
 
 # some data
