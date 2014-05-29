@@ -95,13 +95,13 @@ class MiscTests(unittest.TestCase):
         naf = NelsonAalenFitter()
         expected = ['upper', 'lower']
         naf.fit(LIFETIMES, ci_labels=expected)
-        naf.confidence_interval_.columns = expected
+        npt.assert_array_equal(naf.confidence_interval_.columns, expected)
 
     def test_group_survival_table_from_events_works_with_series(self):
         df = pd.DataFrame([[1,True,3],[1,True,3],[4,False,2]], columns = ['T', 'E', 'G'])
         ug,_,_,_ = group_survival_table_from_events(df.G, df.T, df.E, [0,0,0])
         npt.assert_array_equal(ug, np.array([3,2]))
-        
+
 
 class StatisticalTests(unittest.TestCase):
 
