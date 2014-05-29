@@ -12,7 +12,7 @@ def read(fname):
 
 setup(
     name="lifelines",
-    version="0.3.2.1",
+    version="0.3.2.2",
     author="Cameron Davidson-Pilon",
     author_email="cam.davidson.pilon@gmail.com",
     description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
