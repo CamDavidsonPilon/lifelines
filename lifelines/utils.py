@@ -61,7 +61,8 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         ]
 
     """
-    groups, durations, event_observed, min_observations = map(pd.Series,[groups, durations, event_observed, min_observations])
+    n = max(groups.shape)
+    groups, durations, event_observed, min_observations = map(lambda x: pd.Series(x.reshape(n)),[groups, durations, event_observed, min_observations])
     unique_groups = groups.unique()
 
     # set first group
