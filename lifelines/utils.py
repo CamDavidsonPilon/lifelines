@@ -284,12 +284,6 @@ def yaun_loss(fitter, T_true, T_pred, X_train, T_train, event_observed=None):
 
     return (event_observed * (T_pred - T_true) ** 2 / sC).mean()
 
-
-def quadrature(fx, x):
-    t = x.shape[0]
-    return (0.5 * fx[:, 0] + fx[:, 1:-1].sum(1) + 0.5 * fx[:, -1]) * (x[-1] - x[0]) * 1.0 / t
-
-
 def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2
     M[abs((t - T)) >= bandwidth] = 0

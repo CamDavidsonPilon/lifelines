@@ -3,11 +3,12 @@ from __future__ import print_function
 import numpy as np
 from numpy.linalg import LinAlgError, inv
 from numpy import dot
-import pandas as pd
 from numpy.random import beta
+from scipy.integrate import trapz
+import pandas as pd
 
 from lifelines.plotting import plot_estimate, plot_regressions
-from lifelines.utils import survival_table_from_events, inv_normal_cdf, quadrature, \
+from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
                             epanechnikov_kernel, StatError, coalesce
 from lifelines.progress_bar import progress_bar
 
@@ -747,7 +748,7 @@ class AalenAdditiveFitter(object):
         Compute the expected lifetime, E[T], using covarites X.
         """
         t = self.cumulative_hazards_.index
-        return quadrature(self.predict_survival_function(X).values.T, t)
+        return trapz(self.predict_survival_function(X).values.T, t)
 
     def __repr__(self):
         try:
