@@ -5,6 +5,50 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils import group_survival_table_from_events
+from lifelines._statistics import concordance_index as _cindex
+
+
+def concordance_index(event_times, predicted_event_times, event_observed=None):
+    """
+    Calculates the concordance index (C-index) between two series
+    of event times. The first is the real survival times from
+    the experimental data, and the other is the predicted survival
+    times from a model of some kind.
+
+    The concordance index is a value between 0 and 1 where,
+    0.5 is the expected result from random predictions,
+    1.0 is perfect concordance and,
+    0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
+
+    See:
+    Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
+    developing models, evaluating assumptions and adequacy, and measuring and
+    reducing errors. Statistics in Medicine 1996;15(4):361–87.
+
+    Parameters:
+      event_times: a (nx1) array of observed survival times.
+      predicted_event_times: a (nx1) array of predicted survival times.
+      event_observed: a (nx1) array of censorship flags, 1 if observed,
+                      0 if not. Default assumes all observed.
+
+    Returns:
+      c-index: a value between 0 and 1.
+    """
+    event_times = np.array(event_times, dtype=float)
+    predicted_event_times = np.array(predicted_event_times, dtype=float)
+
+    if event_observed is None:
+        event_observed = np.ones(event_times.shape[0], dtype=float)
+
+    if event_times.shape != predicted_event_times.shape:
+        raise ValueError("Event times and predictions must have the same shape!")
+    if event_times.ndim != 1:
+        raise ValueError("Event times can only be 1-dimensional!")
+
+    # 100 times faster to calculate in Fortran
+    return _cindex(event_times,
+                   predicted_event_times,
+                   event_observed)
 
 
 def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs):

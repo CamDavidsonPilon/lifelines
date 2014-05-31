@@ -15,11 +15,13 @@ import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, \
                          median_survival_times, BreslowFlemingHarringtonFitter, BayesianFitter
-from ..statistics import logrank_test, multivariate_logrank_test, pairwise_logrank_test
+from ..statistics import (logrank_test, multivariate_logrank_test,
+                          pairwise_logrank_test, concordance_index)
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import *
 from ..datasets import lcd_dataset
+
 
 class MiscTests(unittest.TestCase):
 
@@ -230,7 +232,7 @@ class StatisticalTests(unittest.TestCase):
         S, P, R = pairwise_logrank_test(T, g, alpha=0.95)
         V = np.array([[np.nan, None, None], [None, np.nan, None], [None, None, np.nan]])
         npt.assert_array_equal(R, V)
-    
+
     def test_lists_to_KaplanMeierFitter(self):
         T = [2, 3, 4., 1., 6, 5.]
         C = [1, 0, 0, 0, 1, 1]
@@ -315,7 +317,7 @@ class StatisticalTests(unittest.TestCase):
         observations = np.array([ 1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31, \
            22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
         bfh.fit(observations, entry=births)
-        return 
+        return
 
     def test_bayesian_fitter_low_data(self):
         bf = BayesianFitter(samples=15)
@@ -393,6 +395,25 @@ class StatisticalTests(unittest.TestCase):
             na = np.insert(na, 0, 0.)
         return na.reshape(len(na), 1)
 
+    def test_concordance_index(self):
+        size = 1000
+        T = np.random.normal(size=size)
+        P = np.random.normal(size=size)
+        C = np.random.choice([0, 1], size=size)
+        Z = np.zeros_like(T)
+
+        # Zeros is exactly random
+        self.assertTrue(concordance_index(T, Z) == 0.5)
+        self.assertTrue(concordance_index(T, Z, C) == 0.5)
+
+        # Itself is 1
+        self.assertTrue(concordance_index(T, T) == 1.0)
+        self.assertTrue(concordance_index(T, T, C) == 1.0)
+
+        # Random is close to 0.5
+        self.assertTrue(abs(concordance_index(T, P) - 0.5) < 0.05)
+        self.assertTrue(abs(concordance_index(T, P, C) - 0.5) < 0.05)
+
 
 class AalenAdditiveModelTests(unittest.TestCase):
 
@@ -422,13 +443,12 @@ class AalenAdditiveModelTests(unittest.TestCase):
         aaf.fit(X)
 
         return True
-    
+
     def test_aaf_panel_dataset(self):
         aaf = AalenAdditiveFitter()
         aaf.fit(panel_dataset, id_col='id',duration_col='t', event_col='E')
         aaf.plot()
         return
-    
 
     def test_aalen_additive_median_predictions_split_data(self):
         # This tests to make sure that my median predictions statisfy
@@ -458,7 +478,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline), 
+        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
@@ -482,7 +502,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline), 
+        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
@@ -500,12 +520,12 @@ class AalenAdditiveModelTests(unittest.TestCase):
 
     def test_dataframe_input_with_nonstandard_index(self):
 
-        df = pd.DataFrame([(16,True,True), (1,True,True), (4,False,True)], 
+        df = pd.DataFrame([(16,True,True), (1,True,True), (4,False,True)],
                           columns=['duration', 'done_feeding', 'white'],
                           index=['a','b','c'])
         aaf = AalenAdditiveFitter()
         aaf.fit(df, duration_col='duration', event_col='done_feeding')
-        return 
+        return
 
 
 class PlottingTests(unittest.TestCase):
