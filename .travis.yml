@@ -1,0 +1,24 @@
+language: python
+python:
+   - "2.7"
+#  - "3.3"
+   - "3.4"
+# install dependencies with apt-get
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq libatlas-dev libatlas-base-dev liblapack-dev gfortran
+  - sudo apt-get install -qq libgmp-dev libmpfr-dev
+  - sudo apt-get install -qq python-numpy python-scipy python-pandas python-matplotlib
+  - sudo apt-get install -qq python3-numpy python3-scipy
+install:
+  - "pip install virtualenv"
+  - "virtualenv --system-site-packages bob"
+  - "source bob/bin/activate"
+  - "pip install -r requirements.txt"
+  - "pip install ."
+  - "python setup.py build_ext --inplace"
+# command to run tests
+script: python -m lifelines.tests.test_suite
+# I don't want notifications
+notifications:
+  email: false
