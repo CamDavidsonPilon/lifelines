@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 
 # plotting
@@ -96,14 +97,14 @@ def plot_regressions(self):
 
 def plot_estimate(self, estimate):
     doc_string = """"
-        Plots a pretty version of the fitted %s. 
-        
+        Plots a pretty version of the fitted %s.
+
         Matplotlib plot arguments can be passed in inside the kwargs, plus
 
         Parameters:
           flat: an opiniated design style with stepped lines and no shading. Similar to R's plotting. Default: False
           show_censors: place markers at censorship events. Default: False
-          censor_styles: If show_censors, this dictionary will be passed into the plot call. 
+          censor_styles: If show_censors, this dictionary will be passed into the plot call.
           ci_alpha: the transparency level of the confidence interval. Default: 0.3
           ci_force_lines: force the confidence intervals to be line plots (versus default shaded areas). Default: False
           ci_show=True: show confidence intervals. Default: True
@@ -159,7 +160,7 @@ def plot_estimate(self, estimate):
             times = get_loc(self.event_table.ix[(self.event_table['censored'] > 0)]).index.values.astype(float)
             v = self.predict(times)
             kwargs['ax'].plot(times, v, linestyle='None', color=kwargs['color'], **cs )
-                                        
+
         # plot esimate
         get_loc(estimate_).plot(**kwargs)
 
@@ -168,7 +169,7 @@ def plot_estimate(self, estimate):
             if ci_force_lines:
                get_loc(confidence_interval_).plot(linestyle="-", linewidth=1,
                                                    c=kwargs['color'], legend=True,
-                                                   drawstyle=kwargs.get('drawstyle', 'default'), 
+                                                   drawstyle=kwargs.get('drawstyle', 'default'),
                                                    ax=kwargs['ax'], alpha=0.6)
             else:
                 x = get_loc(confidence_interval_).index.values.astype(float)
@@ -184,10 +185,10 @@ def plot_estimate(self, estimate):
 def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
     ''' Fills a hole in matplotlib: Fill_between for step plots.
     https://gist.github.com/thriveth/8352565
- 
+
     Parameters :
     ------------
- 
+
     x : array-like
         Array/vector of index values. These are assumed to be equally-spaced.
         If not, the result will probably look weird...
@@ -195,9 +196,9 @@ def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
         Array/vector of values to be filled under.
     y2 : array-Like
         Array/vector or bottom values for filled area. Default is 0.
- 
+
     **kwargs will be passed to the matplotlib fill_between() function.
- 
+
     '''
     # If no Axes opject given, grab the current one:
     if ax is None:
@@ -208,19 +209,19 @@ def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
     xstep = (x[1:] - x[:-1]).mean()
     # Now: add one step at end of row.
     xx = np.append(xx, xx.max() + xstep)
- 
+
     # Make it possible to change step alignment.
     if h_align == 'mid':
         xx -= xstep / 2.
     elif h_align == 'right':
         xx -= xstep
- 
+
     # Also, duplicate each y coordinate in both arrays
     y1 = y1.repeat(2)
     if type(y2) == np.ndarray:
         y2 = y2.repeat(2)
- 
+
     # now to the plotting part:
     ax.fill_between(xx, y1, y2=y2, **kwargs)
- 
+
     return ax

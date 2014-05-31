@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 python -m lifelines.tests.test_suit
 
