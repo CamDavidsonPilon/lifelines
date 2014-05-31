@@ -23,7 +23,7 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
     See:
     Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
     developing models, evaluating assumptions and adequacy, and measuring and
-    reducing errors. Statistics in Medicine 1996;15(4):361–87.
+    reducing errors. Statistics in Medicine 1996;15(4):361-87.
 
     Parameters:
       event_times: a (nx1) array of observed survival times.
