@@ -6,7 +6,10 @@ python -m lifelines.tests.test_suit
 from __future__ import print_function
 
 import unittest
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 import numpy as np
 import numpy.testing as npt
@@ -355,8 +358,8 @@ class StatisticalTests(unittest.TestCase):
 
 
     def kaplan_meier(self, censor=False):
-        km = np.zeros((len(self.lifetimes.keys()), 1))
-        ordered_lifetimes = np.sort(self.lifetimes.keys())
+        km = np.zeros((len(list(self.lifetimes.keys())), 1))
+        ordered_lifetimes = np.sort(list(self.lifetimes.keys()))
         N = len(LIFETIMES)
         v = 1.
         n = N * 1.0
@@ -376,8 +379,8 @@ class StatisticalTests(unittest.TestCase):
         return km.reshape(len(km), 1)
 
     def nelson_aalen(self, censor=False):
-        na = np.zeros((len(self.lifetimes.keys()), 1))
-        ordered_lifetimes = np.sort(self.lifetimes.keys())
+        na = np.zeros((len(list(self.lifetimes.keys())), 1))
+        ordered_lifetimes = np.sort(list(self.lifetimes.keys()))
         N = len(LIFETIMES)
         v = 0.
         n = N * 1.0
@@ -467,7 +470,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         aaf.fit(X)
 
         # predictions
-        T_pred = aaf.predict_median(X[range(6)])
+        T_pred = aaf.predict_median(X[list(range(6))])
         self.assertTrue(abs((T_pred.values > T).mean() - 0.5) < 0.05)
 
 
