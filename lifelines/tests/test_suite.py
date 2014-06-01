@@ -5,6 +5,7 @@ python -m lifelines.tests.test_suit
 """
 from __future__ import print_function
 
+import os
 import unittest
 try:
     from StringIO import StringIO
@@ -279,6 +280,7 @@ class StatisticalTests(unittest.TestCase):
         T, C = exponential_survival_data(N, 0.2, scale=10)
         self.assertTrue(abs(C.mean() - 0.8) < 0.02)
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_exponential_data_sets_fit(self):
         N = 20000
         T, C = exponential_survival_data(N, 0.2, scale=10)
@@ -296,6 +298,7 @@ class StatisticalTests(unittest.TestCase):
         kmf.fit(waltonT)
         npt.assert_array_almost_equal(np.log(kmf.divide(kmf)).sum().values, 0.0)
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_kmf_minimum_observation_bias(self):
         N = 250
         kmf = KaplanMeierFitter()
@@ -323,6 +326,7 @@ class StatisticalTests(unittest.TestCase):
         bfh.fit(observations, entry=births)
         return
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_bayesian_fitter_low_data(self):
         bf = BayesianFitter(samples=15)
         bf.fit(waltonT1)
@@ -332,6 +336,7 @@ class StatisticalTests(unittest.TestCase):
         plt.show()
         return
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_bayesian_fitter_large_data(self):
         bf = BayesianFitter()
         bf.fit(np.random.exponential(10,size=1000))
@@ -339,6 +344,7 @@ class StatisticalTests(unittest.TestCase):
         plt.show()
         return
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_kmf_left_censorship_plots(self):
         kmf = KaplanMeierFitter()
         kmf.fit(lcd_dataset['alluvial_fan']['T'], lcd_dataset['alluvial_fan']['C'], left_censorship=True, label='alluvial_fan')
@@ -448,6 +454,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
 
         return True
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aaf_panel_dataset(self):
         aaf = AalenAdditiveFitter()
         aaf.fit(panel_dataset, id_col='id',duration_col='t', event_col='E')
@@ -473,7 +480,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T_pred = aaf.predict_median(X[list(range(6))])
         self.assertTrue(abs((T_pred.values > T).mean() - 0.5) < 0.05)
 
-
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
@@ -498,6 +505,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         plt.show()
         return
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aalen_additive_fit_with_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
@@ -532,6 +540,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         return
 
 
+@unittest.skipUnless("DISPLAY" in os.environ, "requires display")
 class PlottingTests(unittest.TestCase):
 
     def test_aalen_additive_plot(self):
