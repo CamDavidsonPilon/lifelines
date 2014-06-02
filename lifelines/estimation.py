@@ -516,7 +516,7 @@ class AalenAdditiveFitter(object):
         columns = df.columns
         
         #initialize dataframe to store estimates
-        non_censorsed_times = T[C].iteritems()
+        non_censorsed_times = list(T[C].iteritems())
         n_deaths = len(non_censorsed_times)
 
         hazards_ = pd.DataFrame( np.zeros((n_deaths,d)), columns = columns,
@@ -539,7 +539,7 @@ class AalenAdditiveFitter(object):
             if t != time:
                 assert t < time
                 #remove the individuals from the previous loop.
-                df.ix[to_remove] = 0.
+                df.iloc[to_remove] = 0.
                 to_remove = []
                 t = time
 
@@ -618,7 +618,7 @@ class AalenAdditiveFitter(object):
         wp = df.to_panel().bfill().fillna(0)
         
         #initialize dataframe to store estimates
-        non_censorsed_times = T[C].iteritems()
+        non_censorsed_times = list(T[C].iteritems())
         columns = wp.items
         hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
                         columns = columns, index = from_tuples(non_censorsed_times))
@@ -858,6 +858,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         estimate_ = np.cumsum(_additive_f(population, deaths))
         var_ = np.cumsum(_additive_var(population, deaths))
 
+    timeline = sorted(timeline)
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
     var_ = var_.reindex(timeline, method='pad')
     var_.index.name = 'timeline'
