@@ -1,11 +1,16 @@
+# -*- coding: utf-8 -*-
 """
 python -m lifelines.tests.test_suit
 
 """
 from __future__ import print_function
 
+import os
 import unittest
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 import numpy as np
 import numpy.testing as npt
@@ -275,6 +280,7 @@ class StatisticalTests(unittest.TestCase):
         T, C = exponential_survival_data(N, 0.2, scale=10)
         self.assertTrue(abs(C.mean() - 0.8) < 0.02)
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_exponential_data_sets_fit(self):
         N = 20000
         T, C = exponential_survival_data(N, 0.2, scale=10)
@@ -292,6 +298,7 @@ class StatisticalTests(unittest.TestCase):
         kmf.fit(waltonT)
         npt.assert_array_almost_equal(np.log(kmf.divide(kmf)).sum().values, 0.0)
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_kmf_minimum_observation_bias(self):
         N = 250
         kmf = KaplanMeierFitter()
@@ -319,6 +326,7 @@ class StatisticalTests(unittest.TestCase):
         bfh.fit(observations, entry=births)
         return
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_bayesian_fitter_low_data(self):
         bf = BayesianFitter(samples=15)
         bf.fit(waltonT1)
@@ -328,6 +336,7 @@ class StatisticalTests(unittest.TestCase):
         plt.show()
         return
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_bayesian_fitter_large_data(self):
         bf = BayesianFitter()
         bf.fit(np.random.exponential(10,size=1000))
@@ -335,6 +344,7 @@ class StatisticalTests(unittest.TestCase):
         plt.show()
         return
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_kmf_left_censorship_plots(self):
         kmf = KaplanMeierFitter()
         kmf.fit(lcd_dataset['alluvial_fan']['T'], lcd_dataset['alluvial_fan']['C'], left_censorship=True, label='alluvial_fan')
@@ -354,8 +364,8 @@ class StatisticalTests(unittest.TestCase):
 
 
     def kaplan_meier(self, censor=False):
-        km = np.zeros((len(self.lifetimes.keys()), 1))
-        ordered_lifetimes = np.sort(self.lifetimes.keys())
+        km = np.zeros((len(list(self.lifetimes.keys())), 1))
+        ordered_lifetimes = np.sort(list(self.lifetimes.keys()))
         N = len(LIFETIMES)
         v = 1.
         n = N * 1.0
@@ -375,8 +385,8 @@ class StatisticalTests(unittest.TestCase):
         return km.reshape(len(km), 1)
 
     def nelson_aalen(self, censor=False):
-        na = np.zeros((len(self.lifetimes.keys()), 1))
-        ordered_lifetimes = np.sort(self.lifetimes.keys())
+        na = np.zeros((len(list(self.lifetimes.keys())), 1))
+        ordered_lifetimes = np.sort(list(self.lifetimes.keys()))
         N = len(LIFETIMES)
         v = 0.
         n = N * 1.0
@@ -444,6 +454,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
 
         return True
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aaf_panel_dataset(self):
         aaf = AalenAdditiveFitter()
         aaf.fit(panel_dataset, id_col='id',duration_col='t', event_col='E')
@@ -466,10 +477,10 @@ class AalenAdditiveModelTests(unittest.TestCase):
         aaf.fit(X)
 
         # predictions
-        T_pred = aaf.predict_median(X[range(6)])
+        T_pred = aaf.predict_median(X[list(range(6))])
         self.assertTrue(abs((T_pred.values > T).mean() - 0.5) < 0.05)
 
-
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
@@ -494,6 +505,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         plt.show()
         return
 
+    @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aalen_additive_fit_with_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
@@ -528,6 +540,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         return
 
 
+@unittest.skipUnless("DISPLAY" in os.environ, "requires display")
 class PlottingTests(unittest.TestCase):
 
     def test_aalen_additive_plot(self):

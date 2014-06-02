@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 """
 A simple progress bar to monitor MCMC sampling progress.
-Modified from original code by Corey Goldberg (2010). 
+Modified from original code by Corey Goldberg (2010).
 Modified from original code from PyMC (2014). Apache License Version 2.0
 
 

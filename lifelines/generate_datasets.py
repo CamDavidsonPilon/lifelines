@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # lib to create fake survival datasets
 import numpy as np
 from numpy import random

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 
 from datetime import datetime
@@ -18,9 +19,9 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         groups: a (n,) array of individuals' group ids.
         durations: a (n,)  array of durations of each individual
         event_observed: a (n,) array of event observations, 1 if observed, 0 else.
-        event_observed: a (n,) array of times individual entered study. This is most applicable in 
-                    cases where there is left-truncation, i.e. a individual might enter the 
-                    study late. If not the case, normally set to all zeros. 
+        event_observed: a (n,) array of times individual entered study. This is most applicable in
+                    cases where there is left-truncation, i.e. a individual might enter the
+                    study late. If not the case, normally set to all zeros.
 
     Output:
         - np.array of unique groups
@@ -74,7 +75,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
     B = min_observations[ix]
 
     g_name = str(g)
-    data = survival_table_from_events(T, C, B, 
+    data = survival_table_from_events(T, C, B,
                 columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name])
     for g in unique_groups[1:]:
         ix = groups == g
@@ -82,7 +83,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         C = event_observed[ix]
         B = min_observations[ix]
         g_name = str(g)
-        data = data.join(survival_table_from_events(T, C, B, 
+        data = data.join(survival_table_from_events(T, C, B,
                     columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
                     how='outer')
     data = data.fillna(0)
@@ -98,7 +99,7 @@ def survival_table_from_events(durations, event_observed, min_observations,
     Parameters:
         durations: (n,1) array of event times (durations individual was observed for)
         event_observed: (n,1) boolean array, 1 if observed event, 0 is censored event.
-        min_observations: used for left truncation data. Sometimes subjects will show 
+        min_observations: used for left truncation data. Sometimes subjects will show
           up late in the study. min_observations is a (n,1) array of positive numbers representing
           when the subject was first observed. A subject's life is then [min observation + duration observed]
         columns: a 3-length array to call the, in order, removed individuals, observed deaths
@@ -140,8 +141,8 @@ def survival_table_from_events(durations, event_observed, min_observations,
     births = pd.DataFrame( min_observations, columns=['event_at'])
     births[columns[3]] = 1
     births_table = births.groupby('event_at').sum()
- 
-    #this next line can be optimized for when min_observerations is all zeros.     
+
+    #this next line can be optimized for when min_observerations is all zeros.
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0) #http://wesmckinney.com/blog/?p=414
 
     return event_table

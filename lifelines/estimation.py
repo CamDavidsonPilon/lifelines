@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 
 import numpy as np
@@ -37,7 +38,7 @@ class NelsonAalenFitter(object):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None, 
+    def fit(self, durations, event_observed=None, timeline=None, entry=None,
                   label='NA-estimate', alpha=None, ci_labels=None):
         """
         Parameters:
@@ -45,8 +46,8 @@ class NelsonAalenFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -174,7 +175,7 @@ class KaplanMeierFitter(object):
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM-estimate', 
+    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM-estimate',
                   alpha=None, left_censorship=False, ci_labels=None):
         """
         Parameters:
@@ -182,8 +183,8 @@ class KaplanMeierFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -198,7 +199,7 @@ class KaplanMeierFitter(object):
 
         """
         #if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
-        estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_' 
+        estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
 
         v = preprocess_inputs(durations, event_observed, timeline, entry)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
@@ -208,9 +209,9 @@ class KaplanMeierFitter(object):
                                                                    left_censorship)
 
         if entry is not None:
-            #a serious problem with KM is that when the sample size is small and there are too few early 
+            #a serious problem with KM is that when the sample size is small and there are too few early
             # truncation times, it may happen that is the number of patients at risk and the number of deaths is the same.
-            # we adjust for this using the Breslow-Fleming-Harrington estimator 
+            # we adjust for this using the Breslow-Fleming-Harrington estimator
             n = self.event_table.shape[0]
             net_population = (self.event_table['entrance'] - self.event_table['removed']).cumsum()
             if net_population.iloc[:int(n/2)].min() == 0:
@@ -269,9 +270,9 @@ class KaplanMeierFitter(object):
 class BreslowFlemingHarringtonFitter(object):
 
     """
-    Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator 
-    is a biased estimator of the survival function but is more stable when the popualtion is small and 
-    there are too few early truncation times, it may happen that is the number of patients at risk and 
+    Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator
+    is a biased estimator of the survival function but is more stable when the popualtion is small and
+    there are too few early truncation times, it may happen that is the number of patients at risk and
     the number of deaths is the same.
 
     Mathematically, the NAF estimator is the negative logarithm of the BFH estimator.
@@ -285,7 +286,7 @@ class BreslowFlemingHarringtonFitter(object):
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None, 
+    def fit(self, durations, event_observed=None, timeline=None, entry=None,
                     label='BFH-estimate', alpha=None, ci_labels=None):
         """
         Parameters:
@@ -293,8 +294,8 @@ class BreslowFlemingHarringtonFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -339,13 +340,13 @@ class BreslowFlemingHarringtonFitter(object):
 
 class BayesianFitter(object):
     """
-    If you have small data, and KM feels too uncertain, you can use the BayesianFitter to 
+    If you have small data, and KM feels too uncertain, you can use the BayesianFitter to
     generate sample survival functions. The algorithm is:
 
     S_i(T) = \Prod_{t=0}^T (1 - p_t)
 
-    where p_t ~ Beta( 0.01 + d_t, 0.01 + n_t - d_t), d_t is the number of deaths and n_t is the size of the 
-    population at risk at time t. The prior is a Beta(0.01, 0.01) for each time point (high values led to a 
+    where p_t ~ Beta( 0.01 + d_t, 0.01 + n_t - d_t), d_t is the number of deaths and n_t is the size of the
+    population at risk at time t. The prior is a Beta(0.01, 0.01) for each time point (high values led to a
     high bias).
 
     Parameters:
@@ -364,8 +365,8 @@ class BayesianFitter(object):
           timeline: return the best estimate at the values in timelines (postively increasing)
           censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if censorship==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is 
-             useful for left-truncated observations, i.e the birth event was not observed. 
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
 
         Returns:
@@ -401,7 +402,7 @@ class AalenAdditiveFitter(object):
 
     hazard(t)  = b_0(t) + b_t(t)*x_1 + ... + b_N(t)*x_N
 
-    that is, the hazard rate is a linear function of the covariates. 
+    that is, the hazard rate is a linear function of the covariates.
 
     Parameters:
       fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The
@@ -418,24 +419,24 @@ class AalenAdditiveFitter(object):
         self.penalizer = penalizer
         assert penalizer >= 0, "penalizer must be >= 0."
 
-    def fit(self, dataframe, duration_col="T", event_col="E", 
+    def fit(self, dataframe, duration_col="T", event_col="E",
                  timeline=None, id_col=None, show_progress=True):
         """
-        Perform inference on the coefficients of the Aalen additive model. 
+        Perform inference on the coefficients of the Aalen additive model.
 
         Parameters:
             dataframe: a pandas dataframe, with covariates and a duration_col and a event_col.
 
                 static covariates:
-                    one row per individual. duration_col refers to how long the individual was 
-                      observed for. event_col is a boolean: 1 if individual 'died', 0 else. id_col 
+                    one row per individual. duration_col refers to how long the individual was
+                      observed for. event_col is a boolean: 1 if individual 'died', 0 else. id_col
                       should be left as None.
 
                 time-varying covariates:
                     For time-varying covariates, an id_col is required to keep track of individuals'
-                    changing covariates. individual should have a unique id. duration_col refers to how 
-                    long the individual has been  observed to up to that point. event_col refers to if 
-                    the event (death) occured in that  period. Censored individuals will not have a 1. 
+                    changing covariates. individual should have a unique id. duration_col refers to how
+                    long the individual has been  observed to up to that point. event_col refers to if
+                    the event (death) occured in that  period. Censored individuals will not have a 1.
                     For example:
 
                         +----+---+---+------+------+
@@ -450,13 +451,13 @@ class AalenAdditiveFitter(object):
                         |  2 | 3 | 0 |    1 |    2 |
                         +----+---+---+------+------+
 
-            duration_col: specify what the duration column is called in the dataframe 
-            event_col: specify what the event occurred column is called in the dataframe 
+            duration_col: specify what the duration column is called in the dataframe
+            event_col: specify what the event occurred column is called in the dataframe
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
             progress_bar: include a fancy progress bar =)
             max_unique_durations: memory can be an issue if there are too many
-              unique durations. If the max is surpassed, max_unique_durations bins 
+              unique durations. If the max is surpassed, max_unique_durations bins
               will be used.
 
         Returns:
@@ -470,19 +471,19 @@ class AalenAdditiveFitter(object):
 
         return self
 
-    def _fit_static(self, dataframe, duration_col="T", event_col="E", 
+    def _fit_static(self, dataframe, duration_col="T", event_col="E",
                  timeline=None, show_progress=True):
         """
-        Perform inference on the coefficients of the Aalen additive model. 
+        Perform inference on the coefficients of the Aalen additive model.
 
         Parameters:
             dataframe: a pandas dataframe, with covariates and a duration_col and a event_col.
-                      one row per individual. duration_col refers to how long the individual was 
-                      observed for. event_col is a boolean: 1 if individual 'died', 0 else. id_col 
+                      one row per individual. duration_col refers to how long the individual was
+                      observed for. event_col is a boolean: 1 if individual 'died', 0 else. id_col
                       should be left as None.
 
-            duration_col: specify what the duration column is called in the dataframe 
-            event_col: specify what the event occurred column is called in the dataframe 
+            duration_col: specify what the duration column is called in the dataframe
+            event_col: specify what the event occurred column is called in the dataframe
             timeline: reformat the estimates index to a new timeline.
             progress_bar: include a fancy progress bar!
 
@@ -496,7 +497,7 @@ class AalenAdditiveFitter(object):
         #set unique ids for individuals
         id_col = 'id'
         ids = np.arange(df.shape[0])
-        df[id_col] = ids 
+        df[id_col] = ids
 
         #if the regression should fit an intercept
         if self.fit_intercept:
@@ -514,7 +515,7 @@ class AalenAdditiveFitter(object):
         del df[event_col]
         n,d = df.shape
         columns = df.columns
-        
+
         #initialize dataframe to store estimates
         non_censorsed_times = list(T[C].iteritems())
         n_deaths = len(non_censorsed_times)
@@ -522,7 +523,7 @@ class AalenAdditiveFitter(object):
         hazards_ = pd.DataFrame( np.zeros((n_deaths,d)), columns = columns,
                                  index = from_tuples(non_censorsed_times)).swaplevel(1,0)
 
-        variance_  = pd.DataFrame( np.zeros((n_deaths,d)), columns = columns, 
+        variance_  = pd.DataFrame( np.zeros((n_deaths,d)), columns = columns,
                                     index = from_tuples(non_censorsed_times)).swaplevel(1,0)
 
         #initializes the penalizer matrix
@@ -543,7 +544,7 @@ class AalenAdditiveFitter(object):
                 to_remove = []
                 t = time
 
-            to_remove.append(id)    
+            to_remove.append(id)
             if C[id] == 0:
                 continue
 
@@ -556,7 +557,7 @@ class AalenAdditiveFitter(object):
                 V = dot(inv(dot(X.T, X) + penalizer), X.T)
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
-                
+
             v = dot(V, 1.0*relevant_individuals )
 
             hazards_.ix[time,id]  = v.T
@@ -590,9 +591,9 @@ class AalenAdditiveFitter(object):
         self._compute_confidence_intervals()
         self.plot = plot_regressions(self)
 
-        return 
+        return
 
-    def _fit_varying(self, dataframe, duration_col="T", event_col="E", 
+    def _fit_varying(self, dataframe, duration_col="T", event_col="E",
                  id_col=None, timeline=None, show_progress=True):
 
 
@@ -605,7 +606,7 @@ class AalenAdditiveFitter(object):
 
         #each individual should have an ID of time of leaving study
         df = df.set_index([duration_col, id_col])
-  
+
         C_panel = df[[event_col]].to_panel().transpose(2,1,0)
         C = C_panel.minor_xs(event_col).sum().astype(bool)
         T = (C_panel.minor_xs(event_col).notnull()).cumsum().idxmax()
@@ -613,17 +614,17 @@ class AalenAdditiveFitter(object):
         del df[event_col]
         n,d = df.shape
 
-        #so this is a problem line. bfill performs a recursion which is 
+        #so this is a problem line. bfill performs a recursion which is
         #really not scalable. Plus even for modest datasets, this eats a lot of memory.
         wp = df.to_panel().bfill().fillna(0)
-        
+
         #initialize dataframe to store estimates
         non_censorsed_times = list(T[C].iteritems())
         columns = wp.items
-        hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
+        hazards_ = pd.DataFrame( np.zeros((len(non_censorsed_times),d)),
                         columns = columns, index = from_tuples(non_censorsed_times))
 
-        variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)), 
+        variance_  = pd.DataFrame( np.zeros((len(non_censorsed_times),d)),
                         columns = columns, index = from_tuples(non_censorsed_times))
 
         #initializes the penalizer matrix
@@ -635,7 +636,7 @@ class AalenAdditiveFitter(object):
         #this makes indexing times much faster
         wp = wp.swapaxes(0,1, copy=False).swapaxes(1,2,copy=False)
 
-        for i,(id, time) in enumerate(non_censorsed_times): 
+        for i,(id, time) in enumerate(non_censorsed_times):
 
             relevant_individuals = (ids==id)
             assert relevant_individuals.sum() == 1.
@@ -647,7 +648,7 @@ class AalenAdditiveFitter(object):
                 V = dot(inv(dot(X.T, X) + penalizer), X.T)
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
-                
+
             v = dot(V, 1.0*relevant_individuals )
 
             hazards_.ix[id, time]  = v.T
@@ -682,7 +683,7 @@ class AalenAdditiveFitter(object):
         self._compute_confidence_intervals()
         self.plot = plot_regressions(self)
 
-        return 
+        return
 
     def smoothed_hazards_(self, bandwidth=1):
         """
@@ -698,8 +699,8 @@ class AalenAdditiveFitter(object):
         d = self.cumulative_hazards_.shape[1]
         index = [['upper'] * n + ['lower'] * n, np.concatenate([self.timeline, self.timeline])]
 
-        self.confidence_intervals_ = pd.DataFrame( np.zeros((2 * n, d)), 
-                                                    index=index, 
+        self.confidence_intervals_ = pd.DataFrame( np.zeros((2 * n, d)),
+                                                    index=index,
                                                     columns=self.cumulative_hazards_.columns
                                                   )
 
@@ -806,7 +807,7 @@ def _predict(self, estimate, label):
       Predict the %s at certain times
 
       Parameters:
-        time: an array of times to predict the value of %s at 
+        time: an array of times to predict the value of %s at
       """ % (estimate, estimate)
 
     def predict(time):
