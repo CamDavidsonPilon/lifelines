@@ -1,24 +1,36 @@
 language: python
 python:
    - "2.7"
-#  - "3.3"
+   - "3.3"
    - "3.4"
-# install dependencies with apt-get
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq libatlas-dev libatlas-base-dev liblapack-dev gfortran
-  - sudo apt-get install -qq libgmp-dev libmpfr-dev
-  - sudo apt-get install -qq python-numpy python-scipy python-pandas python-matplotlib
-  - sudo apt-get install -qq python3-numpy python3-scipy
+  - sudo apt-get update
+  - sudo apt-get install gfortran gcc
+# See http://conda.pydata.org/docs/travis.html
 install:
-  - "pip install virtualenv"
-  - "virtualenv --system-site-packages bob"
-  - "source bob/bin/activate"
-  - "pip install -r requirements.txt"
-  - "pip install ."
-  - "python setup.py build_ext --inplace"
+  # You may want to periodically update this, although the conda update
+  # conda line below will keep everything up-to-date.
+  # This saves us some downloading for this version
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget http://repo.continuum.io/miniconda/Miniconda-3.4.2-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget http://repo.continuum.io/miniconda/Miniconda3-3.4.2-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  # Should match requirements.txt
+  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas matplotlib
+  - source activate test-environment
+  # Build in place so we can run tests
+  - python setup.py build_ext --inplace
 # command to run tests
 script: python -m lifelines.tests.test_suite
-# I don't want notifications
+# Don't want notifications
 notifications:
   email: false
