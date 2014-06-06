@@ -853,8 +853,8 @@ def CoxFitter(BaseFitter):
         return M
 
 
-    def newton_rhapdson(self, X, T, E, initial_beta = None, step_size = 1., epsilon = 10e-5,
-                          score=score_efron, hessian=hessian_efron):
+    def _newton_rhapdson(self, X, T, E, initial_beta = None, step_size = 1., epsilon = 10e-5,
+                          score=self._score_efron, hessian=self._hessian_efron):
 
         assert epsilon <= 1., "epsilon must be less than or equal to 1."
         n,d = X.shape
@@ -876,6 +876,8 @@ def CoxFitter(BaseFitter):
 
         return beta
 
+
+    def fit(X)
 
 
 #### Utils ####

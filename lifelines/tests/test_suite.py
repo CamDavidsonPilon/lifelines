@@ -754,7 +754,12 @@ class CoxRegressionTests(unittest.TestCase):
         beta = beta + u/l
         assert np.abs(beta - -0.0335) < 0.01
 
-    def test_efron_newtons_method
+    def test_efron_newtons_method(self):
+        newton = CoxFitter().newton_rhapdson
+        X, T, E = data_nus['x'][:,None], data_nus['t'], data_nus['E']
+        assert np.abs( newton(X,T,E)[0][0]- -0.0335) < 0.0001
+
+    
 
 
 
