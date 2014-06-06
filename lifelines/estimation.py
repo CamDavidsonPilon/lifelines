@@ -763,7 +763,7 @@ class CoxFitter(BaseFitter):
         beta: (d,1)
         T: (n,1)
         """
-        assert X.shape[1] == beta.shape[0]
+        assert beta.shape == (X.shape[1],1)
         assert X.shape[0] == T.shape[0]
 
         n,d = X.shape
@@ -776,11 +776,9 @@ class CoxFitter(BaseFitter):
             X_j = X[R]
             X_tie = X[ix,:]
             tied_theta_x = self._theta_x(X_tie,beta)
-            assert tied_theta_x.shape == (1,d)
 
             tied_theta = self._theta(X_tie,beta).sum()
             all_theta_x = self._theta_x(X_j,beta)
-            assert all_theta_x.shape == (1,d)
 
             risk_theta = self._sum_exp_over_risk(X, beta, R)
             partial_sum = np.zeros((1,d))
@@ -788,12 +786,10 @@ class CoxFitter(BaseFitter):
             for l in range(m): 
                 c = 1.0*l/m
                 partial_sum += (all_theta_x - c*tied_theta_x)/(risk_theta - c*tied_theta)
-                assert partial_sum.shape==(1,d)
 
 
             partial_score = partial_score + (X_tie.sum(0) - partial_sum)
-            assert partial_score.shape == (1,d)
-
+g
         return partial_score
 
     def _hessian_efron(self, X,beta, T, E):
@@ -802,8 +798,8 @@ class CoxFitter(BaseFitter):
         beta: (d,1)
         T: (n,1)
         """
-        assert X.shape[1] == beta.shape[0]
         assert X.shape[0] == T.shape[0]
+        assert beta.shape == (X.shape[1],1)
 
         d = X.shape[1]
         M = np.zeros((d,d))
@@ -817,11 +813,8 @@ class CoxFitter(BaseFitter):
             sum_thetas = self._sum_exp_over_risk(X, beta, R)
             for i in R:
                 x_j = X[[i], :]
-                assert x_j.shape == (1,d)
                 theta_x_x += np.dot( x_j.T, x_j)*self._theta(x_j, beta)
-                assert theta_x_x.shape == (d,d)
                 Z_risk += self._theta_x(x_j, beta)
-                assert Z_risk.shape == (1,d)
 
             #compute the tied factors
             ix = np.where((T == t) & E)[0]
@@ -833,21 +826,16 @@ class CoxFitter(BaseFitter):
 
             for i in range(m):
                 x_j = X_tie[[i],:]
-                assert x_j.shape == (1,d)
                 tied_theta_x_x += self._theta(x_j, beta)*dot(x_j.T, x_j)
-                assert tied_theta_x_x.shape == (d,d)
                 tied_theta += self._theta(x_j, beta)
                 Z_tied += self._theta_x(x_j, beta)
-                assert Z_tied.shape == (1,d)
 
             for l in range(m):
                 c = 1.0*l/m
                 phi = (sum_thetas - c*tied_theta)
                 a1 = (theta_x_x - c*tied_theta_x_x)/phi
-                assert a1.shape==(d,d)
                 Z = Z_risk - c*Z_tied 
                 a2 = dot(Z.T, Z)/phi**2
-                assert a2.shape == (d,d)
                 M_t += a1 - a2
 
             M += M_t
