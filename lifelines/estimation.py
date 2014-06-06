@@ -2,8 +2,8 @@
 from __future__ import print_function
 
 import numpy as np
-from numpy.linalg import LinAlgError, inv
-from numpy import dot
+from numpy.linalg import LinAlgError, inv, solve, norm
+from numpy import dot, exp
 from numpy.random import beta
 from scipy.integrate import trapz
 import pandas as pd
@@ -739,14 +739,16 @@ class AalenAdditiveFitter(BaseFitter):
         return trapz(self.predict_survival_function(X).values.T, t)
 
 
-def CoxFitter(BaseFitter):
+class CoxFitter(BaseFitter):
     
-
+    def __init__(self, fit_intercept=True, alpha=0.95):
+        self.fit_intercept = fit_intercept
+        self.alpha = alpha
 
     def _sum_exp_over_risk(self, X, beta, R):
         return exp(dot(X[R], beta)).sum()
 
-    def risk_set(self, T, t):
+    def _risk_set(self, T, t):
         return np.where(T >= t)[0]
 
     def _theta(self, x, beta):
@@ -854,10 +856,13 @@ def CoxFitter(BaseFitter):
 
 
     def _newton_rhapdson(self, X, T, E, initial_beta = None, step_size = 1., epsilon = 10e-5,
-                          score=self._score_efron, hessian=self._hessian_efron):
+                         show_progress=True):
 
         assert epsilon <= 1., "epsilon must be less than or equal to 1."
         n,d = X.shape
+
+        score = self._score_efron
+        hessian = self._hessian_efron
 
         #make sure betas are correct size.
         if initial_beta is not None:
@@ -866,6 +871,7 @@ def CoxFitter(BaseFitter):
         else:
             beta = np.zeros((d,1))
 
+        i=0
         converging = True
         while converging:
 
@@ -874,11 +880,48 @@ def CoxFitter(BaseFitter):
             if norm(delta) < epsilon:
                 converging = False
 
+            if i%10 == 0 and show_progress:
+                print("Iteration %d: delta = %.5f"%(i, norm(delta)))
+            i+=1
+
+
+        print("Convergence completed after %d iterations, delta = %.5f"%(i,norm(delta)))
         return beta
 
 
-    def fit(X)
+    def fit(self, dataframe, duration_col='T', event_col='E', 
+            show_progress=True, initial_beta = None):
+        """
+        Fit the Cox Propertional Hazard model to a dataset. Tied survival times are handled using 
+        Efron's tie-method.
 
+        Parameters:
+            dataframe: a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus 
+                other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col` 
+                refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
+            duration_col: the column in dataframe that contains the subjects lifetimes. 
+            event_col: the column in dataframe that contains the subject's death observation. 
+            show_progress: since the fitter is iterative, show convergence diagnostics.
+            initial_beta: initialize the starting point of the iterative algorithm. Default is the 
+                zero vector.  
+
+        Returns:
+            self, with additional properties: hazards_
+
+        """
+
+        df = dataframe.copy()
+        T = df[duration_col]
+        E = df[event_col]
+        del df[duration_col]
+        del df[event_col]
+
+        if self.fit_intercept:
+            df['baseline'] == 1
+
+        X = df.values
+        self.hazards_ = self._newton_rhapdson(X,T,E, initial_beta=initial_beta, show_progress=show_progress)
+        return self
 
 #### Utils ####
 

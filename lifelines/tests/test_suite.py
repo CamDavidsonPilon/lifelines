@@ -721,8 +721,8 @@ class CoxRegressionTests(unittest.TestCase):
 
 
     def test_efron_computed_by_hand_examples(self):
-        score_efron = CoxFitter().score_efron
-        hessian_efron = CoxFitter().hessian_efron
+        score_efron = CoxFitter()._score_efron
+        hessian_efron = CoxFitter()._hessian_efron
 
         X = data_nus['x'][:,None]
         T = data_nus['t']
@@ -755,11 +755,15 @@ class CoxRegressionTests(unittest.TestCase):
         assert np.abs(beta - -0.0335) < 0.01
 
     def test_efron_newtons_method(self):
-        newton = CoxFitter().newton_rhapdson
+        newton = CoxFitter()._newton_rhapdson
         X, T, E = data_nus['x'][:,None], data_nus['t'], data_nus['E']
         assert np.abs( newton(X,T,E)[0][0]- -0.0335) < 0.0001
 
-    
+    def test_fit_method(self):
+        cf = CoxFitter(fit_intercept=False)
+        cf.fit(data_nus, duration_col='t', event_col='E')
+        self.assertTrue( np.abs(cf.hazards_[0][0] - -0.0335) < 0.0001)
+
 
 
 
