@@ -762,7 +762,7 @@ class CoxRegressionTests(unittest.TestCase):
     def test_fit_method(self):
         cf = CoxFitter(fit_intercept=False)
         cf.fit(data_nus, duration_col='t', event_col='E')
-        self.assertTrue( np.abs(cf.hazards_[0][0] - -0.0335) < 0.0001)
+        self.assertTrue( np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
 
 
 
