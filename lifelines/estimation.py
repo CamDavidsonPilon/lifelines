@@ -871,7 +871,7 @@ class CoxFitter(BaseFitter):
         else:
             beta = np.zeros((d,1))
 
-        i=0
+        i=1
         converging = True
         while converging:
 
@@ -884,19 +884,20 @@ class CoxFitter(BaseFitter):
                 print("Iteration %d: delta = %.5f"%(i, norm(delta)))
             i+=1
 
-
+        self._hessian_ = hessian(X,beta,T,E)
+        self._score_ = score(X,beta,T,E)
         print("Convergence completed after %d iterations, delta = %.5f"%(i,norm(delta)))
         return beta
 
 
-    def fit(self, dataframe, duration_col='T', event_col='E', 
+    def fit(self, df, duration_col='T', event_col='E', 
             show_progress=True, initial_beta = None):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times are handled using 
         Efron's tie-method.
 
         Parameters:
-            dataframe: a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus 
+            df: a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus 
                 other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col` 
                 refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
             duration_col: the column in dataframe that contains the subjects lifetimes. 
@@ -910,7 +911,7 @@ class CoxFitter(BaseFitter):
 
         """
 
-        df = dataframe.copy()
+        df = df.copy()
         T = df[duration_col]
         E = df[event_col]
         del df[duration_col]
@@ -920,8 +921,21 @@ class CoxFitter(BaseFitter):
             df['baseline'] == 1
 
         X = df.values
-        self.hazards_ = self._newton_rhapdson(X,T,E, initial_beta=initial_beta, show_progress=show_progress)
+        hazards_ = self._newton_rhapdson(X,T,E, initial_beta=initial_beta, show_progress=show_progress)
+        
+        self.hazards_ = pd.DataFrame(hazards_, columns = df.columns)
+        self.confidence_intervals_ = self._compute_confidence_intervals()
+        self.data = df
+        self.durations = T
+        self.event_observed = E
         return self
+
+    def _compute_confidence_intervals(self):
+        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
+        se = np.sqrt(inv(self._hessian_).diagonal())
+        hazards = self.hazards_.values
+        return pd.DataFrame(np.r_[hazards - alpha2*se, hazards + alpha2*se], 
+                index=['lower-bound', 'upper-bound'], columns = self.hazards_.columns)
 
 #### Utils ####
 

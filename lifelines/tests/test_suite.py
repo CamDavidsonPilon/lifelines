@@ -766,7 +766,6 @@ class CoxRegressionTests(unittest.TestCase):
 
 
 
-
 # some data
 LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 OBSERVED = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
