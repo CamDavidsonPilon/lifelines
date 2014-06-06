@@ -19,7 +19,7 @@ ext_fstat = Extension(name="lifelines._statistics",
 
 setup(
     name="lifelines",
-    version="0.3.3.0",
+    version="0.4.0.0",
     author="Cameron Davidson-Pilon",
     author_email="cam.davidson.pilon@gmail.com",
     description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
