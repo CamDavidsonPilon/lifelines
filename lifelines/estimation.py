@@ -789,7 +789,7 @@ class CoxFitter(BaseFitter):
 
 
             partial_score = partial_score + (X_tie.sum(0) - partial_sum)
-g
+
         return partial_score
 
     def _hessian_efron(self, X,beta, T, E):
