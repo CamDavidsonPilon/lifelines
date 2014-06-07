@@ -27,7 +27,7 @@ from ..statistics import (logrank_test, multivariate_logrank_test,
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import *
-from ..datasets import lcd_dataset
+from ..datasets import lcd_dataset,rossi_dataset
 
 
 class MiscTests(unittest.TestCase):
@@ -731,7 +731,7 @@ class CoxRegressionTests(unittest.TestCase):
         #tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
-        l = hessian_efron(X, beta, T, E)
+        l = -hessian_efron(X, beta, T, E)
         u = score_efron(X, beta, T, E)
         assert np.abs(l[0][0] - 77.13) < 0.05
         assert np.abs(u[0] - -2.51) < 0.05
@@ -739,7 +739,7 @@ class CoxRegressionTests(unittest.TestCase):
         assert np.abs(beta - -0.0326) < 0.05
 
 
-        l = hessian_efron(X, beta, T, E)
+        l = -hessian_efron(X, beta, T, E)
         u = score_efron(X, beta, T, E)
         assert np.abs(l[0][0] - 72.83) < 0.05
         assert np.abs(u[0] - -0.069) < 0.05
@@ -747,22 +747,31 @@ class CoxRegressionTests(unittest.TestCase):
         assert np.abs(beta - -0.0325) < 0.01
 
 
-        l = hessian_efron(X, beta, T, E)
+        l = -hessian_efron(X, beta, T, E)
         u = score_efron(X, beta, T, E)
         assert np.abs(l[0][0] - 72.70) < 0.01
         assert np.abs(u[0] - -0.000061) < 0.01
         beta = beta + u/l
         assert np.abs(beta - -0.0335) < 0.01
 
+    
     def test_efron_newtons_method(self):
         newton = CoxFitter()._newton_rhapdson
         X, T, E = data_nus['x'][:,None], data_nus['t'], data_nus['E']
         assert np.abs( newton(X,T,E)[0][0]- -0.0335) < 0.0001
 
     def test_fit_method(self):
-        cf = CoxFitter(fit_intercept=False)
+        cf = CoxFitter()
         cf.fit(data_nus, duration_col='t', event_col='E')
         self.assertTrue( np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
+
+    def test_output_against_R(self):
+        #from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        expected = np.array([[ -0.3794, -0.0574, 0.3139, -0.1498,-0.4337,-0.0849,  0.0915]])
+        df = rossi_dataset
+        cf = CoxFitter()
+        cf.fit( df, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
 
 

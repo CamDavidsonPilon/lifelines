@@ -741,9 +741,11 @@ class AalenAdditiveFitter(BaseFitter):
 
 class CoxFitter(BaseFitter):
     
-    def __init__(self, fit_intercept=True, alpha=0.95):
-        self.fit_intercept = fit_intercept
+    def __init__(self, alpha=0.95, tie_method='Efron'):
         self.alpha = alpha
+        if tie_method != 'Efron':
+            raise NotImplementedError, "Only Efron is available atm."
+        self.tie_method = tie_method
 
     def _sum_exp_over_risk(self, X, beta, R):
         return exp(dot(X[R], beta)).sum()
@@ -759,51 +761,94 @@ class CoxFitter(BaseFitter):
 
     def _score_efron(self, X, beta, T, E):
         """
-        X: (n,d)
-        beta: (d,1)
-        T: (n,1)
+        Parameters:
+            X: (n,d) numpy array or dataframe of observations. 
+            T: (n,1) numpy array/Series representing observed durations.
+            E: (n,1) numpy array/Series representing death events.
+            beta: (d,1)
         """
         assert beta.shape == (X.shape[1],1)
         assert X.shape[0] == T.shape[0]
 
+        E_ix = np.where(E.astype(bool))[0]
         n,d = X.shape
         partial_score = np.zeros((1,d))
-        for t in np.unique(T[E]):
+        for t in np.unique(T[E_ix]):
 
             ix = np.where((T == t) & E)[0]
             m = ix.shape[0]
             R = self._risk_set(T,t)
             X_j = X[R]
             X_tie = X[ix,:]
+
             tied_theta_x = self._theta_x(X_tie,beta)
-
+            risk_theta_x = self._theta_x(X_j,beta)
             tied_theta = self._theta(X_tie,beta).sum()
-            all_theta_x = self._theta_x(X_j,beta)
-
             risk_theta = self._sum_exp_over_risk(X, beta, R)
+
             partial_sum = np.zeros((1,d))
 
             for l in range(m): 
                 c = 1.0*l/m
-                partial_sum += (all_theta_x - c*tied_theta_x)/(risk_theta - c*tied_theta)
+                partial_sum += (risk_theta_x - c*tied_theta_x)/(risk_theta - c*tied_theta)
 
 
             partial_score = partial_score + (X_tie.sum(0) - partial_sum)
 
         return partial_score
 
-    def _hessian_efron(self, X,beta, T, E):
+
+    def _log_likelihood_efron(self,X,beta,T,E):
         """
-        X: (n,d)
-        beta: (d,1)
-        T: (n,1)
+        Parameters:
+            X: (n,d) numpy array or dataframe of observations. 
+            T: (n,1) numpy array/Series representing observed durations.
+            E: (n,1) numpy array/Series representing death events.
+            beta: (d,1)
         """
         assert X.shape[0] == T.shape[0]
         assert beta.shape == (X.shape[1],1)
 
+        E_ix = np.where(E.astype(bool))[0]
+        n,d = X.shape
+        partial_sum = 0
+        for t in np.unique(T[E_ix]):
+            ix = np.where((T == t) & E)[0]
+            m = ix.shape[0]
+            R = self._risk_set(T,t)
+            X_j = X[R]
+            X_tie = X[ix,:]
+
+            tied_theta = self._theta(X_tie,beta).sum()
+
+            risk_theta = self._sum_exp_over_risk(X, beta, R)
+
+            p_sum = 0
+            for l in range(m):
+                c = 1.0*l/m
+                p_sum += np.log(risk_theta - c*tied_theta)
+
+            partial_sum += np.dot(X_tie,beta).sum()  - p_sum
+
+        return partial_sum
+
+
+    def _hessian_efron(self, X,beta, T, E):
+        """
+        Parameters:
+            X: (n,d) numpy array or dataframe of observations. 
+            T: (n,1) numpy array/Series representing observed durations.
+            E: (n,1) numpy array/Series representing death events.
+            beta: (d,1)
+        """
+
+        assert X.shape[0] == T.shape[0]
+        assert beta.shape == (X.shape[1],1)
+
+        E_ix = np.where(E.astype(bool))[0]
         d = X.shape[1]
         M = np.zeros((d,d))
-        for t in np.unique(T[E]):
+        for t in np.unique(T[E_ix]):
             M_t = np.zeros((d,d))
 
             #compute the risk factors
@@ -830,6 +875,7 @@ class CoxFitter(BaseFitter):
                 tied_theta += self._theta(x_j, beta)
                 Z_tied += self._theta_x(x_j, beta)
 
+
             for l in range(m):
                 c = 1.0*l/m
                 phi = (sum_thetas - c*tied_theta)
@@ -837,33 +883,50 @@ class CoxFitter(BaseFitter):
                 Z = Z_risk - c*Z_tied 
                 a2 = dot(Z.T, Z)/phi**2
                 M_t += a1 - a2
-
             M += M_t
 
-        return M
+        return -M
 
 
     def _newton_rhapdson(self, X, T, E, initial_beta = None, step_size = 1., epsilon = 10e-5,
                          show_progress=True):
 
+        """
+        Newton Rhapdson algorithm for fitting CPH model.
+        Parameters:
+            X: (n,d) numpy array or dataframe of observations. 
+            T: (n,1) numpy array/Series representing observed durations.
+            E: (n,1) numpy array/Series representing death events.
+            initial_beta: (1,d) numpy array of initial starting point for NR algorithm. Default 0.
+            step_size: 0 < float <= 1 to determine a step size in NR algorithm.
+            epsilon: the convergence halts if the norm of delta between successive positions is less 
+              than epsilon.
+
+        Returns:
+            beta: (1,d) numpy array.
+
+        """
         assert epsilon <= 1., "epsilon must be less than or equal to 1."
         n,d = X.shape
 
         score = self._score_efron
         hessian = self._hessian_efron
+        E = E.astype(bool)
 
         #make sure betas are correct size.
         if initial_beta is not None:
-            assert beta.shape == (d, 1)
+            assert initial_beta.shape == (d, 1)
             beta = initial_beta
         else:
             beta = np.zeros((d,1))
 
         i=1
+        betas = []
         converging = True
         while converging:
-
-            delta = solve(hessian(X,beta,T,E), step_size*score(X,beta,T,E).T)
+            
+            betas.append(beta)
+            delta = solve(-hessian(X,beta,T,E), step_size*score(X,beta,T,E).T)
             beta = delta + beta
             if norm(delta) < epsilon:
                 converging = False
@@ -874,12 +937,13 @@ class CoxFitter(BaseFitter):
 
         self._hessian_ = hessian(X,beta,T,E)
         self._score_ = score(X,beta,T,E)
-        print("Convergence completed after %d iterations, delta = %.5f"%(i,norm(delta)))
+        if show_progress:
+            print("Convergence completed after %d iterations."%(i))
         return beta
 
 
     def fit(self, df, duration_col='T', event_col='E', 
-            show_progress=True, initial_beta = None):
+            show_progress=False, initial_beta = None):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times are handled using 
         Efron's tie-method.
@@ -905,13 +969,10 @@ class CoxFitter(BaseFitter):
         del df[duration_col]
         del df[event_col]
 
-        if self.fit_intercept:
-            df['baseline'] == 1
-
         X = df.values
         hazards_ = self._newton_rhapdson(X,T,E, initial_beta=initial_beta, show_progress=show_progress)
         
-        self.hazards_ = pd.DataFrame(hazards_, columns = df.columns)
+        self.hazards_ = pd.DataFrame(hazards_.T, columns = df.columns, index=['coef'])
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.data = df
         self.durations = T
@@ -920,10 +981,60 @@ class CoxFitter(BaseFitter):
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
-        se = np.sqrt(inv(self._hessian_).diagonal())
+        se = self._compute_standard_errors()
         hazards = self.hazards_.values
         return pd.DataFrame(np.r_[hazards - alpha2*se, hazards + alpha2*se], 
                 index=['lower-bound', 'upper-bound'], columns = self.hazards_.columns)
+
+    def _compute_standard_errors(self):
+        se = np.sqrt(inv(-self._hessian_).diagonal())
+        return pd.DataFrame(se[None,:], 
+            index=['se'], columns = self.hazards_.columns)
+
+    def _compute_U_values(self):
+        return 'NotImplemented'
+
+    def _compute_p_values(self):
+        return 'NotImplemented'
+
+    def summary(self):
+        df = pd.DataFrame(index=self.hazards_.columns)
+        df['coef'] = self.hazards_.ix['coef'].values
+        df['exp(coef)'] = exp(self.hazards_.ix['coef'].values)
+        df['se(coef)'] = self._compute_standard_errors().ix['se'].values
+        df['z'] = self._compute_U_values()
+        df['p'] = self._compute_p_values()
+        df['lower %.2f'%self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
+        df['upper %.2f'%self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
+        print(df.to_string())
+        return 
+
+
+
+    def predict_survival_function(self, X, columns=None):
+        """
+        X: a (n,d) covariate matrix
+
+        Returns the survival functions for the individuals
+        """
+        return np.exp(-self.predict_cumulative_hazard(X, columns=columns))
+
+    def predict_median(self, X):
+        """
+        X: a (n,d) covariate matrix
+        Returns the median lifetimes for the individuals
+        """
+        return median_survival_times(self.predict_survival_function(X))
+
+    def predict_expectation(self, X):
+        """
+        Compute the expected lifetime, E[T], using covarites X.
+        """
+        t = self.cumulative_hazards_.index
+        return trapz(self.predict_survival_function(X).values.T, t)
+
+    def _compute_baseline_hazard(self):
+        pass
 
 #### Utils ####
 

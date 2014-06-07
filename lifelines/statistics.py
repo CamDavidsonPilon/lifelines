@@ -226,6 +226,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None, alph
                                    alpha=alpha, null_distribution='chi squared',
                                    df=n_groups - 1, **kwargs)
 
+    print summary
     return summary, p_value, test_result
 
 
