@@ -237,6 +237,13 @@ def chisq_test(U, degrees_freedom, alpha):
     else:
         return None, p_value
 
+def two_sided_z_test(Z, alpha):
+    p_value = 1- max(stats.norm.cdf(Z), 1-stats.norm.cdf(Z))
+    if p_value < 1 - alpha/2.
+      return True, p_value
+    else:
+      return False, p_value
+
 
 def pretty_print_summary(test_results, p_value, test_statistic, **kwargs):
     """

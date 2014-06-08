@@ -6,6 +6,7 @@ from numpy.linalg import LinAlgError, inv, solve, norm
 from numpy import dot, exp
 from numpy.random import beta
 from scipy.integrate import trapz
+import scipy.stats as stats
 import pandas as pd
 
 from lifelines.plotting import plot_estimate, plot_regressions
@@ -698,7 +699,7 @@ class AalenAdditiveFitter(BaseFitter):
                 alpha2 * np.sqrt(self.variance_.cumsum().values)
         return
 
-    def predict_cumulative_hazard(self, X, columns=None, id_col=None):
+    def predict_cumulative_hazard(self, X, id_col=None):
         """
         X: a (n,d) covariate matrix
 
@@ -714,15 +715,15 @@ class AalenAdditiveFitter(BaseFitter):
         except:
             X_ = X.copy()
         X_ = X.copy() if not self.fit_intercept else np.c_[X.copy(), np.ones((n, 1))]
-        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=columns)
+        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline)
 
-    def predict_survival_function(self, X, columns=None):
+    def predict_survival_function(self, X):
         """
         X: a (n,d) covariate matrix
 
         Returns the survival functions for the individuals
         """
-        return np.exp(-self.predict_cumulative_hazard(X, columns=columns))
+        return np.exp(-self.predict_cumulative_hazard(X))
 
     def predict_median(self, X):
         """
@@ -943,7 +944,7 @@ class CoxFitter(BaseFitter):
 
 
     def fit(self, df, duration_col='T', event_col='E', 
-            show_progress=False, initial_beta = None):
+            show_progress=True, initial_beta = None):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times are handled using 
         Efron's tie-method.
@@ -974,9 +975,12 @@ class CoxFitter(BaseFitter):
         
         self.hazards_ = pd.DataFrame(hazards_.T, columns = df.columns, index=['coef'])
         self.confidence_intervals_ = self._compute_confidence_intervals()
+
         self.data = df
         self.durations = T
         self.event_observed = E
+
+        self.baseline_hazard_ = self._compute_baseline_hazard()
         return self
 
     def _compute_confidence_intervals(self):
@@ -991,33 +995,44 @@ class CoxFitter(BaseFitter):
         return pd.DataFrame(se[None,:], 
             index=['se'], columns = self.hazards_.columns)
 
-    def _compute_U_values(self):
-        return 'NotImplemented'
+    def _compute_z_values(self):
+        return self.hazards_.ix['coef']/self._compute_standard_errors().ix['se']
 
     def _compute_p_values(self):
-        return 'NotImplemented'
+        U = self._compute_z_values()**2
+        return 1-stats.chi2.cdf(U,1)
 
     def summary(self):
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.ix['coef'].values
         df['exp(coef)'] = exp(self.hazards_.ix['coef'].values)
         df['se(coef)'] = self._compute_standard_errors().ix['se'].values
-        df['z'] = self._compute_U_values()
+        df['z'] = self._compute_z_values()
         df['p'] = self._compute_p_values()
         df['lower %.2f'%self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
         df['upper %.2f'%self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
         print(df.to_string())
         return 
 
-
-
-    def predict_survival_function(self, X, columns=None):
+    def predict_hazard(self, X):
         """
         X: a (n,d) covariate matrix
 
         Returns the survival functions for the individuals
         """
-        return np.exp(-self.predict_cumulative_hazard(X, columns=columns))
+        v = exp(np.dot(X, self.hazards_.T))
+        bh = self.baseline_hazard_.values
+        return pd.DataFrame(np.dot(bh, v.T), index=self.baseline_hazard_.index)
+        
+
+    def predict_survival_function(self, X):
+        """
+        X: a (n,d) covariate matrix
+
+        Returns the survival functions for the individuals
+        """
+        return exp(-self.predict_hazard(X).cumsum(0))
+
 
     def predict_median(self, X):
         """
@@ -1026,6 +1041,7 @@ class CoxFitter(BaseFitter):
         """
         return median_survival_times(self.predict_survival_function(X))
 
+
     def predict_expectation(self, X):
         """
         Compute the expected lifetime, E[T], using covarites X.
@@ -1033,11 +1049,22 @@ class CoxFitter(BaseFitter):
         t = self.cumulative_hazards_.index
         return trapz(self.predict_survival_function(X).values.T, t)
 
+
     def _compute_baseline_hazard(self):
-        pass
+        #http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
+        ind_hazards = exp(np.dot( self.data, self.hazards_.T ))
+
+        event_table = survival_table_from_events(self.durations, self.event_observed, np.zeros_like(self.durations))
+        n,d = event_table.shape
+        
+        baseline_hazard_ = pd.DataFrame(np.zeros((n,1)), index=event_table.index, columns=['baseline hazard'])
+        for t, s in event_table.iterrows():
+            baseline_hazard_.ix[t] = s['observed']/ind_hazards[self.durations <= t].sum()
+
+        return baseline_hazard_
+
 
 #### Utils ####
-
 def _subtract(self, estimate):
     class_name = self.__class__.__name__
     doc_string = """
