@@ -1,6 +1,9 @@
 import os
 import sys
 
+# bdist_wheel requires setuptools
+import setuptools
+# use setup from numpy to build fortran codes
 from numpy.distutils.core import setup, Extension
 
 
