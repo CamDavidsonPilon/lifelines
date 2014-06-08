@@ -398,7 +398,7 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
     from lifelines.datasets import rossi_dataset
     from lifelines import CoxFitter
 
-    cf = CoxFitter()
+    cf = CoxFitter(alpha=0.95, tie_method='Efron')
     cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
     print cf.summary()
@@ -413,3 +413,5 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
     paro -0.084871   0.918631  0.195757 -0.433554  0.664612   -0.468631    0.298889
     prio  0.091497   1.095814  0.028649  3.193777  0.001404    0.035335    0.147660
     """
+
+To access the coefficients and the baseline hazard, you can use ``cf.hazards_`` and ``cf.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_hazard(X)``, ``.predict_survival_function(X)``, etc. 
