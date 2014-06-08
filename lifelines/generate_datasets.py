@@ -259,7 +259,8 @@ def cumulative_integral(fx, x):
         fx: (n,d) numpy array, what you want to integral of
         x: (n,) numpy array, location to integrate over.
     """
-    return cumtrapz(fx.T, x, initial = 0 ).T
+    return cumtrapz(fx.T, x, initial=0).T
+
 
 def construct_survival_curves(hazard_rates, timelines):
     """

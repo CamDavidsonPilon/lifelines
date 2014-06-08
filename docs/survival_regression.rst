@@ -25,10 +25,6 @@ On the other hand, Aalen's additive model assumes the following form:
 
 .. math:: \lambda(t) = b_0(t) + b_1(t)x_1 + ... + b_N(t)x_T
 
-Currently, *lifelines* implements Aalen's additive model (mostly because
-the original authors only were interested in this model). In both
-models, we attempt to fit the :math:`b` coefficients best to the data --
-notice that in Aalen's additive model has time varying coefficients.
 
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -386,3 +382,32 @@ Prime Minister Stephen Harper.
 
 
 .. image:: Introtolifelines_files/Introtolifelines_57_2.png
+
+
+Cox's Proportional Hazard model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+.. code:: python
+
+    from lifelines import CoxFitter
+    cf = CoxFitter()
+
+    from lifelines.datasets import rossi_dataset
+
+    cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
+
+    print cf.summary()
+
+    """
+    coef  exp(coef)  se(coef)         z         p  lower 0.95  upper 0.95
+    fin  -0.379422   0.684257  0.191379 -1.982565  0.047416   -0.754602   -0.004243
+    age  -0.057438   0.944181  0.021999 -2.610869  0.009031   -0.100565   -0.014310
+    race  0.313900   1.368753  0.307993  1.019179  0.308118   -0.289888    0.917687
+    wexp -0.149796   0.860884  0.212224 -0.705837  0.480290   -0.565839    0.266248
+    mar  -0.433704   0.648104  0.381868 -1.135743  0.256064   -1.182316    0.314908
+    paro -0.084871   0.918631  0.195757 -0.433554  0.664612   -0.468631    0.298889
+    prio  0.091497   1.095814  0.028649  3.193777  0.001404    0.035335    0.147660
+    """
+

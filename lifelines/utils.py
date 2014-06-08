@@ -7,8 +7,10 @@ import numpy as np
 import pandas as pd
 from pandas import to_datetime
 
+
 def coalesce(*args):
-  return next( s for s in args if s is not None)
+    return next(s for s in args if s is not None)
+
 
 def group_survival_table_from_events(groups, durations, event_observed, min_observations, limit=-1):
     """
@@ -64,7 +66,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
     """
     n = max(groups.shape)
     assert n == max(durations.shape) == max(event_observed.shape) == max(min_observations.shape), "inputs must be of the same length."
-    groups, durations, event_observed, min_observations = map(lambda x: pd.Series(np.reshape(x, (n,))),[groups, durations, event_observed, min_observations])
+    groups, durations, event_observed, min_observations = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, durations, event_observed, min_observations])
     unique_groups = groups.unique()
 
     # set first group
@@ -76,7 +78,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
 
     g_name = str(g)
     data = survival_table_from_events(T, C, B,
-                columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name])
+                                      columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name])
     for g in unique_groups[1:]:
         ix = groups == g
         T = durations[ix]
@@ -84,8 +86,8 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         B = min_observations[ix]
         g_name = str(g)
         data = data.join(survival_table_from_events(T, C, B,
-                    columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
-                    how='outer')
+                                                    columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
+                         how='outer')
     data = data.fillna(0)
     # hmmm pandas its too bad I can't do data.ix[:limit] and leave out the if.
     if int(limit) != -1:
@@ -94,7 +96,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
 
 
 def survival_table_from_events(durations, event_observed, min_observations,
-                              columns=["removed", "observed", "censored", 'entrance'], weights=None):
+                               columns=["removed", "observed", "censored", 'entrance'], weights=None):
     """
     Parameters:
         durations: (n,1) array of event times (durations individual was observed for)
@@ -128,7 +130,7 @@ def survival_table_from_events(durations, event_observed, min_observations,
         15              2         2         0
 
     """
-    #deal with deaths and censorships
+    # deal with deaths and censorships
 
     durations = np.asarray(durations) + min_observations
     df = pd.DataFrame(durations, columns=["event_at"])
@@ -137,13 +139,13 @@ def survival_table_from_events(durations, event_observed, min_observations,
     death_table = df.groupby("event_at").sum()
     death_table[columns[2]] = (death_table[columns[0]] - death_table[columns[1]]).astype(int)
 
-    #deal with late births
-    births = pd.DataFrame( min_observations, columns=['event_at'])
+    # deal with late births
+    births = pd.DataFrame(min_observations, columns=['event_at'])
     births[columns[3]] = 1
     births_table = births.groupby('event_at').sum()
 
-    #this next line can be optimized for when min_observerations is all zeros.
-    event_table = death_table.join(births_table, how='outer', sort=True).fillna(0) #http://wesmckinney.com/blog/?p=414
+    # this next line can be optimized for when min_observerations is all zeros.
+    event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
 
     return event_table
 
@@ -230,10 +232,12 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
 
 
 class StatError(Exception):
-     def __init__(self, msg):
-         self.msg = msg
-     def __str__(self):
-         return repr(self.msg)
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
 
 
 def inv_normal_cdf(p):
@@ -284,6 +288,7 @@ def yaun_loss(fitter, T_true, T_pred, X_train, T_train, event_observed=None):
         sC = fitter.predict_survival_function(X_train).ix[T_true[:, 0]].values.diagonal()[:, None]  # dirty way to get this
 
     return (event_observed * (T_pred - T_true) ** 2 / sC).mean()
+
 
 def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2
