@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 from lifelines.utils import coalesce
 
+
 def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None, order=False):
     """
     Parameters:
@@ -87,13 +88,14 @@ def plot_regressions(self):
             y = get_loc(self.cumulative_hazards_[column]).values
             y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
             y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
-            shaded_plot(x, y, y_upper, y_lower, ax=kwargs["ax"], label=coalesce(kwargs.get('label'),column))
+            shaded_plot(x, y, y_upper, y_lower, ax=kwargs["ax"], label=coalesce(kwargs.get('label'), column))
 
         if legend:
             kwargs["ax"].legend()
 
         return kwargs["ax"]
     return plot
+
 
 def plot_estimate(self, estimate):
     doc_string = """"
@@ -118,7 +120,7 @@ def plot_estimate(self, estimate):
 
         Returns:
           ax: a pyplot axis object
-        """%estimate
+        """ % estimate
 
     def plot(ix=None, iloc=None, flat=False, show_censors=False, censor_styles={},
              ci_legend=False, ci_force_lines=False, ci_alpha=0.25, ci_show=True,
@@ -128,8 +130,8 @@ def plot_estimate(self, estimate):
 
         if "ax" not in kwargs:
             kwargs["ax"] = plt.figure().add_subplot(111)
-        kwargs['color'] = coalesce( kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle) )
-        kwargs['drawstyle'] = coalesce( kwargs.get('drawstyle'), 'steps-post')
+        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle))
+        kwargs['drawstyle'] = coalesce(kwargs.get('drawstyle'), 'steps-post')
 
         # R-style graphics
         if flat:
@@ -155,11 +157,11 @@ def plot_estimate(self, estimate):
 
         # plot censors
         if show_censors and self.event_table['censored'].sum() > 0:
-            cs = {'marker':'+','ms':12, 'mew':1}
+            cs = {'marker': '+', 'ms': 12, 'mew': 1}
             cs.update(censor_styles)
             times = get_loc(self.event_table.ix[(self.event_table['censored'] > 0)]).index.values.astype(float)
             v = self.predict(times)
-            kwargs['ax'].plot(times, v, linestyle='None', color=kwargs['color'], **cs )
+            kwargs['ax'].plot(times, v, linestyle='None', color=kwargs['color'], **cs)
 
         # plot esimate
         get_loc(estimate_).plot(**kwargs)
@@ -167,7 +169,7 @@ def plot_estimate(self, estimate):
         # plot confidence intervals
         if ci_show:
             if ci_force_lines:
-               get_loc(confidence_interval_).plot(linestyle="-", linewidth=1,
+                get_loc(confidence_interval_).plot(linestyle="-", linewidth=1,
                                                    c=kwargs['color'], legend=True,
                                                    drawstyle=kwargs.get('drawstyle', 'default'),
                                                    ax=kwargs['ax'], alpha=0.6)
@@ -218,7 +220,7 @@ def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
 
     # Also, duplicate each y coordinate in both arrays
     y1 = y1.repeat(2)
-    if type(y2) == np.ndarray:
+    if isinstance(y2, np.ndarray):
         y2 = y2.repeat(2)
 
     # now to the plotting part:

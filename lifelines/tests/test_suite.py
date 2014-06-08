@@ -19,15 +19,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, \
-                         median_survival_times, BreslowFlemingHarringtonFitter, BayesianFitter, \
-                         CoxFitter
+    median_survival_times, BreslowFlemingHarringtonFitter, BayesianFitter, \
+    CoxFitter
 
 from ..statistics import (logrank_test, multivariate_logrank_test,
                           pairwise_logrank_test, concordance_index)
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import *
-from ..datasets import lcd_dataset,rossi_dataset
+from ..datasets import lcd_dataset, rossi_dataset
 
 
 class MiscTests(unittest.TestCase):
@@ -70,15 +70,6 @@ class MiscTests(unittest.TestCase):
         npt.assert_almost_equal(C, np.array([1, 0, 0], dtype=bool))
         return
 
-    """
-    def test_datetimes_to_durations_max_dates(self):
-        start_date = ['2013-10-10', '2013-10-09', '2013-10-08']
-        end_date =  ['2014-10-10', '2014-10-09', '2014-10-08']
-        T,C = datetimes_to_durations(start_date, end_date, fill_date = "2014-10-09" )
-        npt.assert_almost_equal(C, np.array([1,0,0], dtype=bool) )
-        return
-    """
-
     def test_survival_table_to_events(self):
         T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([1, 0, 1, 1, 1, 1])
         d = survival_table_from_events(T, C, np.zeros_like(T))
@@ -96,9 +87,9 @@ class MiscTests(unittest.TestCase):
         npt.assert_array_equal(kmf.confidence_interval_.columns, expected)
 
     def test_group_survival_table_from_events_works_with_series(self):
-        df = pd.DataFrame([[1,True,3],[1,True,3],[4,False,2]], columns = ['duration', 'E', 'G'])
-        ug,_,_,_ = group_survival_table_from_events(df.G, df.duration, df.E, np.array([[0,0,0]]))
-        npt.assert_array_equal(ug, np.array([3,2]))
+        df = pd.DataFrame([[1, True, 3], [1, True, 3], [4, False, 2]], columns=['duration', 'E', 'G'])
+        ug, _, _, _ = group_survival_table_from_events(df.G, df.duration, df.E, np.array([[0, 0, 0]]))
+        npt.assert_array_equal(ug, np.array([3, 2]))
 
 
 class StatisticalTests(unittest.TestCase):
@@ -149,14 +140,12 @@ class StatisticalTests(unittest.TestCase):
         data1 = np.random.exponential(5, size=(200, 1))
         data2 = np.random.exponential(5, size=(200, 1))
         summary, p_value, result = logrank_test(data1, data2)
-        print(summary)
         self.assertTrue(result is None)
 
     def test_unequal_intensity(self):
         data1 = np.random.exponential(5, size=(200, 1))
         data2 = np.random.exponential(1, size=(200, 1))
         summary, p_value, result = logrank_test(data1, data2)
-        print(summary)
         self.assertTrue(result)
 
     def test_unequal_intensity_event_observed(self):
@@ -165,19 +154,16 @@ class StatisticalTests(unittest.TestCase):
         eventA = np.random.binomial(1, 0.5, size=(200, 1))
         eventB = np.random.binomial(1, 0.5, size=(200, 1))
         summary, p_value, result = logrank_test(data1, data2, event_observed_A=eventA, event_observed_B=eventB)
-        print(summary)
         self.assertTrue(result)
 
     def test_integer_times_logrank_test(self):
         data1 = np.random.exponential(5, size=(200, 1)).astype(int)
         data2 = np.random.exponential(1, size=(200, 1)).astype(int)
         summary, p_value, result = logrank_test(data1, data2)
-        print(summary)
         self.assertTrue(result)
 
     def test_waltons_data(self):
         summary, p_value, result = logrank_test(waltonT1, waltonT2)
-        print(summary)
         self.assertTrue(result)
 
     def test_smoothing_hazard_ties(self):
@@ -218,19 +204,16 @@ class StatisticalTests(unittest.TestCase):
         g = np.random.binomial(2, 0.5, size=300)
         T[g == 1] = np.random.exponential(6, size=(g == 1).sum())
         s, _, result = multivariate_logrank_test(T, g)
-        print(s)
-        self.assertTrue(result == True)
+        self.assertTrue(result)
 
     def test_multivariate_equal_intensities(self):
         T = np.random.exponential(10, size=300)
         g = np.random.binomial(2, 0.5, size=300)
         s, _, result = multivariate_logrank_test(T, g)
-        print(s)
         self.assertTrue(result is None)
 
     def test_pairwise_waltons_data(self):
         _, _, R = pairwise_logrank_test(waltonT, waltonG)
-        print(R)
         self.assertTrue(R.values[0, 1])
 
     def test_pairwise_logrank_test(self):
@@ -306,25 +289,25 @@ class StatisticalTests(unittest.TestCase):
         kmf = KaplanMeierFitter()
         T, C = exponential_survival_data(N, 0.2, scale=10)
         B, _ = exponential_survival_data(N, 0.0, scale=2)
-        kmf.fit(T,C, entry=B)
+        kmf.fit(T, C, entry=B)
         kmf.plot()
         plt.title("Should have larger variances in the tails")
 
     def test_stat_error(self):
-        births = np.array([51, 58, 55, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30, \
-            41, 43, 45, 35, 29, 35, 32, 36, 32, 10])
-        observations = np.array([ 1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31, \
-            22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
+        births = np.array([51, 58, 55, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30,
+                           41, 43, 45, 35, 29, 35, 32, 36, 32, 10])
+        observations = np.array([1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
+                                 22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
         kmf = KaplanMeierFitter()
         with self.assertRaises(StatError):
             kmf.fit(observations, entry=births)
 
     def test_BHF_fit(self):
         bfh = BreslowFlemingHarringtonFitter()
-        births = np.array([51, 58, 55, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30, \
-           41, 43, 45, 35, 29, 35, 32, 36, 32, 10])
-        observations = np.array([ 1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31, \
-           22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
+        births = np.array([51, 58, 55, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30,
+                           41, 43, 45, 35, 29, 35, 32, 36, 32, 10])
+        observations = np.array([1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
+                                 22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
         bfh.fit(observations, entry=births)
         return
 
@@ -341,7 +324,7 @@ class StatisticalTests(unittest.TestCase):
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_bayesian_fitter_large_data(self):
         bf = BayesianFitter()
-        bf.fit(np.random.exponential(10,size=1000))
+        bf.fit(np.random.exponential(10, size=1000))
         bf.plot()
         plt.show()
         return
@@ -359,11 +342,9 @@ class StatisticalTests(unittest.TestCase):
 
     def test_kmf_left_censorship_stats(self):
         T = [3, 5, 5, 5, 6, 6, 10, 12]
-        C = [1,0,0,1,1,1,0,1]
+        C = [1, 0, 0, 1, 1, 1, 0, 1]
         kmf = KaplanMeierFitter()
-        kmf.fit(T,C, left_censorship=True)
-
-
+        kmf.fit(T, C, left_censorship=True)
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(list(self.lifetimes.keys())), 1))
@@ -435,7 +416,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
     def test_large_dimensions_for_recursion_error(self):
         n = 500
         d = 50
-        X = pd.DataFrame(np.random.randn(n,d))
+        X = pd.DataFrame(np.random.randn(n, d))
         T = np.random.exponential(size=n)
         X['T'] = T
         X['E'] = 1
@@ -447,7 +428,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
     def test_tall_data_points(self):
         n = 20000
         d = 2
-        X = pd.DataFrame(np.random.randn(n,d))
+        X = pd.DataFrame(np.random.randn(n, d))
         T = np.random.exponential(size=n)
         X['T'] = T
         X['E'] = 1
@@ -459,7 +440,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aaf_panel_dataset(self):
         aaf = AalenAdditiveFitter()
-        aaf.fit(panel_dataset, id_col='id',duration_col='t', event_col='E')
+        aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
         aaf.plot()
         return
 
@@ -495,15 +476,15 @@ class AalenAdditiveModelTests(unittest.TestCase):
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
-        X['E'] = np.random.binomial(1,1,n)
+        X['E'] = np.random.binomial(1, 1, n)
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
 
-        for i in range(d+1):
-            ax = plt.subplot(d+1,1,i+1)
+        for i in range(d + 1):
+            ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].ix[:15].plot(legend=False,ax=ax)
-            ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
+            ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
+            ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show()
         return
 
@@ -520,23 +501,23 @@ class AalenAdditiveModelTests(unittest.TestCase):
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
-        X['E'] = np.random.binomial(1,0.99,n)
+        X['E'] = np.random.binomial(1, 0.99, n)
         aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
         aaf.fit(X)
 
-        for i in range(d+1):
-            ax = plt.subplot(d+1,1,i+1)
+        for i in range(d + 1):
+            ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].ix[:15].plot(legend=False,ax=ax)
-            ax = aaf.plot(ix=slice(0,15),ax=ax, columns=[col], legend=False)
+            ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
+            ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show()
         return
 
     def test_dataframe_input_with_nonstandard_index(self):
 
-        df = pd.DataFrame([(16,True,True), (1,True,True), (4,False,True)],
+        df = pd.DataFrame([(16, True, True), (1, True, True), (4, False, True)],
                           columns=['duration', 'done_feeding', 'white'],
-                          index=['a','b','c'])
+                          index=['a', 'b', 'c'])
         aaf = AalenAdditiveFitter()
         aaf.fit(df, duration_col='duration', event_col='done_feeding')
         return
@@ -703,76 +684,71 @@ class PlottingTests(unittest.TestCase):
         C2 = np.random.binomial(1, 0.95, size=200)
         kmf = KaplanMeierFitter()
         kmf.fit(data1, C1, label='test label 1')
-        ax = kmf.plot(flat=True, censor_styles={'marker':'+', 'mew':2, 'ms':7})
+        ax = kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
         kmf.fit(data2, C2, label='test label 2')
-        kmf.plot(ax=ax, censor_styles={'marker':'o', 'ms':7}, flat=True)
+        kmf.plot(ax=ax, censor_styles={'marker': 'o', 'ms': 7}, flat=True)
         plt.title("testing kmf flat styling + marker")
         return
 
     def test_flat_style_no_censor(self):
         data1 = np.random.exponential(10, size=200)
         kmf = KaplanMeierFitter()
-        kmf.fit(data1,label='test label 1')
-        ax = kmf.plot(flat=True, censor_styles={'marker':'+', 'mew':2, 'ms':7})
+        kmf.fit(data1, label='test label 1')
+        ax = kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
         return
 
 
 class CoxRegressionTests(unittest.TestCase):
 
-
     def test_efron_computed_by_hand_examples(self):
         score_efron = CoxFitter()._score_efron
         hessian_efron = CoxFitter()._hessian_efron
 
-        X = data_nus['x'][:,None]
+        X = data_nus['x'][:, None]
         T = data_nus['t']
         E = data_nus['E']
 
-        #tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
+        # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
         l = -hessian_efron(X, beta, T, E)
         u = score_efron(X, beta, T, E)
         assert np.abs(l[0][0] - 77.13) < 0.05
         assert np.abs(u[0] - -2.51) < 0.05
-        beta = beta + u/l
+        beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
-
 
         l = -hessian_efron(X, beta, T, E)
         u = score_efron(X, beta, T, E)
         assert np.abs(l[0][0] - 72.83) < 0.05
         assert np.abs(u[0] - -0.069) < 0.05
-        beta = beta + u/l
+        beta = beta + u / l
         assert np.abs(beta - -0.0325) < 0.01
-
 
         l = -hessian_efron(X, beta, T, E)
         u = score_efron(X, beta, T, E)
         assert np.abs(l[0][0] - 72.70) < 0.01
         assert np.abs(u[0] - -0.000061) < 0.01
-        beta = beta + u/l
+        beta = beta + u / l
         assert np.abs(beta - -0.0335) < 0.01
 
-    
     def test_efron_newtons_method(self):
         newton = CoxFitter()._newton_rhapdson
-        X, T, E = data_nus['x'][:,None], data_nus['t'], data_nus['E']
-        assert np.abs( newton(X,T,E)[0][0]- -0.0335) < 0.0001
+        X, T, E = data_nus['x'][:, None], data_nus['t'], data_nus['E']
+        assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self):
         cf = CoxFitter()
         cf.fit(data_nus, duration_col='t', event_col='E')
-        self.assertTrue( np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
+        self.assertTrue(np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
 
     def test_output_against_R(self):
-        #from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
-        expected = np.array([[ -0.3794, -0.0574, 0.3139, -0.1498,-0.4337,-0.0849,  0.0915]])
+        # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         df = rossi_dataset
         cf = CoxFitter()
-        cf.fit( df, duration_col='week', event_col='arrest')
+        cf.fit(df, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
-
 
 
 # some data
@@ -780,11 +756,11 @@ LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 OBSERVED = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
 N = len(LIFETIMES)
 
-waltonT1 = np.array([6.,13.,13.,13.,19.,19.,19.,26.,26.,26.,26.,26.,33.,33.,47.,62.,62.,9.,9.,9.,15.,15.,22.,22.,22.,22.,29.,29.,29.,29.,29.,36.,36.,43.])
-waltonT2 = np.array([33.,54.,54.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,61.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,69.,32.,53.,53.,60.,60.,60.,60.,60.,
-                        68.,68.,68.,68.,68.,68.,68.,68.,68.,68.,75.,17.,51.,51.,51.,58.,58.,58.,58.,66.,66.,7.,7.,41.,41.,41.,41.,41.,41.,41.,48.,48.,48.,
-                        48.,48.,48.,48.,48.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,56.,63.,63.,63.,63.,63.,63.,63.,63.,63.,69.,
-                        69.,38.,38.,45.,45.,45.,45.,45.,45.,45.,45.,45.,45.,53.,53.,53.,53.,53.,60.,60.,60.,60.,60.,60.,60.,60.,60.,60.,60.,66.])
+waltonT1 = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26., 26., 33., 33., 47., 62., 62., 9., 9., 9., 15., 15., 22., 22., 22., 22., 29., 29., 29., 29., 29., 36., 36., 43.])
+waltonT2 = np.array([33., 54., 54., 61., 61., 61., 61., 61., 61., 61., 61., 61., 61., 61., 69., 69., 69., 69., 69., 69., 69., 69., 69., 69., 69., 32., 53., 53., 60., 60., 60., 60., 60.,
+                     68., 68., 68., 68., 68., 68., 68., 68., 68., 68., 75., 17., 51., 51., 51., 58., 58., 58., 58., 66., 66., 7., 7., 41., 41., 41., 41., 41., 41., 41., 48., 48., 48.,
+                     48., 48., 48., 48., 48., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 63., 63., 63., 63., 63., 63., 63., 63., 63., 69.,
+                     69., 38., 38., 45., 45., 45., 45., 45., 45., 45., 45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 66.])
 
 waltonG = np.array(['miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
                     'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
@@ -832,7 +808,6 @@ waltonT = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26.,
                     60., 60., 60., 60., 60., 60., 60., 60., 66.])
 
 
-
 panel_dataset = pd.read_csv(
     StringIO("""id,t,E,var1,var2
 1,1,0,0,1
@@ -866,19 +841,18 @@ panel_dataset = pd.read_csv(
 """))
 
 
-data_nus = pd.DataFrame( [  
-         [6,31.4], 
-         [98, 21.5],  
-         [189, 27.1],  
-         [374, 22.7],  
-         [1002, 35.7],  
-         [1205, 30.7],  
-         [2065, 26.5],  
-         [2201, 28.3],  
-         [2421, 27.9] ],
-      columns = ['t', 'x'])
+data_nus = pd.DataFrame([
+    [6, 31.4],
+    [98, 21.5],
+    [189, 27.1],
+    [374, 22.7],
+    [1002, 35.7],
+    [1205, 30.7],
+    [2065, 26.5],
+    [2201, 28.3],
+    [2421, 27.9]],
+    columns=['t', 'x'])
 data_nus['E'] = True
-
 
 
 if __name__ == '__main__':

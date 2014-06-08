@@ -3,27 +3,27 @@ import pandas as pd
 import numpy as np
 from io import StringIO
 
-__all__ = ['waltons_dataset', 'regression_dataset', 
-    'lcd_dataset', 'dd_dataset', 'rossi_dataset']
+__all__ = ['waltons_dataset', 'regression_dataset',
+           'lcd_dataset', 'dd_dataset', 'rossi_dataset']
 
 
 def generate_left_censored_data():
-    return {  
-            'alluvial_fan': {
-                    'T':[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 
-                        2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 
-                        3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 7.0, 
-                        7.0, 7.0, 8.0, 9.0],
-                    'C':[0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
-                         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]
-            },
-            'basin_trough': {
-                    'T': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0,
-                         3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 6.0, 6.0, 8.0, 9.0, 
-                         9.0, 10.0, 10.0, 10.0, 10.0, 12.0, 14.0, 15.0, 15.0, 17.0, 23.0],
-                    'C': [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 
-                          0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1]
-            }
+    return {
+        'alluvial_fan': {
+            'T': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
+                  2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0,
+                  3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 7.0,
+                  7.0, 7.0, 8.0, 9.0],
+            'C': [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]
+        },
+        'basin_trough': {
+            'T': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0,
+                  3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 6.0, 6.0, 8.0, 9.0,
+                  9.0, 10.0, 10.0, 10.0, 10.0, 12.0, 14.0, 15.0, 15.0, 17.0, 23.0],
+            'C': [0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0,
+                  0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1]
+        }
     }
 
 
@@ -74,22 +74,23 @@ def generate_waltons_data():
                         60., 60., 60., 60., 60., 60., 60., 60., 66.])
 
     waltonC = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
-           1, 1])
+                        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1,
+                        1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                        1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1,
+                        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                        1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+                        1, 1])
 
     waltons_data = pd.DataFrame(waltonT, columns=['T'])
     waltons_data['E'] = waltonC
     waltons_data['group'] = waltonG
     return waltons_data
 
+
 def generate_rossi_dataset():
     return pd.read_csv(
-    StringIO(u"""week,arrest,fin,age,race,wexp,mar,paro,prio
+        StringIO(u"""week,arrest,fin,age,race,wexp,mar,paro,prio
 20,1,0,27,1,0,0,1,3
 17,1,0,18,1,0,0,1,8
 25,1,0,19,0,1,0,1,13
@@ -527,7 +528,7 @@ def generate_rossi_dataset():
 
 def generate_dd_dataset():
     return pd.read_csv(
-    StringIO(u"""
+        StringIO(u"""
 "id","ctryname","cowcode2","politycode","un_region_name","un_continent_name","ehead","leaderspellreg","democracy","regime","start_year","duration","observed"
 "1","Afghanistan",700,700,"Southern Asia","Asia","Mohammad Zahir Shah","Mohammad Zahir Shah.Afghanistan.1946.1952.Monarchy","Non-democracy","Monarchy",1946,7,1
 "2","Afghanistan",700,700,"Southern Asia","Asia","Sardar Mohammad Daoud","Sardar Mohammad Daoud.Afghanistan.1953.1962.Civilian Dict","Non-democracy","Civilian Dict",1953,10,1
@@ -2337,12 +2338,12 @@ def generate_dd_dataset():
 "1806","Zimbabwe",552,552,"Eastern Africa","Africa","Ian Smith","Ian Smith.Zimbabwe.1965.1978.Civilian Dict","Non-democracy","Civilian Dict",1965,14,1
 "1807","Zimbabwe",552,552,"Eastern Africa","Africa","Abel Muzorewa","Abel Muzorewa.Zimbabwe.1979.1979.Civilian Dict","Non-democracy","Civilian Dict",1979,1,1
 "1808","Zimbabwe",552,552,"Eastern Africa","Africa","Robert Mugabe","Robert Mugabe.Zimbabwe.1980.2008.Civilian Dict","Non-democracy","Civilian Dict",1980,29,0"""),
-index_col=[0], header=1)
+        index_col=[0], header=1)
 
 
 def generate_regression_dataset():
     return pd.read_csv(
-    StringIO(u"""
+        StringIO(u"""
 var1,var2,var3,var4,T,E
 0.5951697438546901,1.14347169375119,1.5710788740267934,1.0,14.785478547854785,1
 0.20932541672176813,0.18467669526521932,0.356980285734657,1.0,7.336733673367337,1
@@ -2547,9 +2548,8 @@ var1,var2,var3,var4,T,E
 """), header=1)
 
 
-
 waltons_dataset = generate_waltons_data()
 regression_dataset = generate_regression_dataset()
 dd_dataset = generate_dd_dataset()
 lcd_dataset = generate_left_censored_data()
-rossi_dataset= generate_rossi_dataset()
+rossi_dataset = generate_rossi_dataset()
