@@ -738,6 +738,16 @@ class AalenAdditiveFitter(BaseFitter):
 
 
 class CoxFitter(BaseFitter):
+    """
+    This class implments fitting Cox's proportional hazard model:
+
+    h(t|x) = h_0(t)*exp(x'*beta)
+
+    Parameters:
+      alpha: the level in the confidence intervals.
+      tie_method: specify how the fitter should deal with ties. Currently only
+         'Efron' is available.
+    """
 
     def __init__(self, alpha=0.95, tie_method='Efron'):
         self.alpha = alpha
@@ -874,7 +884,7 @@ class CoxFitter(BaseFitter):
                 Z = Z_risk - c * Z_tied
                 a2 = dot(Z.T, Z) / phi ** 2
                 M_t += a1 - a2
-                
+
             M += M_t
 
         return -M
