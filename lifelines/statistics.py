@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 from itertools import combinations
 
 import numpy as np
@@ -226,7 +227,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None, alph
                                    alpha=alpha, null_distribution='chi squared',
                                    df=n_groups - 1, **kwargs)
 
-    print summary
+    print(summary)
     return summary, p_value, test_result
 
 
