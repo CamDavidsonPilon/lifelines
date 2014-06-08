@@ -387,21 +387,24 @@ Prime Minister Stephen Harper.
 Cox's Proportional Hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+New in 0.4.0 is the implementation of the Propotional Hazard's regression model (implemented in 
+R under ``coxph``). It has a similar API to Aalen's Additive model. Like R, it has a ``summary``
+function that prints a tabuluar view of coefficients and related stats. 
 
+This example data is from the paper `here <http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf>`_.
 
 .. code:: python
 
-    from lifelines import CoxFitter
-    cf = CoxFitter()
-
     from lifelines.datasets import rossi_dataset
+    from lifelines import CoxFitter
 
+    cf = CoxFitter()
     cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
     print cf.summary()
 
     """
-    coef  exp(coef)  se(coef)         z         p  lower 0.95  upper 0.95
+              coef  exp(coef)  se(coef)         z         p  lower 0.95  upper 0.95
     fin  -0.379422   0.684257  0.191379 -1.982565  0.047416   -0.754602   -0.004243
     age  -0.057438   0.944181  0.021999 -2.610869  0.009031   -0.100565   -0.014310
     race  0.313900   1.368753  0.307993  1.019179  0.308118   -0.289888    0.917687
@@ -410,4 +413,3 @@ Cox's Proportional Hazard model
     paro -0.084871   0.918631  0.195757 -0.433554  0.664612   -0.468631    0.298889
     prio  0.091497   1.095814  0.028649  3.193777  0.001404    0.035335    0.147660
     """
-
