@@ -166,7 +166,7 @@ class StatisticalTests(unittest.TestCase):
         summary, p_value, result = logrank_test(data1, data2)
         self.assertTrue(result)
 
-    def test_waltons_data(self):
+    def test_waltons_dataset(self):
         summary, p_value, result = logrank_test(waltonT1, waltonT2)
         self.assertTrue(result)
 
@@ -216,8 +216,8 @@ class StatisticalTests(unittest.TestCase):
         s, _, result = multivariate_logrank_test(T, g)
         self.assertTrue(result is None)
 
-    def test_pairwise_waltons_data(self):
-        _, _, R = pairwise_logrank_test(waltons_data['T'], waltons_data['group'])
+    def test_pairwise_waltons_dataset(self):
+        _, _, R = pairwise_logrank_test(waltons_dataset['T'], waltons_dataset['group'])
         self.assertTrue(R.values[0, 1])
 
     def test_pairwise_logrank_test(self):
@@ -279,12 +279,12 @@ class StatisticalTests(unittest.TestCase):
 
     def test_subtraction_function(self):
         kmf = KaplanMeierFitter()
-        kmf.fit(waltons_data['T'])
+        kmf.fit(waltons_dataset['T'])
         npt.assert_array_almost_equal(kmf.subtract(kmf).sum().values, 0.0)
 
     def test_divide_function(self):
         kmf = KaplanMeierFitter()
-        kmf.fit(waltons_data['T'])
+        kmf.fit(waltons_dataset['T'])
         npt.assert_array_almost_equal(np.log(kmf.divide(kmf)).sum().values, 0.0)
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
@@ -603,12 +603,12 @@ class PlottingTests(unittest.TestCase):
         return True
 
     def test_ix_slicing(self):
-        naf = NelsonAalenFitter().fit(waltons_data['T'])
+        naf = NelsonAalenFitter().fit(waltons_dataset['T'])
         self.assertTrue(naf.cumulative_hazard_.ix[0:10].shape[0] == 4)
         return
 
     def test_iloc_slicing(self):
-        naf = NelsonAalenFitter().fit(waltons_data['T'])
+        naf = NelsonAalenFitter().fit(waltons_dataset['T'])
         self.assertTrue(naf.cumulative_hazard_.iloc[0:10].shape[0] == 10)
         self.assertTrue(naf.cumulative_hazard_.iloc[0:-1].shape[0] == 32)
         return
@@ -761,9 +761,9 @@ OBSERVED = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
 N = len(LIFETIMES)
 
 #walton's data
-ix = waltons_data['group'] == 'miR-137'
-waltonT1 = waltons_data.ix[ix]['T']
-waltonT2 = waltons_data.ix[~ix]['T']
+ix = waltons_dataset['group'] == 'miR-137'
+waltonT1 = waltons_dataset.ix[ix]['T']
+waltonT2 = waltons_dataset.ix[~ix]['T']
 
 
 panel_dataset = pd.read_csv(
