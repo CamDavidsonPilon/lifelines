@@ -53,7 +53,8 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
                    event_observed)
 
 
-def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs):
+def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None, 
+                  alpha=0.95, t_0=-1, suppress_print=False, **kwargs):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -72,6 +73,7 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
       censorship_bar: a (nx1) array of censorship flags, 1 if observed, 0 if not. Default assumes all observed.
       t_0: the period under observation, -1 for all time.
       alpha: the level of signifiance
+      suppress_print: if True, do not print the summary. Default False.
       kwargs: add keywords and meta-data to the experiment summary
 
     Returns
@@ -89,10 +91,12 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
     event_observed = np.r_[event_observed_A, event_observed_B]
-    return multivariate_logrank_test(event_times, groups, event_observed, alpha=alpha, t_0=t_0, **kwargs)
+    return multivariate_logrank_test(event_times, groups, event_observed, 
+                                          alpha=alpha, t_0=t_0, suppress_print=suppress_print, **kwargs)
 
 
-def pairwise_logrank_test(event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs):
+def pairwise_logrank_test(event_durations, groups, event_observed=None,
+                          alpha=0.95, t_0=-1, bonferroni=True, suppress_print=False, **kwargs):
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
     We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase
@@ -109,6 +113,7 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None, alpha=0.
       t_0: the final time to compare the series' up to. Defaults to all.
       bonferroni: If true, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M
             See (here)[http://en.wikipedia.org/wiki/Bonferroni_correction].
+      suppress_print: if True, do not print the summary. Default False.
       kwargs: add keywords and meta-data to the experiment summary.
 
     Returns:
@@ -161,7 +166,8 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None, alpha=0.
         summary, p_value, result = logrank_test(event_durations.ix[ix1], event_durations.ix[ix2],
                                                 event_observed.ix[ix1], event_observed.ix[ix2],
                                                 alpha=alpha, t_0=t_0, use_bonferroni=bonferroni,
-                                                test_name=test_name, **kwargs)
+                                                test_name=test_name, suppress_print=suppress_print,
+                                                **kwargs)
         T[i1, i2], T[i2, i1] = result, result
         P[i1, i2], P[i2, i1] = p_value, p_value
         S[i1, i2], S[i2, i1] = summary, summary
@@ -169,7 +175,8 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None, alpha=0.
     return [pd.DataFrame(x, columns=unique_groups, index=unique_groups) for x in [S, P, T]]
 
 
-def multivariate_logrank_test(event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs):
+def multivariate_logrank_test(event_durations, groups, event_observed=None, 
+                              alpha=0.95, t_0=-1, suppress_print=False, **kwargs):
     """
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
       be equal when n=2):
@@ -184,6 +191,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None, alph
           to all observed.
       alpha: the level of signifiance desired.
       t_0: the final time to compare the series' up to. Defaults to all.
+      suppress_print: if True, do not print the summary. Default False.
       kwargs: add keywords and meta-data to the experiment summary.
 
     Returns:
@@ -221,7 +229,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None, alph
     V[ix, ix] = V[ix, ix] + ev
 
     # take the first n-1 groups
-    U = Z_j.ix[:-1].dot(np.linalg.inv(V[:-1, :-1]).dot(Z_j.ix[:-1]))  # Z.T*inv(V)*Z
+    U = Z_j.ix[:-1].dot(np.linalg.pinv(V[:-1, :-1]).dot(Z_j.ix[:-1]))  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
     test_result, p_value = chisq_test(U, n_groups - 1, alpha)
@@ -229,7 +237,8 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None, alph
                                    alpha=alpha, null_distribution='chi squared',
                                    df=n_groups - 1, **kwargs)
 
-    print(summary)
+    if not suppress_print:
+      print(summary)
     return summary, p_value, test_result
 
 
