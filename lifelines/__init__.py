@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from .estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, BreslowFlemingHarringtonFitter, CoxFitter
+from .estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, BreslowFlemingHarringtonFitter, CoxPHFitter

@@ -28,9 +28,9 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
     reducing errors. Statistics in Medicine 1996;15(4):361-87.
 
     Parameters:
-      event_times: a (nx1) array of observed survival times.
-      predicted_event_times: a (nx1) array of predicted survival times.
-      event_observed: a (nx1) array of censorship flags, 1 if observed,
+      event_times: a (n,) array of observed survival times.
+      predicted_event_times: a (n,) array of predicted survival times.
+      event_observed: a (n,) array of censorship flags, 1 if observed,
                       0 if not. Default assumes all observed.
 
     Returns:
@@ -43,9 +43,9 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
         event_observed = np.ones(event_times.shape[0], dtype=float)
 
     if event_times.shape != predicted_event_times.shape:
-        raise ValueError("Event times and predictions must have the same shape!")
+        raise ValueError("Event times and predictions must have the same shape")
     if event_times.ndim != 1:
-        raise ValueError("Event times can only be 1-dimensional!")
+        raise ValueError("Event times can only be 1-dimensional: (n,)")
 
     # 100 times faster to calculate in Fortran
     return _cindex(event_times,

@@ -25,11 +25,11 @@ On the other hand, Aalen's additive model assumes the following form:
 
 .. math:: \lambda(t) = b_0(t) + b_1(t)x_1 + ... + b_N(t)x_T
 
+.. warning:: These are still experimental.
+
 
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. warning:: This is still experimental.
 
 The estimator to fit unknown coefficients in Aalen's additive model is
 located in ``estimators`` under ``AalenAdditiveFitter``. For this
@@ -396,9 +396,9 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
 .. code:: python
 
     from lifelines.datasets import rossi_dataset
-    from lifelines import CoxFitter
+    from lifelines import CoxPHFitter
 
-    cf = CoxFitter(alpha=0.95, tie_method='Efron')
+    cf = CoxPHFitter(alpha=0.95, tie_method='Efron')
     cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
     print cf.summary()
@@ -415,3 +415,39 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
     """
 
 To access the coefficients and the baseline hazard, you can use ``cf.hazards_`` and ``cf.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_hazard(X)``, ``.predict_survival_function(X)``, etc. 
+
+Model Selection in Survival Regression
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With censorship, it's not correct to use a loss function like mean-squared-error or 
+mean-absolute-loss. Instead, one measure is the c-index, or concordance-index. This measure
+evaluates the ordering of predicted times: how correct is the ordering? It is infact a generalization
+of AUC, another common loss function, and is interpretted similarly: 
+
+* 0.5 is the expected result from random predictions,
+* 1.0 is perfect concordance and,
+* 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
+
+The measure is implemented in lifelines under `lifelines.statsitics.concordance_index` and accepts the actual times (along with any censorships), and the predicted times.
+
+Cross Validation
+######################################
+
+Lifelines has an implementation of k-fold cross validation under `lifelines.utils.k_fold_cross_validation`. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus `k` (the number of folds to perform, default 5). On each fold, it splits the data 
+into a training set and a testing set, fits itself on the training set, and evaluates itself on the testing set (using the concordance measure). 
+
+.. code:: python
+      
+        from lifelines import CoxPHFitter
+        from lifelines.datasets import regression_dataset
+        from lifelines.utils import k_fold_cross_validation
+
+        cf = CoxPHFitter()
+        scores = k_fold_cross_validation(cf, regression_dataset, duration_col='T', event_col='E', k=3)
+        print scores
+        print scores.mean()
+        print scores.std()
+        
+        #[ 0.5896  0.5358  0.5028]
+        # 0.542
+        # 0.035
