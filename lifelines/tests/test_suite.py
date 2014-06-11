@@ -20,14 +20,14 @@ import pandas as pd
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, \
     median_survival_times, BreslowFlemingHarringtonFitter, BayesianFitter, \
-    CoxFitter
+    CoxPHFitter
 
 from ..statistics import (logrank_test, multivariate_logrank_test,
                           pairwise_logrank_test, concordance_index)
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import *
-from ..datasets import lcd_dataset, rossi_dataset
+from ..datasets import lcd_dataset, rossi_dataset, waltons_dataset, regression_dataset
 
 
 class MiscTests(unittest.TestCase):
@@ -90,6 +90,10 @@ class MiscTests(unittest.TestCase):
         df = pd.DataFrame([[1, True, 3], [1, True, 3], [4, False, 2]], columns=['duration', 'E', 'G'])
         ug, _, _, _ = group_survival_table_from_events(df.G, df.duration, df.E, np.array([[0, 0, 0]]))
         npt.assert_array_equal(ug, np.array([3, 2]))
+
+    def test_cross_validator(self):
+        cf = CoxPHFitter()
+        k_fold_cross_validation(cf, regression_dataset, duration_col='T', event_col='E', k=3)
 
 
 class StatisticalTests(unittest.TestCase):
@@ -162,7 +166,7 @@ class StatisticalTests(unittest.TestCase):
         summary, p_value, result = logrank_test(data1, data2)
         self.assertTrue(result)
 
-    def test_waltons_data(self):
+    def test_waltons_dataset(self):
         summary, p_value, result = logrank_test(waltonT1, waltonT2)
         self.assertTrue(result)
 
@@ -212,8 +216,8 @@ class StatisticalTests(unittest.TestCase):
         s, _, result = multivariate_logrank_test(T, g)
         self.assertTrue(result is None)
 
-    def test_pairwise_waltons_data(self):
-        _, _, R = pairwise_logrank_test(waltonT, waltonG)
+    def test_pairwise_waltons_dataset(self):
+        _, _, R = pairwise_logrank_test(waltons_dataset['T'], waltons_dataset['group'])
         self.assertTrue(R.values[0, 1])
 
     def test_pairwise_logrank_test(self):
@@ -222,6 +226,20 @@ class StatisticalTests(unittest.TestCase):
         S, P, R = pairwise_logrank_test(T, g, alpha=0.95)
         V = np.array([[np.nan, None, None], [None, np.nan, None], [None, None, np.nan]])
         npt.assert_array_equal(R, V)
+
+    def test_multivariate_inputs(self):
+        T = np.array([1,2,3])
+        E = np.array([1,1,0], dtype=bool)
+        G = np.array([1,2,1])
+        multivariate_logrank_test(T,G,E)
+        pairwise_logrank_test(T,G,E)
+
+        T = pd.Series(T)
+        E = pd.Series(E)
+        G = pd.Series(G)
+        multivariate_logrank_test(T,G,E)
+        pairwise_logrank_test(T,G,E)
+
 
     def test_lists_to_KaplanMeierFitter(self):
         T = [2, 3, 4., 1., 6, 5.]
@@ -275,12 +293,12 @@ class StatisticalTests(unittest.TestCase):
 
     def test_subtraction_function(self):
         kmf = KaplanMeierFitter()
-        kmf.fit(waltonT)
+        kmf.fit(waltons_dataset['T'])
         npt.assert_array_almost_equal(kmf.subtract(kmf).sum().values, 0.0)
 
     def test_divide_function(self):
         kmf = KaplanMeierFitter()
-        kmf.fit(waltonT)
+        kmf.fit(waltons_dataset['T'])
         npt.assert_array_almost_equal(np.log(kmf.divide(kmf)).sum().values, 0.0)
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
@@ -599,12 +617,12 @@ class PlottingTests(unittest.TestCase):
         return True
 
     def test_ix_slicing(self):
-        naf = NelsonAalenFitter().fit(waltonT)
+        naf = NelsonAalenFitter().fit(waltons_dataset['T'])
         self.assertTrue(naf.cumulative_hazard_.ix[0:10].shape[0] == 4)
         return
 
     def test_iloc_slicing(self):
-        naf = NelsonAalenFitter().fit(waltonT)
+        naf = NelsonAalenFitter().fit(waltons_dataset['T'])
         self.assertTrue(naf.cumulative_hazard_.iloc[0:10].shape[0] == 10)
         self.assertTrue(naf.cumulative_hazard_.iloc[0:-1].shape[0] == 32)
         return
@@ -701,8 +719,8 @@ class PlottingTests(unittest.TestCase):
 class CoxRegressionTests(unittest.TestCase):
 
     def test_efron_computed_by_hand_examples(self):
-        score_efron = CoxFitter()._score_efron
-        hessian_efron = CoxFitter()._hessian_efron
+        score_efron = CoxPHFitter()._score_efron
+        hessian_efron = CoxPHFitter()._hessian_efron
 
         X = data_nus['x'][:, None]
         T = data_nus['t']
@@ -733,12 +751,12 @@ class CoxRegressionTests(unittest.TestCase):
         assert np.abs(beta - -0.0335) < 0.01
 
     def test_efron_newtons_method(self):
-        newton = CoxFitter()._newton_rhapdson
+        newton = CoxPHFitter()._newton_rhapdson
         X, T, E = data_nus['x'][:, None], data_nus['t'], data_nus['E']
         assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self):
-        cf = CoxFitter()
+        cf = CoxPHFitter()
         cf.fit(data_nus, duration_col='t', event_col='E')
         self.assertTrue(np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
 
@@ -746,7 +764,7 @@ class CoxRegressionTests(unittest.TestCase):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         df = rossi_dataset
-        cf = CoxFitter()
+        cf = CoxPHFitter()
         cf.fit(df, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
@@ -756,56 +774,10 @@ LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 OBSERVED = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
 N = len(LIFETIMES)
 
-waltonT1 = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26., 26., 33., 33., 47., 62., 62., 9., 9., 9., 15., 15., 22., 22., 22., 22., 29., 29., 29., 29., 29., 36., 36., 43.])
-waltonT2 = np.array([33., 54., 54., 61., 61., 61., 61., 61., 61., 61., 61., 61., 61., 61., 69., 69., 69., 69., 69., 69., 69., 69., 69., 69., 69., 32., 53., 53., 60., 60., 60., 60., 60.,
-                     68., 68., 68., 68., 68., 68., 68., 68., 68., 68., 75., 17., 51., 51., 51., 58., 58., 58., 58., 66., 66., 7., 7., 41., 41., 41., 41., 41., 41., 41., 48., 48., 48.,
-                     48., 48., 48., 48., 48., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 63., 63., 63., 63., 63., 63., 63., 63., 63., 69.,
-                     69., 38., 38., 45., 45., 45., 45., 45., 45., 45., 45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 60., 66.])
-
-waltonG = np.array(['miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
-                    'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
-                    'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
-                    'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
-                    'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
-                    'miR-137', 'miR-137', 'miR-137', 'miR-137', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control', 'control', 'control', 'control', 'control', 'control',
-                    'control'], dtype=object)
-
-waltonT = np.array([6., 13., 13., 13., 19., 19., 19., 26., 26., 26., 26.,
-                    26., 33., 33., 47., 62., 62., 9., 9., 9., 15., 15.,
-                    22., 22., 22., 22., 29., 29., 29., 29., 29., 36., 36.,
-                    43., 33., 54., 54., 61., 61., 61., 61., 61., 61., 61.,
-                    61., 61., 61., 61., 69., 69., 69., 69., 69., 69., 69.,
-                    69., 69., 69., 69., 32., 53., 53., 60., 60., 60., 60.,
-                    60., 68., 68., 68., 68., 68., 68., 68., 68., 68., 68.,
-                    75., 17., 51., 51., 51., 58., 58., 58., 58., 66., 66.,
-                    7., 7., 41., 41., 41., 41., 41., 41., 41., 48., 48.,
-                    48., 48., 48., 48., 48., 48., 56., 56., 56., 56., 56.,
-                    56., 56., 56., 56., 56., 56., 56., 56., 56., 56., 56.,
-                    56., 56., 63., 63., 63., 63., 63., 63., 63., 63., 63.,
-                    69., 69., 38., 38., 45., 45., 45., 45., 45., 45., 45.,
-                    45., 45., 45., 53., 53., 53., 53., 53., 60., 60., 60.,
-                    60., 60., 60., 60., 60., 60., 60., 60., 66.])
+#walton's data
+ix = waltons_dataset['group'] == 'miR-137'
+waltonT1 = waltons_dataset.ix[ix]['T']
+waltonT2 = waltons_dataset.ix[~ix]['T']
 
 
 panel_dataset = pd.read_csv(

@@ -737,7 +737,7 @@ class AalenAdditiveFitter(BaseFitter):
         return trapz(self.predict_survival_function(X).values.T, t)
 
 
-class CoxFitter(BaseFitter):
+class CoxPHFitter(BaseFitter):
     """
     This class implments fitting Cox's proportional hazard model:
 
@@ -924,10 +924,11 @@ class CoxFitter(BaseFitter):
         betas = []
         converging = True
         while converging:
-
             betas.append(beta)
             delta = solve(-hessian(X, beta, T, E), step_size * score(X, beta, T, E).T)
             beta = delta + beta
+            if pd.isnull(delta).sum() > 1:
+                raise ValueError("delta contains nan value(s). Converge halted.")
             if norm(delta) < epsilon:
                 converging = False
 
@@ -942,7 +943,7 @@ class CoxFitter(BaseFitter):
         return beta
 
     def fit(self, df, duration_col='T', event_col='E',
-            show_progress=True, initial_beta=None):
+            show_progress=False, initial_beta=None):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times are handled using
         Efron's tie-method.
@@ -968,7 +969,7 @@ class CoxFitter(BaseFitter):
         del df[duration_col]
         del df[event_col]
 
-        X = df.values
+        X = self._check_values(df.values)
         hazards_ = self._newton_rhapdson(X, T, E, initial_beta=initial_beta, show_progress=show_progress)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef'])
@@ -980,6 +981,13 @@ class CoxFitter(BaseFitter):
 
         self.baseline_hazard_ = self._compute_baseline_hazard()
         return self
+
+    def _check_values(self,X):
+        low_var = (X.var(0) < 10e-5)
+        if low_var.any():
+            cols = str(list(X.columns[low_var]))
+            print("Warning: column(s) %s have very low variance. This may harm convergence."%cols)
+        return X
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
@@ -1048,7 +1056,7 @@ class CoxFitter(BaseFitter):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         ind_hazards = exp(np.dot(self.data, self.hazards_.T))
 
-        event_table = survival_table_from_events(self.durations, self.event_observed, np.zeros_like(self.durations))
+        event_table = survival_table_from_events(self.durations.values, self.event_observed.values, np.zeros_like(self.durations))
         n, d = event_table.shape
 
         baseline_hazard_ = pd.DataFrame(np.zeros((n, 1)), index=event_table.index, columns=['baseline hazard'])

@@ -28,9 +28,9 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
     reducing errors. Statistics in Medicine 1996;15(4):361-87.
 
     Parameters:
-      event_times: a (nx1) array of observed survival times.
-      predicted_event_times: a (nx1) array of predicted survival times.
-      event_observed: a (nx1) array of censorship flags, 1 if observed,
+      event_times: a (n,) array of observed survival times.
+      predicted_event_times: a (n,) array of predicted survival times.
+      event_observed: a (n,) array of censorship flags, 1 if observed,
                       0 if not. Default assumes all observed.
 
     Returns:
@@ -43,9 +43,9 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
         event_observed = np.ones(event_times.shape[0], dtype=float)
 
     if event_times.shape != predicted_event_times.shape:
-        raise ValueError("Event times and predictions must have the same shape!")
+        raise ValueError("Event times and predictions must have the same shape")
     if event_times.ndim != 1:
-        raise ValueError("Event times can only be 1-dimensional!")
+        raise ValueError("Event times can only be 1-dimensional: (n,)")
 
     # 100 times faster to calculate in Fortran
     return _cindex(event_times,
@@ -134,11 +134,11 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None, alpha=0.
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
 
-    # if they pass in a dataframe
-    try:
-        unique_groups = np.unique(groups).values
-    except:
-        unique_groups = np.unique(groups)
+    n = max(event_durations.shape)
+    assert n == max(event_durations.shape) == max(event_observed.shape), "inputs must be of the same length."
+    groups, event_durations, event_observed = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, event_durations, event_observed])
+
+    unique_groups = np.unique(groups)
 
     n = unique_groups.shape[0]
 
@@ -158,8 +158,8 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None, alpha=0.
         g1, g2 = unique_groups[[i1, i2]]
         ix1, ix2 = (groups == g1), (groups == g2)
         test_name = str(g1) + " vs. " + str(g2)
-        summary, p_value, result = logrank_test(event_durations[ix1], event_durations[ix2],
-                                                event_observed[ix1], event_observed[ix2],
+        summary, p_value, result = logrank_test(event_durations.ix[ix1], event_durations.ix[ix2],
+                                                event_observed.ix[ix1], event_observed.ix[ix2],
                                                 alpha=alpha, t_0=t_0, use_bonferroni=bonferroni,
                                                 test_name=test_name, **kwargs)
         T[i1, i2], T[i2, i1] = result, result
@@ -192,10 +192,12 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None, alph
       test_result: True if reject the null, (pendantically) None if we can't reject the null.
 
     """
-    assert event_durations.shape[0] == groups.shape[0], "event_durations must be the same shape as groups"
-
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
+
+    n = max(event_durations.shape)
+    assert n == max(event_durations.shape) == max(event_observed.shape), "inputs must be of the same length."
+    groups, event_durations, event_observed = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, event_durations, event_observed])
 
     unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, np.zeros_like(event_durations), t_0)
     n_groups = unique_groups.shape[0]
