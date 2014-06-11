@@ -4,7 +4,7 @@
 
 - Ability to specify default printing in statsitical tests with the `suppress_print` keyword argument (default False).
 - For the multivariate log rank test, the inverse step has been replaced with the generalized inverse. This seems to be what other packages use.
-- Adding more robust cross validation scheme based on issue #57.
+- Adding more robust cross validation scheme based on issue #67.
 
 
 ####0.4.1
