@@ -227,6 +227,20 @@ class StatisticalTests(unittest.TestCase):
         V = np.array([[np.nan, None, None], [None, np.nan, None], [None, None, np.nan]])
         npt.assert_array_equal(R, V)
 
+    def test_multivariate_inputs(self):
+        T = np.array([1,2,3])
+        E = np.array([1,1,0], dtype=bool)
+        G = np.array([1,2,1])
+        multivariate_logrank_test(T,G,E)
+        pairwise_logrank_test(T,G,E)
+
+        T = pd.Series(T)
+        E = pd.Series(E)
+        G = pd.Series(G)
+        multivariate_logrank_test(T,G,E)
+        pairwise_logrank_test(T,G,E)
+
+
     def test_lists_to_KaplanMeierFitter(self):
         T = [2, 3, 4., 1., 6, 5.]
         C = [1, 0, 0, 0, 1, 1]
