@@ -4,7 +4,7 @@ from __future__ import print_function
 from datetime import datetime
 
 import numpy as np
-from numpy.random import shuffle
+from numpy.random import permutation
 import pandas as pd
 from pandas import to_datetime
 
@@ -285,8 +285,10 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
 
     n,d = df.shape
     scores = np.zeros((k,))
-    assignments = np.repeat(np.arange(1,k+1), n/k + 1)
-    shuffle(assignments)
+    df = df.copy()
+    df = df.reindex(np.random.permutation(df.index)).sort(event_col)    
+
+    assignments = np.array((n/k + 1)*range(1,k+1))
     assignments = assignments[:n]
 
     testing_columns = df.columns - [duration_col, event_col]
@@ -296,6 +298,7 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
         ix = assignments == i 
         training_data = df.ix[~ix]
         testing_data = df.ix[ix]
+        print(training_data[event_col].mean())
 
         T_actual = testing_data[duration_col].values
         E_actual = testing_data[event_col].values
@@ -308,7 +311,6 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
         scores[i-1] = concordance_index(T_actual, T_pred, E_actual)
 
     return scores
-
 
 def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2
