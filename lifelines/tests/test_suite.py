@@ -27,7 +27,7 @@ from ..statistics import (logrank_test, multivariate_logrank_test,
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import *
-from ..datasets import lcd_dataset, rossi_dataset, waltons_data, regression_data
+from ..datasets import lcd_dataset, rossi_dataset, waltons_dataset, regression_dataset
 
 
 class MiscTests(unittest.TestCase):
@@ -94,7 +94,7 @@ class MiscTests(unittest.TestCase):
     def test_cross_validator(self):
         cf = CoxPHFitter()
         k_fold_cross_validation(cf, regression_dataset, duration_col='T', event_col='E', k=3)
-        
+
 
 class StatisticalTests(unittest.TestCase):
 
