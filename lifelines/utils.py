@@ -298,7 +298,6 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
         ix = assignments == i 
         training_data = df.ix[~ix]
         testing_data = df.ix[ix]
-        print(training_data[event_col].mean())
 
         T_actual = testing_data[duration_col].values
         E_actual = testing_data[event_col].values
