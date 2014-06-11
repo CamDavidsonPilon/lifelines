@@ -288,7 +288,7 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
     df = df.copy()
     df = df.reindex(np.random.permutation(df.index)).sort(event_col)    
 
-    assignments = np.array((n/k + 1)*range(1,k+1))
+    assignments = np.array((int(n/k) + 1)*range(1,k+1))
     assignments = assignments[:n]
 
     testing_columns = df.columns - [duration_col, event_col]
