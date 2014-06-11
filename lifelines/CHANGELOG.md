@@ -17,3 +17,4 @@
    `survival_table_from_events`.
  - CoxPHFitter's `fit` now looks to columns with too low variance, and halts NR algorithm if a NaN is found.
  - Adding a Changelog.
+ - more sanitizing for the statistical tests =)
