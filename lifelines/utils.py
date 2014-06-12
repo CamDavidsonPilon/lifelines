@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+from __future__ import print_function, division
 
 from datetime import datetime
 
