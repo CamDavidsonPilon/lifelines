@@ -924,6 +924,28 @@ class CoxPHFitter(BaseFitter):
 
     def fit(self, df, duration_col='T', event_col='E',
             show_progress=False, initial_beta=None):
+        """
+        Fit the Cox Propertional Hazard model to a dataset. Tied survival times
+        are handled using Efron's tie-method.
+
+        Parameters:
+          df: a Pandas dataframe with necessary columns `duration_col` and
+             `event_col`, plus other covariates. `duration_col` refers to
+             the lifetimes of the subjects. `event_col` refers to whether
+             the 'death' events was observed: 1 if observed, 0 else (censored).
+          duration_col: the column in dataframe that contains the subjects'
+             lifetimes.
+          event_col: the column in dataframe that contains the subjects' death
+             observation.
+          show_progress: since the fitter is iterative, show convergence
+             diagnostics.
+          initial_beta: initialize the starting point of the iterative
+             algorithm. Default is the zero vector.
+
+        Returns:
+            self, with additional properties: hazards_
+
+        """
         df = df.copy()
         # Sort on time
         df.sort(duration_col, inplace=True)
