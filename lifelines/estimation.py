@@ -739,7 +739,7 @@ class AalenAdditiveFitter(BaseFitter):
 
 class CoxPHFitter(BaseFitter):
     """
-    This class implments fitting Cox's proportional hazard model:
+    This class implements fitting Cox's proportional hazard model:
 
     h(t|x) = h_0(t)*exp(x'*beta)
 
@@ -755,162 +755,137 @@ class CoxPHFitter(BaseFitter):
             raise NotImplementedError("Only Efron is available atm.")
         self.tie_method = tie_method
 
-    def _sum_exp_over_risk(self, X, beta, R):
-        return exp(dot(X[R], beta)).sum()
-
-    def _risk_set(self, T, t):
-        return np.where(T >= t)[0]
-
-    def _theta(self, x, beta):
-        return exp(dot(x, beta))
-
-    def _theta_x(self, X, beta):
-        return dot(exp(np.dot(X, beta)).T, X)
-
-    def _score_efron(self, X, beta, T, E):
+    def _get_efron_values(self, X, beta, T, E, include_likelihood=False):
         """
+        Calculates the first and second order vector differentials,
+        with respect to beta. If 'include_likelihood' is True, then
+        the log likelihood is also calculated. This is omitted by default
+        to speed up the fit.
+
+        Note that X, T, E are assumed to be sorted on T!
+
         Parameters:
-            X: (n,d) numpy array or dataframe of observations.
-            T: (n,1) numpy array/Series representing observed durations.
-            E: (n,1) numpy array/Series representing death events.
-            beta: (d,1)
-        """
-        assert beta.shape == (X.shape[1], 1)
-        assert X.shape[0] == T.shape[0]
+            X: (n,d) numpy array of observations.
+            beta: (1, d) numpy array of coefficients.
+            T: (n) numpy array representing observed durations.
+            E: (n) numpy array representing death events.
 
-        E_ix = np.where(E.astype(bool))[0]
+        Returns:
+            hessian: (d, d) numpy array,
+            gradient: (1, d) numpy array
+            log_likelihood: double, if include_likelihood=True
+        """
+
         n, d = X.shape
-        partial_score = np.zeros((1, d))
-        for t in np.unique(T[E_ix]):
+        hessian = np.zeros((d, d))
+        gradient = np.zeros((1, d))
+        log_lik = 0
 
-            ix = np.where((T == t) & E)[0]
-            m = ix.shape[0]
-            R = self._risk_set(T, t)
-            X_j = X[R]
-            X_tie = X[ix, :]
+        # Init risk and tie sums to zero
+        x_tie_sum = np.zeros((1, d))
+        risk_phi, tie_phi = 0, 0
+        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-            tied_theta_x = self._theta_x(X_tie, beta)
-            risk_theta_x = self._theta_x(X_j, beta)
-            tied_theta = self._theta(X_tie, beta).sum()
-            risk_theta = self._sum_exp_over_risk(X, beta, R)
+        # Init number of ties
+        tie_count = 0
 
-            partial_sum = np.zeros((1, d))
+        # Iterate backwards to utilize recursive relationship
+        for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
+            # Doing it like this to preserve shape
+            xi = X[i:i+1]
+            # Calculate phi values
+            phi_i = exp(dot(xi, beta))
+            phi_x_i = dot(phi_i, xi)
+            phi_x_x_i = np.dot(xi.T, xi) * phi_i
 
-            for l in range(m):
-                c = 1.0 * l / m
-                partial_sum += (risk_theta_x - c * tied_theta_x) / (risk_theta - c * tied_theta)
+            # Calculate sums of Risk set
+            risk_phi += phi_i
+            risk_phi_x += phi_x_i
+            risk_phi_x_x += phi_x_x_i
 
-            partial_score = partial_score + (X_tie.sum(0) - partial_sum)
+            # Calculate sums of Ties, if this is an event
+            if ei:
+                x_tie_sum += xi
+                tie_phi += phi_i
+                tie_phi_x += phi_x_i
+                tie_phi_x_x += phi_x_x_i
 
-        return partial_score
+                # Keep track of count
+                tie_count += 1
 
-    def _log_likelihood_efron(self, X, beta, T, E):
-        """
-        Parameters:
-            X: (n,d) numpy array or dataframe of observations.
-            T: (n,1) numpy array/Series representing observed durations.
-            E: (n,1) numpy array/Series representing death events.
-            beta: (d,1)
-        """
-        assert X.shape[0] == T.shape[0]
-        assert beta.shape == (X.shape[1], 1)
+            if i > 0 and T[i-1] == ti:
+                # There are more ties/members of the risk set
+                continue
+            elif tie_count == 0:
+                # Only censored with current time, move on
+                continue
 
-        E_ix = np.where(E.astype(bool))[0]
-        n, d = X.shape
-        partial_sum = 0
-        for t in np.unique(T[E_ix]):
-            ix = np.where((T == t) & E)[0]
-            m = ix.shape[0]
-            R = self._risk_set(T, t)
-            X_tie = X[ix, :]
+            # There was atleast one event and no more ties remain. Time to sum.
+            partial_gradient = np.zeros((1, d))
 
-            tied_theta = self._theta(X_tie, beta).sum()
+            for l in range(tie_count):
+                c = l / tie_count
 
-            risk_theta = self._sum_exp_over_risk(X, beta, R)
+                denom = (risk_phi - c * tie_phi)
+                z = (risk_phi_x - c * tie_phi_x)
+                # Gradient
+                partial_gradient += z / denom
+                # Hessian
+                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
+                a2 = dot(z.T, z) / (denom ** 2)
 
-            c = np.arange(m,dtype=float)/m
-            p_sum = np.log(risk_theta - c * tied_theta).sum()
+                hessian -= (a1 - a2)
 
-            partial_sum += np.dot(X_tie, beta).sum() - p_sum
+                if include_likelihood:
+                    log_lik -= np.log(denom)
 
-        return partial_sum
+            # Values outside tie sum
+            gradient += x_tie_sum - partial_gradient
+            if include_likelihood:
+                log_lik += dot(x_tie_sum, beta).ravel()
 
-    def _hessian_efron(self, X, beta, T, E):
-        """
-        Parameters:
-            X: (n,d) numpy array or dataframe of observations.
-            T: (n,1) numpy array/Series representing observed durations.
-            E: (n,1) numpy array/Series representing death events.
-            beta: (d,1)
-        """
+            # reset tie values
+            tie_count = 0
+            x_tie_sum = np.zeros((1, d))
+            tie_phi = 0
+            tie_phi_x = np.zeros((1, d))
+            tie_phi_x_x = np.zeros((d, d))
 
-        assert X.shape[0] == T.shape[0]
-        assert beta.shape == (X.shape[1], 1)
+        if include_likelihood:
+            return hessian, gradient, log_lik.ravel()[0]
+        else:
+            return hessian, gradient
 
-        E_ix = np.where(E.astype(bool))[0]
-        d = X.shape[1]
-        M = np.zeros((d, d))
-        for t in np.unique(T[E_ix]):
-            M_t = np.zeros((d, d))
-
-            # compute the risk factors
-            R = self._risk_set(T, t)
-            theta_x_x = np.zeros((d, d))
-            Z_risk = np.zeros((1, d))
-            sum_thetas = self._sum_exp_over_risk(X, beta, R)
-            for i in R:
-                x_j = X[[i], :]
-                theta_x_x += np.dot(x_j.T, x_j) * self._theta(x_j, beta)
-                Z_risk += self._theta_x(x_j, beta)
-
-            # compute the tied factors
-            ix = np.where((T == t) & E)[0]
-            X_tie = X[ix, :]
-            m = ix.shape[0]
-            tied_theta_x_x = np.zeros((d, d))
-            Z_tied = np.zeros((1, d))
-            tied_theta = 0
-
-            for i in range(m):
-                x_j = X_tie[[i], :]
-                tied_theta_x_x += self._theta(x_j, beta) * dot(x_j.T, x_j)
-                tied_theta += self._theta(x_j, beta)
-                Z_tied += self._theta_x(x_j, beta)
-
-            for l in range(m):
-                c = 1.0 * l / m
-                phi = (sum_thetas - c * tied_theta)
-                a1 = (theta_x_x - c * tied_theta_x_x) / phi
-                Z = Z_risk - c * Z_tied
-                a2 = dot(Z.T, Z) / phi ** 2
-                M_t += a1 - a2
-
-            M += M_t
-
-        return -M
-
-    def _newton_rhapdson(self, X, T, E, initial_beta=None, step_size=1., epsilon=10e-5,
-                         show_progress=True):
+    def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=1.,
+                         epsilon=10e-5, show_progress=True):
         """
         Newton Rhapdson algorithm for fitting CPH model.
+
+        Note that data is assumed to be sorted on T!
+
         Parameters:
-            X: (n,d) numpy array or dataframe of observations.
-            T: (n,1) numpy array/Series representing observed durations.
-            E: (n,1) numpy array/Series representing death events.
-            initial_beta: (1,d) numpy array of initial starting point for NR algorithm. Default 0.
+            X: (n,d) numpy array of observations.
+            T: (n) numpy array representing observed durations.
+            E: (n) numpy array representing death events.
+            initial_beta: (1,d) numpy array of initial starting point for
+                          NR algorithm. Default 0.
             step_size: 0 < float <= 1 to determine a step size in NR algorithm.
-            epsilon: the convergence halts if the norm of delta between successive positions is less
-              than epsilon.
+            epsilon: the convergence halts if the norm of delta between
+                     successive positions is less than epsilon.
 
         Returns:
             beta: (1,d) numpy array.
-
         """
         assert epsilon <= 1., "epsilon must be less than or equal to 1."
         n, d = X.shape
 
-        score = self._score_efron
-        hessian = self._hessian_efron
+        # Enforce numpy arrays
+        X = np.array(X)
+        T = np.array(T)
+        E = np.array(E)
+
+        # Want as bools
         E = E.astype(bool)
 
         # make sure betas are correct size.
@@ -920,12 +895,19 @@ class CoxPHFitter(BaseFitter):
         else:
             beta = np.zeros((d, 1))
 
+        # Method of choice is just efron right now
+        if self.tie_method == 'Efron':
+            get_gradients = self._get_efron_values
+        else:
+            raise NotImplementedError("Only Efron is available atm.")
+
         i = 1
         betas = []
         converging = True
         while converging:
             betas.append(beta)
-            delta = solve(-hessian(X, beta, T, E), step_size * score(X, beta, T, E).T)
+            hessian, gradient = get_gradients(X, beta, T, E)
+            delta = solve(-hessian, step_size * gradient.T)
             beta = delta + beta
             if pd.isnull(delta).sum() > 1:
                 raise ValueError("delta contains nan value(s). Converge halted.")
@@ -936,43 +918,31 @@ class CoxPHFitter(BaseFitter):
                 print("Iteration %d: delta = %.5f" % (i, norm(delta)))
             i += 1
 
-        self._hessian_ = hessian(X, beta, T, E)
-        self._score_ = score(X, beta, T, E)
+        self._hessian_ = hessian
+        self._score_ = gradient
         if show_progress:
             print("Convergence completed after %d iterations." % (i))
         return beta
 
     def fit(self, df, duration_col='T', event_col='E',
             show_progress=False, initial_beta=None):
-        """
-        Fit the Cox Propertional Hazard model to a dataset. Tied survival times are handled using
-        Efron's tie-method.
-
-        Parameters:
-            df: a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
-                other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
-                refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
-            duration_col: the column in dataframe that contains the subjects lifetimes.
-            event_col: the column in dataframe that contains the subject's death observation.
-            show_progress: since the fitter is iterative, show convergence diagnostics.
-            initial_beta: initialize the starting point of the iterative algorithm. Default is the
-                zero vector.
-
-        Returns:
-            self, with additional properties: hazards_
-
-        """
-
         df = df.copy()
+        # Sort on time
+        df.sort(duration_col, inplace=True)
+        # Extract time and event
         T = df[duration_col]
         E = df[event_col]
         del df[duration_col]
         del df[event_col]
 
-        X = self._check_values(df.values)
-        hazards_ = self._newton_rhapdson(X, T, E, initial_beta=initial_beta, show_progress=show_progress)
+        E = E.astype(bool)
+        self._check_values(df)
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef'])
+        hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
+                                         show_progress=show_progress)
+
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns,
+                                     index=['coef'])
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
         self.data = df
@@ -982,27 +952,30 @@ class CoxPHFitter(BaseFitter):
         self.baseline_hazard_ = self._compute_baseline_hazard()
         return self
 
-    def _check_values(self,X):
+    def _check_values(self, X):
         low_var = (X.var(0) < 10e-5)
         if low_var.any():
             cols = str(list(X.columns[low_var]))
-            print("Warning: column(s) %s have very low variance. This may harm convergence."%cols)
-        return X
+            print("Warning: column(s) %s have very low variance.\
+ This may harm convergence." % cols)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
         se = self._compute_standard_errors()
         hazards = self.hazards_.values
-        return pd.DataFrame(np.r_[hazards - alpha2 * se, hazards + alpha2 * se],
-                            index=['lower-bound', 'upper-bound'], columns=self.hazards_.columns)
+        return pd.DataFrame(np.r_[hazards - alpha2 * se,
+                                  hazards + alpha2 * se],
+                            index=['lower-bound', 'upper-bound'],
+                            columns=self.hazards_.columns)
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal())
-        return pd.DataFrame(se[None, :], 
+        return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
-        return self.hazards_.ix['coef'] / self._compute_standard_errors().ix['se']
+        return (self.hazards_.ix['coef'] /
+                self._compute_standard_errors().ix['se'])
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -1056,12 +1029,17 @@ class CoxPHFitter(BaseFitter):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         ind_hazards = exp(np.dot(self.data, self.hazards_.T))
 
-        event_table = survival_table_from_events(self.durations.values, self.event_observed.values, np.zeros_like(self.durations))
+        event_table = survival_table_from_events(self.durations.values,
+                                                 self.event_observed.values,
+                                                 np.zeros_like(self.durations))
         n, d = event_table.shape
 
-        baseline_hazard_ = pd.DataFrame(np.zeros((n, 1)), index=event_table.index, columns=['baseline hazard'])
+        baseline_hazard_ = pd.DataFrame(np.zeros((n, 1)),
+                                        index=event_table.index,
+                                        columns=['baseline hazard'])
         for t, s in event_table.iterrows():
-            baseline_hazard_.ix[t] = s['observed'] / ind_hazards[self.durations <= t].sum()
+            baseline_hazard_.ix[t] = (s['observed'] /
+                                      ind_hazards[self.durations <= t].sum())
 
         return baseline_hazard_
 
