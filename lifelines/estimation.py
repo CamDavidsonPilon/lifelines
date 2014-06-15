@@ -860,7 +860,7 @@ class CoxPHFitter(BaseFitter):
     def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=1.,
                          epsilon=10e-5, show_progress=True):
         """
-        Newton Rhapdson algorithm for fitting CPH model.
+        Newton Rhaphson algorithm for fitting CPH model.
 
         Note that data is assumed to be sorted on T!
 
