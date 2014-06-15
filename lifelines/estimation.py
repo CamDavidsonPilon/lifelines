@@ -902,10 +902,8 @@ class CoxPHFitter(BaseFitter):
             raise NotImplementedError("Only Efron is available atm.")
 
         i = 1
-        betas = []
         converging = True
         while converging:
-            betas.append(beta)
             hessian, gradient = get_gradients(X, beta, T, E)
             delta = solve(-hessian, step_size * gradient.T)
             beta = delta + beta
