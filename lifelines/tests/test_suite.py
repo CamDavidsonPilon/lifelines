@@ -719,39 +719,49 @@ class PlottingTests(unittest.TestCase):
 class CoxRegressionTests(unittest.TestCase):
 
     def test_efron_computed_by_hand_examples(self):
-        score_efron = CoxPHFitter()._score_efron
-        hessian_efron = CoxPHFitter()._hessian_efron
+        cox = CoxPHFitter()
 
         X = data_nus['x'][:, None]
         T = data_nus['t']
         E = data_nus['E']
 
+        # Enforce numpy arrays
+        X = np.array(X)
+        T = np.array(T)
+        E = np.array(E)
+
+        # Want as bools
+        E = E.astype(bool)
+
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
-        l = -hessian_efron(X, beta, T, E)
-        u = score_efron(X, beta, T, E)
+        l, u = cox._get_efron_values(X, beta, T, E)
+        l = -l
+
         assert np.abs(l[0][0] - 77.13) < 0.05
         assert np.abs(u[0] - -2.51) < 0.05
         beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
 
-        l = -hessian_efron(X, beta, T, E)
-        u = score_efron(X, beta, T, E)
+        l, u = cox._get_efron_values(X, beta, T, E)
+        l = -l
+
         assert np.abs(l[0][0] - 72.83) < 0.05
         assert np.abs(u[0] - -0.069) < 0.05
         beta = beta + u / l
         assert np.abs(beta - -0.0325) < 0.01
 
-        l = -hessian_efron(X, beta, T, E)
-        u = score_efron(X, beta, T, E)
+        l, u = cox._get_efron_values(X, beta, T, E)
+        l = -l
+
         assert np.abs(l[0][0] - 72.70) < 0.01
         assert np.abs(u[0] - -0.000061) < 0.01
         beta = beta + u / l
         assert np.abs(beta - -0.0335) < 0.01
 
     def test_efron_newtons_method(self):
-        newton = CoxPHFitter()._newton_rhapdson
+        newton = CoxPHFitter()._newton_rhaphson
         X, T, E = data_nus['x'][:, None], data_nus['t'], data_nus['E']
         assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
 
