@@ -30,12 +30,8 @@ You can install *lifelines* using
       
        pip install lifelines
 
-and on **Windows**,
-
-    pip --use-wheel install lifelines
 
 Or getting the bleeding edge version with:
-
 
        pip install --upgrade --no-deps git+https://github.com/CamDavidsonPilon/lifelines.git
 
