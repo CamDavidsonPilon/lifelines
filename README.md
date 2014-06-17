@@ -17,7 +17,7 @@ lesser-known technique, for example:
 *lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please ping me at [@cmrn_dp](https://twitter.com/Cmrn_DP) and let me know your 
 thoughts on the library. 
 
-## Installation:
+### Installation:
 
 
 #### Dependencies:
@@ -43,7 +43,7 @@ Or getting the bleeding edge version with:
 from the command line. 
 
 
-## *lifelines* Documentation and an Intro to Survival Analysis
+### *lifelines* Documentation and an Intro to Survival Analysis
 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
 please check out the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
