@@ -81,7 +81,7 @@ but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` 
 Survival Regression
 ---------------------------------
 
-While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter``.
+While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter`` or ``CoxPHFitter``.
 
 .. code:: python
     
@@ -95,8 +95,14 @@ The input of the ``fit`` method's API on ``AalenAdditiveFitter`` is different th
 
 .. code:: python
     
-    from lifelines import AalenAdditiveFitter
+    from lifelines import AalenAdditiveFitter, CoxPHFitter
 
+    # Using Cox Proportional Hazards model
+    cf = CoxPHFitter()
+    cf.fit(regression_dataset, duration_col='T', event_col='E')
+    print cf.summary
+
+    # Using Aalen's Additive model
     aaf = AalenAdditiveFitter(fit_intercept=False)
     aaf.fit(regression_dataset, duration_col='T', event_col='E')
 

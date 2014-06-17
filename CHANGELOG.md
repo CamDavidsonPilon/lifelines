@@ -1,5 +1,10 @@
 ### Changelogs
 
+####0.4.2
+ 
+ - Add Breslows method to CoxPHFitter. 
+
+
 ####0.4.1.1
 
 - Ability to specify default printing in statsitical tests with the `suppress_print` keyword argument (default False).

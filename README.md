@@ -20,7 +20,7 @@ thoughts on the library.
 ## Installation:
 
 
-####Dependencies:
+#### Dependencies:
 
 The usual Python data stack: Numpy, Scipy, Pandas (a modern version please), Matplotlib
 
@@ -29,6 +29,10 @@ The usual Python data stack: Numpy, Scipy, Pandas (a modern version please), Mat
 You can install *lifelines* using 
       
        pip install lifelines
+
+and on **Windows**,
+
+    pip --use-wheel install lifelines
 
 Or getting the bleeding edge version with:
 
@@ -39,96 +43,10 @@ Or getting the bleeding edge version with:
 from the command line. 
 
 
-## Intro to *lifelines* and survival analysis
-    
-Situation: 500 random individuals are born at time 0, currently it is time 12, so we have possibly not observed all death events yet.
-
-    # Create lifetimes, but censor all lifetimes after time 12
-    censor_after = 12
-    actual_lifetimes = np.random.exponential(10, size=500)
-    observed_lifetimes = np.minimum( actual_lifetimes, censor_after*np.ones(500) )
-    C = (actual_lifetimes < censor_after) #boolean array
-
-Non-parametrically fit the *survival curve*:
-
-    from lifelines import KaplanMeierFitter
-
-    kmf = KaplanMeierFitter()
-    kmf.fit(observed_lifetimes, event_observed=C) 
-
-    # fitter methods have an internal plotting method.
-    # plot the curve with the confidence intervals
-    kmf.plot()
-
-![kmf](http://i.imgur.com/zQquwJRl.png)
-
-It looks like 50% of all individuals are dead before time 7.
-
-    print kmf.survival_function_.head()
-
-    time            KM-estimate
-    0.000000        1.000
-    0.038912        0.998
-    0.120667        0.996
-    0.125719        0.994
-    0.133778        0.992
-
-Non-parametrically fit the *cumulative hazard curve*:
-
-    from lifelines import NelsonAalenFitter
-
-    naf = NelsonAalenFitter()
-    naf.fit(observed_lifetimes, event_observed=C) 
-
-    #plot the curve with the confidence intervals
-    naf.plot()
-
-![naf](http://i.imgur.com/mbc5wStl.png)
-
-    print naf.cumulative_hazard_.head()
-
-    time       NA-estimate
-    0.000000     0.000000
-    0.038912     0.002000
-    0.120667     0.004004
-    0.125719     0.006012
-    0.133778     0.008024
-
-Compare two populations using the logrank test:
-
-    from lifelines.statistics import logrank_test
-    other_lifetimes = np.random.exponential(8, size=500)
-
-    summary, p_value, results = logrank_test(observed_lifetimes, other_lifetimes, alpha=0.95)
-    print summary
-
-    """
-    Results
-       df: 1
-       alpha: 0.95
-       t 0: -1
-       test: logrank
-       null distribution: chi squared
-
-       __ p-value ___|__ test statistic __|__ test results __
-             0.89039 |              0.019 |     None
-    """
-
-    ax = kmf.plot()
-    kmf.fit(other_lifetimes)
-    ax = kmf.plot(ax=ax)
-    
-![both](http://i.imgur.com/yGmKZr4l.png)
-
-## (Less Quick) Intro to *lifelines* and survival analysis
+## *lifelines* Documentation and an Intro to Survival Analysis
 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
 please check out the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
-
-Alternatively, you can **use the IPython notebooks tutorials**, located in the main directory of the repo:
-
-1. [Introduction to survival analysis](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/docs/Survival%20Analysis%20intro.ipynb)
-2. [Using lifelines on real data](http://nbviewer.ipython.org/github/CamDavidsonPilon/lifelines/blob/master/docs/Intro%20to%20lifelines.ipynb) 
 
 
 ![lifelines](http://i.imgur.com/QXW71zA.png)
