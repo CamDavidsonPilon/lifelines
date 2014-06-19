@@ -1,9 +1,17 @@
 ### Changelogs
 
-####0.4.2
- 
- - Add Breslows method to CoxPHFitter. 
 
+
+####0.4.2
+
+ - Massive speed improvements to CoxPHFitter. 
+ - Additional prediction method: `predict_percentile` is available on CoxPHFitter and AalenAdditiveFitter. Given a percentile, p, this function returns the value t such that *S(t | x) = p*. It is a generalization of `predict_median`. 
+ - Additional kwargs in `k_fold_cross_validation` that will accept different prediction methods (default is `predict_median`). 
+- Bug fix in CoxPHFitter `predict_expectation` function. 
+- Correct spelling mistake in newton-rhapson algorithm.
+- `datasets` now contains functions for generating the respective datasets, ex: `generate_waltons_dataset`.
+- Bumping up the number of samples in statistical tests to prevent them from failing so often (this a stop-gap)
+- pep8 everything
 
 ####0.4.1.1
 

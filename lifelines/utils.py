@@ -88,7 +88,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         g_name = str(g)
         data = data.join(survival_table_from_events(T, C, B,
                                                     columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
-                                                    how='outer')
+                         how='outer')
     data = data.fillna(0)
     # hmmm pandas its too bad I can't do data.ix[:limit] and leave out the if.
     if int(limit) != -1:
@@ -264,9 +264,11 @@ def AandS_approximation(p):
     return t - (c_0 + c_1 * t + c_2 * t ** 2) / (1 + d_1 * t + d_2 * t * t + d_3 * t ** 3)
 
 
-def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, loss_function="concordance"):
+def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
+                            k=5, loss_function="concordance", predictor="predict_median",
+                            predictor_kwargs={}):
     """
-    Perform cross validation on a dataset. 
+    Perform cross validation on a dataset.
 
     fitter: either an instance of AalenAdditiveFitter or CoxPHFitter.
     df: a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
@@ -277,25 +279,28 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
     k: the number of folds to perform. n/k data will be withheld for testing on.
     loss_function: "concordance" only.
             "concordance":  concordance index (C-index) between two series of event times
+    predictor: a string that matches a prediction method on the fitter instances. For example,
+            "predict_expectation" or "predict_percentile". Default is "predict_median"
+    predictor_kwargs: keyward args to pass into predictor.
 
     Returns:
-        (k,1) array of scores for each fold. 
+        (k,1) array of scores for each fold.
     """
     from .statistics import concordance_index
 
-    n,d = df.shape
+    n, d = df.shape
     scores = np.zeros((k,))
     df = df.copy()
-    df = df.reindex(np.random.permutation(df.index)).sort(event_col)    
+    df = df.reindex(np.random.permutation(df.index)).sort(event_col)
 
-    assignments = np.array((n//k + 1)*list(range(1,k+1)))
+    assignments = np.array((n // k + 1) * list(range(1, k + 1)))
     assignments = assignments[:n]
 
     testing_columns = df.columns - [duration_col, event_col]
 
-    for i in range(1,k+1):
+    for i in range(1, k + 1):
 
-        ix = assignments == i 
+        ix = assignments == i
         training_data = df.ix[~ix]
         testing_data = df.ix[ix]
 
@@ -303,13 +308,14 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
         E_actual = testing_data[event_col].values
         X_testing = testing_data[testing_columns]
 
-        #fit the fitter to the training data
+        # fit the fitter to the training data
         fitter.fit(training_data, duration_col=duration_col, event_col=event_col)
-        T_pred = fitter.predict_median(X_testing).values
+        T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
 
-        scores[i-1] = concordance_index(T_actual, T_pred, E_actual)
+        scores[i - 1] = concordance_index(T_actual, T_pred, E_actual)
 
     return scores
+
 
 def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2

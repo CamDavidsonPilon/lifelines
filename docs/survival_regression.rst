@@ -395,9 +395,10 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
 
 .. code:: python
 
-    from lifelines.datasets import rossi_dataset
+    from lifelines.datasets import generate_rossi_dataset
     from lifelines import CoxPHFitter
 
+    rossi_dataset = generate_rossi_dataset()
     cf = CoxPHFitter(alpha=0.95, tie_method='Efron')
     cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
@@ -439,9 +440,10 @@ into a training set and a testing set, fits itself on the training set, and eval
 .. code:: python
       
         from lifelines import CoxPHFitter
-        from lifelines.datasets import regression_dataset
+        from lifelines.datasets import generate_regression_dataset
         from lifelines.utils import k_fold_cross_validation
 
+        regression_dataset = generate_regression_dataset()
         cf = CoxPHFitter()
         scores = k_fold_cross_validation(cf, regression_dataset, duration_col='T', event_col='E', k=3)
         print scores

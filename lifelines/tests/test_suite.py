@@ -27,7 +27,8 @@ from ..statistics import (logrank_test, multivariate_logrank_test,
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import *
-from ..datasets import lcd_dataset, rossi_dataset, waltons_dataset, regression_dataset
+from ..datasets import generate_lcd_dataset, generate_rossi_dataset, \
+    generate_waltons_dataset, generate_regression_dataset
 
 
 class MiscTests(unittest.TestCase):
@@ -93,7 +94,19 @@ class MiscTests(unittest.TestCase):
 
     def test_cross_validator(self):
         cf = CoxPHFitter()
-        k_fold_cross_validation(cf, regression_dataset, duration_col='T', event_col='E', k=3)
+        k_fold_cross_validation(cf, generate_regression_dataset(), duration_col='T', event_col='E', k=3)
+
+    def test_cross_validator_with_predictor(self):
+        cf = CoxPHFitter()
+        k_fold_cross_validation(cf, generate_regression_dataset(),
+                                duration_col='T', event_col='E', k=3,
+                                predictor="predict_expectation")
+
+    def test_cross_validator_with_predictor_and_kwargs(self):
+        cf = CoxPHFitter()
+        k_fold_cross_validation(cf, generate_regression_dataset(),
+                                duration_col='T', event_col='E', k=3,
+                                predictor="predict_percentile", predictor_kwargs={'p': 0.6})
 
 
 class StatisticalTests(unittest.TestCase):
@@ -141,28 +154,28 @@ class StatisticalTests(unittest.TestCase):
             self.assertTrue(False)
 
     def test_equal_intensity(self):
-        data1 = np.random.exponential(5, size=(200, 1))
-        data2 = np.random.exponential(5, size=(200, 1))
+        data1 = np.random.exponential(5, size=(2000, 1))
+        data2 = np.random.exponential(5, size=(2000, 1))
         summary, p_value, result = logrank_test(data1, data2)
         self.assertTrue(result is None)
 
     def test_unequal_intensity(self):
-        data1 = np.random.exponential(5, size=(200, 1))
-        data2 = np.random.exponential(1, size=(200, 1))
+        data1 = np.random.exponential(5, size=(2000, 1))
+        data2 = np.random.exponential(1, size=(2000, 1))
         summary, p_value, result = logrank_test(data1, data2)
         self.assertTrue(result)
 
     def test_unequal_intensity_event_observed(self):
-        data1 = np.random.exponential(5, size=(200, 1))
-        data2 = np.random.exponential(1, size=(200, 1))
-        eventA = np.random.binomial(1, 0.5, size=(200, 1))
-        eventB = np.random.binomial(1, 0.5, size=(200, 1))
+        data1 = np.random.exponential(5, size=(2000, 1))
+        data2 = np.random.exponential(1, size=(2000, 1))
+        eventA = np.random.binomial(1, 0.5, size=(2000, 1))
+        eventB = np.random.binomial(1, 0.5, size=(2000, 1))
         summary, p_value, result = logrank_test(data1, data2, event_observed_A=eventA, event_observed_B=eventB)
         self.assertTrue(result)
 
     def test_integer_times_logrank_test(self):
-        data1 = np.random.exponential(5, size=(200, 1)).astype(int)
-        data2 = np.random.exponential(1, size=(200, 1)).astype(int)
+        data1 = np.random.exponential(5, size=(2000, 1)).astype(int)
+        data2 = np.random.exponential(1, size=(2000, 1)).astype(int)
         summary, p_value, result = logrank_test(data1, data2)
         self.assertTrue(result)
 
@@ -228,18 +241,17 @@ class StatisticalTests(unittest.TestCase):
         npt.assert_array_equal(R, V)
 
     def test_multivariate_inputs(self):
-        T = np.array([1,2,3])
-        E = np.array([1,1,0], dtype=bool)
-        G = np.array([1,2,1])
-        multivariate_logrank_test(T,G,E)
-        pairwise_logrank_test(T,G,E)
+        T = np.array([1, 2, 3])
+        E = np.array([1, 1, 0], dtype=bool)
+        G = np.array([1, 2, 1])
+        multivariate_logrank_test(T, G, E)
+        pairwise_logrank_test(T, G, E)
 
         T = pd.Series(T)
         E = pd.Series(E)
         G = pd.Series(G)
-        multivariate_logrank_test(T,G,E)
-        pairwise_logrank_test(T,G,E)
-
+        multivariate_logrank_test(T, G, E)
+        pairwise_logrank_test(T, G, E)
 
     def test_lists_to_KaplanMeierFitter(self):
         T = [2, 3, 4., 1., 6, 5.]
@@ -350,6 +362,7 @@ class StatisticalTests(unittest.TestCase):
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_kmf_left_censorship_plots(self):
         kmf = KaplanMeierFitter()
+        lcd_dataset = generate_lcd_dataset()
         kmf.fit(lcd_dataset['alluvial_fan']['T'], lcd_dataset['alluvial_fan']['C'], left_censorship=True, label='alluvial_fan')
         ax = kmf.plot()
 
@@ -773,7 +786,7 @@ class CoxRegressionTests(unittest.TestCase):
     def test_output_against_R(self):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
-        df = rossi_dataset
+        df = generate_rossi_dataset()
         cf = CoxPHFitter()
         cf.fit(df, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
@@ -784,7 +797,8 @@ LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 OBSERVED = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
 N = len(LIFETIMES)
 
-#walton's data
+# walton's data
+waltons_dataset = generate_waltons_dataset()
 ix = waltons_dataset['group'] == 'miR-137'
 waltonT1 = waltons_dataset.ix[ix]['T']
 waltonT2 = waltons_dataset.ix[~ix]['T']

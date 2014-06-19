@@ -587,7 +587,8 @@ instruments could only detect the measurement was *less* than some upperbound.
 
 .. code:: python
 
-    from lifelines.datasets import lcd_dataset
+    from lifelines.datasets import generate_lcd_dataset
+    lcd_dataset = generate_lcd_dataset()
 
     T = lcd_dataset['alluvial_fan']['T']
     C = lcd_dataset['alluvial_fan']['C'] #boolean array, True if observed.

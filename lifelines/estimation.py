@@ -139,7 +139,7 @@ class NelsonAalenFitter(BaseFitter):
         hazard_name = "smoothed-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C,:]),
+        return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth), hazard_.values[C,:]),
                              columns=[hazard_name], index=timeline)
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
@@ -156,7 +156,7 @@ class NelsonAalenFitter(BaseFitter):
         self._cumulative_sq.iloc[0] = 0
         var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
         C = (var_hazard_.values != 0.0)  # only consider the points with jumps
-        std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth)**2, var_hazard_.values[C]))
+        std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth)**2, var_hazard_.values[C]))
         values = {
             self.ci_labels[0]: hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
             self.ci_labels[1]: hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_)
@@ -493,12 +493,13 @@ class AalenAdditiveFitter(BaseFitter):
         C = pd.Series(df[event_col].values, dtype=bool, index=ids)
         T = pd.Series(df[duration_col].values, index=ids)
 
-        df = df.set_index([duration_col, id_col])
+        df = df.set_index(id_col)
 
         ix = T.argsort()
         T, C = T.iloc[ix], C.iloc[ix]
 
         del df[event_col]
+        del df[duration_col]
         n, d = df.shape
         columns = df.columns
 
@@ -722,12 +723,20 @@ class AalenAdditiveFitter(BaseFitter):
         """
         return np.exp(-self.predict_cumulative_hazard(X))
 
+    def predict_percentile(self, X, p=0.5):
+        """
+        X: a (n,d) covariate matrix
+        Returns the median lifetimes for the individuals.
+        http://stats.stackexchange.com/questions/102986/percentile-loss-functions
+        """
+        return qth_survival_times(0.5, self.predict_survival_function(X))
+
     def predict_median(self, X):
         """
         X: a (n,d) covariate matrix
         Returns the median lifetimes for the individuals
         """
-        return median_survival_times(self.predict_survival_function(X))
+        return self.predict_percentile(X, 0.5)
 
     def predict_expectation(self, X):
         """
@@ -738,6 +747,7 @@ class AalenAdditiveFitter(BaseFitter):
 
 
 class CoxPHFitter(BaseFitter):
+
     """
     This class implements fitting Cox's proportional hazard model:
 
@@ -793,7 +803,7 @@ class CoxPHFitter(BaseFitter):
         # Iterate backwards to utilize recursive relationship
         for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
             # Doing it like this to preserve shape
-            xi = X[i:i+1]
+            xi = X[i:i + 1]
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
             phi_x_i = dot(phi_i, xi)
@@ -814,7 +824,7 @@ class CoxPHFitter(BaseFitter):
                 # Keep track of count
                 tie_count += 1
 
-            if i > 0 and T[i-1] == ti:
+            if i > 0 and T[i - 1] == ti:
                 # There are more ties/members of the risk set
                 continue
             elif tie_count == 0:
@@ -990,7 +1000,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal())
-        return pd.DataFrame(se[None, :],
+        return pd.DataFrame(se[None,:],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
@@ -1031,19 +1041,27 @@ class CoxPHFitter(BaseFitter):
         """
         return exp(-self.predict_hazard(X).cumsum(0))
 
+    def predict_percentile(self, X, p=0.5):
+        """
+        X: a (n,d) covariate matrix
+        Returns the median lifetimes for the individuals.
+        http://stats.stackexchange.com/questions/102986/percentile-loss-functions
+        """
+        return qth_survival_times(0.5, self.predict_survival_function(X))
+
     def predict_median(self, X):
         """
         X: a (n,d) covariate matrix
         Returns the median lifetimes for the individuals
         """
-        return median_survival_times(self.predict_survival_function(X))
+        return self.predict_percentile(X, 0.5)
 
     def predict_expectation(self, X):
         """
         Compute the expected lifetime, E[T], using covarites X.
         """
-        t = self.cumulative_hazards_.index
-        return trapz(self.predict_survival_function(X).values.T, t)
+        v = self.predict_survival_function(X)
+        return trapz(v.values.T, v.index)
 
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
@@ -1190,10 +1208,10 @@ def qth_survival_times(q, survival_functions):
     sv_b = (1.0 * (survival_functions < q)).cumsum() > 0
     try:
         v = sv_b.idxmax(0)
-        v[sv_b.iloc[-1, :] == 0] = np.inf
+        v[sv_b.iloc[-1,:] == 0] = np.inf
     except:
         v = sv_b.argmax(0)
-        v[sv_b[-1, :] == 0] = np.inf
+        v[sv_b[-1,:] == 0] = np.inf
     return v
 
 
