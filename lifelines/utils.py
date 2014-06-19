@@ -280,7 +280,7 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
     loss_function: "concordance" only.
             "concordance":  concordance index (C-index) between two series of event times
     predictor: a string that matches a prediction method on the fitter instances. For example,
-            "predict_mean" or "predict_percentile". Default is "predict_median"
+            "predict_expectation" or "predict_percentile". Default is "predict_median"
     predictor_kwargs: keyward args to pass into predictor.
 
     Returns:
