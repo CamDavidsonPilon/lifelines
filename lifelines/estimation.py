@@ -723,12 +723,20 @@ class AalenAdditiveFitter(BaseFitter):
         """
         return np.exp(-self.predict_cumulative_hazard(X))
 
+    def predict_percentile(self, X, p=0.5):
+        """
+        X: a (n,d) covariate matrix
+        Returns the median lifetimes for the individuals.
+        http://stats.stackexchange.com/questions/102986/percentile-loss-functions
+        """
+        return qth_survival_times(0.5, self.predict_survival_function(X))
+
     def predict_median(self, X):
         """
         X: a (n,d) covariate matrix
         Returns the median lifetimes for the individuals
         """
-        return median_survival_times(self.predict_survival_function(X))
+        return self.predict_percentile(X, 0.5)
 
     def predict_expectation(self, X):
         """
@@ -1032,19 +1040,27 @@ class CoxPHFitter(BaseFitter):
         """
         return exp(-self.predict_hazard(X).cumsum(0))
 
+    def predict_percentile(self, X, p=0.5):
+        """
+        X: a (n,d) covariate matrix
+        Returns the median lifetimes for the individuals.
+        http://stats.stackexchange.com/questions/102986/percentile-loss-functions
+        """
+        return qth_survival_times(0.5, self.predict_survival_function(X))
+
     def predict_median(self, X):
         """
         X: a (n,d) covariate matrix
         Returns the median lifetimes for the individuals
         """
-        return median_survival_times(self.predict_survival_function(X))
+        return self.predict_percentile(X, 0.5)
 
     def predict_expectation(self, X):
         """
         Compute the expected lifetime, E[T], using covarites X.
         """
-        t = self.cumulative_hazards_.index
-        return trapz(self.predict_survival_function(X).values.T, t)
+        v = self.predict_survival_function(X)
+        return trapz(v.values.T, v.index)
 
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf

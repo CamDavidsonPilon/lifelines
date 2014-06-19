@@ -3,11 +3,14 @@ import pandas as pd
 import numpy as np
 from io import StringIO
 
-__all__ = ['waltons_dataset', 'regression_dataset',
-           'lcd_dataset', 'dd_dataset', 'rossi_dataset']
+__all__ = [ 'generate_waltons_dataset',
+            'generate_regression_dataset',
+            'generate_dd_dataset',
+            'generate_lcd_dataset',
+            'generate_rossi_dataset']
 
 
-def generate_left_censored_data():
+def generate_lcd_dataset():
     return {
         'alluvial_fan': {
             'T': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
@@ -27,7 +30,7 @@ def generate_left_censored_data():
     }
 
 
-def generate_waltons_data():
+def generate_waltons_dataset():
     waltonG = np.array(['miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
                         'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
                         'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137', 'miR-137',
@@ -2547,8 +2550,4 @@ def generate_regression_dataset():
 """), header=0, delim_whitespace=True)
 
 
-waltons_dataset = generate_waltons_data()
-regression_dataset = generate_regression_dataset()
-dd_dataset = generate_dd_dataset()
-lcd_dataset = generate_left_censored_data()
-rossi_dataset = generate_rossi_dataset()
+

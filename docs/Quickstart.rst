@@ -23,10 +23,11 @@ Let's start by importing some data. We need the durations that individuals are o
 
 .. code:: python
 
-    from lifelines.datasets import waltons_dataset    
+    from lifelines.datasets import generate_waltons_dataset
+    data = generate_waltons_dataset()    
 
-    T = waltons_dataset['T']
-    E = waltons_dataset['E']
+    T = data['T']
+    E = data['E']
 
 ``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed (alternatively an individual can be censored). 
 
@@ -85,7 +86,8 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
 
 .. code:: python
     
-    from lifelines.datasets import regression_dataset
+    from lifelines.datasets import generate_regression_dataset
+    regression_dataset = generate_regression_dataset()
 
     regression_dataset.head()
 

@@ -264,7 +264,9 @@ def AandS_approximation(p):
     return t - (c_0 + c_1 * t + c_2 * t ** 2) / (1 + d_1 * t + d_2 * t * t + d_3 * t ** 3)
 
 
-def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, loss_function="concordance"):
+def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
+                             k=5, loss_function="concordance", predictor="predict_median",
+                             predictor_kwargs={}):
     """
     Perform cross validation on a dataset. 
 
@@ -277,6 +279,9 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
     k: the number of folds to perform. n/k data will be withheld for testing on.
     loss_function: "concordance" only.
             "concordance":  concordance index (C-index) between two series of event times
+    predictor: a string that matches a prediction method on the fitter instances. For example, 
+            "predict_mean" or "predict_percentile". Default is "predict_median"
+    predictor_kwargs: keyward args to pass into predictor.
 
     Returns:
         (k,1) array of scores for each fold. 
@@ -305,7 +310,7 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E', k=5, lo
 
         #fit the fitter to the training data
         fitter.fit(training_data, duration_col=duration_col, event_col=event_col)
-        T_pred = fitter.predict_median(X_testing).values
+        T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
 
         scores[i-1] = concordance_index(T_actual, T_pred, E_actual)
 
