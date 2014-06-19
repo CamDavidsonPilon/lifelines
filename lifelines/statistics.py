@@ -53,8 +53,8 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
                    event_observed)
 
 
-def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None, 
-                  alpha=0.95, t_0=-1, suppress_print=False, **kwargs):
+def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None,
+                 alpha=0.95, t_0=-1, suppress_print=False, **kwargs):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -91,8 +91,8 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
     event_observed = np.r_[event_observed_A, event_observed_B]
-    return multivariate_logrank_test(event_times, groups, event_observed, 
-                                          alpha=alpha, t_0=t_0, suppress_print=suppress_print, **kwargs)
+    return multivariate_logrank_test(event_times, groups, event_observed,
+                                     alpha=alpha, t_0=t_0, suppress_print=suppress_print, **kwargs)
 
 
 def pairwise_logrank_test(event_durations, groups, event_observed=None,
@@ -175,7 +175,7 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None,
     return [pd.DataFrame(x, columns=unique_groups, index=unique_groups) for x in [S, P, T]]
 
 
-def multivariate_logrank_test(event_durations, groups, event_observed=None, 
+def multivariate_logrank_test(event_durations, groups, event_observed=None,
                               alpha=0.95, t_0=-1, suppress_print=False, **kwargs):
     """
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
@@ -238,7 +238,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
                                    df=n_groups - 1, **kwargs)
 
     if not suppress_print:
-      print(summary)
+        print(summary)
     return summary, p_value, test_result
 
 

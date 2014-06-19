@@ -11,6 +11,7 @@
 - Correct spelling mistake in newton-rhapson algorithm.
 - `datasets` now contains functions for generating the respective datasets, ex: `generate_waltons_dataset`.
 - Bumping up the number of samples in statistical tests to prevent them from failing so often (this a stop-gap)
+- pep8 everything
 
 ####0.4.1.1
 

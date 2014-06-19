@@ -3,11 +3,11 @@ import pandas as pd
 import numpy as np
 from io import StringIO
 
-__all__ = [ 'generate_waltons_dataset',
-            'generate_regression_dataset',
-            'generate_dd_dataset',
-            'generate_lcd_dataset',
-            'generate_rossi_dataset']
+__all__ = ['generate_waltons_dataset',
+           'generate_regression_dataset',
+           'generate_dd_dataset',
+           'generate_lcd_dataset',
+           'generate_rossi_dataset']
 
 
 def generate_lcd_dataset():
@@ -2548,6 +2548,3 @@ def generate_regression_dataset():
 0.031865  1.753759  0.252040   8.519852  1
 1.631269  1.588621  3.709899   4.480448  1
 """), header=0, delim_whitespace=True)
-
-
-

@@ -28,7 +28,7 @@ from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import *
 from ..datasets import generate_lcd_dataset, generate_rossi_dataset, \
-                       generate_waltons_dataset, generate_regression_dataset
+    generate_waltons_dataset, generate_regression_dataset
 
 
 class MiscTests(unittest.TestCase):
@@ -98,15 +98,15 @@ class MiscTests(unittest.TestCase):
 
     def test_cross_validator_with_predictor(self):
         cf = CoxPHFitter()
-        k_fold_cross_validation(cf, generate_regression_dataset(), 
+        k_fold_cross_validation(cf, generate_regression_dataset(),
                                 duration_col='T', event_col='E', k=3,
                                 predictor="predict_expectation")
 
     def test_cross_validator_with_predictor_and_kwargs(self):
         cf = CoxPHFitter()
-        k_fold_cross_validation(cf, generate_regression_dataset(), 
+        k_fold_cross_validation(cf, generate_regression_dataset(),
                                 duration_col='T', event_col='E', k=3,
-                                predictor="predict_percentile", predictor_kwargs={'p':0.6})
+                                predictor="predict_percentile", predictor_kwargs={'p': 0.6})
 
 
 class StatisticalTests(unittest.TestCase):
@@ -241,18 +241,17 @@ class StatisticalTests(unittest.TestCase):
         npt.assert_array_equal(R, V)
 
     def test_multivariate_inputs(self):
-        T = np.array([1,2,3])
-        E = np.array([1,1,0], dtype=bool)
-        G = np.array([1,2,1])
-        multivariate_logrank_test(T,G,E)
-        pairwise_logrank_test(T,G,E)
+        T = np.array([1, 2, 3])
+        E = np.array([1, 1, 0], dtype=bool)
+        G = np.array([1, 2, 1])
+        multivariate_logrank_test(T, G, E)
+        pairwise_logrank_test(T, G, E)
 
         T = pd.Series(T)
         E = pd.Series(E)
         G = pd.Series(G)
-        multivariate_logrank_test(T,G,E)
-        pairwise_logrank_test(T,G,E)
-
+        multivariate_logrank_test(T, G, E)
+        pairwise_logrank_test(T, G, E)
 
     def test_lists_to_KaplanMeierFitter(self):
         T = [2, 3, 4., 1., 6, 5.]
@@ -798,7 +797,7 @@ LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 OBSERVED = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
 N = len(LIFETIMES)
 
-#walton's data
+# walton's data
 waltons_dataset = generate_waltons_dataset()
 ix = waltons_dataset['group'] == 'miR-137'
 waltonT1 = waltons_dataset.ix[ix]['T']
