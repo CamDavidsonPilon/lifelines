@@ -243,7 +243,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
 
 
 def chisq_test(U, degrees_freedom, alpha):
-    p_value = 1 - stats.chi2.cdf(U, degrees_freedom)
+    p_value = stats.chi2.sf(U, degrees_freedom)
     if p_value < 1 - alpha:
         return True, p_value
     else:
