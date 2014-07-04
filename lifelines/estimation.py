@@ -1009,7 +1009,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
-        return 1 - stats.chi2.cdf(U, 1)
+        return stats.chi2.sf(U, 1)
 
     def summary(self):
         df = pd.DataFrame(index=self.hazards_.columns)
