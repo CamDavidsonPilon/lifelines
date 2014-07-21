@@ -429,14 +429,6 @@ class StatisticalTests(unittest.TestCase):
         kmf = KaplanMeierFitter()
         kmf.fit(T, C, left_censorship=True)
 
-    def test_conditional_time_to(self):
-        T = np.random.exponential(1, 5000)
-        v = np.log(2)
-        kmf = KaplanMeierFitter()
-        kmf.fit(T)
-        life_expectancy = kmf.conditional_time_to()
-        assert (life_expectancy.ix[0] - v) < 0.01
-
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(list(self.lifetimes.keys())), 1))
         ordered_lifetimes = np.sort(list(self.lifetimes.keys()))
