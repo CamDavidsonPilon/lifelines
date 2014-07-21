@@ -17,10 +17,11 @@ import numpy.testing as npt
 from collections import Counter
 import matplotlib.pyplot as plt
 import pandas as pd
+from pandas.util.testing import assert_frame_equal
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter, AalenAdditiveFitter, \
     median_survival_times, BreslowFlemingHarringtonFitter, BayesianFitter, \
-    CoxPHFitter
+    CoxPHFitter, qth_survival_times, qth_survival_time
 
 from ..statistics import (logrank_test, multivariate_logrank_test,
                           pairwise_logrank_test, concordance_index)
@@ -32,6 +33,44 @@ from ..datasets import generate_lcd_dataset, generate_rossi_dataset, \
 
 
 class MiscTests(unittest.TestCase):
+
+    def test_qth_survival_times_with_varying_datatype_inputs(self):
+        sf_list = [1.0, 0.75, 0.5, 0.25, 0.0]
+        sf_array = np.array([1.0, 0.75, 0.5, 0.25, 0.0])
+        sf_df_no_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0])
+        sf_df_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0], index=[10, 20, 30, 40, 50])
+        sf_series_index = pd.Series([1.0, 0.75, 0.5, 0.25, 0.0], index=[10, 20, 30, 40, 50])
+        sf_series_no_index = pd.Series([1.0, 0.75, 0.5, 0.25, 0.0])
+
+        q = 0.5
+
+        assert qth_survival_times(q, sf_list) == 2
+        assert qth_survival_times(q, sf_array) == 2
+        assert qth_survival_times(q, sf_df_no_index) == 2
+        assert qth_survival_times(q, sf_df_index) == 30
+        assert qth_survival_times(q, sf_series_index) == 30
+        assert qth_survival_times(q, sf_series_no_index) == 2
+
+    def test_qth_survival_times_multi_dim_input(self):
+        sf = np.linspace(1, 0, 50)
+        sf_multi_df = pd.DataFrame({'sf': sf, 'sf**2': sf ** 2})
+
+        medians = qth_survival_times(0.5, sf_multi_df)
+        assert medians.ix['sf'][0.5] == 25
+        assert medians.ix['sf**2'][0.5] == 15
+
+    def test_qth_survival_time_returns_inf(self):
+        sf = pd.Series([1., 0.7, 0.6])
+        assert qth_survival_time(0.5, sf) == np.inf
+
+    def test_qth_survival_times_with_multivariate_q(self):
+        sf = np.linspace(1, 0, 50)
+        sf_multi_df = pd.DataFrame({'sf': sf, 'sf**2': sf ** 2})
+
+        assert_frame_equal(qth_survival_times([0.2, 0.5], sf_multi_df), pd.DataFrame([[40, 25], [28, 15]], columns=[0.2, 0.5], index=['sf', 'sf**2']))
+        assert_frame_equal(qth_survival_times([0.2, 0.5], sf_multi_df['sf']), pd.DataFrame([[40, 25]], columns=[0.2, 0.5], index=['sf']))
+        assert_frame_equal(qth_survival_times(0.5, sf_multi_df), pd.DataFrame([[25], [15]], columns=[0.5], index=['sf', 'sf**2']))
+        assert qth_survival_times(0.5, sf_multi_df['sf']) == 25
 
     def test_datetimes_to_durations_days(self):
         start_date = ['2013-10-10 0:00:00', '2013-10-09', '2012-10-10']
@@ -108,6 +147,19 @@ class MiscTests(unittest.TestCase):
                                 duration_col='T', event_col='E', k=3,
                                 predictor="predict_percentile", predictor_kwargs={'p': 0.6})
 
+    def test_label_is_a_property(self):
+        kmf = KaplanMeierFitter()
+        kmf.fit(LIFETIMES, label='Test Name')
+        assert kmf._label == 'Test Name'
+        assert kmf.confidence_interval_.columns[0] == 'Test Name_upper_0.95'
+        assert kmf.confidence_interval_.columns[1] == 'Test Name_lower_0.95'
+
+        naf = NelsonAalenFitter()
+        naf.fit(LIFETIMES, label='Test Name')
+        assert naf._label == 'Test Name'
+        assert naf.confidence_interval_.columns[0] == 'Test Name_upper_0.95'
+        assert naf.confidence_interval_.columns[1] == 'Test Name_lower_0.95'
+
 
 class StatisticalTests(unittest.TestCase):
 
@@ -140,7 +192,7 @@ class StatisticalTests(unittest.TestCase):
 
     def test_median(self):
         sv = pd.DataFrame(1 - np.linspace(0, 1, 1000))
-        self.assertTrue(median_survival_times(sv).ix[0] == 500)
+        self.assertTrue(median_survival_times(sv) == 500)
 
     def test_not_to_break(self):
         try:
@@ -376,6 +428,14 @@ class StatisticalTests(unittest.TestCase):
         C = [1, 0, 0, 1, 1, 1, 0, 1]
         kmf = KaplanMeierFitter()
         kmf.fit(T, C, left_censorship=True)
+
+    def test_conditional_time_to(self):
+        T = np.random.exponential(1, 5000)
+        v = np.log(2)
+        kmf = KaplanMeierFitter()
+        kmf.fit(T)
+        life_expectancy = kmf.conditional_time_to()
+        assert (life_expectancy.ix[0] - v) < 0.01
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(list(self.lifetimes.keys())), 1))
