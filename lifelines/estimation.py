@@ -900,6 +900,7 @@ class CoxPHFitter(BaseFitter):
             step_size: 0 < float <= 1 to determine a step size in NR algorithm.
             epsilon: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
+            include_likelihood: saves the final log-likelihood to the CoxPHFitter under _log_likelihood.
 
         Returns:
             beta: (1,d) numpy array.
@@ -971,6 +972,9 @@ class CoxPHFitter(BaseFitter):
              diagnostics.
           initial_beta: initialize the starting point of the iterative
              algorithm. Default is the zero vector.
+          include_likelihood: saves the final log-likelihood to the CoxPHFitter under
+             the property _log_likelihood.
+
 
         Returns:
             self, with additional properties: hazards_
