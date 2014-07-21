@@ -885,7 +885,7 @@ class CoxPHFitter(BaseFitter):
             return hessian, gradient
 
     def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=1.,
-                         epsilon=10e-5, show_progress=True):
+                         epsilon=10e-5, show_progress=True, include_likelihood=False):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -931,7 +931,8 @@ class CoxPHFitter(BaseFitter):
         i = 1
         converging = True
         while converging:
-            hessian, gradient = get_gradients(X, beta, T, E)
+            output = get_gradients(X, beta, T, E, include_likelihood=include_likelihood)
+            hessian, gradient = output[:2]
             delta = solve(-hessian, step_size * gradient.T)
             beta = delta + beta
             if pd.isnull(delta).sum() > 1:
@@ -945,12 +946,14 @@ class CoxPHFitter(BaseFitter):
 
         self._hessian_ = hessian
         self._score_ = gradient
+        if include_likelihood:
+            self._log_likelihood = output[2]
         if show_progress:
             print("Convergence completed after %d iterations." % (i))
         return beta
 
     def fit(self, df, duration_col='T', event_col='E',
-            show_progress=False, initial_beta=None):
+            show_progress=False, initial_beta=None, include_likelihood=False):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -986,7 +989,8 @@ class CoxPHFitter(BaseFitter):
         self._check_values(df)
 
         hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
-                                         show_progress=show_progress)
+                                         show_progress=show_progress, 
+                                         include_likelihood=include_likelihood)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns,
                                      index=['coef'])

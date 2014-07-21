@@ -791,6 +791,11 @@ class PlottingTests(unittest.TestCase):
 
 class CoxRegressionTests(unittest.TestCase):
 
+    def test_log_likelihood_is_available_in_output(self):
+        cox = CoxPHFitter()
+        cox.fit(data_nus, duration_col='t', event_col='E', include_likelihood=True)
+        assert abs( cox._log_likelihood - -12.7601409152 ) < 0.001
+
     def test_efron_computed_by_hand_examples(self):
         cox = CoxPHFitter()
 
