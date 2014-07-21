@@ -7,7 +7,7 @@
  in during the `fit`.
  - New method for KaplanMeierFitter: `conditional_time_to`. This returns a DataFrame of the estimate:
     med(S(t | T>s)) - s, human readable: the estimated time left of living, given an individual is aged s.
-- Adds option `include_likelihood` to 
+- Adds option `include_likelihood` to CoxPHFitter fit method to save the final log-likelihood value.
 
 ####0.4.2
 
