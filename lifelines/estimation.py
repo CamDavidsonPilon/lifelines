@@ -746,7 +746,7 @@ class AalenAdditiveFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(0.5, self.predict_survival_function(X))
+        return qth_survival_times(p, self.predict_survival_function(X))
 
     def predict_median(self, X):
         """
