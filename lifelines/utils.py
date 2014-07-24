@@ -4,7 +4,6 @@ from __future__ import print_function, division
 from datetime import datetime
 
 import numpy as np
-from numpy.random import permutation
 import pandas as pd
 from pandas import to_datetime
 
@@ -217,7 +216,7 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
     end_times = pd.Series(end_times).copy()
     start_times_ = to_datetime(start_times, dayfirst=dayfirst)
 
-    C = ~(pd.isnull(end_times).values + (end_times == "") + (end_times == na_values))
+    C = ~(pd.isnull(end_times).values | (end_times == "") | (end_times == na_values))
     end_times[~C] = fill_date
     """
     c =  (to_datetime(end_times, dayfirst=dayfirst, coerce=True) > fill_date)

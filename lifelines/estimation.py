@@ -80,12 +80,13 @@ class NelsonAalenFitter(BaseFitter):
                                                                 self._additive_f, self._variance_f, False)
 
         # esimates
-        self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[label])
+        self._label = label
+        self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
         self._cumulative_sq = cumulative_sq_
 
         # estimation functions
-        self.predict = _predict(self, "cumulative_hazard_", label)
+        self.predict = _predict(self, "cumulative_hazard_", self._label)
         self.subtract = _subtract(self, "cumulative_hazard_")
         self.divide = _divide(self, "cumulative_hazard_")
 
@@ -99,10 +100,9 @@ class NelsonAalenFitter(BaseFitter):
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         alpha2 = inv_normal_cdf(1 - (1 - alpha) / 2)
         df = pd.DataFrame(index=self.timeline)
-        name = self.cumulative_hazard_.columns[0]
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (name, self.alpha), "%s_lower_%.2f" % (name, self.alpha)]
+            ci_labels = ["%s_upper_%.2f" % (self._label, self.alpha), "%s_lower_%.2f" % (self._label, self.alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
         self.ci_labels = ci_labels
 
@@ -206,7 +206,8 @@ class KaplanMeierFitter(BaseFitter):
 
         v = preprocess_inputs(durations, event_observed, timeline, entry)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
-
+        self._label = label
+        self.alpha = alpha if alpha else self.alpha
         log_survival_function, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                    self._additive_f, self._additive_var,
                                                                    left_censorship)
@@ -219,12 +220,12 @@ class KaplanMeierFitter(BaseFitter):
             net_population = (self.event_table['entrance'] - self.event_table['removed']).cumsum()
             if net_population.iloc[:int(n / 2)].min() == 0:
                 ix = net_population.iloc[:int(n / 2)].argmin()
-                raise StatError("""There are too few early truncation times and too many events. S(t)==0 for all t>%.1f. Recommend BFH estimator.""" % ix)
+                raise StatError("""There are too few early truncation times and too many events. S(t)==0 for all t>%.1f. Recommend BreslowFlemingHarringtonFitter.""" % ix)
 
         # estimation
-        setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[label]))
+        setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[self._label]))
         self.__estimate = getattr(self, estimate_name)
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], ci_labels)
         self.median_ = median_survival_times(self.__estimate)
 
         # estimation methods
@@ -237,15 +238,14 @@ class KaplanMeierFitter(BaseFitter):
         setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
-    def _bounds(self, cumulative_sq_, alpha, ci_labels):
+    def _bounds(self, cumulative_sq_, ci_labels):
         # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdfg
-        alpha2 = inv_normal_cdf((1. + alpha) / 2.)
+        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
-        name = self.__estimate.columns[0]
         v = np.log(self.__estimate.values)
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (name, self.alpha), "%s_lower_%.2f" % (name, self.alpha)]
+            ci_labels = ["%s_upper_%.2f" % (self._label, self.alpha), "%s_lower_%.2f" % (self._label, self.alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v))
@@ -259,6 +259,23 @@ class KaplanMeierFitter(BaseFitter):
     def _additive_var(self, population, deaths):
         np.seterr(divide='ignore')
         return (1. * deaths / (population * (population - deaths))).replace([np.inf], 0)
+
+    def conditional_time_to(self):
+        """
+        Return a DataFrame, with index equal to survival_function_, that estimates the median
+        duration remaining until the death event, given survival up until time t. For example, if an
+        indivual exists until age 1, their expected life remaining *given they lived to time 1*
+        might be 9 years.
+
+        Returns:
+            conditional_time_to_: DataFrame, with index equal to survival_function_
+
+        """
+        age = self.survival_function_.index.values[:, None]
+        columns = ['%s - Conditional time remaining to event' % self._label]
+        return pd.DataFrame(qth_survival_times(self.survival_function_[self._label] * 0.5, self.survival_function_).T.sort(ascending=False).values,
+                            index=self.survival_function_.index,
+                            columns=columns) - age
 
 
 class BreslowFlemingHarringtonFitter(BaseFitter):
@@ -868,7 +885,7 @@ class CoxPHFitter(BaseFitter):
             return hessian, gradient
 
     def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=1.,
-                         epsilon=10e-5, show_progress=True):
+                         epsilon=10e-5, show_progress=True, include_likelihood=False):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -883,6 +900,7 @@ class CoxPHFitter(BaseFitter):
             step_size: 0 < float <= 1 to determine a step size in NR algorithm.
             epsilon: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
+            include_likelihood: saves the final log-likelihood to the CoxPHFitter under _log_likelihood.
 
         Returns:
             beta: (1,d) numpy array.
@@ -914,7 +932,8 @@ class CoxPHFitter(BaseFitter):
         i = 1
         converging = True
         while converging:
-            hessian, gradient = get_gradients(X, beta, T, E)
+            output = get_gradients(X, beta, T, E, include_likelihood=include_likelihood)
+            hessian, gradient = output[:2]
             delta = solve(-hessian, step_size * gradient.T)
             beta = delta + beta
             if pd.isnull(delta).sum() > 1:
@@ -928,12 +947,14 @@ class CoxPHFitter(BaseFitter):
 
         self._hessian_ = hessian
         self._score_ = gradient
+        if include_likelihood:
+            self._log_likelihood = output[2]
         if show_progress:
             print("Convergence completed after %d iterations." % (i))
         return beta
 
     def fit(self, df, duration_col='T', event_col='E',
-            show_progress=False, initial_beta=None):
+            show_progress=False, initial_beta=None, include_likelihood=False):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -951,6 +972,9 @@ class CoxPHFitter(BaseFitter):
              diagnostics.
           initial_beta: initialize the starting point of the iterative
              algorithm. Default is the zero vector.
+          include_likelihood: saves the final log-likelihood to the CoxPHFitter under
+             the property _log_likelihood.
+
 
         Returns:
             self, with additional properties: hazards_
@@ -969,7 +993,8 @@ class CoxPHFitter(BaseFitter):
         self._check_values(df)
 
         hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
-                                         show_progress=show_progress)
+                                         show_progress=show_progress, 
+                                         include_likelihood=include_likelihood)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns,
                                      index=['coef'])
@@ -1047,7 +1072,7 @@ class CoxPHFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(0.5, self.predict_survival_function(X))
+        return qth_survival_times(p, self.predict_survival_function(X))[p]
 
     def predict_median(self, X):
         """
@@ -1201,17 +1226,25 @@ def qth_survival_times(q, survival_functions):
         If numpy array, will return indices.
 
     Returns:
-      v: an array containing the first times the value was crossed.
-        np.inf if infinity.
+      v: if d==1, returns a float, np.inf if infinity.
+         if d > 1, an DataFrame containing the first times the value was crossed.
+
     """
-    assert 0. <= q <= 1., "q must be between 0. and 1."
-    sv_b = (1.0 * (survival_functions < q)).cumsum() > 0
-    try:
-        v = sv_b.idxmax(0)
-        v[sv_b.iloc[-1,:] == 0] = np.inf
-    except:
-        v = sv_b.argmax(0)
-        v[sv_b[-1,:] == 0] = np.inf
+    q = pd.Series(q)
+    survival_functions = pd.DataFrame(survival_functions)
+    if survival_functions.shape[1] == 1 and q.shape == (1,):
+        return survival_functions.apply(lambda s: qth_survival_time(q[0], s)).ix[0]
+    else:
+        return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q})
+
+
+def qth_survival_time(q, survival_function):
+    """
+    Expects a Pandas series, returns the time when the qth probability is reached.
+    """
+    if survival_function.iloc[-1] > q:
+        return np.inf
+    v = (survival_function <= q).idxmax(0)
     return v
 
 

@@ -1,6 +1,13 @@
 ### Changelogs
 
-
+####0.4.3
+ - refactoring of `qth_survival_times`: it can now accept an iterable (or a scalar still) of probabilities in the q argument, and will return a DataFrame with these as columns. If len(q)==1 and a single survival function is given, will return a scalar, not a DataFrame. Also some good speed improvements.
+ - KaplanMeierFitter and NelsonAalenFitter now have a `_label` property that is passed in during the fit.
+ - KaplanMeierFitter/NelsonAalenFitter's inital `alpha` value is overwritten if a new `alpha` value is passed
+ in during the `fit`.
+ - New method for KaplanMeierFitter: `conditional_time_to`. This returns a DataFrame of the estimate:
+    med(S(t | T>s)) - s, human readable: the estimated time left of living, given an individual is aged s.
+- Adds option `include_likelihood` to CoxPHFitter fit method to save the final log-likelihood value.
 
 ####0.4.2
 
