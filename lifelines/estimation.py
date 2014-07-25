@@ -1231,6 +1231,7 @@ def qth_survival_times(q, survival_functions):
 
     """
     q = pd.Series(q)
+    assert (q <= 1).all() and (0 <= q).all(), 'q must be between 0 and 1'
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         return survival_functions.apply(lambda s: qth_survival_time(q[0], s)).ix[0]

@@ -309,7 +309,7 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
 
         # fit the fitter to the training data
         fitter.fit(training_data, duration_col=duration_col, event_col=event_col)
-        T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
+        T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values[:,0]
 
         scores[i - 1] = concordance_index(T_actual, T_pred, E_actual)
 
