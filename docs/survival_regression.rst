@@ -195,7 +195,7 @@ We have also included the ``penalizer`` option. During the estimation, a
 linear regression is computed at each step. Often the regression can be
 unstable (due to high
 `co-linearity <http://camdp.com/blogs/machine-learning-counter-examples-pt1>`__
-or small sample sizes) -- adding a penalizer term controls the stability. I recommend alway starting with a small penalizer term -- if
+or small sample sizes) -- adding a penalizer term controls the stability. I recommend always starting with a small penalizer term -- if
 the estimates still appear to be too unstable, try increasing it.
 
 .. code:: python

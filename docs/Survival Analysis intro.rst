@@ -40,13 +40,13 @@ naturally *less* than their actual lifetimes).
 .. note:: There is also left-censorship, where an individuals birth event is not seen.
 
 A common mistake data analysts make is  choosing to ignore the
-right-censored individuals. We'll shall see why this is a mistake next:
+right-censored individuals. We shall see why this is a mistake next:
 
 Consider a case where the population is actually made up of two
 subpopulations, :math:`A` and :math:`B`. Population :math:`A` has a very
 small lifespan, say 2 months on average, and population :math:`B`
 enjoys a much large lifespan, say 12 months on average. We might
- not know this distinction before hand. At :math:`t=10`, we
+not know this distinction before hand. At :math:`t=10`, we
 wish to investigate the average lifespan. Below is an example of such a
 situation.
 
