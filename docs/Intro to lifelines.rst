@@ -37,7 +37,7 @@ defined:
 .. math:: \hat{S}(t) = \prod_{t_i \lt t} \frac{n_i - d_i}{n_i}
 
 where :math:`d_i` are the number of death events at time :math:`t` and
-:math:`n_i` is the number of subjects at risk of death at time
+:math:`n_i` is the number of subjects at risk of death just prior to time
 :math:`t`.
 
 Let's bring in our dataset. 
@@ -517,11 +517,11 @@ Smoothing the hazard curve
 
 Interpretation of the cumulative hazard function can be difficult -- it
 is not how we usually interpret functions. (On the other hand, most
-survival analysis is done using the cumulativ hazard fuction, so it is
-recommend to be use to understanding them).
+survival analysis is done using the cumulative hazard fuction, so understanding
+it is recommended).
 
 Alternatively, we can derive the more-interpretable hazard curve, but
-there is a catch. The derivation involves a kernerl smoother (to smooth
+there is a catch. The derivation involves a kernel smoother (to smooth
 out the differences of the cumulative hazard curve) , and this requires
 us to specify a bandwidth parameter that controls the amount of
 smoothing. This functionality is provided in the ``smoothed_hazard_``
