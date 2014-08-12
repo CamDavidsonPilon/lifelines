@@ -398,7 +398,7 @@ respectively. For example:
 The raw data is not always available in this format -- *lifelines*
 includes some helper functions to transform data formats to *lifelines*
 format. These are located in the ``lifelines.utils`` sublibrary. For
-example, the function ``datetime_to_durations`` accepts an arrary or
+example, the function ``datetimes_to_durations`` accepts an arrary or
 Pandas object of start times/dates, and an array or Pandas objects of
 end times/dates (or ``None`` if not observed):
 
