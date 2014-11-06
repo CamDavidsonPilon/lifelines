@@ -134,9 +134,9 @@ a webpage (an infinite time if they never do). The survival function,
 
 .. math::  S(t) = Pr( T > t) 
 
-The human language: the survival function defines the probability the death event has not occured yet at time
+In human language: the survival function defines the probability the death event has not occured yet at time
 :math:`t`, or equivalently, the probability of surviving until atleast time
-:math:`T`. Note the following properties of the survival function:
+:math:`t`. Note the following properties of the survival function:
 
 1. :math:`0 \le S(t) \le 1`
 2. :math:`F_T(t) = 1 - S(t)`, where :math:`F_T(t)` is the CDF of :math:`T`, which implies
