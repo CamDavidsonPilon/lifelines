@@ -135,23 +135,23 @@ class MiscTests(unittest.TestCase):
     def test_cross_validator_returns_k_results(self):
         cf = CoxPHFitter()
         results = k_fold_cross_validation(cf, generate_regression_dataset(), duration_col='T', event_col='E', k=3)
-        self.assertTrue(len(results)==3)
+        self.assertTrue(len(results) == 3)
 
         aaf = AalenAdditiveFitter()
         results = k_fold_cross_validation(cf, generate_regression_dataset(), duration_col='T', event_col='E', k=5)
-        self.assertTrue(len(results)==5)
+        self.assertTrue(len(results) == 5)
 
     def test_cross_validator_with_predictor(self):
         cf = CoxPHFitter()
         results = k_fold_cross_validation(cf, generate_regression_dataset(),
-                                duration_col='T', event_col='E', k=3,
-                                predictor="predict_expectation")
+                                          duration_col='T', event_col='E', k=3,
+                                          predictor="predict_expectation")
 
     def test_cross_validator_with_predictor_and_kwargs(self):
         cf = CoxPHFitter()
         results_06 = k_fold_cross_validation(cf, generate_regression_dataset(),
-                                duration_col='T', event_col='E', k=3,
-                                predictor="predict_percentile", predictor_kwargs={'p': 0.6})
+                                             duration_col='T', event_col='E', k=3,
+                                             predictor="predict_percentile", predictor_kwargs={'p': 0.6})
 
     def test_label_is_a_property(self):
         kmf = KaplanMeierFitter()
@@ -214,7 +214,7 @@ class StatisticalTests(unittest.TestCase):
     def test_equal_intensity(self):
         """
         This is the (I think) fact that 1-alpha == false positive rate.
-        I use a Bayesian test to test that we achieve this rate. 
+        I use a Bayesian test to test that we achieve this rate.
         """
         N = 100
         false_positives = 0
@@ -225,7 +225,7 @@ class StatisticalTests(unittest.TestCase):
             summary, p_value, result = logrank_test(data1, data2, alpha=0.95, suppress_print=True)
             false_positives += result is not None
         bounds = beta.interval(0.95, 1 + false_positives, N - false_positives + 1)
-        self.assertTrue(bounds[0] < 1-alpha, bounds[0])
+        self.assertTrue(bounds[0] < 1 - alpha, bounds[0])
 
     def test_unequal_intensity(self):
         data1 = np.random.exponential(5, size=(2000, 1))
@@ -301,7 +301,7 @@ class StatisticalTests(unittest.TestCase):
             s, _, result = multivariate_logrank_test(T, g, alpha=alpha, suppress_print=True)
             false_positives += result is not None
         bounds = beta.interval(0.95, 1 + false_positives, N - false_positives + 1)
-        self.assertTrue(bounds[0] < 1-alpha < bounds[1])
+        self.assertTrue(bounds[0] < 1 - alpha < bounds[1])
 
     def test_pairwise_waltons_dataset(self):
         _, _, R = pairwise_logrank_test(waltons_dataset['T'], waltons_dataset['group'])
@@ -368,7 +368,7 @@ class StatisticalTests(unittest.TestCase):
         N = 20000
         censorship = 0.2
         T, C = exponential_survival_data(N, censorship, scale=10)
-        self.assertTrue(abs(C.mean() - (1-censorship)) < 0.02)
+        self.assertTrue(abs(C.mean() - (1 - censorship)) < 0.02)
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_exponential_data_sets_fit(self):
@@ -451,6 +451,11 @@ class StatisticalTests(unittest.TestCase):
         C = [1, 0, 0, 1, 1, 1, 0, 1]
         kmf = KaplanMeierFitter()
         kmf.fit(T, C, left_censorship=True)
+
+    def test_sort_doesnt_affect_kmf(self):
+        T = [3, 5, 5, 5, 6, 6, 10, 12]
+        kmf = KaplanMeierFitter()
+        assert_frame_equal(kmf.fit(T).survival_function_, kmf.fit(sorted(T)).survival_function_)
 
     def kaplan_meier(self, censor=False):
         km = np.zeros((len(list(self.lifetimes.keys())), 1))
@@ -630,11 +635,11 @@ class AalenAdditiveModelTests(unittest.TestCase):
 
     def test_predict_percentile_returns_a_series(self):
         X = generate_regression_dataset()
-        x = X[X.columns-['T','E'] ]
+        x = X[X.columns - ['T', 'E']]
         aaf = AalenAdditiveFitter()
         aaf.fit(X, duration_col='T', event_col='E')
         result = aaf.predict_percentile(x)
-        self.assertTrue(type(result) == pd.Series)
+        self.assertTrue(isinstance(result, pd.Series))
         self.assertTrue(result.shape == (x.shape[0],))
 
 
@@ -818,7 +823,7 @@ class CoxRegressionTests(unittest.TestCase):
     def test_log_likelihood_is_available_in_output(self):
         cox = CoxPHFitter()
         cox.fit(data_nus, duration_col='t', event_col='E', include_likelihood=True)
-        assert abs( cox._log_likelihood - -12.7601409152 ) < 0.001
+        assert abs(cox._log_likelihood - -12.7601409152) < 0.001
 
     def test_efron_computed_by_hand_examples(self):
         cox = CoxPHFitter()
