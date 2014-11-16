@@ -761,7 +761,7 @@ class AalenAdditiveFitter(BaseFitter):
         Compute the expected lifetime, E[T], using covarites X.
         """
         t = self.cumulative_hazards_.index
-        return trapz(self.predict_survival_function(X).values.T, t)
+        return pd.Series(trapz(self.predict_survival_function(X).values.T, t))
 
 
 class CoxPHFitter(BaseFitter):
@@ -1087,7 +1087,7 @@ class CoxPHFitter(BaseFitter):
         Compute the expected lifetime, E[T], using covarites X.
         """
         v = self.predict_survival_function(X)
-        return trapz(v.values.T, v.index)
+        return pd.Series(trapz(v.values.T, v.index))
 
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
