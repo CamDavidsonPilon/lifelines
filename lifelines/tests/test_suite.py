@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import os
 import unittest
+from collections import Counter
 try:
     from StringIO import StringIO
 except ImportError:
@@ -14,7 +15,7 @@ except ImportError:
 
 import numpy as np
 import numpy.testing as npt
-from collections import Counter
+from scipy.stats import beta
 import matplotlib.pyplot as plt
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
@@ -131,19 +132,24 @@ class MiscTests(unittest.TestCase):
         ug, _, _, _ = group_survival_table_from_events(df.G, df.duration, df.E, np.array([[0, 0, 0]]))
         npt.assert_array_equal(ug, np.array([3, 2]))
 
-    def test_cross_validator(self):
+    def test_cross_validator_returns_k_results(self):
         cf = CoxPHFitter()
-        k_fold_cross_validation(cf, generate_regression_dataset(), duration_col='T', event_col='E', k=3)
+        results = k_fold_cross_validation(cf, generate_regression_dataset(), duration_col='T', event_col='E', k=3)
+        self.assertTrue(len(results)==3)
+
+        aaf = AalenAdditiveFitter()
+        results = k_fold_cross_validation(cf, generate_regression_dataset(), duration_col='T', event_col='E', k=5)
+        self.assertTrue(len(results)==5)
 
     def test_cross_validator_with_predictor(self):
         cf = CoxPHFitter()
-        k_fold_cross_validation(cf, generate_regression_dataset(),
+        results = k_fold_cross_validation(cf, generate_regression_dataset(),
                                 duration_col='T', event_col='E', k=3,
                                 predictor="predict_expectation")
 
     def test_cross_validator_with_predictor_and_kwargs(self):
         cf = CoxPHFitter()
-        k_fold_cross_validation(cf, generate_regression_dataset(),
+        results_06 = k_fold_cross_validation(cf, generate_regression_dataset(),
                                 duration_col='T', event_col='E', k=3,
                                 predictor="predict_percentile", predictor_kwargs={'p': 0.6})
 
@@ -206,10 +212,20 @@ class StatisticalTests(unittest.TestCase):
             self.assertTrue(False)
 
     def test_equal_intensity(self):
-        data1 = np.random.exponential(5, size=(2000, 1))
-        data2 = np.random.exponential(5, size=(2000, 1))
-        summary, p_value, result = logrank_test(data1, data2)
-        self.assertTrue(result is None)
+        """
+        This is the (I think) fact that 1-alpha == false positive rate.
+        I use a Bayesian test to test that we achieve this rate. 
+        """
+        N = 100
+        false_positives = 0
+        alpha = 0.95
+        for i in range(100):
+            data1 = np.random.exponential(5, size=(200, 1))
+            data2 = np.random.exponential(5, size=(200, 1))
+            summary, p_value, result = logrank_test(data1, data2, alpha=0.95, suppress_print=True)
+            false_positives += result is not None
+        bounds = beta.interval(0.95, 1 + false_positives, N - false_positives + 1)
+        self.assertTrue(bounds[0] < 1-alpha, bounds[0])
 
     def test_unequal_intensity(self):
         data1 = np.random.exponential(5, size=(2000, 1))
@@ -276,19 +292,25 @@ class StatisticalTests(unittest.TestCase):
         self.assertTrue(result)
 
     def test_multivariate_equal_intensities(self):
-        T = np.random.exponential(10, size=300)
-        g = np.random.binomial(2, 0.5, size=300)
-        s, _, result = multivariate_logrank_test(T, g)
-        self.assertTrue(result is None)
+        N = 100
+        false_positives = 0
+        alpha = 0.95
+        for i in range(100):
+            T = np.random.exponential(10, size=300)
+            g = np.random.binomial(2, 0.5, size=300)
+            s, _, result = multivariate_logrank_test(T, g, alpha=alpha, suppress_print=True)
+            false_positives += result is not None
+        bounds = beta.interval(0.95, 1 + false_positives, N - false_positives + 1)
+        self.assertTrue(bounds[0] < 1-alpha < bounds[1])
 
     def test_pairwise_waltons_dataset(self):
         _, _, R = pairwise_logrank_test(waltons_dataset['T'], waltons_dataset['group'])
         self.assertTrue(R.values[0, 1])
 
     def test_pairwise_logrank_test(self):
-        T = np.random.exponential(10, size=300)
-        g = np.random.binomial(2, 0.7, size=300)
-        S, P, R = pairwise_logrank_test(T, g, alpha=0.95)
+        T = np.random.exponential(10, size=500)
+        g = np.random.binomial(2, 0.7, size=500)
+        S, P, R = pairwise_logrank_test(T, g, alpha=0.99)
         V = np.array([[np.nan, None, None], [None, np.nan, None], [None, None, np.nan]])
         npt.assert_array_equal(R, V)
 
@@ -344,8 +366,9 @@ class StatisticalTests(unittest.TestCase):
 
     def test_exponential_data_sets_correct_censor(self):
         N = 20000
-        T, C = exponential_survival_data(N, 0.2, scale=10)
-        self.assertTrue(abs(C.mean() - 0.8) < 0.02)
+        censorship = 0.2
+        T, C = exponential_survival_data(N, censorship, scale=10)
+        self.assertTrue(abs(C.mean() - (1-censorship)) < 0.02)
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_exponential_data_sets_fit(self):
@@ -604,6 +627,15 @@ class AalenAdditiveModelTests(unittest.TestCase):
         aaf = AalenAdditiveFitter()
         aaf.fit(df, duration_col='duration', event_col='done_feeding')
         return
+
+    def test_predict_percentile_returns_a_series(self):
+        X = generate_regression_dataset()
+        x = X[X.columns-['T','E'] ]
+        aaf = AalenAdditiveFitter()
+        aaf.fit(X, duration_col='T', event_col='E')
+        result = aaf.predict_percentile(x)
+        self.assertTrue(type(result) == pd.Series)
+        self.assertTrue(result.shape == (x.shape[0],))
 
 
 @unittest.skipUnless("DISPLAY" in os.environ, "requires display")

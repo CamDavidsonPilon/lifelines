@@ -189,7 +189,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
       groups: a (n,) numpy array of unique group labels for each individual.
       event_observed: a (n,) numpy array of event observations: 1 if observed death, 0 if censored. Defaults
           to all observed.
-      alpha: the level of signifiance desired.
+      alpha: the level of significance desired.
       t_0: the final time to compare the series' up to. Defaults to all.
       suppress_print: if True, do not print the summary. Default False.
       kwargs: add keywords and meta-data to the experiment summary.

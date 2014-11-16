@@ -619,6 +619,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         # so this is a problem line. bfill performs a recursion which is
         # really not scalable. Plus even for modest datasets, this eats a lot of memory.
+        # Plus is bfill the correct thing to choose? It's forward looking...
         wp = df.to_panel().bfill().fillna(0)
 
         # initialize dataframe to store estimates
@@ -746,7 +747,7 @@ class AalenAdditiveFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(p, self.predict_survival_function(X))
+        return qth_survival_times(p, self.predict_survival_function(X))[p]
 
     def predict_median(self, X):
         """
@@ -760,7 +761,7 @@ class AalenAdditiveFitter(BaseFitter):
         Compute the expected lifetime, E[T], using covarites X.
         """
         t = self.cumulative_hazards_.index
-        return trapz(self.predict_survival_function(X).values.T, t)
+        return pd.Series(trapz(self.predict_survival_function(X).values.T, t))
 
 
 class CoxPHFitter(BaseFitter):
@@ -1086,7 +1087,7 @@ class CoxPHFitter(BaseFitter):
         Compute the expected lifetime, E[T], using covarites X.
         """
         v = self.predict_survival_function(X)
-        return trapz(v.values.T, v.index)
+        return pd.Series(trapz(v.values.T, v.index))
 
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
