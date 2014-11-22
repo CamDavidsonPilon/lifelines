@@ -937,7 +937,7 @@ class CoxPHFitter(BaseFitter):
             hessian, gradient = output[:2]
             delta = solve(-hessian, step_size * gradient.T)
             beta = delta + beta
-            if pd.isnull(delta).sum() > 1:
+            if pd.isnull(delta).sum() >= 1:
                 raise ValueError("delta contains nan value(s). Converge halted.")
             if norm(delta) < epsilon:
                 converging = False

@@ -22,6 +22,8 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
     1.0 is perfect concordance and,
     0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
+    Score is usually 0.6-0.7 for survival models.
+
     See:
     Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
     developing models, evaluating assumptions and adequacy, and measuring and
