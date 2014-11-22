@@ -877,6 +877,51 @@ class CoxRegressionTests(unittest.TestCase):
         cf.fit(data_nus, duration_col='t', event_col='E')
         self.assertTrue(np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
 
+    def test_crossval(self):
+        cf = CoxPHFitter()
+
+        # Infinite loop or similar occurs for data_pred1
+        # for data_pred in [data_pred1, data_pred2]:
+        for data_pred in [data_pred2]:
+            scores = k_fold_cross_validation(cf, data_pred,
+                                             duration_col='t',
+                                             event_col='E', k=3)
+            # TODO raise expected values once tests complete successfully
+            self.assertTrue(scores.mean() > 0.65,
+                            "CoxPH should solve this simple data")
+
+    def test_crossval_normalized(self):
+        # Infinite loop or similar occurs for data_pred1
+        # for data_pred in [data_pred1, data_pred2]:
+        for data_pred in [data_pred2]:
+            data_norm = data_pred.copy()
+
+            times = data_norm['t']
+            # Normalize to mean = 0 and standard deviation = 1
+            times -= np.mean(times)
+            times /= np.std(times)
+            data_norm['t'] = times
+
+            x1 = data_norm['x1']
+            x1 -= np.mean(x1)
+            x1 /= np.std(x1)
+            data_norm['x1'] = x1
+
+            if 'x2' in data_norm.columns:
+                x2 = data_norm['x2']
+                x2 -= np.mean(x2)
+                x2 /= np.std(x2)
+                data_norm['x2'] = x2
+
+            cf = CoxPHFitter()
+
+            scores = k_fold_cross_validation(cf, data_norm,
+                                             duration_col='t',
+                                             event_col='E', k=3)
+            # TODO raise expected values once tests complete successfully
+            self.assertTrue(scores.mean() > 0.65,
+                            "CoxPH should solve this simple normalized data")
+
     def test_output_against_R(self):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
@@ -943,6 +988,19 @@ data_nus = pd.DataFrame([
     [2421, 27.9]],
     columns=['t', 'x'])
 data_nus['E'] = True
+
+
+# Simple sets for predictions
+data_pred1 = pd.DataFrame()
+data_pred1['x1'] = np.random.uniform(size=50)
+data_pred1['t'] = 1 + data_pred1['x1']
+data_pred1['E'] = True
+
+data_pred2 = pd.DataFrame()
+data_pred2['x1'] = np.random.uniform(size=50)
+data_pred2['x2'] = np.random.uniform(size=50)
+data_pred2['t'] = 1 + data_pred2['x1'] + data_pred2['x2']
+data_pred2['E'] = True
 
 
 if __name__ == '__main__':
