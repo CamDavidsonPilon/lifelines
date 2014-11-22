@@ -1101,9 +1101,11 @@ class CoxPHFitter(BaseFitter):
         baseline_hazard_ = pd.DataFrame(np.zeros((n, 1)),
                                         index=event_table.index,
                                         columns=['baseline hazard'])
+
         for t, s in event_table.iterrows():
+            less = np.array(self.durations <= t)
             baseline_hazard_.ix[t] = (s['observed'] /
-                                      ind_hazards[self.durations <= t].sum())
+                                      ind_hazards[less].sum())
 
         return baseline_hazard_
 
