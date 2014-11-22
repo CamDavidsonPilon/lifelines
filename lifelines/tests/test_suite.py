@@ -889,7 +889,7 @@ class CoxRegressionTests(unittest.TestCase):
                             "CoxPH should solve this simple data")
 
     def test_crossval_normalized(self):
-g        for data_pred in [data_pred1, data_pred2]:
+        for data_pred in [data_pred1, data_pred2]:
             data_norm = data_pred.copy()
 
             times = data_norm['t']
