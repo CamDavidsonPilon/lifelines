@@ -96,7 +96,8 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
 
 
 def survival_table_from_events(durations, event_observed, min_observations,
-                               columns=["removed", "observed", "censored", 'entrance'], weights=None):
+                               columns=["removed", "observed", "censored", "entrance"], weights=None,
+                               include_births=True):
     """
     Parameters:
         durations: (n,1) array of event times (durations individual was observed for)
@@ -106,6 +107,8 @@ def survival_table_from_events(durations, event_observed, min_observations,
           when the subject was first observed. A subject's life is then [min observation + duration observed]
         columns: a 3-length array to call the, in order, removed individuals, observed deaths
           and censorships.
+        weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
+        include_births: include a "entrance" column in the output.
 
     Returns:
         Pandas DataFrame with index as the unique times in event_times. The columns named
@@ -121,13 +124,14 @@ def survival_table_from_events(durations, event_observed, min_observations,
 
         #output
 
-                  removed  observed  censored
+                  removed  observed  censored  entrance
         event_at
-        6               1         1         0
-        7               2         2         0
-        9               3         3         0
-        13              3         3         0
-        15              2         2         0
+        0               0         0         0        11
+        6               1         1         0         0
+        7               2         2         0         0
+        9               3         3         0         0 
+        13              3         3         0         0
+        15              2         2         0         0
 
     """
     # deal with deaths and censorships
@@ -145,8 +149,10 @@ def survival_table_from_events(durations, event_observed, min_observations,
     births_table = births.groupby('event_at').sum()
 
     # this next line can be optimized for when min_observerations is all zeros.
-    event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
-
+    if include_births:
+        event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
+    else:
+        event_table = death_table.fillna(0)
     return event_table
 
 

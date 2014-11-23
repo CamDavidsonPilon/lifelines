@@ -833,7 +833,6 @@ class CoxPHFitter(BaseFitter):
             risk_phi += phi_i
             risk_phi_x += phi_x_i
             risk_phi_x_x += phi_x_x_i
-
             # Calculate sums of Ties, if this is an event
             if ei:
                 x_tie_sum += xi
@@ -1100,7 +1099,8 @@ class CoxPHFitter(BaseFitter):
 
         event_table = survival_table_from_events(self.durations.values,
                                                  self.event_observed.values,
-                                                 np.zeros_like(self.durations))
+                                                 np.zeros_like(self.durations), 
+                                                 include_births=False)
         n, d = event_table.shape
 
         baseline_hazard_ = pd.DataFrame(np.zeros((n, 1)),
