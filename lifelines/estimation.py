@@ -763,6 +763,8 @@ class AalenAdditiveFitter(BaseFitter):
         t = self.cumulative_hazards_.index
         return pd.Series(trapz(self.predict_survival_function(X).values.T, t))
 
+    def predict(self, X):
+        return self.predict_median(X)
 
 class CoxPHFitter(BaseFitter):
 
@@ -1088,6 +1090,9 @@ class CoxPHFitter(BaseFitter):
         """
         v = self.predict_survival_function(X)
         return pd.Series(trapz(v.values.T, v.index))
+
+    def predict(self, X):
+        return self.predict_median(X)
 
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
