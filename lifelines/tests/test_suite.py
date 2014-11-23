@@ -956,12 +956,12 @@ class CoxRegressionTests(unittest.TestCase):
 
     def test_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
-        expected = np.array([[0.6567, 0.1596, 0.2484]])
+        expected = np.array([[0.1596, 0.2484, 0.6567]])
         df = pd.read_csv('./datasets/kidney_transplant.csv', usecols=['time','death','black_male','white_male','black_female'])
         cf = CoxPHFitter()
         cf.fit(df, duration_col='time', event_col='death')
         actual = cf.hazards_.values 
-        npt.assert_array_almost_equal(actual, expected)
+        npt.assert_array_almost_equal(actual, expected, decimal=4)
 
 
 # some data
@@ -991,7 +991,7 @@ data_nus['E'] = True
 N = 50
 data_pred1 = pd.DataFrame()
 data_pred1['x1'] = np.random.uniform(size=N)
-data_pred1['t'] = 1 + data_pred1['x1'] + np.random.exponential(1, N)
+data_pred1['t'] = 1 + data_pred1['x1'] + np.random.exponential(0.05, N)
 data_pred1['E'] = True
 
 data_pred2 = pd.DataFrame()
