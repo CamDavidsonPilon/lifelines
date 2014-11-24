@@ -656,7 +656,7 @@ class RegressionTests(unittest.TestCase):
         self.aaf.fit(X, duration_col='T', event_col='E')
         self.cph.fit(X, duration_col='T', event_col='E')
 
-        for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict']:
+        for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict', 'predict_cumulative_hazard']:
             self.assertEqual(type(getattr(self.aaf,fit_method)(x)), type(getattr(self.cph,fit_method)(x)))
 
     def test_duration_vector_can_be_normalized(self):
@@ -920,6 +920,7 @@ class CoxRegressionTests(unittest.TestCase):
                             msg.format(expected, scores.mean()))
 
     def test_crossval_with_normalized_data(self):
+        cf = CoxPHFitter()
         for data_pred in [data_pred1, data_pred2]:
             data_norm = data_pred.copy()
 
@@ -940,8 +941,6 @@ class CoxRegressionTests(unittest.TestCase):
                 x2 /= np.std(x2)
                 data_norm['x2'] = x2
 
-            cf = CoxPHFitter()
-
             scores = k_fold_cross_validation(cf, data_norm,
                                              duration_col='t',
                                              event_col='E', k=3)
@@ -958,14 +957,32 @@ class CoxRegressionTests(unittest.TestCase):
         cf.fit(df, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
-    def test_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
+    def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
-        expected = np.array([[0.1596, 0.2484, 0.6567]])
         df = pd.read_csv('./datasets/kidney_transplant.csv', usecols=['time','death','black_male','white_male','black_female'])
         cf = CoxPHFitter()
         cf.fit(df, duration_col='time', event_col='death')
-        actual = cf.hazards_.values 
-        npt.assert_array_almost_equal(actual, expected, decimal=4)
+
+        # coefs
+        actual_coefs = cf.hazards_.values 
+        expected_coefs = np.array([[0.1596, 0.2484, 0.6567]])
+        npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=4)
+
+    def test_se_and_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
+        # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
+        df = pd.read_csv('./datasets/larynx.csv')
+        cf = CoxPHFitter()
+        cf.fit(df, duration_col='time', event_col='death')
+
+        #standard errors
+        actual_se = cf._compute_standard_errors().values
+        expected_se = np.array([[0.0143,  0.4623,  0.3561,  0.4222]])
+        npt.assert_array_almost_equal(actual_se, expected_se, decimal=4)
+
+        #p-values
+        actual_p = cf._compute_p_values()
+        expected_p = np.array([0.1847, 0.7644,  0.0730, 0.00])
+        npt.assert_array_almost_equal(actual_p, expected_p, decimal=3)
 
 
 # some data
