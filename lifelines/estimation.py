@@ -1074,9 +1074,9 @@ class CoxPHFitter(BaseFitter):
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
-        print("Concordance =", concordance_index(self.durations,
-                                                 self.predict(self.data),
-                                                 self.event_observed))
+        print("Concordance = {:.3f}".format(concordance_index(self.durations,
+                                                              self.predict(self.data),
+                                                              self.event_observed)))
         return
 
     def predict_partial_hazard(self, X):
