@@ -859,11 +859,18 @@ class CoxPHFitter(BaseFitter):
 
                 denom = (risk_phi - c * tie_phi)
                 z = (risk_phi_x - c * tie_phi_x)
+
+                if denom == 0:
+                    # Can't divide by zero
+                    raise ValueError("Denominator was zero")
+
                 # Gradient
                 partial_gradient += z / denom
                 # Hessian
                 a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
-                a2 = dot(z.T, z) / (denom ** 2)
+                # In case z and denom both are really small numbers,
+                # make sure to do division before multiplications
+                a2 = dot(z.T / denom, z / denom)
 
                 hessian -= (a1 - a2)
 
@@ -900,7 +907,7 @@ class CoxPHFitter(BaseFitter):
             E: (n) numpy array representing death events.
             initial_beta: (1,d) numpy array of initial starting point for
                           NR algorithm. Default 0.
-            step_size: 0 < float <= 1 to determine a step size in NR algorithm.
+            step_size: float > 0.001 to determine a starting step size in NR algorithm.
             epsilon: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
             include_likelihood: saves the final log-likelihood to the CoxPHFitter under _log_likelihood.
@@ -934,19 +941,26 @@ class CoxPHFitter(BaseFitter):
 
         i = 1
         converging = True
-        while converging:
-            output = get_gradients(X, beta, T, E, include_likelihood=include_likelihood)
-            hessian, gradient = output[:2]
-            try:
-                delta = solve(-hessian, step_size * gradient.T)
-            except LinAlgError:
-                # Singular matrix, solve approximately instead of exact
-                res = lstsq(-hessian, step_size * gradient.T)
-                delta = res[0]
+        # 50 iterations steps with N-R is a lot.
+        # Expected convergence is ~10 steps
+        while converging and i < 50 and step_size > 0.001:
+            output = get_gradients(X, beta, T, E,
+                                   include_likelihood=include_likelihood)
+            # Do not override hessian and gradient in case of garbage
+            h, g = output[:2]
 
-            beta = delta + beta
-            if pd.isnull(delta).sum() >= 1:
-                raise ValueError("delta contains nan value(s). Converge halted.")
+            delta = solve(-h, step_size * g.T)
+            if np.any(np.isnan(delta)):
+                raise ValueError("delta contains nan value(s). Convergence halted.")
+            # Only allow small steps
+            if norm(delta) > 10:
+                step_size *= 0.5
+                continue
+
+            beta += delta
+            # Save these as pending result
+            hessian, gradient = h, g
+
             if norm(delta) < epsilon:
                 converging = False
 
@@ -1035,12 +1049,7 @@ class CoxPHFitter(BaseFitter):
                             columns=self.hazards_.columns)
 
     def _compute_standard_errors(self):
-        try:
-            se = np.sqrt(inv(-self._hessian_).diagonal())
-        except LinAlgError:
-            # Singular matrix, use pseudo-inverse (pinv) instead?
-            print("Failed to invert hessian. Standard Errors are set to 0.")
-            se = np.zeros_like(self._hessian_.diagonal())
+        se = np.sqrt(inv(-self._hessian_).diagonal())
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
