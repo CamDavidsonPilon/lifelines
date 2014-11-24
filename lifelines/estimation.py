@@ -1069,7 +1069,7 @@ class CoxPHFitter(BaseFitter):
         print('n={}, number of events={}'.format(self.data.shape[0],
                                                  np.where(self.event_observed)[0].shape[0]),
               end='\n\n')
-        print(df.to_string())
+        print(df.to_string(float_format=lambda f: '{:.3e}'.format(f)))
         # Significance code explanation
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
