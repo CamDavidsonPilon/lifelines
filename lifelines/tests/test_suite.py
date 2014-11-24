@@ -914,8 +914,10 @@ class CoxRegressionTests(unittest.TestCase):
             scores = k_fold_cross_validation(cf, data_pred,
                                              duration_col='t',
                                              event_col='E', k=3)
-            self.assertTrue(scores.mean() > 0.50,
-                            "CoxPH should solve this simple data")
+            expected = 0.9
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            self.assertTrue(scores.mean() > expected,
+                            msg.format(expected, scores.mean()))
 
     def test_crossval_with_normalized_data(self):
         for data_pred in [data_pred1, data_pred2]:
@@ -943,8 +945,10 @@ class CoxRegressionTests(unittest.TestCase):
             scores = k_fold_cross_validation(cf, data_norm,
                                              duration_col='t',
                                              event_col='E', k=3)
-            self.assertTrue(scores.mean() > 0.50,
-                            "CoxPH should solve this simple normalized data")
+            expected = 0.9
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            self.assertTrue(scores.mean() > expected,
+                            msg.format(expected, scores.mean()))
 
     def test_output_against_R(self):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
@@ -991,13 +995,14 @@ data_nus['E'] = True
 N = 50
 data_pred1 = pd.DataFrame()
 data_pred1['x1'] = np.random.uniform(size=N)
-data_pred1['t'] = 1 + data_pred1['x1'] + np.random.exponential(0.05, N)
+data_pred1['t'] = 1 + data_pred1['x1'] + np.random.normal(0, 0.07, size=N)
 data_pred1['E'] = True
 
 data_pred2 = pd.DataFrame()
 data_pred2['x1'] = np.random.uniform(size=N)
 data_pred2['x2'] = np.random.uniform(size=N)
-data_pred2['t'] = 1 + data_pred2['x1'] + data_pred2['x2'] + np.random.exponential(1, N)
+data_pred2['t'] = (1 + data_pred2['x1'] + data_pred2['x2'] +
+                   np.random.normal(0, 0.07, size=N))
 data_pred2['E'] = True
 
 
