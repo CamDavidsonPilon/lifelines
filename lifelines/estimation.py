@@ -1007,6 +1007,8 @@ class CoxPHFitter(BaseFitter):
         self.event_observed = E
 
         self.baseline_hazard_ = self._compute_baseline_hazard()
+        self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
+        self.baseline_survival_ = exp(-self.baseline_cumulative_hazard_)
         return self
 
     def _check_values(self, X):
@@ -1050,15 +1052,24 @@ class CoxPHFitter(BaseFitter):
         print(df.to_string())
         return
 
-    def predict_hazard(self, X):
+    def predict_partial_hazard(self, X):
         """
         X: a (n,d) covariate matrix
 
-        Returns the survival functions for the individuals
+        Returns the partial hazard for the individuals, partial since the 
+        baseline hazard is not included. Equal to \exp{\beta X}
         """
-        v = exp(np.dot(X, self.hazards_.T))
-        bh = self.baseline_hazard_.values
-        return pd.DataFrame(np.dot(bh, v.T), index=self.baseline_hazard_.index)
+        return exp(np.dot(X, self.hazards_.T))
+
+    def predict_cumulative_hazard(self, X):
+        """
+        X: a (n,d) covariate matrix
+
+        Returns the cumulative hazard for the individuals.
+        """
+        v = self.predict_partial_hazard(X)
+        s_0 = self.baseline_survival_
+        return pd.DataFrame(-np.dot( np.log(s_0), v.T), index=self.baseline_survival_.index)
 
     def predict_survival_function(self, X):
         """
@@ -1066,7 +1077,7 @@ class CoxPHFitter(BaseFitter):
 
         Returns the survival functions for the individuals
         """
-        return exp(-self.predict_hazard(X).cumsum(0))
+        return exp(-self.predict_cumulative_hazard(X))
 
     def predict_percentile(self, X, p=0.5):
         """
@@ -1099,18 +1110,19 @@ class CoxPHFitter(BaseFitter):
 
         event_table = survival_table_from_events(self.durations.values,
                                                  self.event_observed.values,
-                                                 np.zeros_like(self.durations), 
-                                                 include_births=False)
-        n, d = event_table.shape
+                                                 np.zeros_like(self.durations))
 
-        baseline_hazard_ = pd.DataFrame(np.zeros((n, 1)),
+        baseline_hazard_ = pd.DataFrame(np.zeros((event_table.shape[0], 1)),
                                         index=event_table.index,
                                         columns=['baseline hazard'])
 
         for t, s in event_table.iterrows():
-            less = np.array(self.durations <= t)
-            baseline_hazard_.ix[t] = (s['observed'] /
-                                      ind_hazards[less].sum())
+            less = np.array(self.durations >= t)
+            if ind_hazards[less].sum() == 0:
+                v = 0
+            else:
+                v = (s['observed'] / ind_hazards[less].sum())
+            baseline_hazard_.ix[t] = v
 
         return baseline_hazard_
 
