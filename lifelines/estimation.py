@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import numpy as np
-from numpy.linalg import LinAlgError, inv, solve, norm
+from numpy.linalg import LinAlgError, inv, solve, norm, lstsq
 from numpy import dot, exp
 from numpy.random import beta
 from scipy.integrate import trapz
@@ -937,7 +937,13 @@ class CoxPHFitter(BaseFitter):
         while converging:
             output = get_gradients(X, beta, T, E, include_likelihood=include_likelihood)
             hessian, gradient = output[:2]
-            delta = solve(-hessian, step_size * gradient.T)
+            try:
+                delta = solve(-hessian, step_size * gradient.T)
+            except LinAlgError:
+                # Singular matrix, solve approximately instead of exact
+                res = lstsq(-hessian, step_size * gradient.T)
+                delta = res[0]
+
             beta = delta + beta
             if pd.isnull(delta).sum() >= 1:
                 raise ValueError("delta contains nan value(s). Converge halted.")
@@ -1029,7 +1035,12 @@ class CoxPHFitter(BaseFitter):
                             columns=self.hazards_.columns)
 
     def _compute_standard_errors(self):
-        se = np.sqrt(inv(-self._hessian_).diagonal())
+        try:
+            se = np.sqrt(inv(-self._hessian_).diagonal())
+        except LinAlgError:
+            # Singular matrix, use pseudo-inverse (pinv) instead?
+            print("Failed to invert hessian. Standard Errors are set to 0.")
+            se = np.zeros_like(self._hessian_.diagonal())
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
