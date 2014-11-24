@@ -96,8 +96,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
 
 
 def survival_table_from_events(durations, event_observed, min_observations,
-                               columns=["removed", "observed", "censored", "entrance"], weights=None,
-                               include_births=True):
+                               columns=["removed", "observed", "censored", "entrance"], weights=None):
     """
     Parameters:
         durations: (n,1) array of event times (durations individual was observed for)
@@ -108,8 +107,6 @@ def survival_table_from_events(durations, event_observed, min_observations,
         columns: a 3-length array to call the, in order, removed individuals, observed deaths
           and censorships.
         weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
-        include_births: include a "entrance" column in the output.
-
     Returns:
         Pandas DataFrame with index as the unique times in event_times. The columns named
         'removed' refers to the number of individuals who were removed from the population
@@ -149,11 +146,8 @@ def survival_table_from_events(durations, event_observed, min_observations,
     births_table = births.groupby('event_at').sum()
 
     # this next line can be optimized for when min_observerations is all zeros.
-    if include_births:
-        event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
-    else:
-        event_table = death_table.fillna(0)
-    return event_table
+    event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
+    return event_table.astype(int)
 
 
 def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
