@@ -13,6 +13,7 @@ from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
     epanechnikov_kernel, StatError, coalesce
 from lifelines.progress_bar import progress_bar
+from lifelines.statistics import concordance_index
 
 
 class BaseFitter(object):
@@ -1040,6 +1041,18 @@ class CoxPHFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
+    def _significance_code(self, p):
+        if p < 0.001:
+            return '***'
+        elif p < 0.01:
+            return '**'
+        elif p < 0.05:
+            return '*'
+        elif p < 0.1:
+            return '.'
+        else:
+            return ' '
+
     def summary(self):
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.ix['coef'].values
@@ -1049,14 +1062,28 @@ class CoxPHFitter(BaseFitter):
         df['p'] = self._compute_p_values()
         df['lower %.2f' % self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
+        # Significance codes last
+        df[''] = [self._significance_code(p) for p in df['p']]
+
+        # Print information about data first
+        print('n={}, number of events={}'.format(self.data.shape[0],
+                                                 np.where(self.event_observed)[0].shape[0]),
+              end='\n\n')
         print(df.to_string())
+        # Significance code explanation
+        print('---')
+        print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
+              end='\n\n')
+        print("Concordance =", concordance_index(self.durations,
+                                                 self.predict(self.data),
+                                                 self.event_observed))
         return
 
     def predict_partial_hazard(self, X):
         """
         X: a (n,d) covariate matrix
 
-        Returns the partial hazard for the individuals, partial since the 
+        Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to \exp{\beta X}
         """
         return exp(np.dot(X, self.hazards_.T))
