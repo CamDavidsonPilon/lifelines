@@ -118,6 +118,12 @@ class MiscTests(unittest.TestCase):
         npt.assert_array_equal(T, T_)
         npt.assert_array_equal(C, C_)
 
+    def test_survival_table_to_events_casts_to_float(self):
+        T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([True, False, True, True, True, True])
+        d = survival_table_from_events(T, C, np.zeros_like(T))
+        npt.assert_array_equal(d['censored'].values, np.array([ 0.,  0.,  1.,  0.,  0.,  0.]))
+        npt.assert_array_equal(d['removed'].values, np.array([ 0.,  1.,  1.,  1.,  2.,  1.]))
+
     def test_ci_labels(self):
         naf = NelsonAalenFitter()
         expected = ['upper', 'lower']

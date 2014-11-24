@@ -147,7 +147,7 @@ def survival_table_from_events(durations, event_observed, min_observations,
 
     # this next line can be optimized for when min_observerations is all zeros.
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
-    return event_table.astype(int)
+    return event_table.astype(float)
 
 
 def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
