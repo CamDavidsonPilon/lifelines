@@ -35,6 +35,12 @@ from ..datasets import generate_lcd_dataset, generate_rossi_dataset, \
 
 class MiscTests(unittest.TestCase):
 
+    def test_normalize(self):
+        df = pd.read_csv('./datasets/larynx.csv')
+        n,d = df.shape
+        npt.assert_almost_equal(normalize(df).mean(0).values, np.zeros(d))
+        npt.assert_almost_equal(normalize(df).std(0).values, np.ones(d))
+
     def test_qth_survival_times_with_varying_datatype_inputs(self):
         sf_list = [1.0, 0.75, 0.5, 0.25, 0.0]
         sf_array = np.array([1.0, 0.75, 0.5, 0.25, 0.0])

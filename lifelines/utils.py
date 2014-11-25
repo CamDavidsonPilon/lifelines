@@ -315,6 +315,8 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
 
     return scores
 
+def normalize(X):
+    return (X - X.mean(0))/X.std(0)
 
 def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2

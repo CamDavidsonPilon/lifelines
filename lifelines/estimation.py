@@ -11,7 +11,7 @@ import pandas as pd
 
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
-    epanechnikov_kernel, StatError, coalesce
+    epanechnikov_kernel, StatError, coalesce, normalize
 from lifelines.progress_bar import progress_bar
 from lifelines.statistics import concordance_index
 
@@ -780,8 +780,9 @@ class CoxPHFitter(BaseFitter):
          'Efron' is available.
     """
 
-    def __init__(self, alpha=0.95, tie_method='Efron'):
+    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True):
         self.alpha = alpha
+        self.normalize = normalize
         if tie_method != 'Efron':
             raise NotImplementedError("Only Efron is available atm.")
         self.tie_method = tie_method
@@ -964,7 +965,7 @@ class CoxPHFitter(BaseFitter):
             if norm(delta) < epsilon:
                 converging = False
 
-            if i % 10 == 0 and show_progress:
+            if ((i % 10) == 0) and show_progress:
                 print("Iteration %d: delta = %.5f" % (i, norm(delta)))
             i += 1
 
@@ -1011,6 +1012,9 @@ class CoxPHFitter(BaseFitter):
         E = df[event_col]
         del df[duration_col]
         del df[event_col]
+
+        if self.normalize:
+            df = normalize(df)
 
         E = E.astype(bool)
         self._check_values(df)
