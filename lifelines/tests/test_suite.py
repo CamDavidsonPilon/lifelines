@@ -530,6 +530,10 @@ class StatisticalTests(unittest.TestCase):
         self.assertTrue(abs(concordance_index(T, P) - 0.5) < 0.05)
         self.assertTrue(abs(concordance_index(T, P, C) - 0.5) < 0.05)
 
+    def test_concordance_index_returns_same_after_shifting(self):
+        T = np.array([1,2,3,4,5,6])
+        T_ = np.array([2,1,4,6,5,3])
+        self.assertTrue( concordance_index(T, T_) == concordance_index(T - 5, T_ - 5) == concordance_index(T, T_ - 5) == concordance_index(T - 5, T_))
 
 class AalenAdditiveModelTests(unittest.TestCase):
 
