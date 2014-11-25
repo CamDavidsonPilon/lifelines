@@ -1012,7 +1012,6 @@ class CoxPHFitter(BaseFitter):
         E = df[event_col]
         del df[duration_col]
         del df[event_col]
-
         if self.normalize:
             df = normalize(df)
 

@@ -915,9 +915,32 @@ class CoxRegressionTests(unittest.TestCase):
         assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self):
-        cf = CoxPHFitter()
+        cf = CoxPHFitter(normalize=False)
         cf.fit(data_nus, duration_col='t', event_col='E')
         self.assertTrue(np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
+
+    def test_crossval_for_cox_ph_with_normalizing_times(self):
+        cf = CoxPHFitter()
+
+        for data_pred in [data_pred1, data_pred2]:
+
+            #why does this 
+            data_norm = data_pred.copy()
+            times = data_norm['t']
+            # Normalize to mean = 0 and standard deviation = 1
+            times -= np.mean(times)
+            times /= np.std(times)
+            data_norm['t'] = times
+
+            scores = k_fold_cross_validation(cf, data_norm,
+                                             duration_col='t',
+                                             event_col='E', k=3)
+
+
+            expected = 0.9
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            self.assertTrue(scores.mean() > expected,
+                            msg.format(expected, scores.mean()))
 
     def test_crossval_for_cox_ph(self):
         cf = CoxPHFitter()
@@ -926,6 +949,8 @@ class CoxRegressionTests(unittest.TestCase):
             scores = k_fold_cross_validation(cf, data_pred,
                                              duration_col='t',
                                              event_col='E', k=3)
+
+
             expected = 0.9
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             self.assertTrue(scores.mean() > expected,
@@ -965,14 +990,14 @@ class CoxRegressionTests(unittest.TestCase):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         df = generate_rossi_dataset()
-        cf = CoxPHFitter()
+        cf = CoxPHFitter(normalize=False)
         cf.fit(df, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
     def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
         df = pd.read_csv('./datasets/kidney_transplant.csv', usecols=['time','death','black_male','white_male','black_female'])
-        cf = CoxPHFitter()
+        cf = CoxPHFitter(normalize=False)
         cf.fit(df, duration_col='time', event_col='death')
 
         # coefs
@@ -980,16 +1005,22 @@ class CoxRegressionTests(unittest.TestCase):
         expected_coefs = np.array([[0.1596, 0.2484, 0.6567]])
         npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=4)
 
-    def test_se_and_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
+    def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
         df = pd.read_csv('./datasets/larynx.csv')
-        cf = CoxPHFitter()
+        cf = CoxPHFitter(normalize=False)
         cf.fit(df, duration_col='time', event_col='death')
 
         #standard errors
         actual_se = cf._compute_standard_errors().values
         expected_se = np.array([[0.0143,  0.4623,  0.3561,  0.4222]])
         npt.assert_array_almost_equal(actual_se, expected_se, decimal=2)
+
+    def test_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
+        # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
+        df = pd.read_csv('./datasets/larynx.csv')
+        cf = CoxPHFitter()
+        cf.fit(df, duration_col='time', event_col='death')
 
         #p-values
         actual_p = cf._compute_p_values()
