@@ -680,7 +680,7 @@ class RegressionTests(unittest.TestCase):
         t = df['time']
         normalized_df = df.copy()
         normalized_df['time'] = (normalized_df['time'] - t.mean())/t.std()
-        
+
         for fitter in [self.cph, self.aaf]:
             # we drop indexs since aaf will have a different "time" index.
             hazards = fitter.fit(df, duration_col='time', event_col='death').hazards_.reset_index(drop=True)
@@ -960,7 +960,7 @@ class CoxRegressionTests(unittest.TestCase):
             self.assertTrue(scores.mean() > expected,
                             msg.format(expected, scores.mean()))
 
-    def test_crossval_with_normalized_data(self):
+    def test_crossval_for_cox_ph_normalized(self):
         cf = CoxPHFitter()
         for data_pred in [data_pred1, data_pred2]:
             data_norm = data_pred.copy()
@@ -1005,7 +1005,7 @@ class CoxRegressionTests(unittest.TestCase):
         cf.fit(df, duration_col='time', event_col='death')
 
         # coefs
-        actual_coefs = cf.hazards_.values 
+        actual_coefs = cf.hazards_.values
         expected_coefs = np.array([[0.1596, 0.2484, 0.6567]])
         npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=4)
 
