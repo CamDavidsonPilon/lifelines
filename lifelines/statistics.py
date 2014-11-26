@@ -41,13 +41,25 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
     event_times = np.array(event_times, dtype=float)
     predicted_event_times = np.array(predicted_event_times, dtype=float)
 
-    if event_observed is None:
-        event_observed = np.ones(event_times.shape[0], dtype=float)
+    # Allow for (n, 1) or (1, n) arrays
+    if event_times.ndim == 2 and (event_times.shape[0] == 1 or
+                                  event_times.shape[1] == 1):
+        # Flatten array
+        event_times = event_times.ravel()
+    # Allow for (n, 1) or (1, n) arrays
+    if (predicted_event_times.ndim == 2 and
+        (predicted_event_times.shape[0] == 1 or
+         predicted_event_times.shape[1] == 1)):
+        # Flatten array
+        predicted_event_times = predicted_event_times.ravel()
 
     if event_times.shape != predicted_event_times.shape:
         raise ValueError("Event times and predictions must have the same shape")
     if event_times.ndim != 1:
         raise ValueError("Event times can only be 1-dimensional: (n,)")
+
+    if event_observed is None:
+        event_observed = np.ones(event_times.shape[0], dtype=float)
 
     # 100 times faster to calculate in Fortran
     return _cindex(event_times,
