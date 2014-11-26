@@ -939,6 +939,28 @@ class CoxRegressionTests(unittest.TestCase):
         cf.fit(data_nus, duration_col='t', event_col='E')
         self.assertTrue(np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
 
+    def test_data_sorting(self):
+        # During fit, CoxPH copies the training data and sorts it
+        # Make sure the final concordance matches betweens sorted
+        # and unsorted versions of the data set to verify that
+        # the order was not screwed up
+
+        cf = CoxPHFitter()
+        cf.fit(data_pred2, duration_col='t', event_col='E')
+
+        # Internal training c-index
+        ci_trn = concordance_index(cf.durations,
+                                   -cf.predict_partial_hazard(cf.data).ravel(),
+                                   cf.event_observed)
+        # Against original order
+        ci_org = concordance_index(data_pred2['t'],
+                                   -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).ravel(),
+                                   data_pred2['E'])
+
+        self.assertEqual(ci_org, ci_trn,
+                         "Reordering should not change concordance index for cox!")
+
+
     def test_crossval_for_cox_ph_with_normalizing_times(self):
         cf = CoxPHFitter()
 
