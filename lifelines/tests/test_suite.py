@@ -1052,7 +1052,7 @@ class CoxRegressionTests(unittest.TestCase):
         #p-values
         actual_p = cf._compute_p_values()
         expected_p = np.array([0.1847, 0.7644,  0.0730, 0.00])
-        npt.assert_array_almost_equal(actual_p, expected_p, decimal=3)
+        npt.assert_array_almost_equal(actual_p, expected_p, decimal=2)
 
 
 # some data
@@ -1082,14 +1082,14 @@ data_nus['E'] = True
 N = 150
 data_pred1 = pd.DataFrame()
 data_pred1['x1'] = np.random.uniform(size=N)
-data_pred1['t'] = 1 + data_pred1['x1'] + np.random.normal(0, 0.07, size=N)
+data_pred1['t'] = 1 + data_pred1['x1'] + np.random.normal(0, 0.05, size=N)
 data_pred1['E'] = True
 
 data_pred2 = pd.DataFrame()
 data_pred2['x1'] = np.random.uniform(size=N)
 data_pred2['x2'] = np.random.uniform(size=N)
 data_pred2['t'] = (1 + data_pred2['x1'] + data_pred2['x2'] +
-                   np.random.normal(0, 0.07, size=N))
+                   np.random.normal(0, 0.05, size=N))
 data_pred2['E'] = True
 
 
