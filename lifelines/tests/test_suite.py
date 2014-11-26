@@ -659,6 +659,22 @@ class AalenAdditiveModelTests(unittest.TestCase):
         self.assertTrue(isinstance(result, pd.Series))
         self.assertTrue(result.shape == (x.shape[0],))
 
+    def test_crossval_for_aalen_add(self):
+        aaf = AalenAdditiveFitter()
+
+        for data_pred in [data_pred1, data_pred2]:
+            mean_scores = []
+            for repeat in range(20):
+                scores = k_fold_cross_validation(aaf, data_pred,
+                                                 duration_col='t',
+                                                 event_col='E', k=3)
+                mean_scores.append(np.mean(scores))
+
+            expected = 0.85
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            self.assertTrue(np.mean(mean_scores) > expected,
+                            msg.format(expected, scores.mean())) 
+
 class RegressionTests(unittest.TestCase):
 
     def setUp(self):
