@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import numpy as np
-from numpy.linalg import LinAlgError, inv, solve, norm, lstsq
+from numpy.linalg import LinAlgError, inv, solve, norm
 from numpy import dot, exp
 from numpy.random import beta
 from scipy.integrate import trapz

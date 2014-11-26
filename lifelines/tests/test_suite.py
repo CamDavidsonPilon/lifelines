@@ -962,7 +962,7 @@ class CoxRegressionTests(unittest.TestCase):
             expected = 0.85
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             self.assertTrue(np.mean(mean_scores) > expected,
-                            msg.format(expected, scores.mean()))
+                            msg.format(expected, np.mean(mean_scores)))
 
     def test_crossval_for_cox_ph(self):
         cf = CoxPHFitter()
@@ -978,7 +978,7 @@ class CoxRegressionTests(unittest.TestCase):
             expected = 0.85
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             self.assertTrue(np.mean(mean_scores) > expected,
-                            msg.format(expected, scores.mean()))
+                            msg.format(expected, np.mean(mean_scores)))
 
     def test_crossval_for_cox_ph_normalized(self):
         cf = CoxPHFitter()
@@ -1011,7 +1011,7 @@ class CoxRegressionTests(unittest.TestCase):
             expected = 0.85
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             self.assertTrue(np.mean(mean_scores) > expected,
-                            msg.format(expected, scores.mean()))
+                            msg.format(expected, np.mean(mean_scores)))
 
     def test_output_against_R(self):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
