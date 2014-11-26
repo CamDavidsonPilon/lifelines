@@ -1003,7 +1003,10 @@ class CoxRegressionTests(unittest.TestCase):
         self.assertEqual(ci_org, ci_trn)
 
 
-    def test_cox_ph_predictions(self):
+    @unittest.expectedFailure
+    def test_cox_ph_prediction_monotonicity(self):
+        # Concordance wise, all prediction methods should be monotonic versions
+        # of one-another, unless numerical factors screw it up.
         t = data_pred2['t']
         e = data_pred2['E']
         X = data_pred2[['x1', 'x2']]
