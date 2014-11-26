@@ -1126,13 +1126,17 @@ class CoxPHFitter(BaseFitter):
         # Make sure column ordering is the same as during fitting
         if isinstance(X, pd.DataFrame):
             X = X[self.data.columns]
-        # If it's not a dataframe, order is up to user
+            index = X.index
+        else:
+            # If it's not a dataframe, order is up to user
+            index = np.arange(X.shape[0])
 
         if self.normalize:
             # Assuming correct ordering and number of columns
             X = normalize(X, self._norm_mean.values, self._norm_std.values)
 
-        return exp(np.dot(X, self.hazards_.T))
+        return pd.DataFrame(exp(np.dot(X, self.hazards_.T)),
+                            index=index, columns=['exp(beta X)'])
 
     def predict_cumulative_hazard(self, X):
         """
@@ -1179,7 +1183,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        ind_hazards = exp(np.dot(self.data, self.hazards_.T))
+        ind_hazards = self.predict_partial_hazard(self.data).values
 
         event_table = survival_table_from_events(self.durations.values,
                                                  self.event_observed.values,

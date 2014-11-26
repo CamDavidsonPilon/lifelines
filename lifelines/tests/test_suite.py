@@ -993,11 +993,11 @@ class CoxRegressionTests(unittest.TestCase):
 
         # Internal training set
         ci_trn = concordance_index(cf.durations,
-                                   -cf.predict_partial_hazard(cf.data).ravel(),
+                                   -cf.predict_partial_hazard(cf.data).values,
                                    cf.event_observed)
         # New data should normalize in the exact same way
         ci_org = concordance_index(data_pred2['t'],
-                                   -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).ravel(),
+                                   -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).values,
                                    data_pred2['E'])
 
         self.assertEqual(ci_org, ci_trn)
@@ -1016,7 +1016,7 @@ class CoxRegressionTests(unittest.TestCase):
 
             # Base comparison is partial_hazards
             ci_ph = concordance_index(t,
-                                      -cf.predict_partial_hazard(X).ravel(),
+                                      -cf.predict_partial_hazard(X).values,
                                       e)
 
             ci_med = concordance_index(t,
