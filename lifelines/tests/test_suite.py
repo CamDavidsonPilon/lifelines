@@ -1063,7 +1063,7 @@ data_nus = pd.DataFrame([
 data_nus['E'] = True
 
 # Simple sets for predictions
-N = 50
+N = 150
 data_pred1 = pd.DataFrame()
 data_pred1['x1'] = np.random.uniform(size=N)
 data_pred1['t'] = 1 + data_pred1['x1'] + np.random.normal(0, 0.07, size=N)
