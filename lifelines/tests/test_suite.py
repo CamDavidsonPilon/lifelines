@@ -35,6 +35,15 @@ from ..datasets import generate_lcd_dataset, generate_rossi_dataset, \
 
 class MiscTests(unittest.TestCase):
 
+    def test_unnormalize(self):
+        df = pd.read_csv('./datasets/larynx.csv')
+        m = df.mean(0)
+        s = df.std(0)
+
+        ndf = normalize(df)
+
+        npt.assert_almost_equal(df.values, unnormalize(ndf, m, s).values)
+
     def test_normalize(self):
         df = pd.read_csv('./datasets/larynx.csv')
         n,d = df.shape
@@ -673,7 +682,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
             expected = 0.85
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             self.assertTrue(np.mean(mean_scores) > expected,
-                            msg.format(expected, scores.mean())) 
+                            msg.format(expected, scores.mean()))
 
 class RegressionTests(unittest.TestCase):
 
@@ -939,26 +948,61 @@ class CoxRegressionTests(unittest.TestCase):
         cf.fit(data_nus, duration_col='t', event_col='E')
         self.assertTrue(np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
 
-    def test_data_sorting(self):
-        # During fit, CoxPH copies the training data and sorts it
-        # Make sure the final concordance matches betweens sorted
-        # and unsorted versions of the data set to verify that
-        # the order was not screwed up
+    def test_column_shuffling(self):
+        # Order of columns should not matter for dataframes
+        cf = CoxPHFitter(normalize=False)
+        cf.fit(data_pred2, 't', 'E')
 
-        cf = CoxPHFitter()
+        # Reversed order
+        X = data_pred2[cf.data.columns]
+        X_reversed = data_pred2[list(reversed(cf.data.columns))]
+
+        # Predictions should be exactly the same
+        hazards = cf.predict_partial_hazard(X)
+        hazards_r = cf.predict_partial_hazard(X_reversed)
+
+        self.assertTrue(np.all(hazards == hazards_r))
+
+        # Should still work with numpy arrays
+        hazards_n = cf.predict_partial_hazard(np.array(X))
+        self.assertTrue(np.all(hazards == hazards_n))
+
+
+        # Again with normalization
+        cf = CoxPHFitter(normalize=True)
+        cf.fit(data_pred2, 't', 'E')
+
+        # Predictions should be exactly the same
+        hazards = cf.predict_partial_hazard(X)
+        hazards_r = cf.predict_partial_hazard(X_reversed)
+
+        self.assertTrue(np.all(hazards == hazards_r))
+
+        # Should still work with numpy arrays
+        hazards_n = cf.predict_partial_hazard(np.array(X))
+        self.assertTrue(np.all(hazards == hazards_n))
+
+
+    def test_data_normalization(self):
+        # During fit, CoxPH copies the training data and normalizes it.
+        # Future calls should be normalized in the same way and
+        # internal training set should not be saved in a normalized state.
+
+        cf = CoxPHFitter(normalize=True)
         cf.fit(data_pred2, duration_col='t', event_col='E')
 
-        # Internal training c-index
+        # Internal training set
         ci_trn = concordance_index(cf.durations,
                                    -cf.predict_partial_hazard(cf.data).ravel(),
                                    cf.event_observed)
-        # Against original order
+        # New data should normalize in the exact same way
         ci_org = concordance_index(data_pred2['t'],
                                    -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).ravel(),
                                    data_pred2['E'])
 
-        self.assertEqual(ci_org, ci_trn,
-                         "Reordering should not change concordance index for cox!")
+        self.assertEqual(ci_org, ci_trn)
+
+
 
 
     def test_crossval_for_cox_ph_with_normalizing_times(self):

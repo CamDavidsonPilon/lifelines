@@ -126,7 +126,7 @@ def survival_table_from_events(durations, event_observed, min_observations,
         0               0         0         0        11
         6               1         1         0         0
         7               2         2         0         0
-        9               3         3         0         0 
+        9               3         3         0         0
         13              3         3         0         0
         15              2         2         0         0
 
@@ -315,8 +315,22 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
 
     return scores
 
-def normalize(X):
-    return (X - X.mean(0))/X.std(0)
+def normalize(X, mean=None, std=None):
+    '''
+    Normalize X. If mean OR std is None, normalizes
+    X to have mean 0 and std 1.
+    '''
+    if mean is None or std is None:
+        mean = X.mean(0)
+        std = X.std(0)
+    return (X - mean) / std
+
+def unnormalize(X, mean, std):
+    '''
+    Reverse a normalization. Requires the original mean and
+    standard deviation of the data set.
+    '''
+    return X * std + mean
 
 def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2

@@ -1012,7 +1012,14 @@ class CoxPHFitter(BaseFitter):
         E = df[event_col]
         del df[duration_col]
         del df[event_col]
+
+        # Store original non-normalized data
+        self.data = df
+
         if self.normalize:
+            # Need to normalize future inputs as well
+            self._norm_mean = df.mean(0)
+            self._norm_std = df.std(0)
             df = normalize(df)
 
         E = E.astype(bool)
@@ -1026,7 +1033,6 @@ class CoxPHFitter(BaseFitter):
                                      index=['coef'])
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self.data = df
         self.durations = T
         self.event_observed = E
 
@@ -1107,9 +1113,25 @@ class CoxPHFitter(BaseFitter):
         """
         X: a (n,d) covariate matrix
 
+        If covariates were normalized during fitting, they are normalized
+        in the same way here.
+
+        If X is a dataframe, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+
         Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to \exp{\beta X}
         """
+        # Make sure column ordering is the same as during fitting
+        if isinstance(X, pd.DataFrame):
+            X = X[self.data.columns]
+        # If it's not a dataframe, order is up to user
+
+        if self.normalize:
+            # Assuming correct ordering and number of columns
+            X = normalize(X, self._norm_mean.values, self._norm_std.values)
+
         return exp(np.dot(X, self.hazards_.T))
 
     def predict_cumulative_hazard(self, X):
