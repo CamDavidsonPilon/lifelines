@@ -1003,6 +1003,31 @@ class CoxRegressionTests(unittest.TestCase):
         self.assertEqual(ci_org, ci_trn)
 
 
+    def test_cox_ph_predictions(self):
+        t = data_pred2['t']
+        e = data_pred2['E']
+        X = data_pred2[['x1', 'x2']]
+
+        for normalize in [True, False]:
+            msg = ("Predict methods should get the same concordance" +
+                   " when {}normalizing".format('' if normalize else 'not '))
+            cf = CoxPHFitter(normalize=normalize)
+            cf.fit(data_pred2, duration_col='t', event_col='E')
+
+            # Base comparison is partial_hazards
+            ci_ph = concordance_index(t,
+                                      -cf.predict_partial_hazard(X).ravel(),
+                                      e)
+
+            ci_med = concordance_index(t,
+                                       cf.predict_median(X).ravel(),
+                                       e)
+            self.assertEqual(ci_ph, ci_med, msg)
+
+            ci_exp = concordance_index(t,
+                                       cf.predict_expectation(X).ravel(),
+                                       e)
+            self.assertEqual(ci_ph, ci_exp, msg)
 
 
     def test_crossval_for_cox_ph_with_normalizing_times(self):
