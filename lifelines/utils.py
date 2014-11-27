@@ -315,6 +315,7 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
 
     return scores
 
+
 def normalize(X, mean=None, std=None):
     '''
     Normalize X. If mean OR std is None, normalizes
@@ -325,6 +326,7 @@ def normalize(X, mean=None, std=None):
         std = X.std(0)
     return (X - mean) / std
 
+
 def unnormalize(X, mean, std):
     '''
     Reverse a normalization. Requires the original mean and
@@ -332,13 +334,14 @@ def unnormalize(X, mean, std):
     '''
     return X * std + mean
 
+
 def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2
     M[abs((t - T)) >= bandwidth] = 0
     return M
 
 
-def significance_code(self, p):
+def significance_code(p):
     if p < 0.001:
         return '***'
     elif p < 0.01:

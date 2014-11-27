@@ -14,7 +14,7 @@ lesser-known technique, for example:
 - sociologists are interested in measure political parties lifetimes, or relationships, or marriages
 - Businesses are interested in what variables affect lifetime value
 
-*lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please ping me at [@cmrn_dp](https://twitter.com/Cmrn_DP) and let me know your 
+*lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please leave an Issue and let us know your 
 thoughts on the library. 
 
 ### Installation:

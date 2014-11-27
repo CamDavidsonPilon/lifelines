@@ -770,6 +770,7 @@ class AalenAdditiveFitter(BaseFitter):
     def predict(self, X):
         return self.predict_median(X)
 
+
 class CoxPHFitter(BaseFitter):
 
     """
@@ -1096,7 +1097,7 @@ class CoxPHFitter(BaseFitter):
               end='\n\n')
         print("Concordance = {:.3f}"
               .format(concordance_index(self.durations,
-                      -self.predict_partial_hazard(self.data).ravel(),
+                      -self.predict_partial_hazard(self.data).values.ravel(),
                       self.event_observed)))
         return
 
@@ -1131,7 +1132,7 @@ class CoxPHFitter(BaseFitter):
         v = self.predict_partial_hazard(X)
         s_0 = self.baseline_survival_
         col = get_index(X)
-        return pd.DataFrame(-np.dot( np.log(s_0), v.T), index=self.baseline_survival_.index, columns=col)
+        return pd.DataFrame(-np.dot(np.log(s_0), v.T), index=self.baseline_survival_.index, columns=col)
 
     def predict_survival_function(self, X):
         """
