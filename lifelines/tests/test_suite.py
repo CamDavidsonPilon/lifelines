@@ -955,33 +955,26 @@ class CoxRegressionTests(unittest.TestCase):
         self.assertTrue(np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
 
     def test_using_dataframes_vs_numpy_arrays(self):
-        # Order of columns should not matter for dataframes
+        # First without normalization
         cf = CoxPHFitter(normalize=False)
         cf.fit(data_pred2, 't', 'E')
 
-        # Reversed order
         X = data_pred2[cf.data.columns]
-        X_reversed = data_pred2[list(reversed(cf.data.columns))]
-
-        # Predictions should be exactly the same
         hazards = cf.predict_partial_hazard(X)
 
-        # Should still work with numpy arrays
+        # A Numpy array should return the same result
         hazards_n = cf.predict_partial_hazard(np.array(X))
         self.assertTrue(np.all(hazards == hazards_n))
 
-
-        # Again with normalization
+        # Now with normalization
         cf = CoxPHFitter(normalize=True)
         cf.fit(data_pred2, 't', 'E')
 
-        # Predictions should be exactly the same
         hazards = cf.predict_partial_hazard(X)
 
-        # Should still work with numpy arrays
+        # Compare with array argument
         hazards_n = cf.predict_partial_hazard(np.array(X))
         self.assertTrue(np.all(hazards == hazards_n))
-
 
     def test_data_normalization(self):
         # During fit, CoxPH copies the training data and normalizes it.
