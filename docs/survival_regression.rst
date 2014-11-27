@@ -399,20 +399,26 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
     from lifelines import CoxPHFitter
 
     rossi_dataset = generate_rossi_dataset()
-    cf = CoxPHFitter(alpha=0.95, tie_method='Efron')
+    cf = CoxPHFitter()
     cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
     print cf.summary()
 
     """
-              coef  exp(coef)  se(coef)         z         p  lower 0.95  upper 0.95
-    fin  -0.379422   0.684257  0.191379 -1.982565  0.047416   -0.754602   -0.004243
-    age  -0.057438   0.944181  0.021999 -2.610869  0.009031   -0.100565   -0.014310
-    race  0.313900   1.368753  0.307993  1.019179  0.308118   -0.289888    0.917687
-    wexp -0.149796   0.860884  0.212224 -0.705837  0.480290   -0.565839    0.266248
-    mar  -0.433704   0.648104  0.381868 -1.135743  0.256064   -1.182316    0.314908
-    paro -0.084871   0.918631  0.195757 -0.433554  0.664612   -0.468631    0.298889
-    prio  0.091497   1.095814  0.028649  3.193777  0.001404    0.035335    0.147660
+    n=432, number of events=114
+
+               coef  exp(coef)  se(coef)          z         p  lower 0.95  upper 0.95
+    fin  -1.897e-01  8.272e-01 9.579e-02 -1.981e+00 4.763e-02  -3.775e-01  -1.938e-03   *
+    age  -3.500e-01  7.047e-01 1.344e-01 -2.604e+00 9.210e-03  -6.134e-01  -8.651e-02  **
+    race  1.032e-01  1.109e+00 1.012e-01  1.020e+00 3.078e-01  -9.516e-02   3.015e-01
+    wexp -7.486e-02  9.279e-01 1.051e-01 -7.124e-01 4.762e-01  -2.809e-01   1.311e-01
+    mar  -1.421e-01  8.675e-01 1.254e-01 -1.134e+00 2.570e-01  -3.880e-01   1.037e-01
+    paro -4.134e-02  9.595e-01 9.522e-02 -4.341e-01 6.642e-01  -2.280e-01   1.453e-01
+    prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-01  **
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    Concordance = 0.642
     """
 
 To access the coefficients and the baseline hazard, you can use ``cf.hazards_`` and ``cf.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_hazard(X)``, ``.predict_survival_function(X)``, etc. 
