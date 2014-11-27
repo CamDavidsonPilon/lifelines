@@ -665,7 +665,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         aaf = AalenAdditiveFitter()
         aaf.fit(X, duration_col='T', event_col='E')
         result = aaf.predict_percentile(x)
-        self.assertTrue(isinstance(result, pd.Series))
+        self.assertTrue(isinstance(result, pd.DataFrame))
         self.assertTrue(result.shape == (x.shape[0],))
 
     def test_crossval_for_aalen_add(self):
