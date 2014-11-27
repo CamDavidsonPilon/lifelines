@@ -11,8 +11,9 @@ import pandas as pd
 
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
-    epanechnikov_kernel, StatError, coalesce
+    epanechnikov_kernel, StatError, coalesce, normalize, significance_code
 from lifelines.progress_bar import progress_bar
+from lifelines.statistics import concordance_index
 
 
 class BaseFitter(object):
@@ -731,7 +732,8 @@ class AalenAdditiveFitter(BaseFitter):
         except:
             X_ = X.copy()
         X_ = X.copy() if not self.fit_intercept else np.c_[X.copy(), np.ones((n, 1))]
-        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline)
+        cols = get_index(X)
+        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=cols)
 
     def predict_survival_function(self, X):
         """
@@ -747,7 +749,8 @@ class AalenAdditiveFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(p, self.predict_survival_function(X))[p]
+        index = get_index(X)
+        return qth_survival_times(p, self.predict_survival_function(X)[index])
 
     def predict_median(self, X):
         """
@@ -760,9 +763,12 @@ class AalenAdditiveFitter(BaseFitter):
         """
         Compute the expected lifetime, E[T], using covarites X.
         """
+        index = get_index(X)
         t = self.cumulative_hazards_.index
-        return pd.Series(trapz(self.predict_survival_function(X).values.T, t))
+        return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
+    def predict(self, X):
+        return self.predict_median(X)
 
 class CoxPHFitter(BaseFitter):
 
@@ -777,8 +783,9 @@ class CoxPHFitter(BaseFitter):
          'Efron' is available.
     """
 
-    def __init__(self, alpha=0.95, tie_method='Efron'):
+    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True):
         self.alpha = alpha
+        self.normalize = normalize
         if tie_method != 'Efron':
             raise NotImplementedError("Only Efron is available atm.")
         self.tie_method = tie_method
@@ -831,7 +838,6 @@ class CoxPHFitter(BaseFitter):
             risk_phi += phi_i
             risk_phi_x += phi_x_i
             risk_phi_x_x += phi_x_x_i
-
             # Calculate sums of Ties, if this is an event
             if ei:
                 x_tie_sum += xi
@@ -857,11 +863,18 @@ class CoxPHFitter(BaseFitter):
 
                 denom = (risk_phi - c * tie_phi)
                 z = (risk_phi_x - c * tie_phi_x)
+
+                if denom == 0:
+                    # Can't divide by zero
+                    raise ValueError("Denominator was zero")
+
                 # Gradient
                 partial_gradient += z / denom
                 # Hessian
                 a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
-                a2 = dot(z.T, z) / (denom ** 2)
+                # In case z and denom both are really small numbers,
+                # make sure to do division before multiplications
+                a2 = dot(z.T / denom, z / denom)
 
                 hessian -= (a1 - a2)
 
@@ -898,7 +911,7 @@ class CoxPHFitter(BaseFitter):
             E: (n) numpy array representing death events.
             initial_beta: (1,d) numpy array of initial starting point for
                           NR algorithm. Default 0.
-            step_size: 0 < float <= 1 to determine a step size in NR algorithm.
+            step_size: float > 0.001 to determine a starting step size in NR algorithm.
             epsilon: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
             include_likelihood: saves the final log-likelihood to the CoxPHFitter under _log_likelihood.
@@ -932,17 +945,30 @@ class CoxPHFitter(BaseFitter):
 
         i = 1
         converging = True
-        while converging:
-            output = get_gradients(X, beta, T, E, include_likelihood=include_likelihood)
-            hessian, gradient = output[:2]
-            delta = solve(-hessian, step_size * gradient.T)
-            beta = delta + beta
-            if pd.isnull(delta).sum() > 1:
-                raise ValueError("delta contains nan value(s). Converge halted.")
+        # 50 iterations steps with N-R is a lot.
+        # Expected convergence is ~10 steps
+        while converging and i < 50 and step_size > 0.001:
+            output = get_gradients(X, beta, T, E,
+                                   include_likelihood=include_likelihood)
+            # Do not override hessian and gradient in case of garbage
+            h, g = output[:2]
+
+            delta = solve(-h, step_size * g.T)
+            if np.any(np.isnan(delta)):
+                raise ValueError("delta contains nan value(s). Convergence halted.")
+            # Only allow small steps
+            if norm(delta) > 10:
+                step_size *= 0.5
+                continue
+
+            beta += delta
+            # Save these as pending result
+            hessian, gradient = h, g
+
             if norm(delta) < epsilon:
                 converging = False
 
-            if i % 10 == 0 and show_progress:
+            if ((i % 10) == 0) and show_progress:
                 print("Iteration %d: delta = %.5f" % (i, norm(delta)))
             i += 1
 
@@ -990,6 +1016,15 @@ class CoxPHFitter(BaseFitter):
         del df[duration_col]
         del df[event_col]
 
+        # Store original non-normalized data
+        self.data = df
+
+        if self.normalize:
+            # Need to normalize future inputs as well
+            self._norm_mean = df.mean(0)
+            self._norm_std = df.std(0)
+            df = normalize(df)
+
         E = E.astype(bool)
         self._check_values(df)
 
@@ -1001,11 +1036,12 @@ class CoxPHFitter(BaseFitter):
                                      index=['coef'])
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self.data = df
         self.durations = T
         self.event_observed = E
 
         self.baseline_hazard_ = self._compute_baseline_hazard()
+        self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
+        self.baseline_survival_ = exp(-self.baseline_cumulative_hazard_)
         return self
 
     def _check_values(self, X):
@@ -1046,18 +1082,56 @@ class CoxPHFitter(BaseFitter):
         df['p'] = self._compute_p_values()
         df['lower %.2f' % self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
-        print(df.to_string())
+        # Significance codes last
+        df[''] = [significance_code(p) for p in df['p']]
+
+        # Print information about data first
+        print('n={}, number of events={}'.format(self.data.shape[0],
+                                                 np.where(self.event_observed)[0].shape[0]),
+              end='\n\n')
+        print(df.to_string(float_format=lambda f: '{:.3e}'.format(f)))
+        # Significance code explanation
+        print('---')
+        print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
+              end='\n\n')
+        print("Concordance = {:.3f}"
+              .format(concordance_index(self.durations,
+                      -self.predict_partial_hazard(self.data).ravel(),
+                      self.event_observed)))
         return
 
-    def predict_hazard(self, X):
+    def predict_partial_hazard(self, X):
         """
         X: a (n,d) covariate matrix
 
-        Returns the survival functions for the individuals
+        If covariates were normalized during fitting, they are normalized
+        in the same way here.
+
+        If X is a dataframe, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+
+        Returns the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to \exp{\beta X}
         """
-        v = exp(np.dot(X, self.hazards_.T))
-        bh = self.baseline_hazard_.values
-        return pd.DataFrame(np.dot(bh, v.T), index=self.baseline_hazard_.index)
+        index = get_index(X)
+
+        if self.normalize:
+            # Assuming correct ordering and number of columns
+            X = normalize(X, self._norm_mean.values, self._norm_std.values)
+
+        return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
+
+    def predict_cumulative_hazard(self, X):
+        """
+        X: a (n,d) covariate matrix
+
+        Returns the cumulative hazard for the individuals.
+        """
+        v = self.predict_partial_hazard(X)
+        s_0 = self.baseline_survival_
+        col = get_index(X)
+        return pd.DataFrame(-np.dot( np.log(s_0), v.T), index=self.baseline_survival_.index, columns=col)
 
     def predict_survival_function(self, X):
         """
@@ -1065,7 +1139,7 @@ class CoxPHFitter(BaseFitter):
 
         Returns the survival functions for the individuals
         """
-        return exp(-self.predict_hazard(X).cumsum(0))
+        return exp(-self.predict_cumulative_hazard(X))
 
     def predict_percentile(self, X, p=0.5):
         """
@@ -1073,7 +1147,8 @@ class CoxPHFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(p, self.predict_survival_function(X))[p]
+        index = get_index(X)
+        return qth_survival_times(p, self.predict_survival_function(X)[index])
 
     def predict_median(self, X):
         """
@@ -1086,29 +1161,46 @@ class CoxPHFitter(BaseFitter):
         """
         Compute the expected lifetime, E[T], using covarites X.
         """
-        v = self.predict_survival_function(X)
-        return pd.Series(trapz(v.values.T, v.index))
+        index = get_index(X)
+        v = self.predict_survival_function(X)[index]
+        return pd.DataFrame(trapz(v.values.T, v.index), index=index)
+
+    def predict(self, X):
+        return self.predict_median(X)
 
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        ind_hazards = exp(np.dot(self.data, self.hazards_.T))
+        ind_hazards = self.predict_partial_hazard(self.data).values
 
         event_table = survival_table_from_events(self.durations.values,
                                                  self.event_observed.values,
                                                  np.zeros_like(self.durations))
-        n, d = event_table.shape
 
-        baseline_hazard_ = pd.DataFrame(np.zeros((n, 1)),
+        baseline_hazard_ = pd.DataFrame(np.zeros((event_table.shape[0], 1)),
                                         index=event_table.index,
                                         columns=['baseline hazard'])
+
         for t, s in event_table.iterrows():
-            baseline_hazard_.ix[t] = (s['observed'] /
-                                      ind_hazards[self.durations <= t].sum())
+            less = np.array(self.durations >= t)
+            if ind_hazards[less].sum() == 0:
+                v = 0
+            else:
+                v = (s['observed'] / ind_hazards[less].sum())
+            baseline_hazard_.ix[t] = v
 
         return baseline_hazard_
 
 
 #### Utils ####
+def get_index(X):
+    if isinstance(X, pd.DataFrame):
+        index = list(X.index)
+    else:
+        # If it's not a dataframe, order is up to user
+        index = list(range(X.shape[0]))
+    return index
+
+
 def _subtract(self, estimate):
     class_name = self.__class__.__name__
     doc_string = """

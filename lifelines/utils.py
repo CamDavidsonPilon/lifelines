@@ -96,7 +96,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
 
 
 def survival_table_from_events(durations, event_observed, min_observations,
-                               columns=["removed", "observed", "censored", 'entrance'], weights=None):
+                               columns=["removed", "observed", "censored", "entrance"], weights=None):
     """
     Parameters:
         durations: (n,1) array of event times (durations individual was observed for)
@@ -106,7 +106,7 @@ def survival_table_from_events(durations, event_observed, min_observations,
           when the subject was first observed. A subject's life is then [min observation + duration observed]
         columns: a 3-length array to call the, in order, removed individuals, observed deaths
           and censorships.
-
+        weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
     Returns:
         Pandas DataFrame with index as the unique times in event_times. The columns named
         'removed' refers to the number of individuals who were removed from the population
@@ -121,13 +121,14 @@ def survival_table_from_events(durations, event_observed, min_observations,
 
         #output
 
-                  removed  observed  censored
+                  removed  observed  censored  entrance
         event_at
-        6               1         1         0
-        7               2         2         0
-        9               3         3         0
-        13              3         3         0
-        15              2         2         0
+        0               0         0         0        11
+        6               1         1         0         0
+        7               2         2         0         0
+        9               3         3         0         0
+        13              3         3         0         0
+        15              2         2         0         0
 
     """
     # deal with deaths and censorships
@@ -146,8 +147,7 @@ def survival_table_from_events(durations, event_observed, min_observations,
 
     # this next line can be optimized for when min_observerations is all zeros.
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
-
-    return event_table
+    return event_table.astype(float)
 
 
 def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
@@ -315,8 +315,37 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
 
     return scores
 
+def normalize(X, mean=None, std=None):
+    '''
+    Normalize X. If mean OR std is None, normalizes
+    X to have mean 0 and std 1.
+    '''
+    if mean is None or std is None:
+        mean = X.mean(0)
+        std = X.std(0)
+    return (X - mean) / std
+
+def unnormalize(X, mean, std):
+    '''
+    Reverse a normalization. Requires the original mean and
+    standard deviation of the data set.
+    '''
+    return X * std + mean
 
 def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2
     M[abs((t - T)) >= bandwidth] = 0
     return M
+
+
+def significance_code(self, p):
+    if p < 0.001:
+        return '***'
+    elif p < 0.01:
+        return '**'
+    elif p < 0.05:
+        return '*'
+    elif p < 0.1:
+        return '.'
+    else:
+        return ' '

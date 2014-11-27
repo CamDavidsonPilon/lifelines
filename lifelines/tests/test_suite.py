@@ -35,6 +35,21 @@ from ..datasets import generate_lcd_dataset, generate_rossi_dataset, \
 
 class MiscTests(unittest.TestCase):
 
+    def test_unnormalize(self):
+        df = pd.read_csv('./datasets/larynx.csv')
+        m = df.mean(0)
+        s = df.std(0)
+
+        ndf = normalize(df)
+
+        npt.assert_almost_equal(df.values, unnormalize(ndf, m, s).values)
+
+    def test_normalize(self):
+        df = pd.read_csv('./datasets/larynx.csv')
+        n,d = df.shape
+        npt.assert_almost_equal(normalize(df).mean(0).values, np.zeros(d))
+        npt.assert_almost_equal(normalize(df).std(0).values, np.ones(d))
+
     def test_qth_survival_times_with_varying_datatype_inputs(self):
         sf_list = [1.0, 0.75, 0.5, 0.25, 0.0]
         sf_array = np.array([1.0, 0.75, 0.5, 0.25, 0.0])
@@ -117,6 +132,12 @@ class MiscTests(unittest.TestCase):
         T_, C_ = survival_events_from_table(d[['censored', 'observed']])
         npt.assert_array_equal(T, T_)
         npt.assert_array_equal(C, C_)
+
+    def test_survival_table_to_events_casts_to_float(self):
+        T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([True, False, True, True, True, True])
+        d = survival_table_from_events(T, C, np.zeros_like(T))
+        npt.assert_array_equal(d['censored'].values, np.array([ 0.,  0.,  1.,  0.,  0.,  0.]))
+        npt.assert_array_equal(d['removed'].values, np.array([ 0.,  1.,  1.,  1.,  2.,  1.]))
 
     def test_ci_labels(self):
         naf = NelsonAalenFitter()
@@ -518,8 +539,12 @@ class StatisticalTests(unittest.TestCase):
         self.assertTrue(abs(concordance_index(T, P) - 0.5) < 0.05)
         self.assertTrue(abs(concordance_index(T, P, C) - 0.5) < 0.05)
 
+    def test_concordance_index_returns_same_after_shifting(self):
+        T = np.array([1,2,3,4,5,6])
+        T_ = np.array([2,1,4,6,5,3])
+        self.assertTrue( concordance_index(T, T_) == concordance_index(T - 5, T_ - 5) == concordance_index(T, T_ - 5) == concordance_index(T - 5, T_))
 
-class AalenAdditiveModelTests(unittest.TestCase):
+class AalenRegressionTests(unittest.TestCase):
 
     def setUp(self):
         self.aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
@@ -531,8 +556,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T = np.random.exponential(size=n)
         X['T'] = T
         X['E'] = 1
-        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         return True
 
@@ -543,16 +567,15 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T = np.random.exponential(size=n)
         X['T'] = T
         X['E'] = 1
-        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         return True
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aaf_panel_dataset(self):
-        aaf = AalenAdditiveFitter()
-        aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
-        aaf.plot()
+        panel_dataset = pd.read_csv('./datasets/panel_test.csv')
+        self.aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
+        self.aaf.plot()
         return
 
     def test_aalen_additive_median_predictions_split_data(self):
@@ -567,11 +590,10 @@ class AalenAdditiveModelTests(unittest.TestCase):
         X['T'] = T
         X['E'] = 1
         # fit it to Aalen's model
-        aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         # predictions
-        T_pred = aaf.predict_median(X[list(range(6))])
+        T_pred = self.aaf.predict_median(X[list(range(6))])
         self.assertTrue(abs((T_pred.values > T).mean() - 0.5) < 0.05)
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
@@ -588,14 +610,13 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
         X['E'] = np.random.binomial(1, 1, n)
-        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         for i in range(d + 1):
             ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
+            ax = self.aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show()
         return
 
@@ -613,14 +634,13 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
         X['E'] = np.random.binomial(1, 0.99, n)
-        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         for i in range(d + 1):
             ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
+            ax = self.aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show()
         return
 
@@ -629,18 +649,75 @@ class AalenAdditiveModelTests(unittest.TestCase):
         df = pd.DataFrame([(16, True, True), (1, True, True), (4, False, True)],
                           columns=['duration', 'done_feeding', 'white'],
                           index=['a', 'b', 'c'])
-        aaf = AalenAdditiveFitter()
-        aaf.fit(df, duration_col='duration', event_col='done_feeding')
+        self.aaf.fit(df, duration_col='duration', event_col='done_feeding')
         return
 
     def test_predict_percentile_returns_a_series(self):
         X = generate_regression_dataset()
         x = X[X.columns - ['T', 'E']]
+        self.aaf.fit(X, duration_col='T', event_col='E')
+        result = self.aaf.predict_percentile(x)
+        self.assertTrue(isinstance(result, pd.DataFrame))
+        self.assertTrue(result.shape == (x.shape[0],1))
+
+    def test_crossval_for_aalen_add(self):
         aaf = AalenAdditiveFitter()
-        aaf.fit(X, duration_col='T', event_col='E')
-        result = aaf.predict_percentile(x)
-        self.assertTrue(isinstance(result, pd.Series))
-        self.assertTrue(result.shape == (x.shape[0],))
+        for data_pred in [data_pred1, data_pred2]:
+            mean_scores = []
+            for repeat in range(20):
+                scores = k_fold_cross_validation(aaf, data_pred,
+                                                 duration_col='t',
+                                                 event_col='E', k=3)
+                mean_scores.append(np.mean(scores))
+
+            expected = 0.90
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            self.assertTrue(np.mean(mean_scores) > expected,
+                            msg.format(expected, scores.mean()))
+
+class RegressionTests(unittest.TestCase):
+
+    def setUp(self):
+        self.aaf = AalenAdditiveFitter()
+        self.cph = CoxPHFitter()
+
+    def test_predict_methods_in_regression_return_same_types(self):
+        X = generate_regression_dataset()
+        x = X[X.columns - ['T', 'E']]
+
+        self.aaf.fit(X, duration_col='T', event_col='E')
+        self.cph.fit(X, duration_col='T', event_col='E')
+
+        for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict', 'predict_cumulative_hazard']:
+            self.assertEqual(type(getattr(self.aaf,fit_method)(x)), type(getattr(self.cph,fit_method)(x)))
+
+    def test_duration_vector_can_be_normalized(self):
+        df = pd.read_csv('./datasets/kidney_transplant.csv')
+        t = df['time']
+        normalized_df = df.copy()
+        normalized_df['time'] = (normalized_df['time'] - t.mean())/t.std()
+
+        for fitter in [self.cph, self.aaf]:
+            # we drop indexs since aaf will have a different "time" index.
+            hazards = fitter.fit(df, duration_col='time', event_col='death').hazards_.reset_index(drop=True)
+            hazards_norm = fitter.fit(normalized_df, duration_col='time', event_col='death').hazards_.reset_index(drop=True)
+            assert_frame_equal(hazards, hazards_norm)
+
+    def test_prediction_methods_respect_index(self):
+        x = data_pred2[['x1','x2']].ix[:3].sort_index(ascending=False)
+        expected_index = pd.Index(np.array([3,2,1,0]))
+
+        self.cph.fit(data_pred2, duration_col='t')
+        npt.assert_array_equal(self.cph.predict_partial_hazard(x).index, expected_index)
+        npt.assert_array_equal(self.cph.predict_percentile(x).index,expected_index)
+        npt.assert_array_equal(self.cph.predict(x).index, expected_index)
+        npt.assert_array_equal(self.cph.predict_expectation(x).index, expected_index)
+
+        self.aaf.fit(data_pred2, duration_col='t')
+        npt.assert_array_equal(self.aaf.predict_percentile(x).index,expected_index)
+        npt.assert_array_equal(self.aaf.predict(x).index, expected_index)
+        npt.assert_array_equal(self.aaf.predict_expectation(x).index, expected_index)
+
 
 
 @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
@@ -873,63 +950,207 @@ class CoxRegressionTests(unittest.TestCase):
         assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self):
-        cf = CoxPHFitter()
+        cf = CoxPHFitter(normalize=False)
         cf.fit(data_nus, duration_col='t', event_col='E')
         self.assertTrue(np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001)
+
+    def test_using_dataframes_vs_numpy_arrays(self):
+        # First without normalization
+        cf = CoxPHFitter(normalize=False)
+        cf.fit(data_pred2, 't', 'E')
+
+        X = data_pred2[cf.data.columns]
+        hazards = cf.predict_partial_hazard(X)
+
+        # A Numpy array should return the same result
+        hazards_n = cf.predict_partial_hazard(np.array(X))
+        self.assertTrue(np.all(hazards == hazards_n))
+
+        # Now with normalization
+        cf = CoxPHFitter(normalize=True)
+        cf.fit(data_pred2, 't', 'E')
+
+        hazards = cf.predict_partial_hazard(X)
+
+        # Compare with array argument
+        hazards_n = cf.predict_partial_hazard(np.array(X))
+        self.assertTrue(np.all(hazards == hazards_n))
+
+    def test_data_normalization(self):
+        # During fit, CoxPH copies the training data and normalizes it.
+        # Future calls should be normalized in the same way and
+        # internal training set should not be saved in a normalized state.
+
+        cf = CoxPHFitter(normalize=True)
+        cf.fit(data_pred2, duration_col='t', event_col='E')
+
+        # Internal training set
+        ci_trn = concordance_index(cf.durations,
+                                   -cf.predict_partial_hazard(cf.data).values,
+                                   cf.event_observed)
+        # New data should normalize in the exact same way
+        ci_org = concordance_index(data_pred2['t'],
+                                   -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).values,
+                                   data_pred2['E'])
+
+        self.assertEqual(ci_org, ci_trn)
+
+
+    @unittest.expectedFailure
+    def test_cox_ph_prediction_monotonicity(self):
+        # Concordance wise, all prediction methods should be monotonic versions
+        # of one-another, unless numerical factors screw it up.
+        t = data_pred2['t']
+        e = data_pred2['E']
+        X = data_pred2[['x1', 'x2']]
+
+        for normalize in [True, False]:
+            msg = ("Predict methods should get the same concordance" +
+                   " when {}normalizing".format('' if normalize else 'not '))
+            cf = CoxPHFitter(normalize=normalize)
+            cf.fit(data_pred2, duration_col='t', event_col='E')
+
+            # Base comparison is partial_hazards
+            ci_ph = concordance_index(t,
+                                      -cf.predict_partial_hazard(X).values,
+                                      e)
+
+            ci_med = concordance_index(t,
+                                       cf.predict_median(X).ravel(),
+                                       e)
+            self.assertEqual(ci_ph, ci_med, msg)
+
+            ci_exp = concordance_index(t,
+                                       cf.predict_expectation(X).ravel(),
+                                       e)
+            self.assertEqual(ci_ph, ci_exp, msg)
+
+
+    def test_crossval_for_cox_ph_with_normalizing_times(self):
+        cf = CoxPHFitter()
+
+        for data_pred in [data_pred1, data_pred2]:
+
+            #why does this
+            data_norm = data_pred.copy()
+            times = data_norm['t']
+            # Normalize to mean = 0 and standard deviation = 1
+            times -= np.mean(times)
+            times /= np.std(times)
+            data_norm['t'] = times
+
+            scores = k_fold_cross_validation(cf, data_norm,
+                                             duration_col='t',
+                                             event_col='E', k=3,
+                                             predictor='predict_partial_hazard')
+
+            mean_score = 1 - np.mean(scores)
+
+            expected = 0.9
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            self.assertTrue(mean_score > expected,
+                            msg.format(expected, mean_score))
+
+    def test_crossval_for_cox_ph(self):
+        cf = CoxPHFitter()
+
+        for data_pred in [data_pred1, data_pred2]:
+            scores = k_fold_cross_validation(cf, data_pred,
+                                             duration_col='t',
+                                             event_col='E', k=3,
+                                             predictor='predict_partial_hazard')
+
+            mean_score = 1 - np.mean(scores) # this is because we are using predict_partial_hazard
+
+            expected = 0.9
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            self.assertTrue(mean_score > expected,
+                            msg.format(expected, mean_score))
+
+    def test_crossval_for_cox_ph_normalized(self):
+        cf = CoxPHFitter()
+        for data_pred in [data_pred1, data_pred2]:
+            data_norm = data_pred.copy()
+
+            times = data_norm['t']
+            # Normalize to mean = 0 and standard deviation = 1
+            times -= np.mean(times)
+            times /= np.std(times)
+            data_norm['t'] = times
+
+            x1 = data_norm['x1']
+            x1 -= np.mean(x1)
+            x1 /= np.std(x1)
+            data_norm['x1'] = x1
+
+            if 'x2' in data_norm.columns:
+                x2 = data_norm['x2']
+                x2 -= np.mean(x2)
+                x2 /= np.std(x2)
+                data_norm['x2'] = x2
+
+            scores = k_fold_cross_validation(cf, data_norm,
+                                             duration_col='t',
+                                             event_col='E', k=3,
+                                             predictor='predict_partial_hazard')
+
+            mean_score = 1 - np.mean(scores) # this is because we are using predict_partial_hazard
+            expected = 0.9
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            self.assertTrue(mean_score > expected,
+                            msg.format(expected, mean_score))
 
     def test_output_against_R(self):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         df = generate_rossi_dataset()
-        cf = CoxPHFitter()
+        cf = CoxPHFitter(normalize=False)
         cf.fit(df, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+
+    def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
+        # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
+        df = pd.read_csv('./datasets/kidney_transplant.csv', usecols=['time','death','black_male','white_male','black_female'])
+        cf = CoxPHFitter(normalize=False)
+        cf.fit(df, duration_col='time', event_col='death')
+
+        # coefs
+        actual_coefs = cf.hazards_.values
+        expected_coefs = np.array([[0.1596, 0.2484, 0.6567]])
+        npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=4)
+
+    def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
+        # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
+        df = pd.read_csv('./datasets/larynx.csv')
+        cf = CoxPHFitter(normalize=False)
+        cf.fit(df, duration_col='time', event_col='death')
+
+        #standard errors
+        actual_se = cf._compute_standard_errors().values
+        expected_se = np.array([[0.0143,  0.4623,  0.3561,  0.4222]])
+        npt.assert_array_almost_equal(actual_se, expected_se, decimal=2)
+
+    def test_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
+        # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
+        df = pd.read_csv('./datasets/larynx.csv')
+        cf = CoxPHFitter()
+        cf.fit(df, duration_col='time', event_col='death')
+
+        #p-values
+        actual_p = cf._compute_p_values()
+        expected_p = np.array([0.1847, 0.7644,  0.0730, 0.00])
+        npt.assert_array_almost_equal(actual_p, expected_p, decimal=2)
 
 
 # some data
 LIFETIMES = np.array([2, 4, 4, 4, 5, 7, 10, 11, 11, 12])
 OBSERVED = np.array([1, 1, 0, 1, 0, 1, 1, 1, 1, 0])
-N = len(LIFETIMES)
 
 # walton's data
 waltons_dataset = generate_waltons_dataset()
 ix = waltons_dataset['group'] == 'miR-137'
 waltonT1 = waltons_dataset.ix[ix]['T']
 waltonT2 = waltons_dataset.ix[~ix]['T']
-
-
-panel_dataset = pd.read_csv(
-    StringIO("""id,t,E,var1,var2
-1,1,0,0,1
-1,2,0,0,1
-1,3,0,4,3
-1,4,1,8,4
-2,1,0,1.2,1
-2,2,0,1.2,2
-2,3,0,1.2,2
-3,1,0,0,1
-3,2,1,1,2
-4,1,0,0,1
-4,2,0,1,2
-4,3,0,1,3
-4,4,0,2,4
-4,5,1,2,5
-5,1,0,1,-1
-5,2,0,2,-1
-5,3,0,3,-1
-6,1,1,3,0
-7,1,0,1,0
-7,2,0,2,1
-7,3,0,3,0
-7,4,0,3,1
-7,5,0,3,0
-7,6,1,3,1
-8,1,0,-1,0
-8,2,1,1,0
-9,1,0,1,1
-9,2,0,2,2
-"""))
-
 
 data_nus = pd.DataFrame([
     [6, 31.4],
@@ -943,6 +1164,20 @@ data_nus = pd.DataFrame([
     [2421, 27.9]],
     columns=['t', 'x'])
 data_nus['E'] = True
+
+# Simple sets for predictions
+N = 150
+data_pred1 = pd.DataFrame()
+data_pred1['x1'] = np.random.uniform(size=N)
+data_pred1['t'] = 1 + data_pred1['x1'] + np.random.normal(0, 0.05, size=N)
+data_pred1['E'] = True
+
+data_pred2 = pd.DataFrame()
+data_pred2['x1'] = np.random.uniform(size=N)
+data_pred2['x2'] = np.random.uniform(size=N)
+data_pred2['t'] = (1 + data_pred2['x1'] + data_pred2['x2'] +
+                   np.random.normal(0, 0.05, size=N))
+data_pred2['E'] = True
 
 
 if __name__ == '__main__':
