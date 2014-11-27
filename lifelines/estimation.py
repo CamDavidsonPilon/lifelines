@@ -1130,7 +1130,8 @@ class CoxPHFitter(BaseFitter):
         """
         v = self.predict_partial_hazard(X)
         s_0 = self.baseline_survival_
-        return pd.DataFrame(-np.dot( np.log(s_0), v.T), index=self.baseline_survival_.index)
+        col = get_index(X)
+        return pd.DataFrame(-np.dot( np.log(s_0), v.T), index=self.baseline_survival_.index, columns=col)
 
     def predict_survival_function(self, X):
         """

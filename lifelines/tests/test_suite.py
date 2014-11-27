@@ -670,7 +670,7 @@ class AalenRegressionTests(unittest.TestCase):
                                                  event_col='E', k=3)
                 mean_scores.append(np.mean(scores))
 
-            expected = 0.85
+            expected = 0.90
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             self.assertTrue(np.mean(mean_scores) > expected,
                             msg.format(expected, scores.mean()))
@@ -1051,10 +1051,7 @@ class CoxRegressionTests(unittest.TestCase):
                                              event_col='E', k=3,
                                              predictor='predict_partial_hazard')
 
-            mean_score = np.mean(scores)
-            # partial_hazard will get inverse concordance
-            if mean_score < 0.5:
-                mean_score = 1 - mean_score
+            mean_score = 1 - np.mean(scores)
 
             expected = 0.9
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
@@ -1070,10 +1067,7 @@ class CoxRegressionTests(unittest.TestCase):
                                              event_col='E', k=3,
                                              predictor='predict_partial_hazard')
 
-            mean_score = np.mean(scores)
-            # partial_hazard will get inverse concordance
-            if mean_score < 0.5:
-                mean_score = 1 - mean_score
+            mean_score = 1 - np.mean(scores) # this is because we are using predict_partial_hazard
 
             expected = 0.9
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
@@ -1107,10 +1101,7 @@ class CoxRegressionTests(unittest.TestCase):
                                              event_col='E', k=3,
                                              predictor='predict_partial_hazard')
 
-            mean_score = np.mean(scores)
-            # partial_hazard will get inverse concordance
-            if mean_score < 0.5:
-                mean_score = 1 - mean_score
+            mean_score = 1 - np.mean(scores) # this is because we are using predict_partial_hazard
             expected = 0.9
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             self.assertTrue(mean_score > expected,
