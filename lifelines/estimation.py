@@ -1194,10 +1194,10 @@ class CoxPHFitter(BaseFitter):
 #### Utils ####
 def get_index(X):
     if isinstance(X, pd.DataFrame):
-       index = list(X.index)
+        index = list(X.index)
     else:
-       # If it's not a dataframe, order is up to user
-       index = range(X.shape[0])
+        # If it's not a dataframe, order is up to user
+        index = list(range(X.shape[0]))
     return index
 
 
