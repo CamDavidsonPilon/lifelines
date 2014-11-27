@@ -748,7 +748,7 @@ class AalenAdditiveFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(p, self.predict_survival_function(X))[p]
+        return qth_survival_times(p, self.predict_survival_function(X))
 
     def predict_median(self, X):
         """
@@ -762,7 +762,7 @@ class AalenAdditiveFitter(BaseFitter):
         Compute the expected lifetime, E[T], using covarites X.
         """
         t = self.cumulative_hazards_.index
-        return pd.Series(trapz(self.predict_survival_function(X).values.T, t))
+        return pd.DataFrame(trapz(self.predict_survival_function(X).values.T, t))
 
     def predict(self, X):
         return self.predict_median(X)
@@ -1123,20 +1123,12 @@ class CoxPHFitter(BaseFitter):
         Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to \exp{\beta X}
         """
-        # Make sure column ordering is the same as during fitting
-        if isinstance(X, pd.DataFrame):
-            X = X[self.data.columns]
-            index = X.index
-        else:
-            # If it's not a dataframe, order is up to user
-            index = np.arange(X.shape[0])
 
         if self.normalize:
             # Assuming correct ordering and number of columns
             X = normalize(X, self._norm_mean.values, self._norm_std.values)
 
-        return pd.DataFrame(exp(np.dot(X, self.hazards_.T)),
-                            index=index, columns=['exp(beta X)'])
+        return pd.DataFrame(exp(np.dot(X, self.hazards_.T)))
 
     def predict_cumulative_hazard(self, X):
         """
@@ -1162,7 +1154,7 @@ class CoxPHFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(p, self.predict_survival_function(X))[p]
+        return qth_survival_times(p, self.predict_survival_function(X))
 
     def predict_median(self, X):
         """
@@ -1176,7 +1168,7 @@ class CoxPHFitter(BaseFitter):
         Compute the expected lifetime, E[T], using covarites X.
         """
         v = self.predict_survival_function(X)
-        return pd.Series(trapz(v.values.T, v.index))
+        return pd.DataFrame(trapz(v.values.T, v.index))
 
     def predict(self, X):
         return self.predict_median(X)
