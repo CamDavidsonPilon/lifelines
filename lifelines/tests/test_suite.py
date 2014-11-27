@@ -544,7 +544,7 @@ class StatisticalTests(unittest.TestCase):
         T_ = np.array([2,1,4,6,5,3])
         self.assertTrue( concordance_index(T, T_) == concordance_index(T - 5, T_ - 5) == concordance_index(T, T_ - 5) == concordance_index(T - 5, T_))
 
-class AalenAdditiveModelTests(unittest.TestCase):
+class AalenRegressionTests(unittest.TestCase):
 
     def setUp(self):
         self.aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
@@ -556,8 +556,7 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T = np.random.exponential(size=n)
         X['T'] = T
         X['E'] = 1
-        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         return True
 
@@ -568,17 +567,15 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T = np.random.exponential(size=n)
         X['T'] = T
         X['E'] = 1
-        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         return True
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aaf_panel_dataset(self):
-        aaf = AalenAdditiveFitter()
         panel_dataset = pd.read_csv('./datasets/panel_test.csv')
-        aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
-        aaf.plot()
+        self.aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
+        self.aaf.plot()
         return
 
     def test_aalen_additive_median_predictions_split_data(self):
@@ -593,11 +590,10 @@ class AalenAdditiveModelTests(unittest.TestCase):
         X['T'] = T
         X['E'] = 1
         # fit it to Aalen's model
-        aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         # predictions
-        T_pred = aaf.predict_median(X[list(range(6))])
+        T_pred = self.aaf.predict_median(X[list(range(6))])
         self.assertTrue(abs((T_pred.values > T).mean() - 0.5) < 0.05)
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
@@ -614,14 +610,13 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
         X['E'] = np.random.binomial(1, 1, n)
-        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         for i in range(d + 1):
             ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
+            ax = self.aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show()
         return
 
@@ -639,14 +634,13 @@ class AalenAdditiveModelTests(unittest.TestCase):
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
         X['E'] = np.random.binomial(1, 0.99, n)
-        aaf = AalenAdditiveFitter(penalizer=1., fit_intercept=False)
-        aaf.fit(X)
+        self.aaf.fit(X)
 
         for i in range(d + 1):
             ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
+            ax = self.aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show()
         return
 
@@ -655,22 +649,19 @@ class AalenAdditiveModelTests(unittest.TestCase):
         df = pd.DataFrame([(16, True, True), (1, True, True), (4, False, True)],
                           columns=['duration', 'done_feeding', 'white'],
                           index=['a', 'b', 'c'])
-        aaf = AalenAdditiveFitter()
-        aaf.fit(df, duration_col='duration', event_col='done_feeding')
+        self.aaf.fit(df, duration_col='duration', event_col='done_feeding')
         return
 
     def test_predict_percentile_returns_a_series(self):
         X = generate_regression_dataset()
         x = X[X.columns - ['T', 'E']]
-        aaf = AalenAdditiveFitter()
-        aaf.fit(X, duration_col='T', event_col='E')
-        result = aaf.predict_percentile(x)
+        self.aaf.fit(X, duration_col='T', event_col='E')
+        result = self.aaf.predict_percentile(x)
         self.assertTrue(isinstance(result, pd.DataFrame))
-        self.assertTrue(result.shape == (x.shape[0],))
+        self.assertTrue(result.shape == (x.shape[0],1))
 
     def test_crossval_for_aalen_add(self):
         aaf = AalenAdditiveFitter()
-
         for data_pred in [data_pred1, data_pred2]:
             mean_scores = []
             for repeat in range(20):
@@ -711,6 +702,21 @@ class RegressionTests(unittest.TestCase):
             hazards = fitter.fit(df, duration_col='time', event_col='death').hazards_.reset_index(drop=True)
             hazards_norm = fitter.fit(normalized_df, duration_col='time', event_col='death').hazards_.reset_index(drop=True)
             assert_frame_equal(hazards, hazards_norm)
+
+    def test_prediction_methods_respect_index(self):
+        x = data_pred2[['x1','x2']].ix[:3].sort_index(ascending=False)
+        expected_index = pd.Index(np.array([3,2,1,0]))
+
+        self.cph.fit(data_pred2, duration_col='t')
+        npt.assert_array_equal(self.cph.predict_partial_hazard(x).index, expected_index)
+        npt.assert_array_equal(self.cph.predict_percentile(x).index,expected_index)
+        npt.assert_array_equal(self.cph.predict(x).index, expected_index)
+        npt.assert_array_equal(self.cph.predict_expectation(x).index, expected_index)
+
+        self.aaf.fit(data_pred2, duration_col='t')
+        npt.assert_array_equal(self.aaf.predict_percentile(x).index,expected_index)
+        npt.assert_array_equal(self.aaf.predict(x).index, expected_index)
+        npt.assert_array_equal(self.aaf.predict_expectation(x).index, expected_index)
 
 
 

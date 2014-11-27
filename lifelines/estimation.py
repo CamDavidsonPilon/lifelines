@@ -11,7 +11,7 @@ import pandas as pd
 
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
-    epanechnikov_kernel, StatError, coalesce, normalize
+    epanechnikov_kernel, StatError, coalesce, normalize, significance_code
 from lifelines.progress_bar import progress_bar
 from lifelines.statistics import concordance_index
 
@@ -732,7 +732,8 @@ class AalenAdditiveFitter(BaseFitter):
         except:
             X_ = X.copy()
         X_ = X.copy() if not self.fit_intercept else np.c_[X.copy(), np.ones((n, 1))]
-        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline)
+        cols = get_index(X)
+        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=cols)
 
     def predict_survival_function(self, X):
         """
@@ -748,7 +749,8 @@ class AalenAdditiveFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(p, self.predict_survival_function(X))
+        index = get_index(X)
+        return qth_survival_times(p, self.predict_survival_function(X)[index])
 
     def predict_median(self, X):
         """
@@ -761,8 +763,9 @@ class AalenAdditiveFitter(BaseFitter):
         """
         Compute the expected lifetime, E[T], using covarites X.
         """
+        index = get_index(X)
         t = self.cumulative_hazards_.index
-        return pd.DataFrame(trapz(self.predict_survival_function(X).values.T, t))
+        return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def predict(self, X):
         return self.predict_median(X)
@@ -1070,18 +1073,6 @@ class CoxPHFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def _significance_code(self, p):
-        if p < 0.001:
-            return '***'
-        elif p < 0.01:
-            return '**'
-        elif p < 0.05:
-            return '*'
-        elif p < 0.1:
-            return '.'
-        else:
-            return ' '
-
     def summary(self):
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.ix['coef'].values
@@ -1092,7 +1083,7 @@ class CoxPHFitter(BaseFitter):
         df['lower %.2f' % self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
         # Significance codes last
-        df[''] = [self._significance_code(p) for p in df['p']]
+        df[''] = [significance_code(p) for p in df['p']]
 
         # Print information about data first
         print('n={}, number of events={}'.format(self.data.shape[0],
@@ -1123,12 +1114,13 @@ class CoxPHFitter(BaseFitter):
         Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to \exp{\beta X}
         """
+        index = get_index(X)
 
         if self.normalize:
             # Assuming correct ordering and number of columns
             X = normalize(X, self._norm_mean.values, self._norm_std.values)
 
-        return pd.DataFrame(exp(np.dot(X, self.hazards_.T)))
+        return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
 
     def predict_cumulative_hazard(self, X):
         """
@@ -1154,7 +1146,8 @@ class CoxPHFitter(BaseFitter):
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        return qth_survival_times(p, self.predict_survival_function(X))
+        index = get_index(X)
+        return qth_survival_times(p, self.predict_survival_function(X)[index])
 
     def predict_median(self, X):
         """
@@ -1167,8 +1160,9 @@ class CoxPHFitter(BaseFitter):
         """
         Compute the expected lifetime, E[T], using covarites X.
         """
-        v = self.predict_survival_function(X)
-        return pd.DataFrame(trapz(v.values.T, v.index))
+        index = get_index(X)
+        v = self.predict_survival_function(X)[index]
+        return pd.DataFrame(trapz(v.values.T, v.index), index=index)
 
     def predict(self, X):
         return self.predict_median(X)
@@ -1197,6 +1191,15 @@ class CoxPHFitter(BaseFitter):
 
 
 #### Utils ####
+def get_index(X):
+    if isinstance(X, pd.DataFrame):
+       index = list(X.index)
+    else:
+       # If it's not a dataframe, order is up to user
+       index = range(X.shape[0])
+    return index
+
+
 def _subtract(self, estimate):
     class_name = self.__class__.__name__
     doc_string = """

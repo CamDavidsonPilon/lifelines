@@ -336,3 +336,16 @@ def epanechnikov_kernel(t, T, bandwidth=1.):
     M = 0.75 * (1 - (t - T) / bandwidth) ** 2
     M[abs((t - T)) >= bandwidth] = 0
     return M
+
+
+def significance_code(self, p):
+    if p < 0.001:
+        return '***'
+    elif p < 0.01:
+        return '**'
+    elif p < 0.05:
+        return '*'
+    elif p < 0.1:
+        return '.'
+    else:
+        return ' '
