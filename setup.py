@@ -29,7 +29,7 @@ setup(
     license="MIT",
     keywords="survival analysis statistics data analysis",
     url="https://github.com/CamDavidsonPilon/lifelines",
-    packages=['lifelines'],
+    packages=['lifelines', 'lifelines.tests'],
     long_description=read('README.txt'),
     classifiers=[
         "Development Status :: 4 - Beta",
