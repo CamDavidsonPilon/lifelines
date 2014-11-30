@@ -352,3 +352,41 @@ def significance_code(p):
         return '.'
     else:
         return ' '
+
+
+def qth_survival_times(q, survival_functions):
+    """
+    This can be done much better.
+
+    Parameters:
+      q: a float between 0 and 1.
+      survival_functions: a (n,d) dataframe or numpy array.
+        If dataframe, will return index values (actual times)
+        If numpy array, will return indices.
+
+    Returns:
+      v: if d==1, returns a float, np.inf if infinity.
+         if d > 1, an DataFrame containing the first times the value was crossed.
+
+    """
+    q = pd.Series(q)
+    assert (q <= 1).all() and (0 <= q).all(), 'q must be between 0 and 1'
+    survival_functions = pd.DataFrame(survival_functions)
+    if survival_functions.shape[1] == 1 and q.shape == (1,):
+        return survival_functions.apply(lambda s: qth_survival_time(q[0], s)).ix[0]
+    else:
+        return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q})
+
+
+def qth_survival_time(q, survival_function):
+    """
+    Expects a Pandas series, returns the time when the qth probability is reached.
+    """
+    if survival_function.iloc[-1] > q:
+        return np.inf
+    v = (survival_function <= q).idxmax(0)
+    return v
+
+
+def median_survival_times(survival_functions):
+    return qth_survival_times(0.5, survival_functions)

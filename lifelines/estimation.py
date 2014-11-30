@@ -11,7 +11,8 @@ import pandas as pd
 
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
-    epanechnikov_kernel, StatError, coalesce, normalize, significance_code
+    epanechnikov_kernel, StatError, coalesce, normalize, significance_code, \
+    qth_survival_times, median_survival_times
 from lifelines.progress_bar import progress_bar
 from lifelines.statistics import concordance_index
 
@@ -1307,48 +1308,6 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     estimate_.index.name = 'timeline'
 
     return estimate_, var_
-
-
-def qth_survival_times(q, survival_functions):
-    """
-    This can be done much better.
-
-    Parameters:
-      q: a float between 0 and 1.
-      survival_functions: a (n,d) dataframe or numpy array.
-        If dataframe, will return index values (actual times)
-        If numpy array, will return indices.
-
-    Returns:
-      v: if d==1, returns a float, np.inf if infinity.
-         if d > 1, an DataFrame containing the first times the value was crossed.
-
-    """
-    q = pd.Series(q)
-    assert (q <= 1).all() and (0 <= q).all(), 'q must be between 0 and 1'
-    survival_functions = pd.DataFrame(survival_functions)
-    if survival_functions.shape[1] == 1 and q.shape == (1,):
-        return survival_functions.apply(lambda s: qth_survival_time(q[0], s)).ix[0]
-    else:
-        return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q})
-
-
-def qth_survival_time(q, survival_function):
-    """
-    Expects a Pandas series, returns the time when the qth probability is reached.
-    """
-    if survival_function.iloc[-1] > q:
-        return np.inf
-    v = (survival_function <= q).idxmax(0)
-    return v
-
-
-def median_survival_times(survival_functions):
-    return qth_survival_times(0.5, survival_functions)
-
-
-def asymmetric_epanechnikov_kernel(q, x):
-    return (64 * (2 - 4 * q + 6 * q * q - 3 * q ** 3) + 240 * (1 - q) ** 2 * x) / ((1 + q) ** 4 * (19 - 18 * q + 3 * q ** 2))
 
 """
 References:
