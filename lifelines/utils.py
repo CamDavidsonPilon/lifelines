@@ -21,7 +21,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         groups: a (n,) array of individuals' group ids.
         durations: a (n,)  array of durations of each individual
         event_observed: a (n,) array of event observations, 1 if observed, 0 else.
-        event_observed: a (n,) array of times individual entered study. This is most applicable in
+        min_observations: a (n,) array of times individual entered study. This is most applicable in
                     cases where there is left-truncation, i.e. a individual might enter the
                     study late. If not the case, normally set to all zeros.
 

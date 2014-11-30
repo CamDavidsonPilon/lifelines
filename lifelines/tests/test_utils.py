@@ -9,7 +9,7 @@ from ..utils import group_survival_table_from_events, survival_table_from_events
                     datetimes_to_durations, k_fold_cross_validation, normalize, unnormalize, significance_code,\
                     qth_survival_time, qth_survival_times
 from ..estimation import CoxPHFitter, AalenAdditiveFitter
-from ..datasets import generate_regression_dataset, load_larynx
+from ..datasets import load_regression_dataset, load_larynx, load_waltons
 
 def test_unnormalize():
     df = load_larynx()
@@ -109,6 +109,15 @@ def test_survival_table_to_events():
     npt.assert_array_equal(T, T_)
     npt.assert_array_equal(C, C_)
 
+def test_group_survival_table_from_events_on_waltons_data():
+    df = load_waltons()
+    first_obs = np.zeros(df.shape[0])
+    g, removed, observed, censored = group_survival_table_from_events(df['group'], df['T'], df['E'], first_obs)
+    assert len(g) == 2
+    assert all(removed.columns == ['removed:miR-137', 'removed:control'])
+    assert all(removed.index == observed.index)
+    assert all(removed.index == censored.index)
+
 def test_survival_table_to_events_casts_to_float():
     T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([True, False, True, True, True, True])
     d = survival_table_from_events(T, C, np.zeros_like(T))
@@ -122,20 +131,20 @@ def test_group_survival_table_from_events_works_with_series():
 
 def test_cross_validator_returns_k_results():
     cf = CoxPHFitter()
-    results = k_fold_cross_validation(cf, generate_regression_dataset(), duration_col='T', event_col='E', k=3)
+    results = k_fold_cross_validation(cf, load_regression_dataset(), duration_col='T', event_col='E', k=3)
     assert len(results) == 3
 
-    results = k_fold_cross_validation(cf, generate_regression_dataset(), duration_col='T', event_col='E', k=5)
+    results = k_fold_cross_validation(cf, load_regression_dataset(), duration_col='T', event_col='E', k=5)
     assert len(results) == 5
 
 def test_cross_validator_with_predictor():
     cf = CoxPHFitter()
-    results = k_fold_cross_validation(cf, generate_regression_dataset(),
+    results = k_fold_cross_validation(cf, load_regression_dataset(),
                                       duration_col='T', event_col='E', k=3,
                                       predictor="predict_expectation")
 
 def test_cross_validator_with_predictor_and_kwargs():
     cf = CoxPHFitter()
-    results_06 = k_fold_cross_validation(cf, generate_regression_dataset(),
+    results_06 = k_fold_cross_validation(cf, load_regression_dataset(),
                                          duration_col='T', event_col='E', k=3,
                                          predictor="predict_percentile", predictor_kwargs={'p': 0.6})
