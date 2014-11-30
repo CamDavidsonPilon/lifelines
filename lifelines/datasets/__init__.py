@@ -2,6 +2,8 @@
 import pandas as pd
 import numpy as np
 from io import StringIO
+from pkg_resources import resource_filename
+
 
 __all__ = ['generate_waltons_dataset',
            'generate_regression_dataset',
@@ -9,6 +11,43 @@ __all__ = ['generate_waltons_dataset',
            'generate_lcd_dataset',
            'generate_rossi_dataset']
 
+def load_dataset(filename, usecols=None):
+    '''
+    Load a dataset from lifelines.datasets
+
+    Parameters:
+    filename : for example "larynx.csv"
+    usecols : list of columns in file to use
+
+    Returns : Pandas dataframe
+    '''
+    return pd.read_csv(resource_filename('lifelines',
+                                         'datasets/' + filename),
+                       usecols=usecols)
+
+def load_canadian_senators(usecols=None):
+    return load_dataset('canadian_senators.csv', usecols)
+
+def load_dd(usecols=None):
+    return load_dataset('dd.csv', usecols)
+
+def load_kidney_transplant(usecols=None):
+    return load_dataset('kidney_transplant.csv', usecols)
+
+def load_larynx(usecols=None):
+    return load_dataset('larynx.csv', usecols)
+
+def load_lung(usecols=None):
+    return load_dataset('lung.csv', usecols)
+
+def load_panel_test(usecols=None):
+    return load_dataset('panel_test.csv', usecols)
+
+def load_psychiatric_patients(usecols=None):
+    return load_dataset('psychiatric_patients.csv', usecols)
+
+def load_static_test(usecols=None):
+    return load_dataset('static_test.csv', usecols)
 
 def generate_lcd_dataset():
     return {

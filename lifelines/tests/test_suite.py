@@ -29,14 +29,15 @@ from ..statistics import (logrank_test, multivariate_logrank_test,
 from ..generate_datasets import *
 from ..plotting import plot_lifetimes
 from ..utils import *
-from ..datasets import generate_lcd_dataset, generate_rossi_dataset, \
-    generate_waltons_dataset, generate_regression_dataset
+from ..datasets import (generate_lcd_dataset, generate_rossi_dataset,
+                        generate_waltons_dataset, generate_regression_dataset,
+                        load_larynx, load_panel_test, load_kidney_transplant)
 
 
 class MiscTests(unittest.TestCase):
 
     def test_unnormalize(self):
-        df = pd.read_csv('./datasets/larynx.csv')
+        df = load_larynx()
         m = df.mean(0)
         s = df.std(0)
 
@@ -45,7 +46,7 @@ class MiscTests(unittest.TestCase):
         npt.assert_almost_equal(df.values, unnormalize(ndf, m, s).values)
 
     def test_normalize(self):
-        df = pd.read_csv('./datasets/larynx.csv')
+        df = load_larynx()
         n, d = df.shape
         npt.assert_almost_equal(normalize(df).mean(0).values, np.zeros(d))
         npt.assert_almost_equal(normalize(df).std(0).values, np.ones(d))
@@ -574,7 +575,7 @@ class AalenRegressionTests(unittest.TestCase):
 
     @unittest.skipUnless("DISPLAY" in os.environ, "requires display")
     def test_aaf_panel_dataset(self):
-        panel_dataset = pd.read_csv('./datasets/panel_test.csv')
+        panel_dataset = load_panel_test()
         self.aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
         self.aaf.plot()
         return
@@ -694,7 +695,7 @@ class RegressionTests(unittest.TestCase):
             self.assertEqual(type(getattr(self.aaf, fit_method)(x)), type(getattr(self.cph, fit_method)(x)))
 
     def test_duration_vector_can_be_normalized(self):
-        df = pd.read_csv('./datasets/kidney_transplant.csv')
+        df = load_kidney_transplant()
         t = df['time']
         normalized_df = df.copy()
         normalized_df['time'] = (normalized_df['time'] - t.mean()) / t.std()
@@ -1109,7 +1110,9 @@ class CoxRegressionTests(unittest.TestCase):
 
     def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
-        df = pd.read_csv('./datasets/kidney_transplant.csv', usecols=['time', 'death', 'black_male', 'white_male', 'black_female'])
+        df = load_kidney_transplant(usecols=['time', 'death',
+                                             'black_male', 'white_male',
+                                             'black_female'])
         cf = CoxPHFitter(normalize=False)
         cf.fit(df, duration_col='time', event_col='death')
 
@@ -1120,7 +1123,7 @@ class CoxRegressionTests(unittest.TestCase):
 
     def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
-        df = pd.read_csv('./datasets/larynx.csv')
+        df = load_larynx()
         cf = CoxPHFitter(normalize=False)
         cf.fit(df, duration_col='time', event_col='death')
 
@@ -1131,7 +1134,7 @@ class CoxRegressionTests(unittest.TestCase):
 
     def test_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
-        df = pd.read_csv('./datasets/larynx.csv')
+        df = load_larynx()
         cf = CoxPHFitter()
         cf.fit(df, duration_col='time', event_col='death')
 
