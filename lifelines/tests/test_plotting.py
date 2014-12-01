@@ -1,12 +1,13 @@
 from __future__ import print_function
 
 import os
-import pytest 
+import pytest
 from matplotlib import pyplot as plt
 import numpy as np
-from ..estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter, CoxPHFitter
+from ..estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter
 from ..generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from ..plotting import plot_lifetimes
+
 
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting():
@@ -76,7 +77,6 @@ class TestPlotting():
         ax.set_xlabel("time")
         ax.set_title('.plot() smoothed hazards')
         return
-
 
     def test_naf_plotting_slice(self):
         data1 = np.random.exponential(5, size=(200, 1))

@@ -1,10 +1,8 @@
-#test_generate_datasets.py
+# test_generate_datasets.py
 from __future__ import print_function
 import os
 
 import pytest
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from ..estimation import KaplanMeierFitter, NelsonAalenFitter

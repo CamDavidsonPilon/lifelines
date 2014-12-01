@@ -10,12 +10,10 @@ from matplotlib import pyplot as plt
 from pandas.util.testing import assert_frame_equal
 import numpy.testing as npt
 
-from ..utils import group_survival_table_from_events, survival_table_from_events, survival_events_from_table, \
-                    datetimes_to_durations, k_fold_cross_validation, normalize, unnormalize, significance_code,\
-                    qth_survival_time, qth_survival_times, StatError
+from ..utils import k_fold_cross_validation, StatError
 from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, NelsonAalenFitter, BreslowFlemingHarringtonFitter
 from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
-                       load_lcd, load_panel_test
+    load_lcd, load_panel_test
 from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
 from ..statistics import concordance_index
 
@@ -25,9 +23,11 @@ def sample_lifetimes():
     N = 30
     return (np.random.randint(20, size=N), np.random.randint(2, size=N))
 
+
 @pytest.fixture
 def waltons_dataset():
     return load_waltons()
+
 
 @pytest.fixture
 def data_pred1():
@@ -37,6 +37,7 @@ def data_pred1():
     data_pred1['t'] = 1 + data_pred1['x1'] + np.random.normal(0, 0.05, size=N)
     data_pred1['E'] = True
     return data_pred1
+
 
 @pytest.fixture
 def data_pred2():
@@ -48,6 +49,7 @@ def data_pred2():
                        np.random.normal(0, 0.05, size=N))
     data_pred2['E'] = True
     return data_pred2
+
 
 @pytest.fixture
 def data_nus():
@@ -65,6 +67,7 @@ def data_nus():
     data_nus['E'] = True
     return data_nus
 
+
 class TestUnivariateFitters():
 
     def test_custom_timeline_can_be_list_or_array(self, sample_lifetimes):
@@ -79,20 +82,19 @@ class TestUnivariateFitters():
         T, C = sample_lifetimes
         timeline = [2, 3, 4., 1., 6, 5.]
 
-        kmf = KaplanMeierFitter().fit(T,C,timeline=timeline)
+        kmf = KaplanMeierFitter().fit(T, C, timeline=timeline)
         assert sorted(timeline) == list(kmf.survival_function_.index.values)
 
-        naf = NelsonAalenFitter().fit(T,C, timeline=timeline)
+        naf = NelsonAalenFitter().fit(T, C, timeline=timeline)
         assert sorted(timeline) == list(naf.cumulative_hazard_.index.values)
-
 
     def test_label_is_a_property(self, sample_lifetimes):
         label = 'Test Name'
         for f in [KaplanMeierFitter(), NelsonAalenFitter()]:
             f.fit(sample_lifetimes[0], label=label)
             assert f._label == label
-            assert f.confidence_interval_.columns[0] == '%s_upper_0.95'%label
-            assert f.confidence_interval_.columns[1] == '%s_lower_0.95'%label
+            assert f.confidence_interval_.columns[0] == '%s_upper_0.95' % label
+            assert f.confidence_interval_.columns[1] == '%s_lower_0.95' % label
 
     def test_ci_labels(self, sample_lifetimes):
         expected = ['upper', 'lower']
@@ -113,7 +115,7 @@ class TestUnivariateFitters():
         with_list = naf.fit(list(T), list(C)).cumulative_hazard_
         assert_frame_equal(with_list, with_array)
 
-    def test_subtraction_function(self,sample_lifetimes):
+    def test_subtraction_function(self, sample_lifetimes):
         for f in [KaplanMeierFitter(), NelsonAalenFitter()]:
             f.fit(sample_lifetimes[0])
             npt.assert_array_almost_equal(f.subtract(f).sum().values, 0.0)
@@ -122,6 +124,7 @@ class TestUnivariateFitters():
         for f in [KaplanMeierFitter(), NelsonAalenFitter()]:
             f.fit(sample_lifetimes[0])
             npt.assert_array_almost_equal(np.log(f.divide(f)).sum().values, 0.0)
+
 
 class TestKaplanMeierFitter():
 
@@ -147,7 +150,6 @@ class TestKaplanMeierFitter():
             km = np.insert(km, 0, 1.)
         return km.reshape(len(km), 1)
 
-
     def test_kaplan_meier_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes
         kmf = KaplanMeierFitter()
@@ -170,14 +172,14 @@ class TestKaplanMeierFitter():
             kmf.fit(observations, entry=births)
 
     def test_sort_doesnt_affect_kmf(self, sample_lifetimes):
-        T,_ = sample_lifetimes
+        T, _ = sample_lifetimes
         kmf = KaplanMeierFitter()
         assert_frame_equal(kmf.fit(T).survival_function_, kmf.fit(sorted(T)).survival_function_)
 
     def test_passing_in_left_censorship_creates_a_cumulative_density(self, sample_lifetimes):
         T, C = sample_lifetimes
         kmf = KaplanMeierFitter()
-        kmf.fit(T,C, left_censorship=True)
+        kmf.fit(T, C, left_censorship=True)
         assert hasattr(kmf, 'cumulative_density_')
         assert hasattr(kmf, 'plot_cumulative_density_')
         assert not hasattr(kmf, 'survival_function_')
@@ -239,7 +241,7 @@ class TestNelsonAalenFitter():
         T, C = sample_lifetimes
         naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
         naf.fit(T, C)
-        npt.assert_almost_equal(naf.cumulative_hazard_.values, self.nelson_aalen(T,C))
+        npt.assert_almost_equal(naf.cumulative_hazard_.values, self.nelson_aalen(T, C))
 
     def test_ix_slicing(self, waltons_dataset):
         naf = NelsonAalenFitter().fit(waltons_dataset['T'])
@@ -249,7 +251,6 @@ class TestNelsonAalenFitter():
         naf = NelsonAalenFitter().fit(waltons_dataset['T'])
         assert naf.cumulative_hazard_.iloc[0:10].shape[0] == 10
         assert naf.cumulative_hazard_.iloc[0:-1].shape[0] == 32
-
 
     def test_smoothing_hazard_ties(self):
         T = np.random.binomial(20, 0.7, size=300)
@@ -283,7 +284,7 @@ class TestNelsonAalenFitter():
 
 
 class TestBreslowFlemingHarringtonFitter():
-    
+
     def test_BHF_fit(self):
         bfh = BreslowFlemingHarringtonFitter()
         births = np.array([51, 58, 55, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30,
@@ -293,8 +294,8 @@ class TestBreslowFlemingHarringtonFitter():
         bfh.fit(observations, entry=births)
         return
 
-class TestRegressionFitters():
 
+class TestRegressionFitters():
 
     def test_predict_methods_in_regression_return_same_types(self):
         X = load_regression_dataset()
@@ -307,7 +308,7 @@ class TestRegressionFitters():
         cph.fit(X, duration_col='T', event_col='E')
 
         for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict', 'predict_cumulative_hazard']:
-            assert type(getattr(aaf, fit_method)(x)) == type(getattr(cph, fit_method)(x))
+            assert isinstance(getattr(aaf, fit_method)(x), type(getattr(cph, fit_method)(x)))
 
     def test_duration_vector_can_be_normalized(self):
         df = load_kidney_transplant()
@@ -501,7 +502,7 @@ class TestCoxPHFitter():
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert mean_score > expected, msg.format(expected, mean_score)
 
-    def test_crossval_for_cox_ph_normalized(self,data_pred2, data_pred1):
+    def test_crossval_for_cox_ph_normalized(self, data_pred2, data_pred1):
         cf = CoxPHFitter()
         for data_pred in [data_pred1, data_pred2]:
             data_norm = data_pred.copy()
@@ -589,7 +590,6 @@ class TestAalenAdditiveFitter():
         aaf = AalenAdditiveFitter()
         aaf.fit(X)
 
-
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_aaf_panel_dataset(self):
         panel_dataset = load_panel_test()
@@ -673,7 +673,6 @@ class TestAalenAdditiveFitter():
                           index=['a', 'b', 'c'])
         aaf.fit(df, duration_col='duration', event_col='done_feeding')
 
-
     def test_crossval_for_aalen_add(self, data_pred2, data_pred1):
         aaf = AalenAdditiveFitter()
         for data_pred in [data_pred1, data_pred2]:
@@ -687,8 +686,3 @@ class TestAalenAdditiveFitter():
             expected = 0.90
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert np.mean(mean_scores) > expected, msg.format(expected, scores.mean())
-
-
-
-
-

@@ -6,11 +6,13 @@ from scipy.stats import beta
 from ..statistics import *
 from ..datasets import load_waltons
 
+
 def test_unequal_intensity():
     data1 = np.random.exponential(5, size=(2000, 1))
     data2 = np.random.exponential(1, size=(2000, 1))
     summary, p_value, result = logrank_test(data1, data2)
     assert result
+
 
 def test_unequal_intensity_event_observed():
     data1 = np.random.exponential(5, size=(2000, 1))
@@ -20,11 +22,13 @@ def test_unequal_intensity_event_observed():
     summary, p_value, result = logrank_test(data1, data2, event_observed_A=eventA, event_observed_B=eventB)
     assert result
 
+
 def test_integer_times_logrank_test():
     data1 = np.random.exponential(5, size=(2000, 1)).astype(int)
     data2 = np.random.exponential(1, size=(2000, 1)).astype(int)
     summary, p_value, result = logrank_test(data1, data2)
     assert result
+
 
 def test_waltons_dataset():
     df = load_waltons()
@@ -34,6 +38,7 @@ def test_waltons_dataset():
     summary, p_value, result = logrank_test(waltonT1, waltonT2)
     assert result
 
+
 def test_logrank_test_is_symmetric():
     data1 = np.random.exponential(5, size=(2000, 1)).astype(int)
     data2 = np.random.exponential(1, size=(2000, 1)).astype(int)
@@ -41,7 +46,8 @@ def test_logrank_test_is_symmetric():
     summary2, p_value2, result2 = logrank_test(data1, data2)
     assert p_value2 == p_value1
     assert result2 == result1
-    
+
+
 def test_multivariate_unequal_intensities():
     T = np.random.exponential(10, size=300)
     g = np.random.binomial(2, 0.5, size=300)
@@ -49,10 +55,12 @@ def test_multivariate_unequal_intensities():
     s, _, result = multivariate_logrank_test(T, g)
     assert result
 
+
 def test_pairwise_waltons_dataset():
     waltons_dataset = load_waltons()
     _, _, R = pairwise_logrank_test(waltons_dataset['T'], waltons_dataset['group'])
     assert R.values[0, 1]
+
 
 def test_pairwise_logrank_test():
     T = np.random.exponential(10, size=500)
@@ -75,6 +83,7 @@ def test_multivariate_inputs():
     multivariate_logrank_test(T, G, E)
     pairwise_logrank_test(T, G, E)
 
+
 def test_pairwise_allows_dataframes():
     N = 100
     df = pd.DataFrame(np.empty((N, 3)), columns=["T", "C", "group"])
@@ -82,6 +91,7 @@ def test_pairwise_allows_dataframes():
     df["C"] = np.random.binomial(1, 0.6, size=N)
     df["group"] = np.random.binomial(2, 0.5, size=N)
     pairwise_logrank_test(df['T'], df["group"], event_observed=df["C"])
+
 
 def test_concordance_index():
     size = 1000
@@ -102,11 +112,11 @@ def test_concordance_index():
     assert abs(concordance_index(T, P) - 0.5) < 0.05
     assert abs(concordance_index(T, P, C) - 0.5) < 0.05
 
+
 def test_concordance_index_returns_same_after_shifting():
     T = np.array([1, 2, 3, 4, 5, 6])
     T_ = np.array([2, 1, 4, 6, 5, 3])
     assert concordance_index(T, T_) == concordance_index(T - 5, T_ - 5) == concordance_index(T, T_ - 5) == concordance_index(T - 5, T_)
-
 
 
 def test_equal_intensity():
@@ -125,6 +135,7 @@ def test_equal_intensity():
     bounds = beta.interval(0.95, 1 + false_positives, N - false_positives + 1)
     assert bounds[0] < 1 - alpha < bounds[1]
 
+
 def test_multivariate_equal_intensities():
     N = 100
     false_positives = 0
@@ -136,5 +147,3 @@ def test_multivariate_equal_intensities():
         false_positives += result is not None
     bounds = beta.interval(0.95, 1 + false_positives, N - false_positives + 1)
     assert bounds[0] < 1 - alpha < bounds[1]
-
-

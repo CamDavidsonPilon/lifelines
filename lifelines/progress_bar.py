@@ -109,7 +109,7 @@ class IPythonNotebookPB(ProgressBar):
         display(Javascript(
             "$('div#%s').width('%i%%')" % (self.divid, percentage)))
         display(Javascript("$('label#%s').text('%i%% in %.1f sec')" %
-                (self.sec_id, fraction, round(elapsed, 1))))
+                           (self.sec_id, fraction, round(elapsed, 1))))
 
 
 def run_from_ipython():

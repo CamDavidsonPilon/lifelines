@@ -1098,8 +1098,8 @@ class CoxPHFitter(BaseFitter):
               end='\n\n')
         print("Concordance = {:.3f}"
               .format(concordance_index(self.durations,
-                      -self.predict_partial_hazard(self.data).values.ravel(),
-                      self.event_observed)))
+                                        -self.predict_partial_hazard(self.data).values.ravel(),
+                                        self.event_observed)))
         return
 
     def predict_partial_hazard(self, X):

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
-from io import StringIO
 from pkg_resources import resource_filename
 
 
