@@ -30,7 +30,7 @@ install:
   # Build in place so we can run tests
   - python setup.py build_ext --inplace
 # command to run tests
-script: py.test lifelines/tests/ -vv
+script: python -m lifelines.tests -vv
 # Don't want notifications
 notifications:
   email: false

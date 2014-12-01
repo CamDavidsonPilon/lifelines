@@ -1,6 +1,5 @@
-import unittest
-from . import test_suite
+import pytest
 
 
 if __name__ == '__main__':
-    unittest.main(module=test_suite)
+    pytest.main("--pyargs lifelines.tests")
