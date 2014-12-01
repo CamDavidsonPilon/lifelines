@@ -67,7 +67,7 @@ def load_waltons():
     return load_dataset('waltons_dataset.csv')
 
 
-def load_rossi_dataset():
+def load_rossi():
     """
     This data set is originally from Rossi et al. (1980), and is used as an example in Allison (1995). The data pertain to 432 convicts who were released from Maryland state prisons in the 1970s and who were followed up for one year after release. Half the released convicts were assigned at random to an experimental treatment in which they were given financial aid; half did not receive aid.
 
