@@ -1,5 +1,7 @@
+import sys
 import pytest
 
 
 if __name__ == '__main__':
-    pytest.main("--pyargs lifelines.tests")
+    # Exit with correct code
+    sys.exit(pytest.main("--pyargs lifelines.tests"))
