@@ -594,6 +594,11 @@ class TestAalenAdditiveFitter():
         aaf.fit(rossi, event_col='week', duration_col='arrest')
         assert list(aaf.cumulative_hazards_.columns.drop('baseline')) == expected
 
+        aaf = AalenAdditiveFitter(fit_intercept=False)
+        expected = ['fin', 'age', 'race', 'wexp', 'mar', 'paro', 'prio']
+        aaf.fit(rossi, event_col='week', duration_col='arrest')
+        assert list(aaf.cumulative_hazards_.columns) == expected
+
     def test_swapping_order_of_columns_in_a_df_is_okay(self):
         rossi = load_rossi()
         aaf = AalenAdditiveFitter()
@@ -602,6 +607,11 @@ class TestAalenAdditiveFitter():
         misorder = ['age', 'race', 'wexp', 'mar', 'paro', 'prio', 'fin']
         natural_order = rossi.columns.drop(['week','arrest'])
         deleted_order = rossi.columns - ['week','arrest']
+        assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
+        assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
+        
+        aaf = AalenAdditiveFitter(fit_intercept=False)
+        aaf.fit(rossi, event_col='week', duration_col='arrest')
         assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
         assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
 
