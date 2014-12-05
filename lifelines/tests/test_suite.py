@@ -551,6 +551,24 @@ class AalenRegressionTests(unittest.TestCase):
     def setUp(self):
         self.aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
 
+    def test_input_column_order_is_equal_to_output_hazards_order(self):
+        rossi = load_rossi()
+        aaf = AalenAdditiveFitter()
+        expected = ['fin', 'age', 'race', 'wexp', 'mar', 'paro', 'prio']
+        aaf.fit(rossi, event_col='week', duration_col='arrest')
+        assert list(aaf.cumulative_hazards_.columns.drop('baseline')) == expected
+
+    def test_swapping_order_of_columns_in_a_df_is_okay(self):
+        rossi = load_rossi()
+        aaf = AalenAdditiveFitter()
+        aaf.fit(rossi, event_col='week', duration_col='arrest')
+
+        misorder = ['age', 'race', 'wexp', 'mar', 'paro', 'prio', 'fin']
+        natural_order = rossi.columns.drop(['week','arrest'])
+        deleted_order = rossi.columns - ['week','arrest']
+        assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
+        assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
+
     def test_large_dimensions_for_recursion_error(self):
         n = 500
         d = 50
@@ -898,6 +916,13 @@ class PlottingTests(unittest.TestCase):
 
 
 class CoxRegressionTests(unittest.TestCase):
+
+    def test_input_column_order_is_equal_to_output_hazards_order(self):
+        rossi = load_rossi()
+        cp = CoxPHFitter()
+        expected = ['fin', 'age', 'race', 'wexp', 'mar', 'paro', 'prio']
+        cp.fit(rossi, event_col='week', duration_col='arrest')
+        assert list(cp.hazards_.columns) == expected
 
     def test_log_likelihood_is_available_in_output(self):
         cox = CoxPHFitter()
