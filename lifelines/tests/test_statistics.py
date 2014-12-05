@@ -56,21 +56,22 @@ def test_multivariate_unequal_intensities():
     assert result
 
 
-def test_pairwise_waltons_dataset():
+def test_pairwise_waltons_dataset_is_significantly_different():
     waltons_dataset = load_waltons()
     _, _, R = pairwise_logrank_test(waltons_dataset['T'], waltons_dataset['group'])
     assert R.values[0, 1]
 
 
-def test_pairwise_logrank_test():
-    T = np.random.exponential(10, size=500)
-    g = np.random.binomial(2, 0.7, size=500)
-    S, P, R = pairwise_logrank_test(T, g, alpha=0.99)
+def test_pairwise_logrank_test_with_identical_data_returns_inconclusive():
+    t = np.random.exponential(10, size=100)
+    T = np.tile(t, 3)
+    g = np.array([1,2,3]).repeat(100)
+    S, P, R = pairwise_logrank_test(T, g, alpha=0.95)
     V = np.array([[np.nan, None, None], [None, np.nan, None], [None, None, np.nan]])
     npt.assert_array_equal(R, V)
 
 
-def test_multivariate_inputs():
+def test_multivariate_inputs_return_identical_solutions():
     T = np.array([1, 2, 3])
     E = np.array([1, 1, 0], dtype=bool)
     G = np.array([1, 2, 1])
