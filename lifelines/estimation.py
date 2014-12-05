@@ -732,7 +732,8 @@ class AalenAdditiveFitter(BaseFitter):
 
         cols = get_index(X)
         if isinstance(X, pd.DataFrame):
-            order = self.cumulative_hazards_.columns.drop('baseline')
+            order = self.cumulative_hazards_.columns
+            order = order.drop('baseline') if self.fit_intercept else order
             X_ = X[order].values.copy()
         else:
             X_ = X.copy()
