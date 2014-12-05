@@ -718,7 +718,9 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict_cumulative_hazard(self, X, id_col=None):
         """
-        X: a (n,d) covariate matrix
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
+            can be in any order. If a numpy array, columns must be in the 
+            same order as the training data.
 
         Returns the hazard rates for the individuals
         """
@@ -727,17 +729,22 @@ class AalenAdditiveFitter(BaseFitter):
             raise NotImplementedError
 
         n, d = X.shape
-        try:
-            X_ = X.values.copy()
-        except:
-            X_ = X.copy()
-        X_ = X.copy() if not self.fit_intercept else np.c_[X.copy(), np.ones((n, 1))]
+
         cols = get_index(X)
+        if isinstance(X, pd.DataFrame):
+            order = self.cumulative_hazards_.columns
+            order = order.drop('baseline') if self.fit_intercept else order
+            X_ = X[order].values.copy()
+        else:
+            X_ = X.copy()
+        X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
         return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=cols)
 
     def predict_survival_function(self, X):
         """
-        X: a (n,d) covariate matrix
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
+            can be in any order. If a numpy array, columns must be in the 
+            same order as the training data.
 
         Returns the survival functions for the individuals
         """
@@ -745,7 +752,10 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict_percentile(self, X, p=0.5):
         """
-        X: a (n,d) covariate matrix
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
+            can be in any order. If a numpy array, columns must be in the 
+            same order as the training data.
+
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
@@ -754,7 +764,10 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict_median(self, X):
         """
-        X: a (n,d) covariate matrix
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
+            can be in any order. If a numpy array, columns must be in the 
+            same order as the training data.
+
         Returns the median lifetimes for the individuals
         """
         return self.predict_percentile(X, 0.5)
@@ -762,6 +775,12 @@ class AalenAdditiveFitter(BaseFitter):
     def predict_expectation(self, X):
         """
         Compute the expected lifetime, E[T], using covarites X.
+
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
+            can be in any order. If a numpy array, columns must be in the 
+            same order as the training data.
+
+        Returns the expected lifetimes for the individuals
         """
         index = get_index(X)
         t = self.cumulative_hazards_.index
@@ -1117,9 +1136,14 @@ class CoxPHFitter(BaseFitter):
         """
         index = get_index(X)
 
+        if isinstance(X, pd.DataFrame):
+            order = self.hazards_.columns
+            X = X[order]
+
         if self.normalize:
             # Assuming correct ordering and number of columns
             X = normalize(X, self._norm_mean.values, self._norm_std.values)
+
 
         return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
 
