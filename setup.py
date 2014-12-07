@@ -16,8 +16,8 @@ def read(fname):
 
 
 # Fortran extensions for statistics module
-ext_fstat = Extension(name="lifelines._statistics",
-                      sources=["lifelines/_statistics.f90"])
+ext_fstat = Extension(name="lifelines._utils",
+                      sources=["lifelines/_utils.f90"])
 
 
 setup(

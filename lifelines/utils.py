@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pandas import to_datetime
 
-from lifelines._statistics import concordance_index as _cindex
+from lifelines._utils import concordance_index as _cindex
 
 
 def concordance_index(event_times, predicted_event_times, event_observed=None):
