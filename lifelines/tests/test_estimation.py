@@ -192,6 +192,7 @@ class TestKaplanMeierFitter():
         assert kmf.cumulative_density_[kmf._label].ix[0] == 0.0
         assert kmf.cumulative_density_[kmf._label].ix[12] == 1.0
 
+    @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_kmf_left_censorship_plots(self):
         kmf = KaplanMeierFitter()
@@ -662,6 +663,7 @@ class TestAalenAdditiveFitter():
         aaf = AalenAdditiveFitter()
         aaf.fit(X)
 
+    @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_aaf_panel_dataset(self):
         panel_dataset = load_panel_test()
@@ -688,6 +690,7 @@ class TestAalenAdditiveFitter():
         T_pred = aaf.predict_median(X[list(range(6))])
         assert abs((T_pred.values > T).mean() - 0.5) < 0.05
 
+    @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
@@ -713,6 +716,7 @@ class TestAalenAdditiveFitter():
         plt.show()
         return
 
+    @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_aalen_additive_fit_with_censor(self):
         # this is a visual test of the fitting the cumulative

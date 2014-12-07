@@ -9,6 +9,7 @@ from ..generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from ..plotting import plot_lifetimes
 
 
+@pytest.mark.plottest
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting():
 
