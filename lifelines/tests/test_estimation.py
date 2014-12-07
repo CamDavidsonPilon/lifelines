@@ -354,6 +354,7 @@ class TestCoxPHFitter():
         try:
             out = StringIO()
             sys.stdout = out
+            
             cp = CoxPHFitter()
             df = load_rossi()
             cp.fit(df, duration_col='week', event_col='arrest')

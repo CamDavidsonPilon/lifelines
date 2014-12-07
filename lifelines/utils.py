@@ -7,6 +7,65 @@ import numpy as np
 import pandas as pd
 from pandas import to_datetime
 
+from lifelines._statistics import concordance_index as _cindex
+
+
+def concordance_index(event_times, predicted_event_times, event_observed=None):
+    """
+    Calculates the concordance index (C-index) between two series
+    of event times. The first is the real survival times from
+    the experimental data, and the other is the predicted survival
+    times from a model of some kind.
+
+    The concordance index is a value between 0 and 1 where,
+    0.5 is the expected result from random predictions,
+    1.0 is perfect concordance and,
+    0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
+
+    Score is usually 0.6-0.7 for survival models.
+
+    See:
+    Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
+    developing models, evaluating assumptions and adequacy, and measuring and
+    reducing errors. Statistics in Medicine 1996;15(4):361-87.
+
+    Parameters:
+      event_times: a (n,) array of observed survival times.
+      predicted_event_times: a (n,) array of predicted survival times.
+      event_observed: a (n,) array of censorship flags, 1 if observed,
+                      0 if not. Default assumes all observed.
+
+    Returns:
+      c-index: a value between 0 and 1.
+    """
+    event_times = np.array(event_times, dtype=float)
+    predicted_event_times = np.array(predicted_event_times, dtype=float)
+
+    # Allow for (n, 1) or (1, n) arrays
+    if event_times.ndim == 2 and (event_times.shape[0] == 1 or
+                                  event_times.shape[1] == 1):
+        # Flatten array
+        event_times = event_times.ravel()
+    # Allow for (n, 1) or (1, n) arrays
+    if (predicted_event_times.ndim == 2 and
+        (predicted_event_times.shape[0] == 1 or
+         predicted_event_times.shape[1] == 1)):
+        # Flatten array
+        predicted_event_times = predicted_event_times.ravel()
+
+    if event_times.shape != predicted_event_times.shape:
+        raise ValueError("Event times and predictions must have the same shape")
+    if event_times.ndim != 1:
+        raise ValueError("Event times can only be 1-dimensional: (n,)")
+
+    if event_observed is None:
+        event_observed = np.ones(event_times.shape[0], dtype=float)
+
+    # 100 times faster to calculate in Fortran
+    return _cindex(event_times,
+                   predicted_event_times,
+                   event_observed)
+
 
 def coalesce(*args):
     return next(s for s in args if s is not None)
@@ -264,7 +323,7 @@ def AandS_approximation(p):
 
 
 def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
-                            k=5, loss_function="concordance", predictor="predict_median",
+                            k=5, evaluation_measure=concordance_index, predictor="predict_median",
                             predictor_kwargs={}):
     """
     Perform cross validation on a dataset.
@@ -276,8 +335,9 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
     duration_col: the column in dataframe that contains the subjects lifetimes.
     event_col: the column in dataframe that contains the subject's death observation.    loss functions:
     k: the number of folds to perform. n/k data will be withheld for testing on.
-    loss_function: "concordance" only.
-            "concordance":  concordance index (C-index) between two series of event times
+    evaluation_measure: a function that accepts either (event_times, predicted_event_times), 
+                  or (event_times, predicted_event_times, event_observed) and returns a scalar value.
+                  Default: statistics.concordance_index: (C-index) between two series of event times
     predictor: a string that matches a prediction method on the fitter instances. For example,
             "predict_expectation" or "predict_percentile". Default is "predict_median"
     predictor_kwargs: keyward args to pass into predictor.
@@ -285,8 +345,6 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
     Returns:
         (k,1) array of scores for each fold.
     """
-    from .statistics import concordance_index
-
     n, d = df.shape
     scores = np.zeros((k,))
     df = df.copy()
@@ -311,7 +369,10 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
         fitter.fit(training_data, duration_col=duration_col, event_col=event_col)
         T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
 
-        scores[i - 1] = concordance_index(T_actual, T_pred, E_actual)
+        try:
+            scores[i - 1] = evaluation_measure(T_actual, T_pred, E_actual)
+        except TypeError:
+            scores[i - 1] = evaluation_measure(T_actual, T_pred)
 
     return scores
 

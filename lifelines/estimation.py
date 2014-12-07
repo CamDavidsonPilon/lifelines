@@ -13,7 +13,7 @@ from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
     epanechnikov_kernel, StatError, coalesce, normalize, significance_code
 from lifelines.progress_bar import progress_bar
-from lifelines.statistics import concordance_index
+from lifelines.utils import concordance_index
 
 
 class BaseFitter(object):
