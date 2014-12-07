@@ -7,7 +7,7 @@ import numpy.testing as npt
 
 from ..utils import group_survival_table_from_events, survival_table_from_events, survival_events_from_table, \
     datetimes_to_durations, k_fold_cross_validation, normalize, unnormalize,\
-    qth_survival_time, qth_survival_times, median_survival_times
+    qth_survival_time, qth_survival_times, median_survival_times, concordance_index
 from ..estimation import CoxPHFitter
 from ..datasets import load_regression_dataset, load_larynx, load_waltons
 

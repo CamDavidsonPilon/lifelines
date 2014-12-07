@@ -44,7 +44,7 @@ def test_logrank_test_is_symmetric():
     data2 = np.random.exponential(1, size=(2000, 1)).astype(int)
     summary1, p_value1, result1 = logrank_test(data1, data2)
     summary2, p_value2, result2 = logrank_test(data2, data1)
-    assert p_value2 == p_value1
+    assert abs(p_value2 - p_value1) < 10e-8
     assert result2 == result1
 
 
