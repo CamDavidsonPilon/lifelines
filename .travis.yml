@@ -25,12 +25,12 @@ install:
   - conda info -a
 
   # Should match requirements.txt
-  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas matplotlib
+  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas matplotlib pytest
   - source activate test-environment
   # Build in place so we can run tests
   - python setup.py build_ext --inplace
 # command to run tests
-script: python -m lifelines.tests.test_suite
+script: python -m lifelines.tests -vv
 # Don't want notifications
 notifications:
   email: false

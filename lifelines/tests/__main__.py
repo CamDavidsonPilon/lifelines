@@ -1,6 +1,7 @@
-import unittest
-from . import test_suite
+import sys
+import pytest
 
 
 if __name__ == '__main__':
-    unittest.main(module=test_suite)
+    # Exit with correct code
+    sys.exit(pytest.main(["--pyargs", "lifelines.tests"] + sys.argv[1:]))

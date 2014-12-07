@@ -16,13 +16,13 @@ def read(fname):
 
 
 # Fortran extensions for statistics module
-ext_fstat = Extension(name="lifelines._statistics",
-                      sources=["lifelines/_statistics.f90"])
+ext_fstat = Extension(name="lifelines._utils",
+                      sources=["lifelines/_utils.f90"])
 
 
 setup(
     name="lifelines",
-    version="0.4.4.0",
+    version="0.5.0.0",
     author="Cameron Davidson-Pilon",
     author_email="cam.davidson.pilon@gmail.com",
     description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",

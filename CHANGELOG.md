@@ -1,5 +1,22 @@
 ### Changelogs
 
+#### 0.5.0
+
+- move testing to py.test
+- refactor tests into smaller files
+- make `test_pairwise_logrank_test_with_identical_data_returns_inconclusive` a better test
+- add test for summary()
+- Alternate metrics can be used for `k_fold_cross_validation`.
+
+
+#### 0.4.4
+
+ - Lots of improvements to numerical stability (but something things still need work)
+ - Additions to `summary` in CoxPHFitter.
+ - Make all prediction methods output a DataFrame
+ - Fixes bug in 1-d input not returning in CoxPHFitter
+ - Lots of new tests. 
+
 ####0.4.3
  - refactoring of `qth_survival_times`: it can now accept an iterable (or a scalar still) of probabilities in the q argument, and will return a DataFrame with these as columns. If len(q)==1 and a single survival function is given, will return a scalar, not a DataFrame. Also some good speed improvements.
  - KaplanMeierFitter and NelsonAalenFitter now have a `_label` property that is passed in during the fit.
