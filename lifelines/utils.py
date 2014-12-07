@@ -335,7 +335,7 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
     duration_col: the column in dataframe that contains the subjects lifetimes.
     event_col: the column in dataframe that contains the subject's death observation.    loss functions:
     k: the number of folds to perform. n/k data will be withheld for testing on.
-    evaluation_measure: a function that accepts either (event_times, predicted_event_times), 
+    evaluation_measure: a function that accepts either (event_times, predicted_event_times),
                   or (event_times, predicted_event_times, event_observed) and returns a scalar value.
                   Default: statistics.concordance_index: (C-index) between two series of event times
     predictor: a string that matches a prediction method on the fitter instances. For example,

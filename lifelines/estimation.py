@@ -718,8 +718,8 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict_cumulative_hazard(self, X, id_col=None):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
-            can be in any order. If a numpy array, columns must be in the 
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
         Returns the hazard rates for the individuals
@@ -742,8 +742,8 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict_survival_function(self, X):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
-            can be in any order. If a numpy array, columns must be in the 
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
         Returns the survival functions for the individuals
@@ -752,8 +752,8 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict_percentile(self, X, p=0.5):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
-            can be in any order. If a numpy array, columns must be in the 
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
         Returns the median lifetimes for the individuals.
@@ -764,8 +764,8 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict_median(self, X):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
-            can be in any order. If a numpy array, columns must be in the 
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
         Returns the median lifetimes for the individuals
@@ -776,8 +776,8 @@ class AalenAdditiveFitter(BaseFitter):
         """
         Compute the expected lifetime, E[T], using covarites X.
 
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns 
-            can be in any order. If a numpy array, columns must be in the 
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
         Returns the expected lifetimes for the individuals
@@ -1116,8 +1116,8 @@ class CoxPHFitter(BaseFitter):
               end='\n\n')
         print("Concordance = {:.3f}"
               .format(concordance_index(self.durations,
-                      -self.predict_partial_hazard(self.data).values.ravel(),
-                      self.event_observed)))
+                                        -self.predict_partial_hazard(self.data).values.ravel(),
+                                        self.event_observed)))
         return
 
     def predict_partial_hazard(self, X):
@@ -1143,7 +1143,6 @@ class CoxPHFitter(BaseFitter):
         if self.normalize:
             # Assuming correct ordering and number of columns
             X = normalize(X, self._norm_mean.values, self._norm_std.values)
-
 
         return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
 

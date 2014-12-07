@@ -65,7 +65,7 @@ def test_pairwise_waltons_dataset_is_significantly_different():
 def test_pairwise_logrank_test_with_identical_data_returns_inconclusive():
     t = np.random.exponential(10, size=100)
     T = np.tile(t, 3)
-    g = np.array([1,2,3]).repeat(100)
+    g = np.array([1, 2, 3]).repeat(100)
     S, P, R = pairwise_logrank_test(T, g, alpha=0.99)
     V = np.array([[np.nan, None, None], [None, np.nan, None], [None, None, np.nan]])
     npt.assert_array_equal(R, V)

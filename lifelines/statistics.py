@@ -8,6 +8,7 @@ import pandas as pd
 
 from lifelines.utils import group_survival_table_from_events
 
+
 def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None,
                  alpha=0.95, t_0=-1, suppress_print=False, **kwargs):
     """
