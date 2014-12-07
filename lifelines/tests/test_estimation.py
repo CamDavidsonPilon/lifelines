@@ -15,7 +15,7 @@ from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, Ne
 from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test
 from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
-from ..statistics import concordance_index
+from ..utils import concordance_index
 
 
 @pytest.fixture
