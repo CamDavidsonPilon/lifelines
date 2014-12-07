@@ -94,32 +94,6 @@ def test_pairwise_allows_dataframes():
     pairwise_logrank_test(df['T'], df["group"], event_observed=df["C"])
 
 
-def test_concordance_index():
-    size = 1000
-    T = np.random.normal(size=size)
-    P = np.random.normal(size=size)
-    C = np.random.choice([0, 1], size=size)
-    Z = np.zeros_like(T)
-
-    # Zeros is exactly random
-    assert concordance_index(T, Z) == 0.5
-    assert concordance_index(T, Z, C) == 0.5
-
-    # Itself is 1
-    assert concordance_index(T, T) == 1.0
-    assert concordance_index(T, T, C) == 1.0
-
-    # Random is close to 0.5
-    assert abs(concordance_index(T, P) - 0.5) < 0.05
-    assert abs(concordance_index(T, P, C) - 0.5) < 0.05
-
-
-def test_concordance_index_returns_same_after_shifting():
-    T = np.array([1, 2, 3, 4, 5, 6])
-    T_ = np.array([2, 1, 4, 6, 5, 3])
-    assert concordance_index(T, T_) == concordance_index(T - 5, T_ - 5) == concordance_index(T, T_ - 5) == concordance_index(T - 5, T_)
-
-
 def test_equal_intensity():
     """
     This is the (I think) fact that 1-alpha == false positive rate.
