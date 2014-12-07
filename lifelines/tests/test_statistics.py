@@ -43,7 +43,7 @@ def test_logrank_test_is_symmetric():
     data1 = np.random.exponential(5, size=(2000, 1)).astype(int)
     data2 = np.random.exponential(1, size=(2000, 1)).astype(int)
     summary1, p_value1, result1 = logrank_test(data1, data2)
-    summary2, p_value2, result2 = logrank_test(data1, data2)
+    summary2, p_value2, result2 = logrank_test(data2, data1)
     assert p_value2 == p_value1
     assert result2 == result1
 
@@ -66,7 +66,7 @@ def test_pairwise_logrank_test_with_identical_data_returns_inconclusive():
     t = np.random.exponential(10, size=100)
     T = np.tile(t, 3)
     g = np.array([1,2,3]).repeat(100)
-    S, P, R = pairwise_logrank_test(T, g, alpha=0.95)
+    S, P, R = pairwise_logrank_test(T, g, alpha=0.99)
     V = np.array([[np.nan, None, None], [None, np.nan, None], [None, None, np.nan]])
     npt.assert_array_equal(R, V)
 

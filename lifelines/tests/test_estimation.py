@@ -342,6 +342,42 @@ class TestRegressionFitters():
 
 class TestCoxPHFitter():
 
+    def test_print_summary(self):
+
+        import sys
+        try:
+            from StringIO import StringIO
+        except:
+            from io import StringIO
+
+        saved_stdout = sys.stdout
+        try:
+            out = StringIO()
+            sys.stdout = out
+            cp = CoxPHFitter()
+            df = load_rossi()
+            cp.fit(df, duration_col='week', event_col='arrest')
+            cp.summary()
+            output = out.getvalue().strip().split()
+            expected = """n=432, number of events=114
+
+           coef  exp(coef)  se(coef)          z         p  lower 0.95  upper 0.95
+fin  -1.897e-01  8.272e-01 9.579e-02 -1.981e+00 4.763e-02  -3.775e-01  -1.938e-03   *
+age  -3.500e-01  7.047e-01 1.344e-01 -2.604e+00 9.210e-03  -6.134e-01  -8.651e-02  **
+race  1.032e-01  1.109e+00 1.012e-01  1.020e+00 3.078e-01  -9.516e-02   3.015e-01
+wexp -7.486e-02  9.279e-01 1.051e-01 -7.124e-01 4.762e-01  -2.809e-01   1.311e-01
+mar  -1.421e-01  8.675e-01 1.254e-01 -1.134e+00 2.570e-01  -3.880e-01   1.037e-01
+paro -4.134e-02  9.595e-01 9.522e-02 -4.341e-01 6.642e-01  -2.280e-01   1.453e-01
+prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-01  **
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Concordance = 0.642""".strip().split()
+            assert output == expected
+        finally:
+            sys.stdout = saved_stdout
+
+
     def test_log_likelihood_is_available_in_output(self, data_nus):
         cox = CoxPHFitter()
         cox.fit(data_nus, duration_col='t', event_col='E', include_likelihood=True)
