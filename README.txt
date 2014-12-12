@@ -5,7 +5,7 @@ lifelines
 it? <http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html>`__
 Survival analysis was originally developed and applied heavily by the
 actuarial and medical community. Its purpose was to answer *why do
-events occur now versus later* under uncertainity (where *events* might
+events occur now versus later* under uncertainty (where *events* might
 refer to deaths, disease remission, etc.). This is great for researchers
 who are interested in measuring lifetimes: they can answer questions
 like *what factors might influence deaths?*
