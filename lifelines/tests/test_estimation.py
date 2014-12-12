@@ -343,6 +343,21 @@ class TestRegressionFitters():
 
 class TestCoxPHFitter():
 
+    def test_summary(self):
+        
+        cp = CoxPHFitter()
+        df = load_rossi()
+        cp.fit(df, duration_col='week', event_col='arrest')
+        summDf = cp.summary
+        expectedColumns = ['coef',
+                           'exp(coef)',
+                           'se(coef)',
+                           'z',
+                           'p',
+                           'lower',
+                           'upper']
+        assert all([col in summDf.columns for col in expectedColumns])
+
     def test_print_summary(self):
 
         import sys
@@ -359,7 +374,7 @@ class TestCoxPHFitter():
             cp = CoxPHFitter()
             df = load_rossi()
             cp.fit(df, duration_col='week', event_col='arrest')
-            cp.summary()
+            cp.print_summary()
             output = out.getvalue().strip().split()
             expected = """n=432, number of events=114
 

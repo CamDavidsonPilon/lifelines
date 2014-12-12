@@ -1093,15 +1093,33 @@ class CoxPHFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
+    @property
     def summary(self):
+        """Summary statistics describing the fit.
+        Set alpha property in the object before calling.
+        
+        Returns
+        -------
+        df : pd.DataFrame
+            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
+
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.ix['coef'].values
         df['exp(coef)'] = exp(self.hazards_.ix['coef'].values)
         df['se(coef)'] = self._compute_standard_errors().ix['se'].values
         df['z'] = self._compute_z_values()
         df['p'] = self._compute_p_values()
-        df['lower %.2f' % self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
-        df['upper %.2f' % self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
+        df['lower'] = self.confidence_intervals_.ix['lower-bound'].values
+        df['upper'] = self.confidence_intervals_.ix['upper-bound'].values
+        return df
+
+    def print_summary(self):
+        """Print summary statistics describing the fit."""
+        df = self.summary
+        mapper = {'lower':'lower %.2f' % self.alpha,
+                  'upper':'upper %.2f' % self.alpha}
+        df = df.rename_axis(mapper, axis=1)
+
         # Significance codes last
         df[''] = [significance_code(p) for p in df['p']]
 
