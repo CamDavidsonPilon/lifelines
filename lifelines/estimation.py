@@ -1093,7 +1093,7 @@ class CoxPHFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def summary(self):
+    def summary(self, return_summary = False):
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.ix['coef'].values
         df['exp(coef)'] = exp(self.hazards_.ix['coef'].values)
@@ -1102,23 +1102,27 @@ class CoxPHFitter(BaseFitter):
         df['p'] = self._compute_p_values()
         df['lower %.2f' % self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
-        # Significance codes last
-        df[''] = [significance_code(p) for p in df['p']]
-
-        # Print information about data first
-        print('n={}, number of events={}'.format(self.data.shape[0],
-                                                 np.where(self.event_observed)[0].shape[0]),
-              end='\n\n')
-        print(df.to_string(float_format=lambda f: '{:.3e}'.format(f)))
-        # Significance code explanation
-        print('---')
-        print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
-              end='\n\n')
-        print("Concordance = {:.3f}"
-              .format(concordance_index(self.durations,
-                                        -self.predict_partial_hazard(self.data).values.ravel(),
-                                        self.event_observed)))
-        return
+        
+        if return_summary:
+            return df
+        else:
+            # Significance codes last
+            df[''] = [significance_code(p) for p in df['p']]
+    
+            # Print information about data first
+            print('n={}, number of events={}'.format(self.data.shape[0],
+                                                     np.where(self.event_observed)[0].shape[0]),
+                  end='\n\n')
+            print(df.to_string(float_format=lambda f: '{:.3e}'.format(f)))
+            # Significance code explanation
+            print('---')
+            print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
+                  end='\n\n')
+            print("Concordance = {:.3f}"
+                  .format(concordance_index(self.durations,
+                                            -self.predict_partial_hazard(self.data).values.ravel(),
+                                            self.event_observed)))
+            return
 
     def predict_partial_hazard(self, X):
         """
