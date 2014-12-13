@@ -154,15 +154,16 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
 
-def survival_table_from_events(durations, event_observed, min_observations,
+def survival_table_from_events(durations, event_observed, birth_times=None,
                                columns=["removed", "observed", "censored", "entrance"], weights=None):
     """
     Parameters:
         durations: (n,1) array of event times (durations individual was observed for)
         event_observed: (n,1) boolean array, 1 if observed event, 0 is censored event.
-        min_observations: used for left truncation data. Sometimes subjects will show
-          up late in the study. min_observations is a (n,1) array of positive numbers representing
-          when the subject was first observed. A subject's life is then [min observation + duration observed]
+	birth_times: used for left truncation data. Sometimes subjects will show
+	  up late in the study. birth_times is a (n,1) array of positive numbers representing
+	  when the subject was first observed. A subject's death event is then at [birth times + duration observed].
+	  If None (default), birth_times are set to be the first observation.
         columns: a 3-length array to call the, in order, removed individuals, observed deaths
           and censorships.
         weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
@@ -190,21 +191,28 @@ def survival_table_from_events(durations, event_observed, min_observations,
         15              2         2         0         0
 
     """
-    # deal with deaths and censorships
+    durations = np.asarray(durations)
+    if birth_times is None:
+	birth_times = min(0, durations.min()) * np.ones(durations.shape[0])
+	offset = np.zeros(durations.shape[0])
+    else:
+	birth_times = np.asarray(birth_times)
+	assert np.all(birth_times >= 0) or np.all(durations >= 0)
+	offset = birth_times
 
-    durations = np.asarray(durations) + min_observations
-    df = pd.DataFrame(durations, columns=["event_at"])
+    # deal with deaths and censorships
+    death_times = durations + offset
+    df = pd.DataFrame(death_times, columns=["event_at"])
     df[columns[0]] = 1 if weights is None else weights
-    df[columns[1]] = event_observed
+    df[columns[1]] = np.asarray(event_observed)
     death_table = df.groupby("event_at").sum()
     death_table[columns[2]] = (death_table[columns[0]] - death_table[columns[1]]).astype(int)
 
     # deal with late births
-    births = pd.DataFrame(min_observations, columns=['event_at'])
+    births = pd.DataFrame(birth_times, columns=['event_at'])
     births[columns[3]] = 1
     births_table = births.groupby('event_at').sum()
 
-    # this next line can be optimized for when min_observerations is all zeros.
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     return event_table.astype(float)
 

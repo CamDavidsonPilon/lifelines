@@ -204,7 +204,6 @@ class KaplanMeierFitter(BaseFitter):
         """
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
-
         v = preprocess_inputs(durations, event_observed, timeline, entry)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
         self._label = label
@@ -1097,7 +1096,7 @@ class CoxPHFitter(BaseFitter):
     def summary(self):
         """Summary statistics describing the fit.
         Set alpha property in the object before calling.
-        
+
         Returns
         -------
         df : pd.DataFrame
@@ -1116,8 +1115,8 @@ class CoxPHFitter(BaseFitter):
     def print_summary(self):
         """Print summary statistics describing the fit."""
         df = self.summary
-        mapper = {'lower':'lower %.2f' % self.alpha,
-                  'upper':'upper %.2f' % self.alpha}
+	mapper = {'lower': 'lower %.2f' % self.alpha,
+		  'upper': 'upper %.2f' % self.alpha}
         df = df.rename_axis(mapper, axis=1)
 
         # Significance codes last
@@ -1310,12 +1309,12 @@ def preprocess_inputs(durations, event_observed, timeline, entry):
         event_observed = np.asarray(event_observed).reshape((n,)).copy().astype(int)
 
     if entry is None:
-        entry = np.zeros(n)
+	entry = np.empty(n)
+	entry.fill(min(0, durations.min()))
     else:
         entry = np.asarray(entry).reshape((n,))
 
     event_table = survival_table_from_events(durations, event_observed, entry)
-
     if timeline is None:
         timeline = event_table.index.values
     else:
