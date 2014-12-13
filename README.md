@@ -10,19 +10,18 @@ lifelines
 
 But outside of medicine and actuarial science, there are many other interesting and exciting applications of this
 lesser-known technique, for example:
-- SaaS providers are interested in measuring customer lifetimes, or time to first behaviours.
-- sociologists are interested in measure political parties lifetimes, or relationships, or marriages
-- Businesses are interested in what variables affect lifetime value
+- SaaS providers are interested in measuring customer lifetimes, or time to first behaviours
+- sociologists are interested in measuring political parties' lifetimes, or relationships, or marriages
+- businesses are interested in what variables affect lifetime value
 
-*lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please leave an Issue and let us know your
-thoughts on the library.
+*lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please leave an Issue and let us know your thoughts on the library.
 
 ### Installation:
 
 
 #### Dependencies:
 
-The usual Python data stack: Numpy, Scipy, Pandas (a modern version please), Matplotlib
+The usual Python data stack: NumPy, SciPy, Pandas (a modern version please), Matplotlib
 
 #### Installing
 
