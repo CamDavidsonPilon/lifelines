@@ -52,6 +52,12 @@ please check out the [Documentation and Tutorials page](http://lifelines.readthe
 
 ![lifelines](http://i.imgur.com/QXW71zA.png)
 
+## Developing
+
+To contribute, fork and clone this repository. You may need to compile the `_utils.f90` file like so:
+
+    f2py -c -m lifelines._utils lifelines/_utils.f90
+
 
 ## License
 
