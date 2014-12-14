@@ -15,44 +15,58 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-# Fortran extensions for statistics module
-ext_fstat = Extension(name="lifelines._utils",
-                      sources=["lifelines/_utils.f90"])
+# Fortran extensions for extra speed (optional)
+ext_fstat = Extension(name="lifelines._utils._cindex",
+                      sources=["lifelines/_utils/_cindex.f90"])
+exts = [ext_fstat]
 
 
-setup(
-    name="lifelines",
-    version="0.5.0.0",
-    author="Cameron Davidson-Pilon",
-    author_email="cam.davidson.pilon@gmail.com",
-    description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
-    license="MIT",
-    keywords="survival analysis statistics data analysis",
-    url="https://github.com/CamDavidsonPilon/lifelines",
-    packages=['lifelines', 'lifelines.datasets', 'lifelines.tests'],
-    long_description=read('README.txt'),
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python",
-        "Topic :: Scientific/Engineering",
-    ],
-    install_requires=[
-        "numpy",
-        "scipy",
-        "matplotlib",
-        "pandas>=0.14",
-    ],
-    package_data={
-        "lifelines": [
-            "*.f90",
-            "../README.md",
-            "../README.txt",
-            "../LICENSE",
-            "../MANIFEST.in",
-            "../*.ipynb",
-            "datasets/*",
-        ]
-    },
-    ext_modules=[ext_fstat]
-)
+done = False
+# First try to build with the extension. In case of failure, do without.
+for ext_modules in [exts, []]:
+    if done:
+        break
+
+    try:
+        setup(
+            name="lifelines",
+            version="0.5.0.0",
+            author="Cameron Davidson-Pilon",
+            author_email="cam.davidson.pilon@gmail.com",
+            description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
+            license="MIT",
+            keywords="survival analysis statistics data analysis",
+            url="https://github.com/CamDavidsonPilon/lifelines",
+            packages=['lifelines',
+                      'lifelines.datasets',
+                      'lifelines._utils',
+                      'lifelines.tests'],
+            long_description=read('README.txt'),
+            classifiers=[
+                "Development Status :: 4 - Beta",
+                "License :: OSI Approved :: MIT License",
+                "Programming Language :: Python",
+                "Topic :: Scientific/Engineering",
+                ],
+            install_requires=[
+                "numpy",
+                "scipy",
+                "matplotlib",
+                "pandas>=0.14",
+            ],
+            package_data={
+                "lifelines": [
+                    "*.f90",
+                    "../README.md",
+                    "../README.txt",
+                    "../LICENSE",
+                    "../MANIFEST.in",
+                    "../*.ipynb",
+                    "datasets/*",
+                ]
+            },
+            ext_modules=ext_modules
+        )
+        done = True
+    except:
+        print("Failed to build. Trying again without native extensions.")
