@@ -51,7 +51,7 @@ def test_logrank_test_is_symmetric():
 def test_multivariate_unequal_intensities():
     T = np.random.exponential(10, size=300)
     g = np.random.binomial(2, 0.5, size=300)
-    T[g == 1] = np.random.exponential(6, size=(g == 1).sum())
+    T[g == 1] = np.random.exponential(1, size=(g == 1).sum())
     s, _, result = multivariate_logrank_test(T, g)
     assert result
 
