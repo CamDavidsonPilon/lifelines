@@ -32,7 +32,7 @@ time (months, days, ...)      observed deaths       censored
 
     from lifelines.utils import survival_events_from_table
 
-    T,C = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censoreds')
+    T,C = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
     print T # np.array([0,0,0,0,0,0,0,1,2,2, ...])
     print C # np.array([1,1,1,1,1,1,1,0,1,1, ...])
 
@@ -61,15 +61,8 @@ If you have a pandas `DataFrame` with columns "group", "T", and "C", then someth
     
     ax = plt.subplot(111)
 
-    #group the data by column 'group'
-    grouped_data = df.groupby("group")
-
-    #iterate over the groups and plot the estimate + 95% intervals.
-    unique_groups = grouped_data.groups.keys()
-    unique_groups.sort()
-
     kmf = KaplanMeierFitter()
-    for i, group in enumerate(unique_groups):
+    for group in df['group'].unique():
         data = grouped_data.get_group(group)
         kmf.fit(data["T"], data["C"], label=group)
         kmf.plot(ax=ax)
@@ -224,7 +217,7 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
 
 What you would really like is to have a predictable and full index from 40 to 75. (Notice that
 in the above index, the last two time points are not adjacent -- this is caused by observing no lifetimes
-existing for at times 72 or 73) This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a `timeline` argument: 
+existing for times 72 or 73) This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a `timeline` argument: 
 
 .. code-block:: python
 
@@ -274,7 +267,7 @@ existing for at times 72 or 73) This is especially useful for comparing multiple
 Example SQL query to get data from a table
 ##############################################
 
-Below is a way to get an example dataset from a relation database (this may vary depending on your database):
+Below is a way to get an example dataset from a relational database (this may vary depending on your database):
 
 .. code-block:: mysql
 

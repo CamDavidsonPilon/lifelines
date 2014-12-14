@@ -23,11 +23,11 @@ Let's start by importing some data. We need the durations that individuals are o
 
 .. code:: python
 
-    from lifelines.datasets import generate_waltons_dataset
-    data = generate_waltons_dataset()    
+    from lifelines.datasets import load_waltons
+    df = load_waltons() # returns a pandas DataFrame
 
-    T = data['T']
-    E = data['E']
+    T = df['T']
+    E = df['E']
 
 ``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed (alternatively an individual can be censored). 
 
@@ -38,7 +38,7 @@ Let's start by importing some data. We need the durations that individuals are o
 
     from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
-    kmf.fit(T, event_observed=E)
+    kmf.fit(T, event_observed=E) # more succiently, kmf.fit(T,E)
 
 After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Pandas internal plotting library (see `here <http://lifelines.readthedocs.org/en/latest/examples.html#plotting-options-and-styles>`__ for examples). 
 
@@ -55,8 +55,8 @@ Multiple groups
 
 .. code:: python
     
-    groups = waltons_dataset['group']
-    ix = groups == 'control'
+    groups = df['group']
+    ix = (groups == 'control')
 
     kmf.fit(T[ix], E[ix], label='control')
     ax = kmf.plot()
@@ -86,8 +86,8 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
 
 .. code:: python
     
-    from lifelines.datasets import generate_regression_dataset
-    regression_dataset = generate_regression_dataset()
+    from lifelines.datasets import load_regression_dataset
+    regression_dataset = load_regression_dataset()
 
     regression_dataset.head()
 

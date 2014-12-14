@@ -208,6 +208,8 @@ two special columns: a *duration* column and a boolean *event occured* column (w
 
 
 .. code:: python
+    
+    data = lifelines.datasets.load_dd()
 
     X['T'] = data['duration']
     X['E'] = data['observed'] 
@@ -395,14 +397,14 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
 
 .. code:: python
 
-    from lifelines.datasets import generate_rossi_dataset
+    from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
 
-    rossi_dataset = generate_rossi_dataset()
+    rossi_dataset = load_rossi()
     cf = CoxPHFitter()
     cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
-    print cf.summary()
+    cf.print_summary()
 
     """
     n=432, number of events=114
@@ -446,10 +448,10 @@ into a training set and a testing set, fits itself on the training set, and eval
 .. code:: python
       
         from lifelines import CoxPHFitter
-        from lifelines.datasets import generate_regression_dataset
+        from lifelines.datasets import load_regression_dataset
         from lifelines.utils import k_fold_cross_validation
 
-        regression_dataset = generate_regression_dataset()
+        regression_dataset = load_regression_dataset()
         cf = CoxPHFitter()
         scores = k_fold_cross_validation(cf, regression_dataset, duration_col='T', event_col='E', k=3)
         print scores
