@@ -71,7 +71,7 @@ def coalesce(*args):
     return next(s for s in args if s is not None)
 
 
-def group_survival_table_from_events(groups, durations, event_observed, min_observations, limit=-1):
+def group_survival_table_from_events(groups, durations, event_observed, birth_times, limit=-1):
     """
     Joins multiple event series together into dataframes. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
@@ -80,9 +80,9 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         groups: a (n,) array of individuals' group ids.
         durations: a (n,)  array of durations of each individual
         event_observed: a (n,) array of event observations, 1 if observed, 0 else.
-        min_observations: a (n,) array of times individual entered study. This is most applicable in
-                    cases where there is left-truncation, i.e. a individual might enter the
-                    study late. If not the case, normally set to all zeros.
+	birth_times: a (n,) array of positive numbers representing
+	  when the subject was first observed. A subject's death event is then at [birth times + duration observed].
+	  Normally set to all zeros.
 
     Output:
         - np.array of unique groups
@@ -124,8 +124,8 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
 
     """
     n = max(groups.shape)
-    assert n == max(durations.shape) == max(event_observed.shape) == max(min_observations.shape), "inputs must be of the same length."
-    groups, durations, event_observed, min_observations = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, durations, event_observed, min_observations])
+    assert n == max(durations.shape) == max(event_observed.shape) == max(birth_times.shape), "inputs must be of the same length."
+    groups, durations, event_observed, birth_times = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, durations, event_observed, birth_times])
     unique_groups = groups.unique()
 
     # set first group
@@ -133,7 +133,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
     ix = (groups == g)
     T = durations[ix]
     C = event_observed[ix]
-    B = min_observations[ix]
+    B = birth_times[ix]
 
     g_name = str(g)
     data = survival_table_from_events(T, C, B,
@@ -142,7 +142,7 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
         ix = groups == g
         T = durations[ix]
         C = event_observed[ix]
-        B = min_observations[ix]
+	B = birth_times[ix]
         g_name = str(g)
         data = data.join(survival_table_from_events(T, C, B,
                                                     columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
@@ -155,16 +155,15 @@ def group_survival_table_from_events(groups, durations, event_observed, min_obse
 
 
 def survival_table_from_events(durations, event_observed, birth_times=None,
-                               columns=["removed", "observed", "censored", "entrance"], weights=None):
+			       columns=["removed", "observed", "censored", "entrance"], weights=None):
     """
     Parameters:
-        durations: (n,1) array of event times (durations individual was observed for)
-        event_observed: (n,1) boolean array, 1 if observed event, 0 is censored event.
-	birth_times: used for left truncation data. Sometimes subjects will show
-	  up late in the study. birth_times is a (n,1) array of positive numbers representing
+	durations: (n,) array of event times (durations individual was observed for)
+	event_observed: (n,) boolean array, 1 if observed event, 0 is censored event.
+	birth_times: a (n,) array of positive numbers representing
 	  when the subject was first observed. A subject's death event is then at [birth times + duration observed].
 	  If None (default), birth_times are set to be the first observation.
-        columns: a 3-length array to call the, in order, removed individuals, observed deaths
+	columns: a 3-length array to call the, in order, removed individuals, observed deaths
           and censorships.
         weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
     Returns:
