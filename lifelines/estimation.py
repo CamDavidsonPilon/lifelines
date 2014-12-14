@@ -1306,13 +1306,10 @@ def preprocess_inputs(durations, event_observed, timeline, entry):
     if event_observed is None:
         event_observed = np.ones(n, dtype=int)
     else:
-        event_observed = np.asarray(event_observed).reshape((n,)).copy().astype(int)
+	event_observed = np.asarray(event_observed).reshape((n,)).copy().astype(int)
 
-    if entry is None:
-	entry = np.empty(n)
-	entry.fill(min(0, durations.min()))
-    else:
-        entry = np.asarray(entry).reshape((n,))
+    if entry is not None:
+	entry = np.asarray(entry).reshape((n,))
 
     event_table = survival_table_from_events(durations, event_observed, entry)
     if timeline is None:

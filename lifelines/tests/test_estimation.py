@@ -192,6 +192,20 @@ class TestKaplanMeierFitter():
         assert kmf.cumulative_density_[kmf._label].ix[0] == 0.0
         assert kmf.cumulative_density_[kmf._label].ix[12] == 1.0
 
+    def test_shifting_durations_doesnt_affect_survival_function_values(self):
+	T = np.random.exponential(10, size=100)
+	kmf = KaplanMeierFitter()
+	expected = kmf.fit(T).survival_function_.values
+
+	T_shifted = T + 100
+	npt.assert_almost_equal(expected, kmf.fit(T_shifted).survival_function_.values)
+
+	T_shifted = T - 50
+	npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
+
+	T_shifted = T - 200
+	npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
+
     @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_kmf_left_censorship_plots(self):

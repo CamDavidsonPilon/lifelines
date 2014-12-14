@@ -77,15 +77,15 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
 
     Parameters:
-        groups: a (n,) array of individuals' group ids.
-        durations: a (n,)  array of durations of each individual
-        event_observed: a (n,) array of event observations, 1 if observed, 0 else.
-	birth_times: a (n,) array of positive numbers representing
+	groups: a (n,) array of individuals' group ids.
+	durations: a (n,)  array of durations of each individual
+	event_observed: a (n,) array of event observations, 1 if observed, 0 else.
+	birth_times: a (n,) array of numbers representing
 	  when the subject was first observed. A subject's death event is then at [birth times + duration observed].
-	  Normally set to all zeros.
+	  Normally set to all zeros, but can be positive or negative.
 
     Output:
-        - np.array of unique groups
+	- np.array of unique groups
         - dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
         - dataframe of observed count data at event_times for each group, column names are 'observed:<group name>'
         - dataframe of censored count data at event_times for each group, column names are 'censored:<group name>'
@@ -160,12 +160,12 @@ def survival_table_from_events(durations, event_observed, birth_times=None,
     Parameters:
 	durations: (n,) array of event times (durations individual was observed for)
 	event_observed: (n,) boolean array, 1 if observed event, 0 is censored event.
-	birth_times: a (n,) array of positive numbers representing
+	birth_times: a (n,) array of numbers representing
 	  when the subject was first observed. A subject's death event is then at [birth times + duration observed].
-	  If None (default), birth_times are set to be the first observation.
+	  If None (default), birth_times are set to be the first observation or 0, which ever is smaller.
 	columns: a 3-length array to call the, in order, removed individuals, observed deaths
-          and censorships.
-        weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
+	  and censorships.
+	weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
     Returns:
         Pandas DataFrame with index as the unique times in event_times. The columns named
         'removed' refers to the number of individuals who were removed from the population
