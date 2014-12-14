@@ -163,9 +163,9 @@ class TestKaplanMeierFitter():
         npt.assert_almost_equal(kmf.survival_function_.values, self.kaplan_meier(T, C))
 
     def test_stat_error_is_raised_if_too_few_early_deaths(self):
-        births = np.array([51, 58, 55, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30,
+        births = np.array([0, 0, 0, 28, 21, 19, 25, 48, 47, 25, 31, 24, 25, 30, 33, 36, 30,
                            41, 43, 45, 35, 29, 35, 32, 36, 32, 10])
-        observations = np.array([1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
+        observations = np.array([1,  1,  1, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
                                  22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
         kmf = KaplanMeierFitter()
         with pytest.raises(StatError):
@@ -344,7 +344,7 @@ class TestRegressionFitters():
 class TestCoxPHFitter():
 
     def test_summary(self):
-        
+
         cp = CoxPHFitter()
         df = load_rossi()
         cp.fit(df, duration_col='week', event_col='arrest')
@@ -390,7 +390,7 @@ prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-0
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Concordance = 0.642""".strip().split()
-            for i in [0,1,2,-2,-1]:
+            for i in [0, 1, 2, -2, -1]:
                 assert output[i] == expected[i]
         finally:
             sys.stdout = saved_stdout
