@@ -3,7 +3,7 @@ import pandas as pd
 from pkg_resources import resource_filename
 
 
-def load_dataset(filename, usecols=None):
+def load_dataset(filename, **kwargs):
     '''
     Load a dataset from lifelines.datasets
 
@@ -15,7 +15,7 @@ def load_dataset(filename, usecols=None):
     '''
     return pd.read_csv(resource_filename('lifelines',
                                          'datasets/' + filename),
-                       usecols=usecols)
+                       **kwargs)
 
 
 def load_canadian_senators(usecols=None):
@@ -77,3 +77,7 @@ def load_rossi():
 
 def load_regression_dataset():
     return load_dataset('regression.csv')
+
+
+def load_g3():
+    return load_dataset('g3.csv', index_col=[0])

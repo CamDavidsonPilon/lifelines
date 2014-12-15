@@ -13,7 +13,7 @@ import numpy.testing as npt
 from ..utils import k_fold_cross_validation, StatError
 from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, NelsonAalenFitter, BreslowFlemingHarringtonFitter
 from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
-    load_lcd, load_panel_test
+    load_lcd, load_panel_test, load_g3
 from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
 from ..utils import concordance_index
 
@@ -219,6 +219,34 @@ class TestKaplanMeierFitter():
         ax = kmf.plot(ax=ax)
         plt.show()
         return
+
+    def test_kmf_survival_curve_output_against_R(self):
+        df = load_g3()
+        ix = df['group'] == 'RIT'
+        kmf = KaplanMeierFitter()
+
+        expected = np.array([[0.909, 0.779]]).T
+        kmf.fit(df.ix[ix]['time'], df.ix[ix]['event'], timeline=[25, 53])
+        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=3)
+
+        expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
+        kmf.fit(df.ix[~ix]['time'], df.ix[~ix]['event'], timeline=[9, 19, 32, 34])
+        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=3)
+
+    def test_kmf_confidence_intervals_output_against_R(self):
+        # this uses conf.type = 'log-log'
+        df = load_g3()
+        ix = df['group'] != 'RIT'
+        kmf = KaplanMeierFitter()
+        kmf.fit(df.ix[ix]['time'], df.ix[ix]['event'], timeline=[9, 19, 32, 34])
+
+        expected_lower_bound = np.array([0.2731, 0.1946, 0.1109, 0.0461])
+        npt.assert_array_almost_equal(kmf.confidence_interval_['KM-estimate_lower_0.95'].values,
+                                      expected_lower_bound, decimal=3)
+
+        expected_upper_bound = np.array([0.975, 0.904, 0.804, 0.676])
+        npt.assert_array_almost_equal(kmf.confidence_interval_['KM-estimate_upper_0.95'].values,
+                                      expected_upper_bound, decimal=3)
 
 
 class TestNelsonAalenFitter():

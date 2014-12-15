@@ -22,7 +22,8 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     Pre lifelines 0.2.x: this returned a test statistic.
     Post lifelines 0.2.x: this returns the results of the entire test.
 
-    See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
+    See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights. The R language
+    equivilant in the `survival` package would use conf.type='log-log'.
 
     Parameters:
       event_times_foo: a (nx1) array of event durations (birth to death,...) for the population.

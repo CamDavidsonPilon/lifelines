@@ -4,14 +4,26 @@ import numpy.testing as npt
 from scipy.stats import beta
 
 from ..statistics import *
-from ..datasets import load_waltons
+from ..datasets import load_waltons, load_g3
 
 
-def test_unequal_intensity():
+def test_unequal_intensity_with_random_data():
     data1 = np.random.exponential(5, size=(2000, 1))
     data2 = np.random.exponential(1, size=(2000, 1))
     summary, p_value, result = logrank_test(data1, data2)
     assert result
+
+
+def test_logrank_test_output_against_R():
+    df = load_g3()
+    ix = (df['group'] == 'RIT')
+    d1, e1 = df.ix[ix]['time'], df.ix[ix]['event']
+    d2, e2 = df.ix[~ix]['time'], df.ix[~ix]['event']
+
+    expected = 0.0138
+    summary, p_value, result = logrank_test(d1, d2, event_observed_A=e1, event_observed_B=e2)
+    print(summary)
+    assert abs(p_value - expected) < 0.000001
 
 
 def test_unequal_intensity_event_observed():
