@@ -195,7 +195,8 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
         birth_times = min(0, death_times.min()) * np.ones(death_times.shape[0])
     else:
         birth_times = np.asarray(birth_times)
-        assert np.all(birth_times <= death_times), 'birth time must be less than time of death.'
+        if np.any(birth_times > death_times):
+            raise ValueError('birth time must be less than time of death.')
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
