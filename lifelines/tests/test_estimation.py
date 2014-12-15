@@ -160,15 +160,15 @@ class TestKaplanMeierFitter():
         T, C = sample_lifetimes
         kmf = KaplanMeierFitter()
         kmf.fit(T, C)
-	npt.assert_almost_equal(kmf.survival_function_.values, self.kaplan_meier(T, C))
+        npt.assert_almost_equal(kmf.survival_function_.values, self.kaplan_meier(T, C))
 
     def test_stat_error_is_raised_if_too_few_early_deaths(self):
-	observations = np.array([1,  1,  1, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
-				 22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
-	births = observations - 1
-	kmf = KaplanMeierFitter()
-	with pytest.raises(StatError):
-	    kmf.fit(observations, entry=births)
+        observations = np.array([1,  1,  1, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
+                                 22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
+        births = observations - 1
+        kmf = KaplanMeierFitter()
+        with pytest.raises(StatError):
+            kmf.fit(observations, entry=births)
 
     def test_sort_doesnt_affect_kmf(self, sample_lifetimes):
         T, _ = sample_lifetimes
@@ -192,18 +192,18 @@ class TestKaplanMeierFitter():
         assert kmf.cumulative_density_[kmf._label].ix[12] == 1.0
 
     def test_shifting_durations_doesnt_affect_survival_function_values(self):
-	T = np.random.exponential(10, size=100)
-	kmf = KaplanMeierFitter()
-	expected = kmf.fit(T).survival_function_.values
+        T = np.random.exponential(10, size=100)
+        kmf = KaplanMeierFitter()
+        expected = kmf.fit(T).survival_function_.values
 
-	T_shifted = T + 100
-	npt.assert_almost_equal(expected, kmf.fit(T_shifted).survival_function_.values)
+        T_shifted = T + 100
+        npt.assert_almost_equal(expected, kmf.fit(T_shifted).survival_function_.values)
 
-	T_shifted = T - 50
-	npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
+        T_shifted = T - 50
+        npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
 
-	T_shifted = T - 200
-	npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
+        T_shifted = T - 200
+        npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
 
     @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
@@ -304,7 +304,7 @@ class TestBreslowFlemingHarringtonFitter():
 
         observations = np.array([1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
                                  22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
-	births = observations - 1
+        births = observations - 1
         bfh.fit(observations, entry=births)
 
 
@@ -402,7 +402,7 @@ prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-0
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Concordance = 0.642""".strip().split()
-	    for i in [0, 1, 2, -2, -1]:
+            for i in [0, 1, 2, -2, -1]:
                 assert output[i] == expected[i]
         finally:
             sys.stdout = saved_stdout
