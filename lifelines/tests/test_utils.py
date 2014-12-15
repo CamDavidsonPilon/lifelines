@@ -1,7 +1,6 @@
 from __future__ import print_function
 import numpy as np
 import pandas as pd
-import pytest
 
 from pandas.util.testing import assert_frame_equal
 import numpy.testing as npt
@@ -240,7 +239,7 @@ def test_survival_table_from_events_with_non_negative_T_and_lagged_births():
     df = survival_table_from_events(T, C, min_obs)
     assert df.iloc[0]['entrance'] == 1
     assert df.index[0] == T.min()
-    assert df.index[-1] == (T + min_obs).max()
+    assert df.index[-1] == T.max()
 
 
 def test_survival_table_from_events_with_negative_T_and_lagged_births():
@@ -248,6 +247,8 @@ def test_survival_table_from_events_with_negative_T_and_lagged_births():
     T = np.arange(-n / 2, n / 2)
     C = [True] * n
     min_obs = np.linspace(-n / 2, 2, n)
-
-    with pytest.raises(AssertionError):
-	df = survival_table_from_events(T, C, min_obs)
+    df = survival_table_from_events(T, C, min_obs)
+    print(df)
+    assert df.iloc[0]['entrance'] == 1
+    assert df.index[0] == T.min()
+    assert df.index[-1] == T.max()
