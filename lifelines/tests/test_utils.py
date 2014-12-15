@@ -289,7 +289,7 @@ def test_concordance_index_py_is_same_as_native():
     cp.fit(df, duration_col='week', event_col='arrest')
 
     T = cp.durations.values.ravel()
-    P = cp.predict_partial_hazard(cp.data).values.ravel()
+    P = -cp.predict_partial_hazard(cp.data).values.ravel()
     E = cp.event_observed.values.ravel()
 
-    assert slow_cindex(T, P, C) == fast_cindex(T, P, C)
+    assert slow_cindex(T, P, E) == fast_cindex(T, P, E)
