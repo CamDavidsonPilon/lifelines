@@ -148,7 +148,7 @@ def plot_estimate(self, estimate):
 
         # did user specify certain indexes or locations?
         if iloc == ix is None:
-	    user_submitted_ix = slice(None)
+            user_submitted_ix = slice(None)
         else:
             user_submitted_ix = ix if ix is not None else iloc
 
@@ -163,7 +163,7 @@ def plot_estimate(self, estimate):
             v = self.predict(times)
             kwargs['ax'].plot(times, v, linestyle='None', color=kwargs['color'], **cs)
 
-	# plot estimate
+        # plot estimate
         get_loc(estimate_).plot(**kwargs)
 
         # plot confidence intervals

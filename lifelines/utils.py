@@ -77,16 +77,16 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
 
     Parameters:
-	groups: a (n,) array of individuals' group ids.
-	durations: a (n,)  array of durations of each individual
-	event_observed: a (n,) array of event observations, 1 if observed, 0 else.
-	birth_times: a (n,) array of numbers representing
-	  when the subject was first observed. A subject's death event is then at [birth times + duration observed].
-	  Normally set to all zeros, but can be positive or negative.
+        groups: a (n,) array of individuals' group ids.
+        durations: a (n,)  array of durations of each individual
+        event_observed: a (n,) array of event observations, 1 if observed, 0 else.
+        birth_times: a (n,) array of numbers representing
+          when the subject was first observed. A subject's death event is then at [birth times + duration observed].
+          Normally set to all zeros, but can be positive or negative.
 
     Output:
-	- np.array of unique groups
-	- dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
+        - np.array of unique groups
+        - dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
         - dataframe of observed count data at event_times for each group, column names are 'observed:<group name>'
         - dataframe of censored count data at event_times for each group, column names are 'censored:<group name>'
 
@@ -142,7 +142,7 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
         ix = groups == g
         T = durations[ix]
         C = event_observed[ix]
-	B = birth_times[ix]
+        B = birth_times[ix]
         g_name = str(g)
         data = data.join(survival_table_from_events(T, C, B,
                                                     columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
@@ -155,17 +155,17 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
 
 def survival_table_from_events(death_times, event_observed, birth_times=None,
-			       columns=["removed", "observed", "censored", "entrance"], weights=None):
+                               columns=["removed", "observed", "censored", "entrance"], weights=None):
     """
     Parameters:
-	death_times: (n,) array of event times
-	event_observed: (n,) boolean array, 1 if observed event, 0 is censored event.
-	birth_times: a (n,) array of numbers representing
-	  when the subject was first observed. A subject's death event is then at [birth times + duration observed].
-	  If None (default), birth_times are set to be the first observation or 0, which ever is smaller.
-	columns: a 3-length array to call the, in order, removed individuals, observed deaths
-	  and censorships.
-	weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
+        death_times: (n,) array of event times
+        event_observed: (n,) boolean array, 1 if observed event, 0 is censored event.
+        birth_times: a (n,) array of numbers representing
+          when the subject was first observed. A subject's death event is then at [birth times + duration observed].
+          If None (default), birth_times are set to be the first observation or 0, which ever is smaller.
+        columns: a 3-length array to call the, in order, removed individuals, observed deaths
+          and censorships.
+        weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
     Returns:
         Pandas DataFrame with index as the unique times in event_times. The columns named
         'removed' refers to the number of individuals who were removed from the population
@@ -187,15 +187,15 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
         7               2         2         0         0
         9               3         3         0         0
         13              3         3         0         0
-	15              2         2         0         0
+        15              2         2         0         0
 
     """
     death_times = np.asarray(death_times)
     if birth_times is None:
-	birth_times = min(0, death_times.min()) * np.ones(death_times.shape[0])
+        birth_times = min(0, death_times.min()) * np.ones(death_times.shape[0])
     else:
-	birth_times = np.asarray(birth_times)
-	assert np.all(birth_times <= death_times), 'birth time must be less than time of death.'
+        birth_times = np.asarray(birth_times)
+        assert np.all(birth_times <= death_times), 'birth time must be less than time of death.'
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
