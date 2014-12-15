@@ -183,7 +183,6 @@ def test_cross_validator_with_specific_loss_function():
     assert list(results_sq) != list(results_con)
 
 
-
 def test_concordance_index():
     size = 1000
     T = np.random.normal(size=size)
@@ -208,3 +207,48 @@ def test_concordance_index_returns_same_after_shifting():
     T = np.array([1, 2, 3, 4, 5, 6])
     T_ = np.array([2, 1, 4, 6, 5, 3])
     assert concordance_index(T, T_) == concordance_index(T - 5, T_ - 5) == concordance_index(T, T_ - 5) == concordance_index(T - 5, T_)
+
+
+def test_survival_table_from_events_with_non_negative_T_and_no_lagged_births():
+    n = 10
+    T = np.arange(n)
+    C = [True] * n
+    min_obs = [0] * n
+    df = survival_table_from_events(T, C, min_obs)
+    assert df.iloc[0]['entrance'] == n
+    assert df.index[0] == T.min()
+    assert df.index[-1] == T.max()
+
+
+def test_survival_table_from_events_with_negative_T_and_no_lagged_births():
+    n = 10
+    T = np.arange(-n / 2, n / 2)
+    C = [True] * n
+    min_obs = None
+    df = survival_table_from_events(T, C, min_obs)
+    assert df.iloc[0]['entrance'] == n
+    assert df.index[0] == T.min()
+    assert df.index[-1] == T.max()
+
+
+def test_survival_table_from_events_with_non_negative_T_and_lagged_births():
+    n = 10
+    T = np.arange(n)
+    C = [True] * n
+    min_obs = np.linspace(0, 2, n)
+    df = survival_table_from_events(T, C, min_obs)
+    assert df.iloc[0]['entrance'] == 1
+    assert df.index[0] == T.min()
+    assert df.index[-1] == T.max()
+
+
+def test_survival_table_from_events_with_negative_T_and_lagged_births():
+    n = 10
+    T = np.arange(-n / 2, n / 2)
+    C = [True] * n
+    min_obs = np.linspace(-n / 2, 2, n)
+    df = survival_table_from_events(T, C, min_obs)
+    print(df)
+    assert df.iloc[0]['entrance'] == 1
+    assert df.index[0] == T.min()
+    assert df.index[-1] == T.max()

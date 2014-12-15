@@ -140,7 +140,7 @@ class NelsonAalenFitter(BaseFitter):
         hazard_name = "smoothed-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame( 1./(2*bandwidth)*np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C,:]),
+        return pd.DataFrame( 1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C,:]),
                              columns=[hazard_name], index=timeline)
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
@@ -157,7 +157,7 @@ class NelsonAalenFitter(BaseFitter):
         self._cumulative_sq.iloc[0] = 0
         var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
         C = (var_hazard_.values != 0.0)  # only consider the points with jumps
-        std_hazard_ = np.sqrt(1./(2*bandwidth**2)*np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth)**2, var_hazard_.values[C]))
+        std_hazard_ = np.sqrt(1./(2 * bandwidth ** 2) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C]))
         values = {
             self.ci_labels[0]: hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
             self.ci_labels[1]: hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_)
@@ -204,7 +204,6 @@ class KaplanMeierFitter(BaseFitter):
         """
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
-
         v = preprocess_inputs(durations, event_observed, timeline, entry)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
         self._label = label
@@ -1097,7 +1096,7 @@ class CoxPHFitter(BaseFitter):
     def summary(self):
         """Summary statistics describing the fit.
         Set alpha property in the object before calling.
-        
+
         Returns
         -------
         df : pd.DataFrame
@@ -1116,8 +1115,8 @@ class CoxPHFitter(BaseFitter):
     def print_summary(self):
         """Print summary statistics describing the fit."""
         df = self.summary
-        mapper = {'lower':'lower %.2f' % self.alpha,
-                  'upper':'upper %.2f' % self.alpha}
+        mapper = {'lower': 'lower %.2f' % self.alpha,
+                  'upper': 'upper %.2f' % self.alpha}
         df = df.rename_axis(mapper, axis=1)
 
         # Significance codes last
@@ -1215,8 +1214,7 @@ class CoxPHFitter(BaseFitter):
         ind_hazards = self.predict_partial_hazard(self.data).values
 
         event_table = survival_table_from_events(self.durations.values,
-                                                 self.event_observed.values,
-                                                 np.zeros_like(self.durations))
+                                                 self.event_observed.values)
 
         baseline_hazard_ = pd.DataFrame(np.zeros((event_table.shape[0], 1)),
                                         index=event_table.index,
@@ -1233,7 +1231,6 @@ class CoxPHFitter(BaseFitter):
         return baseline_hazard_
 
 
-#### Utils ####
 def get_index(X):
     if isinstance(X, pd.DataFrame):
         index = list(X.index)
@@ -1309,13 +1306,10 @@ def preprocess_inputs(durations, event_observed, timeline, entry):
     else:
         event_observed = np.asarray(event_observed).reshape((n,)).copy().astype(int)
 
-    if entry is None:
-        entry = np.zeros(n)
-    else:
+    if entry is not None:
         entry = np.asarray(entry).reshape((n,))
 
     event_table = survival_table_from_events(durations, event_observed, entry)
-
     if timeline is None:
         timeline = event_table.index.values
     else:
