@@ -11,11 +11,6 @@ from __future__ import print_function
 
 import sys
 import time
-import uuid
-try:
-    from IPython.core.display import HTML, Javascript, display
-except ImportError:
-    pass
 
 __all__ = ['progress_bar']
 
@@ -84,6 +79,7 @@ def consoleprint(s):
 def ipythonprint(s):
     print('\r', s, end='')
     sys.stdout.flush()
+
 
 def run_from_ipython():
     try:
