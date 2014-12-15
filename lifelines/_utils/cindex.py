@@ -28,9 +28,10 @@ def concordance_index(event_times, predicted_event_times, event_observed):
     paircount = 0.0
     csum = 0.0
 
-    for a, (time_a, pred_a, event_a) in enumerate(zip(event_times,
-                                                      predicted_event_times,
-                                                      event_observed)):
+    for a in range(0, len(event_times)):
+        time_a = event_times[a]
+        pred_a = predicted_event_times[a]
+        event_a = event_observed[a]
         # Don't want to double count
         for b in range(a + 1, len(event_times)):
             time_b = event_times[b]
