@@ -5,12 +5,19 @@ import pytest
 
 from pandas.util.testing import assert_frame_equal
 import numpy.testing as npt
-
+import pytest
 from ..utils import group_survival_table_from_events, survival_table_from_events, survival_events_from_table, \
     datetimes_to_durations, k_fold_cross_validation, normalize, unnormalize,\
     qth_survival_time, qth_survival_times, median_survival_times, concordance_index
 from ..estimation import CoxPHFitter
-from ..datasets import load_regression_dataset, load_larynx, load_waltons
+from ..datasets import (load_regression_dataset, load_larynx,
+                        load_waltons, load_rossi)
+from .._utils.cindex import concordance_index as slow_cindex
+try:
+    from .._utils._cindex import concordance_index as fast_cindex
+except ImportError:
+    # If code has not been compiled.
+    fast_cindex = None
 
 
 def test_unnormalize():
@@ -261,3 +268,28 @@ def test_survival_table_from_events_raises_value_error_if_too_early_births():
     min_obs[1] = min_obs[1] + 10
     with pytest.raises(ValueError):
         df = survival_table_from_events(T, C, min_obs)
+
+
+@pytest.mark.skipif(fast_cindex is None, reason='extensions not compiled')
+def test_concordance_index_py_is_same_as_native():
+    size = 100
+    T = np.random.normal(size=size)
+    P = np.random.normal(size=size)
+    C = np.random.choice([0, 1], size=size)
+    Z = np.zeros_like(T)
+
+    # Hard to imagine these failing
+    assert slow_cindex(T, Z, C) == fast_cindex(T, Z, C)
+    assert slow_cindex(T, T, C) == fast_cindex(T, T, C)
+    # This is the real test though
+    assert slow_cindex(T, P, C) == fast_cindex(T, P, C)
+
+    cp = CoxPHFitter()
+    df = load_rossi()
+    cp.fit(df, duration_col='week', event_col='arrest')
+
+    T = cp.durations.values.ravel()
+    P = -cp.predict_partial_hazard(cp.data).values.ravel()
+    E = cp.event_observed.values.ravel()
+
+    assert slow_cindex(T, P, E) == fast_cindex(T, P, E)

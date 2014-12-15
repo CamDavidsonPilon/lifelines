@@ -60,6 +60,10 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
 
     if event_observed is None:
         event_observed = np.ones(event_times.shape[0], dtype=float)
+    else:
+        if event_observed.shape != event_times.shape:
+            raise ValueError("Observed events must be 1-dimensional of same length as event times")
+        event_observed = np.array(event_observed, dtype=float).ravel()
 
     # 100 times faster to calculate in Fortran
     return _cindex(event_times,
