@@ -30,8 +30,8 @@ def test_exponential_data_sets_fit():
 def test_kmf_minimum_observation_bias():
     N = 250
     kmf = KaplanMeierFitter()
-    T, C = exponential_survival_data(N, 0.2, scale=10)
-    B, _ = exponential_survival_data(N, 0.0, scale=2)
+    T, C = exponential_survival_data(N, 0.1, scale=10)
+    B = 0.01*T
     kmf.fit(T, C, entry=B)
     kmf.plot()
     plt.title("Should have larger variances in the tails")

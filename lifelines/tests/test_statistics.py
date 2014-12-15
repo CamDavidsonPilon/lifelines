@@ -22,8 +22,7 @@ def test_logrank_test_output_against_R():
 
     expected = 0.0138
     summary, p_value, result = logrank_test(d1, d2, event_observed_A=e1, event_observed_B=e2)
-    print(summary)
-    assert abs(p_value - expected) < 0.000001
+    assert abs(p_value - expected) < 0.0001
 
 
 def test_unequal_intensity_event_observed():
