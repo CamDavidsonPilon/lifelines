@@ -85,33 +85,6 @@ def ipythonprint(s):
     print('\r', s, end='')
     sys.stdout.flush()
 
-
-class IPythonNotebookPB(ProgressBar):
-
-    def __init__(self, iterations):
-        self.divid = str(uuid.uuid4())
-        self.sec_id = str(uuid.uuid4())
-
-        pb = HTML(
-            """
-            <div style="float: left; border: 1px solid black; width:500px">
-              <div id="%s" style="background-color:blue; width:0%%">&nbsp;</div>
-            </div>
-            <label id="%s" style="padding-left: 10px;" text = ""/>
-            """ % (self.divid, self.sec_id))
-        display(pb)
-
-        super(IPythonNotebookPB, self).__init__(iterations)
-
-    def animate(self, i, elapsed):
-        percentage = int(self.fraction(i))
-
-        display(Javascript(
-            "$('div#%s').width('%i%%')" % (self.divid, percentage)))
-        display(Javascript("$('label#%s').text('%i%% in %.1f sec')" %
-                           (self.sec_id, fraction, round(elapsed, 1))))
-
-
 def run_from_ipython():
     try:
         __IPYTHON__
@@ -122,9 +95,6 @@ def run_from_ipython():
 
 def progress_bar(iters):
     if run_from_ipython():
-        if None:
-            return NotebookProgressBar(iters)
-        else:
-            return TextProgressBar(iters, ipythonprint)
+        return TextProgressBar(iters, ipythonprint)
     else:
         return TextProgressBar(iters, consoleprint)
