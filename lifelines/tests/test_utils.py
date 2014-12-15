@@ -10,8 +10,8 @@ from ..utils import group_survival_table_from_events, survival_table_from_events
     datetimes_to_durations, k_fold_cross_validation, normalize, unnormalize,\
     qth_survival_time, qth_survival_times, median_survival_times, concordance_index
 from ..estimation import CoxPHFitter
-from ..datasets import load_regression_dataset, load_larynx, load_waltons
-
+from ..datasets import (load_regression_dataset, load_larynx,
+                        load_waltons, load_rossi)
 from .._utils.cindex import concordance_index as slow_cindex
 try:
     from .._utils._cindex import concordance_index as fast_cindex
@@ -282,4 +282,14 @@ def test_concordance_index_py_is_same_as_native():
     assert slow_cindex(T, Z, C) == fast_cindex(T, Z, C)
     assert slow_cindex(T, T, C) == fast_cindex(T, T, C)
     # This is the real test though
+    assert slow_cindex(T, P, C) == fast_cindex(T, P, C)
+
+    cp = CoxPHFitter()
+    df = load_rossi()
+    cp.fit(df, duration_col='week', event_col='arrest')
+
+    T = cp.durations.values.ravel()
+    P = cp.predict_partial_hazard(cp.data).values.ravel()
+    E = cp.event_observed.values.ravel()
+
     assert slow_cindex(T, P, C) == fast_cindex(T, P, C)
