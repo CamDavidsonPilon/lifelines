@@ -48,15 +48,16 @@ def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None, order=False)
     return
 
 
-def shaded_plot(x, y, y_upper, y_lower, **kwargs):
-    ax = kwargs.pop('ax', plt.gca())
+def shaded_plot(x, y, y_upper, y_lower, ax=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
     base_line, = ax.plot(x, y, drawstyle='steps-post', **kwargs)
     fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25, color=base_line.get_color(), linewidth=1.0)
     return
 
 
 def plot_regressions(self):
-    def plot(ix=None, iloc=None, columns=[], legend=True, **kwargs):
+    def plot(ix=None, iloc=None, columns=[], legend=True, ax=None, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
@@ -66,6 +67,7 @@ def plot_regressions(self):
                    .plot(iloc=slice(0,10)) will plot the first 10 time points.
           columns: If not empty, plot a subset of columns from the cumulative_hazards_. Default all.
           legend: show legend in figure.
+          ax: a pyplot axis object.
 
         """
         assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot'
@@ -80,20 +82,20 @@ def plot_regressions(self):
         if len(columns) == 0:
             columns = self.cumulative_hazards_.columns
 
-        if "ax" not in kwargs:
-            kwargs["ax"] = plt.figure().add_subplot(111)
+        if ax is None:
+            ax = plt.figure().add_subplot(111)
 
         x = get_loc(self.cumulative_hazards_).index.values.astype(float)
         for column in columns:
             y = get_loc(self.cumulative_hazards_[column]).values
             y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
             y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
-            shaded_plot(x, y, y_upper, y_lower, ax=kwargs["ax"], label=coalesce(kwargs.get('label'), column))
+            shaded_plot(x, y, y_upper, y_lower, ax=ax, label=coalesce(kwargs.get('label'), column))
 
         if legend:
-            kwargs["ax"].legend()
+            ax.legend()
 
-        return kwargs["ax"]
+        return ax
     return plot
 
 
@@ -117,6 +119,7 @@ def plot_estimate(self, estimate):
                    .plot(iloc=slice(0,10)) will plot the first 10 time points.
           bandwidth: specify the bandwidth of the kernel smoother for the smoothed-hazard rate. Only used
               when called 'plot_hazard'.
+          ax: a pyplot axis object.
 
         Returns:
           ax: a pyplot axis object
@@ -124,13 +127,13 @@ def plot_estimate(self, estimate):
 
     def plot(ix=None, iloc=None, flat=False, show_censors=False, censor_styles={},
              ci_legend=False, ci_force_lines=False, ci_alpha=0.25, ci_show=True,
-             bandwidth=None, **kwargs):
+             bandwidth=None, ax=None, **kwargs):
 
         assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot().'
 
-        if "ax" not in kwargs:
-            kwargs["ax"] = plt.figure().add_subplot(111)
-        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle))
+        if ax is None:
+            ax = plt.figure().add_subplot(111)
+        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'), next(ax._get_lines.color_cycle))
         kwargs['drawstyle'] = coalesce(kwargs.get('drawstyle'), 'steps-post')
 
         # R-style graphics
@@ -161,7 +164,7 @@ def plot_estimate(self, estimate):
             cs.update(censor_styles)
             times = get_loc(self.event_table.ix[(self.event_table['censored'] > 0)]).index.values.astype(float)
             v = self.predict(times)
-            kwargs['ax'].plot(times, v, linestyle='None', color=kwargs['color'], **cs)
+            ax.plot(times, v, linestyle='None', color=kwargs['color'], **cs)
 
         # plot estimate
         get_loc(estimate_).plot(**kwargs)
@@ -172,14 +175,14 @@ def plot_estimate(self, estimate):
                 get_loc(confidence_interval_).plot(linestyle="-", linewidth=1,
                                                    c=kwargs['color'], legend=True,
                                                    drawstyle=kwargs.get('drawstyle', 'default'),
-                                                   ax=kwargs['ax'], alpha=0.6)
+                                                   ax=ax, alpha=0.6)
             else:
                 x = get_loc(confidence_interval_).index.values.astype(float)
                 lower = get_loc(confidence_interval_.filter(like='lower')).values[:, 0]
                 upper = get_loc(confidence_interval_.filter(like='upper')).values[:, 0]
-                fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'], alpha=ci_alpha, color=kwargs['color'], linewidth=1.0)
+                fill_between_steps(x, lower, y2=upper, ax=ax, alpha=ci_alpha, color=kwargs['color'], linewidth=1.0)
 
-        return kwargs['ax']
+        return ax
     plot.__doc__ = doc_string
     return plot
 
@@ -198,6 +201,7 @@ def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
         Array/vector of values to be filled under.
     y2 : array-Like
         Array/vector or bottom values for filled area. Default is 0.
+    ax: a pyplot axis object.
 
     **kwargs will be passed to the matplotlib fill_between() function.
 
