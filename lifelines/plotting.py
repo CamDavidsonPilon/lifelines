@@ -8,7 +8,59 @@ from matplotlib import pyplot as plt
 from lifelines.utils import coalesce
 
 
-def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None, order=False):
+def remove_spines(ax, sides):
+    '''
+    Remove spines of axis.
+
+    Parameters:
+      ax: axes to operate on
+      sides: list of sides: top, left, bottom, right
+
+    Examples:
+    removespines(ax, ['top'])
+    removespines(ax, ['top', 'bottom', 'right', 'left'])
+    '''
+    for side in sides:
+        ax.spines[side].set_visible(False)
+
+
+def move_spines(ax, sides, dists):
+    '''
+    Move the entire spine relative to the figure.
+
+    Parameters:
+      ax: axes to operate on
+      sides: list of sides to move. Sides: top, left, bottom, right
+      dists: list of float distances to move. Should match sides in length.
+
+    Example:
+    move_spines(ax, sides=['left', 'bottom'], dists=[-0.02, 0.1])
+    '''
+    for side, dist in zip(sides, dists):
+        ax.spines[side].set_position(('axes', dist))
+
+
+def remove_ticks(ax, x=False, y=False):
+    '''
+    Remove ticks from axis.
+
+    Parameters:
+      ax: axes to work on
+      x: if True, remove xticks. Default False.
+      y: if True, remove yticks. Default False.
+
+    Examples:
+    removeticks(ax, x=True)
+    removeticks(ax, x=True, y=True)
+    '''
+    if x:
+        ax.xaxis.set_ticks_position('none')
+    if y:
+        ax.yaxis.set_ticks_position('none')
+
+
+def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
+                   order=False):
     """
     Parameters:
       lifetimes: an (n,) numpy array of lifetimes.
