@@ -65,14 +65,9 @@ def add_at_risk_counts(ax1, *kmfs):
     '''
     # Create another axes where we can put size ticks
     ax2 = plt.twiny(ax=ax1)
-    # Make room for the new ticks
-    _b = 0.12
-    _o = 0.03
-    _bo = _b + _o
-    _bh = _b + _o * len(kmfs)
-    plt.subplots_adjust(bottom=_bh)
     # Move the ticks below existing axes
-    move_spines(ax2, ['bottom'], [-_bo])
+    ax2_ypos = -0.15
+    move_spines(ax2, ['bottom'], [ax2_ypos])
     # Hide all fluff
     remove_spines(ax2, ['top', 'right', 'bottom', 'left'])
     # Set ticks and labels on bottom
@@ -96,8 +91,8 @@ def add_at_risk_counts(ax1, *kmfs):
         labels.append(lbl)
 
     ax2.set_xticklabels(labels)
-    # Add a descriptive label
-    ax2.xaxis.set_label_coords(0, -_bo)
+    # Add a descriptive label, at a good position
+    ax2.xaxis.set_label_coords(0, ax2_ypos)
     ax2.set_xlabel('At risk')
 
 
