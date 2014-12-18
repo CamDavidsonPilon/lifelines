@@ -85,11 +85,12 @@ def add_at_risk_counts(ax1, *kmfs):
             lbl += "\n{}".format(kmf.durations[kmf.durations >= tick].shape[0])
             # Last one add group name
             #if tick == ax2.get_xticks()[-1]:
-            #    lbl += " {}".format(kmf._label)
+            #    lbl += "  {}".format(kmf._label)
 
         labels.append(lbl.strip())
 
-    ax2.set_xticklabels(labels)
+    # Align labels to the left so labels above don't change positions
+    ax2.set_xticklabels(labels, ha = 'right')
     # Add a descriptive label, at a good position
     ax2.xaxis.set_label_coords(0, ax2_ypos)
     ax2.set_xlabel('At risk')
