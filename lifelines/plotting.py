@@ -136,11 +136,13 @@ def plot_estimate(self, estimate):
         if censor_styles is None:
             censor_styles = {}
 
-        assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot().'
+        if (ix is not None and iloc is not None):
+            raise ValueError('Cannot set both ix and iloc in call to .plot().')
 
         if "ax" not in kwargs:
             kwargs["ax"] = plt.figure().add_subplot(111)
-        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'), next(kwargs["ax"]._get_lines.color_cycle))
+        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
+                                   next(kwargs["ax"]._get_lines.color_cycle))
         kwargs['drawstyle'] = coalesce(kwargs.get('drawstyle'), 'steps-post')
 
         # R-style graphics
@@ -149,9 +151,13 @@ def plot_estimate(self, estimate):
             show_censors = True
 
         if estimate == "hazard_":
-            assert bandwidth is not None, 'Must specify a bandwidth parameter in the call to plot_hazard.'
+            if bandwidth is None:
+                raise ValueError('Must specify a bandwidth parameter in the ' +
+                                 'call to plot_hazard.')
             estimate_ = self.smoothed_hazard_(bandwidth)
-            confidence_interval_ = self.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:, 0])
+            confidence_interval_ = \
+                self.smoothed_hazard_confidence_intervals_(bandwidth,
+                                                           hazard_=estimate_.values[:, 0])
         else:
             confidence_interval_ = getattr(self, 'confidence_interval_')
             estimate_ = getattr(self, estimate)
@@ -171,7 +177,8 @@ def plot_estimate(self, estimate):
             cs.update(censor_styles)
             times = get_loc(self.event_table.ix[(self.event_table['censored'] > 0)]).index.values.astype(float)
             v = self.predict(times)
-            kwargs['ax'].plot(times, v, linestyle='None', color=kwargs['color'], **cs)
+            kwargs['ax'].plot(times, v, linestyle='None',
+                              color=kwargs['color'], **cs)
 
         # plot estimate
         get_loc(estimate_).plot(**kwargs)
@@ -187,7 +194,9 @@ def plot_estimate(self, estimate):
                 x = get_loc(confidence_interval_).index.values.astype(float)
                 lower = get_loc(confidence_interval_.filter(like='lower')).values[:, 0]
                 upper = get_loc(confidence_interval_.filter(like='upper')).values[:, 0]
-                fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'], alpha=ci_alpha, color=kwargs['color'], linewidth=1.0)
+                fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'],
+                                   alpha=ci_alpha, color=kwargs['color'],
+                                   linewidth=1.0)
 
         return kwargs['ax']
     plot.__doc__ = doc_string
