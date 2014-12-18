@@ -129,9 +129,12 @@ def plot_estimate(self, estimate):
           ax: a pyplot axis object
         """ % estimate
 
-    def plot(ix=None, iloc=None, flat=False, show_censors=False, censor_styles={},
-             ci_legend=False, ci_force_lines=False, ci_alpha=0.25, ci_show=True,
-             bandwidth=None, **kwargs):
+    def plot(ix=None, iloc=None, flat=False, show_censors=False,
+             censor_styles=None, ci_legend=False, ci_force_lines=False,
+             ci_alpha=0.25, ci_show=True, bandwidth=None, **kwargs):
+
+        if censor_styles is None:
+            censor_styles = {}
 
         assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot().'
 
