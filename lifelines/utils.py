@@ -397,7 +397,7 @@ def unnormalize(X, mean, std):
 
 
 def epanechnikov_kernel(t, T, bandwidth=1.):
-    M = 0.75 * (1 - (t - T) / bandwidth) ** 2
+    M = 0.75 * (1 - ((t - T) / bandwidth) ** 2)
     M[abs((t - T)) >= bandwidth] = 0
     return M
 
