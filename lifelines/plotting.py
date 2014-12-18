@@ -169,6 +169,7 @@ def plot_estimate(self, estimate):
           ci_show: show confidence intervals. Default: True
           ci_legend: if ci_force_lines is True, this is a boolean flag to add
                      the lines' labels to the legend. Default: False
+          size_show: show group sizes at time points. Default: False
           ix: specify a time-based subsection of the curves to plot, ex:
                    .plot(ix=slice(0.,10.))
               will plot the time values between t=0. and t=10.
@@ -251,6 +252,32 @@ def plot_estimate(self, estimate):
                 fill_between_steps(x, lower, y2=upper, ax=kwargs['ax'],
                                    alpha=ci_alpha, color=kwargs['color'],
                                    linewidth=1.0)
+
+        if size_show:
+            # Create another axes where we can put size ticks
+            ax1 = kwargs['ax']
+            ax2 = plt.twiny(ax=ax1)
+            # Make room for the new ticks
+            plt.subplots_adjust(bottom=0.15)
+            # Move the ticks below existing axes
+            move_spines(ax2, ['bottom'], [-0.15])
+            # Hide all fluff
+            remove_spines(ax2, ['top', 'right', 'bottom', 'left'])
+            # Set ticks and labels on bottom
+            ax2.xaxis.tick_bottom()
+            # Match tick numbers and locations
+            ax2.set_xlim(ax1.get_xlim())
+            ax2.set_xticks(ax1.get_xticks())
+            # Remove ticks, need to do this AFTER moving the ticks
+            remove_ticks(ax2, x=True, y=True)
+            # Add population size at times
+            labels = []
+            for tick in ax2.get_xticks():
+                labels.append(self.durations[self.durations >= tick].shape[0])
+            ax2.set_xticklabels(labels)
+            # Add a descriptive label
+            ax2.xaxis.set_label_coords(0, -0.15)
+            ax2.set_xlabel('At risk')
 
         return kwargs['ax']
     plot.__doc__ = doc_string
