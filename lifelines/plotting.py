@@ -87,8 +87,7 @@ def add_at_risk_counts(ax1, *kmfs):
             #if tick == ax2.get_xticks()[-1]:
             #    lbl += " {}".format(kmf._label)
 
-        lbl = lbl.strip()
-        labels.append(lbl)
+        labels.append(lbl.strip())
 
     ax2.set_xticklabels(labels)
     # Add a descriptive label, at a good position
