@@ -51,7 +51,8 @@ def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None, order=False)
 def shaded_plot(x, y, y_upper, y_lower, **kwargs):
     ax = kwargs.pop('ax', plt.gca())
     base_line, = ax.plot(x, y, drawstyle='steps-post', **kwargs)
-    fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25, color=base_line.get_color(), linewidth=1.0)
+    fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25,
+                       color=base_line.get_color(), linewidth=1.0)
     return
 
 
@@ -113,7 +114,7 @@ def plot_estimate(self, estimate):
                     Default: 0.3
           ci_force_lines: force the confidence intervals to be line plots
                           (versus default shaded areas). Default: False
-          ci_show=True: show confidence intervals. Default: True
+          ci_show: show confidence intervals. Default: True
           ci_legend: if ci_force_lines is True, this is a boolean flag to add
                      the lines' labels to the legend. Default: False
           ix: specify a time-based subsection of the curves to plot, ex:
@@ -131,7 +132,8 @@ def plot_estimate(self, estimate):
 
     def plot(ix=None, iloc=None, flat=False, show_censors=False,
              censor_styles=None, ci_legend=False, ci_force_lines=False,
-             ci_alpha=0.25, ci_show=True, bandwidth=None, **kwargs):
+             ci_alpha=0.25, ci_show=True, size_show=False,
+             bandwidth=None, **kwargs):
 
         if censor_styles is None:
             censor_styles = {}
