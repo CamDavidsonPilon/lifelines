@@ -59,6 +59,48 @@ def remove_ticks(ax, x=False, y=False):
         ax.yaxis.set_ticks_position('none')
 
 
+def add_at_risk_counts(ax1, *kmfs):
+    '''
+    Add counts to plot
+    '''
+    # Create another axes where we can put size ticks
+    ax2 = plt.twiny(ax=ax1)
+    # Make room for the new ticks
+    _b = 0.12
+    _o = 0.03
+    _bo = _b + _o
+    _bh = _b + _o * len(kmfs)
+    plt.subplots_adjust(bottom=_bh)
+    # Move the ticks below existing axes
+    move_spines(ax2, ['bottom'], [-_bo])
+    # Hide all fluff
+    remove_spines(ax2, ['top', 'right', 'bottom', 'left'])
+    # Set ticks and labels on bottom
+    ax2.xaxis.tick_bottom()
+    # Match tick numbers and locations
+    ax2.set_xlim(ax1.get_xlim())
+    ax2.set_xticks(ax1.get_xticks())
+    # Remove ticks, need to do this AFTER moving the ticks
+    remove_ticks(ax2, x=True, y=True)
+    # Add population size at times
+    labels = []
+    for tick in ax2.get_xticks():
+        lbl = ""
+        for kmf in kmfs:
+            lbl += "\n{}".format(kmf.durations[kmf.durations >= tick].shape[0])
+            # Last one add group name
+            #if tick == ax2.get_xticks()[-1]:
+            #    lbl += " {}".format(kmf._label)
+
+        lbl = lbl.strip()
+        labels.append(lbl)
+
+    ax2.set_xticklabels(labels)
+    # Add a descriptive label
+    ax2.xaxis.set_label_coords(0, -_bo)
+    ax2.set_xlabel('At risk')
+
+
 def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
                    order=False):
     """
@@ -254,30 +296,7 @@ def plot_estimate(self, estimate):
                                    linewidth=1.0)
 
         if size_show:
-            # Create another axes where we can put size ticks
-            ax1 = kwargs['ax']
-            ax2 = plt.twiny(ax=ax1)
-            # Make room for the new ticks
-            plt.subplots_adjust(bottom=0.15)
-            # Move the ticks below existing axes
-            move_spines(ax2, ['bottom'], [-0.15])
-            # Hide all fluff
-            remove_spines(ax2, ['top', 'right', 'bottom', 'left'])
-            # Set ticks and labels on bottom
-            ax2.xaxis.tick_bottom()
-            # Match tick numbers and locations
-            ax2.set_xlim(ax1.get_xlim())
-            ax2.set_xticks(ax1.get_xticks())
-            # Remove ticks, need to do this AFTER moving the ticks
-            remove_ticks(ax2, x=True, y=True)
-            # Add population size at times
-            labels = []
-            for tick in ax2.get_xticks():
-                labels.append(self.durations[self.durations >= tick].shape[0])
-            ax2.set_xticklabels(labels)
-            # Add a descriptive label
-            ax2.xaxis.set_label_coords(0, -0.15)
-            ax2.set_xlabel('At risk')
+            add_at_risk_counts(kwargs['ax'], self)
 
         return kwargs['ax']
     plot.__doc__ = doc_string
