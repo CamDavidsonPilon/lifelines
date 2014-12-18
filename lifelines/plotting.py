@@ -59,12 +59,12 @@ def remove_ticks(ax, x=False, y=False):
         ax.yaxis.set_ticks_position('none')
 
 
-def add_at_risk_counts(ax1, *kmfs):
+def add_at_risk_counts(ax, *fitters):
     '''
     Add counts to plot
     '''
     # Create another axes where we can put size ticks
-    ax2 = plt.twiny(ax=ax1)
+    ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
     ax2_ypos = -0.15
     move_spines(ax2, ['bottom'], [ax2_ypos])
@@ -73,24 +73,25 @@ def add_at_risk_counts(ax1, *kmfs):
     # Set ticks and labels on bottom
     ax2.xaxis.tick_bottom()
     # Match tick numbers and locations
-    ax2.set_xlim(ax1.get_xlim())
-    ax2.set_xticks(ax1.get_xticks())
+    ax2.set_xlim(ax.get_xlim())
+    ax2.set_xticks(ax.get_xticks())
     # Remove ticks, need to do this AFTER moving the ticks
     remove_ticks(ax2, x=True, y=True)
     # Add population size at times
-    labels = []
+    ticklabels = []
     for tick in ax2.get_xticks():
         lbl = ""
-        for kmf in kmfs:
-            lbl += "\n{}".format(kmf.durations[kmf.durations >= tick].shape[0])
-            # Last one add group name
-            #if tick == ax2.get_xticks()[-1]:
-            #    lbl += "  {}".format(kmf._label)
-
-        labels.append(lbl.strip())
-
+        for f in fitters:
+            lbl += "\n{}".format(f.durations[f.durations >= tick].shape[0])
+        ticklabels.append(lbl.strip())
     # Align labels to the left so labels above don't change positions
-    ax2.set_xticklabels(labels, ha = 'right')
+    ax2.set_xticklabels(ticklabels, ha='right')
+
+    # Add group names
+    #labels = "\n".join([f._label for f in fitters])
+    #plt.subplots_adjust(right=0.8)
+    #ax2.text(0, ax2_ypos - 0.01, labels, va='top', ha='left', transform=ax2.transAxes)
+
     # Add a descriptive label, at a good position
     ax2.xaxis.set_label_coords(0, ax2_ypos)
     ax2.set_xlabel('At risk')
