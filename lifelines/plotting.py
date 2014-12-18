@@ -95,6 +95,8 @@ def add_at_risk_counts(ax1, *kmfs):
     ax2.xaxis.set_label_coords(0, ax2_ypos)
     ax2.set_xlabel('At risk')
 
+    plt.tight_layout()
+
 
 def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
                    order=False):
