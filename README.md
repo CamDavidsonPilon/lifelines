@@ -54,10 +54,12 @@ please check out the [Documentation and Tutorials page](http://lifelines.readthe
 
 ## Developing
 
-To contribute, fork and clone this repository. You may need to compile the `_utils.f90` file like so:
-
-    f2py -c -m lifelines._utils lifelines/_utils.f90
-
+To contribute, follow the usual github workflow:
+- fork the main repository 
+- create a new branch with `git checkout -b <branch_name>`
+- add your new code
+- push to your fork with `git push origin <branch_name>`
+- open a pull-request on the main repository
 
 ## License
 
