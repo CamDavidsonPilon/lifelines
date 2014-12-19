@@ -73,7 +73,43 @@ def remove_ticks(ax, x=False, y=False):
 
 def add_at_risk_counts(*fitters, **kwargs):
     '''
-    Add counts to plot
+    Add counts showing how many individuals were at risk at each time point in
+    survival/hazard plots.
+
+    Arguments:
+      One or several fitters, for example KaplanMeierFitter,
+      NelsonAalenFitter, etc...
+
+    Keyword arguments (all optional):
+      ax: The axes to add the labels to. Default is the current axes.
+      fig: The figure of the axes. Default is the current figure.
+      labels: The labels to use for the fitters. Default is whatever was
+              specified in the fitters' fit-function. Giving 'None' will
+              hide fitter labels.
+
+    Returns:
+      ax: The axes which was used.
+
+    Examples:
+        # First train some fitters and plot them
+        fig = plt.figure()
+        ax = plt.subplot(111)
+
+        f1 = KaplanMeierFitter()
+        f1.fit(data)
+        f1.plot(ax=ax)
+
+        f2 = KaplanMeierFitter()
+        f2.fit(data)
+        f2.plot(ax=ax)
+
+        # There are equivalent
+        add_at_risk_counts(f1, f2)
+        add_at_risk_counts(f1, f2, ax=ax, fig=fig)
+        # This overrides the labels
+        add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
+        # This hides the labels
+        add_at_risk_counts(f1, f2, labels=None)
     '''
     # Axes and Figure can't be None
     ax = kwargs.get('ax', None)
