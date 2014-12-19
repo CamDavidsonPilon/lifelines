@@ -82,15 +82,15 @@ def add_at_risk_counts(ax, *fitters):
     for tick in ax2.get_xticks():
         lbl = ""
         for f in fitters:
-            lbl += "\n{}".format(f.durations[f.durations >= tick].shape[0])
+            # First tick is prepended with the label
+            if tick == ax2.get_xticks()[0]:
+                s = "\n{}  ".format(f._label) + "{}"
+            else:
+                s = "\n{}"
+            lbl += s.format(f.durations[f.durations >= tick].shape[0])
         ticklabels.append(lbl.strip())
     # Align labels to the left so labels above don't change positions
     ax2.set_xticklabels(ticklabels, ha='right')
-
-    # Add group names
-    #labels = "\n".join([f._label for f in fitters])
-    #plt.subplots_adjust(right=0.8)
-    #ax2.text(0, ax2_ypos - 0.01, labels, va='top', ha='left', transform=ax2.transAxes)
 
     # Add a descriptive label, at a good position
     ax2.xaxis.set_label_coords(0, ax2_ypos)
