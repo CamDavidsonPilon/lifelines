@@ -71,10 +71,19 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(ax, *fitters, **kwargs):
+def add_at_risk_counts(*fitters, **kwargs):
     '''
     Add counts to plot
     '''
+    # Axes and Figure can't be None
+    ax = kwargs.get('ax', None)
+    if ax is None:
+        ax = plt.gca()
+
+    fig = kwargs.get('fig', None)
+    if fig is None:
+        fig = plt.gcf()
+
     if 'labels' not in kwargs:
         labels = [f._label for f in fitters]
     else:
@@ -86,10 +95,6 @@ def add_at_risk_counts(ax, *fitters, **kwargs):
     ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
     # Appropriate length scaled for 6 inches. Adjust for figure size.
-    if 'fig' in kwargs:
-        fig = kwargs['fig']
-    else:
-        fig = plt.gcf()
     ax2_ypos = -0.15 * 6.0 / fig.get_figheight()
     move_spines(ax2, ['bottom'], [ax2_ypos])
     # Hide all fluff
