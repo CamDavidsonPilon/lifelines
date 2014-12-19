@@ -157,10 +157,10 @@ def add_at_risk_counts(*fitters, **kwargs):
                 s = "\n{}"
             lbl += s.format(f.durations[f.durations >= tick].shape[0])
         ticklabels.append(lbl.strip())
-    # Align labels to the left so labels above don't change positions
+    # Align labels to the right so numbers can be compared easily
     ax2.set_xticklabels(ticklabels, ha='right')
 
-    # Add a descriptive label, at a good position
+    # Add a descriptive headline.
     ax2.xaxis.set_label_coords(0, ax2_ypos)
     ax2.set_xlabel('At risk')
 
