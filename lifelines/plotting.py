@@ -22,6 +22,7 @@ def remove_spines(ax, sides):
     '''
     for side in sides:
         ax.spines[side].set_visible(False)
+    return ax
 
 
 def move_spines(ax, sides, dists):
@@ -38,6 +39,7 @@ def move_spines(ax, sides, dists):
     '''
     for side, dist in zip(sides, dists):
         ax.spines[side].set_position(('axes', dist))
+    return ax
 
 
 def remove_ticks(ax, x=False, y=False):
@@ -57,6 +59,7 @@ def remove_ticks(ax, x=False, y=False):
         ax.xaxis.set_ticks_position('none')
     if y:
         ax.yaxis.set_ticks_position('none')
+    return ax
 
 
 def add_at_risk_counts(ax, *fitters):
@@ -97,6 +100,7 @@ def add_at_risk_counts(ax, *fitters):
     ax2.set_xlabel('At risk')
 
     plt.tight_layout()
+    return ax
 
 
 def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
