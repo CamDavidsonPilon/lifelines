@@ -3,9 +3,18 @@ from __future__ import print_function
 
 # plotting
 import numpy as np
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 
 from lifelines.utils import coalesce
+
+
+def is_latex_enabled():
+    '''
+    Returns True if LaTeX is enabled in matplotlib's rcParams,
+    False otherwise
+    '''
+    return mpl.rcParams['text.usetex']
 
 
 def remove_spines(ax, sides):
@@ -62,10 +71,17 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(ax, *fitters):
+def add_at_risk_counts(ax, *fitters, **kwargs):
     '''
     Add counts to plot
     '''
+    if 'labels' not in kwargs:
+        labels = [f._label for f in fitters]
+    else:
+        # Allow None, in which case no labels should be used
+        labels = kwargs['labels']
+        if labels is None:
+            labels = [None] * len(fitters)
     # Create another axes where we can put size ticks
     ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
@@ -84,10 +100,13 @@ def add_at_risk_counts(ax, *fitters):
     ticklabels = []
     for tick in ax2.get_xticks():
         lbl = ""
-        for f in fitters:
+        for f, l in zip(fitters, labels):
             # First tick is prepended with the label
-            if tick == ax2.get_xticks()[0]:
-                s = "\n{}  ".format(f._label) + "{}"
+            if tick == ax2.get_xticks()[0] and l is not None:
+                if is_latex_enabled():
+                    s = "\n{}\\quad".format(l) + "{}"
+                else:
+                    s = "\n{}   ".format(l) + "{}"
             else:
                 s = "\n{}"
             lbl += s.format(f.durations[f.durations >= tick].shape[0])
