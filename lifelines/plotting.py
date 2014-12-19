@@ -85,7 +85,12 @@ def add_at_risk_counts(ax, *fitters, **kwargs):
     # Create another axes where we can put size ticks
     ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
-    ax2_ypos = -0.15
+    # Appropriate length scaled for 6 inches. Adjust for figure size.
+    if 'fig' in kwargs:
+        fig = kwargs['fig']
+    else:
+        fig = plt.gcf()
+    ax2_ypos = -0.15 * 6.0 / fig.get_figheight()
     move_spines(ax2, ['bottom'], [ax2_ypos])
     # Hide all fluff
     remove_spines(ax2, ['top', 'right', 'bottom', 'left'])
