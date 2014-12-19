@@ -278,7 +278,8 @@ def plot_estimate(self, estimate):
           ci_show: show confidence intervals. Default: True
           ci_legend: if ci_force_lines is True, this is a boolean flag to add
                      the lines' labels to the legend. Default: False
-          size_show: show group sizes at time points. Default: False
+          at_risk_counts: show group sizes at time points. See function
+                          'add_at_risk_counts' for details. Default: False
           ix: specify a time-based subsection of the curves to plot, ex:
                    .plot(ix=slice(0.,10.))
               will plot the time values between t=0. and t=10.
@@ -294,7 +295,7 @@ def plot_estimate(self, estimate):
 
     def plot(ix=None, iloc=None, flat=False, show_censors=False,
              censor_styles=None, ci_legend=False, ci_force_lines=False,
-             ci_alpha=0.25, ci_show=True, size_show=False,
+             ci_alpha=0.25, ci_show=True, at_risk_counts=False,
              bandwidth=None, **kwargs):
 
         if censor_styles is None:
@@ -362,7 +363,7 @@ def plot_estimate(self, estimate):
                                    alpha=ci_alpha, color=kwargs['color'],
                                    linewidth=1.0)
 
-        if size_show:
+        if at_risk_counts:
             add_at_risk_counts(kwargs['ax'], self)
 
         return kwargs['ax']
