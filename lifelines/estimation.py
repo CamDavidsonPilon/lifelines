@@ -422,7 +422,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.penalizer = penalizer
         assert penalizer >= 0, "penalizer must be >= 0."
 
-    def fit(self, dataframe, duration_col="T", event_col="E",
+    def fit(self, dataframe, duration_col, event_col=None,
             timeline=None, id_col=None, show_progress=True):
         """
         Perform inference on the coefficients of the Aalen additive model.
@@ -455,7 +455,8 @@ class AalenAdditiveFitter(BaseFitter):
                         +----+---+---+------+------+
 
             duration_col: specify what the duration column is called in the dataframe
-            event_col: specify what the event occurred column is called in the dataframe
+            event_col: specify what the event occurred column is called in the dataframe. 
+                       If left as None, treat all individuals as non-censored. 
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
             progress_bar: include a fancy progress bar =)
@@ -474,7 +475,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         return self
 
-    def _fit_static(self, dataframe, duration_col="T", event_col="E",
+    def _fit_static(self, dataframe, duration_col, event_col=None,
                     timeline=None, show_progress=True):
         """
         Perform inference on the coefficients of the Aalen additive model.
@@ -506,8 +507,15 @@ class AalenAdditiveFitter(BaseFitter):
         if self.fit_intercept:
             df['baseline'] = 1.
 
+        # if no event_col is specified, assume all non-censorships
+        if event_col:
+            c = df[event_col].values
+            del df[event_col]
+        else:
+            c = np.ones_like(ids)
+            
         # each individual should have an ID of time of leaving study
-        C = pd.Series(df[event_col].values, dtype=bool, index=ids)
+        C = pd.Series(c, dtype=bool, index=ids)
         T = pd.Series(df[duration_col].values, index=ids)
 
         df = df.set_index(id_col)
@@ -515,7 +523,6 @@ class AalenAdditiveFitter(BaseFitter):
         ix = T.argsort()
         T, C = T.iloc[ix], C.iloc[ix]
 
-        del df[event_col]
         del df[duration_col]
         n, d = df.shape
         columns = df.columns
@@ -609,6 +616,10 @@ class AalenAdditiveFitter(BaseFitter):
 
         # each individual should have an ID of time of leaving study
         df = df.set_index([duration_col, id_col])
+
+        # if no event_col is specified, assume all non-censorships
+        if event_col is None:
+            df[event_col] = 1
 
         C_panel = df[[event_col]].to_panel().transpose(2, 1, 0)
         C = C_panel.minor_xs(event_col).sum().astype(bool)
@@ -999,7 +1010,7 @@ class CoxPHFitter(BaseFitter):
             print("Convergence completed after %d iterations." % (i))
         return beta
 
-    def fit(self, df, duration_col='T', event_col='E',
+    def fit(self, df, duration_col, event_col=None,
             show_progress=False, initial_beta=None, include_likelihood=False):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
@@ -1013,7 +1024,7 @@ class CoxPHFitter(BaseFitter):
           duration_col: the column in dataframe that contains the subjects'
              lifetimes.
           event_col: the column in dataframe that contains the subjects' death
-             observation.
+             observation. If left as None, assume all individuals are non-censored.
           show_progress: since the fitter is iterative, show convergence
              diagnostics.
           initial_beta: initialize the starting point of the iterative
@@ -1029,11 +1040,15 @@ class CoxPHFitter(BaseFitter):
         df = df.copy()
         # Sort on time
         df.sort(duration_col, inplace=True)
+
         # Extract time and event
         T = df[duration_col]
-        E = df[event_col]
         del df[duration_col]
-        del df[event_col]
+        if event_col is None:
+            E = pd.Series(np.ones(df.shape[0]), index=df.index)
+        else:
+            E = df[event_col]
+            del df[event_col]
 
         # Store original non-normalized data
         self.data = df
