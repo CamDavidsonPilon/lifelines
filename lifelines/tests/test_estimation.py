@@ -23,6 +23,11 @@ def sample_lifetimes():
     N = 30
     return (np.random.randint(20, size=N), np.random.randint(2, size=N))
 
+@pytest.fixture
+def sample_lifetimes2():
+    N = 25
+    return (np.random.randint(20, size=N), np.random.randint(2, size=N))
+
 
 @pytest.fixture
 def waltons_dataset():
@@ -115,16 +120,31 @@ class TestUnivariateFitters():
         with_list = naf.fit(list(T), list(C)).cumulative_hazard_
         assert_frame_equal(with_list, with_array)
 
-    def test_subtraction_function(self, sample_lifetimes):
-        for f in [KaplanMeierFitter(), NelsonAalenFitter()]:
-            f.fit(sample_lifetimes[0])
-            npt.assert_array_almost_equal(f.subtract(f).sum().values, 0.0)
+    def test_subtraction_function(self, sample_lifetimes, sample_lifetimes2):
+        for fitter in [KaplanMeierFitter, NelsonAalenFitter]:
+            f1 = fitter()
+            f2 = fitter()
+            
+            f1.fit(sample_lifetimes[0])
+            f2.fit(sample_lifetimes2[0])
 
-    def test_divide_function(self, sample_lifetimes):
-        for f in [KaplanMeierFitter(), NelsonAalenFitter()]:
-            f.fit(sample_lifetimes[0])
-            npt.assert_array_almost_equal(np.log(f.divide(f)).sum().values, 0.0)
+            result = f1.subtract(f2)
+            assert result.shape[0] == (np.unique(np.concatenate((f1.durations,f2.durations))).shape[0])
 
+            npt.assert_array_almost_equal(f1.subtract(f1).sum().values, 0.0)
+
+    def test_divide_function(self, sample_lifetimes, sample_lifetimes2):
+        for fitter in [KaplanMeierFitter, NelsonAalenFitter]:
+            f1 = fitter()
+            f2 = fitter()
+            
+            f1.fit(sample_lifetimes[0])
+            f2.fit(sample_lifetimes2[0])
+
+            result = f1.subtract(f2)
+            assert result.shape[0] == (np.unique(np.concatenate((f1.durations,f2.durations))).shape[0])
+
+            npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
 class TestKaplanMeierFitter():
 
