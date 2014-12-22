@@ -455,8 +455,8 @@ class AalenAdditiveFitter(BaseFitter):
                         +----+---+---+------+------+
 
             duration_col: specify what the duration column is called in the dataframe
-            event_col: specify what the event occurred column is called in the dataframe. 
-                       If left as None, treat all individuals as non-censored. 
+            event_col: specify what the event occurred column is called in the dataframe.
+                       If left as None, treat all individuals as non-censored.
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
             progress_bar: include a fancy progress bar =)
@@ -513,7 +513,7 @@ class AalenAdditiveFitter(BaseFitter):
             del df[event_col]
         else:
             c = np.ones_like(ids)
-            
+
         # each individual should have an ID of time of leaving study
         C = pd.Series(c, dtype=bool, index=ids)
         T = pd.Series(df[duration_col].values, index=ids)

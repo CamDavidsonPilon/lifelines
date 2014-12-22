@@ -357,15 +357,14 @@ class TestRegressionFitters():
         assert_series_equal(aaf.event_observed.sort_index(), X['E'].astype(bool))
 
         aaf.fit(X, 'T')
-        npt.assert_array_equal(aaf.event_observed.values,np.ones(X.shape[0]))
+        npt.assert_array_equal(aaf.event_observed.values, np.ones(X.shape[0]))
 
         cph = CoxPHFitter()
         cph.fit(X, 'T', event_col='E')
         assert_series_equal(cph.event_observed.sort_index(), X['E'].astype(bool))
 
         cph.fit(X, 'T')
-        npt.assert_array_equal(cph.event_observed.values,np.ones(X.shape[0]))
-
+        npt.assert_array_equal(cph.event_observed.values, np.ones(X.shape[0]))
 
     def test_predict_methods_in_regression_return_same_types(self):
         X = load_regression_dataset()
