@@ -1253,8 +1253,10 @@ def _subtract(self, estimate):
     def subtract(other):
         self_estimate = getattr(self, estimate)
         other_estimate = getattr(other, estimate)
-        return self_estimate.reindex(other_estimate.index, method='ffill') - \
-            other_estimate.reindex(self_estimate.index, method='ffill')
+        new_index = np.concatenate((other_estimate.index,self_estimate.index))
+        new_index = np.unique(new_index)
+        return self_estimate.reindex(new_index, method='ffill') - \
+            other_estimate.reindex(new_index, method='ffill')
 
     subtract.__doc__ = doc_string
     return subtract
@@ -1273,8 +1275,10 @@ def _divide(self, estimate):
     def divide(other):
         self_estimate = getattr(self, estimate)
         other_estimate = getattr(other, estimate)
-        return self_estimate.reindex(other_estimate.index, method='ffill') / \
-            other_estimate.reindex(self_estimate.index, method='ffill')
+        new_index = np.concatenate((other_estimate.index,self_estimate.index))
+        new_index = np.unique(new_index)
+        return self_estimate.reindex(new_index, method='ffill') / \
+            other_estimate.reindex(new_index, method='ffill')
 
     divide.__doc__ = doc_string
     return divide
