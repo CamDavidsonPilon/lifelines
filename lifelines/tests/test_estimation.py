@@ -129,7 +129,7 @@ class TestUnivariateFitters():
             f2.fit(sample_lifetimes2[0])
 
             result = f1.subtract(f2)
-            assert result.shape[0] == (np.unique(np.concatenate((f1.durations,f2.durations))).shape[0])
+            assert result.shape[0] == (np.unique(np.concatenate((f1.timeline,f2.timeline))).shape[0])
 
             npt.assert_array_almost_equal(f1.subtract(f1).sum().values, 0.0)
 
@@ -142,7 +142,7 @@ class TestUnivariateFitters():
             f2.fit(sample_lifetimes2[0])
 
             result = f1.subtract(f2)
-            assert result.shape[0] == (np.unique(np.concatenate((f1.durations,f2.durations))).shape[0])
+            assert result.shape[0] == (np.unique(np.concatenate((f1.timeline,f2.timeline))).shape[0])
 
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
