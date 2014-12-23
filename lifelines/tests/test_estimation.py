@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from matplotlib import pyplot as plt
 
-from pandas.util.testing import assert_frame_equal
+from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 
 from ..utils import k_fold_cross_validation, StatError
@@ -358,6 +358,34 @@ class TestBreslowFlemingHarringtonFitter():
 
 class TestRegressionFitters():
 
+    def test_fit_methods_require_duration_col(self):
+        X = load_regression_dataset()
+
+        aaf = AalenAdditiveFitter()
+        cph = CoxPHFitter()
+
+        with pytest.raises(TypeError):
+            aaf.fit(X)
+        with pytest.raises(TypeError):
+            cph.fit(X)
+
+    def test_fit_methods_can_accept_optional_event_col_param(self):
+        X = load_regression_dataset()
+
+        aaf = AalenAdditiveFitter()
+        aaf.fit(X, 'T', event_col='E')
+        assert_series_equal(aaf.event_observed.sort_index(), X['E'].astype(bool))
+
+        aaf.fit(X, 'T')
+        npt.assert_array_equal(aaf.event_observed.values, np.ones(X.shape[0]))
+
+        cph = CoxPHFitter()
+        cph.fit(X, 'T', event_col='E')
+        assert_series_equal(cph.event_observed.sort_index(), X['E'].astype(bool))
+
+        cph.fit(X, 'T')
+        npt.assert_array_equal(cph.event_observed.values, np.ones(X.shape[0]))
+
     def test_predict_methods_in_regression_return_same_types(self):
         X = load_regression_dataset()
         x = X[X.columns - ['T', 'E']]
@@ -388,14 +416,14 @@ class TestRegressionFitters():
         expected_index = pd.Index(np.array([3, 2, 1, 0]))
 
         cph = CoxPHFitter()
-        cph.fit(data_pred2, duration_col='t')
+        cph.fit(data_pred2, duration_col='t', event_col='E')
         npt.assert_array_equal(cph.predict_partial_hazard(x).index, expected_index)
         npt.assert_array_equal(cph.predict_percentile(x).index, expected_index)
         npt.assert_array_equal(cph.predict(x).index, expected_index)
         npt.assert_array_equal(cph.predict_expectation(x).index, expected_index)
 
         aaf = AalenAdditiveFitter()
-        aaf.fit(data_pred2, duration_col='t')
+        aaf.fit(data_pred2, duration_col='t', event_col='E')
         npt.assert_array_equal(aaf.predict_percentile(x).index, expected_index)
         npt.assert_array_equal(aaf.predict(x).index, expected_index)
         npt.assert_array_equal(aaf.predict_expectation(x).index, expected_index)
@@ -734,9 +762,8 @@ class TestAalenAdditiveFitter():
         X = pd.DataFrame(np.random.randn(n, d))
         T = np.random.exponential(size=n)
         X['T'] = T
-        X['E'] = 1
         aaf = AalenAdditiveFitter()
-        aaf.fit(X)
+        aaf.fit(X, duration_col='T')
 
     @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
@@ -745,6 +772,14 @@ class TestAalenAdditiveFitter():
         aaf = AalenAdditiveFitter()
         aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
         aaf.plot()
+
+    def test_aaf_panel_dataset_with_no_censorship(self):
+        panel_dataset = load_panel_test()
+        aaf = AalenAdditiveFitter()
+        aaf.fit(panel_dataset, id_col='id', duration_col='t')
+        expected = pd.Series([True] * 9, index=range(1, 10))
+        expected.index.name = 'id'
+        assert_series_equal(aaf.event_observed, expected)
 
     def test_aalen_additive_median_predictions_split_data(self):
         # This tests to make sure that my median predictions statisfy
@@ -756,10 +791,9 @@ class TestAalenAdditiveFitter():
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
-        X['E'] = 1
         # fit it to Aalen's model
         aaf = AalenAdditiveFitter()
-        aaf.fit(X)
+        aaf.fit(X, 'T')
 
         # predictions
         T_pred = aaf.predict_median(X[list(range(6))])
@@ -781,7 +815,7 @@ class TestAalenAdditiveFitter():
         X['T'] = T
         X['E'] = np.random.binomial(1, 1, n)
         aaf = AalenAdditiveFitter()
-        aaf.fit(X)
+        aaf.fit(X, 'T', 'E')
 
         for i in range(d + 1):
             ax = plt.subplot(d + 1, 1, i + 1)
@@ -808,7 +842,7 @@ class TestAalenAdditiveFitter():
         X['E'] = np.random.binomial(1, 0.99, n)
 
         aaf = AalenAdditiveFitter()
-        aaf.fit(X)
+        aaf.fit(X, 'T', 'E')
 
         for i in range(d + 1):
             ax = plt.subplot(d + 1, 1, i + 1)

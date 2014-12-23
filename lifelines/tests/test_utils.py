@@ -260,6 +260,7 @@ def test_survival_table_from_events_with_negative_T_and_lagged_births():
     assert df.index[0] == T.min()
     assert df.index[-1] == T.max()
 
+
 def test_survival_table_from_events_raises_value_error_if_too_early_births():
     n = 10
     T = np.arange(0, n)
@@ -267,7 +268,7 @@ def test_survival_table_from_events_raises_value_error_if_too_early_births():
     min_obs = T.copy()
     min_obs[1] = min_obs[1] + 10
     with pytest.raises(ValueError):
-        df = survival_table_from_events(T, C, min_obs)
+        survival_table_from_events(T, C, min_obs)
 
 
 @pytest.mark.skipif(fast_cindex is None, reason='extensions not compiled')
