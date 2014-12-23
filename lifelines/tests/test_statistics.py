@@ -86,15 +86,16 @@ def test_multivariate_inputs_return_identical_solutions():
     T = np.array([1, 2, 3])
     E = np.array([1, 1, 0], dtype=bool)
     G = np.array([1, 2, 1])
-    multivariate_logrank_test(T, G, E)
-    pairwise_logrank_test(T, G, E)
+    m_a = multivariate_logrank_test(T, G, E, suppress_print=True)
+    p_a = pairwise_logrank_test(T, G, E, suppress_print=True)
 
     T = pd.Series(T)
     E = pd.Series(E)
     G = pd.Series(G)
-    multivariate_logrank_test(T, G, E)
-    pairwise_logrank_test(T, G, E)
-
+    m_s = multivariate_logrank_test(T, G, E, suppress_print=True)
+    p_s = pairwise_logrank_test(T, G, E, suppress_print=True)
+    assert m_a == m_s
+   
 
 def test_pairwise_allows_dataframes():
     N = 100
@@ -104,32 +105,26 @@ def test_pairwise_allows_dataframes():
     df["group"] = np.random.binomial(2, 0.5, size=N)
     pairwise_logrank_test(df['T'], df["group"], event_observed=df["C"])
 
+def test_log_rank_returns_None_if_equal_arrays():
+    T = np.random.exponential(5, size=200)
+    summary, p_value, result = logrank_test(T, T, alpha=0.95, suppress_print=True)
+    assert result is None
 
-def test_equal_intensity():
-    """
-    This is the (I think) fact that 1-alpha == false positive rate.
-    I use a Bayesian test to test that we achieve this rate.
-    """
-    N = 100
-    false_positives = 0
-    alpha = 0.95
-    for i in range(100):
-        data1 = np.random.exponential(5, size=(200, 1))
-        data2 = np.random.exponential(5, size=(200, 1))
-        summary, p_value, result = logrank_test(data1, data2, alpha=0.95, suppress_print=True)
-        false_positives += result is not None
-    bounds = beta.interval(0.95, 1 + false_positives, N - false_positives + 1)
-    assert bounds[0] < 1 - alpha < bounds[1]
+    C = np.random.binomial(2, 0.8, size=200)
+    summary, p_value, result = logrank_test(T, T, C, C, alpha=0.95, suppress_print=True)
+    assert result is None
 
+def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
+    N = 200
+    T1 = np.random.exponential(5, size=N)
+    T2 = np.random.exponential(5, size=N)
+    C1 = np.random.binomial(2, 0.9, size=N)
+    C2 = np.random.binomial(2, 0.9, size=N)
+    summary, p_value, result = logrank_test(T1, T2, C1, C2, alpha=0.95, suppress_print=True)
 
-def test_multivariate_equal_intensities():
-    N = 100
-    false_positives = 0
-    alpha = 0.95
-    for i in range(100):
-        T = np.random.exponential(10, size=300)
-        g = np.random.binomial(2, 0.5, size=300)
-        s, _, result = multivariate_logrank_test(T, g, alpha=alpha, suppress_print=True)
-        false_positives += result is not None
-    bounds = beta.interval(0.95, 1 + false_positives, N - false_positives + 1)
-    assert bounds[0] < 1 - alpha < bounds[1]
+    T = np.r_[T1,T2] 
+    C = np.r_[C1, C2]
+    G = np.array([1]*200 + [2]*200)
+    summary_m, p_value_m, result_m = multivariate_logrank_test(T, G, C, alpha=0.95, suppress_print=True)
+    assert p_value == p_value_m
+    assert result == result_m
