@@ -753,6 +753,14 @@ class TestAalenAdditiveFitter():
         aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
         aaf.plot()
 
+    def test_aaf_panel_dataset_with_no_censorship(self):
+        panel_dataset = load_panel_test()
+        aaf = AalenAdditiveFitter()
+        aaf.fit(panel_dataset, id_col='id', duration_col='t')
+        expected = pd.Series([True] * 9, index=range(1, 10))
+        expected.index.name = 'id'
+        assert_series_equal(aaf.event_observed, expected)
+
     def test_aalen_additive_median_predictions_split_data(self):
         # This tests to make sure that my median predictions statisfy
         # the prediction are greater than the actual 1/2 the time.

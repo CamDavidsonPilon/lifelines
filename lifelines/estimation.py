@@ -455,7 +455,7 @@ class AalenAdditiveFitter(BaseFitter):
                         +----+---+---+------+------+
 
             duration_col: specify what the duration column is called in the dataframe
-            event_col: specify what the event occurred column is called in the dataframe.
+            event_col: specify what the event column is called in the dataframe.
                        If left as None, treat all individuals as non-censored.
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
@@ -619,6 +619,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         # if no event_col is specified, assume all non-censorships
         if event_col is None:
+            event_col = 'E'
             df[event_col] = 1
 
         C_panel = df[[event_col]].to_panel().transpose(2, 1, 0)
