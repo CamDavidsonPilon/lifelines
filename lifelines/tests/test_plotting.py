@@ -6,12 +6,52 @@ from matplotlib import pyplot as plt
 import numpy as np
 from ..estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter
 from ..generate_datasets import generate_random_lifetimes, generate_hazard_rates
-from ..plotting import plot_lifetimes
+from ..plotting import plot_lifetimes, add_at_risk_counts
 
 
 @pytest.mark.plottest
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting():
+
+    def test_at_risk_counts_default_labels(self):
+        # Prepare a figure
+        fig = plt.figure()
+        ax = plt.subplot(111)
+        # Some made up data
+        data1 = np.random.exponential(10, size=(100))
+        # Should work with all these fitters
+        kmf = KaplanMeierFitter()
+        kmf.fit(data1, label='kmf')
+        kmf.plot(ax=ax)
+        na = NelsonAalenFitter()
+        na.fit(data1, label='na')
+        na.plot(ax=ax)
+
+        add_at_risk_counts(kmf, na, ax=ax, fig=fig)
+
+        plt.title('test_at_risk_counts_default_labels')
+        plt.show()
+        return
+
+    def test_at_risk_counts_with_labels(self):
+        # Prepare a figure
+        fig = plt.figure()
+        ax = plt.subplot(111)
+        # Some made up data
+        data1 = np.random.exponential(10, size=(100))
+        # Should work with all these fitters
+        kmf = KaplanMeierFitter()
+        kmf.fit(data1, label='kmf')
+        kmf.plot(ax=ax)
+        na = NelsonAalenFitter()
+        na.fit(data1, label='na')
+        na.plot(ax=ax)
+
+        add_at_risk_counts(kmf, na, labels=['KMF', 'NA'], ax=ax, fig=fig)
+
+        plt.title('test_at_risk_counts_with_labels (CAPS)')
+        plt.show()
+        return
 
     def test_negative_times_still_plots(self):
         n = 40
