@@ -39,6 +39,14 @@ class TestPlotting():
         plt.show()
         return
 
+    def test_kmf_with_risk_counts(self):
+        data1 = np.random.exponential(10, size=(100))
+        kmf = KaplanMeierFitter()
+        kmf.fit(data1)
+        kmf.plot(at_risk_counts=True)
+        plt.title("test_kmf_with_risk_counts")
+        plt.show()
+
     def test_naf_plotting_with_custom_colours(self):
         data1 = np.random.exponential(5, size=(200, 1))
         data2 = np.random.exponential(1, size=(500))
