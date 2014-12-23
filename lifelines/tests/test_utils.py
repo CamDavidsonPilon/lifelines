@@ -176,7 +176,7 @@ def test_cross_validator_with_predictor():
 def test_cross_validator_with_predictor_and_kwargs():
     cf = CoxPHFitter()
     results_06 = k_fold_cross_validation(cf, load_regression_dataset(),
-                                         duration_col='T', event_col='E', k=3,
+                                         duration_col='T', k=3,
                                          predictor="predict_percentile", predictor_kwargs={'p': 0.6})
 
 

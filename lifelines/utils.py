@@ -331,7 +331,7 @@ def AandS_approximation(p):
     return t - (c_0 + c_1 * t + c_2 * t ** 2) / (1 + d_1 * t + d_2 * t * t + d_3 * t ** 3)
 
 
-def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
+def k_fold_cross_validation(fitter, df, duration_col, event_col=None,
                             k=5, evaluation_measure=concordance_index, predictor="predict_median",
                             predictor_kwargs={}):
     """
@@ -342,7 +342,8 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
         other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
         refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
     duration_col: the column in dataframe that contains the subjects lifetimes.
-    event_col: the column in dataframe that contains the subject's death observation.    loss functions:
+    event_col: the column in dataframe that contains the subject's death observation. If left
+                as None, assumes all individuals are non-censored.   
     k: the number of folds to perform. n/k data will be withheld for testing on.
     evaluation_measure: a function that accepts either (event_times, predicted_event_times),
                   or (event_times, predicted_event_times, event_observed) and returns a scalar value.
@@ -357,6 +358,11 @@ def k_fold_cross_validation(fitter, df, duration_col='T', event_col='E',
     n, d = df.shape
     scores = np.zeros((k,))
     df = df.copy()
+
+    if event_col is None:
+        event_col = 'E'
+        df[event_col] = 1.
+
     df = df.reindex(np.random.permutation(df.index)).sort(event_col)
 
     assignments = np.array((n // k + 1) * list(range(1, k + 1)))
