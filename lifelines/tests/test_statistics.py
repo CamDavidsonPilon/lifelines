@@ -95,7 +95,7 @@ def test_multivariate_inputs_return_identical_solutions():
     m_s = multivariate_logrank_test(T, G, E, suppress_print=True)
     p_s = pairwise_logrank_test(T, G, E, suppress_print=True)
     assert m_a == m_s
-   
+
 
 def test_pairwise_allows_dataframes():
     N = 100
@@ -104,6 +104,7 @@ def test_pairwise_allows_dataframes():
     df["C"] = np.random.binomial(1, 0.6, size=N)
     df["group"] = np.random.binomial(2, 0.5, size=N)
     pairwise_logrank_test(df['T'], df["group"], event_observed=df["C"])
+
 
 def test_log_rank_returns_None_if_equal_arrays():
     T = np.random.exponential(5, size=200)
@@ -114,6 +115,7 @@ def test_log_rank_returns_None_if_equal_arrays():
     summary, p_value, result = logrank_test(T, T, C, C, alpha=0.95, suppress_print=True)
     assert result is None
 
+
 def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
     N = 200
     T1 = np.random.exponential(5, size=N)
@@ -122,9 +124,9 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
     C2 = np.random.binomial(2, 0.9, size=N)
     summary, p_value, result = logrank_test(T1, T2, C1, C2, alpha=0.95, suppress_print=True)
 
-    T = np.r_[T1,T2] 
+    T = np.r_[T1, T2]
     C = np.r_[C1, C2]
-    G = np.array([1]*200 + [2]*200)
+    G = np.array([1] * 200 + [2] * 200)
     summary_m, p_value_m, result_m = multivariate_logrank_test(T, G, C, alpha=0.95, suppress_print=True)
     assert p_value == p_value_m
     assert result == result_m

@@ -23,6 +23,7 @@ def sample_lifetimes():
     N = 30
     return (np.random.randint(20, size=N), np.random.randint(2, size=N))
 
+
 @pytest.fixture
 def sample_lifetimes2():
     N = 25
@@ -124,12 +125,12 @@ class TestUnivariateFitters():
         for fitter in [KaplanMeierFitter, NelsonAalenFitter]:
             f1 = fitter()
             f2 = fitter()
-            
+
             f1.fit(sample_lifetimes[0])
             f2.fit(sample_lifetimes2[0])
 
             result = f1.subtract(f2)
-            assert result.shape[0] == (np.unique(np.concatenate((f1.timeline,f2.timeline))).shape[0])
+            assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
 
             npt.assert_array_almost_equal(f1.subtract(f1).sum().values, 0.0)
 
@@ -137,14 +138,15 @@ class TestUnivariateFitters():
         for fitter in [KaplanMeierFitter, NelsonAalenFitter]:
             f1 = fitter()
             f2 = fitter()
-            
+
             f1.fit(sample_lifetimes[0])
             f2.fit(sample_lifetimes2[0])
 
             result = f1.subtract(f2)
-            assert result.shape[0] == (np.unique(np.concatenate((f1.timeline,f2.timeline))).shape[0])
+            assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
 
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
+
 
 class TestKaplanMeierFitter():
 
