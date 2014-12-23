@@ -17,8 +17,6 @@ lesser-known technique, for example:
 *lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please leave an Issue and let us know your thoughts on the library.
 
 ### Installation:
-
-
 #### Dependencies:
 
 The usual Python data stack: NumPy, SciPy, Pandas (a modern version please), Matplotlib
