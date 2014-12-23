@@ -364,7 +364,7 @@ def plot_estimate(self, estimate):
                                    linewidth=1.0)
 
         if at_risk_counts:
-            add_at_risk_counts(kwargs['ax'], self)
+            add_at_risk_counts(self, ax=kwargs['ax'])
 
         return kwargs['ax']
     plot.__doc__ = doc_string
