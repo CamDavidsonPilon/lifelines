@@ -220,7 +220,7 @@ two special columns: a *duration* column and a boolean *event occured* column (w
 
 .. code:: python
 
-    aaf.fit(X, duration_col='T', event_col='E')
+    aaf.fit(X, 'T', event_col='E')
 
 
 
@@ -390,7 +390,7 @@ Cox's Proportional Hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 New in 0.4.0 is the implementation of the Propotional Hazard's regression model (implemented in 
-R under ``coxph``). It has a similar API to Aalen's Additive model. Like R, it has a ``summary``
+R under ``coxph``). It has a similar API to Aalen's Additive model. Like R, it has a ``print_summary``
 function that prints a tabuluar view of coefficients and related stats. 
 
 This example data is from the paper `here <http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf>`_.
@@ -402,7 +402,7 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
 
     rossi_dataset = load_rossi()
     cf = CoxPHFitter()
-    cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cf.fit(rossi_dataset, 'week', event_col='arrest')
 
     cf.print_summary()
 
@@ -453,7 +453,7 @@ into a training set and a testing set, fits itself on the training set, and eval
 
         regression_dataset = load_regression_dataset()
         cf = CoxPHFitter()
-        scores = k_fold_cross_validation(cf, regression_dataset, duration_col='T', event_col='E', k=3)
+        scores = k_fold_cross_validation(cf, regression_dataset, 'T', event_col='E', k=3)
         print scores
         print scores.mean()
         print scores.std()

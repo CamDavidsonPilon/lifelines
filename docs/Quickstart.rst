@@ -102,7 +102,7 @@ The input of the ``fit`` method's API on ``AalenAdditiveFitter`` is different th
     # Using Cox Proportional Hazards model
     cf = CoxPHFitter()
     cf.fit(regression_dataset, duration_col='T', event_col='E')
-    print cf.summary
+    cf.print_summary()
 
     # Using Aalen's Additive model
     aaf = AalenAdditiveFitter(fit_intercept=False)

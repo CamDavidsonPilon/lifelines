@@ -811,7 +811,9 @@ class CoxPHFitter(BaseFitter):
     Parameters:
       alpha: the level in the confidence intervals.
       tie_method: specify how the fitter should deal with ties. Currently only
-         'Efron' is available.
+        'Efron' is available.
+      normalize: substract the mean and divide by standard deviation of each covariate 
+        in the input data before performing any fitting. 
     """
 
     def __init__(self, alpha=0.95, tie_method='Efron', normalize=True):

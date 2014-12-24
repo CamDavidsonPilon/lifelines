@@ -1,5 +1,15 @@
 ### Changelogs
 
+#### 0.5.1
+
+- New API for `CoxPHFitter` and `AalenAdditiveFitter`: the default arguments for `event_col` and `duration_col`. `duration_col` is now mandatory, and `event_col` now accepts a column, or by default, `None`, which assumes all events are observed (non-censored).
+- Fix statistical tests.
+- Allow negative durations in Fitters.
+- New API in `survival_table_from_events`: `min_observations` is replaced by `birth_times` (default `None`).
+- New API in `CoxPHFitter` for summary: `summary` will return a dataframe with statistics, `print_summary()` will print the dataframe (plus some other statistics) in a pretty manner.
+- Adding "At Risk" counts option to univariate fitter `plot` methods, `.plot(at_risk_counts=True)`, and the function `lifelines.plotting.add_at_risk_counts`.
+- Fix bug Epanechnikov kernel.  
+
 #### 0.5.0
 
 - move testing to py.test

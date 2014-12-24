@@ -3,6 +3,64 @@ More examples and recipes
 
 This section goes through some examples and recipes to help you use *lifelines*. 
 
+Model Selection Using *lifelines*
+#####################################################
+
+If using *lifelines* for prediction work, it's ideal that you perform some sort of cross-validation scheme. This allows you to be confident that your out-of-sample predictions will work well in practice. It also allows you to choose between multiple models.
+
+*lifelines* has a built in k-fold cross-validation function. For example, consider the following example:
+
+.. code-block:: python
+    
+    from lifelines import AalenAdditiveFitter, CoxPHFitter
+    from lifelines.datasets import load_regression_dataset
+    from lifelines.utils import k_fold_cross_validation
+    
+    df = load_regression_dataset()
+
+    #create the three models we'd like to compare.
+    aaf_1 = AalenAdditiveFitter(penalizer=0.5)
+    aaf_2 = AalenAdditiveFitter(penalizer=10)
+    cph = CoxPHFitter() 
+
+    print k_fold_cross_validation(cph, df, duration_col='T', event_col='E').mean()
+    print k_fold_cross_validation(aaf_1, df, duration_col='T', event_col='E').mean()
+    print k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E').mean()
+
+From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
+
+Displaying At-Risk Counts Below Plots:
+#####################################################
+The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add At-Risk counts at the bottom of your figures. For example:
+
+.. code-block:: python
+    
+    from numpy.random import exponential
+    T_control = exponential(10, size=250)
+    T_experiment = exponential(20, size=200)
+    ax = plt.subplot(111)
+
+    from lifelines import KaplanMeierFitter
+
+    kmf_control = KaplanMeierFitter()
+    ax = kmf_control.fit(T_control, label='control').plot(ax=ax)
+
+    kmf_exp = KaplanMeierFitter()
+    ax = kmf_exp.fit(T_experiment, label='experiment').plot(ax=ax)
+
+
+    from lifelines.plotting import add_at_risk_counts
+    add_at_risk_counts(kmf_exp, kmf_control, ax=ax)
+
+will display
+
+.. image:: /images/add_at_risk.png 
+   :height: 300
+
+
+Alternatively, you can add this at the call to ``plot``: ``kmf.plot(at_risk_counts=True)``
+
+
 Getting survival-table data into *lifelines* format
 #####################################################
 
