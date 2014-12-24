@@ -1128,8 +1128,13 @@ class CoxPHFitter(BaseFitter):
         df['upper'] = self.confidence_intervals_.ix['upper-bound'].values
         return df
 
-    def print_summary(self):
-        """Print summary statistics describing the fit."""
+    def print_summary(self, c_index=True):
+        """
+        Print summary statistics describing the fit.
+
+        c_index: If set to False, will not print the concordance index
+
+        """
         df = self.summary
         mapper = {'lower': 'lower %.2f' % self.alpha,
                   'upper': 'upper %.2f' % self.alpha}
@@ -1147,10 +1152,11 @@ class CoxPHFitter(BaseFitter):
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
-        print("Concordance = {:.3f}"
-              .format(concordance_index(self.durations,
-                                        -self.predict_partial_hazard(self.data).values.ravel(),
-                                        self.event_observed)))
+        if c_index:
+            print("Concordance = {:.3f}"
+                  .format(concordance_index(self.durations,
+                                            -self.predict_partial_hazard(self.data).values.ravel(),
+                                            self.event_observed)))
         return
 
     def predict_partial_hazard(self, X):
