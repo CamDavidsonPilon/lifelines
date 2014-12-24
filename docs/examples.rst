@@ -58,7 +58,7 @@ will display
    :height: 300
 
 
-Alternatively, you can add this at the call to `plot`: `kmf.plot(at_risk_counts=True)`
+Alternatively, you can add this at the call to ``plot``: ``kmf.plot(at_risk_counts=True)``
 
 
 Getting survival-table data into *lifelines* format
