@@ -53,7 +53,7 @@ class NelsonAalenFitter(BaseFitter):
             self._additive_f = self._additive_f_discrete
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
-            label='NA-estimate', alpha=None, ci_labels=None):
+            label='NA_estimate', alpha=None, ci_labels=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -137,7 +137,7 @@ class NelsonAalenFitter(BaseFitter):
         """
         timeline = self.timeline
         cumulative_hazard_name = self.cumulative_hazard_.columns[0]
-        hazard_name = "smoothed-" + cumulative_hazard_name
+        hazard_name = "differenced-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
         return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth), hazard_.values[C,:]),
@@ -179,7 +179,7 @@ class KaplanMeierFitter(BaseFitter):
     def __init__(self, alpha=0.95):
         self.alpha = alpha
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM-estimate',
+    def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM_estimate',
             alpha=None, left_censorship=False, ci_labels=None):
         """
         Parameters:
@@ -298,7 +298,7 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
         self.alpha = alpha
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
-            label='BFH-estimate', alpha=None, ci_labels=None):
+            label='BFH_estimate', alpha=None, ci_labels=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -562,7 +562,7 @@ class AalenAdditiveFitter(BaseFitter):
             relevant_individuals = (ids == id)
             assert relevant_individuals.sum() == 1.
 
-            # perform linear regression step.
+            # perform linear regression step. This is to be abstracted out. 
             X = df.values
             try:
                 V = dot(inv(dot(X.T, X) + penalizer), X.T)
@@ -1126,8 +1126,8 @@ class CoxPHFitter(BaseFitter):
         df['se(coef)'] = self._compute_standard_errors().ix['se'].values
         df['z'] = self._compute_z_values()
         df['p'] = self._compute_p_values()
-        df['lower'] = self.confidence_intervals_.ix['lower-bound'].values
-        df['upper'] = self.confidence_intervals_.ix['upper-bound'].values
+        df['lower %.2f' % self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
+        df['upper %.2f' % self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
         return df
 
     def print_summary(self, c_index=True):
@@ -1138,10 +1138,6 @@ class CoxPHFitter(BaseFitter):
 
         """
         df = self.summary
-        mapper = {'lower': 'lower %.2f' % self.alpha,
-                  'upper': 'upper %.2f' % self.alpha}
-        df = df.rename_axis(mapper, axis=1)
-
         # Significance codes last
         df[''] = [significance_code(p) for p in df['p']]
 

@@ -444,8 +444,8 @@ class TestCoxPHFitter():
                            'se(coef)',
                            'z',
                            'p',
-                           'lower',
-                           'upper']
+                           'lower 0.95',
+                           'upper 0.95']
         assert all([col in summDf.columns for col in expectedColumns])
 
     def test_print_summary(self):
