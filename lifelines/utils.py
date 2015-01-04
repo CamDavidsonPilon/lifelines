@@ -10,6 +10,52 @@ from pandas import to_datetime
 from lifelines._utils import concordance_index as _cindex
 
 
+def l1_log_loss(event_times, predicted_event_times, event_observed=None):
+    """ 
+    Calculates the l1 log-loss of predicted event times to true event times for *non-censored*
+    individuals only. 
+
+    1/N \sum_{i} |log(t_i) - log(q_i)|
+
+    Parameters:
+      event_times: a (n,) array of observed survival times.
+      predicted_event_times: a (n,) array of predicted survival times.
+      event_observed: a (n,) array of censorship flags, 1 if observed,
+                      0 if not. Default None assumes all observed.
+
+    Returns:
+      l1-loss: a scalar
+    """
+    if event_observed is None:
+        event_observed = np.ones_like(event_times)
+        
+    ix = event_observed.astype(bool)
+    return np.abs(np.log(event_times[ix]) - np.log(predicted_event_times[ix])).mean()
+    
+
+def l2_log_loss(event_times, predicted_event_times, event_observed=None):
+    """ 
+    Calculates the l2 log-loss of predicted event times to true event times for *non-censored*
+    individuals only. 
+
+    1/N \sum_{i} (log(t_i) - log(q_i))**2
+
+    Parameters:
+      event_times: a (n,) array of observed survival times.
+      predicted_event_times: a (n,) array of predicted survival times.
+      event_observed: a (n,) array of censorship flags, 1 if observed,
+                      0 if not. Default None assumes all observed.
+
+    Returns:
+      l1-loss: a scalar
+    """
+    if event_observed is None:
+        event_observed = np.ones_like(event_times)
+
+    ix = event_observed.astype(bool)
+    return np.power(np.log(event_times[ix]) - np.log(predicted_event_times[ix]), 2).mean()
+
+
 def concordance_index(event_times, predicted_event_times, event_observed=None):
     """
     Calculates the concordance index (C-index) between two series
@@ -33,7 +79,7 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
       event_times: a (n,) array of observed survival times.
       predicted_event_times: a (n,) array of predicted survival times.
       event_observed: a (n,) array of censorship flags, 1 if observed,
-                      0 if not. Default assumes all observed.
+                      0 if not. Default None assumes all observed.
 
     Returns:
       c-index: a value between 0 and 1.
