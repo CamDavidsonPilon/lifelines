@@ -24,7 +24,7 @@ def l1_log_loss(event_times, predicted_event_times, event_observed=None):
                       0 if not. Default None assumes all observed.
 
     Returns:
-      l1-loss: a scalar
+      l1-log-loss: a scalar
     """
     if event_observed is None:
         event_observed = np.ones_like(event_times)
@@ -47,7 +47,7 @@ def l2_log_loss(event_times, predicted_event_times, event_observed=None):
                       0 if not. Default None assumes all observed.
 
     Returns:
-      l1-loss: a scalar
+      l2-log-loss: a scalar
     """
     if event_observed is None:
         event_observed = np.ones_like(event_times)
