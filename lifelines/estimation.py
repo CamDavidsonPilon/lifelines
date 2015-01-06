@@ -422,7 +422,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.alpha = alpha
         self.coef_penalizer = coef_penalizer
         self.smoothing_penalizer = smoothing_penalizer
-        assert coef_penalizer >= 0 or smoothing_penalizer >= 0, "penalizer must be >= 0."
+        assert coef_penalizer >= 0 and smoothing_penalizer >= 0, "penalizer must be >= 0."
 
     def fit(self, dataframe, duration_col, event_col=None,
             timeline=None, id_col=None, show_progress=True):
