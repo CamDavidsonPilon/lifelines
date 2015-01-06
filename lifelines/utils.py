@@ -517,9 +517,11 @@ def median_survival_times(survival_functions):
 
 def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     """
-    This solves the minimization problem:
+    Also known as Tikhonov regularization. This solves the minimization problem:
 
     min_{beta} ||(beta X - Y)||^2 + c1||beta||^2 + c2||beta - offset||^2
+
+    One can find more information here: http://en.wikipedia.org/wiki/Tikhonov_regularization
 
     Parameters:
         X: a (n,d) numpy array
@@ -540,7 +542,6 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     if offset is None:
         offset = np.zeros((d,))
 
-    # based on http://en.wikipedia.org/wiki/Tikhonov_regularization
     V_1 = inv(np.dot(X.T, X) + penalizer_matrix)
     V_2 = (np.dot(X.T, Y) + c2 * offset)
     beta = np.dot(V_1, V_2)
