@@ -81,7 +81,6 @@ def test_l2_log_loss_with_observed():
     assert utils.l2_log_loss(actual, predicted, E) == 0.0
     predicted = np.array([2,1,1])
     assert utils.l2_log_loss(actual, predicted, E) == 0.0
->>>>>>> 0bb26599ead2d00d01552ba3612f949dac433245
 
 
 def test_unnormalize():
