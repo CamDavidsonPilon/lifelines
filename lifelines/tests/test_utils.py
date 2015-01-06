@@ -42,7 +42,7 @@ def test_ridge_regression_with_extreme_c2_penalty_equals_close_to_offset():
     offset = np.ones(2)
     X = randn(2, 2)
     Y = randn(2)
-    assert norm(utils.ridge_regression(X, Y, c1`, c2, offset)[0] - offset) < 10e-4
+    assert norm(utils.ridge_regression(X, Y, c1, c2, offset)[0] - offset) < 10e-4
 
 
 def test_lstsq_returns_similar_values_to_ridge_regression():
