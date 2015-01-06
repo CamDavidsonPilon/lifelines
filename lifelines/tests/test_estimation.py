@@ -263,11 +263,11 @@ class TestKaplanMeierFitter():
         kmf.fit(df.ix[ix]['time'], df.ix[ix]['event'], timeline=[9, 19, 32, 34])
 
         expected_lower_bound = np.array([0.2731, 0.1946, 0.1109, 0.0461])
-        npt.assert_array_almost_equal(kmf.confidence_interval_['KM-estimate_lower_0.95'].values,
+        npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_lower_0.95'].values,
                                       expected_lower_bound, decimal=3)
 
         expected_upper_bound = np.array([0.975, 0.904, 0.804, 0.676])
-        npt.assert_array_almost_equal(kmf.confidence_interval_['KM-estimate_upper_0.95'].values,
+        npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
                                       expected_upper_bound, decimal=3)
 
 
@@ -729,6 +729,18 @@ Concordance = 0.642""".strip().split()
 
 
 class TestAalenAdditiveFitter():
+
+    def test_penalizer_reduces_norm_of_hazards(self):
+        from numpy.linalg import norm
+        rossi = load_rossi()
+
+        aaf_without_penalizer = AalenAdditiveFitter(coef_penalizer=0., smoothing_penalizer=0.)
+        assert aaf_without_penalizer.coef_penalizer == aaf_without_penalizer.smoothing_penalizer == 0.0
+        aaf_without_penalizer.fit(rossi, event_col='week', duration_col='arrest')
+
+        aaf_with_penalizer = AalenAdditiveFitter(coef_penalizer=10., smoothing_penalizer=10.)
+        aaf_with_penalizer.fit(rossi, event_col='week', duration_col='arrest')
+        assert norm(aaf_with_penalizer.cumulative_hazards_) <= norm(aaf_without_penalizer.cumulative_hazards_)
 
     def test_input_column_order_is_equal_to_output_hazards_order(self):
         rossi = load_rossi()

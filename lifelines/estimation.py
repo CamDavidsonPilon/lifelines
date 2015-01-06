@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import numpy as np
-from numpy.linalg import LinAlgError, inv, solve, norm
+from numpy.linalg import solve, norm, inv, LinAlgError
 from numpy import dot, exp
 from numpy.random import beta
 from scipy.integrate import trapz
@@ -12,6 +12,7 @@ import pandas as pd
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
     epanechnikov_kernel, StatError, coalesce, normalize, significance_code
+from lifelines.utils import ridge_regression as lr
 from lifelines.progress_bar import progress_bar
 from lifelines.utils import concordance_index
 
@@ -416,11 +417,12 @@ class AalenAdditiveFitter(BaseFitter):
 
     """
 
-    def __init__(self, fit_intercept=True, alpha=0.95, penalizer=0.5):
+    def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.5, smoothing_penalizer=0.):
         self.fit_intercept = fit_intercept
         self.alpha = alpha
-        self.penalizer = penalizer
-        assert penalizer >= 0, "penalizer must be >= 0."
+        self.coef_penalizer = coef_penalizer
+        self.smoothing_penalizer = smoothing_penalizer
+        assert coef_penalizer >= 0 and smoothing_penalizer >= 0, "penalizer must be >= 0."
 
     def fit(self, dataframe, duration_col, event_col=None,
             timeline=None, id_col=None, show_progress=True):
@@ -537,10 +539,8 @@ class AalenAdditiveFitter(BaseFitter):
         variance_ = pd.DataFrame(np.zeros((n_deaths, d)), columns=columns,
                                  index=from_tuples(non_censorsed_times)).swaplevel(1, 0)
 
-        # initializes the penalizer matrix
-        penalizer = self.penalizer * np.eye(d)
-
         # initialize loop variables.
+        previous_hazard = np.zeros((d,))
         progress = progress_bar(n_deaths)
         to_remove = []
         t = T.iloc[0]
@@ -562,17 +562,15 @@ class AalenAdditiveFitter(BaseFitter):
             relevant_individuals = (ids == id)
             assert relevant_individuals.sum() == 1.
 
-            # perform linear regression step. This is to be abstracted out. 
-            X = df.values
+            # perform linear regression step.
             try:
-                V = dot(inv(dot(X.T, X) + penalizer), X.T)
+                v, V = lr(df.values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
 
-            v = dot(V, 1.0 * relevant_individuals)
-
             hazards_.ix[time, id] = v.T
             variance_.ix[time, id] = V[:, relevant_individuals][:, 0] ** 2
+            previous_hazard = v.T
 
             # update progress bar
             if show_progress:
@@ -643,9 +641,7 @@ class AalenAdditiveFitter(BaseFitter):
         variance_ = pd.DataFrame(np.zeros((len(non_censorsed_times), d)),
                                  columns=columns, index=from_tuples(non_censorsed_times))
 
-        # initializes the penalizer matrix
-        penalizer = self.penalizer * np.eye(d)
-
+        previous_hazard = np.zeros((d,))
         ids = wp.minor_axis.values
         progress = progress_bar(len(non_censorsed_times))
 
@@ -657,18 +653,15 @@ class AalenAdditiveFitter(BaseFitter):
             relevant_individuals = (ids == id)
             assert relevant_individuals.sum() == 1.
 
-            X = wp[time].values
-
             # perform linear regression step.
             try:
-                V = dot(inv(dot(X.T, X) + penalizer), X.T)
+                v, V = lr(wp[time].values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
 
-            v = dot(V, 1.0 * relevant_individuals)
-
             hazards_.ix[id, time] = v.T
             variance_.ix[id, time] = V[:, relevant_individuals][:, 0] ** 2
+            previous_hazard = v.T
 
             # update progress bar
             if show_progress:
@@ -679,7 +672,7 @@ class AalenAdditiveFitter(BaseFitter):
             print()
 
         ordered_cols = df.columns  # to_panel() mixes up my columns
-        # not sure this is the correct thing to do.
+
         self.hazards_ = hazards_.groupby(level=1).sum()[ordered_cols]
         self.cumulative_hazards_ = self.hazards_.cumsum()[ordered_cols]
         self.variance_ = variance_.groupby(level=1).sum()[ordered_cols]
@@ -812,8 +805,8 @@ class CoxPHFitter(BaseFitter):
       alpha: the level in the confidence intervals.
       tie_method: specify how the fitter should deal with ties. Currently only
         'Efron' is available.
-      normalize: substract the mean and divide by standard deviation of each covariate 
-        in the input data before performing any fitting. 
+      normalize: substract the mean and divide by standard deviation of each covariate
+        in the input data before performing any fitting.
     """
 
     def __init__(self, alpha=0.95, tie_method='Efron', normalize=True):

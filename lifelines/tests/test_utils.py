@@ -5,18 +5,52 @@ import pytest
 
 from pandas.util.testing import assert_frame_equal
 import numpy.testing as npt
+from numpy.linalg import norm, lstsq
+from numpy.random import randn
 import pytest
-import lifelines.utils as utils
 from ..estimation import CoxPHFitter
 from ..datasets import (load_regression_dataset, load_larynx,
                         load_waltons, load_rossi)
 from .._utils.cindex import concordance_index as slow_cindex
+from lifelines import utils
 try:
     from .._utils._cindex import concordance_index as fast_cindex
 except ImportError:
     # If code has not been compiled.
     fast_cindex = None
 
+
+def test_ridge_regression_with_penalty_is_less_than_without_penalty():
+    X = randn(2, 2)
+    Y = randn(2)
+    assert norm(utils.ridge_regression(X, Y, c1=2.0)[0]) <= norm(utils.ridge_regression(X, Y)[0])
+    assert norm(utils.ridge_regression(X, Y, c1=1.0, c2=1.0)[0]) <= norm(utils.ridge_regression(X, Y)[0])
+
+
+def test_ridge_regression_with_extreme_c1_penalty_equals_close_to_zero_vector():
+    c1 = 10e8
+    c2 = 0.0
+    offset = np.ones(2)
+    X = randn(2, 2)
+    Y = randn(2)
+    assert norm(utils.ridge_regression(X, Y, c1, c2, offset)[0]) < 10e-4
+
+
+def test_ridge_regression_with_extreme_c2_penalty_equals_close_to_offset():
+    c1 = 0.0
+    c2 = 10e8
+    offset = np.ones(2)
+    X = randn(2, 2)
+    Y = randn(2)
+    assert norm(utils.ridge_regression(X, Y, c1, c2, offset)[0] - offset) < 10e-4
+
+
+def test_lstsq_returns_similar_values_to_ridge_regression():
+    offset = np.ones(2)
+    X = randn(2, 2)
+    Y = randn(2)
+    expected = lstsq(X, Y)[0]
+    assert norm(utils.ridge_regression(X, Y)[0] - expected) < 10e-4
 
 def test_l1_log_loss_with_no_observed():
     actual = np.array([1,1,1])
