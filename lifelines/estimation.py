@@ -1298,6 +1298,7 @@ class MTLRFitter(BaseFitter):
         return Theta
 
     def _f(self, Theta, x, k):
+        """Deprecated"""
         m, d = Theta.shape
 
         if k == m + 1:
@@ -1307,7 +1308,15 @@ class MTLRFitter(BaseFitter):
 
     def _sum_exp_f(self, Theta, x, lower_bound, upper_bound):
         m, d = Theta.shape
+
+        v = Theta.dot(x)
+        return np.exp(v[::-1].cumsum()[-(upper_bound+1):]).sum()
+    
+    def _sum_exp_f_old(self, Theta, x, lower_bound, upper_bound):
+        """Deprecated, left for checking against"""
+        m, d = Theta.shape
         s = 0
+
         for k in range(lower_bound, upper_bound + 1):
             s += np.exp(self._f(Theta, x, k))
         return s
@@ -1339,7 +1348,7 @@ class MTLRFitter(BaseFitter):
 
             x_i = X[i,:]
             assert x_i.shape == (d,)
-            logistic_likelihood += is_dead * x_i - self._sum_exp_f(Theta, x_i, 0, j) * x_i / self._sum_exp_f(Theta, x_i, 0, m)
+            logistic_likelihood += (is_dead - self._sum_exp_f(Theta, x_i, 0, j) / self._sum_exp_f(Theta, x_i, 0, m))*x_i
 
         return logistic_likelihood
 

@@ -111,3 +111,4 @@ def test_simplest_minimizing_function():
     npt.assert_approx_equal(mtlr._first_part_log_likelihood_j(Theta, X, T, 1),  (1*Theta[1, 0]*X[0,:] + 1*Theta[1,:]*X[1,:]))
     npt.assert_approx_equal(mtlr._second_part_log_likelihood(Theta, X),  np.log(exp(2) + exp(1) + exp(0)) + np.log(exp(0) + exp(-1) + exp(-2)))
     npt.assert_approx_equal(mtlr._log_likelihood(Theta, X, T),  (1 + 1 - np.log(exp(2) + exp(1) + exp(0))) + (0 - 1 - np.log(exp(0) + exp(-1) + exp(-2))))
+
