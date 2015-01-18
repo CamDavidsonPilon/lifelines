@@ -47,15 +47,15 @@ def test_sum_exp_f(X, T, Theta):
     mtlr = MTLRFitter()
     x = X[0,:]
 
-    assert mtlr._sum_exp_f(Theta, x, 0, 0) == np.exp(mtlr._f(Theta, x, 0))
-    assert mtlr._sum_exp_f(Theta, x, 0, 1) == np.exp(mtlr._f(Theta, x, 0)) + np.exp(mtlr._f(Theta, x, 1))
+    assert mtlr._sum_exp_f(Theta, x, 0) == np.exp(mtlr._f(Theta, x, 0))
+    assert mtlr._sum_exp_f(Theta, x, 1) == np.exp(mtlr._f(Theta, x, 0)) + np.exp(mtlr._f(Theta, x, 1))
 
 
 def test_d_log_likelihood_j(X, T, Theta):
     mtlr = MTLRFitter()
     X = X[0,:].reshape(1, 2)
     x = X[0,:]
-    expected = 1 * x - mtlr._sum_exp_f(Theta, x, 0, 0) / mtlr._sum_exp_f(Theta, x, 0, 3) * x
+    expected = 1 * x - mtlr._sum_exp_f(Theta, x, 0) / mtlr._sum_exp_f(Theta, x, 3) * x
     actual = mtlr._d_log_likelihood_j(Theta, X, 0, T)
 
     npt.assert_array_almost_equal(expected, actual)
@@ -99,6 +99,10 @@ def test_simplest_minimizing_function():
     Theta = np.array([[1.]])
     T = np.array([[0.]])
     X = np.array([[1.]])
+    assert mtlr._smoothing_norm(Theta) == 0.0
+    assert mtlr._coef_norm(Theta) == 1.0
+    assert mtlr._log_likelihood(Theta, X, T) == (1 - np.log(np.exp(1) + 1))
+    
     assert mtlr._minimizing_function(Theta, X, T) == 0.5 - (1 - np.log(np.exp(1) + 1))
 
     Theta = np.array([[1.], [1.]])
@@ -111,4 +115,12 @@ def test_simplest_minimizing_function():
     npt.assert_approx_equal(mtlr._first_part_log_likelihood_j(Theta, X, T, 1),  (1*Theta[1, 0]*X[0,:] + 1*Theta[1,:]*X[1,:]))
     npt.assert_approx_equal(mtlr._second_part_log_likelihood(Theta, X),  np.log(exp(2) + exp(1) + exp(0)) + np.log(exp(0) + exp(-1) + exp(-2)))
     npt.assert_approx_equal(mtlr._log_likelihood(Theta, X, T),  (1 + 1 - np.log(exp(2) + exp(1) + exp(0))) + (0 - 1 - np.log(exp(0) + exp(-1) + exp(-2))))
+
+
+def test_new_sum_exp_f_against_old(Theta, X, T):
+    mtlr = MTLRFitter()
+    x = X[0,:]
+    n,d = Theta.shape
+    assert mtlr._sum_exp_f_old(Theta,x, 2) == mtlr._sum_exp_f(Theta,x, 2)
+    assert mtlr._sum_exp_f_old(Theta,x, n) == mtlr._sum_exp_f(Theta,x, n)
 

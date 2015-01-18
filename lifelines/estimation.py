@@ -1281,7 +1281,6 @@ class MTLRFitter(BaseFitter):
         delta = np.inf
         iter = 0
         while delta > precision:
-
             gradient = np.zeros_like(Theta)
             for j in range(m):
                 print(j)
@@ -1306,19 +1305,19 @@ class MTLRFitter(BaseFitter):
         else:
             return Theta[k:,:].dot(x).sum()
 
-    def _sum_exp_f(self, Theta, x, lower_bound, upper_bound):
+    def _sum_exp_f(self, Theta, x, upper_bound):
         m, d = Theta.shape
-
         v = Theta.dot(x)
-        return np.exp(v[::-1].cumsum()[-(upper_bound+1):]).sum()
-    
-    def _sum_exp_f_old(self, Theta, x, lower_bound, upper_bound):
+        return np.exp(v[::-1].cumsum()[-(upper_bound+1):]).sum() + float(upper_bound == m)
+
+    def _sum_exp_f_old(self, Theta, x, upper_bound):
         """Deprecated, left for checking against"""
         m, d = Theta.shape
         s = 0
 
-        for k in range(lower_bound, upper_bound + 1):
+        for k in range(upper_bound + 1):
             s += np.exp(self._f(Theta, x, k))
+            print( np.exp(self._f(Theta, x, k)))
         return s
 
     def _d_coef_norm(self, Theta, j):
@@ -1347,8 +1346,7 @@ class MTLRFitter(BaseFitter):
             is_dead = survival_booleans[i]
 
             x_i = X[i,:]
-            assert x_i.shape == (d,)
-            logistic_likelihood += (is_dead - self._sum_exp_f(Theta, x_i, 0, j) / self._sum_exp_f(Theta, x_i, 0, m))*x_i
+            logistic_likelihood += (is_dead - self._sum_exp_f(Theta, x_i, j) / self._sum_exp_f(Theta, x_i, m))*x_i
 
         return logistic_likelihood
 
@@ -1388,8 +1386,7 @@ class MTLRFitter(BaseFitter):
 
         for i in xrange(n):
             x_i = X[i,:]
-            assert x_i.shape == (d,)
-            second_sum += np.log(self._sum_exp_f(Theta, x_i, 0, m))
+            second_sum += np.log(self._sum_exp_f(Theta, x_i, m))
 
         return second_sum
 
