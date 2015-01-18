@@ -1252,16 +1252,14 @@ class MTLRFitter(BaseFitter):
         self.smoothing_penalizer = smoothing_penalizer
         self.normalize = normalize
 
-
     def fit(self, df, duration_col, event_col=None):
 
         df = df.sort(duration_col).copy()
 
-
         self.durations = df[duration_col].values
 
         del df[duration_col]
-        n,d = df.shape
+        n, d = df.shape
         m = n
 
         self.data = df.copy()
@@ -1270,14 +1268,14 @@ class MTLRFitter(BaseFitter):
             # Need to normalize future inputs as well
             self._norm_mean = df.mean(0)
             self._norm_std = df.std(0)
-            df = normalize(df) 
+            df = normalize(df)
 
-        initial_Theta = 0.1*np.random.randn(m,d)
+        initial_Theta = 0.1 * np.random.randn(m, d)
         self.Theta = self._gradient_descent(initial_Theta, df.values, self.durations)
         return self
 
-    def _gradient_descent(self, Theta, X, T, show_progress=True, precision=10e-4, step_size=0.01 ):
-  
+    def _gradient_descent(self, Theta, X, T, show_progress=True, precision=10e-4, step_size=0.01):
+
         m, d = Theta.shape
         n, d = X.shape
         delta = np.inf
@@ -1286,59 +1284,50 @@ class MTLRFitter(BaseFitter):
 
             gradient = np.zeros_like(Theta)
             for j in range(m):
+                print(j)
                 gradient[j,:] = self._d_minimizing_function_j(Theta, X, j, T)
 
-            Theta_prime = Theta - step_size*gradient
+            Theta_prime = Theta - step_size * gradient
             delta = norm(Theta - Theta_prime)
             Theta = Theta_prime
-            print(self._minimizing_function(Theta, X, T))
-            if ((iter % 10) == 0) and show_progress:
+            if ((iter % 2) == 0) and show_progress:
                 print("Iteration %d: delta = %.5f" % (iter, delta))
 
             iter += 1
 
         return Theta
 
-
     def _f(self, Theta, x, k):
         m, d = Theta.shape
-        assert x.shape == (d,) 
-        assert k <= m
 
-        if k == m + 1 :
+        if k == m + 1:
             return 0
         else:
             return Theta[k:,:].dot(x).sum()
 
-
     def _sum_exp_f(self, Theta, x, lower_bound, upper_bound):
         m, d = Theta.shape
-        assert x.shape == (d,) 
         s = 0
-        for k in range(lower_bound, upper_bound+1):
+        for k in range(lower_bound, upper_bound + 1):
             s += np.exp(self._f(Theta, x, k))
         return s
 
-
     def _d_coef_norm(self, Theta, j):
         return Theta[j,:]
-        
 
     def _d_smoothing_norm(self, Theta, j):
         m, d = Theta.shape
 
         if j == 0:
-            return -(Theta[j+1, :] - Theta[j,:])
-        elif j == m-1:
-            return Theta[j, :] - Theta[j-1,:]
+            return -(Theta[j+1,:] - Theta[j,:])
+        elif j == m - 1:
+            return Theta[j,:] - Theta[j-1,:]
         else:
-            return (Theta[j, :] - Theta[j-1,:]) - (Theta[j+1, :] - Theta[j,:])
-
+            return (Theta[j,:] - Theta[j-1,:]) - (Theta[j+1,:] - Theta[j,:])
 
     def _d_log_likelihood_j(self, Theta, X, j, T):
-        m ,d = Theta.shape
-        assert X.shape[1] == d 
-        n,d = X.shape 
+        m, d = Theta.shape
+        n, d = X.shape
 
         t = T[j]
         survival_booleans = self._survival_status_at_time_t(t, T)
@@ -1350,15 +1339,14 @@ class MTLRFitter(BaseFitter):
 
             x_i = X[i,:]
             assert x_i.shape == (d,)
-            logistic_likelihood += is_dead*x_i - self._sum_exp_f(Theta, x_i, 0, j)*x_i/self._sum_exp_f(Theta, x_i, 0, m)
+            logistic_likelihood += is_dead * x_i - self._sum_exp_f(Theta, x_i, 0, j) * x_i / self._sum_exp_f(Theta, x_i, 0, m)
 
         return logistic_likelihood
- 
-    def _d_minimizing_function_j(self, Theta, X, j, T):
-        return  self.coef_penalizer*self._d_coef_norm(Theta, j)\
-              + self.smoothing_penalizer*self._d_smoothing_norm(Theta, j)\
-              - self._d_log_likelihood_j(Theta, X, j, T)
 
+    def _d_minimizing_function_j(self, Theta, X, j, T):
+        return  self.coef_penalizer * self._d_coef_norm(Theta, j)\
+            + self.smoothing_penalizer * self._d_smoothing_norm(Theta, j)\
+            - self._d_log_likelihood_j(Theta, X, j, T)
 
     def _survival_status_at_time_t(self, t, T):
         """
@@ -1366,14 +1354,13 @@ class MTLRFitter(BaseFitter):
         """
         return (t >= T).astype(float)
 
-
     def _first_part_log_likelihood_j(self, Theta, X, T, j):
-        n,d = X.shape
-        m,d = Theta.shape
+        n, d = X.shape
+        m, d = Theta.shape
         first_sum = 0
         t = T[j]
         survival_booleans = self._survival_status_at_time_t(t, T)
-        theta_j = Theta[j, :]
+        theta_j = Theta[j,:]
 
         for i in xrange(n):
 
@@ -1386,8 +1373,8 @@ class MTLRFitter(BaseFitter):
         return first_sum
 
     def _second_part_log_likelihood(self, Theta, X):
-        n,d = X.shape
-        m,d = Theta.shape
+        n, d = X.shape
+        m, d = Theta.shape
         second_sum = 0
 
         for i in xrange(n):
@@ -1405,21 +1392,19 @@ class MTLRFitter(BaseFitter):
         return log_likelihood - self._second_part_log_likelihood(Theta, X)
 
     def _minimizing_function(self, Theta, X, T):
-        return 0.5*self.coef_penalizer*self._coef_norm(Theta) + \
-               0.5*self.smoothing_penalizer*self._smoothing_norm(Theta) - \
-               self._log_likelihood(Theta, X, T)
-
+        return 0.5 * self.coef_penalizer * self._coef_norm(Theta) + \
+            0.5 * self.smoothing_penalizer * self._smoothing_norm(Theta) - \
+            self._log_likelihood(Theta, X, T)
 
     def _smoothing_norm(self, Theta):
-        t,d = Theta.shape
+        t, d = Theta.shape
         s = 0
-        for i in range(t-1):
+        for i in range(t - 1):
             s += norm(Theta[i+1,:] - Theta[i,:])**2
         return s
 
     def _coef_norm(self, Theta):
-        return norm(Theta)**2
-
+        return norm(Theta) ** 2
 
 
 def get_index(X):
