@@ -56,6 +56,8 @@ def _first_part_log_likelihood_j(Theta, X, durations, T, j):
     survival_booleans = _survival_status_at_time_t(t, durations)
     theta_j = Theta[j,:]
 
+    #return (X.dot(theta_j)*survival_booleans).sum()
+
     for i in xrange(n):
 
         is_dead = survival_booleans[i]
@@ -95,6 +97,7 @@ def _smoothing_norm(Theta):
         s += norm(Theta[i+1,:] - Theta[i,:])**2
     return s
 
+
 def _coef_norm(Theta):
     return norm(Theta) ** 2
 
@@ -103,23 +106,4 @@ def _sum_exp_f(Theta, x, upper_bound):
     m, d = Theta.shape
     v = Theta.dot(x)
     return exp(v[::-1].cumsum()[-(upper_bound+1):]).sum() + float(upper_bound == m)
-
-def _sum_exp_f_old(Theta, x, upper_bound):
-    """Deprecated, left for checking against"""
-
-    m, d = Theta.shape
-    s = 0
-
-    for k in range(upper_bound + 1):
-        s += exp(_f(Theta, x, k))
-    return s
-
-def _f(Theta, x, k):
-    """Deprecated"""
-    m, d = Theta.shape
-
-    if k == m + 1:
-        return 0
-    else:
-        return Theta[k:,:].dot(x).sum()
 
