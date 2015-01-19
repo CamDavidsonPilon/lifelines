@@ -23,20 +23,10 @@ def _d_smoothing_norm(Theta, j):
 
 def _d_log_likelihood_j(Theta, X, j, durations, T):
     m, d = Theta.shape
-    n, d = X.shape
-
     t = T[j]
     survival_booleans = _survival_status_at_time_t(t, durations)
-    logistic_likelihood = zeros(d)
 
-    for i in xrange(n):
-
-        is_dead = survival_booleans[i]
-
-        x_i = X[i,:]
-        logistic_likelihood += (is_dead - _sum_exp_f(Theta, x_i, j) / _sum_exp_f(Theta, x_i, m))*x_i
-
-    return logistic_likelihood
+    return (survival_booleans - _sum_exp_fX(Theta, X, j)/_sum_exp_fX(Theta, X, m)).dot(X)
 
 def _survival_status_at_time_t(t, T):
     """
