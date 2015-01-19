@@ -6,8 +6,6 @@ from numpy import exp, log
 import pytest
 import numpy.testing as npt
 
-import lifelines.mtlr as mtlr
-
 
 @pytest.fixture
 def T():
@@ -26,20 +24,6 @@ def X():
     return np.array([[1, 1],
                      [2, 0],
                      [1, -1]])
-
-
-def test_f(X, T, Theta):
-    x = X[0, :]
-    expected = np.dot(Theta[0, :], x)\
-                + np.dot(Theta[1, :], x)\
-                + np.dot(Theta[2, :], x)
-    assert mtlr._f(Theta, x, 0) == expected
-
-    expected = np.dot(Theta[1, :], x) + np.dot(Theta[2,:], x)
-    assert mtlr._f(Theta, x, 1) == expected
-
-    expected = np.dot(Theta[2, :], x) 
-    assert mtlr._f(Theta, x, 2) == expected
 
 
 def test_sum_exp_f(X, T, Theta):
@@ -107,10 +91,3 @@ def test_simplest_minimizing_function():
     npt.assert_approx_equal(mtlr._first_part_log_likelihood_j(Theta, X, T, 1),  (1*Theta[1, 0]*X[0, :] + 1*Theta[1,:]*X[1,:]))
     npt.assert_approx_equal(mtlr._second_part_log_likelihood(Theta, X),  np.log(exp(2) + exp(1) + exp(0)) + np.log(exp(0) + exp(-1) + exp(-2)))
     npt.assert_approx_equal(mtlr._log_likelihood(Theta, X, T),  (1 + 1 - np.log(exp(2) + exp(1) + exp(0))) + (0 - 1 - np.log(exp(0) + exp(-1) + exp(-2))))
-
-
-def test_new_sum_exp_f_against_old(Theta, X, T):
-    x = X[0, :]
-    n, d = Theta.shape
-    assert mtlr._sum_exp_f_old(Theta, x, 2) == mtlr._sum_exp_f(Theta, x, 2)
-    assert mtlr._sum_exp_f_old(Theta, x, n) == mtlr._sum_exp_f(Theta, x, n)

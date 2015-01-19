@@ -28,7 +28,7 @@ def _d_log_likelihood_j(Theta, X, j, durations, T):
     t = T[j]
     survival_booleans = _survival_status_at_time_t(t, durations)
 
-    return (survival_booleans - _sum_exp_fX(Theta, X, j) / _sum_exp_fX(Theta, X, m)).dot(X)
+    return (survival_booleans - _sum_exp_f(Theta, X, j) / _sum_exp_f(Theta, X, m)).dot(X)
 
 
 def _survival_status_at_time_t(t, T):
@@ -51,7 +51,7 @@ def _first_part_log_likelihood_j(Theta, X, durations, T, j):
 def _second_part_log_likelihood(Theta, X):
     n, d = X.shape
     m, d = Theta.shape
-    return log(_sum_exp_fX(Theta, X, m)).sum()
+    return log(_sum_exp_f(Theta, X, m)).sum()
 
 
 def _log_likelihood(Theta, X, durations, T):
@@ -80,13 +80,7 @@ def _coef_norm(Theta):
     return norm(Theta) ** 2
 
 
-def _sum_exp_f(Theta, x, upper_bound):
-    m = Theta.shape[0]
-    v = Theta.dot(x)
-    return exp(v[::-1].cumsum()[-(upper_bound + 1):]).sum() + float(upper_bound == m)
-
-
-def _sum_exp_fX(Theta, X, upper_bound):
+def _sum_exp_f(Theta, X, upper_bound):
     m = Theta.shape[0]
     v = fliplr(Theta.dot(X.T).T)
     return exp(v.cumsum(1)[:, -(upper_bound + 1):]).sum(1) + float(upper_bound == m)
