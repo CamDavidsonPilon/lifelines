@@ -58,9 +58,15 @@ def _first_part_log_likelihood_j(Theta, X, durations, T, j):
     return (X.dot(theta_j)*survival_booleans).sum()
 
 def _second_part_log_likelihood(Theta, X):
+    n, d = X.shape
     m, d = Theta.shape
+    second_sum = 0
 
-    return sum(map(lambda x: log(_sum_exp_f(Theta, x, m)), X))
+    for i in xrange(n):
+        x_i = X[i,:]
+        second_sum += log(_sum_exp_f(Theta, x_i, m))
+
+    return second_sum
 
 def _log_likelihood(Theta, X, durations, T):
     m, d = Theta.shape
