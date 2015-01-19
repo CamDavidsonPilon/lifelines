@@ -1289,19 +1289,20 @@ class MTLRFitter(BaseFitter):
             #out = Parallel(n_jobs=-1)(delayed(_d_minimizing_function_j)(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m))
             out = [_d_minimizing_function_j(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m)]
             gradient = np.asarray(out)
-
-            step_size = self._line_search(_minimizing_function, Theta, gradient, X, durations, T, self.coef_penalizer, self.smoothing_penalizer)
+            if ((iter % 2) == 0):
+                step_size = self._line_search(_minimizing_function, Theta, gradient, X, durations, T, self.coef_penalizer, self.smoothing_penalizer)
             Theta = Theta - step_size * gradient
             delta = norm(gradient)
 
             if ((iter % 10) == 0) and show_progress:
                 print("Iteration %d: delta = %.5f" % (iter, delta))
                 print("Objective function = %.5f" % _minimizing_function(Theta, X, durations, T, self.coef_penalizer, self.smoothing_penalizer))
+            
             iter += 1
         return Theta
 
     def _line_search(self, minimizing_function, x, delta_x, *args):
-        ts = 10 ** np.linspace(-5, 0, 12)
+        ts = 10 ** np.linspace(-5, 0, 10)
         out = map(lambda t: minimizing_function(x - t * delta_x, *args), ts)
         return ts[np.argmin(out)]
 
