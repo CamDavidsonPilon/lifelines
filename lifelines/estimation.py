@@ -1278,30 +1278,35 @@ class MTLRFitter(BaseFitter):
         self.Theta = self._gradient_descent(initial_Theta, df.values, self.durations.values, T)
         return self
 
-    def _gradient_descent(self, Theta, X, durations, T, show_progress=True, precision=10e-4, step_size=0.0005):
+    def _gradient_descent(self, Theta, X, durations, T, show_progress=True, precision=10e-5, step_size=0.0001):
         from .mtlr import _d_minimizing_function_j, _minimizing_function
 
         m, d = Theta.shape
         n, d = X.shape
         delta = np.inf
         iter = 0
-        while delta > precision:
+        number_of_estimates = m*d
+        while delta > number_of_estimates*precision:
 
-            #out = Parallel(n_jobs=4)(delayed(_d_minimizing_function_j)(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m))
+            #out = Parallel(n_jobs=-1)(delayed(_d_minimizing_function_j)(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m))
             out = [_d_minimizing_function_j(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m)]
             gradient = np.asarray(out)
 
-            Theta_prime = Theta - step_size * gradient
-            delta = norm(Theta - Theta_prime)
-            Theta = Theta_prime
+            step_size = self._line_search(_minimizing_function, Theta, gradient, X, durations, T, self.coef_penalizer, self.smoothing_penalizer)
+            Theta = Theta - step_size * gradient
+            delta = norm(gradient) 
+
             if ((iter % 10) == 0) and show_progress:
                 print("Iteration %d: delta = %.5f" % (iter, delta))
-                print(norm(gradient))
-                print(_minimizing_function(Theta, X, durations, T, self.coef_penalizer, self.smoothing_penalizer))
-
+                print("Objective function = %.5f"%_minimizing_function(Theta, X, durations, T, self.coef_penalizer, self.smoothing_penalizer))
             iter += 1
-
         return Theta
+
+    def _line_search(self, minimizing_function, x, delta_x, *args):
+        ts = 10**np.linspace(-5, 0, 12)
+        out = map(lambda t: minimizing_function(x - t * delta_x, *args), ts)
+        return ts[np.argmin(out)]
+
 
 def get_index(X):
     if isinstance(X, pd.DataFrame):
