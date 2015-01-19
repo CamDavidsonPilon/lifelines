@@ -15,7 +15,6 @@ from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
 from lifelines.utils import ridge_regression as lr
 from lifelines.progress_bar import progress_bar
 from lifelines.utils import concordance_index
-from lifelines.externals.joblib import Parallel, delayed
 
 
 class BaseFitter(object):
@@ -1254,7 +1253,6 @@ class MTLRFitter(BaseFitter):
         self.normalize = normalize
         self.n_jobs = n_jobs
 
-
     def fit(self, df, duration_col, event_col=None):
 
         df = df.sort(duration_col).copy()
@@ -1285,8 +1283,8 @@ class MTLRFitter(BaseFitter):
         n, d = X.shape
         delta = np.inf
         iter = 0
-        number_of_estimates = m*d
-        while delta > number_of_estimates*precision:
+        number_of_estimates = m * d
+        while delta > number_of_estimates * precision:
 
             #out = Parallel(n_jobs=-1)(delayed(_d_minimizing_function_j)(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m))
             out = [_d_minimizing_function_j(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m)]
@@ -1294,16 +1292,16 @@ class MTLRFitter(BaseFitter):
 
             step_size = self._line_search(_minimizing_function, Theta, gradient, X, durations, T, self.coef_penalizer, self.smoothing_penalizer)
             Theta = Theta - step_size * gradient
-            delta = norm(gradient) 
+            delta = norm(gradient)
 
             if ((iter % 10) == 0) and show_progress:
                 print("Iteration %d: delta = %.5f" % (iter, delta))
-                print("Objective function = %.5f"%_minimizing_function(Theta, X, durations, T, self.coef_penalizer, self.smoothing_penalizer))
+                print("Objective function = %.5f" % _minimizing_function(Theta, X, durations, T, self.coef_penalizer, self.smoothing_penalizer))
             iter += 1
         return Theta
 
     def _line_search(self, minimizing_function, x, delta_x, *args):
-        ts = 10**np.linspace(-5, 0, 12)
+        ts = 10 ** np.linspace(-5, 0, 12)
         out = map(lambda t: minimizing_function(x - t * delta_x, *args), ts)
         return ts[np.argmin(out)]
 
