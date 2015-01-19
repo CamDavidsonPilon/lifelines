@@ -56,16 +56,7 @@ def _first_part_log_likelihood_j(Theta, X, durations, T, j):
     survival_booleans = _survival_status_at_time_t(t, durations)
     theta_j = Theta[j,:]
 
-    #return (X.dot(theta_j)*survival_booleans).sum()
-
-    for i in xrange(n):
-
-        is_dead = survival_booleans[i]
-        x_i = X[i,:]
-
-        if is_dead:
-            first_sum += theta_j.dot(x_i)
-    return first_sum
+    return (X.dot(theta_j)*survival_booleans).sum()
 
 def _second_part_log_likelihood(Theta, X):
     n, d = X.shape
