@@ -36,10 +36,6 @@ def _d_log_likelihood_j(Theta, X, j, durations, T):
         x_i = X[i,:]
         logistic_likelihood += (is_dead - _sum_exp_f(Theta, x_i, j) / _sum_exp_f(Theta, x_i, m))*x_i
 
-        if np.any(np.isnan(logistic_likelihood)):
-            import pdb
-            pdb.set_trace()
-
     return logistic_likelihood
 
 def _survival_status_at_time_t(t, T):
@@ -60,13 +56,7 @@ def _first_part_log_likelihood_j(Theta, X, durations, T, j):
 def _second_part_log_likelihood(Theta, X):
     n, d = X.shape
     m, d = Theta.shape
-    second_sum = 0
-
-    for i in xrange(n):
-        x_i = X[i,:]
-        second_sum += log(_sum_exp_f(Theta, x_i, m))
-
-    return second_sum
+    return log(_sum_exp_fX(Theta, X, m)).sum()
 
 def _log_likelihood(Theta, X, durations, T):
     m, d = Theta.shape
@@ -83,7 +73,7 @@ def _minimizing_function(Theta, X, durations, T, coef_penalizer, smoothing_penal
 def _smoothing_norm(Theta):
     t, d = Theta.shape
     s = 0
-    for i in range(t - 1):
+    for i in xrange(t - 1):
         s += norm(Theta[i+1,:] - Theta[i,:])**2
     return s
 
@@ -93,7 +83,14 @@ def _coef_norm(Theta):
 
 
 def _sum_exp_f(Theta, x, upper_bound):
-    m, d = Theta.shape
+    m = Theta.shape[0]
     v = Theta.dot(x)
     return exp(v[::-1].cumsum()[-(upper_bound+1):]).sum() + float(upper_bound == m)
+
+def _sum_exp_fX(Theta, X, upper_bound):
+    m = Theta.shape[0]
+    v = np.fliplr(Theta.dot(X.T).T)
+    return exp(v.cumsum(1)[:, -(upper_bound+1):]).sum(1) + float(upper_bound == m)
+
+
 
