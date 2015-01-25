@@ -1245,20 +1245,26 @@ class CoxPHFitter(BaseFitter):
 
 
 class MTLRFitter(BaseFitter):
+    """
 
-    def __init__(self, coef_penalizer=0.5, smoothing_penalizer=0.5, fit_intercept=True, normalize=True, n_jobs=1):
-        self.coef_penalizer = coef_penalizer
+    Uses an alternate version of the penalizers when in the original paper.
+
+    """
+
+
+    def __init__(self, likelihood_penalizer=1., smoothing_penalizer=1., fit_intercept=True, normalize=True, n_jobs=1):
         self.smoothing_penalizer = smoothing_penalizer
+        self.likelihood_penalizer = likelihood_penalizer
         self.fit_intercept = fit_intercept
         self.normalize = normalize
         self.n_jobs = n_jobs
 
-    def fit(self, df, duration_col, event_col=None):
+    def fit(self, df, duration_col, event_col=None, periods=60):
 
         df = df.sort(duration_col).copy()
 
         self.durations = df[duration_col]
-        T = self.durations.unique()
+        T = np.linspace(0, self.durations.max(), periods)
 
         del df[duration_col]
         n, d = df.shape
@@ -1272,11 +1278,11 @@ class MTLRFitter(BaseFitter):
             self._norm_std = df.std(0)
             df = normalize(df)
 
-        initial_Theta = 0.1 * np.random.randn(m, d)
+        initial_Theta = 0.1*np.random.randn(m, d)
         self.Theta = self._gradient_descent(initial_Theta, df.values, self.durations.values, T)
         return self
 
-    def _gradient_descent(self, Theta, X, durations, T, show_progress=True, precision=10e-5, step_size=0.0001):
+    def _gradient_descent(self, Theta, X, durations, T, show_progress=True, precision=10e-5):
         from .mtlr import _d_minimizing_function_j, _minimizing_function
 
         m, d = Theta.shape
@@ -1284,25 +1290,33 @@ class MTLRFitter(BaseFitter):
         delta = np.inf
         iter = 0
         number_of_estimates = m * d
+
+        if show_progress:
+            print("Number of estimates to estimate: %d"%number_of_estimates)
+        
         while delta > number_of_estimates * precision:
-
-            #out = Parallel(n_jobs=-1)(delayed(_d_minimizing_function_j)(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m))
-            out = [_d_minimizing_function_j(Theta, X, j, durations, T, self.coef_penalizer, self.smoothing_penalizer) for j in range(m)]
-            gradient = np.asarray(out)
-            if ((iter % 2) == 0):
-                step_size = self._line_search(_minimizing_function, Theta, gradient, X, durations, T, self.coef_penalizer, self.smoothing_penalizer)
-            Theta = Theta - step_size * gradient
-            delta = norm(gradient)
-
-            if ((iter % 10) == 0) and show_progress:
-                print("Iteration %d: delta = %.5f" % (iter, delta))
-                print("Objective function = %.5f" % _minimizing_function(Theta, X, durations, T, self.coef_penalizer, self.smoothing_penalizer))
-            
             iter += 1
+
+            gradient_vectors = [_d_minimizing_function_j(Theta, X, j, durations, T, self.likelihood_penalizer, self.smoothing_penalizer) for j in range(m)]
+            gradient_matrix = np.asarray(gradient_vectors)
+
+            step_size = self._line_search(_minimizing_function, Theta, gradient_matrix, X, durations, T, self.likelihood_penalizer, self.smoothing_penalizer)
+            Theta = Theta - step_size * gradient_matrix
+            delta = norm(gradient_matrix)
+
+            if ((iter % 10) == 1) and show_progress:
+                print("Iteration %d: delta = %.5f" % (iter, delta))
+                print("Objective function = %.5f" % _minimizing_function(Theta, X, durations, T, self.likelihood_penalizer, self.smoothing_penalizer))
+            
+
+        if show_progress and ((iter % 10) != 1):
+            print("Iteration %d: delta = %.5f" % (iter, delta))
+            print("Objective function = %.5f" % _minimizing_function(Theta, X, durations, T, self.likelihood_penalizer, self.smoothing_penalizer))
+        
         return Theta
 
     def _line_search(self, minimizing_function, x, delta_x, *args):
-        ts = 10 ** np.linspace(-5, 0, 10)
+        ts = 10 ** np.linspace(-5, -1, 5)
         out = map(lambda t: minimizing_function(x - t * delta_x, *args), ts)
         return ts[np.argmin(out)]
 
