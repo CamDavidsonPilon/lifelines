@@ -7,7 +7,7 @@ that will try to keep subsequent values of a hazard curve close together. The pe
 is `smoothing_penalizer`. 
 - Changed `penalizer` keyword arg to `coef_penalizer` in AalenAdditiveFitter.
 - new `ridge_regression` function in `utils.py` to perform linear regression with l2 penalizer terms.
-- 
+- Matplotlib is no longer a mandatory dependency. 
 
 #### 0.5.1
 
