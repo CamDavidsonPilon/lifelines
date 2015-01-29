@@ -19,7 +19,7 @@ lesser-known technique, for example:
 ### Installation:
 #### Dependencies:
 
-The usual Python data stack: NumPy, SciPy, Pandas (a modern version please), Matplotlib
+The usual Python data stack: NumPy, SciPy, Pandas (a modern version please). Matplotlib is optional (as of 0.6.0+). 
 
 #### Installing
 
