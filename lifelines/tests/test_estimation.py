@@ -5,7 +5,6 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
-from matplotlib import pyplot as plt
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
@@ -230,6 +229,9 @@ class TestKaplanMeierFitter():
     @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_kmf_left_censorship_plots(self):
+        matplotlib = pytest.importorskip("matplotlib")
+        from matplotlib import pyplot as plt
+
         kmf = KaplanMeierFitter()
         lcd_dataset = load_lcd()
         alluvial_fan = lcd_dataset.ix[lcd_dataset['group'] == 'alluvial_fan']
@@ -782,6 +784,9 @@ class TestAalenAdditiveFitter():
     @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_aaf_panel_dataset(self):
+        matplotlib = pytest.importorskip("matplotlib")
+        from matplotlib import pyplot as plt
+
         panel_dataset = load_panel_test()
         aaf = AalenAdditiveFitter()
         aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
@@ -818,6 +823,9 @@ class TestAalenAdditiveFitter():
     def test_aalen_additive_fit_no_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
+        matplotlib = pytest.importorskip("matplotlib")
+        from matplotlib import pyplot as plt
+
         n = 2500
         d = 6
         timeline = np.linspace(0, 70, 10000)
@@ -844,6 +852,9 @@ class TestAalenAdditiveFitter():
     def test_aalen_additive_fit_with_censor(self):
         # this is a visual test of the fitting the cumulative
         # hazards.
+        matplotlib = pytest.importorskip("matplotlib")
+        from matplotlib import pyplot as plt
+
         n = 2500
         d = 6
         timeline = np.linspace(0, 70, 10000)
