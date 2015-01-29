@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-# plotting
 import numpy as np
-import matplotlib as mpl
-from matplotlib import pyplot as plt
-
 from lifelines.utils import coalesce
 
 
 def is_latex_enabled():
+    import matplotlib as mpl
     '''
     Returns True if LaTeX is enabled in matplotlib's rcParams,
     False otherwise
@@ -111,6 +108,9 @@ def add_at_risk_counts(*fitters, **kwargs):
         # This hides the labels
         add_at_risk_counts(f1, f2, labels=None)
     '''
+    from matplotlib import pyplot as plt
+
+
     # Axes and Figure can't be None
     ax = kwargs.get('ax', None)
     if ax is None:
@@ -181,6 +181,8 @@ def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
     examples:
 
     """
+    from matplotlib import pyplot as plt
+
     N = lifetimes.shape[0]
     if N > 100:
         print("warning: you may want to subsample to less than 100 individuals.")
@@ -230,6 +232,8 @@ def plot_regressions(self):
           legend: show legend in figure.
 
         """
+        from matplotlib import pyplot as plt
+
         assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot'
 
         get_method = "ix" if ix is not None else "iloc"
@@ -297,6 +301,8 @@ def plot_estimate(self, estimate):
              censor_styles=None, ci_legend=False, ci_force_lines=False,
              ci_alpha=0.25, ci_show=True, at_risk_counts=False,
              bandwidth=None, **kwargs):
+
+        from matplotlib import pyplot as plt
 
         if censor_styles is None:
             censor_styles = {}
@@ -389,6 +395,8 @@ def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
     **kwargs will be passed to the matplotlib fill_between() function.
 
     '''
+    from matplotlib import pyplot as plt
+
     # If no Axes opject given, grab the current one:
     if ax is None:
         ax = plt.gca()

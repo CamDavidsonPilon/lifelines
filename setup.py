@@ -51,7 +51,6 @@ for ext_modules in [exts, []]:
             install_requires=[
                 "numpy",
                 "scipy",
-                "matplotlib",
                 "pandas>=0.14",
             ],
             package_data={

@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import os
 import pytest
-from matplotlib import pyplot as plt
 import numpy as np
 from ..estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter
 from ..generate_datasets import generate_random_lifetimes, generate_hazard_rates
@@ -12,6 +11,9 @@ from ..plotting import plot_lifetimes
 @pytest.mark.plottest
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting():
+
+    matplotlib = pytest.importorskip("matplotlib")
+    plt = matplotlib.pyplot
 
     def test_negative_times_still_plots(self):
         n = 40
