@@ -6,11 +6,12 @@ from lifelines.utils import coalesce
 
 
 def is_latex_enabled():
-    import matplotlib as mpl
     '''
     Returns True if LaTeX is enabled in matplotlib's rcParams,
     False otherwise
     '''
+    import matplotlib as mpl
+
     return mpl.rcParams['text.usetex']
 
 
