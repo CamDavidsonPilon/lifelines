@@ -230,7 +230,7 @@ class TestKaplanMeierFitter():
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_kmf_left_censorship_plots(self):
         matplotlib = pytest.importorskip("matplotlib")
-        plt = matplotlib.pyplot
+        from matplotlib import pyplot as plt
 
         kmf = KaplanMeierFitter()
         lcd_dataset = load_lcd()
@@ -773,7 +773,7 @@ class TestAalenAdditiveFitter():
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
     def test_aaf_panel_dataset(self):
         matplotlib = pytest.importorskip("matplotlib")
-        plt = matplotlib.pyplot
+        from matplotlib import pyplot as plt
 
         panel_dataset = load_panel_test()
         aaf = AalenAdditiveFitter()
@@ -812,7 +812,7 @@ class TestAalenAdditiveFitter():
         # this is a visual test of the fitting the cumulative
         # hazards.
         matplotlib = pytest.importorskip("matplotlib")
-        plt = matplotlib.pyplot
+        from matplotlib import pyplot as plt
 
         n = 2500
         d = 6
@@ -841,7 +841,7 @@ class TestAalenAdditiveFitter():
         # this is a visual test of the fitting the cumulative
         # hazards.
         matplotlib = pytest.importorskip("matplotlib")
-        plt = matplotlib.pyplot
+        from matplotlib import pyplot as plt
 
         n = 2500
         d = 6
