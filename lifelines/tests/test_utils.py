@@ -19,6 +19,28 @@ except ImportError:
     # If code has not been compiled.
     fast_cindex = None
 
+def test_line_search():
+    minimizing_function = lambda x: x**2
+    current_x = np.array([1])
+    gradient = np.array([2])
+
+    assert 1e-1 == utils._line_search(minimizing_function, current_x, gradient)
+
+def test_line_search_with_kwargs():
+    minimizing_function = lambda x: x**2
+    current_x = np.array([1])
+    gradient = np.array([2])
+
+    assert 1e-2 == utils._line_search(minimizing_function, current_x, gradient, log_min=-3, log_max=-2)
+
+def test_line_search_with_args():
+    minimizing_function = lambda x,k: x**2 + k
+    current_x = np.array([1])
+    gradient = np.array([2])
+    k = 2
+
+    assert 1e-1 == utils._line_search(minimizing_function, current_x, gradient, k)
+
 
 def test_ridge_regression_with_penalty_is_less_than_without_penalty():
     X = randn(2, 2)
