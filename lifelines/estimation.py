@@ -19,6 +19,9 @@ from lifelines.utils import concordance_index
 
 class BaseFitter(object):
 
+    def __init__(self, alpha=0.95):
+        self.alpha = alpha
+
     def __repr__(self):
         classname = self.__class__.__name__
         try:
@@ -27,6 +30,76 @@ class BaseFitter(object):
         except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s
+
+
+class WeibullFitter(BaseFitter):
+    """
+    This class implements an exponential model for univariate data. 
+
+    S(t) = exp(-(lambda*t)**rho)
+
+    """
+
+    
+    def fit(self, durations, event_observed=None, timeline=None, entry=None,
+            label='Weibull_estimate', alpha=None, ci_labels=None):
+    
+        self.durations = np.asarray(durations, dtype=float)
+        self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
+        self.timeline = np.asarray(timeline) if timeline is not None else np.sort(np.unique(durations))
+        self.timeline = np.sort(self.timeline)
+
+        self._label = label
+
+        #initialize
+        init_rho = 1.0
+        init_lambda_ = 1.0
+
+        #estimation
+        self.rho_, self.lambda_ = self._gradient_descent(init_rho, init_lambda_, self.durations, self.event_observed)
+        self.survival_function_ = pd.DataFrame(np.exp(-self.cumulative_hazard(self.timeline)), columns=[self._label], index=self.timeline)
+
+        # estimation functions
+        self.predict = _predict(self, "survival_function_", self._label)
+        self.subtract = _subtract(self, "survival_function_")
+        self.divide = _divide(self, "survival_function_")
+
+        return self
+
+    def hazard(self, times):
+        return self.lambda_*self.rho*(self.lambda_*times)**(self.rho_-1)
+
+    def cumulative_hazard(self, times):
+        return (self.lambda_*times)**self.rho_
+
+    def _gradient_descent(self, rho, lambda_, T, E, step_size=0.01, precision=1e-4):
+
+        delta = np.inf 
+        N = T.shape[0]
+        step_size = min(step_size/N, 0.00001)
+
+        while delta > precision:
+            
+            d_rho = self._rho_gradient(lambda_, rho, T, E)
+            d_lambda = self._lambda_gradient(lambda_, rho, T, E)
+            
+            #update
+            rho = rho - step_size*d_rho
+            lambda_ = lambda_ - step_size*d_lambda
+            
+            delta = d_rho**2 + d_lambda**2
+
+        return rho, lambda_
+
+
+    @staticmethod
+    def _lambda_gradient(lambda_, rho, T, E):
+        return  - rho/lambda_*E.sum() + (rho*T*(lambda_*T)**(rho-1)).sum()
+
+    @staticmethod
+    def _rho_gradient(lambda_, rho, T, E):
+        return - E.sum()/rho - (np.log(lambda_*T)*E).sum() + (np.log(lambda_*T)*(lambda_*T)**rho).sum()
+
 
 
 class ExponentialFitter(BaseFitter):
@@ -38,10 +111,6 @@ class ExponentialFitter(BaseFitter):
     This implies a constant hazard rate of \lambda. 
 
     """
-
-
-    def __init__(self, alpha=0.95):
-        self.alpha = alpha
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
             label='Exponential_estimate', alpha=None, ci_labels=None):
@@ -66,8 +135,9 @@ class ExponentialFitter(BaseFitter):
         """
 
         self.durations = np.asarray(durations, dtype=float)
-        self.event_observed = np.asarray(event_observed, dtype=int)
-        self.timeline = np.asarray(timeline) or np.sort(np.unique(durations))
+        self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
+        self.timeline = np.asarray(timeline) if timeline is not None else np.unique(durations)
+        self.timeline = np.sort(self.timeline)
         self._label = label
 
         #estimation
@@ -250,9 +320,6 @@ class KaplanMeierFitter(BaseFitter):
 
     """
 
-    def __init__(self, alpha=0.95):
-        self.alpha = alpha
-
     def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM_estimate',
             alpha=None, left_censorship=False, ci_labels=None):
         """
@@ -368,9 +435,6 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
 
     """
 
-    def __init__(self, alpha=0.95):
-        self.alpha = alpha
-
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
             label='BFH_estimate', alpha=None, ci_labels=None):
         """
@@ -393,6 +457,8 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
           self, with new properties like 'survival_function_'.
 
         """
+        self._label = label
+
         naf = NelsonAalenFitter(self.alpha)
         naf.fit(durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = \
@@ -412,64 +478,6 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
         self.plot = plot_estimate(self, "survival_function_")
         self.plot_survival_function = self.plot
         return self
-
-
-class BayesianFitter(BaseFitter):
-
-    """
-    If you have small data, and KM feels too uncertain, you can use the BayesianFitter to
-    generate sample survival functions. The algorithm is:
-
-    S_i(T) = \Prod_{t=0}^T (1 - p_t)
-
-    where p_t ~ Beta( 0.01 + d_t, 0.01 + n_t - d_t), d_t is the number of deaths and n_t is the size of the
-    population at risk at time t. The prior is a Beta(0.01, 0.01) for each time point (high values led to a
-    high bias).
-
-    Parameters:
-        samples: the number of sample survival functions to return.
-
-    """
-
-    def __init__(self, samples=300):
-        self.beta = beta
-        self.samples = samples
-
-    def fit(self, durations, censorship=None, timeline=None, entry=None):
-        """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
-          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if censorship==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
-
-        Returns:
-          self, with new properties like 'sample_survival_functions_'.
-        """
-        v = preprocess_inputs(durations, censorship, timeline, entry)
-        self.durations, self.censorship, self.timeline, self.entry, self.event_table = v
-
-        self.sample_survival_functions_ = self.generate_sample_path(self.samples)
-
-        return self
-
-    def plot(self, **kwargs):
-        kwargs['alpha'] = coalesce(kwargs.pop('alpha', None), 0.05)
-        kwargs['legend'] = False
-        kwargs['c'] = coalesce(kwargs.pop('c', None), kwargs.pop('color', None), '#348ABD')
-        ax = self.sample_survival_functions_.plot(**kwargs)
-        return ax
-
-    def generate_sample_path(self, n=1):
-        deaths = self.event_table['observed']
-        population = self.event_table['entrance'].cumsum() - self.event_table['removed'].cumsum().shift(1).fillna(0)
-        d = deaths.shape[0]
-        samples = 1. - beta(0.01 + deaths, 0.01 + population - deaths, size=(n, d))
-        sample_paths = pd.DataFrame(np.exp(np.log(samples).cumsum(1)).T, index=self.timeline)
-        return sample_paths
 
 
 class AalenAdditiveFitter(BaseFitter):
