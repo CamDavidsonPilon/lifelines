@@ -188,11 +188,11 @@ class TestWeibullFitter():
         E = np.array([1])
         T = np.array([10])
         rho = lambda_ = 1
-        assert - wf._lambda_gradient([lambda_, rho] T, E) == -9
+        assert - wf._lambda_gradient([lambda_, rho], T, E) == -9
 
         E = np.array([1, 1])
         T = np.array([10, 10])
-        assert - wf._lambda_gradient([lambda_, rho] T, E) == -9 * 2
+        assert - wf._lambda_gradient([lambda_, rho], T, E) == -9 * 2
 
     def test_rho_gradient(self):
         wf = WeibullFitter
@@ -200,11 +200,11 @@ class TestWeibullFitter():
         E = np.array([1])
         T = np.array([10])
         rho = lambda_ = 1
-        assert - wf._rho_gradient(lambda_, rho, T, E) == 1 + 1 * np.log(10) - np.log(10) * 10
+        assert - wf._rho_gradient([lambda_, rho], T, E) == 1 + 1 * np.log(10) - np.log(10) * 10
 
         E = np.array([1, 1])
         T = np.array([10, 10])
-        assert - wf._rho_gradient(lambda_, rho, T, E) == 2 * (1 + 1 * np.log(10) - np.log(10) * 10)
+        assert - wf._rho_gradient([lambda_, rho], T, E) == 2 * (1 + 1 * np.log(10) - np.log(10) * 10)
 
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
