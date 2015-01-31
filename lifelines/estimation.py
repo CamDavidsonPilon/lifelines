@@ -29,6 +29,79 @@ class BaseFitter(object):
         return s
 
 
+class ExponentialFitter(BaseFitter):
+    """
+    This class implements an exponential model for univariate data. 
+
+    S(t) = exp(-\lambda*t)
+
+    This implies a constant hazard rate of \lambda. 
+
+    """
+
+
+    def __init__(self, alpha=0.95):
+        self.alpha = alpha
+
+    def fit(self, durations, event_observed=None, timeline=None, entry=None,
+            label='Exponential_estimate', alpha=None, ci_labels=None):
+        """
+        Parameters:
+          duration: an array, or pd.Series, of length n -- duration subject was observed for
+          timeline: return the best estimate at the values in timelines (postively increasing)
+          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if event_observed==None
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
+             If None, defaults to all 0 (all birth events observed.)
+          label: a string to name the column of the estimate.
+          alpha: the alpha value in the confidence intervals. Overrides the initializing
+             alpha for this call to fit only.
+          ci_labels: add custom column names to the generated confidence intervals
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+
+        Returns:
+          self, with new properties like 'survival_function_' and 'lambda_'.
+
+        """
+
+        self.durations = np.asarray(durations, dtype=float)
+        self.event_observed = np.asarray(event_observed, dtype=int)
+        self.timeline = np.asarray(timeline) or np.sort(np.unique(durations))
+        self._label = label
+
+        #estimation
+        D = self.event_observed.sum()
+        T = self.durations.sum()
+        self.lambda_ = D/T 
+        self._lambda_variance_ = self.lambda_/T
+        self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_*self.timeline), columns=[self._label], index=self.timeline)
+        self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
+
+        # estimation functions
+        self.predict = _predict(self, "survival_function_", self._label)
+        self.subtract = _subtract(self, "survival_function_")
+        self.divide = _divide(self, "survival_function_")
+
+        # plotting
+        self.plot = plot_estimate(self, "survival_function_")
+        self.plot_survival_function_ = self.plot
+
+        return self
+
+    def _bounds(self, alpha, ci_labels):
+        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
+        df = pd.DataFrame(index=self.timeline)
+        std = np.sqrt(self._lambda_variance_)
+
+        if ci_labels is None:
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+        assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
+
+        df[ci_labels[0]] = np.exp(-(self.lambda_ - alpha2*std)*self.timeline)
+        df[ci_labels[1]] = np.exp(-(self.lambda_ + alpha2*std)*self.timeline)
+        return df
+
 class NelsonAalenFitter(BaseFitter):
 
     """
@@ -208,7 +281,7 @@ class KaplanMeierFitter(BaseFitter):
         v = preprocess_inputs(durations, event_observed, timeline, entry)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
         self._label = label
-        self.alpha = alpha if alpha else self.alpha
+        alpha = alpha if alpha else self.alpha
         log_survival_function, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                    self._additive_f, self._additive_var,
                                                                    left_censorship)
@@ -226,7 +299,7 @@ class KaplanMeierFitter(BaseFitter):
         # estimation
         setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[self._label]))
         self.__estimate = getattr(self, estimate_name)
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], ci_labels)
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self.median_ = median_survival_times(self.__estimate)
 
         # estimation methods
@@ -239,14 +312,14 @@ class KaplanMeierFitter(BaseFitter):
         setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
-    def _bounds(self, cumulative_sq_, ci_labels):
-        # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdfg
-        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
+    def _bounds(self, cumulative_sq_, alpha, ci_labels):
+        # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdf
+        alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
         v = np.log(self.__estimate.values)
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, self.alpha), "%s_lower_%.2f" % (self._label, self.alpha)]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v))
@@ -1253,8 +1326,8 @@ def get_index(X):
     return index
 
 
-def _subtract(self, estimate):
-    class_name = self.__class__.__name__
+def _subtract(fitter, estimate):
+    class_name = fitter.__class__.__name__
     doc_string = """
         Subtract the %s of two %s objects.
 
@@ -1264,7 +1337,7 @@ def _subtract(self, estimate):
         """ % (estimate, class_name, class_name)
 
     def subtract(other):
-        self_estimate = getattr(self, estimate)
+        self_estimate = getattr(fitter, estimate)
         other_estimate = getattr(other, estimate)
         new_index = np.concatenate((other_estimate.index, self_estimate.index))
         new_index = np.unique(new_index)
@@ -1275,8 +1348,8 @@ def _subtract(self, estimate):
     return subtract
 
 
-def _divide(self, estimate):
-    class_name = self.__class__.__name__
+def _divide(fitter, estimate):
+    class_name = fitter.__class__.__name__
     doc_string = """
         Divide the %s of two %s objects.
 
@@ -1286,7 +1359,7 @@ def _divide(self, estimate):
         """ % (estimate, class_name, class_name)
 
     def divide(other):
-        self_estimate = getattr(self, estimate)
+        self_estimate = getattr(fitter, estimate)
         other_estimate = getattr(other, estimate)
         new_index = np.concatenate((other_estimate.index, self_estimate.index))
         new_index = np.unique(new_index)
@@ -1297,16 +1370,24 @@ def _divide(self, estimate):
     return divide
 
 
-def _predict(self, estimate, label):
+def _predict(fitter, estimate, label):
+    class_name = fitter.__class__.__name__
     doc_string = """
-      Predict the %s at certain times
+      Predict the %s at certain point in time.
 
       Parameters:
-        time: an array of times to predict the value of %s at
-      """ % (estimate, estimate)
+        time: a scalar or an array of times to predict the value of %s at. 
+
+      Returns:
+        predictions: a scalar if time is a scalar, a numpy array if time in an array.
+      """ % (class_name, class_name)
 
     def predict(time):
-        return [getattr(self, estimate).ix[:t].iloc[-1][label] for t in time]
+        predictor = lambda t: getattr(fitter, estimate).ix[:t].iloc[-1][label]
+        try:
+            return np.array([predictor(t) for t in time])
+        except TypeError:
+            return predictor(time)
 
     predict.__doc__ = doc_string
     return predict
