@@ -52,34 +52,38 @@ def test_lstsq_returns_similar_values_to_ridge_regression():
     expected = lstsq(X, Y)[0]
     assert norm(utils.ridge_regression(X, Y)[0] - expected) < 10e-4
 
+
 def test_l1_log_loss_with_no_observed():
-    actual = np.array([1,1,1])
-    predicted = np.array([1,1,1])
+    actual = np.array([1, 1, 1])
+    predicted = np.array([1, 1, 1])
     assert utils.l1_log_loss(actual, predicted) == 0.0
     predicted = predicted + 1
     assert utils.l1_log_loss(actual, predicted) == np.log(2)
 
+
 def test_l1_log_loss_with_observed():
-    E = np.array([0,1,1])
-    actual = np.array([1,1,1])
-    predicted = np.array([1,1,1])
+    E = np.array([0, 1, 1])
+    actual = np.array([1, 1, 1])
+    predicted = np.array([1, 1, 1])
     assert utils.l1_log_loss(actual, predicted, E) == 0.0
-    predicted = np.array([2,1,1])
+    predicted = np.array([2, 1, 1])
     assert utils.l1_log_loss(actual, predicted, E) == 0.0
+
 
 def test_l2_log_loss_with_no_observed():
-    actual = np.array([1,1,1])
-    predicted = np.array([1,1,1])
+    actual = np.array([1, 1, 1])
+    predicted = np.array([1, 1, 1])
     assert utils.l2_log_loss(actual, predicted) == 0.0
     predicted = predicted + 1
-    assert abs(utils.l2_log_loss(actual, predicted) - np.log(2)**2) < 10e-8
+    assert abs(utils.l2_log_loss(actual, predicted) - np.log(2) ** 2) < 10e-8
+
 
 def test_l2_log_loss_with_observed():
-    E = np.array([0,1,1])
-    actual = np.array([1,1,1])
-    predicted = np.array([1,1,1])
+    E = np.array([0, 1, 1])
+    actual = np.array([1, 1, 1])
+    predicted = np.array([1, 1, 1])
     assert utils.l2_log_loss(actual, predicted, E) == 0.0
-    predicted = np.array([2,1,1])
+    predicted = np.array([2, 1, 1])
     assert utils.l2_log_loss(actual, predicted, E) == 0.0
 
 
@@ -232,15 +236,15 @@ def test_cross_validator_returns_k_results():
 def test_cross_validator_with_predictor():
     cf = CoxPHFitter()
     results = utils.k_fold_cross_validation(cf, load_regression_dataset(),
-                                      duration_col='T', event_col='E', k=3,
-                                      predictor="predict_expectation")
+                                            duration_col='T', event_col='E', k=3,
+                                            predictor="predict_expectation")
 
 
 def test_cross_validator_with_predictor_and_kwargs():
     cf = CoxPHFitter()
     results_06 = utils.k_fold_cross_validation(cf, load_regression_dataset(),
-                                         duration_col='T', k=3,
-                                         predictor="predict_percentile", predictor_kwargs={'p': 0.6})
+                                               duration_col='T', k=3,
+                                               predictor="predict_percentile", predictor_kwargs={'p': 0.6})
 
 
 def test_cross_validator_with_specific_loss_function():
@@ -249,7 +253,7 @@ def test_cross_validator_with_specific_loss_function():
 
     cf = CoxPHFitter()
     results_sq = utils.k_fold_cross_validation(cf, load_regression_dataset(), evaluation_measure=square_loss,
-                                         duration_col='T', event_col='E')
+                                               duration_col='T', event_col='E')
     results_con = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col='T', event_col='E')
     assert list(results_sq) != list(results_con)
 

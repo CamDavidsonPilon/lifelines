@@ -12,9 +12,9 @@ from lifelines._utils import concordance_index as _cindex
 
 
 def l1_log_loss(event_times, predicted_event_times, event_observed=None):
-    """ 
+    """
     Calculates the l1 log-loss of predicted event times to true event times for *non-censored*
-    individuals only. 
+    individuals only.
 
     1/N \sum_{i} |log(t_i) - log(q_i)|
 
@@ -29,15 +29,15 @@ def l1_log_loss(event_times, predicted_event_times, event_observed=None):
     """
     if event_observed is None:
         event_observed = np.ones_like(event_times)
-        
+
     ix = event_observed.astype(bool)
     return np.abs(np.log(event_times[ix]) - np.log(predicted_event_times[ix])).mean()
-    
+
 
 def l2_log_loss(event_times, predicted_event_times, event_observed=None):
-    """ 
+    """
     Calculates the l2 log-loss of predicted event times to true event times for *non-censored*
-    individuals only. 
+    individuals only.
 
     1/N \sum_{i} (log(t_i) - log(q_i))**2
 

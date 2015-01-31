@@ -668,6 +668,7 @@ class AalenAdditiveFitter(BaseFitter):
             self.timeline = self.hazards_.index.values.astype(float)
 
         self.data = dataframe
+
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
@@ -998,7 +999,7 @@ class CoxPHFitter(BaseFitter):
             return hessian, gradient
 
     def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=1.,
-                         epsilon=10e-5, show_progress=True, include_likelihood=False):
+                         precision=10e-5, show_progress=True, include_likelihood=False):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -1018,7 +1019,6 @@ class CoxPHFitter(BaseFitter):
         Returns:
             beta: (1,d) numpy array.
         """
-        assert epsilon <= 1., "epsilon must be less than or equal to 1."
         n, d = X.shape
 
         # Enforce numpy arrays
@@ -1064,7 +1064,7 @@ class CoxPHFitter(BaseFitter):
             # Save these as pending result
             hessian, gradient = h, g
 
-            if norm(delta) < epsilon:
+            if norm(delta) < precision:
                 converging = False
 
             if ((i % 10) == 0) and show_progress:
@@ -1315,6 +1315,83 @@ class CoxPHFitter(BaseFitter):
             baseline_hazard_.ix[t] = v
 
         return baseline_hazard_
+
+
+class MTLRFitter(BaseFitter):
+    """
+
+    Uses an alternate version of the penalizers when in the original paper.
+
+    """
+
+
+    def __init__(self, likelihood_penalizer=1., smoothing_penalizer=1., fit_intercept=True, normalize=True, n_jobs=1):
+        self.smoothing_penalizer = smoothing_penalizer
+        self.likelihood_penalizer = likelihood_penalizer
+        self.fit_intercept = fit_intercept
+        self.normalize = normalize
+        self.n_jobs = n_jobs
+
+    def fit(self, df, duration_col, event_col=None, periods=60):
+
+        df = df.sort(duration_col).copy()
+
+        self.durations = df[duration_col]
+        T = np.linspace(0, self.durations.max(), periods)
+
+        del df[duration_col]
+        n, d = df.shape
+        m = T.shape[0]
+
+        self.data = df.copy()
+
+        if self.normalize:
+            # Need to normalize future inputs as well
+            self._norm_mean = df.mean(0)
+            self._norm_std = df.std(0)
+            df = normalize(df)
+
+        initial_Theta = 0.1*np.random.randn(m, d)
+        self.Theta = self._gradient_descent(initial_Theta, df.values, self.durations.values, T)
+        return self
+
+    def _gradient_descent(self, Theta, X, durations, T, show_progress=True, precision=10e-5):
+        from .mtlr import _d_minimizing_function_j, _minimizing_function
+
+        m, d = Theta.shape
+        n, d = X.shape
+        delta = np.inf
+        iter = 0
+        number_of_estimates = m * d
+
+        if show_progress:
+            print("Number of estimates to estimate: %d"%number_of_estimates)
+        
+        while delta > number_of_estimates * precision:
+            iter += 1
+
+            gradient_vectors = [_d_minimizing_function_j(Theta, X, j, durations, T, self.likelihood_penalizer, self.smoothing_penalizer) for j in range(m)]
+            gradient_matrix = np.asarray(gradient_vectors)
+
+            step_size = self._line_search(_minimizing_function, Theta, gradient_matrix, X, durations, T, self.likelihood_penalizer, self.smoothing_penalizer)
+            Theta = Theta - step_size * gradient_matrix
+            delta = norm(gradient_matrix)
+
+            if ((iter % 10) == 1) and show_progress:
+                print("Iteration %d: delta = %.5f" % (iter, delta))
+                print("Objective function = %.5f" % _minimizing_function(Theta, X, durations, T, self.likelihood_penalizer, self.smoothing_penalizer))
+            
+
+        if show_progress and ((iter % 10) != 1):
+            print("Iteration %d: delta = %.5f" % (iter, delta))
+            print("Objective function = %.5f" % _minimizing_function(Theta, X, durations, T, self.likelihood_penalizer, self.smoothing_penalizer))
+        
+        return Theta
+
+    def _line_search(self, minimizing_function, x, delta_x, *args):
+        ts = 10 ** np.linspace(-5, -1, 5)
+        out = map(lambda t: minimizing_function(x - t * delta_x, *args), ts)
+        return ts[np.argmin(out)]
 
 
 def get_index(X):
