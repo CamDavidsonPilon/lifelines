@@ -43,7 +43,25 @@ class WeibullFitter(BaseFitter):
     
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
             label='Weibull_estimate', alpha=None, ci_labels=None):
-    
+        """
+        Parameters:
+          duration: an array, or pd.Series, of length n -- duration subject was observed for
+          timeline: return the best estimate at the values in timelines (postively increasing)
+          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if event_observed==None
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
+             If None, defaults to all 0 (all birth events observed.)
+          label: a string to name the column of the estimate.
+          alpha: the alpha value in the confidence intervals. Overrides the initializing
+             alpha for this call to fit only.
+          ci_labels: add custom column names to the generated confidence intervals
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+
+        Returns:
+          self, with new properties like 'survival_function_', 'lambda_' and 'rho_'.
+
+        """
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 100)
@@ -86,7 +104,6 @@ class WeibullFitter(BaseFitter):
             gradient = np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
             step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-6, log_max=-np.log10(N)-1)
 
-            #update
             parameters = parameters - step_size*gradient
             delta = norm(gradient)**2
 
@@ -113,9 +130,9 @@ class ExponentialFitter(BaseFitter):
     """
     This class implements an exponential model for univariate data. 
 
-    S(t) = exp(-\lambda*t)
+    S(t) = exp(-lambda*t)
 
-    This implies a constant hazard rate of \lambda. 
+    This implies a constant hazard rate of lambda. 
 
     """
 
