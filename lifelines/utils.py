@@ -547,3 +547,11 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     beta = np.dot(V_1, V_2)
 
     return beta, np.dot(V_1, X.T)
+
+def _line_search(minimizing_function, x, delta_x, *args, **kwargs):
+    log_min = kwargs.get('log_min', -5)
+    log_max = kwargs.get('log_max', -1)
+    ts = 10 ** np.linspace(log_min, log_max, 5)
+    out = map(lambda t: minimizing_function(x - t * delta_x, *args), ts)
+    return ts[np.argmin(out)]
+

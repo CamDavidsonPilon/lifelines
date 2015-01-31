@@ -2,6 +2,7 @@
 
 #### 0.6.0
 
+- Inclusion of the univariate fitters `WeibullFitter` and `ExponentialFitter`. 
 - Added new penalization scheme to AalenAdditiveFitter. You can now add a smoothing penalizer
 that will try to keep subsequent values of a hazard curve close together. The penalizing coefficient
 is `smoothing_penalizer`. 
@@ -9,6 +10,7 @@ is `smoothing_penalizer`.
 - new `ridge_regression` function in `utils.py` to perform linear regression with l2 penalizer terms.
 - Matplotlib is no longer a mandatory dependency. 
 - `.predict(time)` method on univariate fitters can now accept a scalar (and returns a scalar) and an iterable (and returns a numpy array)
+
 
 #### 0.5.1
 

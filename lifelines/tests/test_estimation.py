@@ -82,6 +82,13 @@ def data_nus():
 
 class TestUnivariateFitters():
 
+    def test_univariate_fitters_have_a_plot_method(self, sample_lifetimes, univariate_fitters):
+        T = sample_lifetimes[0]
+        for f in univariate_fitters:
+            f.fit(T)
+            assert hasattr(f, 'plot')
+
+
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, sample_lifetimes):
         kmf = KaplanMeierFitter()
         kmf.fit(sample_lifetimes[0])
@@ -183,11 +190,11 @@ class TestWeibullFitter():
         E = np.array([1])
         T = np.array([10])
         rho = lambda_ = 1
-        assert wf._lambda_gradient(lambda_, rho, T, E) == -9
+        assert - wf._lambda_gradient([lambda_, rho] T, E) == -9
 
         E = np.array([1,1])
         T = np.array([10,10])
-        assert wf._lambda_gradient(lambda_, rho, T, E) == -9*2
+        assert - wf._lambda_gradient([lambda_, rho] T, E) == -9*2
 
 
     def test_rho_gradient(self):
@@ -196,11 +203,11 @@ class TestWeibullFitter():
         E = np.array([1])
         T = np.array([10])
         rho = lambda_ = 1
-        assert wf._rho_gradient(lambda_, rho, T, E) == 1 + 1*np.log(10) - np.log(10)*10
+        assert - wf._rho_gradient(lambda_, rho, T, E) == 1 + 1*np.log(10) - np.log(10)*10
 
         E = np.array([1,1])
         T = np.array([10,10])
-        assert wf._rho_gradient(lambda_, rho, T, E) == 2*(1 + 1*np.log(10) - np.log(10)*10)
+        assert - wf._rho_gradient(lambda_, rho, T, E) == 2*(1 + 1*np.log(10) - np.log(10)*10)
 
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()

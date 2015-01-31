@@ -46,8 +46,7 @@ class WeibullFitter(BaseFitter):
     
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        self.timeline = np.asarray(timeline) if timeline is not None else np.sort(np.unique(durations))
-        self.timeline = np.sort(self.timeline)
+        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 100)
 
         self._label = label
 
@@ -56,13 +55,17 @@ class WeibullFitter(BaseFitter):
         init_lambda_ = 1.0
 
         #estimation
-        self.rho_, self.lambda_ = self._gradient_descent(init_rho, init_lambda_, self.durations, self.event_observed)
+        self.lambda_, self.rho_ = self._gradient_descent(init_rho, init_lambda_, self.durations, self.event_observed)
         self.survival_function_ = pd.DataFrame(np.exp(-self.cumulative_hazard(self.timeline)), columns=[self._label], index=self.timeline)
 
         # estimation functions
         self.predict = _predict(self, "survival_function_", self._label)
         self.subtract = _subtract(self, "survival_function_")
         self.divide = _divide(self, "survival_function_")
+
+        # plotting
+        self.plot = plot_estimate(self, "survival_function_")
+        self.plot_survival_function_ = self.plot
 
         return self
 
@@ -72,32 +75,36 @@ class WeibullFitter(BaseFitter):
     def cumulative_hazard(self, times):
         return (self.lambda_*times)**self.rho_
 
-    def _gradient_descent(self, rho, lambda_, T, E, step_size=0.01, precision=1e-4):
+    def _gradient_descent(self, rho, lambda_, T, E, precision=1e-4):
+        from lifelines.utils import _line_search
 
         delta = np.inf 
         N = T.shape[0]
-        step_size = min(step_size/N, 0.00001)
+        parameters = np.array([lambda_, rho])
 
         while delta > precision:
-            
-            d_rho = self._rho_gradient(lambda_, rho, T, E)
-            d_lambda = self._lambda_gradient(lambda_, rho, T, E)
-            
+            gradient = np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
+            step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-6, log_max=-np.log10(N)-1)
+
             #update
-            rho = rho - step_size*d_rho
-            lambda_ = lambda_ - step_size*d_lambda
-            
-            delta = d_rho**2 + d_lambda**2
+            parameters = parameters - step_size*gradient
+            delta = norm(gradient)**2
 
-        return rho, lambda_
-
+        return parameters
 
     @staticmethod
-    def _lambda_gradient(lambda_, rho, T, E):
+    def _negative_log_likelihood(lambda_rho, T, E):
+        lambda_, rho = lambda_rho
+        return - np.log(rho*lambda_)*E.sum() - (rho-1)*(E*np.log(lambda_*T)).sum() + ((lambda_*T)**rho).sum()
+
+    @staticmethod
+    def _lambda_gradient(lambda_rho, T, E):
+        lambda_, rho = lambda_rho
         return  - rho/lambda_*E.sum() + (rho*T*(lambda_*T)**(rho-1)).sum()
 
     @staticmethod
-    def _rho_gradient(lambda_, rho, T, E):
+    def _rho_gradient(lambda_rho, T, E):
+        lambda_, rho = lambda_rho
         return - E.sum()/rho - (np.log(lambda_*T)*E).sum() + (np.log(lambda_*T)*(lambda_*T)**rho).sum()
 
 
@@ -136,8 +143,7 @@ class ExponentialFitter(BaseFitter):
 
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        self.timeline = np.asarray(timeline) if timeline is not None else np.unique(durations)
-        self.timeline = np.sort(self.timeline)
+        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 100)
         self._label = label
 
         #estimation
