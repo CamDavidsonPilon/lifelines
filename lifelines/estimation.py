@@ -70,7 +70,9 @@ class WeibullFitter(BaseFitter):
        
         # estimation
         self.lambda_, self.rho_ = self._gradient_descent(self.durations, self.event_observed)
-        self.survival_function_ = pd.DataFrame(np.exp(-self.cumulative_hazard(self.timeline)), columns=[self._label], index=self.timeline)
+        self.survival_function_ = pd.DataFrame(np.exp(-self.cumulative_hazard_at_times(self.timeline)), columns=[self._label], index=self.timeline)
+        self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
+        self.cumulative_hazard_ = pd.DataFrame(self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
 
         # estimation functions
         self.predict = _predict(self, "survival_function_", self._label)
@@ -80,27 +82,28 @@ class WeibullFitter(BaseFitter):
         # plotting
         self.plot = plot_estimate(self, "survival_function_")
         self.plot_survival_function_ = self.plot
+        self.plot_survival_function_ = self.plot
 
         return self
 
-    def hazard(self, times):
-        return self.lambda_ * self.rho * (self.lambda_ * times) ** (self.rho_ - 1)
+    def hazard_at_times(self, times):
+        return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
 
-    def cumulative_hazard(self, times):
+    def cumulative_hazard_at_times(self, times):
         return (self.lambda_ * times) ** self.rho_
 
     def _gradient_descent(self, T, E, precision=1e-5):
         from lifelines.utils import _line_search, _smart_search
+        N = T.shape[0]
 
-        gradient_function = lambda parameters, *args: np.array([self._lambda_gradient(parameters, *args), self._rho_gradient(parameters, *args)])
-        # initialize
+        # initialize search
         parameters = _smart_search(self._negative_log_likelihood, 2, T, E)
 
+        gradient_function = lambda parameters, *args: np.array([self._lambda_gradient(parameters, *args), self._rho_gradient(parameters, *args)])
         delta = np.inf
-        N = T.shape[0]
-        #parameters = np.array([lambda_, rho])
         iter = 1
         normalized_precision = N*precision
+
         while delta > normalized_precision:
             gradient = gradient_function(parameters, T, E)
             step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-np.log10(N) - 4, log_max=-np.log10(N))
