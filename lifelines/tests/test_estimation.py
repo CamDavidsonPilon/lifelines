@@ -1,5 +1,5 @@
 from __future__ import print_function
-from collections import Counter
+from collections import Counter, Iterable
 import os
 
 import numpy as np
@@ -10,7 +10,8 @@ from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 
 from ..utils import k_fold_cross_validation, StatError
-from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, NelsonAalenFitter, BreslowFlemingHarringtonFitter
+from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
+                         NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter
 from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test, load_g3
 from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
@@ -74,6 +75,27 @@ def data_nus():
 
 
 class TestUnivariateFitters():
+
+    def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, sample_lifetimes):
+        kmf = KaplanMeierFitter()
+        kmf.fit(sample_lifetimes[0])
+        assert not isinstance(kmf.predict(1), Iterable)
+        assert isinstance(kmf.predict([1,2]), Iterable)
+
+    def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
+        T = [1,2,3]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T)
+        time = 1
+        assert abs(kmf.predict(time) - kmf.survival_function_.ix[time].values) < 10e-8
+
+    def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
+        T = [1,2,3]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T)
+        assert abs(kmf.predict(0.5) - kmf.survival_function_.ix[0].values) < 10e-8
+        assert abs(kmf.predict(1.9999) - kmf.survival_function_.ix[1].values) < 10e-8
+
 
     def test_custom_timeline_can_be_list_or_array(self, sample_lifetimes):
         T, C = sample_lifetimes
@@ -147,6 +169,26 @@ class TestUnivariateFitters():
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
 
+class TestExponentialFitter():
+
+    def test_fit_computes_correct_lambda_(self):
+        T = np.array([10,10,10,10], dtype=float)
+        E = np.array([1,0,0,0], dtype=float)
+        enf = ExponentialFitter()
+        enf.fit(T,E)
+        assert abs(enf.lambda_ - (E.sum() / T.sum())) < 10e-6
+
+    @pytest.mark.plottest
+    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
+    def test_plot_function_on_fitted_model(self, sample_lifetimes):
+        from matplotlib import pyplot as plt
+
+        T, C = sample_lifetimes
+        enf = ExponentialFitter()
+        enf.fit(T,C)
+        enf.plot()
+        plt.show()
+
 class TestKaplanMeierFitter():
 
     def kaplan_meier(self, lifetimes, observed=None):
@@ -170,6 +212,14 @@ class TestKaplanMeierFitter():
         if lifetimes_counter.get(0) is None:
             km = np.insert(km, 0, 1.)
         return km.reshape(len(km), 1)
+
+    def test_kaplan_meier_allows_one_to_change_alpha_at_fit_time(self, sample_lifetimes):
+        alpha = 0.9
+        alpha_fit = 0.95
+        kmf = KaplanMeierFitter(alpha=alpha)
+        kmf.fit(sample_lifetimes[0])
+        assert kmf.alpha == alpha 
+        assert str(alpha_fit) in kmf.confidence_interval_.columns[0]
 
     def test_kaplan_meier_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes
