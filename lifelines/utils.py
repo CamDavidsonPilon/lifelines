@@ -552,6 +552,23 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
 def _line_search(minimizing_function, x, delta_x, *args, **kwargs):
     log_min = kwargs.get('log_min', -5)
     log_max = kwargs.get('log_max', -1)
-    ts = 10 ** np.linspace(log_min, log_max, 5)
+    ts = 10 ** np.linspace(log_min, log_max, 10)
     out = map(lambda t: minimizing_function(x - t * delta_x, *args), ts)
     return ts[np.argmin(out)]
+
+
+def _random_search(minimizing_function, x_shape, *args, **kwargs):
+    log_min = kwargs.get('log_min', -2)
+    log_max = kwargs.get('log_max', 2)
+    n = x_shape[0]
+    best = np.inf
+    for i in range(100):
+        values = 10 ** ( (log_max - log_min) * np.random.random(n) + log_min )
+        
+        if minimizing_function(values, *args) < best:
+            minimizing_values = values 
+            best = minimizing_function(values, *args)
+        print(best, minimizing_values)
+        print()
+    return minimizing_values
+

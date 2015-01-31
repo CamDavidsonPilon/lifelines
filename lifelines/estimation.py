@@ -66,13 +66,9 @@ class WeibullFitter(BaseFitter):
         self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 100)
 
         self._label = label
-
-        # initialize
-        init_rho = 1.0
-        init_lambda_ = 1.0
-
+       
         # estimation
-        self.lambda_, self.rho_ = self._gradient_descent(init_rho, init_lambda_, self.durations, self.event_observed)
+        self.lambda_, self.rho_ = self._gradient_descent(self.durations, self.event_observed)
         self.survival_function_ = pd.DataFrame(np.exp(-self.cumulative_hazard(self.timeline)), columns=[self._label], index=self.timeline)
 
         # estimation functions
@@ -92,21 +88,47 @@ class WeibullFitter(BaseFitter):
     def cumulative_hazard(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-    def _gradient_descent(self, rho, lambda_, T, E, precision=1e-4):
+    def _gradient_descent(self, T, E, precision=1e-4):
         from lifelines.utils import _line_search
+
+        # initialize
+        from lifelines.utils import _random_search
+        lambda_, rho = _random_search(self._negative_log_likelihood, (2,), T, E)
+        print(lambda_, rho)
 
         delta = np.inf
         N = T.shape[0]
         parameters = np.array([lambda_, rho])
+        iter = 0
 
         while delta > precision:
             gradient = np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
-            step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-6, log_max=-np.log10(N) - 1)
-
+            step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-np.log10(N) - 5, log_max=-np.log10(N) - 1)
+            print()
+            print(step_size)
             parameters = parameters - step_size * gradient
             delta = norm(gradient) ** 2
-
+            print(delta)
+            print(gradient)
+            print(parameters)
+            iter+=1
+            if iter % 5001 == 0:
+                raise ValueError('Gradient descent is not converging well. Iteration %d, delta %.5f'%(iter,delta)) 
+        print(iter)
         return parameters
+
+    def _bounds(self, alpha, ci_labels):
+        alpha2 = inv_normal_cdf((1. + alpha) / 2.)
+        df = pd.DataFrame(index=self.timeline)
+        std = np.sqrt(self._lambda_variance_)
+
+        if ci_labels is None:
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+        assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
+
+        df[ci_labels[0]] = np.exp(-(self.lambda_ - alpha2 * std) * self.timeline)
+        df[ci_labels[1]] = np.exp(-(self.lambda_ + alpha2 * std) * self.timeline)
+        return df
 
     @staticmethod
     def _negative_log_likelihood(lambda_rho, T, E):
@@ -182,16 +204,18 @@ class ExponentialFitter(BaseFitter):
         return self
 
     def _bounds(self, alpha, ci_labels):
-        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
+        alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
-        std = np.sqrt(self._lambda_variance_)
 
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(-(self.lambda_ - alpha2 * std) * self.timeline)
-        df[ci_labels[1]] = np.exp(-(self.lambda_ + alpha2 * std) * self.timeline)
+        std = np.sqrt(self._lambda_variance_)
+        sv = self.survival_function_
+        error = std*self.timeline[:,None]*sv
+        df[ci_labels[0]] = sv + alpha2*error
+        df[ci_labels[1]] = sv - alpha2*error
         return df
 
 
