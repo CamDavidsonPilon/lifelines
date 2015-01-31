@@ -4,5 +4,5 @@ from .estimation import KaplanMeierFitter, NelsonAalenFitter, \
     WeibullFitter, ExponentialFitter
 
 __all__ = ['KaplanMeierFitter', 'NelsonAalenFitter', 'AalenAdditiveFitter',
-           'BreslowFlemingHarringtonFitter', 'CoxPHFitter', 'WeibullFitter', 
+           'BreslowFlemingHarringtonFitter', 'CoxPHFitter', 'WeibullFitter',
            'ExponentialFitter']

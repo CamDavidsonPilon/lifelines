@@ -4,14 +4,13 @@ from __future__ import print_function
 import numpy as np
 from numpy.linalg import solve, norm, inv, LinAlgError
 from numpy import dot, exp
-from numpy.random import beta
 from scipy.integrate import trapz
 import scipy.stats as stats
 import pandas as pd
 
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
-    epanechnikov_kernel, StatError, coalesce, normalize, significance_code
+    epanechnikov_kernel, StatError, normalize, significance_code
 from lifelines.utils import ridge_regression as lr
 from lifelines.progress_bar import progress_bar
 from lifelines.utils import concordance_index
@@ -33,14 +32,14 @@ class BaseFitter(object):
 
 
 class WeibullFitter(BaseFitter):
+
     """
-    This class implements an exponential model for univariate data. 
+    This class implements an exponential model for univariate data.
 
     S(t) = exp(-(lambda*t)**rho)
 
     """
 
-    
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
             label='Weibull_estimate', alpha=None, ci_labels=None):
         """
@@ -68,11 +67,11 @@ class WeibullFitter(BaseFitter):
 
         self._label = label
 
-        #initialize
+        # initialize
         init_rho = 1.0
         init_lambda_ = 1.0
 
-        #estimation
+        # estimation
         self.lambda_, self.rho_ = self._gradient_descent(init_rho, init_lambda_, self.durations, self.event_observed)
         self.survival_function_ = pd.DataFrame(np.exp(-self.cumulative_hazard(self.timeline)), columns=[self._label], index=self.timeline)
 
@@ -88,51 +87,51 @@ class WeibullFitter(BaseFitter):
         return self
 
     def hazard(self, times):
-        return self.lambda_*self.rho*(self.lambda_*times)**(self.rho_-1)
+        return self.lambda_ * self.rho * (self.lambda_ * times) ** (self.rho_ - 1)
 
     def cumulative_hazard(self, times):
-        return (self.lambda_*times)**self.rho_
+        return (self.lambda_ * times) ** self.rho_
 
     def _gradient_descent(self, rho, lambda_, T, E, precision=1e-4):
         from lifelines.utils import _line_search
 
-        delta = np.inf 
+        delta = np.inf
         N = T.shape[0]
         parameters = np.array([lambda_, rho])
 
         while delta > precision:
             gradient = np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
-            step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-6, log_max=-np.log10(N)-1)
+            step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-6, log_max=-np.log10(N) - 1)
 
-            parameters = parameters - step_size*gradient
-            delta = norm(gradient)**2
+            parameters = parameters - step_size * gradient
+            delta = norm(gradient) ** 2
 
         return parameters
 
     @staticmethod
     def _negative_log_likelihood(lambda_rho, T, E):
         lambda_, rho = lambda_rho
-        return - np.log(rho*lambda_)*E.sum() - (rho-1)*(E*np.log(lambda_*T)).sum() + ((lambda_*T)**rho).sum()
+        return - np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
 
     @staticmethod
     def _lambda_gradient(lambda_rho, T, E):
         lambda_, rho = lambda_rho
-        return  - rho/lambda_*E.sum() + (rho*T*(lambda_*T)**(rho-1)).sum()
+        return - rho / lambda_ * E.sum() + (rho * T * (lambda_ * T) ** (rho - 1)).sum()
 
     @staticmethod
     def _rho_gradient(lambda_rho, T, E):
         lambda_, rho = lambda_rho
-        return - E.sum()/rho - (np.log(lambda_*T)*E).sum() + (np.log(lambda_*T)*(lambda_*T)**rho).sum()
-
+        return - E.sum() / rho - (np.log(lambda_ * T) * E).sum() + (np.log(lambda_ * T) * (lambda_ * T) ** rho).sum()
 
 
 class ExponentialFitter(BaseFitter):
+
     """
-    This class implements an exponential model for univariate data. 
+    This class implements an exponential model for univariate data.
 
     S(t) = exp(-lambda*t)
 
-    This implies a constant hazard rate of lambda. 
+    This implies a constant hazard rate of lambda.
 
     """
 
@@ -163,12 +162,12 @@ class ExponentialFitter(BaseFitter):
         self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 100)
         self._label = label
 
-        #estimation
+        # estimation
         D = self.event_observed.sum()
         T = self.durations.sum()
-        self.lambda_ = D/T 
-        self._lambda_variance_ = self.lambda_/T
-        self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_*self.timeline), columns=[self._label], index=self.timeline)
+        self.lambda_ = D / T
+        self._lambda_variance_ = self.lambda_ / T
+        self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_ * self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
 
         # estimation functions
@@ -191,9 +190,10 @@ class ExponentialFitter(BaseFitter):
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(-(self.lambda_ - alpha2*std)*self.timeline)
-        df[ci_labels[1]] = np.exp(-(self.lambda_ + alpha2*std)*self.timeline)
+        df[ci_labels[0]] = np.exp(-(self.lambda_ - alpha2 * std) * self.timeline)
+        df[ci_labels[1]] = np.exp(-(self.lambda_ + alpha2 * std) * self.timeline)
         return df
+
 
 class NelsonAalenFitter(BaseFitter):
 
@@ -1407,7 +1407,7 @@ def _predict(fitter, estimate, label):
       Predict the %s at certain point in time.
 
       Parameters:
-        time: a scalar or an array of times to predict the value of %s at. 
+        time: a scalar or an array of times to predict the value of %s at.
 
       Returns:
         predictions: a scalar if time is a scalar, a numpy array if time in an array.

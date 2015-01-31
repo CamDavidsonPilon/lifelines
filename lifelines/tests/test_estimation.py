@@ -11,8 +11,8 @@ import numpy.testing as npt
 
 from ..utils import k_fold_cross_validation, StatError
 from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
-                         NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-                         WeibullFitter
+    NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
+    WeibullFitter
 from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test, load_g3
 from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
@@ -45,10 +45,11 @@ def data_pred1():
     data_pred1['E'] = True
     return data_pred1
 
+
 @pytest.fixture
 def univariate_fitters():
-    return  [KaplanMeierFitter(), NelsonAalenFitter(), BreslowFlemingHarringtonFitter(), 
-             ExponentialFitter(), WeibullFitter()]
+    return [KaplanMeierFitter(), NelsonAalenFitter(), BreslowFlemingHarringtonFitter(),
+            ExponentialFitter(), WeibullFitter()]
 
 
 @pytest.fixture
@@ -88,27 +89,25 @@ class TestUnivariateFitters():
             f.fit(T)
             assert hasattr(f, 'plot')
 
-
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, sample_lifetimes):
         kmf = KaplanMeierFitter()
         kmf.fit(sample_lifetimes[0])
         assert not isinstance(kmf.predict(1), Iterable)
-        assert isinstance(kmf.predict([1,2]), Iterable)
+        assert isinstance(kmf.predict([1, 2]), Iterable)
 
     def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
-        T = [1,2,3]
+        T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
         time = 1
         assert abs(kmf.predict(time) - kmf.survival_function_.ix[time].values) < 10e-8
 
     def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
-        T = [1,2,3]
+        T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
         assert abs(kmf.predict(0.5) - kmf.survival_function_.ix[0].values) < 10e-8
         assert abs(kmf.predict(1.9999) - kmf.survival_function_.ix[1].values) < 10e-8
-
 
     def test_custom_timeline_can_be_list_or_array(self, sample_lifetimes):
         T, C = sample_lifetimes
@@ -127,7 +126,6 @@ class TestUnivariateFitters():
                 assert sorted(timeline) == list(f.survival_function_.index.values)
             elif hasattr(f, 'cumulative_hazard_'):
                 assert sorted(timeline) == list(f.cumulative_hazard_.index.values)
-
 
     def test_label_is_a_property(self, sample_lifetimes, univariate_fitters):
         label = 'Test Label'
@@ -192,10 +190,9 @@ class TestWeibullFitter():
         rho = lambda_ = 1
         assert - wf._lambda_gradient([lambda_, rho] T, E) == -9
 
-        E = np.array([1,1])
-        T = np.array([10,10])
-        assert - wf._lambda_gradient([lambda_, rho] T, E) == -9*2
-
+        E = np.array([1, 1])
+        T = np.array([10, 10])
+        assert - wf._lambda_gradient([lambda_, rho] T, E) == -9 * 2
 
     def test_rho_gradient(self):
         wf = WeibullFitter
@@ -203,11 +200,11 @@ class TestWeibullFitter():
         E = np.array([1])
         T = np.array([10])
         rho = lambda_ = 1
-        assert - wf._rho_gradient(lambda_, rho, T, E) == 1 + 1*np.log(10) - np.log(10)*10
+        assert - wf._rho_gradient(lambda_, rho, T, E) == 1 + 1 * np.log(10) - np.log(10) * 10
 
-        E = np.array([1,1])
-        T = np.array([10,10])
-        assert - wf._rho_gradient(lambda_, rho, T, E) == 2*(1 + 1*np.log(10) - np.log(10)*10)
+        E = np.array([1, 1])
+        T = np.array([10, 10])
+        assert - wf._rho_gradient(lambda_, rho, T, E) == 2 * (1 + 1 * np.log(10) - np.log(10) * 10)
 
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
@@ -222,7 +219,7 @@ class TestWeibullFitter():
         N = 10000
         T = np.random.exponential(5, size=N)
         T_ = np.random.exponential(5, size=N)
-        wf.fit(np.minimum(T,T_), (T < T_))
+        wf.fit(np.minimum(T, T_), (T < T_))
         assert abs(wf.rho_ - 0.2) < 0.01
         assert abs(wf.lambda_ - 1) < 0.01
 
@@ -230,10 +227,10 @@ class TestWeibullFitter():
 class TestExponentialFitter():
 
     def test_fit_computes_correct_lambda_(self):
-        T = np.array([10,10,10,10], dtype=float)
-        E = np.array([1,0,0,0], dtype=float)
+        T = np.array([10, 10, 10, 10], dtype=float)
+        E = np.array([1, 0, 0, 0], dtype=float)
         enf = ExponentialFitter()
-        enf.fit(T,E)
+        enf.fit(T, E)
         assert abs(enf.lambda_ - (E.sum() / T.sum())) < 10e-6
 
     @pytest.mark.plottest
@@ -243,9 +240,10 @@ class TestExponentialFitter():
 
         T, C = sample_lifetimes
         enf = ExponentialFitter()
-        enf.fit(T,C)
+        enf.fit(T, C)
         enf.plot()
         plt.show()
+
 
 class TestKaplanMeierFitter():
 

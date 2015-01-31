@@ -3,6 +3,7 @@
 #### 0.6.0
 
 - Inclusion of the univariate fitters `WeibullFitter` and `ExponentialFitter`. 
+- Removing `BayesianFitter` from lifelines.
 - Added new penalization scheme to AalenAdditiveFitter. You can now add a smoothing penalizer
 that will try to keep subsequent values of a hazard curve close together. The penalizing coefficient
 is `smoothing_penalizer`. 
