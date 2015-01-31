@@ -217,9 +217,11 @@ class TestKaplanMeierFitter():
         alpha = 0.9
         alpha_fit = 0.95
         kmf = KaplanMeierFitter(alpha=alpha)
-        kmf.fit(sample_lifetimes[0])
-        assert kmf.alpha == alpha 
+        kmf.fit(sample_lifetimes[0], alpha=alpha_fit)
         assert str(alpha_fit) in kmf.confidence_interval_.columns[0]
+
+        kmf.fit(sample_lifetimes[0])
+        assert str(alpha) in kmf.confidence_interval_.columns[0]
 
     def test_kaplan_meier_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes
