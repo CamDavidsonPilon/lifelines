@@ -247,10 +247,15 @@ class TestWeibullFitter():
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):
         wf = WeibullFitter()
-        for N in [1000,10000,100000]:
-            T = 2*np.random.weibull(5, size=N)
+        rho = 5
+        lambda_ = 1./2
+        for N in [50, 500, 5000, 50000]:
+            T = np.random.weibull(rho, size=N)/lambda_
             wf.fit(T)
-            assert abs(wf.rho_ - 0.2) < 0.1
+            assert abs(1 - wf.rho_/rho) < 5/np.sqrt(N)
+            assert abs(1 - wf.lambda_/lambda_) < 5/np.sqrt(N)
+
+
 
 
 class TestExponentialFitter():

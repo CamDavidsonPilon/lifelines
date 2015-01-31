@@ -34,7 +34,8 @@ class BaseFitter(object):
 class WeibullFitter(BaseFitter):
 
     """
-    This class implements an exponential model for univariate data.
+    This class implements an Weibull model for univariate data. The model has parameterized
+    form:
 
     S(t) = exp(-(lambda*t)**rho)
 
@@ -88,33 +89,26 @@ class WeibullFitter(BaseFitter):
     def cumulative_hazard(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-    def _gradient_descent(self, T, E, precision=1e-4):
-        from lifelines.utils import _line_search
+    def _gradient_descent(self, T, E, precision=1e-5):
+        from lifelines.utils import _line_search, _smart_search
 
+        gradient_function = lambda parameters, *args: np.array([self._lambda_gradient(parameters, *args), self._rho_gradient(parameters, *args)])
         # initialize
-        from lifelines.utils import _random_search
-        lambda_, rho = _random_search(self._negative_log_likelihood, (2,), T, E)
-        print(lambda_, rho)
+        parameters = _smart_search(self._negative_log_likelihood, 2, T, E)
 
         delta = np.inf
         N = T.shape[0]
-        parameters = np.array([lambda_, rho])
-        iter = 0
-
-        while delta > precision:
-            gradient = np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
-            step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-np.log10(N) - 5, log_max=-np.log10(N) - 1)
-            print()
-            print(step_size)
+        #parameters = np.array([lambda_, rho])
+        iter = 1
+        normalized_precision = N*precision
+        while delta > normalized_precision:
+            gradient = gradient_function(parameters, T, E)
+            step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-np.log10(N) - 4, log_max=-np.log10(N))
             parameters = parameters - step_size * gradient
             delta = norm(gradient) ** 2
-            print(delta)
-            print(gradient)
-            print(parameters)
-            iter+=1
-            if iter % 5001 == 0:
+            if iter % 5000 == 0:
                 raise ValueError('Gradient descent is not converging well. Iteration %d, delta %.5f'%(iter,delta)) 
-        print(iter)
+            iter+=1
         return parameters
 
     def _bounds(self, alpha, ci_labels):
@@ -132,6 +126,8 @@ class WeibullFitter(BaseFitter):
 
     @staticmethod
     def _negative_log_likelihood(lambda_rho, T, E):
+        if np.any(lambda_rho < 0):
+          return np.inf 
         lambda_, rho = lambda_rho
         return - np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
 
