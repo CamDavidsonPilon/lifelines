@@ -92,26 +92,41 @@ class WeibullFitter(BaseFitter):
     def cumulative_hazard_at_times(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-    def _gradient_descent(self, T, E, precision=1e-5):
-        from lifelines.utils import _line_search, _smart_search
+    def _newtons_method(self, T, E, precision=1e-5):
         N = T.shape[0]
+        from lifelines.utils import _smart_search
 
-        # initialize search
-        parameters = _smart_search(self._negative_log_likelihood, 2, T, E)
+
+        def jacobian_function(parameters, T, E):
+            return np.array([
+                  [self._d_lambda_d_lambda_(parameters, T, E), self._d_rho_d_lambda_(parameters, T, E)],
+                  [self._d_rho_d_lambda_(parameters, T, E), self._d_rho_d_rho(parameters, T, E)]
+                      ])
 
         gradient_function = lambda parameters, *args: np.array([self._lambda_gradient(parameters, *args), self._rho_gradient(parameters, *args)])
-        delta = np.inf
-        iter = 1
-        normalized_precision = N*precision
 
-        while delta > normalized_precision:
-            gradient = gradient_function(parameters, T, E)
-            step_size = _line_search(self._negative_log_likelihood, parameters, gradient, T, E, log_min=-np.log10(N) - 4, log_max=-np.log10(N))
-            parameters = parameters - step_size * gradient
-            delta = norm(gradient) ** 2
-            if iter % 5000 == 0:
-                raise ValueError('Gradient descent is not converging well. Iteration %d, delta %.5f'%(iter,delta)) 
+        parameters = _smart_search(self._negative_log_likelihood, 2, T, E)
+
+
+        iter = 1
+        step_size = 1.
+        converging = True
+        while converging and iter < 50:
+            # Do not override hessian and gradient in case of garbage
+            j, g = jacobian_function(parameters, T, E), gradient_function(parameters, T, E)
+
+            delta = solve(j, - step_size * g.T)
+            if np.any(np.isnan(delta)):
+                raise ValueError("delta contains nan value(s). Convergence halted.")
+
+            parameters += delta
+            # Save these as pending result
+            jacobian, gradient = j, g
+
+            if norm(delta) < precision:
+                converging = False
             iter+=1
+
         return parameters
 
     def _bounds(self, alpha, ci_labels):
@@ -137,12 +152,29 @@ class WeibullFitter(BaseFitter):
     @staticmethod
     def _lambda_gradient(lambda_rho, T, E):
         lambda_, rho = lambda_rho
-        return - rho / lambda_ * E.sum() + (rho * T * (lambda_ * T) ** (rho - 1)).sum()
+        return - rho*(E/lambda_ - (lambda_*T)**rho/lambda_).sum()
 
     @staticmethod
     def _rho_gradient(lambda_rho, T, E):
         lambda_, rho = lambda_rho
         return - E.sum() / rho - (np.log(lambda_ * T) * E).sum() + (np.log(lambda_ * T) * (lambda_ * T) ** rho).sum()
+        # - D/p - D Log[m t] + (m t)^p Log[m t]
+
+    @staticmethod
+    def _d_rho_d_rho(lambda_rho, T, E):
+        lambda_, rho = lambda_rho
+        return (1./rho**2*E + (np.log(lambda_*T)**2*(lambda_*T)**rho)).sum()
+        # (D/p^2) + (m t)^p Log[m t]^2
+
+    @staticmethod
+    def _d_lambda_d_lambda_(lambda_rho, T, E):
+        lambda_, rho = lambda_rho
+        return (rho/lambda_**2)*(E + (rho-1)*(lambda_*T)**rho).sum()
+
+    @staticmethod
+    def _d_rho_d_lambda_(lambda_rho, T, E):
+        lambda_, rho = lambda_rho
+        return (-1./lambda_)*(E - (lambda_*T)**rho - rho*(lambda_*T)**rho*np.log(lambda_*T)).sum()
 
 
 class ExponentialFitter(BaseFitter):
@@ -1052,7 +1084,7 @@ class CoxPHFitter(BaseFitter):
             return hessian, gradient
 
     def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=1.,
-                         epsilon=10e-5, show_progress=True, include_likelihood=False):
+                         precision=10e-5, show_progress=True, include_likelihood=False):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -1118,7 +1150,7 @@ class CoxPHFitter(BaseFitter):
             # Save these as pending result
             hessian, gradient = h, g
 
-            if norm(delta) < epsilon:
+            if norm(delta) < precision:
                 converging = False
 
             if ((i % 10) == 0) and show_progress:
