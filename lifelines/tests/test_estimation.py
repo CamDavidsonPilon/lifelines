@@ -97,8 +97,9 @@ class TestUnivariateFitters():
     def test_univariate_fitters_have_a_plot_method(self, sample_lifetimes, univariate_fitters):
         T = sample_lifetimes[0]
         for f in univariate_fitters:
-            f().fit(T)
-            assert hasattr(f, 'plot')
+            fitter = f()
+            fitter.fit(T)
+            assert hasattr(fitter, 'plot')
 
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, sample_lifetimes):
         kmf = KaplanMeierFitter()
@@ -231,29 +232,38 @@ class TestWeibullFitter():
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
         N = 10000
-        T = np.random.exponential(5, size=N)
+        T = 5*np.random.exponential(1, size=N)**2
         wf.fit(T)
-        assert abs(wf.rho_ - 0.2) < 0.01
-        assert abs(wf.lambda_ - 1) < 0.01
+        assert abs(wf.rho_ - 0.5) < 0.01
+        assert abs(wf.lambda_ - 0.2) < 0.01
 
-    def test_exponential_data_produces_correct_inference_no_censorship(self):
+    def test_exponential_data_produces_correct_inference_with_censorship(self):
         wf = WeibullFitter()
         N = 10000
-        T = np.random.exponential(5, size=N)
-        T_ = np.random.exponential(5, size=N)
+        factor = 5
+        T = factor*np.random.exponential(1, size=N)
+        T_ = factor*np.random.exponential(1, size=N)
         wf.fit(np.minimum(T, T_), (T < T_))
-        assert abs(wf.rho_ - 0.2) < 0.01
-        assert abs(wf.lambda_ - 1) < 0.01
+        assert abs(wf.rho_ - 1.) < 0.05
+        assert abs(wf.lambda_ - 1./factor) < 0.05
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):
         wf = WeibullFitter()
         rho = 5
         lambda_ = 1./2
-        for N in [50, 500, 5000, 50000]:
+        for N in [10, 50, 500, 5000, 50000]:
             T = np.random.weibull(rho, size=N)/lambda_
             wf.fit(T)
             assert abs(1 - wf.rho_/rho) < 5/np.sqrt(N)
-            assert abs(1 - wf.lambda_/lambda_) < 5/np.sqrt(N)
+            assert abs(1 - wf.lambda_/lambda_) < 5/np.sqrt(N)   
+
+    def test_convergence_is_okay_for_data_that_contains_zeros(self):
+        try:
+            T = np.arange(20)
+            wf = WeibullFitter()
+            wf.fit()
+        except ValueError:
+            assert False 
 
 
 
@@ -266,17 +276,6 @@ class TestExponentialFitter():
         enf = ExponentialFitter()
         enf.fit(T, E)
         assert abs(enf.lambda_ - (E.sum() / T.sum())) < 10e-6
-
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_plot_function_on_fitted_model(self, sample_lifetimes):
-        from matplotlib import pyplot as plt
-
-        T, C = sample_lifetimes
-        enf = ExponentialFitter()
-        enf.fit(T, C)
-        enf.plot()
-        plt.show()
 
 
 class TestKaplanMeierFitter():

@@ -74,10 +74,16 @@ class WeibullFitter(BaseFitter):
 
         """
         self.durations = np.asarray(durations, dtype=float)
+        #check for negative or 0 durations - these are not allowed in a weibull model. 
+        if np.any(self.durations<=0):
+            filler = 0.01
+            print("Non-positive times found in durations. Replacing each non-positive value with %.5f"%filler)
+            self.durations[self.durations<=0] = filler
+
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 500)
         self._label = label
-        alpha = alpha if alpha else self.alpha
+        alpha = alpha if alpha is not None else self.alpha
 
         # estimation
         self.lambda_, self.rho_ = self._newton_rhaphson(self.durations, self.event_observed)
@@ -113,9 +119,10 @@ class WeibullFitter(BaseFitter):
 
         def jacobian_function(parameters, T, E):
             return np.array([
-                  [self._d_lambda_d_lambda_(parameters, T, E), self._d_rho_d_lambda_(parameters, T, E)],
-                  [self._d_rho_d_lambda_(parameters, T, E), self._d_rho_d_rho(parameters, T, E)]
+                          [self._d_lambda_d_lambda_(parameters, T, E), self._d_rho_d_lambda_(parameters, T, E)],
+                          [self._d_rho_d_lambda_(parameters, T, E), self._d_rho_d_rho(parameters, T, E)]
                       ])
+
         def gradient_function(parameters, T, E):
             return np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
 
@@ -152,14 +159,14 @@ class WeibullFitter(BaseFitter):
         df = pd.DataFrame(index=self.timeline)
         var_lambda_, var_rho_ = inv(self._jacobian).diagonal()
 
-        def _dH_dlambda(lambda_, rho, T):
+        def _dH_d_lambda(lambda_, rho, T):
           return rho/lambda_*(lambda_*T)**rho 
 
-        def _dH_drho(lambda_, rho, T):
+        def _dH_d_rho(lambda_, rho, T):
           return np.log(lambda_*T)*(lambda_*T)**rho
 
         def sensitivity_analysis(lambda_, rho, var_lambda_, var_rho_, T):
-            return var_lambda_*_dH_dlambda(lambda_, rho, T)**2 + var_rho_*_dH_drho(lambda_, rho, T)**2
+            return var_lambda_*_dH_d_lambda(lambda_, rho, T)**2 + var_rho_*_dH_d_rho(lambda_, rho, T)**2
 
 
         std_cumulative_hazard = np.sqrt(sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline))
@@ -210,11 +217,21 @@ class WeibullFitter(BaseFitter):
 class ExponentialFitter(BaseFitter):
 
     """
-    This class implements an exponential model for univariate data.
+    This class implements an Exponential model for univariate data. The model has parameterized
+    form:
 
-    S(t) = exp(-lambda*t)
+      S(t) = exp(-(lambda*t)),   lambda >0
 
-    This implies a constant hazard rate of lambda.
+    which implies the cumulative hazard rate is 
+
+      H(t) = lambda*t
+
+    and the hazard rate is:
+
+      h(t) = lambda
+
+    After calling the `.fit` method, you have access to properties like:
+     'survival_function_', 'lambda_' 
 
     """
 
@@ -355,7 +372,7 @@ class NelsonAalenFitter(BaseFitter):
         df = pd.DataFrame(index=self.timeline)
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, self.alpha), "%s_lower_%.2f" % (self._label, self.alpha)]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
         self.ci_labels = ci_labels
 
@@ -566,8 +583,9 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
 
         """
         self._label = label
+        alpha = alpha if alpha is not None else self.alpha
 
-        naf = NelsonAalenFitter(self.alpha)
+        naf = NelsonAalenFitter(alpha)
         naf.fit(durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = \
             naf.durations, naf.event_observed, naf.timeline, naf.entry, naf.event_table
@@ -1127,14 +1145,14 @@ class CoxPHFitter(BaseFitter):
             initial_beta: (1,d) numpy array of initial starting point for
                           NR algorithm. Default 0.
             step_size: float > 0.001 to determine a starting step size in NR algorithm.
-            epsilon: the convergence halts if the norm of delta between
+            precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
             include_likelihood: saves the final log-likelihood to the CoxPHFitter under _log_likelihood.
 
         Returns:
             beta: (1,d) numpy array.
         """
-        assert epsilon <= 1., "epsilon must be less than or equal to 1."
+        assert precision <= 1., "precision must be less than or equal to 1."
         n, d = X.shape
 
         # Enforce numpy arrays
