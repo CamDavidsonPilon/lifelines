@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import numpy.testing as npt
-from scipy.stats import beta
 
 from ..statistics import *
 from ..datasets import load_waltons, load_g3
@@ -95,6 +94,7 @@ def test_multivariate_inputs_return_identical_solutions():
     m_s = multivariate_logrank_test(T, G, E, suppress_print=True)
     p_s = pairwise_logrank_test(T, G, E, suppress_print=True)
     assert m_a == m_s
+    assert p_a == p_s
 
 
 def test_pairwise_allows_dataframes():

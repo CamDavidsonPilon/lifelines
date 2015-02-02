@@ -39,7 +39,7 @@ class WeibullFitter(BaseFitter):
 
       S(t) = exp(-(lambda*t)**rho),   lambda >0, rho > 0,
 
-    which implies the cumulative hazard rate is 
+    which implies the cumulative hazard rate is
 
       H(t) = (lambda*t)**rho,
 
@@ -74,11 +74,11 @@ class WeibullFitter(BaseFitter):
 
         """
         self.durations = np.asarray(durations, dtype=float)
-        #check for negative or 0 durations - these are not allowed in a weibull model. 
-        if np.any(self.durations<=0):
+        # check for negative or 0 durations - these are not allowed in a weibull model.
+        if np.any(self.durations <= 0):
             filler = 0.01
-            print("Non-positive times found in durations. Replacing each non-positive value with %.5f"%filler)
-            self.durations[self.durations<=0] = filler
+            print("Non-positive times found in durations. Replacing each non-positive value with %.5f" % filler)
+            self.durations[self.durations <= 0] = filler
 
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 500)
@@ -103,7 +103,6 @@ class WeibullFitter(BaseFitter):
 
         return self
 
-
     def hazard_at_times(self, times):
         return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
 
@@ -113,23 +112,21 @@ class WeibullFitter(BaseFitter):
     def cumulative_hazard_at_times(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-
     def _newton_rhaphson(self, T, E, precision=1e-5):
         from lifelines.utils import _smart_search
 
         def jacobian_function(parameters, T, E):
             return np.array([
-                          [self._d_lambda_d_lambda_(parameters, T, E), self._d_rho_d_lambda_(parameters, T, E)],
-                          [self._d_rho_d_lambda_(parameters, T, E), self._d_rho_d_rho(parameters, T, E)]
-                      ])
+                [self._d_lambda_d_lambda_(parameters, T, E), self._d_rho_d_lambda_(parameters, T, E)],
+                [self._d_rho_d_lambda_(parameters, T, E), self._d_rho_d_rho(parameters, T, E)]
+            ])
 
         def gradient_function(parameters, T, E):
             return np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
 
-        #initialize the parameters. This shows dramatic improvements. 
+        # initialize the parameters. This shows dramatic improvements.
         parameters = _smart_search(self._negative_log_likelihood, 2, T, E)
 
-        N = T.shape[0]
         iter = 1
         step_size = 1.
         converging = True
@@ -145,11 +142,11 @@ class WeibullFitter(BaseFitter):
             parameters += delta
 
             # Save these as pending result
-            jacobian, gradient = j, g
+            jacobian = j
 
             if norm(delta) < precision:
                 converging = False
-            iter+=1
+            iter += 1
 
         self._jacobian = jacobian
         return parameters
@@ -160,14 +157,13 @@ class WeibullFitter(BaseFitter):
         var_lambda_, var_rho_ = inv(self._jacobian).diagonal()
 
         def _dH_d_lambda(lambda_, rho, T):
-          return rho/lambda_*(lambda_*T)**rho 
+            return rho / lambda_ * (lambda_ * T) ** rho
 
         def _dH_d_rho(lambda_, rho, T):
-          return np.log(lambda_*T)*(lambda_*T)**rho
+            return np.log(lambda_ * T) * (lambda_ * T) ** rho
 
         def sensitivity_analysis(lambda_, rho, var_lambda_, var_rho_, T):
-            return var_lambda_*_dH_d_lambda(lambda_, rho, T)**2 + var_rho_*_dH_d_rho(lambda_, rho, T)**2
-
+            return var_lambda_ * _dH_d_lambda(lambda_, rho, T) ** 2 + var_rho_ * _dH_d_rho(lambda_, rho, T) ** 2
 
         std_cumulative_hazard = np.sqrt(sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline))
 
@@ -175,21 +171,21 @@ class WeibullFitter(BaseFitter):
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2*std_cumulative_hazard
-        df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2*std_cumulative_hazard
+        df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
+        df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
         return df
 
     @staticmethod
     def _negative_log_likelihood(lambda_rho, T, E):
         if np.any(lambda_rho < 0):
-          return np.inf 
+            return np.inf
         lambda_, rho = lambda_rho
         return - np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
 
     @staticmethod
     def _lambda_gradient(lambda_rho, T, E):
         lambda_, rho = lambda_rho
-        return - rho*(E/lambda_ - (lambda_*T)**rho/lambda_).sum()
+        return - rho * (E / lambda_ - (lambda_ * T) ** rho / lambda_).sum()
 
     @staticmethod
     def _rho_gradient(lambda_rho, T, E):
@@ -200,18 +196,18 @@ class WeibullFitter(BaseFitter):
     @staticmethod
     def _d_rho_d_rho(lambda_rho, T, E):
         lambda_, rho = lambda_rho
-        return (1./rho**2*E + (np.log(lambda_*T)**2*(lambda_*T)**rho)).sum()
+        return (1. / rho ** 2 * E + (np.log(lambda_ * T) ** 2 * (lambda_ * T) ** rho)).sum()
         # (D/p^2) + (m t)^p Log[m t]^2
 
     @staticmethod
     def _d_lambda_d_lambda_(lambda_rho, T, E):
         lambda_, rho = lambda_rho
-        return (rho/lambda_**2)*(E + (rho-1)*(lambda_*T)**rho).sum()
+        return (rho / lambda_ ** 2) * (E + (rho - 1) * (lambda_ * T) ** rho).sum()
 
     @staticmethod
     def _d_rho_d_lambda_(lambda_rho, T, E):
         lambda_, rho = lambda_rho
-        return (-1./lambda_)*(E - (lambda_*T)**rho - rho*(lambda_*T)**rho*np.log(lambda_*T)).sum()
+        return (-1. / lambda_) * (E - (lambda_ * T) ** rho - rho * (lambda_ * T) ** rho * np.log(lambda_ * T)).sum()
 
 
 class ExponentialFitter(BaseFitter):
@@ -222,7 +218,7 @@ class ExponentialFitter(BaseFitter):
 
       S(t) = exp(-(lambda*t)),   lambda >0
 
-    which implies the cumulative hazard rate is 
+    which implies the cumulative hazard rate is
 
       H(t) = lambda*t
 
@@ -231,7 +227,7 @@ class ExponentialFitter(BaseFitter):
       h(t) = lambda
 
     After calling the `.fit` method, you have access to properties like:
-     'survival_function_', 'lambda_' 
+     'survival_function_', 'lambda_'
 
     """
 
@@ -291,9 +287,9 @@ class ExponentialFitter(BaseFitter):
 
         std = np.sqrt(self._lambda_variance_)
         sv = self.survival_function_
-        error = std*self.timeline[:,None]*sv
-        df[ci_labels[0]] = sv + alpha2*error
-        df[ci_labels[1]] = sv - alpha2*error
+        error = std * self.timeline[:, None] * sv
+        df[ci_labels[0]] = sv + alpha2 * error
+        df[ci_labels[1]] = sv - alpha2 * error
         return df
 
 
@@ -409,7 +405,7 @@ class NelsonAalenFitter(BaseFitter):
         hazard_name = "differenced-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth), hazard_.values[C,:]),
+        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C, :]),
                             columns=[hazard_name], index=timeline)
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):

@@ -11,6 +11,7 @@ is `smoothing_penalizer`.
 - new `ridge_regression` function in `utils.py` to perform linear regression with l2 penalizer terms.
 - Matplotlib is no longer a mandatory dependency. 
 - `.predict(time)` method on univariate fitters can now accept a scalar (and returns a scalar) and an iterable (and returns a numpy array)
+- In `KaplanMeierFitter`, `epsilon` has been renamed to `precision`. 
 
 
 #### 0.5.1

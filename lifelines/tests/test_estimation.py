@@ -190,7 +190,7 @@ class TestUnivariateFitters():
             npt.assert_array_almost_equal(f1.subtract(f1).sum().values, 0.0)
 
     def test_divide_function(self, sample_lifetimes, sample_lifetimes2, univariate_fitters):
-        for fitter in univariate_fitters:            
+        for fitter in univariate_fitters:
             f1 = fitter()
             f2 = fitter()
 
@@ -232,7 +232,7 @@ class TestWeibullFitter():
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
         N = 10000
-        T = 5*np.random.exponential(1, size=N)**2
+        T = 5 * np.random.exponential(1, size=N) ** 2
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01
         assert abs(wf.lambda_ - 0.2) < 0.01
@@ -241,31 +241,29 @@ class TestWeibullFitter():
         wf = WeibullFitter()
         N = 10000
         factor = 5
-        T = factor*np.random.exponential(1, size=N)
-        T_ = factor*np.random.exponential(1, size=N)
+        T = factor * np.random.exponential(1, size=N)
+        T_ = factor * np.random.exponential(1, size=N)
         wf.fit(np.minimum(T, T_), (T < T_))
         assert abs(wf.rho_ - 1.) < 0.05
-        assert abs(wf.lambda_ - 1./factor) < 0.05
+        assert abs(wf.lambda_ - 1. / factor) < 0.05
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):
         wf = WeibullFitter()
         rho = 5
-        lambda_ = 1./2
+        lambda_ = 1. / 2
         for N in [10, 50, 500, 5000, 50000]:
-            T = np.random.weibull(rho, size=N)/lambda_
+            T = np.random.weibull(rho, size=N) / lambda_
             wf.fit(T)
-            assert abs(1 - wf.rho_/rho) < 5/np.sqrt(N)
-            assert abs(1 - wf.lambda_/lambda_) < 5/np.sqrt(N)   
+            assert abs(1 - wf.rho_ / rho) < 5 / np.sqrt(N)
+            assert abs(1 - wf.lambda_ / lambda_) < 5 / np.sqrt(N)
 
     def test_convergence_is_okay_for_data_that_contains_zeros(self):
         try:
             T = np.arange(20)
             wf = WeibullFitter()
-            wf.fit()
+            wf.fit(T)
         except ValueError:
-            assert False 
-
-
+            assert False
 
 
 class TestExponentialFitter():
@@ -301,7 +299,6 @@ class TestKaplanMeierFitter():
         if lifetimes_counter.get(0) is None:
             km = np.insert(km, 0, 1.)
         return km.reshape(len(km), 1)
-
 
     def test_kaplan_meier_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes

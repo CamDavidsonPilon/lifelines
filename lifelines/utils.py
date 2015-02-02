@@ -561,4 +561,3 @@ def _smart_search(minimizing_function, n, *args):
     from scipy.optimize import fmin_powell
     x = np.ones(n)
     return fmin_powell(minimizing_function, x, args=args, disp=False)
-
