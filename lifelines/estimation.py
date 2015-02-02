@@ -37,7 +37,18 @@ class WeibullFitter(BaseFitter):
     This class implements an Weibull model for univariate data. The model has parameterized
     form:
 
-    S(t) = exp(-(lambda*t)**rho)
+      S(t) = exp(-(lambda*t)**rho),   lambda >0, rho > 0,
+
+    which implies the cumulative hazard rate is 
+
+      H(t) = (lambda*t)**rho,
+
+    and the hazard rate is:
+
+      h(t) = rho*lambda(lambda*t)**rho
+
+    After calling the `.fit` method, you have access to properties like:
+    `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
 
     """
 
@@ -59,58 +70,63 @@ class WeibullFitter(BaseFitter):
                 as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
 
         Returns:
-          self, with new properties like 'survival_function_', 'lambda_' and 'rho_'.
+          self, with new properties like `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
 
         """
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 100)
-
+        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 500)
         self._label = label
-       
+        alpha = alpha if alpha else self.alpha
+
         # estimation
-        self.lambda_, self.rho_ = self._gradient_descent(self.durations, self.event_observed)
-        self.survival_function_ = pd.DataFrame(np.exp(-self.cumulative_hazard_at_times(self.timeline)), columns=[self._label], index=self.timeline)
+        self.lambda_, self.rho_ = self._newton_rhaphson(self.durations, self.event_observed)
+        self.survival_function_ = pd.DataFrame(self.survival_function_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.cumulative_hazard_ = pd.DataFrame(self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
+        self.confidence_interval_ = self._bounds(alpha, ci_labels)
 
-        # estimation functions
-        self.predict = _predict(self, "survival_function_", self._label)
-        self.subtract = _subtract(self, "survival_function_")
-        self.divide = _divide(self, "survival_function_")
+        # estimation functions - Cumulative hazard takes priority.
+        self.predict = _predict(self, "cumulative_hazard_", self._label)
+        self.subtract = _subtract(self, "cumulative_hazard_")
+        self.divide = _divide(self, "cumulative_hazard_")
 
-        # plotting
-        self.plot = plot_estimate(self, "survival_function_")
-        self.plot_survival_function_ = self.plot
-        self.plot_survival_function_ = self.plot
+        # plotting - Cumulative hazard takes priority.
+        self.plot = plot_estimate(self, "cumulative_hazard_")
+        self.plot_cumulative_hazard = self.plot
 
         return self
+
 
     def hazard_at_times(self, times):
         return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
 
+    def survival_function_at_times(self, times):
+        return np.exp(-self.cumulative_hazard_at_times(times))
+
     def cumulative_hazard_at_times(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-    def _newtons_method(self, T, E, precision=1e-5):
-        N = T.shape[0]
-        from lifelines.utils import _smart_search
 
+    def _newton_rhaphson(self, T, E, precision=1e-5):
+        from lifelines.utils import _smart_search
 
         def jacobian_function(parameters, T, E):
             return np.array([
                   [self._d_lambda_d_lambda_(parameters, T, E), self._d_rho_d_lambda_(parameters, T, E)],
                   [self._d_rho_d_lambda_(parameters, T, E), self._d_rho_d_rho(parameters, T, E)]
                       ])
+        def gradient_function(parameters, T, E):
+            return np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
 
-        gradient_function = lambda parameters, *args: np.array([self._lambda_gradient(parameters, *args), self._rho_gradient(parameters, *args)])
-
+        #initialize the parameters. This shows dramatic improvements. 
         parameters = _smart_search(self._negative_log_likelihood, 2, T, E)
 
-
+        N = T.shape[0]
         iter = 1
         step_size = 1.
         converging = True
+
         while converging and iter < 50:
             # Do not override hessian and gradient in case of garbage
             j, g = jacobian_function(parameters, T, E), gradient_function(parameters, T, E)
@@ -120,6 +136,7 @@ class WeibullFitter(BaseFitter):
                 raise ValueError("delta contains nan value(s). Convergence halted.")
 
             parameters += delta
+
             # Save these as pending result
             jacobian, gradient = j, g
 
@@ -127,19 +144,32 @@ class WeibullFitter(BaseFitter):
                 converging = False
             iter+=1
 
+        self._jacobian = jacobian
         return parameters
 
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
-        std = np.sqrt(self._lambda_variance_)
+        var_lambda_, var_rho_ = inv(self._jacobian).diagonal()
+
+        def _dH_dlambda(lambda_, rho, T):
+          return rho/lambda_*(lambda_*T)**rho 
+
+        def _dH_drho(lambda_, rho, T):
+          return np.log(lambda_*T)*(lambda_*T)**rho
+
+        def sensitivity_analysis(lambda_, rho, var_lambda_, var_rho_, T):
+            return var_lambda_*_dH_dlambda(lambda_, rho, T)**2 + var_rho_*_dH_drho(lambda_, rho, T)**2
+
+
+        std_cumulative_hazard = np.sqrt(sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline))
 
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(-(self.lambda_ - alpha2 * std) * self.timeline)
-        df[ci_labels[1]] = np.exp(-(self.lambda_ + alpha2 * std) * self.timeline)
+        df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2*std_cumulative_hazard
+        df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2*std_cumulative_hazard
         return df
 
     @staticmethod
