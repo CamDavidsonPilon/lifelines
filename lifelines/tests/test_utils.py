@@ -19,6 +19,7 @@ except ImportError:
     # If code has not been compiled.
     fast_cindex = None
 
+
 def test_ridge_regression_with_penalty_is_less_than_without_penalty():
     X = randn(2, 2)
     Y = randn(2)
