@@ -37,8 +37,11 @@ function concordance_index (event_times, predictions, event_observed, rows) resu
       event_b = event_observed(b)
 
       ! Check if it's a valid comparison
-      if (event_a == 1 .and. event_b == 1) then
-        ! Two events can always be compared
+      if (time_a == time_b) then
+        ! Ties are not informative
+        valid_pair = .false.
+      else if (event_a == 1 .and. event_b == 1) then
+        ! Two events which are not tied are informative
         valid_pair = .true.
       else if (event_a == 1 .and. time_a < time_b) then
         ! If b is censored, then a must have event first
@@ -47,7 +50,7 @@ function concordance_index (event_times, predictions, event_observed, rows) resu
         ! If a is censored, then b must have event first
         valid_pair = .true.
       else
-        ! Not valid to compare this pair
+        ! Not an informative pair
         valid_pair = .false.
       end if
 
