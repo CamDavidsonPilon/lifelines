@@ -114,18 +114,20 @@ class WeibullFitter(BaseFitter):
 
     def _newton_rhaphson(self, T, E, precision=1e-5):
         from lifelines.utils import _smart_search
+        from lifelines._univariate_weibull import _d_lambda_d_lambda_, _d_rho_d_lambda_, _d_rho_d_lambda_,\
+            _d_rho_d_rho, _lambda_gradient, _rho_gradient, _negative_log_likelihood
 
         def jacobian_function(parameters, T, E):
             return np.array([
-                [self._d_lambda_d_lambda_(parameters, T, E), self._d_rho_d_lambda_(parameters, T, E)],
-                [self._d_rho_d_lambda_(parameters, T, E), self._d_rho_d_rho(parameters, T, E)]
+                [_d_lambda_d_lambda_(parameters, T, E), _d_rho_d_lambda_(parameters, T, E)],
+                [_d_rho_d_lambda_(parameters, T, E), _d_rho_d_rho(parameters, T, E)]
             ])
 
         def gradient_function(parameters, T, E):
-            return np.array([self._lambda_gradient(parameters, T, E), self._rho_gradient(parameters, T, E)])
+            return np.array([_lambda_gradient(parameters, T, E), _rho_gradient(parameters, T, E)])
 
         # initialize the parameters. This shows dramatic improvements.
-        parameters = _smart_search(self._negative_log_likelihood, 2, T, E)
+        parameters = _smart_search(_negative_log_likelihood, 2, T, E)
 
         iter = 1
         step_size = 1.
@@ -174,40 +176,6 @@ class WeibullFitter(BaseFitter):
         df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
         df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
         return df
-
-    @staticmethod
-    def _negative_log_likelihood(lambda_rho, T, E):
-        if np.any(lambda_rho < 0):
-            return np.inf
-        lambda_, rho = lambda_rho
-        return - np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
-
-    @staticmethod
-    def _lambda_gradient(lambda_rho, T, E):
-        lambda_, rho = lambda_rho
-        return - rho * (E / lambda_ - (lambda_ * T) ** rho / lambda_).sum()
-
-    @staticmethod
-    def _rho_gradient(lambda_rho, T, E):
-        lambda_, rho = lambda_rho
-        return - E.sum() / rho - (np.log(lambda_ * T) * E).sum() + (np.log(lambda_ * T) * (lambda_ * T) ** rho).sum()
-        # - D/p - D Log[m t] + (m t)^p Log[m t]
-
-    @staticmethod
-    def _d_rho_d_rho(lambda_rho, T, E):
-        lambda_, rho = lambda_rho
-        return (1. / rho ** 2 * E + (np.log(lambda_ * T) ** 2 * (lambda_ * T) ** rho)).sum()
-        # (D/p^2) + (m t)^p Log[m t]^2
-
-    @staticmethod
-    def _d_lambda_d_lambda_(lambda_rho, T, E):
-        lambda_, rho = lambda_rho
-        return (rho / lambda_ ** 2) * (E + (rho - 1) * (lambda_ * T) ** rho).sum()
-
-    @staticmethod
-    def _d_rho_d_lambda_(lambda_rho, T, E):
-        lambda_, rho = lambda_rho
-        return (-1. / lambda_) * (E - (lambda_ * T) ** rho - rho * (lambda_ * T) ** rho * np.log(lambda_ * T)).sum()
 
 
 class ExponentialFitter(BaseFitter):
@@ -405,7 +373,7 @@ class NelsonAalenFitter(BaseFitter):
         hazard_name = "differenced-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth), hazard_.values[C,:]),
+        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C,:]),
                             columns=[hazard_name], index=timeline)
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
@@ -422,7 +390,7 @@ class NelsonAalenFitter(BaseFitter):
         self._cumulative_sq.iloc[0] = 0
         var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
         C = (var_hazard_.values != 0.0)  # only consider the points with jumps
-        std_hazard_ = np.sqrt(1. / (2 * bandwidth ** 2) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth) ** 2, var_hazard_.values[C]))
+        std_hazard_ = np.sqrt(1. / (2 * bandwidth ** 2) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C]))
         values = {
             self.ci_labels[0]: hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
             self.ci_labels[1]: hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_)
@@ -1295,7 +1263,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal())
-        return pd.DataFrame(se[None,:],
+        return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
