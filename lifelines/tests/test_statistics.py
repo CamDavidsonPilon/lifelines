@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import numpy.testing as npt
+from pandas.util.testing import assert_frame_equal
+
 
 from ..statistics import *
 from ..datasets import load_waltons, load_g3
@@ -94,7 +96,9 @@ def test_multivariate_inputs_return_identical_solutions():
     m_s = multivariate_logrank_test(T, G, E, suppress_print=True)
     p_s = pairwise_logrank_test(T, G, E, suppress_print=True)
     assert m_a == m_s
-    assert p_a == p_s
+    assert_frame_equal(p_a[0], p_s[0])
+    assert_frame_equal(p_a[1], p_s[1])
+    assert_frame_equal(p_a[2], p_s[2])
 
 
 def test_pairwise_allows_dataframes():
