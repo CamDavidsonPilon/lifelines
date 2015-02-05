@@ -24,11 +24,10 @@ def sample_lifetimes():
     N = 30
     return (np.random.randint(20, size=N), np.random.randint(2, size=N))
 
-
 @pytest.fixture
-def sample_lifetimes2():
-    N = 25
-    return (np.random.randint(20, size=N), np.random.randint(2, size=N))
+def positive_sample_lifetimes():
+    N = 30
+    return (np.random.randint(1, 20, size=N), np.random.randint(2, size=N))
 
 
 @pytest.fixture
@@ -83,19 +82,19 @@ def data_nus():
 
 class TestUnivariateFitters():
 
-    def test_univariate_fitters_allows_one_to_change_alpha_at_fit_time(self, sample_lifetimes, univariate_fitters):
+    def test_univariate_fitters_allows_one_to_change_alpha_at_fit_time(self, positive_sample_lifetimes, univariate_fitters):
         alpha = 0.9
         alpha_fit = 0.95
         for f in univariate_fitters:
             fitter = f(alpha=alpha)
-            fitter.fit(sample_lifetimes[0], alpha=alpha_fit)
+            fitter.fit(positive_sample_lifetimes[0], alpha=alpha_fit)
             assert str(alpha_fit) in fitter.confidence_interval_.columns[0]
 
-            fitter.fit(sample_lifetimes[0])
+            fitter.fit(positive_sample_lifetimes[0])
             assert str(alpha) in fitter.confidence_interval_.columns[0]
 
-    def test_univariate_fitters_have_a_plot_method(self, sample_lifetimes, univariate_fitters):
-        T = sample_lifetimes[0]
+    def test_univariate_fitters_have_a_plot_method(self, positive_sample_lifetimes, univariate_fitters):
+        T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(T)
@@ -121,8 +120,8 @@ class TestUnivariateFitters():
         assert abs(kmf.predict(0.5) - kmf.survival_function_.ix[0].values) < 10e-8
         assert abs(kmf.predict(1.9999) - kmf.survival_function_.ix[1].values) < 10e-8
 
-    def test_custom_timeline_can_be_list_or_array(self, sample_lifetimes, univariate_fitters):
-        T, C = sample_lifetimes
+    def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
+        T, C = positive_sample_lifetimes
         timeline = [2, 3, 4., 1., 6, 5.]
         for f in univariate_fitters:
             fitter = f()
@@ -136,8 +135,8 @@ class TestUnivariateFitters():
                 with_array = fitter.fit(T, C, timeline=np.array(timeline)).cumulative_hazard_.values
                 npt.assert_array_equal(with_list, with_array)
 
-    def test_custom_timeline(self, sample_lifetimes, univariate_fitters):
-        T, C = sample_lifetimes
+    def test_custom_timeline(self, positive_sample_lifetimes, univariate_fitters):
+        T, C = positive_sample_lifetimes
         timeline = [2, 3, 4., 1., 6, 5.]
         for f in univariate_fitters:
             fitter = f()
@@ -147,24 +146,24 @@ class TestUnivariateFitters():
             elif hasattr(fitter, 'cumulative_hazard_'):
                 assert sorted(timeline) == list(fitter.cumulative_hazard_.index.values)
 
-    def test_label_is_a_property(self, sample_lifetimes, univariate_fitters):
+    def test_label_is_a_property(self, positive_sample_lifetimes, univariate_fitters):
         label = 'Test Label'
         for f in univariate_fitters:
             fitter = f()
-            fitter.fit(sample_lifetimes[0], label=label)
+            fitter.fit(positive_sample_lifetimes[0], label=label)
             assert fitter._label == label
             assert fitter.confidence_interval_.columns[0] == '%s_upper_0.95' % label
             assert fitter.confidence_interval_.columns[1] == '%s_lower_0.95' % label
 
-    def test_ci_labels(self, sample_lifetimes, univariate_fitters):
+    def test_ci_labels(self, positive_sample_lifetimes, univariate_fitters):
         expected = ['upper', 'lower']
         for f in univariate_fitters:
             fitter = f()
-            fitter.fit(sample_lifetimes[0], ci_labels=expected)
+            fitter.fit(positive_sample_lifetimes[0], ci_labels=expected)
             npt.assert_array_equal(fitter.confidence_interval_.columns, expected)
 
-    def test_lists_as_input(self, sample_lifetimes, univariate_fitters):
-        T, C = sample_lifetimes
+    def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):
+        T, C = positive_sample_lifetimes
         for f in univariate_fitters:
             fitter = f()
             if hasattr(fitter, 'survival_function_'):
@@ -176,26 +175,28 @@ class TestUnivariateFitters():
                 with_list = fitter.fit(list(T), list(C)).cumulative_hazard_
                 assert_frame_equal(with_list, with_array)
 
-    def test_subtraction_function(self, sample_lifetimes, sample_lifetimes2, univariate_fitters):
+    def test_subtraction_function(self, positive_sample_lifetimes, univariate_fitters):
+        T2 = np.arange(1,50)
         for fitter in univariate_fitters:
             f1 = fitter()
             f2 = fitter()
 
-            f1.fit(sample_lifetimes[0])
-            f2.fit(sample_lifetimes2[0])
+            f1.fit(positive_sample_lifetimes[0])
+            f2.fit(T2)
 
             result = f1.subtract(f2)
             assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
 
             npt.assert_array_almost_equal(f1.subtract(f1).sum().values, 0.0)
 
-    def test_divide_function(self, sample_lifetimes, sample_lifetimes2, univariate_fitters):
+    def test_divide_function(self, positive_sample_lifetimes, univariate_fitters):
+        T2 = np.arange(1,50)
         for fitter in univariate_fitters:
             f1 = fitter()
             f2 = fitter()
 
-            f1.fit(sample_lifetimes[0])
-            f2.fit(sample_lifetimes2[0])
+            f1.fit(positive_sample_lifetimes[0])
+            f2.fit(T2)
 
             result = f1.subtract(f2)
             assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
