@@ -245,14 +245,6 @@ class TestWeibullFitter():
             assert abs(1 - wf.rho_ / rho) < 5 / np.sqrt(N)
             assert abs(1 - wf.lambda_ / lambda_) < 5 / np.sqrt(N)
 
-    def test_convergence_is_okay_for_data_that_contains_zeros(self):
-        try:
-            T = np.arange(20)
-            wf = WeibullFitter()
-            wf.fit(T)
-        except ValueError:
-            assert False
-
 
 class TestExponentialFitter():
 
