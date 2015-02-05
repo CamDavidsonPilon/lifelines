@@ -205,6 +205,17 @@ class TestUnivariateFitters():
 
 class TestWeibullFitter():
 
+    def test_weibull_model_does_not_except_negative_or_zero_values(self):
+        wf = WeibullFitter()
+        
+        T = [0, 1, 2, 4, 5]
+        with pytest.raises(ValueError):
+            wf.fit(T)
+
+        T[0] = -1
+        with pytest.raises(ValueError):
+            wf.fit(T)
+
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
         N = 10000

@@ -1,5 +1,5 @@
+from __future__ import division
 import numpy as np
-
 
 def _negative_log_likelihood(lambda_rho, T, E):
     if np.any(lambda_rho < 0):

@@ -34,7 +34,7 @@ class BaseFitter(object):
 class WeibullFitter(BaseFitter):
 
     """
-    This class implements an Weibull model for univariate data. The model has parameterized
+    This class implements a Weibull model for univariate data. The model has parameterized
     form:
 
       S(t) = exp(-(lambda*t)**rho),   lambda >0, rho > 0,
@@ -76,9 +76,7 @@ class WeibullFitter(BaseFitter):
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
-            filler = 0.01
-            print("Non-positive times found in durations. Replacing each non-positive value with %.5f" % filler)
-            self.durations[self.durations <= 0] = filler
+            raise ValueError('This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements.')
 
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 500)
