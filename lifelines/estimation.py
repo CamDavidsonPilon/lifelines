@@ -4,20 +4,22 @@ from __future__ import print_function
 import numpy as np
 from numpy.linalg import solve, norm, inv, LinAlgError
 from numpy import dot, exp
-from numpy.random import beta
 from scipy.integrate import trapz
 import scipy.stats as stats
 import pandas as pd
 
 from lifelines.plotting import plot_estimate, plot_regressions
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, \
-    epanechnikov_kernel, StatError, coalesce, normalize, significance_code
+    epanechnikov_kernel, StatError, normalize, significance_code
 from lifelines.utils import ridge_regression as lr
 from lifelines.progress_bar import progress_bar
 from lifelines.utils import concordance_index
 
 
 class BaseFitter(object):
+
+    def __init__(self, alpha=0.95):
+        self.alpha = alpha
 
     def __repr__(self):
         classname = self.__class__.__name__
@@ -29,19 +31,171 @@ class BaseFitter(object):
         return s
 
 
+class WeibullFitter(BaseFitter):
+
+    """
+    This class implements a Weibull model for univariate data. The model has parameterized
+    form:
+
+      S(t) = exp(-(lambda*t)**rho),   lambda >0, rho > 0,
+
+    which implies the cumulative hazard rate is
+
+      H(t) = (lambda*t)**rho,
+
+    and the hazard rate is:
+
+      h(t) = rho*lambda(lambda*t)**rho
+
+    After calling the `.fit` method, you have access to properties like:
+    `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
+
+    """
+
+    def fit(self, durations, event_observed=None, timeline=None, entry=None,
+            label='Weibull_estimate', alpha=None, ci_labels=None):
+        """
+        Parameters:
+          duration: an array, or pd.Series, of length n -- duration subject was observed for
+          timeline: return the best estimate at the values in timelines (postively increasing)
+          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+             was lost (right-censored). Defaults all True if event_observed==None
+          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated observations, i.e the birth event was not observed.
+             If None, defaults to all 0 (all birth events observed.)
+          label: a string to name the column of the estimate.
+          alpha: the alpha value in the confidence intervals. Overrides the initializing
+             alpha for this call to fit only.
+          ci_labels: add custom column names to the generated confidence intervals
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+
+        Returns:
+          self, with new properties like `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
+
+        """
+        self.durations = np.asarray(durations, dtype=float)
+        # check for negative or 0 durations - these are not allowed in a weibull model.
+        if np.any(self.durations <= 0):
+            raise ValueError('This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements.')
+
+        self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
+        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 500)
+        self._label = label
+        alpha = alpha if alpha is not None else self.alpha
+
+        # estimation
+        self.lambda_, self.rho_ = self._newton_rhaphson(self.durations, self.event_observed)
+        self.survival_function_ = pd.DataFrame(self.survival_function_at_times(self.timeline), columns=[self._label], index=self.timeline)
+        self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
+        self.cumulative_hazard_ = pd.DataFrame(self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
+        self.confidence_interval_ = self._bounds(alpha, ci_labels)
+
+        # estimation functions - Cumulative hazard takes priority.
+        self.predict = _predict(self, "cumulative_hazard_", self._label)
+        self.subtract = _subtract(self, "cumulative_hazard_")
+        self.divide = _divide(self, "cumulative_hazard_")
+
+        # plotting - Cumulative hazard takes priority.
+        self.plot = plot_estimate(self, "cumulative_hazard_")
+        self.plot_cumulative_hazard = self.plot
+
+        return self
+
+    def hazard_at_times(self, times):
+        return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
+
+    def survival_function_at_times(self, times):
+        return np.exp(-self.cumulative_hazard_at_times(times))
+
+    def cumulative_hazard_at_times(self, times):
+        return (self.lambda_ * times) ** self.rho_
+
+    def _newton_rhaphson(self, T, E, precision=1e-5):
+        from lifelines.utils import _smart_search
+        from lifelines._univariate_weibull import _d_lambda_d_lambda_, _d_rho_d_lambda_, _d_rho_d_lambda_,\
+            _d_rho_d_rho, _lambda_gradient, _rho_gradient, _negative_log_likelihood
+
+        def jacobian_function(parameters, T, E):
+            return np.array([
+                [_d_lambda_d_lambda_(parameters, T, E), _d_rho_d_lambda_(parameters, T, E)],
+                [_d_rho_d_lambda_(parameters, T, E), _d_rho_d_rho(parameters, T, E)]
+            ])
+
+        def gradient_function(parameters, T, E):
+            return np.array([_lambda_gradient(parameters, T, E), _rho_gradient(parameters, T, E)])
+
+        # initialize the parameters. This shows dramatic improvements.
+        parameters = _smart_search(_negative_log_likelihood, 2, T, E)
+
+        iter = 1
+        step_size = 1.
+        converging = True
+
+        while converging and iter < 50:
+            # Do not override hessian and gradient in case of garbage
+            j, g = jacobian_function(parameters, T, E), gradient_function(parameters, T, E)
+
+            delta = solve(j, - step_size * g.T)
+            if np.any(np.isnan(delta)):
+                raise ValueError("delta contains nan value(s). Convergence halted.")
+
+            parameters += delta
+
+            # Save these as pending result
+            jacobian = j
+
+            if norm(delta) < precision:
+                converging = False
+            iter += 1
+
+        self._jacobian = jacobian
+        return parameters
+
+    def _bounds(self, alpha, ci_labels):
+        alpha2 = inv_normal_cdf((1. + alpha) / 2.)
+        df = pd.DataFrame(index=self.timeline)
+        var_lambda_, var_rho_ = inv(self._jacobian).diagonal()
+
+        def _dH_d_lambda(lambda_, rho, T):
+            return rho / lambda_ * (lambda_ * T) ** rho
+
+        def _dH_d_rho(lambda_, rho, T):
+            return np.log(lambda_ * T) * (lambda_ * T) ** rho
+
+        def sensitivity_analysis(lambda_, rho, var_lambda_, var_rho_, T):
+            return var_lambda_ * _dH_d_lambda(lambda_, rho, T) ** 2 + var_rho_ * _dH_d_rho(lambda_, rho, T) ** 2
+
+        std_cumulative_hazard = np.sqrt(sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline))
+
+        if ci_labels is None:
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+        assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
+
+        df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
+        df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
+        return df
+
+
 class ExponentialFitter(BaseFitter):
-    """
-    This class implements an exponential model for univariate data. 
-
-    S(t) = exp(-\lambda*t)
-
-    This implies a constant hazard rate of \lambda. 
 
     """
+    This class implements an Exponential model for univariate data. The model has parameterized
+    form:
 
+      S(t) = exp(-(lambda*t)),   lambda >0
 
-    def __init__(self, alpha=0.95):
-        self.alpha = alpha
+    which implies the cumulative hazard rate is
+
+      H(t) = lambda*t
+
+    and the hazard rate is:
+
+      h(t) = lambda
+
+    After calling the `.fit` method, you have access to properties like:
+     'survival_function_', 'lambda_'
+
+    """
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
             label='Exponential_estimate', alpha=None, ci_labels=None):
@@ -66,16 +220,16 @@ class ExponentialFitter(BaseFitter):
         """
 
         self.durations = np.asarray(durations, dtype=float)
-        self.event_observed = np.asarray(event_observed, dtype=int)
-        self.timeline = np.asarray(timeline) or np.sort(np.unique(durations))
+        self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
+        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 100)
         self._label = label
 
-        #estimation
+        # estimation
         D = self.event_observed.sum()
         T = self.durations.sum()
-        self.lambda_ = D/T 
-        self._lambda_variance_ = self.lambda_/T
-        self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_*self.timeline), columns=[self._label], index=self.timeline)
+        self.lambda_ = D / T
+        self._lambda_variance_ = self.lambda_ / T
+        self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_ * self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
 
         # estimation functions
@@ -90,17 +244,20 @@ class ExponentialFitter(BaseFitter):
         return self
 
     def _bounds(self, alpha, ci_labels):
-        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
+        alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
-        std = np.sqrt(self._lambda_variance_)
 
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(-(self.lambda_ - alpha2*std)*self.timeline)
-        df[ci_labels[1]] = np.exp(-(self.lambda_ + alpha2*std)*self.timeline)
+        std = np.sqrt(self._lambda_variance_)
+        sv = self.survival_function_
+        error = std * self.timeline[:, None] * sv
+        df[ci_labels[0]] = sv + alpha2 * error
+        df[ci_labels[1]] = sv - alpha2 * error
         return df
+
 
 class NelsonAalenFitter(BaseFitter):
 
@@ -177,7 +334,7 @@ class NelsonAalenFitter(BaseFitter):
         df = pd.DataFrame(index=self.timeline)
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, self.alpha), "%s_lower_%.2f" % (self._label, self.alpha)]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
         self.ci_labels = ci_labels
 
@@ -214,7 +371,7 @@ class NelsonAalenFitter(BaseFitter):
         hazard_name = "differenced-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth), hazard_.values[C,:]),
+        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C,:]),
                             columns=[hazard_name], index=timeline)
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
@@ -231,7 +388,7 @@ class NelsonAalenFitter(BaseFitter):
         self._cumulative_sq.iloc[0] = 0
         var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
         C = (var_hazard_.values != 0.0)  # only consider the points with jumps
-        std_hazard_ = np.sqrt(1. / (2 * bandwidth ** 2) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None,:], bandwidth) ** 2, var_hazard_.values[C]))
+        std_hazard_ = np.sqrt(1. / (2 * bandwidth ** 2) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C]))
         values = {
             self.ci_labels[0]: hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
             self.ci_labels[1]: hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_)
@@ -249,9 +406,6 @@ class KaplanMeierFitter(BaseFitter):
     alpha: The alpha value associated with the confidence intervals.
 
     """
-
-    def __init__(self, alpha=0.95):
-        self.alpha = alpha
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM_estimate',
             alpha=None, left_censorship=False, ci_labels=None):
@@ -368,9 +522,6 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
 
     """
 
-    def __init__(self, alpha=0.95):
-        self.alpha = alpha
-
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
             label='BFH_estimate', alpha=None, ci_labels=None):
         """
@@ -393,7 +544,10 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
           self, with new properties like 'survival_function_'.
 
         """
-        naf = NelsonAalenFitter(self.alpha)
+        self._label = label
+        alpha = alpha if alpha is not None else self.alpha
+
+        naf = NelsonAalenFitter(alpha)
         naf.fit(durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = \
             naf.durations, naf.event_observed, naf.timeline, naf.entry, naf.event_table
@@ -412,64 +566,6 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
         self.plot = plot_estimate(self, "survival_function_")
         self.plot_survival_function = self.plot
         return self
-
-
-class BayesianFitter(BaseFitter):
-
-    """
-    If you have small data, and KM feels too uncertain, you can use the BayesianFitter to
-    generate sample survival functions. The algorithm is:
-
-    S_i(T) = \Prod_{t=0}^T (1 - p_t)
-
-    where p_t ~ Beta( 0.01 + d_t, 0.01 + n_t - d_t), d_t is the number of deaths and n_t is the size of the
-    population at risk at time t. The prior is a Beta(0.01, 0.01) for each time point (high values led to a
-    high bias).
-
-    Parameters:
-        samples: the number of sample survival functions to return.
-
-    """
-
-    def __init__(self, samples=300):
-        self.beta = beta
-        self.samples = samples
-
-    def fit(self, durations, censorship=None, timeline=None, entry=None):
-        """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
-          censorship: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if censorship==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
-
-        Returns:
-          self, with new properties like 'sample_survival_functions_'.
-        """
-        v = preprocess_inputs(durations, censorship, timeline, entry)
-        self.durations, self.censorship, self.timeline, self.entry, self.event_table = v
-
-        self.sample_survival_functions_ = self.generate_sample_path(self.samples)
-
-        return self
-
-    def plot(self, **kwargs):
-        kwargs['alpha'] = coalesce(kwargs.pop('alpha', None), 0.05)
-        kwargs['legend'] = False
-        kwargs['c'] = coalesce(kwargs.pop('c', None), kwargs.pop('color', None), '#348ABD')
-        ax = self.sample_survival_functions_.plot(**kwargs)
-        return ax
-
-    def generate_sample_path(self, n=1):
-        deaths = self.event_table['observed']
-        population = self.event_table['entrance'].cumsum() - self.event_table['removed'].cumsum().shift(1).fillna(0)
-        d = deaths.shape[0]
-        samples = 1. - beta(0.01 + deaths, 0.01 + population - deaths, size=(n, d))
-        sample_paths = pd.DataFrame(np.exp(np.log(samples).cumsum(1)).T, index=self.timeline)
-        return sample_paths
 
 
 class AalenAdditiveFitter(BaseFitter):
@@ -998,7 +1094,7 @@ class CoxPHFitter(BaseFitter):
             return hessian, gradient
 
     def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=1.,
-                         epsilon=10e-5, show_progress=True, include_likelihood=False):
+                         precision=10e-5, show_progress=True, include_likelihood=False):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -1011,14 +1107,14 @@ class CoxPHFitter(BaseFitter):
             initial_beta: (1,d) numpy array of initial starting point for
                           NR algorithm. Default 0.
             step_size: float > 0.001 to determine a starting step size in NR algorithm.
-            epsilon: the convergence halts if the norm of delta between
+            precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
             include_likelihood: saves the final log-likelihood to the CoxPHFitter under _log_likelihood.
 
         Returns:
             beta: (1,d) numpy array.
         """
-        assert epsilon <= 1., "epsilon must be less than or equal to 1."
+        assert precision <= 1., "precision must be less than or equal to 1."
         n, d = X.shape
 
         # Enforce numpy arrays
@@ -1064,7 +1160,7 @@ class CoxPHFitter(BaseFitter):
             # Save these as pending result
             hessian, gradient = h, g
 
-            if norm(delta) < epsilon:
+            if norm(delta) < precision:
                 converging = False
 
             if ((i % 10) == 0) and show_progress:
@@ -1165,7 +1261,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal())
-        return pd.DataFrame(se[None,:],
+        return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
@@ -1376,7 +1472,7 @@ def _predict(fitter, estimate, label):
       Predict the %s at certain point in time.
 
       Parameters:
-        time: a scalar or an array of times to predict the value of %s at. 
+        time: a scalar or an array of times to predict the value of %s at.
 
       Returns:
         predictions: a scalar if time is a scalar, a numpy array if time in an array.

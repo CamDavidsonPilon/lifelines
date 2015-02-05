@@ -111,7 +111,6 @@ def add_at_risk_counts(*fitters, **kwargs):
     '''
     from matplotlib import pyplot as plt
 
-
     # Axes and Figure can't be None
     ax = kwargs.get('ax', None)
     if ax is None:

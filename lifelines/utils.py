@@ -12,9 +12,9 @@ from lifelines._utils import concordance_index as _cindex
 
 
 def l1_log_loss(event_times, predicted_event_times, event_observed=None):
-    """ 
+    """
     Calculates the l1 log-loss of predicted event times to true event times for *non-censored*
-    individuals only. 
+    individuals only.
 
     1/N \sum_{i} |log(t_i) - log(q_i)|
 
@@ -29,15 +29,15 @@ def l1_log_loss(event_times, predicted_event_times, event_observed=None):
     """
     if event_observed is None:
         event_observed = np.ones_like(event_times)
-        
+
     ix = event_observed.astype(bool)
     return np.abs(np.log(event_times[ix]) - np.log(predicted_event_times[ix])).mean()
-    
+
 
 def l2_log_loss(event_times, predicted_event_times, event_observed=None):
-    """ 
+    """
     Calculates the l2 log-loss of predicted event times to true event times for *non-censored*
-    individuals only. 
+    individuals only.
 
     1/N \sum_{i} (log(t_i) - log(q_i))**2
 
@@ -547,3 +547,9 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     beta = np.dot(V_1, V_2)
 
     return beta, np.dot(V_1, X.T)
+
+
+def _smart_search(minimizing_function, n, *args):
+    from scipy.optimize import fmin_powell
+    x = np.ones(n)
+    return fmin_powell(minimizing_function, x, args=args, disp=False)

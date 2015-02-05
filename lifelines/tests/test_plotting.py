@@ -17,7 +17,6 @@ class TestPlotting():
         from matplotlib import pyplot as plt
         self.plt = plt
 
-
     def test_negative_times_still_plots(self):
         n = 40
         T = np.linspace(-2, 3, n)
