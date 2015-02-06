@@ -26,14 +26,15 @@ Contents:
   Quickstart
   Survival Analysis intro
   Intro to lifelines
-  survival_regression
-  examples
+  Univarite Survival Models
+  Survival Regression
+  Examples
 
 
 Installation
 ------------------------------
 
-Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and Matplotlib. Install using::
+Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and optionally Matplotlib. Install using:
 
     pip install lifelines
 

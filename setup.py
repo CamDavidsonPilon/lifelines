@@ -30,7 +30,7 @@ for ext_modules in [exts, []]:
     try:
         setup(
             name="lifelines",
-            version="0.5.1.0",
+            version="0.6.0.0",
             author="Cameron Davidson-Pilon, Jonas Kalderstam",
             author_email="cam.davidson.pilon@gmail.com",
             description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
