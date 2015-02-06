@@ -4,10 +4,57 @@ from __future__ import print_function, division
 from datetime import datetime
 
 import numpy as np
+from numpy.linalg import inv
 import pandas as pd
 from pandas import to_datetime
 
 from lifelines._utils import concordance_index as _cindex
+
+
+def l1_log_loss(event_times, predicted_event_times, event_observed=None):
+    """
+    Calculates the l1 log-loss of predicted event times to true event times for *non-censored*
+    individuals only.
+
+    1/N \sum_{i} |log(t_i) - log(q_i)|
+
+    Parameters:
+      event_times: a (n,) array of observed survival times.
+      predicted_event_times: a (n,) array of predicted survival times.
+      event_observed: a (n,) array of censorship flags, 1 if observed,
+                      0 if not. Default None assumes all observed.
+
+    Returns:
+      l1-log-loss: a scalar
+    """
+    if event_observed is None:
+        event_observed = np.ones_like(event_times)
+
+    ix = event_observed.astype(bool)
+    return np.abs(np.log(event_times[ix]) - np.log(predicted_event_times[ix])).mean()
+
+
+def l2_log_loss(event_times, predicted_event_times, event_observed=None):
+    """
+    Calculates the l2 log-loss of predicted event times to true event times for *non-censored*
+    individuals only.
+
+    1/N \sum_{i} (log(t_i) - log(q_i))**2
+
+    Parameters:
+      event_times: a (n,) array of observed survival times.
+      predicted_event_times: a (n,) array of predicted survival times.
+      event_observed: a (n,) array of censorship flags, 1 if observed,
+                      0 if not. Default None assumes all observed.
+
+    Returns:
+      l2-log-loss: a scalar
+    """
+    if event_observed is None:
+        event_observed = np.ones_like(event_times)
+
+    ix = event_observed.astype(bool)
+    return np.power(np.log(event_times[ix]) - np.log(predicted_event_times[ix]), 2).mean()
 
 
 def concordance_index(event_times, predicted_event_times, event_observed=None):
@@ -33,7 +80,7 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
       event_times: a (n,) array of observed survival times.
       predicted_event_times: a (n,) array of predicted survival times.
       event_observed: a (n,) array of censorship flags, 1 if observed,
-                      0 if not. Default assumes all observed.
+                      0 if not. Default None assumes all observed.
 
     Returns:
       c-index: a value between 0 and 1.
@@ -343,7 +390,7 @@ def k_fold_cross_validation(fitter, df, duration_col, event_col=None,
         refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
     duration_col: the column in dataframe that contains the subjects lifetimes.
     event_col: the column in dataframe that contains the subject's death observation. If left
-                as None, assumes all individuals are non-censored.   
+                as None, assumes all individuals are non-censored.
     k: the number of folds to perform. n/k data will be withheld for testing on.
     evaluation_measure: a function that accepts either (event_times, predicted_event_times),
                   or (event_times, predicted_event_times, event_observed) and returns a scalar value.
@@ -466,3 +513,43 @@ def qth_survival_time(q, survival_function):
 
 def median_survival_times(survival_functions):
     return qth_survival_times(0.5, survival_functions)
+
+
+def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
+    """
+    Also known as Tikhonov regularization. This solves the minimization problem:
+
+    min_{beta} ||(beta X - Y)||^2 + c1||beta||^2 + c2||beta - offset||^2
+
+    One can find more information here: http://en.wikipedia.org/wiki/Tikhonov_regularization
+
+    Parameters:
+        X: a (n,d) numpy array
+        Y: a (n,) numpy array
+        c1: a scalar
+        c2: a scalar
+        offset: a (d,) numpy array.
+
+    Returns:
+        beta_hat: the solution to the minimization problem.
+        V = (X*X^T + (c1+c2)I)^{-1} X^T
+
+    """
+    n, d = X.shape
+    X = X.astype(float)
+    penalizer_matrix = (c1 + c2) * np.eye(d)
+
+    if offset is None:
+        offset = np.zeros((d,))
+
+    V_1 = inv(np.dot(X.T, X) + penalizer_matrix)
+    V_2 = (np.dot(X.T, Y) + c2 * offset)
+    beta = np.dot(V_1, V_2)
+
+    return beta, np.dot(V_1, X.T)
+
+
+def _smart_search(minimizing_function, n, *args):
+    from scipy.optimize import fmin_powell
+    x = np.ones(n)
+    return fmin_powell(minimizing_function, x, args=args, disp=False)

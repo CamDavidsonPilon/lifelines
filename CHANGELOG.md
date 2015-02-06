@@ -1,5 +1,19 @@
 ### Changelogs
 
+#### 0.6.0
+
+- Inclusion of the univariate fitters `WeibullFitter` and `ExponentialFitter`. 
+- Removing `BayesianFitter` from lifelines.
+- Added new penalization scheme to AalenAdditiveFitter. You can now add a smoothing penalizer
+that will try to keep subsequent values of a hazard curve close together. The penalizing coefficient
+is `smoothing_penalizer`. 
+- Changed `penalizer` keyword arg to `coef_penalizer` in AalenAdditiveFitter.
+- new `ridge_regression` function in `utils.py` to perform linear regression with l2 penalizer terms.
+- Matplotlib is no longer a mandatory dependency. 
+- `.predict(time)` method on univariate fitters can now accept a scalar (and returns a scalar) and an iterable (and returns a numpy array)
+- In `KaplanMeierFitter`, `epsilon` has been renamed to `precision`. 
+
+
 #### 0.5.1
 
 - New API for `CoxPHFitter` and `AalenAdditiveFitter`: the default arguments for `event_col` and `duration_col`. `duration_col` is now mandatory, and `event_col` now accepts a column, or by default, `None`, which assumes all events are observed (non-censored).
