@@ -96,8 +96,8 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None,
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
 
-    n = max(event_durations.shape)
-    assert n == max(event_durations.shape) == max(event_observed.shape), "inputs must be of the same length."
+    n = np.max(event_durations.shape)
+    assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
     groups, event_durations, event_observed = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, event_durations, event_observed])
 
     unique_groups = np.unique(groups)
@@ -160,11 +160,11 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
 
-    n = max(event_durations.shape)
-    assert n == max(event_durations.shape) == max(event_observed.shape), "inputs must be of the same length."
+    n = np.max(event_durations.shape)
+    assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
     groups, event_durations, event_observed = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, event_durations, event_observed])
 
-    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, np.zeros_like(event_durations), t_0)
+    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, limit=t_0)
     n_groups = unique_groups.shape[0]
 
     # compute the factors needed
@@ -208,7 +208,7 @@ def chisq_test(U, degrees_freedom, alpha):
 
 
 def two_sided_z_test(Z, alpha):
-    p_value = 1 - max(stats.norm.cdf(Z), 1 - stats.norm.cdf(Z))
+    p_value = 1 - np.max(stats.norm.cdf(Z), 1 - stats.norm.cdf(Z))
     if p_value < 1 - alpha / 2.:
         return True, p_value
     else:

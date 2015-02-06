@@ -42,6 +42,24 @@ def test_integer_times_logrank_test():
     assert result
 
 
+def test_equal_intensity_with_negative_data():
+    data1 = np.random.normal(0, size=(2000, 1))
+    data1 -= data1.mean()
+    data1 /= data1.std()
+    data2 = np.random.normal(0, size=(2000, 1))
+    data2 -= data2.mean()
+    data2 /= data2.std()
+    summary, p_value, result = logrank_test(data1, data2)
+    assert result is None
+
+
+def test_unequal_intensity_with_negative_data():
+    data1 = np.random.normal(-5, size=(2000, 1))
+    data2 = np.random.normal(5, size=(2000, 1))
+    summary, p_value, result = logrank_test(data1, data2)
+    assert result
+
+
 def test_waltons_dataset():
     df = load_waltons()
     ix = df['group'] == 'miR-137'
