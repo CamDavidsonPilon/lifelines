@@ -12,7 +12,8 @@ But outside of medicine and actuarial science, there are many other interesting 
 lesser-known technique, for example:
 - SaaS providers are interested in measuring customer lifetimes, or time to first behaviours
 - sociologists are interested in measuring political parties' lifetimes, or relationships, or marriages
-- businesses are interested in what variables affect lifetime value
+- analysing [Godwin's law](https://raw.githubusercontent.com/lukashalim/GODWIN/master/Kaplan-Meier-Godwin.png) in Reddit comments
+- A/B tests to determine how long it takes different groups to perform an action.
 
 *lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please leave an Issue and let us know your thoughts on the library.
 

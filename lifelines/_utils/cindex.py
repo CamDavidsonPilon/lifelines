@@ -5,7 +5,10 @@ def concordance_index(event_times, predicted_event_times, event_observed):
     """
     def valid_comparison(time_a, time_b, event_a, event_b):
         """True if times can be compared."""
-        if event_a and event_b:
+        if time_a == time_b:
+            # Ties are not informative
+            return False
+        elif event_a and event_b:
             return True
         elif event_a and time_a < time_b:
             return True

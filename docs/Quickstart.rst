@@ -24,7 +24,17 @@ Let's start by importing some data. We need the durations that individuals are o
 .. code:: python
 
     from lifelines.datasets import load_waltons
-    df = load_waltons() # returns a pandas DataFrame
+    df = load_waltons() # returns a Pandas DataFrame
+
+    print df.head()
+    """
+        T  E    group
+    0   6  1  miR-137
+    1  13  1  miR-137
+    2  13  1  miR-137
+    3  13  1  miR-137
+    4  19  1  miR-137
+    """
 
     T = df['T']
     E = df['E']
@@ -56,12 +66,12 @@ Multiple groups
 .. code:: python
     
     groups = df['group']
-    ix = (groups == 'control')
+    ix = (groups == 'miR-137')
 
-    kmf.fit(T[ix], E[ix], label='control')
+    kmf.fit(T[~ix], E[~ix], label='control')
     ax = kmf.plot()
 
-    kmf.fit(T[~ix], E[~ix], label='miR-137')
+    kmf.fit(T[ix], E[ix], label='miR-137')
     kmf.plot(ax=ax)
 
 .. image:: images/quickstart_multi.png   
@@ -78,6 +88,24 @@ Similar functionality exists for the ``NelsonAalenFitter``:
 but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` is. 
 
 .. note:: Similar to Scikit-Learn, all statistically estimated quanities append an underscore to the property name. 
+
+Getting Data in The Right Format
+---------------------------------
+
+Often you'll have data that looks like:
+
+*start_time*, *end_time*
+
+Lifelines has some utility functions to transform this dataset into durations and censorships:
+
+.. code:: python
+    
+    from lifelines.utils import datetimes_to_durations
+
+    # start_times is a vector of datetime objects
+    # end_times is a vector of (possibly missing) datetime objects. 
+    T, C = datetimes_to_durations(start_times, end_times, freq='h')
+
 
 Survival Regression
 ---------------------------------
