@@ -122,7 +122,7 @@ def coalesce(*args):
     return next(s for s in args if s is not None)
 
 
-def group_survival_table_from_events(groups, durations, event_observed, birth_times, limit=-1):
+def group_survival_table_from_events(groups, durations, event_observed, birth_times=None, limit=-1):
     """
     Joins multiple event series together into dataframes. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
@@ -174,8 +174,15 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
         ]
 
     """
-    n = max(groups.shape)
-    assert n == max(durations.shape) == max(event_observed.shape) == max(birth_times.shape), "inputs must be of the same length."
+    n = np.max(groups.shape)
+    assert n == np.max(durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
+    if birth_times is None:
+        # Create some birth times
+        birth_times = np.zeros(np.max(durations.shape))
+        birth_times[:] = np.min(durations)
+
+    assert n == np.max(birth_times.shape), "inputs must be of the same length."
+
     groups, durations, event_observed, birth_times = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, durations, event_observed, birth_times])
     unique_groups = groups.unique()
 
