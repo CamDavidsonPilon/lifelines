@@ -1,5 +1,5 @@
 
-Survival regression
+Survival Regression
 =====================================
 
 Often we have additional data aside from the durations, and if

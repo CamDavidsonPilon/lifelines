@@ -1,4 +1,4 @@
-More examples and recipes
+More Examples and Recipes
 ==================================
 
 This section goes through some examples and recipes to help you use *lifelines*. 
