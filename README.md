@@ -51,6 +51,14 @@ please check out the [Documentation and Tutorials page](http://lifelines.readthe
 
 ![lifelines](http://i.imgur.com/QXW71zA.png)
 
+## Developing
+
+To contribute, follow the usual github workflow:
+- fork the main repository 
+- create a new branch with `git checkout -b <branch_name>`
+- add your new code
+- push to your fork with `git push origin <branch_name>`
+- open a pull-request on the main repository
 
 ## License
 
