@@ -48,9 +48,6 @@ If you are new to survival analysis, wondering why it is useful, or are interest
 please check out the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
 
 
-![lifelines](http://i.imgur.com/QXW71zA.png)
-
-
 ### Citing lifelines
 
  - Davidson-Pilon, C., Lifelines, (2015), Github repository, https://github.com/CamDavidsonPilon/lifelines 
@@ -68,3 +65,4 @@ or with bibTex here:
   commit = {63fc4f0ada0c61248957a478f3544efb4eeb2ccf}
 }
 ```
+![lifelines](http://i.imgur.com/QXW71zA.png)
