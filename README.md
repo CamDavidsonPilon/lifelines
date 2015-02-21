@@ -1,6 +1,5 @@
 lifelines
 ===========
-<img src="http://i.imgur.com/pwGRqiR.png" height=175 />
 
 [![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 [![Build Status](https://travis-ci.org/CamDavidsonPilon/lifelines.svg?branch=master)](https://travis-ci.org/CamDavidsonPilon/lifelines)
@@ -52,28 +51,20 @@ please check out the [Documentation and Tutorials page](http://lifelines.readthe
 ![lifelines](http://i.imgur.com/QXW71zA.png)
 
 
-## License
+### Citing lifelines
 
-The MIT License (MIT)
+ - Davidson-Pilon, C., Lifelines, (2015), Github repository, https://github.com/CamDavidsonPilon/lifelines 
+ 
+or with bibTex here: 
 
-Copyright (c) 2013, Cameron Davidson-Pilon
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-1. The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
-*lifelines* logo designed by Pulse designed by TNS from the Noun Project
+```
+@misc{Lifelines,
+  author = {C., Davidson-Pilon},
+  title = {Lifelines},
+  year = {2015},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/camdavidsonpilon/lifelines}},
+  commit = {63fc4f0ada0c61248957a478f3544efb4eeb2ccf}
+}
+```
