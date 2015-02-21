@@ -54,7 +54,7 @@ please check out the [Documentation and Tutorials page](http://lifelines.readthe
 
 ## License
 
-The Feedback MIT License (FMIT)
+The MIT License (MIT)
 
 Copyright (c) 2013, Cameron Davidson-Pilon
 
@@ -67,8 +67,6 @@ subject to the following conditions:
 
 1. The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-
-2. Person obtaining a copy must return feedback to the authors.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
