@@ -611,7 +611,7 @@ Left Truncated Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Another form of bias that can be introduced into a dataset is called left-truncation. (Also a form of censorship). 
-This occurs when individuals may die before ever entrying into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional arugment for ``entry``, which is of equal size to the duration array.
+This occurs when individuals may die even before ever entrying into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional arugment for ``entry``, which is an array of equal size to the duration array.
 It describes the offset from birth to entering the study. This is also useful when subjects enter the study at different
 points in their lifetime. For example, if you are measuring time to death of prisoners in 
 prison, the prisoners will enter the study at different ages. 
