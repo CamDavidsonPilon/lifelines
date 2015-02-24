@@ -1,5 +1,12 @@
 ### Changelogs
 
+#### 0.6.1
+
+- addition of `median_` property to `WeibullFitter` and `ExponentialFitter`. 
+- `WeibullFitter` and `ExponentialFitter` will use integer timelines instead of float provided by `linspace`. This is 
+so if your work is to sum up the survival function (for expected values or something similar), it's more difficult to 
+make a mistake. 
+
 #### 0.6.0
 
 - Inclusion of the univariate fitters `WeibullFitter` and `ExponentialFitter`. 

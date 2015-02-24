@@ -79,7 +79,7 @@ class WeibullFitter(BaseFitter):
             raise ValueError('This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements.')
 
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 500)
+        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.arange(int(self.durations.min()), int(self.durations.max()) + 1)
         self._label = label
         alpha = alpha if alpha is not None else self.alpha
 
@@ -89,6 +89,7 @@ class WeibullFitter(BaseFitter):
         self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.cumulative_hazard_ = pd.DataFrame(self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
+        self.median_ = 1. / self.lambda_ * (np.log(2)) ** (1. / self.rho_)
 
         # estimation functions - Cumulative hazard takes priority.
         self.predict = _predict(self, "cumulative_hazard_", self._label)
@@ -112,7 +113,7 @@ class WeibullFitter(BaseFitter):
 
     def _newton_rhaphson(self, T, E, precision=1e-5):
         from lifelines.utils import _smart_search
-        from lifelines._univariate_weibull import _d_lambda_d_lambda_, _d_rho_d_lambda_, _d_rho_d_lambda_,\
+        from lifelines._univariate_weibull import _d_lambda_d_lambda_, _d_rho_d_lambda_,\
             _d_rho_d_rho, _lambda_gradient, _rho_gradient, _negative_log_likelihood
 
         def jacobian_function(parameters, T, E):
@@ -221,7 +222,7 @@ class ExponentialFitter(BaseFitter):
 
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.linspace(self.durations.min(), self.durations.max(), 100)
+        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.arange(int(self.durations.min()), int(self.durations.max()) + 1)
         self._label = label
 
         # estimation
@@ -231,6 +232,7 @@ class ExponentialFitter(BaseFitter):
         self._lambda_variance_ = self.lambda_ / T
         self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_ * self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
+        self.median_ = 1. / self.lambda_ * (np.log(2))
 
         # estimation functions
         self.predict = _predict(self, "survival_function_", self._label)
@@ -371,7 +373,7 @@ class NelsonAalenFitter(BaseFitter):
         hazard_name = "differenced-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C,:]),
+        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C, :]),
                             columns=[hazard_name], index=timeline)
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
@@ -417,7 +419,7 @@ class KaplanMeierFitter(BaseFitter):
              was lost (right-censored). Defaults all True if event_observed==None
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
              useful for left-truncated (not left-censored) observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.). 
+             If None, defaults to all 0 (all birth events observed.).
              See this twitter convo: https://twitter.com/Cmrn_DP/status/566403872361836544
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -1262,7 +1264,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal())
-        return pd.DataFrame(se[None, :],
+        return pd.DataFrame(se[None,:],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):

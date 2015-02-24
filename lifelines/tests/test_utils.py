@@ -7,7 +7,6 @@ from pandas.util.testing import assert_frame_equal
 import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
-import pytest
 from ..estimation import CoxPHFitter
 from ..datasets import (load_regression_dataset, load_larynx,
                         load_waltons, load_rossi)
@@ -46,7 +45,6 @@ def test_ridge_regression_with_extreme_c2_penalty_equals_close_to_offset():
 
 
 def test_lstsq_returns_similar_values_to_ridge_regression():
-    offset = np.ones(2)
     X = randn(2, 2)
     Y = randn(2)
     expected = lstsq(X, Y)[0]
@@ -238,6 +236,7 @@ def test_cross_validator_with_predictor():
     results = utils.k_fold_cross_validation(cf, load_regression_dataset(),
                                             duration_col='T', event_col='E', k=3,
                                             predictor="predict_expectation")
+    assert len(results) == 3
 
 
 def test_cross_validator_with_predictor_and_kwargs():
@@ -245,6 +244,7 @@ def test_cross_validator_with_predictor_and_kwargs():
     results_06 = utils.k_fold_cross_validation(cf, load_regression_dataset(),
                                                duration_col='T', k=3,
                                                predictor="predict_percentile", predictor_kwargs={'p': 0.6})
+    assert len(results_06) == 3
 
 
 def test_cross_validator_with_specific_loss_function():

@@ -24,6 +24,7 @@ def sample_lifetimes():
     N = 30
     return (np.random.randint(20, size=N), np.random.randint(2, size=N))
 
+
 @pytest.fixture
 def positive_sample_lifetimes():
     N = 30
@@ -113,7 +114,7 @@ class TestUnivariateFitters():
         time = 1
         assert abs(kmf.predict(time) - kmf.survival_function_.ix[time].values) < 10e-8
 
-    def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
+    def test_predict_method_returns_gives_values_prior_to_the_value_in_the_survival_function(self):
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
@@ -176,7 +177,7 @@ class TestUnivariateFitters():
                 assert_frame_equal(with_list, with_array)
 
     def test_subtraction_function(self, positive_sample_lifetimes, univariate_fitters):
-        T2 = np.arange(1,50)
+        T2 = np.arange(1, 50)
         for fitter in univariate_fitters:
             f1 = fitter()
             f2 = fitter()
@@ -190,7 +191,7 @@ class TestUnivariateFitters():
             npt.assert_array_almost_equal(f1.subtract(f1).sum().values, 0.0)
 
     def test_divide_function(self, positive_sample_lifetimes, univariate_fitters):
-        T2 = np.arange(1,50)
+        T2 = np.arange(1, 50)
         for fitter in univariate_fitters:
             f1 = fitter()
             f2 = fitter()
@@ -206,9 +207,16 @@ class TestUnivariateFitters():
 
 class TestWeibullFitter():
 
+    def test_weibull_fit_returns_integer_timelines(self):
+        wf = WeibullFitter()
+        T = np.linspace(0.1, 10)
+        wf.fit(T)
+        npt.assert_array_equal(wf.timeline, np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+        npt.assert_array_equal(wf.survival_function_.index.values, np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+
     def test_weibull_model_does_not_except_negative_or_zero_values(self):
         wf = WeibullFitter()
-        
+
         T = [0, 1, 2, 4, 5]
         with pytest.raises(ValueError):
             wf.fit(T)
@@ -224,6 +232,7 @@ class TestWeibullFitter():
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01
         assert abs(wf.lambda_ - 0.2) < 0.01
+        assert abs(wf.median_ - 5 * np.log(2) ** 2) < 0.01
 
     def test_exponential_data_produces_correct_inference_with_censorship(self):
         wf = WeibullFitter()
@@ -234,6 +243,7 @@ class TestWeibullFitter():
         wf.fit(np.minimum(T, T_), (T < T_))
         assert abs(wf.rho_ - 1.) < 0.05
         assert abs(wf.lambda_ - 1. / factor) < 0.05
+        assert abs(wf.median_ - 5 * np.log(2)) < 0.05
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):
         wf = WeibullFitter()
