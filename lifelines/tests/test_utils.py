@@ -231,6 +231,18 @@ def test_cross_validator_returns_k_results():
     assert len(results) == 5
 
 
+def test_cross_validator_returns_fitters_k_results():
+    cf = CoxPHFitter()
+    fitters = [cf, cf]
+    results = utils.k_fold_cross_validation(fitters, load_regression_dataset(), duration_col='T', event_col='E', k=3)
+    assert len(results) == 2
+    assert len(results[0]) == len(results[1]) == 3
+
+    results = utils.k_fold_cross_validation(fitters, load_regression_dataset(), duration_col='T', event_col='E', k=5)
+    assert len(results) == 2
+    assert len(results[0]) == len(results[1]) == 5
+
+
 def test_cross_validator_with_predictor():
     cf = CoxPHFitter()
     results = utils.k_fold_cross_validation(cf, load_regression_dataset(),

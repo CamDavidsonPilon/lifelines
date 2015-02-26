@@ -385,32 +385,49 @@ def AandS_approximation(p):
     return t - (c_0 + c_1 * t + c_2 * t ** 2) / (1 + d_1 * t + d_2 * t * t + d_3 * t ** 3)
 
 
-def k_fold_cross_validation(fitter, df, duration_col, event_col=None,
-                            k=5, evaluation_measure=concordance_index, predictor="predict_median",
-                            predictor_kwargs={}):
+def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
+                            k=5, evaluation_measure=concordance_index,
+                            predictor="predict_median", predictor_kwargs={}):
     """
-    Perform cross validation on a dataset.
+    Perform cross validation on a dataset. If multiple models are provided,
+    all models will train on each of the k subsets.
 
-    fitter: either an instance of AalenAdditiveFitter or CoxPHFitter.
+    fitter(s): one or several objects which possess a method:
+                   fit(self, data, duration_col, event_col)
+               Note that the last two arguments will be given as keyword arguments,
+               and that event_col is optional. The objects must also have
+               the "predictor" method defined below.
     df: a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
         other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
         refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
     duration_col: the column in dataframe that contains the subjects lifetimes.
     event_col: the column in dataframe that contains the subject's death observation. If left
-                as None, assumes all individuals are non-censored.
+               as None, assumes all individuals are non-censored.
     k: the number of folds to perform. n/k data will be withheld for testing on.
     evaluation_measure: a function that accepts either (event_times, predicted_event_times),
-                  or (event_times, predicted_event_times, event_observed) and returns a scalar value.
-                  Default: statistics.concordance_index: (C-index) between two series of event times
-    predictor: a string that matches a prediction method on the fitter instances. For example,
-            "predict_expectation" or "predict_percentile". Default is "predict_median"
-    predictor_kwargs: keyward args to pass into predictor.
+                        or (event_times, predicted_event_times, event_observed)
+                        and returns something (could be anything).
+                        Default: statistics.concordance_index: (C-index)
+                        between two series of event times
+    predictor: a string that matches a prediction method on the fitter instances.
+               For example, "predict_expectation" or "predict_percentile".
+               Default is "predict_median"
+               The interface for the method is:
+                   predict(self, data, **optional_kwargs)
+    predictor_kwargs: keyword args to pass into predictor-method.
 
     Returns:
-        (k,1) array of scores for each fold.
+        (k,1) list of scores for each fold. The scores can be anything.
     """
+    # Make sure fitters is a list
+    try:
+        fitters = list(fitters)
+    except TypeError:
+        fitters = [fitters]
+    # Each fitter has its own scores
+    fitterscores = [[] for _ in fitters]
+
     n, d = df.shape
-    scores = np.zeros((k,))
     df = df.copy()
 
     if event_col is None:
@@ -434,16 +451,21 @@ def k_fold_cross_validation(fitter, df, duration_col, event_col=None,
         E_actual = testing_data[event_col].values
         X_testing = testing_data[testing_columns]
 
-        # fit the fitter to the training data
-        fitter.fit(training_data, duration_col=duration_col, event_col=event_col)
-        T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
+        for fitter, scores in zip(fitters, fitterscores):
+            # fit the fitter to the training data
+            fitter.fit(training_data, duration_col=duration_col, event_col=event_col)
+            T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
 
-        try:
-            scores[i - 1] = evaluation_measure(T_actual, T_pred, E_actual)
-        except TypeError:
-            scores[i - 1] = evaluation_measure(T_actual, T_pred)
+            try:
+                scores.append(evaluation_measure(T_actual, T_pred, E_actual))
+            except TypeError:
+                scores.append(evaluation_measure(T_actual, T_pred))
 
-    return scores
+    # If a single fitter was given as argument, return a single result
+    if len(fitters) == 1:
+        return fitterscores[0]
+    else:
+        return fitterscores
 
 
 def normalize(X, mean=None, std=None):
