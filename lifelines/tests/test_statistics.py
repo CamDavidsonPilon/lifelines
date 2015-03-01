@@ -15,7 +15,7 @@ def test_unequal_intensity_with_random_data():
     assert result
 
 
-def test_logrank_test_output_against_R():
+def test_logrank_test_output_against_R_1():
     df = load_g3()
     ix = (df['group'] == 'RIT')
     d1, e1 = df.ix[ix]['time'], df.ix[ix]['event']
@@ -24,6 +24,20 @@ def test_logrank_test_output_against_R():
     expected = 0.0138
     summary, p_value, result = logrank_test(d1, d2, event_observed_A=e1, event_observed_B=e2)
     assert abs(p_value - expected) < 0.0001
+
+
+def test_logrank_test_output_against_R_2():
+    # from https://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_2.pdf
+    control_T = [1, 1, 2, 2, 3, 4, 4, 5, 5, 8, 8, 8, 8, 11, 11, 12, 12, 15, 17, 22, 23]
+    control_E = np.ones_like(control_T)
+
+    treatment_T = [6, 6, 6, 7, 10, 13, 16, 22, 23, 6, 9, 10, 11, 17, 19, 20, 25, 32, 32, 34, 25]
+    treatment_E = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    summary, p_value, result = logrank_test(control_T, treatment_T, event_observed_A=control_E, event_observed_B=treatment_E)
+    expected_p_value = 4.17e-05
+
+    assert abs(p_value - expected_p_value) < 0.0001
 
 
 def test_unequal_intensity_event_observed():

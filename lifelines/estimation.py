@@ -57,7 +57,7 @@ class WeibullFitter(BaseFitter):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
+          timeline: return the estimate at the values in timeline (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
@@ -101,6 +101,10 @@ class WeibullFitter(BaseFitter):
         self.plot_cumulative_hazard = self.plot
 
         return self
+
+    @property
+    def conditional_time_to_event_(self):
+        return _conditional_time_to_event_(self)
 
     def hazard_at_times(self, times):
         return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
@@ -245,6 +249,10 @@ class ExponentialFitter(BaseFitter):
 
         return self
 
+    @property
+    def conditional_time_to_event_(self):
+        return _conditional_time_to_event_(self)
+
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
@@ -373,7 +381,7 @@ class NelsonAalenFitter(BaseFitter):
         hazard_name = "differenced-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C, :]),
+        return pd.DataFrame(1. / (2 * bandwidth) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C,:]),
                             columns=[hazard_name], index=timeline)
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
@@ -469,6 +477,10 @@ class KaplanMeierFitter(BaseFitter):
         setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
+    @property
+    def conditional_time_to_event_(self):
+        return _conditional_time_to_event_(self)
+
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdf
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
@@ -490,23 +502,6 @@ class KaplanMeierFitter(BaseFitter):
     def _additive_var(self, population, deaths):
         np.seterr(divide='ignore')
         return (1. * deaths / (population * (population - deaths))).replace([np.inf], 0)
-
-    def conditional_time_to(self):
-        """
-        Return a DataFrame, with index equal to survival_function_, that estimates the median
-        duration remaining until the death event, given survival up until time t. For example, if an
-        indivual exists until age 1, their expected life remaining *given they lived to time 1*
-        might be 9 years.
-
-        Returns:
-            conditional_time_to_: DataFrame, with index equal to survival_function_
-
-        """
-        age = self.survival_function_.index.values[:, None]
-        columns = ['%s - Conditional time remaining to event' % self._label]
-        return pd.DataFrame(qth_survival_times(self.survival_function_[self._label] * 0.5, self.survival_function_).T.sort(ascending=False).values,
-                            index=self.survival_function_.index,
-                            columns=columns) - age
 
 
 class BreslowFlemingHarringtonFitter(BaseFitter):
@@ -569,6 +564,10 @@ class BreslowFlemingHarringtonFitter(BaseFitter):
         self.plot = plot_estimate(self, "survival_function_")
         self.plot_survival_function = self.plot
         return self
+
+    @property
+    def conditional_time_to_event_(self):
+        return _conditional_time_to_event_(self)
 
 
 class AalenAdditiveFitter(BaseFitter):
@@ -1264,7 +1263,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal())
-        return pd.DataFrame(se[None,:],
+        return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
@@ -1425,6 +1424,24 @@ def get_index(X):
     return index
 
 
+def _conditional_time_to_event_(fitter):
+    """
+    Return a DataFrame, with index equal to survival_function_, that estimates the median
+    duration remaining until the death event, given survival up until time t. For example, if an
+    individual exists until age 1, their expected life remaining *given they lived to time 1*
+    might be 9 years.
+
+    Returns:
+        conditional_time_to_: DataFrame, with index equal to survival_function_
+
+    """
+    age = fitter.survival_function_.index.values[:, None]
+    columns = ['%s - Conditional time remaining to event' % fitter._label]
+    return pd.DataFrame(qth_survival_times(fitter.survival_function_[fitter._label] * 0.5, fitter.survival_function_).T.sort(ascending=False).values,
+                        index=fitter.survival_function_.index,
+                        columns=columns) - age
+
+
 def _subtract(fitter, estimate):
     class_name = fitter.__class__.__name__
     doc_string = """
@@ -1577,10 +1594,6 @@ def qth_survival_time(q, survival_function):
 
 def median_survival_times(survival_functions):
     return qth_survival_times(0.5, survival_functions)
-
-
-def asymmetric_epanechnikov_kernel(q, x):
-    return (64 * (2 - 4 * q + 6 * q * q - 3 * q ** 3) + 240 * (1 - q) ** 2 * x) / ((1 + q) ** 4 * (19 - 18 * q + 3 * q ** 2))
 
 """
 References:

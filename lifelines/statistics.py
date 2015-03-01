@@ -46,7 +46,7 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
         event_observed_B = np.ones(event_times_B.shape[0])
 
     event_times = np.r_[event_times_A, event_times_B]
-    groups = np.r_[np.zeros(event_times_A.shape[0]), np.ones(event_times_B.shape[0])]
+    groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
     event_observed = np.r_[event_observed_A, event_observed_B]
     return multivariate_logrank_test(event_times, groups, event_observed,
                                      alpha=alpha, t_0=t_0, suppress_print=suppress_print, **kwargs)
@@ -157,6 +157,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
       test_result: True if reject the null, (pendantically) None if we can't reject the null.
 
     """
+    event_durations, groups = np.asarray(event_durations), np.asarray(groups)
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
 
@@ -180,13 +181,16 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     assert abs(Z_j.sum()) < 10e-8, "Sum is not zero."  # this should move to a test eventually.
 
     # compute covariance matrix
-    V_ = n_ij.mul(np.sqrt(d_i) / n_i, axis='index').fillna(1)
+    factor = (((n_i - d_i) / (n_i - 1)).replace(np.inf, 1)) * d_i
+    n_ij['_'] = n_i.values
+    V_ = n_ij.mul(np.sqrt(factor) / n_i, axis='index').fillna(1)
     V = -np.dot(V_.T, V_)
     ix = np.arange(n_groups)
-    V[ix, ix] = V[ix, ix] + ev
+    V[ix, ix] = -V[-1, ix] + V[ix, ix]
+    V = V[:-1, :-1]
 
     # take the first n-1 groups
-    U = Z_j.ix[:-1].dot(np.linalg.pinv(V[:-1, :-1]).dot(Z_j.ix[:-1]))  # Z.T*inv(V)*Z
+    U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1]).dot(Z_j.iloc[:-1]))  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
     test_result, p_value = chisq_test(U, n_groups - 1, alpha)
