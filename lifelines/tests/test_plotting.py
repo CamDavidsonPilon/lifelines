@@ -76,7 +76,7 @@ class TestPlotting():
         X['E'] = C
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
-        aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
+        aaf = AalenAdditiveFitter(coef_penalizer=0.1, fit_intercept=False)
 
         aaf.fit(X, 'T', 'E')
         ax = aaf.plot(iloc=slice(0, aaf.cumulative_hazards_.shape[0] - 100))
@@ -98,7 +98,7 @@ class TestPlotting():
         X['E'] = C
 
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
-        aaf = AalenAdditiveFitter(penalizer=0.1, fit_intercept=False)
+        aaf = AalenAdditiveFitter(coef_penalizer=0.1, fit_intercept=False)
         aaf.fit(X, 'T', 'E')
         ax = aaf.smoothed_hazards_(1).iloc[0:aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
