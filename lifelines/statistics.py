@@ -10,7 +10,7 @@ from lifelines.utils import group_survival_table_from_events
 
 
 def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None,
-                 alpha=0.95, t_0=-1, suppress_print=False, **kwargs):
+                 alpha=0.95, t_0=-1, **kwargs):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -30,7 +30,6 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
       censorship_bar: a (nx1) array of censorship flags, 1 if observed, 0 if not. Default assumes all observed.
       t_0: the period under observation, -1 for all time.
       alpha: the level of signifiance
-      suppress_print: if True, do not print the summary. Default False.
       kwargs: add keywords and meta-data to the experiment summary
 
     Returns
@@ -49,11 +48,11 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
     event_observed = np.r_[event_observed_A, event_observed_B]
     return multivariate_logrank_test(event_times, groups, event_observed,
-                                     alpha=alpha, t_0=t_0, suppress_print=suppress_print, **kwargs)
+                                     alpha=alpha, t_0=t_0, **kwargs)
 
 
 def pairwise_logrank_test(event_durations, groups, event_observed=None,
-                          alpha=0.95, t_0=-1, bonferroni=True, suppress_print=False, **kwargs):
+                          alpha=0.95, t_0=-1, bonferroni=True, **kwargs):
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
     We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase
@@ -70,26 +69,10 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None,
       t_0: the final time to compare the series' up to. Defaults to all.
       bonferroni: If true, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M
             See (here)[http://en.wikipedia.org/wiki/Bonferroni_correction].
-      suppress_print: if True, do not print the summary. Default False.
       kwargs: add keywords and meta-data to the experiment summary.
 
     Returns:
-      S: a (n,n) dataframe of print-friendly test summaries (np.nan on the diagonal). Ex:
-      P: a (n,n) dataframe of p-values (np.nan on the diagonal).
-      T: a (n,n) dataframe of test results (True is significant, None if not) (np.nan on the diagonal).
-
-    Example:
-      P:
-                a         b         c
-      a       NaN  0.711136  0.401462
-      b  0.711136       NaN  0.734605
-      c  0.401462  0.734605       NaN
-
-      T:
-            a     b     c
-      a   NaN  None  None
-      b  None   NaN  None
-      c  None  None   NaN
+        R: a (n,n) dataframe of StatisticalResults (None on the diagonal)
 
     """
 
@@ -108,32 +91,25 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None,
         m = 0.5 * n * (n - 1)
         alpha = 1 - (1 - alpha) / m
 
-    P = np.zeros((n, n), dtype=float)
-    T = np.empty((n, n), dtype=object)
-    S = np.empty((n, n), dtype=object)
+    R = np.zeros((n, n), dtype=object)
 
-    np.fill_diagonal(P, np.nan)
-    np.fill_diagonal(T, np.nan)
-    np.fill_diagonal(S, np.nan)
+    np.fill_diagonal(R, None)
 
     for i1, i2 in combinations(np.arange(n), 2):
         g1, g2 = unique_groups[[i1, i2]]
         ix1, ix2 = (groups == g1), (groups == g2)
         test_name = str(g1) + " vs. " + str(g2)
-        summary, p_value, result = logrank_test(event_durations.ix[ix1], event_durations.ix[ix2],
-                                                event_observed.ix[ix1], event_observed.ix[ix2],
-                                                alpha=alpha, t_0=t_0, use_bonferroni=bonferroni,
-                                                test_name=test_name, suppress_print=suppress_print,
-                                                **kwargs)
-        T[i1, i2], T[i2, i1] = result, result
-        P[i1, i2], P[i2, i1] = p_value, p_value
-        S[i1, i2], S[i2, i1] = summary, summary
+        result = logrank_test(event_durations.ix[ix1], event_durations.ix[ix2],
+                              event_observed.ix[ix1], event_observed.ix[ix2],
+                              alpha=alpha, t_0=t_0, use_bonferroni=bonferroni,
+                              test_name=test_name, **kwargs)
+        R[i1, i2], R[i2, i1] = result, result
 
-    return [pd.DataFrame(x, columns=unique_groups, index=unique_groups) for x in [S, P, T]]
+    return pd.DataFrame(R, columns=unique_groups, index=unique_groups)
 
 
 def multivariate_logrank_test(event_durations, groups, event_observed=None,
-                              alpha=0.95, t_0=-1, suppress_print=False, **kwargs):
+                              alpha=0.95, t_0=-1, **kwargs):
     """
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
       be equal when n=2):
@@ -148,7 +124,6 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
           to all observed.
       alpha: the level of significance desired.
       t_0: the final time to compare the series' up to. Defaults to all.
-      suppress_print: if True, do not print the summary. Default False.
       kwargs: add keywords and meta-data to the experiment summary.
 
     Returns:
@@ -194,13 +169,43 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
 
     # compute the p-values and tests
     test_result, p_value = chisq_test(U, n_groups - 1, alpha)
-    summary = pretty_print_summary(test_result, p_value, U, t_0=t_0, test='logrank',
-                                   alpha=alpha, null_distribution='chi squared',
-                                   df=n_groups - 1, **kwargs)
 
-    if not suppress_print:
-        print(summary)
-    return summary, p_value, test_result
+    return StatisticalResult(test_result, p_value, U, t_0=t_0, test='logrank',
+                             alpha=alpha, null_distribution='chi squared',
+                             df=n_groups - 1, **kwargs)
+
+
+class StatisticalResult(object):
+
+    def __init__(self, test_results, p_value, test_statistic, **kwargs):
+        self.p_value = p_value
+        self.test_statistic = test_statistic
+        self.test_results = test_results
+
+        for kw, value in kwargs.items():
+            setattr(self, kw, value)
+
+        self._kwargs = kwargs
+        self.summary = self.__unicode__()
+
+    def __repr__(self):
+        return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
+
+    def __unicode__(self):
+        HEADER = "   __ p-value ___|__ test statistic __|__ test results __"
+        meta_data = self._pretty_print_meta_data(self._kwargs)
+        s = ""
+        s += "Results\n"
+        s += meta_data + "\n"
+        s += HEADER + "\n"
+        s += "         %.5f |              %.3f |     %s   " % (self.p_value, self.test_statistic, self.test_results)
+        return s
+
+    def _pretty_print_meta_data(self, dictionary):
+        s = ""
+        for k, v in dictionary.items():
+            s += "   " + unicode(k).replace('_', ' ') + ": " + unicode(v) + "\n"
+        return s
 
 
 def chisq_test(U, degrees_freedom, alpha):
@@ -217,23 +222,3 @@ def two_sided_z_test(Z, alpha):
         return True, p_value
     else:
         return False, p_value
-
-
-def pretty_print_summary(test_results, p_value, test_statistic, **kwargs):
-    """
-    kwargs are experiment meta-data.
-    """
-    HEADER = "   __ p-value ___|__ test statistic __|__ test results __"
-    s = "Results\n"
-    meta_data = pretty_print_meta_data(kwargs)
-    s += meta_data + "\n"
-    s += HEADER + "\n"
-    s += "         %.5f |              %.3f |     %s   " % (p_value, test_statistic, test_results)
-    return s
-
-
-def pretty_print_meta_data(dictionary):
-    s = ""
-    for k, v in dictionary.items():
-        s = s + "   " + k.__str__().replace('_', ' ') + ": " + v.__str__() + "\n"
-    return s
