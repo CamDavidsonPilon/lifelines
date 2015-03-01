@@ -242,7 +242,7 @@ class TestWeibullFitter():
 
     def test_exponential_data_produces_correct_inference_with_censorship(self):
         wf = WeibullFitter()
-        N = 10000
+        N = 40000
         factor = 5
         T = factor * np.random.exponential(1, size=N)
         T_ = factor * np.random.exponential(1, size=N)

@@ -173,8 +173,8 @@ class StatisticalResult(object):
     def __init__(self, test_result, p_value, test_statistic, **kwargs):
         self.p_value = p_value
         self.test_statistic = test_statistic
-        self.test_result = test_result
-        self.significant = test_result is True
+        self.test_result = "Reject Null" if test_result else "Cannot Reject Null"
+        self.is_significant = test_result is True
 
         for kw, value in kwargs.items():
             setattr(self, kw, value)
@@ -186,20 +186,20 @@ class StatisticalResult(object):
 
     @property
     def summary(self):
-        cols = ['p-value', 'test_statistic', 'test_result']
-        return pd.DataFrame([[self.p_value, self.test_statistic, self.test_result]], columns=cols)
+        cols = ['p-value', 'test_statistic', 'test_result', 'is_significant']
+        return pd.DataFrame([[self.p_value, self.test_statistic, self.test_result, self.is_significant]], columns=cols)
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
 
     def __unicode__(self):
-        HEADER = "   __ p-value ___|__ test statistic __|__ test result __"
+        HEADER = "   __ p-value ___|__ test statistic __|___ test result ____|__ is significant __"
         meta_data = self._pretty_print_meta_data(self._kwargs)
         s = ""
         s += "Results\n"
         s += meta_data + "\n"
         s += HEADER + "\n"
-        s += "         %.5f |              %.3f |     %s   " % (self.p_value, self.test_statistic, self.test_result)
+        s += "         %.5f |              %.3f |%s|%s|" % (self.p_value, self.test_statistic,  '{: ^20}'.format(self.test_result), '{: ^20}'.format('True' if self.is_significant else 'False'))
         return s
 
     def _pretty_print_meta_data(self, dictionary):
