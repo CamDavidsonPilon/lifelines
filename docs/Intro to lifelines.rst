@@ -342,8 +342,9 @@ we rule that the series have different generators.
 
     from lifelines.statistics import logrank_test
     
-    summary, p_value, test_results = logrank_test(T[dem], T[~dem], C[dem], C[~dem], alpha=.99 )
-    print summary
+    results = logrank_test(T[dem], T[~dem], C[dem], C[~dem], alpha=.99 )
+
+    results.print_summary()
 
 .. parsed-literal::
 
@@ -354,8 +355,8 @@ we rule that the series have different generators.
        test: logrank
        null distribution: chi squared
     
-       __ p-value ___|__ test statistic __|__ test results __
-             0.00000 |              208.306 |     True   
+       __ p-value ___|__ test statistic __|____ test results ____|__ significant __
+             0.00000 |            208.306 |      Reject Null     |     True
 
 
 Lets compare the different *types* of regimes present in the dataset:

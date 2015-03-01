@@ -129,12 +129,12 @@ The input of the ``fit`` method's API on ``AalenAdditiveFitter`` is different th
 
     # Using Cox Proportional Hazards model
     cf = CoxPHFitter()
-    cf.fit(regression_dataset, duration_col='T', event_col='E')
+    cf.fit(regression_dataset, 'T', event_col='E')
     cf.print_summary()
 
     # Using Aalen's Additive model
     aaf = AalenAdditiveFitter(fit_intercept=False)
-    aaf.fit(regression_dataset, duration_col='T', event_col='E')
+    aaf.fit(regression_dataset, 'T', event_col='E')
 
 
 After fitting, you'll have access to properties like ``cumulative_hazards_`` and methods like ``plot``, ``predict_cumulative_hazards``, and ``predict_survival_function``. The latter two methods require an additional argument of individual covariates:

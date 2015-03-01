@@ -33,9 +33,8 @@ compares whether the "death" generation process of the two populations are equal
     
     from lifelines.statistics import logrank_test
 
-    summary, p_value, test_result = logrank_test(T1, T2, event_observed_A=C1, event_observed_B=C2)
-
-    print summary
+    results = logrank_test(T1, T2, event_observed_A=C1, event_observed_B=C2)
+    results.print_summary()
 
     """
     Results
@@ -45,12 +44,13 @@ compares whether the "death" generation process of the two populations are equal
        test: logrank
        null distribution: chi squared
 
-       __ p-value ___|__ test statistic __|__ test results __
-             0.46759 |              0.528 |     None
+       __ p-value ___|__ test statistic __|____ test results ____|__ significant __
+             0.46759 |              0.528 |  Cannot Reject Null  |      False
    """
 
-   print p_value     # 0.46759 
-   print test_result # None
+   print results.p_value     # 0.46759 
+   print results.test_statistic # 0.528
+   print results.is_significant # False
 
 
 If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares
