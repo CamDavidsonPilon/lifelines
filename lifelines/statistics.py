@@ -204,7 +204,7 @@ class StatisticalResult(object):
     def _pretty_print_meta_data(self, dictionary):
         s = ""
         for k, v in dictionary.items():
-            s += "   " + unicode(k).replace('_', ' ') + ": " + unicode(v) + "\n"
+            s += "   " + str(k).replace('_', ' ') + ": " + str(v) + "\n"
         return s
 
 
