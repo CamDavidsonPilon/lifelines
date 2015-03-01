@@ -2,7 +2,6 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import numpy.testing as npt
-from pandas.util.testing import assert_frame_equal
 
 from .. import statistics as stats
 from ..datasets import load_waltons, load_g3
@@ -12,7 +11,7 @@ def test_unequal_intensity_with_random_data():
     data1 = np.random.exponential(5, size=(2000, 1))
     data2 = np.random.exponential(1, size=(2000, 1))
     test_result = stats.logrank_test(data1, data2)
-    assert test_result.test_results
+    assert test_result.test_result
 
 
 def test_logrank_test_output_against_R_1():
@@ -47,14 +46,14 @@ def test_unequal_intensity_event_observed():
     eventA = np.random.binomial(1, 0.5, size=(2000, 1))
     eventB = np.random.binomial(1, 0.5, size=(2000, 1))
     result = stats.logrank_test(data1, data2, event_observed_A=eventA, event_observed_B=eventB)
-    assert result.test_results
+    assert result.test_result
 
 
 def test_integer_times_logrank_test():
     data1 = np.random.exponential(5, size=(2000, 1)).astype(int)
     data2 = np.random.exponential(1, size=(2000, 1)).astype(int)
     result = stats.logrank_test(data1, data2)
-    assert result.test_results
+    assert result.test_result
 
 
 def test_equal_intensity_with_negative_data():
@@ -65,14 +64,14 @@ def test_equal_intensity_with_negative_data():
     data2 -= data2.mean()
     data2 /= data2.std()
     result = stats.logrank_test(data1, data2)
-    assert result.test_results is None
+    assert result.test_result is None
 
 
 def test_unequal_intensity_with_negative_data():
     data1 = np.random.normal(-5, size=(2000, 1))
     data2 = np.random.normal(5, size=(2000, 1))
     result = stats.logrank_test(data1, data2)
-    assert result.test_results
+    assert result.test_result
 
 
 def test_waltons_dataset():
@@ -81,7 +80,7 @@ def test_waltons_dataset():
     waltonT1 = df.ix[ix]['T']
     waltonT2 = df.ix[~ix]['T']
     result = stats.logrank_test(waltonT1, waltonT2)
-    assert result.test_results
+    assert result.test_result
 
 
 def test_logrank_test_is_symmetric():
@@ -90,7 +89,7 @@ def test_logrank_test_is_symmetric():
     result1 = stats.logrank_test(data1, data2)
     result2 = stats.logrank_test(data2, data1)
     assert abs(result1.p_value - result2.p_value) < 10e-8
-    assert result2.test_results == result1.test_results
+    assert result2.test_result == result1.test_result
 
 
 def test_multivariate_unequal_intensities():
@@ -98,20 +97,20 @@ def test_multivariate_unequal_intensities():
     g = np.random.binomial(2, 0.5, size=300)
     T[g == 1] = np.random.exponential(1, size=(g == 1).sum())
     result = stats.multivariate_logrank_test(T, g)
-    assert result.test_results
+    assert result.test_result
 
 
 def test_pairwise_waltons_dataset_is_significantly_different():
     waltons_dataset = load_waltons()
     R = stats.pairwise_logrank_test(waltons_dataset['T'], waltons_dataset['group'])
-    assert R.values[0, 1].test_results
+    assert R.values[0, 1].test_result
 
 
 def test_pairwise_logrank_test_with_identical_data_returns_inconclusive():
     t = np.random.exponential(10, size=100)
     T = np.tile(t, 3)
     g = np.array([1, 2, 3]).repeat(100)
-    R = stats.pairwise_logrank_test(T, g, alpha=0.99).applymap(lambda r: r.test_results if r is not None else None)
+    R = stats.pairwise_logrank_test(T, g, alpha=0.99).applymap(lambda r: r.test_result if r is not None else None)
     V = np.array([[None, None, None], [None, None, None], [None, None, None]])
     npt.assert_array_equal(R.values, V)
 
@@ -128,11 +127,11 @@ def test_pairwise_allows_dataframes():
 def test_log_rank_returns_None_if_equal_arrays():
     T = np.random.exponential(5, size=200)
     result = stats.logrank_test(T, T, alpha=0.95)
-    assert result.test_results is None
+    assert result.test_result is None
 
     C = np.random.binomial(2, 0.8, size=200)
     result = stats.logrank_test(T, T, C, C, alpha=0.95)
-    assert result.test_results is None
+    assert result.test_result is None
 
 
 def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
@@ -147,5 +146,20 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
     C = np.r_[C1, C2]
     G = np.array([1] * 200 + [2] * 200)
     result_m = stats.multivariate_logrank_test(T, G, C, alpha=0.95)
-    assert result.test_results == result_m.test_results
+    assert result.test_result == result_m.test_result
     assert result.p_value == result_m.p_value
+
+def test_StatisticalResult_class():
+    sr = stats.StatisticalResult(True, 0.04, 5.0)
+    assert sr.significant
+
+    sr = stats.StatisticalResult(None, 0.04, 5.0)
+    assert not sr.significant
+
+    sr = stats.StatisticalResult(True, 0.05, 5.0, kw='some_value')
+    assert hasattr(sr, 'kw')
+    assert getattr(sr, 'kw') == 'some_value'
+    assert 'some_value' in sr.__unicode__()
+
+
+

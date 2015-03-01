@@ -29,7 +29,7 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
       kwargs: add keywords and meta-data to the experiment summary
 
     Returns:
-      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_results'
+      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
 
     """
 
@@ -122,7 +122,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
       kwargs: add keywords and meta-data to the experiment summary.
 
     Returns
-      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_results'
+      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
 
     """
     event_durations, groups = np.asarray(event_durations), np.asarray(groups)
@@ -170,10 +170,11 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
 
 class StatisticalResult(object):
 
-    def __init__(self, test_results, p_value, test_statistic, **kwargs):
+    def __init__(self, test_result, p_value, test_statistic, **kwargs):
         self.p_value = p_value
         self.test_statistic = test_statistic
-        self.test_results = test_results
+        self.test_result = test_result
+        self.significant = test_result is True
 
         for kw, value in kwargs.items():
             setattr(self, kw, value)
@@ -181,25 +182,24 @@ class StatisticalResult(object):
         self._kwargs = kwargs
 
     def print_summary(self):
-       print(self.__unicode__())
-       return
+        print(self.__unicode__())
 
     @property
     def summary(self):
-       cols = ['p-value', 'test_statistics', 'test_results']
-       return pd.DataFrame([[self.p_value, self.test_statistic, self.test_results]], columns=cols)
+        cols = ['p-value', 'test_statistic', 'test_result']
+        return pd.DataFrame([[self.p_value, self.test_statistic, self.test_result]], columns=cols)
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
 
     def __unicode__(self):
-        HEADER = "   __ p-value ___|__ test statistic __|__ test results __"
+        HEADER = "   __ p-value ___|__ test statistic __|__ test result __"
         meta_data = self._pretty_print_meta_data(self._kwargs)
         s = ""
         s += "Results\n"
         s += meta_data + "\n"
         s += HEADER + "\n"
-        s += "         %.5f |              %.3f |     %s   " % (self.p_value, self.test_statistic, self.test_results)
+        s += "         %.5f |              %.3f |     %s   " % (self.p_value, self.test_statistic, self.test_result)
         return s
 
     def _pretty_print_meta_data(self, dictionary):
@@ -222,4 +222,4 @@ def two_sided_z_test(Z, alpha):
     if p_value < 1 - alpha / 2.:
         return True, p_value
     else:
-        return False, p_value
+        return None, p_value
