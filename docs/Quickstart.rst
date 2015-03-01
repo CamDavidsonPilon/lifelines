@@ -50,10 +50,12 @@ Let's start by importing some data. We need the durations that individuals are o
     kmf = KaplanMeierFitter()
     kmf.fit(T, event_observed=E) # more succiently, kmf.fit(T,E)
 
-After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Pandas internal plotting library (see `here <http://lifelines.readthedocs.org/en/latest/examples.html#plotting-options-and-styles>`__ for examples). 
+After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Pandas internal plotting library. 
 
 .. code:: python
     
+    kmf.survival_function_
+    kmf.median_
     kmf.plot()
 
 
