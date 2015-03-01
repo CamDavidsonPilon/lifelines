@@ -193,13 +193,13 @@ class StatisticalResult(object):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
 
     def __unicode__(self):
-        HEADER = "   __ p-value ___|__ test statistic __|___ test result ____|__ is significant __"
+        HEADER = "   __ p-value ___|__ test statistic __|____ test result ____|__ is significant __"
         meta_data = self._pretty_print_meta_data(self._kwargs)
         s = ""
         s += "Results\n"
         s += meta_data + "\n"
         s += HEADER + "\n"
-        s += "         %.5f |              %.3f |%s|%s|" % (self.p_value, self.test_statistic,  '{: ^20}'.format(self.test_result), '{: ^20}'.format('True' if self.is_significant else 'False'))
+        s += '{:>16.5f} | {:>18.3f} |  {: ^19}| {: ^18}'.format(self.p_value, self.test_statistic, self.test_result, 'True' if self.is_significant else 'False')
         return s
 
     def _pretty_print_meta_data(self, dictionary):
