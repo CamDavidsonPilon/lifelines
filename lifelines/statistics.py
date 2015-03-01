@@ -19,11 +19,7 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     H_0: both event series are from the same generating processes
     H_A: the event series are from different generating processes.
 
-    Pre lifelines 0.2.x: this returned a test statistic.
-    Post lifelines 0.2.x: this returns the results of the entire test.
-
-    See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights. The R language
-    equivilant in the `survival` package would use conf.type='log-log'.
+    See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
 
     Parameters:
       event_times_foo: a (nx1) array of event durations (birth to death,...) for the population.
@@ -32,10 +28,9 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
       alpha: the level of signifiance
       kwargs: add keywords and meta-data to the experiment summary
 
-    Returns
-      summary: a print-friendly string detailing the results of the test.
-      p: the p-value
-      test result: True if reject the null, (pendantically None if inconclusive)
+    Returns:
+      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_results'
+
     """
 
     event_times_A, event_times_B = np.array(event_times_A), np.array(event_times_B)
@@ -126,10 +121,8 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
       t_0: the final time to compare the series' up to. Defaults to all.
       kwargs: add keywords and meta-data to the experiment summary.
 
-    Returns:
-      summary: a print-friendly summary of the statistical test
-      p_value: the p-value
-      test_result: True if reject the null, (pendantically) None if we can't reject the null.
+    Returns
+      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_results'
 
     """
     event_durations, groups = np.asarray(event_durations), np.asarray(groups)
