@@ -179,7 +179,15 @@ class StatisticalResult(object):
             setattr(self, kw, value)
 
         self._kwargs = kwargs
-        self.summary = self.__unicode__()
+
+    def print_summary(self):
+       print(self.__unicode__())
+       return
+
+    @property
+    def summary(self):
+       cols = ['p-value', 'test_statistics', 'test_results']
+       return pd.DataFrame([[self.p_value, self.test_statistic, self.test_results]], columns=cols)
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
