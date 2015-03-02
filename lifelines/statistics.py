@@ -128,6 +128,8 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     event_durations, groups = np.asarray(event_durations), np.asarray(groups)
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
+    else:
+        event_observed = np.asarray(event_observed)
 
     n = np.max(event_durations.shape)
     assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."

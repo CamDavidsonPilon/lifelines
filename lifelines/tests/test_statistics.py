@@ -40,6 +40,33 @@ def test_logrank_test_output_against_R_2():
     assert abs(result.test_statistic - 16.8) < 0.1
 
 
+def test_rank_test_output_against_R_no_censorship():
+    """
+    > time <- c(10,20,30,10,20,50)
+    > status <- c(1,1,1,1,1,1)
+    > treatment <- c(1,1,1,0,0,0)
+    > survdiff(Surv(time, status) ~ treatment)
+    """
+    result = stats.multivariate_logrank_test([10,20,30,10,20,50], [1,1,1,0,0,0])
+    r_p_value = 0.614107
+    r_stat =  0.254237
+    assert abs(result.p_value - r_p_value) < 10e-6 
+    assert abs(result.test_statistic - r_stat) < 10e-6 
+
+def test_rank_test_output_against_R_with_censorship():
+    """
+    > time <- c(10,20,30,10,20,50)
+    > status <- c(1,0,1,1,0,1)
+    > treatment <- c(1,1,1,0,0,0)
+    > survdiff(Surv(time, status) ~ treatment)
+    """
+    result = stats.multivariate_logrank_test([10,20,30,10,20,50], [1,1,1,0,0,0], [1,0,1,1,0,1])
+    r_p_value = 0.535143 
+    r_stat =  0.384615
+    assert abs(result.p_value - r_p_value) < 10e-6 
+    assert abs(result.test_statistic - r_stat) < 10e-6 
+
+
 def test_unequal_intensity_event_observed():
     data1 = np.random.exponential(5, size=(2000, 1))
     data2 = np.random.exponential(1, size=(2000, 1))
