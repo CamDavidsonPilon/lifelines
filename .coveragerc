@@ -1,0 +1,5 @@
+# .coveragerc to control coverage.py
+[run]
+omit = 
+    lifelines/plotting.py
+    lifelines/tests/*.py
