@@ -1,4 +1,3 @@
 numpy
 scipy
 pandas>=0.14
-pytest

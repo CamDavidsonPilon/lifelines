@@ -29,8 +29,12 @@ install:
   - source activate test-environment
   # Build in place so we can run tests
   - python setup.py build_ext --inplace
+  - pip install coveralls
+  - pip install pytest-cov
 # command to run tests
-script: python -m lifelines.tests -vv
+script: py.test --cov lifelines -vv
+after_success:
+  coveralls
 # Don't want notifications
 notifications:
   email: false
