@@ -1,3 +1,7 @@
+.. image:: http://i.imgur.com/EOowdSD.png
+
+-------------------------------------
+
 More Examples and Recipes
 ==================================
 

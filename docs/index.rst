@@ -3,7 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-lifelines
+.. image:: http://i.imgur.com/EOowdSD.png
+
+-------------------------------------
+
+
+Lifelines
 =====================================
 
 *lifelines* is a implementation of survival analysis in Python. What

@@ -1,3 +1,6 @@
+.. image:: http://i.imgur.com/EOowdSD.png
+
+-------------------------------------
 
 Survival Regression
 =====================================

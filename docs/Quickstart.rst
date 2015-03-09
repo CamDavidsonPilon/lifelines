@@ -1,5 +1,10 @@
 .. _code_directive:
 
+.. image:: http://i.imgur.com/EOowdSD.png
+
+-------------------------------------
+
+
 Quickstart
 '''''''''''''''''''''''''''''''''''''''
 

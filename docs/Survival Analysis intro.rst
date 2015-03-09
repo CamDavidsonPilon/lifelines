@@ -1,3 +1,8 @@
+.. image:: http://i.imgur.com/EOowdSD.png
+
+-------------------------------------
+
+
 Introduction to Survival Analysis
 '''''''''''''''''''''''''''''''''
 

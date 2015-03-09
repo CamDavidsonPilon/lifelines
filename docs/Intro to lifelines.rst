@@ -1,4 +1,8 @@
-Introduction to using *lifelines*
+.. image:: http://i.imgur.com/EOowdSD.png
+
+-------------------------------------
+
+Introduction to using lifelines
 =====================================
 
 In the previous :doc:`section</Survival Analysis intro>`,
