@@ -1,5 +1,4 @@
-lifelines
-===========
+![logo](http://i.imgur.com/EOowdSD.png)
 
 [![Latest Version](https://pypip.in/v/lifelines/badge.png)](https://pypi.python.org/pypi/lifelines/)
 [![Build Status](https://travis-ci.org/CamDavidsonPilon/lifelines.svg?branch=master)](https://travis-ci.org/CamDavidsonPilon/lifelines)
