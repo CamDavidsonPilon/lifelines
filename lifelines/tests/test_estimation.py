@@ -12,7 +12,7 @@ import numpy.testing as npt
 from ..utils import k_fold_cross_validation, StatError
 from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-    WeibullFitter
+    WeibullFitter, BaseFitter
 from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test, load_g3
 from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
@@ -80,6 +80,18 @@ def data_nus():
     data_nus['E'] = True
     return data_nus
 
+
+class TestBaseFitter():
+
+    def test_repr_without_fitter(self):
+        bf = BaseFitter()
+        assert bf.__repr__() == '<lifelines.BaseFitter>'
+
+    def test_repr_with_fitter(self, sample_lifetimes):
+        T,C = sample_lifetimes
+        bf = BaseFitter()
+        bf.event_observed = C
+        assert bf.__repr__() == '<lifelines.BaseFitter: fitted with %d observations, %d censored>'%(C.shape[0], C.shape[0] - C.sum())
 
 class TestUnivariateFitters():
 
@@ -857,6 +869,26 @@ Concordance = 0.644""".strip().split()
 
 class TestAalenAdditiveFitter():
 
+    def test_using_a_custom_timeline_in_static_fitting(self):
+        rossi = load_rossi()
+        aaf = AalenAdditiveFitter()
+        timeline = np.arange(10)
+        aaf.fit(rossi, event_col='week', duration_col='arrest', timeline=timeline)
+        npt.assert_array_equal(aaf.hazards_.index.values, timeline)
+        npt.assert_array_equal(aaf.cumulative_hazards_.index.values, timeline)
+        npt.assert_array_equal(aaf.variance_.index.values, timeline)
+        npt.assert_array_equal(aaf.timeline, timeline)
+
+    def test_using_a_custom_timeline_in_varying_fitting(self):
+        panel_dataset = load_panel_test()
+        aaf = AalenAdditiveFitter()
+        timeline = np.arange(10)
+        aaf.fit(panel_dataset, id_col='id', duration_col='t', timeline=timeline)
+        npt.assert_array_equal(aaf.hazards_.index.values, timeline)
+        npt.assert_array_equal(aaf.cumulative_hazards_.index.values, timeline)
+        npt.assert_array_equal(aaf.variance_.index.values, timeline)
+        npt.assert_array_equal(aaf.timeline, timeline)
+
     def test_penalizer_reduces_norm_of_hazards(self):
         from numpy.linalg import norm
         rossi = load_rossi()
@@ -1021,3 +1053,11 @@ class TestAalenAdditiveFitter():
             expected = 0.90
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert np.mean(mean_scores) > expected, msg.format(expected, scores.mean())
+
+    def test_predict_cumulative_hazard_inputs(self, data_pred1):
+        aaf = AalenAdditiveFitter()
+        aaf.fit(data_pred1, duration_col='t', event_col='E',)
+        x = data_pred1.ix[:5].drop(['t', 'E'], axis=1)
+        y_df = aaf.predict_cumulative_hazard(x)
+        y_np = aaf.predict_cumulative_hazard(x.values)
+        assert_frame_equal(y_df, y_np)

@@ -1138,7 +1138,7 @@ class CoxPHFitter(BaseFitter):
         if self.tie_method == 'Efron':
             get_gradients = self._get_efron_values
         else:
-            raise NotImplementedError("Only Efron is available atm.")
+            raise NotImplementedError("Only Efron is available.")
 
         i = 1
         converging = True
