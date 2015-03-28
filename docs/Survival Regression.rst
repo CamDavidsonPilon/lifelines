@@ -194,7 +194,7 @@ column in our patsy we have included the keyword ``fit_intercept=True``
 matrix. (Sidenote: the intercept term, :math:`b_0(t)` in survival
 regression is often referred to as the *baseline* hazard.)
 
-We have also included the ``penalizer`` option. During the estimation, a
+We have also included the ``coef_penalizer`` option. During the estimation, a
 linear regression is computed at each step. Often the regression can be
 unstable (due to high
 `co-linearity <http://camdp.com/blogs/machine-learning-counter-examples-pt1>`__
@@ -203,7 +203,7 @@ the estimates still appear to be too unstable, try increasing it.
 
 .. code:: python
 
-    aaf = AalenAdditiveFitter(penalizer=1.0, fit_intercept=True)
+    aaf = AalenAdditiveFitter(coef_penalizer=1.0, fit_intercept=True)
 
 Like the API syntax above, an instance of ``AalenAdditiveFitter``
 includes a ``fit`` method that performs the inference on the coefficients. This method accepts a pandas DataFrame: each row is an individual and columns are the covarites and 

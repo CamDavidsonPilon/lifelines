@@ -583,8 +583,11 @@ class AalenAdditiveFitter(BaseFitter):
       fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The
         intercept, b_0(t) acts as a baseline hazard.
       alpha: the level in the confidence intervals.
-      penalizer: Attach a L2 penalizer to the regression. This improves stability of the estimates
-       and controls high correlation between covariates. Recommended, even if a small value.
+      coef_penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves 
+        stability of the estimates and controls for high correlation between covariates. 
+        For example, this shrinks the absolute value of c_{i,t}. Recommended, even if a small value.
+      smoothing_penalizer: Attach a L2 penalizer to difference between adjacent (over time) coefficents. For 
+        example, this shrinks the absolute value of c_{i,t} - c_{i,t+1}.
 
     """
 
