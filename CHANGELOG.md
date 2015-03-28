@@ -2,7 +2,7 @@
 
 #### 0.7.0
 - allow for multiple fitters to be passed into `k_fold_cross_validation`. 
-- statistical tests in `lifelines.statstics`. now return a `StatisticalResult` object with properties like `p_value`, `test_results`, and `summary`.  
+- statistical tests in `lifelines.statistics`. now return a `StatisticalResult` object with properties like `p_value`, `test_results`, and `summary`.  
 - fixed a bug in how log-rank statistical tests are performed. The covariance matrix was not being correctly calculated. This resulted in slightly different p-values. 
 - `WeibullFitter`, `ExponentialFitter`, `KaplanMeierFitter` and `BreslowFlemingHarringtonFitter` all have a `conditional_time_to_event_` property that measures  the median duration remaining until the death event, given survival up until time t.
 
