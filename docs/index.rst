@@ -19,7 +19,7 @@ implementations?
 -  internal plotting methods
 -  simple and intuitive API (*designed for humans*)
 -  only does survival analysis (No unnecessary features or second-class
-   implentations)
+   implementations)
 
 
 Contents:
