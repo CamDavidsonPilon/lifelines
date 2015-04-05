@@ -32,8 +32,11 @@ Or getting the bleeding edge version with:
 
        pip install --upgrade --no-deps git+https://github.com/CamDavidsonPilon/lifelines.git
 
-
 from the command line.
+
+##### Installation Issues?
+
+See the common [problems/solutions for installing lifelines](https://github.com/CamDavidsonPilon/lifelines/issues?utf8=%E2%9C%93&q=label%3Ainstallation+).
 
 #### Running the tests
 
