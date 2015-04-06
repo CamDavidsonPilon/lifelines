@@ -20,6 +20,8 @@ ext_fstat = Extension(name="lifelines._utils._cindex",
                       sources=["lifelines/_utils/_cindex.f90"])
 exts = [ext_fstat]
 
+exec(compile(open('lifelines/version.py').read(),
+                  'lifelines/version.py', 'exec'))
 
 done = False
 # First try to build with the extension. In case of failure, do without.
@@ -30,7 +32,7 @@ for ext_modules in [exts, []]:
     try:
         setup(
             name="lifelines",
-            version="0.7.0.0",
+            version=__version__,
             author="Cameron Davidson-Pilon, Jonas Kalderstam",
             author_email="cam.davidson.pilon@gmail.com",
             description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
