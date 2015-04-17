@@ -818,9 +818,28 @@ Concordance = 0.644""".strip().split()
 
     def test_output_against_R(self):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        # Link is now broken, but this is the code:
+        #
+        # rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        # mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+        #     data=rossi)
+        # cat(round(mod.allison$coefficients, 4), sep=", ")
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         df = load_rossi()
         cf = CoxPHFitter(normalize=False)
+        cf.fit(df, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+
+    def test_penalized_output_against_R(self):
+        # R code:
+        #
+        # rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        # mod.allison <- coxph(Surv(week, arrest) ~ ridge(fin, age, race, wexp, mar, paro, prio,
+        #                                                 theta=1.0, scale=FALSE), data=rossi)
+        # cat(round(mod.allison$coefficients, 4), sep=", ")
+        expected = np.array([[-0.3641, -0.0580, 0.2894, -0.1496, -0.3837, -0.0822, 0.0913]])
+        df = load_rossi()
+        cf = CoxPHFitter(normalize=False, penalizer=1.0)
         cf.fit(df, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 

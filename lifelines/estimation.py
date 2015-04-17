@@ -583,10 +583,10 @@ class AalenAdditiveFitter(BaseFitter):
       fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The
         intercept, b_0(t) acts as a baseline hazard.
       alpha: the level in the confidence intervals.
-      coef_penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves 
-        stability of the estimates and controls for high correlation between covariates. 
+      coef_penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves
+        stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the absolute value of c_{i,t}. Recommended, even if a small value.
-      smoothing_penalizer: Attach a L2 penalizer to difference between adjacent (over time) coefficents. For 
+      smoothing_penalizer: Attach a L2 penalizer to difference between adjacent (over time) coefficents. For
         example, this shrinks the absolute value of c_{i,t} - c_{i,t+1}.
 
     """
@@ -981,14 +981,20 @@ class CoxPHFitter(BaseFitter):
         'Efron' is available.
       normalize: substract the mean and divide by standard deviation of each covariate
         in the input data before performing any fitting.
+      penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves
+        stability of the estimates and controls for high correlation between covariates.
+        For example, this shrinks the absolute value of beta_i. Recommended, even if a small value.
+        The penalty is 1/2 * penalizer * ||beta||^2.
     """
 
-    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True):
+    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True, penalizer=0.0):
         self.alpha = alpha
         self.normalize = normalize
         if tie_method != 'Efron':
             raise NotImplementedError("Only Efron is available atm.")
         self.tie_method = tie_method
+        assert penalizer >= 0, "penalizer must be >= 0"
+        self.penalizer = penalizer
 
     def _get_efron_values(self, X, beta, T, E, include_likelihood=False):
         """
@@ -1152,6 +1158,10 @@ class CoxPHFitter(BaseFitter):
                                    include_likelihood=include_likelihood)
             # Do not override hessian and gradient in case of garbage
             h, g = output[:2]
+            if self.penalizer > 0:
+                # add the gradient and hessian of the l2 term
+                g -= self.penalizer * beta.T
+                h.flat[::d+1] -= self.penalizer
 
             delta = solve(-h, step_size * g.T)
             if np.any(np.isnan(delta)):
