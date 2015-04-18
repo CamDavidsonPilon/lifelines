@@ -11,6 +11,7 @@ from ..estimation import CoxPHFitter
 from ..datasets import (load_regression_dataset, load_larynx,
                         load_waltons, load_rossi)
 from .._utils.cindex import concordance_index as slow_cindex
+from .._utils.cindex import fast_concordance_index as fast_py_cindex
 from lifelines import utils
 try:
     from .._utils._cindex import concordance_index as fast_cindex
@@ -373,3 +374,30 @@ def test_concordance_index_py_is_same_as_native():
     E = cp.event_observed.values.ravel()
 
     assert slow_cindex(T, P, E) == fast_cindex(T, P, E)
+
+
+@pytest.mark.skipif(fast_cindex is None, reason='extensions not compiled')
+def test_fast_concordance_index_is_same_as_native():
+    size = 100
+    T = np.random.normal(size=size)
+    P = np.random.normal(size=size)
+    C = np.random.choice([0, 1], size=size)
+    Z = np.zeros_like(T)
+
+    # Hard to imagine these failing
+    assert fast_py_cindex(T, Z, C) == fast_cindex(T, Z, C)
+    assert fast_py_cindex(T, T, C) == fast_cindex(T, T, C)
+    # This is the real test though
+    assert fast_py_cindex(T, P, C) == fast_cindex(T, P, C)
+
+    cp = CoxPHFitter()
+    df = load_rossi()
+    cp.fit(df, duration_col='week', event_col='arrest')
+
+    T = cp.durations.values.ravel()
+    P = -cp.predict_partial_hazard(cp.data).values.ravel()
+    E = cp.event_observed.values.ravel()
+
+    # This fails right now, and BOTH values disagree with the R output.
+    # TODO: investigate?
+    assert fast_py_cindex(T, P, E) == fast_cindex(T, P, E)
