@@ -46,22 +46,22 @@ class _BTree(object):
 
     def insert(self, value):
         """Insert an occurrence of `value` into the btree."""
-        self._insert(value, 0)
+        i = 0
+        n = len(self._tree)
+        while i < n:
+            cur = self._tree[i]
+            self._counts[i] += 1
+            if value < cur:
+                i = 2 * i + 1
+            elif value > cur:
+                i = 2 * i + 2
+            else:
+                return
+        raise ValueError("Value %s not contained in tree."
+                         "Also, the counts are now messed up." % value)
 
     def __len__(self):
         return self._counts[0]
-
-    def _insert(self, value, i):
-        if i >= len(self._tree):
-            raise ValueError("Value %s not contained in tree" % value)
-        cur = self._tree[i]
-        if value < cur:
-            self._insert(value, 2*i + 1)
-        elif value > cur:
-            self._insert(value, 2*i + 2)
-        # If we've made it here, _insert didn't throw an exception, so we know
-        # the value got inserted somewhere in the subtree
-        self._counts[i] += 1
 
     def rank(self, value):
         """Returns the rank and count of the value in the btree."""
