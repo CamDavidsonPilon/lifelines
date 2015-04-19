@@ -1,7 +1,99 @@
 from __future__ import division
 
 import numpy as np
-import blist
+
+class _BTree(object):
+
+    def __init__(self, values):
+        """
+        Args:
+            values: List of sorted (ascending), unique values that will be inserted.
+        """
+        self._tree = self._treeify(values)
+        self._counts = np.zeros_like(self._tree, dtype=int)
+
+    @staticmethod
+    def _treeify(values):
+        if len(values) == 1: # this case causes problems later
+            return values
+        tree = np.empty_like(values)
+        # Tree indices work as follows:
+        # 0 is the root
+        # 2n+1 is the left child of n
+        # 2n+2 is the right child of n
+        # So we now rearrange `values` into that format...
+
+        # The first step is to remove the bottom row of leaves, which might not be exactly full
+        last_full_row = int(np.log2(len(values) - 1))
+        len_ragged_row = len(values) - (2 ** last_full_row - 1)
+        bottom_row_ix = np.s_[:2 * len_ragged_row:2]
+        tree[-len_ragged_row:] = values[bottom_row_ix]
+        values = np.delete(values, bottom_row_ix)
+
+        # Now `values` is length 2**n - 1, so can be packed efficiently into a tree
+        # Last row of nodes is indices 0, 2, ..., 2**n - 2
+        # Second-last row is indices 1, 5, ..., 2**n - 3
+        # nth-last row is indices (2**n - 1)::(2**(n+1))
+        values_start = 0
+        values_space = 2
+        values_len = 2 ** (last_full_row - 1)
+        while values_start < len(values):
+            tree[values_len - 1:2 * values_len - 1] = values[values_start::values_space]
+            values_start += int(values_space / 2)
+            values_space *= 2
+            values_len /= 2
+        return tree
+
+    def insert(self, value):
+        """Insert an occurrence of `value` into the btree."""
+        self._insert(value, 0)
+
+    def __len__(self):
+        return self._counts[0]
+
+    def _insert(self, value, i):
+        if i >= len(self._tree):
+            raise ValueError("Value %s not contained in tree" % value)
+        cur = self._tree[i]
+        if value < cur:
+            self._insert(value, 2*i + 1)
+        elif value > cur:
+            self._insert(value, 2*i + 2)
+        # If we've made it here, _insert didn't throw an exception, so we know
+        # the value got inserted somewhere in the subtree
+        self._counts[i] += 1
+
+    def rank(self, value):
+        """Returns the rank and count of the value in the btree."""
+        return self._rank(value, 0)
+
+    def _rank(self, value, i):
+        if i >= len(self._tree):
+            return (0, 0)
+        cur = self._tree[i]
+        if value < cur:
+            return self._rank(value, 2*i + 1)
+        elif value > cur:
+            # `value` is greater than everything in the left subtree, and the
+            # current node
+            rank_right, count = self._rank(value, 2*i + 2)
+            num_left_plus_cur = self._counts[i]
+            if 2*i + 2 < len(self._counts):
+                # subtract off right child's count, if it exists
+                num_left_plus_cur -= self._counts[2*i + 2]
+            return (rank_right + num_left_plus_cur, count)
+        else: # cur == value
+            # cur is greater than the entire left subtree
+            if 2*i + 1 < len(self._counts):
+                rank = self._counts[2*i + 1]
+            else:
+                rank = 0
+            count = self._counts[i] - rank
+            # subtract off the right subtree, if it exists
+            if 2*i + 2 < len(self._counts):
+                count -= self._counts[2*i + 2]
+            return (rank, count)
+
 
 def fast_concordance_index(event_times, predicted_event_times, event_observed):
     """n * log(n) concordance index algorithm prototype."""
@@ -54,7 +146,7 @@ def fast_concordance_index(event_times, predicted_event_times, event_observed):
 
     censored_ix = 0
     died_ix = 0
-    times_to_compare = blist.sortedlist()
+    times_to_compare = _BTree(np.unique(died_pred))
     num_pairs = 0
     num_correct = 0
     num_tied = 0
@@ -75,8 +167,9 @@ def fast_concordance_index(event_times, predicted_event_times, event_observed):
         correct = 0
         tied = 0
         for i in xrange(first_ix, next_ix):
-            correct += times_to_compare.bisect_left(pred[i])
-            tied += times_to_compare.count(pred[i])
+            rank, count = times_to_compare.rank(pred[i])
+            correct += rank
+            tied += count
 
         return (pairs, correct, tied, next_ix)
 
@@ -95,7 +188,8 @@ def fast_concordance_index(event_times, predicted_event_times, event_observed):
         elif has_more_died and (not has_more_censored
                                 or died_truth[died_ix] <= censored_truth[censored_ix]):
             pairs, correct, tied, next_ix = handle_pairs(died_truth, died_pred, died_ix)
-            times_to_compare.update(died_pred[died_ix:next_ix])
+            for pred in died_pred[died_ix:next_ix]:
+                times_to_compare.insert(pred)
             died_ix = next_ix
         else:
             assert not (has_more_died or has_more_censored)
@@ -116,8 +210,8 @@ def concordance_index(event_times, predicted_event_times, event_observed):
     def valid_comparison(time_a, time_b, event_a, event_b):
         """True if times can be compared."""
         if time_a == time_b:
-            # Ties are not informative
-            return False
+            # Ties are only informative if exactly one event happened
+            return event_a != event_b
         elif event_a and event_b:
             return True
         elif event_a and time_a < time_b:
@@ -131,12 +225,10 @@ def concordance_index(event_times, predicted_event_times, event_observed):
         if pred_a == pred_b:
             # Same as random
             return 0.5
-        elif time_a < time_b and pred_a < pred_b:
-            return 1.0
-        elif time_b < time_a and pred_b < pred_a:
-            return 1.0
-        else:
-            return 0.0
+        elif pred_a < pred_b:
+            return (time_a < time_b) or (time_a == time_b and event_a and not event_b)
+        else: # pred_a > pred_b
+            return (time_a > time_b) or (time_a == time_b and not event_a and event_b)
 
     paircount = 0.0
     csum = 0.0

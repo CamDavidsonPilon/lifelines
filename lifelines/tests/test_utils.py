@@ -12,6 +12,7 @@ from ..datasets import (load_regression_dataset, load_larynx,
                         load_waltons, load_rossi)
 from .._utils.cindex import concordance_index as slow_cindex
 from .._utils.cindex import fast_concordance_index as fast_py_cindex
+from .._utils.cindex import _BTree as BTree
 from lifelines import utils
 try:
     from .._utils._cindex import concordance_index as fast_cindex
@@ -351,6 +352,31 @@ def test_survival_table_from_events_raises_value_error_if_too_early_births():
         utils.survival_table_from_events(T, C, min_obs)
 
 
+def test_btree():
+    t = BTree(np.arange(10))
+    for i in xrange(10):
+        assert t.rank(i) == (0, 0)
+
+    assert len(t) == 0
+    t.insert(5)
+    t.insert(6)
+    t.insert(6)
+    t.insert(0)
+    t.insert(9)
+    assert len(t) == 5
+
+    assert t.rank(0) == (0, 1)
+    assert t.rank(0.5) == (1, 0)
+    assert t.rank(4.5) == (1, 0)
+    assert t.rank(5) == (1, 1)
+    assert t.rank(5.5) == (2, 0)
+    assert t.rank(6) == (2, 2)
+    assert t.rank(6.5) == (4, 0)
+    assert t.rank(8.5) == (4, 0)
+    assert t.rank(9) == (4, 1)
+    assert t.rank(9.5) == (5, 0)
+
+
 @pytest.mark.skipif(fast_cindex is None, reason='extensions not compiled')
 def test_concordance_index_py_is_same_as_native():
     size = 100
@@ -400,4 +426,4 @@ def test_fast_concordance_index_is_same_as_native():
 
     # This fails right now, and BOTH values disagree with the R output.
     # TODO: investigate?
-    assert fast_py_cindex(T, P, E) == fast_cindex(T, P, E)
+    assert fast_py_cindex(T, P, E) == slow_cindex(T, P, E)
