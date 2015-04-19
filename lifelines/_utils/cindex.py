@@ -41,7 +41,7 @@ class _BTree(object):
             tree[values_len - 1:2 * values_len - 1] = values[values_start::values_space]
             values_start += int(values_space / 2)
             values_space *= 2
-            values_len /= 2
+            values_len = int(values_len / 2)
         return tree
 
     def insert(self, value):
@@ -65,35 +65,37 @@ class _BTree(object):
 
     def rank(self, value):
         """Returns the rank and count of the value in the btree."""
-        return self._rank(value, 0)
-
-    def _rank(self, value, i):
-        if i >= len(self._tree):
-            return (0, 0)
-        cur = self._tree[i]
-        if value < cur:
-            return self._rank(value, 2*i + 1)
-        elif value > cur:
-            # `value` is greater than everything in the left subtree, and the
-            # current node
-            rank_right, count = self._rank(value, 2*i + 2)
-            num_left_plus_cur = self._counts[i]
-            if 2*i + 2 < len(self._counts):
-                # subtract off right child's count, if it exists
-                num_left_plus_cur -= self._counts[2*i + 2]
-            return (rank_right + num_left_plus_cur, count)
-        else: # cur == value
-            # cur is greater than the entire left subtree
-            if 2*i + 1 < len(self._counts):
-                rank = self._counts[2*i + 1]
-            else:
-                rank = 0
-            count = self._counts[i] - rank
-            # subtract off the right subtree, if it exists
-            if 2*i + 2 < len(self._counts):
-                count -= self._counts[2*i + 2]
-            return (rank, count)
-
+        i = 0
+        n = len(self._tree)
+        rank = 0
+        count = 0
+        while i < n:
+            cur = self._tree[i]
+            if value < cur:
+                i = 2 * i + 1
+                continue
+            elif value > cur:
+                rank += self._counts[i]
+                # subtract off the right tree if exists
+                nexti = 2 * i + 2
+                if nexti < n:
+                    rank -= self._counts[nexti]
+                    i = nexti
+                    continue
+                else:
+                    return (rank, count)
+            else: # value == cur
+                count = self._counts[i]
+                lefti = 2 * i + 1
+                if lefti < n:
+                    nleft = self._counts[lefti]
+                    count -= nleft
+                    rank += nleft
+                    righti = lefti + 1
+                    if righti < n:
+                        count -= self._counts[righti]
+                return (rank, count)
+        return (rank, count)
 
 def fast_concordance_index(event_times, predicted_event_times, event_observed):
     """n * log(n) concordance index algorithm prototype."""
