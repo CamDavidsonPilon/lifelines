@@ -10,15 +10,10 @@ from numpy.random import randn
 from ..estimation import CoxPHFitter
 from ..datasets import (load_regression_dataset, load_larynx,
                         load_waltons, load_rossi)
-from .._utils.cindex import concordance_index as slow_cindex
-from .._utils.cindex import fast_concordance_index as fast_py_cindex
-from .._utils.cindex import _BTree as BTree
 from lifelines import utils
-try:
-    from .._utils._cindex import concordance_index as fast_cindex
-except ImportError:
-    # If code has not been compiled.
-    fast_cindex = None
+from lifelines.utils import _concordance_index as fast_cindex
+from lifelines.utils import _naive_concordance_index as slow_cindex
+from lifelines.utils import _BTree as BTree
 
 
 def test_ridge_regression_with_penalty_is_less_than_without_penalty():
@@ -354,7 +349,7 @@ def test_survival_table_from_events_raises_value_error_if_too_early_births():
 
 def test_btree():
     t = BTree(np.arange(10))
-    for i in xrange(10):
+    for i in range(10):
         assert t.rank(i) == (0, 0)
 
     assert len(t) == 0
@@ -376,9 +371,11 @@ def test_btree():
     assert t.rank(9) == (4, 1)
     assert t.rank(9.5) == (5, 0)
 
+    for i in range(1, 32):
+        BTree(np.arange(i))
 
-@pytest.mark.skipif(fast_cindex is None, reason='extensions not compiled')
-def test_concordance_index_py_is_same_as_native():
+
+def test_concordance_index_fast_is_same_as_slow():
     size = 100
     T = np.random.normal(size=size)
     P = np.random.normal(size=size)
@@ -400,30 +397,3 @@ def test_concordance_index_py_is_same_as_native():
     E = cp.event_observed.values.ravel()
 
     assert slow_cindex(T, P, E) == fast_cindex(T, P, E)
-
-
-@pytest.mark.skipif(fast_cindex is None, reason='extensions not compiled')
-def test_fast_concordance_index_is_same_as_native():
-    size = 100
-    T = np.random.normal(size=size)
-    P = np.random.normal(size=size)
-    C = np.random.choice([0, 1], size=size)
-    Z = np.zeros_like(T)
-
-    # Hard to imagine these failing
-    assert fast_py_cindex(T, Z, C) == fast_cindex(T, Z, C)
-    assert fast_py_cindex(T, T, C) == fast_cindex(T, T, C)
-    # This is the real test though
-    assert fast_py_cindex(T, P, C) == fast_cindex(T, P, C)
-
-    cp = CoxPHFitter()
-    df = load_rossi()
-    cp.fit(df, duration_col='week', event_col='arrest')
-
-    T = cp.durations.values.ravel()
-    P = -cp.predict_partial_hazard(cp.data).values.ravel()
-    E = cp.event_observed.values.ravel()
-
-    # This fails right now, and BOTH values disagree with the R output.
-    # TODO: investigate?
-    assert fast_py_cindex(T, P, E) == slow_cindex(T, P, E)
