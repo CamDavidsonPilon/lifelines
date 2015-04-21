@@ -374,6 +374,9 @@ def test_btree():
     for i in range(1, 32):
         BTree(np.arange(i))
 
+    with pytest.raises(ValueError):
+        # This has to go last since it screws up the counts
+        t.insert(5.5)
 
 def test_concordance_index_fast_is_same_as_slow():
     size = 100
