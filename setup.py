@@ -33,10 +33,10 @@ setup(
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering",
         ],
-    requires=[
+    install_requires=[
         "numpy",
         "scipy",
-        "pandas(>=0.14)",
+        "pandas>=0.14",
     ],
     package_data={
         "lifelines": [
