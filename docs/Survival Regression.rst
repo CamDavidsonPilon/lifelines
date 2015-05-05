@@ -407,7 +407,7 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
     cf = CoxPHFitter()
     cf.fit(rossi_dataset, 'week', event_col='arrest')
 
-    cf.print_summary()
+    cf.print_summary()  # access the results using cf.summary
 
     """
     n=432, number of events=114
@@ -427,6 +427,32 @@ This example data is from the paper `here <http://cran.r-project.org/doc/contrib
     """
 
 To access the coefficients and the baseline hazard, you can use ``cf.hazards_`` and ``cf.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_hazard(X)``, ``.predict_survival_function(X)``, etc. 
+
+Stratification
+################
+
+Sometimes a covartiate may not obey the proportional hazard assumption. In this case, we can allow a factor to be adjusted for without estimating its effect. To specify catagorical variables to be used in stratification, we specify them in the call to ``fit``:
+
+.. code:: python
+
+    cf.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
+
+    cf.print_summary()  # access the results using cf.summary
+    """
+    n=432, number of events=114
+
+               coef  exp(coef)  se(coef)          z         p  lower 0.95  upper 0.95
+    fin  -1.890e-01  8.278e-01 9.576e-02 -1.973e+00 4.848e-02  -3.767e-01  -1.218e-03   *
+    age  -3.503e-01  7.045e-01 1.343e-01 -2.608e+00 9.106e-03  -6.137e-01  -8.700e-02  **
+    wexp -7.107e-02  9.314e-01 1.053e-01 -6.746e-01 4.999e-01  -2.776e-01   1.355e-01
+    mar  -1.452e-01  8.649e-01 1.255e-01 -1.157e+00 2.473e-01  -3.911e-01   1.008e-01
+    paro -4.079e-02  9.600e-01 9.524e-02 -4.283e-01 6.684e-01  -2.275e-01   1.459e-01
+    prio  2.661e-01  1.305e+00 8.319e-02  3.198e+00 1.381e-03   1.030e-01   4.292e-01  **
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    Concordance = 0.638
+    """
 
 Model Selection in Survival Regression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

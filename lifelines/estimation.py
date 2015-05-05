@@ -995,6 +995,7 @@ class CoxPHFitter(BaseFitter):
         self.tie_method = tie_method
         assert penalizer >= 0, "penalizer must be >= 0"
         self.penalizer = penalizer
+        self.strata = None
 
     def _get_efron_values(self, X, beta, T, E, include_likelihood=False):
         """
@@ -1038,7 +1039,7 @@ class CoxPHFitter(BaseFitter):
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
             phi_x_i = dot(phi_i, xi)
-            phi_x_x_i = np.dot(xi.T, xi) * phi_i
+            phi_x_x_i = dot(xi.T, xi) * phi_i
 
             # Calculate sums of Risk set
             risk_phi += phi_i
@@ -1085,12 +1086,12 @@ class CoxPHFitter(BaseFitter):
                 hessian -= (a1 - a2)
 
                 if include_likelihood:
-                    log_lik -= np.log(denom)
+                    log_lik -= np.log(denom).ravel()[0]
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
             if include_likelihood:
-                log_lik += dot(x_tie_sum, beta).ravel()
+                log_lik += dot(x_tie_sum, beta).ravel()[0]
 
             # reset tie values
             tie_count = 0
@@ -1100,7 +1101,7 @@ class CoxPHFitter(BaseFitter):
             tie_phi_x_x = np.zeros((d, d))
 
         if include_likelihood:
-            return hessian, gradient, log_lik.ravel()[0]
+            return hessian, gradient, log_lik
         else:
             return hessian, gradient
 
@@ -1112,9 +1113,9 @@ class CoxPHFitter(BaseFitter):
         Note that data is assumed to be sorted on T!
 
         Parameters:
-            X: (n,d) numpy array of observations.
-            T: (n) numpy array representing observed durations.
-            E: (n) numpy array representing death events.
+            X: (n,d) Pandas DataFrame of observations.
+            T: (n) Pandas Series representing observed durations.
+            E: (n) Pandas Series representing death events.
             initial_beta: (1,d) numpy array of initial starting point for
                           NR algorithm. Default 0.
             step_size: float > 0.001 to determine a starting step size in NR algorithm.
@@ -1127,11 +1128,6 @@ class CoxPHFitter(BaseFitter):
         """
         assert precision <= 1., "precision must be less than or equal to 1."
         n, d = X.shape
-
-        # Enforce numpy arrays
-        X = np.array(X)
-        T = np.array(T)
-        E = np.array(E)
 
         # Want as bools
         E = E.astype(bool)
@@ -1154,14 +1150,26 @@ class CoxPHFitter(BaseFitter):
         # 50 iterations steps with N-R is a lot.
         # Expected convergence is ~10 steps
         while converging and i < 50 and step_size > 0.001:
-            output = get_gradients(X, beta, T, E,
-                                   include_likelihood=include_likelihood)
-            # Do not override hessian and gradient in case of garbage
-            h, g = output[:2]
+
+            if self.strata is None:
+                output = get_gradients(X.values, beta, T.values, E.values, include_likelihood=include_likelihood)
+                h, g = output[:2]
+            else:
+                g = np.zeros_like(beta).T
+                h = np.zeros((beta.shape[0], beta.shape[0]))
+                ll = 0
+                for strata in np.unique(X.index):
+                    stratified_X, stratified_T, stratified_E = X.loc[strata], T.loc[strata], E.loc[strata]
+                    output = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, include_likelihood=include_likelihood)
+                    _h, _g = output[:2]
+                    g += _g
+                    h += _h
+                    ll += output[2] if include_likelihood else 0
+
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
                 g -= self.penalizer * beta.T
-                h.flat[::d+1] -= self.penalizer
+                h.flat[::d + 1] -= self.penalizer
 
             delta = solve(-h, step_size * g.T)
             if np.any(np.isnan(delta)):
@@ -1185,13 +1193,14 @@ class CoxPHFitter(BaseFitter):
         self._hessian_ = hessian
         self._score_ = gradient
         if include_likelihood:
-            self._log_likelihood = output[2]
+            self._log_likelihood = output[-1] if self.strata is None else ll
         if show_progress:
             print("Convergence completed after %d iterations." % (i))
         return beta
 
     def fit(self, df, duration_col, event_col=None,
-            show_progress=False, initial_beta=None, include_likelihood=False):
+            show_progress=False, initial_beta=None, include_likelihood=False,
+            strata=None):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -1211,7 +1220,10 @@ class CoxPHFitter(BaseFitter):
              algorithm. Default is the zero vector.
           include_likelihood: saves the final log-likelihood to the CoxPHFitter under
              the property _log_likelihood.
-
+          strata: specify a list of columns to use in stratification. This is useful if a
+             catagorical covariate does not obey the proportional hazard assumption. This
+             is used similar to the `strata` expression in R.
+             See http://courses.washington.edu/b515/l17.pdf.
 
         Returns:
             self, with additional properties: hazards_
@@ -1220,6 +1232,11 @@ class CoxPHFitter(BaseFitter):
         df = df.copy()
         # Sort on time
         df.sort(duration_col, inplace=True)
+
+        # remove strata coefs
+        self.strata = strata
+        if strata is not None:
+            df = df.set_index(strata)
 
         # Extract time and event
         T = df[duration_col]
@@ -1231,7 +1248,7 @@ class CoxPHFitter(BaseFitter):
             del df[event_col]
 
         # Store original non-normalized data
-        self.data = df
+        self.data = df if self.strata is None else df.reset_index()
 
         if self.normalize:
             # Need to normalize future inputs as well

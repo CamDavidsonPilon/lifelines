@@ -88,10 +88,11 @@ class TestBaseFitter():
         assert bf.__repr__() == '<lifelines.BaseFitter>'
 
     def test_repr_with_fitter(self, sample_lifetimes):
-        T,C = sample_lifetimes
+        T, C = sample_lifetimes
         bf = BaseFitter()
         bf.event_observed = C
-        assert bf.__repr__() == '<lifelines.BaseFitter: fitted with %d observations, %d censored>'%(C.shape[0], C.shape[0] - C.sum())
+        assert bf.__repr__() == '<lifelines.BaseFitter: fitted with %d observations, %d censored>' % (C.shape[0], C.shape[0] - C.sum())
+
 
 class TestUnivariateFitters():
 
@@ -673,7 +674,7 @@ Concordance = 0.640""".strip().split()
 
     def test_efron_newtons_method(self, data_nus):
         newton = CoxPHFitter()._newton_rhaphson
-        X, T, E = data_nus['x'][:, None], data_nus['t'], data_nus['E']
+        X, T, E = data_nus[['x']], data_nus['t'], data_nus['E']
         assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus):
@@ -884,6 +885,27 @@ Concordance = 0.640""".strip().split()
         expected = ['fin', 'age', 'race', 'wexp', 'mar', 'paro', 'prio']
         cp.fit(rossi, event_col='week', duration_col='arrest')
         assert list(cp.hazards_.columns) == expected
+
+    def test_strata_removes_variable_from_summary_output(self):
+        df = load_rossi()
+        cp = CoxPHFitter()
+        cp.fit(df, 'week', 'arrest', strata=['race'])
+        assert 'race' not in cp.summary.index
+
+    def test_strata_against_r_output(self):
+        """
+        > r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
+            paro, mar, wexp) + prio, data = rossi)
+        > r
+        > r$loglik
+        """
+
+        df = load_rossi()
+        cp = CoxPHFitter(normalize=False)
+        cp.fit(df, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'], include_likelihood=True)
+
+        npt.assert_almost_equal(cp.summary['coef'].values, [-0.335, -0.059, 0.100], decimal=3)
+        assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
 
 
 class TestAalenAdditiveFitter():
