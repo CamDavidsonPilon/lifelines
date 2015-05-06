@@ -1442,6 +1442,37 @@ class CoxPHFitter(BaseFitter):
         return baseline_hazard_
 
 
+class CLogit(BaseFitter):
+
+    """
+    This class implements fitting conditional logistic regression:
+
+    Parameters:
+      alpha: the level in the confidence intervals.
+      normalize: substract the mean and divide by standard deviation of each covariate
+        in the input data before performing any fitting.
+      penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves
+        stability of the estimates and controls for high correlation between covariates.
+        For example, this shrinks the absolute value of beta_i. Recommended, even if a small value.
+        The penalty is 1/2 * penalizer * ||beta||^2.
+    """
+
+    def __init__(self, alpha=0.95, normalize=True, penalizer=0.0):
+        self.alpha = alpha
+        self.normalize = normalize
+        assert penalizer >= 0, "penalizer must be >= 0"
+        self.penalizer = penalizer
+
+    def fit(self, X, Y, strata=None):
+        df = pd.DataFrame(X)
+        df['E'] = Y 
+        df['T'] = 1.
+        cp = CoxPHFitter(alpha=self.alpha, penalizer=self.penalizer, normalize=self.normalize)
+        cp.fit(df, 'T', 'E', strata=strata)
+        self.summary = cp.summary
+        self.print_summary = cp.print_summary
+        
+
 def get_index(X):
     if isinstance(X, pd.DataFrame):
         index = list(X.index)
