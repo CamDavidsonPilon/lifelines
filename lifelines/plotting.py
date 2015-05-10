@@ -360,7 +360,7 @@ def plot_estimate(self, estimate):
         if ci_show:
             if ci_force_lines:
                 get_loc(confidence_interval_).plot(linestyle="-", linewidth=1,
-                                                   c=kwargs['color'], legend=True,
+                                                   color=[kwargs['color']], legend=True,
                                                    drawstyle=kwargs.get('drawstyle', 'default'),
                                                    ax=kwargs['ax'], alpha=0.6)
             else:

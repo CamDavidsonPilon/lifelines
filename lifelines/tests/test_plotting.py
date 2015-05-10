@@ -201,5 +201,6 @@ class TestPlotting():
         kmf = KaplanMeierFitter()
         kmf.fit(data1, label='test label 1')
         ax = kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
+        self.plt.title('test_flat_style_no_censor')
         self.plt.show()
         return
