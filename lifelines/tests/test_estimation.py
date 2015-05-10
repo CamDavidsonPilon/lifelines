@@ -223,6 +223,12 @@ class TestUnivariateFitters():
 
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
+    def test_valueerror_is_thrown_if_alpha_out_of_bounds(self, univariate_fitters):
+        T2 = np.arange(1, 50)
+        for fitter in univariate_fitters:
+            with pytest.raises(ValueError):
+                f = fitter(alpha=95)
+
 
 class TestWeibullFitter():
 

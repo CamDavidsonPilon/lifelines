@@ -2,6 +2,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import numpy.testing as npt
+import pytest
 
 from .. import statistics as stats
 from ..datasets import load_waltons, load_g3
@@ -191,3 +192,10 @@ def test_StatisticalResult_class():
     assert hasattr(sr, 'kw')
     assert getattr(sr, 'kw') == 'some_value'
     assert 'some_value' in sr.__unicode__()
+
+
+def test_valueerror_is_raised_if_alpha_out_of_bounds():
+    data1 = np.random.exponential(5, size=(20, 1))
+    data2 = np.random.exponential(1, size=(20, 1))
+    with pytest.raises(ValueError):
+        stats.logrank_test(data1, data2, alpha=95)

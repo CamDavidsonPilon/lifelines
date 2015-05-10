@@ -125,6 +125,9 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
       results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
 
     """
+    if not (0 < alpha <= 1.):
+        raise ValueError('alpha parameter must be between 0 and 1.')
+
     event_durations, groups = np.asarray(event_durations), np.asarray(groups)
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))

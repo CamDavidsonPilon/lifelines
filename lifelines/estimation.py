@@ -19,6 +19,8 @@ from lifelines.utils import concordance_index
 class BaseFitter(object):
 
     def __init__(self, alpha=0.95):
+        if not (0 < alpha <= 1.):
+            raise ValueError('alpha parameter must be between 0 and 1.')
         self.alpha = alpha
 
     def __repr__(self):
@@ -283,6 +285,8 @@ class NelsonAalenFitter(BaseFitter):
     """
 
     def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
+        if not (0 < alpha <= 1.):
+            raise ValueError('alpha parameter must be between 0 and 1.')
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
 
@@ -592,11 +596,15 @@ class AalenAdditiveFitter(BaseFitter):
     """
 
     def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.5, smoothing_penalizer=0.):
+        if not (0 < alpha <= 1.):
+            raise ValueError('alpha parameter must be between 0 and 1.')
+        if coef_penalizer < 0 or smoothing_penalizer < 0:
+            raise ValueError("penalizer parameter must be >= 0.")
+
         self.fit_intercept = fit_intercept
         self.alpha = alpha
         self.coef_penalizer = coef_penalizer
         self.smoothing_penalizer = smoothing_penalizer
-        assert coef_penalizer >= 0 and smoothing_penalizer >= 0, "penalizer must be >= 0."
 
     def fit(self, dataframe, duration_col, event_col=None,
             timeline=None, id_col=None, show_progress=True):
@@ -988,12 +996,16 @@ class CoxPHFitter(BaseFitter):
     """
 
     def __init__(self, alpha=0.95, tie_method='Efron', normalize=True, penalizer=0.0):
-        self.alpha = alpha
-        self.normalize = normalize
+        if not (0 < alpha <= 1.):
+            raise ValueError('alpha parameter must be between 0 and 1.')
+        if penalizer < 0:
+            raise ValueError("penalizer parameter must be >= 0.")
         if tie_method != 'Efron':
             raise NotImplementedError("Only Efron is available atm.")
+
+        self.alpha = alpha
+        self.normalize = normalize
         self.tie_method = tie_method
-        assert penalizer >= 0, "penalizer must be >= 0"
         self.penalizer = penalizer
         self.strata = None
 
