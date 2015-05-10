@@ -378,6 +378,7 @@ def test_btree():
         # This has to go last since it screws up the counts
         t.insert(5.5)
 
+
 def test_concordance_index_fast_is_same_as_slow():
     size = 100
     T = np.random.normal(size=size)

@@ -32,9 +32,10 @@ def load_leukemia(**kwargs):
     """
     return load_dataset('anderson.csv', sep=" ", **kwargs)
 
+
 def load_canadian_senators(**kwargs):
     """
-    A history of Canadian senators in office. 
+    A history of Canadian senators in office.
 
     Size: (933,10)
     Example:
@@ -94,7 +95,7 @@ def load_kidney_transplant(**kwargs):
 def load_larynx(**kwargs):
     """
     Size: (89,6)
-    Example: 
+    Example:
             time  age  death  Stage II  Stage III  Stage IV
         0    0.6   77      1         0          0         0
         1    1.3   53      1         0          0         0
@@ -109,7 +110,7 @@ def load_larynx(**kwargs):
 def load_lung(**kwargs):
     """
     Size: (288,10)
-    Example: 
+    Example:
         inst            3
         time          306
         status          2
@@ -128,7 +129,7 @@ def load_lung(**kwargs):
 def load_panel_test(**kwargs):
     """
     Size: (28,5)
-    Example: 
+    Example:
            id  t  E  var1  var2
         0   1  1  0   0.0     1
         1   1  2  0   0.0     1
@@ -143,7 +144,7 @@ def load_panel_test(**kwargs):
 def load_psychiatric_patients(**kwargs):
     """
     Size: (26,4)
-    Example: 
+    Example:
            Age   T  C  sex
         0   51   1  1    2
         1   58   1  1    2
@@ -172,9 +173,9 @@ def load_static_test(**kwargs):
 
 
 def load_lcd(**kwargs):
-    """ 
+    """
     Size: (104,3)
-    Example: 
+    Example:
            C  T         group
         0  0  1  alluvial_fan
         1  0  1  alluvial_fan
@@ -188,9 +189,9 @@ def load_lcd(**kwargs):
 def load_waltons(**kwargs):
     """
     Genotypes and number of days survived in Drosophila . Since we work with flies, we don't need to worry about left-censoring. We know the birth date of all flies. We do have issues with accidentally killing some or if some escape. These would be right-censored as we do not actually observe their death due to "natural" causes.
-   
+
     Size: (163,3)
-    Example: 
+    Example:
             T  E    group
         0   6  1  miR-137
         1  13  1  miR-137
@@ -206,9 +207,9 @@ def load_rossi(**kwargs):
     This data set is originally from Rossi et al. (1980), and is used as an example in Allison (1995). The data pertain to 432 convicts who were released from Maryland state prisons in the 1970s and who were followed up for one year after release. Half the released convicts were assigned at random to an experimental treatment in which they were given financial aid; half did not receive aid.
 
     Rossi, P.H., R.A. Berk, and K.J. Lenihan (1980). Money, Work, and Crime:     Some Experimental Results. New York: Academic Press.     John Fox, Marilia Sa Carvalho (2012). The RcmdrPlugin.survival Package: Extending the R Commander Interface to Survival Analysis. Journal of Statistical Software, 49(7), 1-32.
-    
+
     Size: (432,9)
-    Example: 
+    Example:
         week      20
         arrest     1
         fin        0
@@ -224,10 +225,10 @@ def load_rossi(**kwargs):
 
 def load_regression_dataset(**kwargs):
     """
-    Artificial regression dataset 
+    Artificial regression dataset
 
     Size: (200,5)
-    Example: 
+    Example:
                var1      var2      var3          T  E
         0  0.595170  1.143472  1.571079  14.785479  1
         1  0.209325  0.184677  0.356980   7.336734  1
@@ -242,7 +243,7 @@ def load_g3(**kwargs):
     """
 
     Size: (17,7)
-    Example: 
+    Example:
         no.               1
         age              41
         sex          Female

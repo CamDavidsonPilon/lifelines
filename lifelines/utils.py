@@ -145,7 +145,7 @@ class _BTree(object):
 
         Assumes `values` is sorted ascending. Returns a list `t` of the same length in which t[i] >
         t[2i+1] and t[i] < t[2i+2] for all i."""
-        if len(values) == 1: # this case causes problems later
+        if len(values) == 1:  # this case causes problems later
             return values
         tree = np.empty_like(values)
         # Tree indices work as follows:
@@ -216,7 +216,7 @@ class _BTree(object):
                     continue
                 else:
                     return (rank, count)
-            else: # value == cur
+            else:  # value == cur
                 count = self._counts[i]
                 lefti = 2 * i + 1
                 if lefti < n:
@@ -228,6 +228,7 @@ class _BTree(object):
                         count -= self._counts[righti]
                 return (rank, count)
         return (rank, count)
+
 
 def _concordance_index(event_times, predicted_event_times, event_observed):
     """Find the concordance index in n * log(n) time.
@@ -366,7 +367,7 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
             return 0.5
         elif pred_a < pred_b:
             return (time_a < time_b) or (time_a == time_b and event_a and not event_b)
-        else: # pred_a > pred_b
+        else:  # pred_a > pred_b
             return (time_a > time_b) or (time_a == time_b and not event_a and event_b)
 
     paircount = 0.0
