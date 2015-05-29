@@ -14,7 +14,7 @@ from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter
 from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
-    load_lcd, load_panel_test, load_g3
+    load_lcd, load_panel_test, load_g3, load_holly_molly_polly
 from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
 from ..utils import concordance_index
 
