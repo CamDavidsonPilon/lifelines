@@ -1,0 +1,8 @@
+ ID Status Stratum Start(days) Stop(days) tx T
+0 M 1 1 0 100 1 100
+1 M 1 2 100 105 1 5
+2 H 1 1 0 30 0 30
+3 H 1 2 30 50 0 20
+4 P 1 1 0 20 0 20
+5 P 1 2 20 60 0 40
+6 P 1 3 60 85 0 25

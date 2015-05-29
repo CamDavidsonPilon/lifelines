@@ -898,6 +898,15 @@ Concordance = 0.640""".strip().split()
         cp.fit(df, 'week', 'arrest', strata=['race'])
         assert 'race' not in cp.summary.index
 
+    def test_strata_works_if_only_a_single_element_is_in_the_strata(self):
+        df = load_holly_molly_polly()
+        del df['Start(days)']
+        del df['Stop(days)']
+        del df['ID']
+        cp = CoxPHFitter()
+        cp.fit(df, 'T', 'Status', strata=['Stratum'])
+        assert True        
+
     def test_strata_against_r_output(self):
         """
         > r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
