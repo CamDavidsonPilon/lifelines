@@ -14,7 +14,7 @@ from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter
 from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
-    load_lcd, load_panel_test, load_g3
+    load_lcd, load_panel_test, load_g3, load_holly_molly_polly
 from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
 from ..utils import concordance_index
 
@@ -897,6 +897,15 @@ Concordance = 0.640""".strip().split()
         cp = CoxPHFitter()
         cp.fit(df, 'week', 'arrest', strata=['race'])
         assert 'race' not in cp.summary.index
+
+    def test_strata_works_if_only_a_single_element_is_in_the_strata(self):
+        df = load_holly_molly_polly()
+        del df['Start(days)']
+        del df['Stop(days)']
+        del df['ID']
+        cp = CoxPHFitter()
+        cp.fit(df, 'T', 'Status', strata=['Stratum'])
+        assert True        
 
     def test_strata_against_r_output(self):
         """

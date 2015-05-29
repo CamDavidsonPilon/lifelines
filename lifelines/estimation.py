@@ -1171,7 +1171,7 @@ class CoxPHFitter(BaseFitter):
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for strata in np.unique(X.index):
-                    stratified_X, stratified_T, stratified_E = X.loc[strata], T.loc[strata], E.loc[strata]
+                    stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
                     output = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, include_likelihood=include_likelihood)
                     _h, _g = output[:2]
                     g += _g
