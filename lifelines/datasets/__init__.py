@@ -17,6 +17,35 @@ def load_dataset(filename, **kwargs):
                                          'datasets/' + filename),
                        **kwargs)
 
+
+def load_recur(**kwargs):
+    """
+    From ftp://ftp.wiley.com/public/sci_tech_med/survival/, first published in 
+    "Applied Survival Analysis: Regression Modeling of Time to Event Data, Second Edition"
+
+    ID          Subject Identification        1 - 400
+    AGE         Age                           years
+    TREAT       Treatment Assignment          0 = New
+                                              1 = Old
+    TIME0       Day of Previous Episode       Days
+    TIME1       Day of New Episode            Days
+                  or censoring
+    CENSOR      Indicator for Soreness        1 = Episode Occurred
+                  Episode or Censoring            at TIME1
+                                              0 = Censored
+    EVENT       Soreness Episode Number       0 to at most 4
+
+    Size: (1296, 7)
+    Example:
+        ID,AGE,TREAT,TIME0,TIME1,CENSOR,EVENT
+        1,43,0,9,56,1,3
+        1,43,0,56,88,1,4
+        1,43,0,0,6,1,1
+        1,43,0,6,9,1,2
+
+    """
+    return load_dataset('recur.csv', **kwargs)
+
 def load_holly_molly_polly(**kwargs):
     """
     From https://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_10.pdf
@@ -32,7 +61,7 @@ def load_holly_molly_polly(**kwargs):
      P 1 3 60 85 0 25
 
     """
-    return load_dataset('holly_molly_polly.tsv', sep="\s")
+    return load_dataset('holly_molly_polly.tsv', sep="\s", **kwargs)
 
 
 def load_leukemia(**kwargs):
