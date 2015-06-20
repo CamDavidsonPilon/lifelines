@@ -522,14 +522,14 @@ class TestRegressionFitters():
 
         aaf = AalenAdditiveFitter()
         aaf.fit(X, 'T', event_col='E')
-        assert_series_equal(aaf.event_observed.sort_index(), X['E'].astype(bool))
+        assert_series_equal(aaf.event_observed.sort_index(), X['E'].astype(bool), check_names=False)
 
         aaf.fit(X, 'T')
         npt.assert_array_equal(aaf.event_observed.values, np.ones(X.shape[0]))
 
         cph = CoxPHFitter()
         cph.fit(X, 'T', event_col='E')
-        assert_series_equal(cph.event_observed.sort_index(), X['E'].astype(bool))
+        assert_series_equal(cph.event_observed.sort_index(), X['E'].astype(bool), check_names=False)
 
         cph.fit(X, 'T')
         npt.assert_array_equal(cph.event_observed.values, np.ones(X.shape[0]))
