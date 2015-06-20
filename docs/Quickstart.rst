@@ -94,7 +94,7 @@ Similar functionality exists for the ``NelsonAalenFitter``:
 
 but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` is. 
 
-.. note:: Similar to Scikit-Learn, all statistically estimated quanities append an underscore to the property name. 
+.. note:: Similar to Scikit-Learn, all statistically estimated quantities append an underscore to the property name. 
 
 Getting Data in The Right Format
 ---------------------------------

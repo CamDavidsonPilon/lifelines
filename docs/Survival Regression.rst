@@ -6,7 +6,7 @@ Survival Regression
 =====================================
 
 Often we have additional data aside from the durations, and if
-applicable any censorships that occured. In the regime dataset, we have
+applicable any censorships that occurred. In the regime dataset, we have
 the type of government the political leader was part of, the country
 they were head of, and the year they were elected. Can we use this data
 in survival analysis?
@@ -18,7 +18,7 @@ logic in the first part of this tutorial, we cannot use traditional
 methods like linear regression.
 
 There are two popular competing techniques in survival regression: Cox's
-model and Aalen's additive model. Both models attemps to model the
+model and Aalen's additive model. Both models attempt to represent the
 hazard rate :math:`\lambda(t)`. In Cox's model, the relationship is
 defined:
 
@@ -36,7 +36,7 @@ Aalen's Additive model
 
 The estimator to fit unknown coefficients in Aalen's additive model is
 located in ``estimators`` under ``AalenAdditiveFitter``. For this
-exercise, we will use the regime dataset and include the catagorical
+exercise, we will use the regime dataset and include the categorical
 variables ``un_continent_name`` (eg: Asia, North America,...), the
 ``regime`` type (eg: monarchy, civilan,...) and the year the regime
 started in, ``start_year``.
@@ -157,7 +157,7 @@ above). This is important to keep in mind when analzying the output.
 
 
 I'm using the lovely library ``patsy`` <https://github.com/pydata/patsy>`__ here to create a
-covaritate matrix from my original dataframe.
+covariance matrix from my original dataframe.
 
 .. code:: python
 
@@ -189,7 +189,7 @@ covaritate matrix from my original dataframe.
 
 
 Below we create our Fitter class. Since we did not supply an intercept
-column in our patsy we have included the keyword ``fit_intercept=True``
+column in our matrix we have included the keyword ``fit_intercept=True``
 (``True`` by default) which will append the column of ones to our
 matrix. (Sidenote: the intercept term, :math:`b_0(t)` in survival
 regression is often referred to as the *baseline* hazard.)
@@ -206,7 +206,7 @@ the estimates still appear to be too unstable, try increasing it.
     aaf = AalenAdditiveFitter(coef_penalizer=1.0, fit_intercept=True)
 
 Like the API syntax above, an instance of ``AalenAdditiveFitter``
-includes a ``fit`` method that performs the inference on the coefficients. This method accepts a pandas DataFrame: each row is an individual and columns are the covarites and 
+includes a ``fit`` method that performs the inference on the coefficients. This method accepts a pandas DataFrame: each row is an individual and columns are the covariates and 
 two special columns: a *duration* column and a boolean *event occured* column (where event occured refers to the event of interest - expulsion from government in this case)
 
 
@@ -431,7 +431,7 @@ To access the coefficients and the baseline hazard, you can use ``cf.hazards_`` 
 Stratification
 ################
 
-Sometimes a covartiate may not obey the proportional hazard assumption. In this case, we can allow a factor to be adjusted for without estimating its effect. To specify catagorical variables to be used in stratification, we specify them in the call to ``fit``:
+Sometimes a covariate may not obey the proportional hazard assumption. In this case, we can allow a factor to be adjusted for without estimating its effect. To specify categorical variables to be used in stratification, we specify them in the call to ``fit``:
 
 .. code:: python
 

@@ -405,7 +405,7 @@ respectively. For example:
 The raw data is not always available in this format -- *lifelines*
 includes some helper functions to transform data formats to *lifelines*
 format. These are located in the ``lifelines.utils`` sublibrary. For
-example, the function ``datetimes_to_durations`` accepts an arrary or
+example, the function ``datetimes_to_durations`` accepts an array or
 Pandas object of start times/dates, and an array or Pandas objects of
 end times/dates (or ``None`` if not observed):
 
@@ -432,8 +432,8 @@ Estimating hazard rates using Nelson-Aalen
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The survival curve is a great way to summarize and visualize the
-lifetime data, it is not the only way. If we are curious about the hazard function :math:`\lambda(t)` of a
-population, we unfortunatly cannot transform the Kaplan Meier estimate
+lifetime data, however it is not the only way. If we are curious about the hazard function :math:`\lambda(t)` of a
+population, we unfortunately cannot transform the Kaplan Meier estimate
 -- statistics doesn't work quite that well. Fortunately, there is a
 proper estimator of the *cumulative* hazard function:
 
@@ -489,7 +489,7 @@ a DataFrame:
 
 The cumulative hazard has less immediate understanding than the survival
 curve, but the hazard curve is the basis of more advanced techniques in
-survival anaylsis. Recall that we are estimating *cumulative hazard
+survival analysis. Recall that we are estimating *cumulative hazard
 curve*, :math:`\Lambda(t)`. (Why? The sum of estimates is much more
 stable than the point-wise estimates.) Thus we know the *rate of change*
 of this curve is an estimate of the hazard function.
@@ -533,7 +533,7 @@ out the differences of the cumulative hazard curve) , and this requires
 us to specify a bandwidth parameter that controls the amount of
 smoothing. This functionality is provided in the ``smoothed_hazard_``
 and ``hazard_confidence_intervals_`` methods. (Why methods? They require
-an arguement representing the bandwidth).
+an argument representing the bandwidth).
 
 There is also a ``plot_hazard`` function (that also requires a
 ``bandwidth`` keyword) that will plot the estimate plus the confidence
@@ -584,8 +584,8 @@ Left Censored Data
 
 We've mainly been focusing on *right-censorship*, which describes cases where we do not observe the death event.
 This situation is the most common one. Alternatively, there are situations where we do not observe the *birth* event
-occuring. Consider the case where a doctor sees a delayed onset of symptoms of an underlying disease. The doctor
-is unsure *when* the disease was contracted (birth), but know it was before the discovery. 
+occurring. Consider the case where a doctor sees a delayed onset of symptoms of an underlying disease. The doctor
+is unsure *when* the disease was contracted (birth), but knows it was before the discovery. 
 
 Another situation where we have left censored data is when measurements have only an upperbound, that is, the measurements
 instruments could only detect the measurement was *less* than some upperbound.
@@ -604,7 +604,7 @@ instruments could only detect the measurement was *less* than some upperbound.
     kmf.fit(T,C, left_censorship=True)  
 
 Instead of producing a survival function, left-censored data is more interested in the cumulative density function
-of time to birth. This is available as the ``cumulative_density_`` property aftering fitting the data.
+of time to birth. This is available as the ``cumulative_density_`` property after fitting the data.
 
 .. code:: python
     
