@@ -18,7 +18,7 @@ population may be a nation's population (for actuaries), or a population
 sticken by a disease (in the medical professional's case).
 Traditionally, sort of a morbid subject.
 
-The anaylsis can be further applied to not just traditional *births and
+The analysis can be further applied to not just traditional *births and
 deaths*, but any duration. Medical professional might be interested in
 the *time between childbirths*, where a birth in this case is the event
 of having a child , and a death is becoming pregnant again! (obviously,
@@ -89,7 +89,7 @@ situation.
 The red lines denote the lifespan of individuals where the death event
 has been observed, and the blue lines denote the lifespan of the
 right-censored individuals (deaths have not been observed). If we are
-asked to estimate the average lifetime of our population, and we naivly
+asked to estimate the average lifetime of our population, and we naively
 decided to *not* included the right-censored individuals, it is clear
 that we would be serverly underestimating the true average lifespan.
 

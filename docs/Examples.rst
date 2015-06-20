@@ -341,10 +341,10 @@ Below is a way to get an example dataset from a relational database (this may va
       (ended_at IS NOT NULL) AS "C" 
     FROM some_tables
 
-Explaination
+Explanation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each row is an `id`, a duration, and a boolean indicating whether the event occured or not. Recall that we denote a 
+Each row is an `id`, a duration, and a boolean indicating whether the event occurred or not. Recall that we denote a 
 "True" if the event *did* occur, that is, `ended_at` is filled in (we observed the `ended_at`). Ex: 
 
 ==================   ============   ============

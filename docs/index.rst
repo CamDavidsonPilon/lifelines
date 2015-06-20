@@ -15,7 +15,7 @@ Lifelines
 benefits does *lifelines* offer over other survival analysis
 implementations?
 
--  built ontop of Pandas
+-  built on top of Pandas
 -  internal plotting methods
 -  simple and intuitive API (*designed for humans*)
 -  only does survival analysis (No unnecessary features or second-class
