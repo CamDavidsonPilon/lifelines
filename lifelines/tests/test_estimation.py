@@ -905,7 +905,7 @@ Concordance = 0.640""".strip().split()
         del df['ID']
         cp = CoxPHFitter()
         cp.fit(df, 'T', 'Status', strata=['Stratum'])
-        assert True        
+        assert True
 
     def test_strata_against_r_output(self):
         """

@@ -20,7 +20,7 @@ def load_dataset(filename, **kwargs):
 
 def load_recur(**kwargs):
     """
-    From ftp://ftp.wiley.com/public/sci_tech_med/survival/, first published in 
+    From ftp://ftp.wiley.com/public/sci_tech_med/survival/, first published in
     "Applied Survival Analysis: Regression Modeling of Time to Event Data, Second Edition"
 
     ID          Subject Identification        1 - 400
@@ -46,10 +46,11 @@ def load_recur(**kwargs):
     """
     return load_dataset('recur.csv', **kwargs)
 
+
 def load_holly_molly_polly(**kwargs):
     """
     From https://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_10.pdf
-    Used as a toy example for CoxPH in recurrent SA. 
+    Used as a toy example for CoxPH in recurrent SA.
 
      ID Status Stratum Start(days) Stop(days) tx T
      M 1 1 0 100 1 100
