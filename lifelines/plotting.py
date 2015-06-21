@@ -265,7 +265,7 @@ def plot_regressions(self):
     return plot
 
 
-def plot_estimate(self, estimate):
+def plot_estimate(cls, estimate):
     doc_string = """"
         Plots a pretty version of the fitted %s.
 
@@ -327,13 +327,13 @@ def plot_estimate(self, estimate):
             if bandwidth is None:
                 raise ValueError('Must specify a bandwidth parameter in the ' +
                                  'call to plot_hazard.')
-            estimate_ = self.smoothed_hazard_(bandwidth)
+            estimate_ = cls.smoothed_hazard_(bandwidth)
             confidence_interval_ = \
-                self.smoothed_hazard_confidence_intervals_(bandwidth,
+                cls.smoothed_hazard_confidence_intervals_(bandwidth,
                                                            hazard_=estimate_.values[:, 0])
         else:
-            confidence_interval_ = getattr(self, 'confidence_interval_')
-            estimate_ = getattr(self, estimate)
+            confidence_interval_ = getattr(cls, 'confidence_interval_')
+            estimate_ = getattr(cls, estimate)
 
         # did user specify certain indexes or locations?
         if iloc == ix is None:
@@ -345,11 +345,11 @@ def plot_estimate(self, estimate):
         get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
 
         # plot censors
-        if show_censors and self.event_table['censored'].sum() > 0:
+        if show_censors and cls.event_table['censored'].sum() > 0:
             cs = {'marker': '+', 'ms': 12, 'mew': 1}
             cs.update(censor_styles)
-            times = get_loc(self.event_table.ix[(self.event_table['censored'] > 0)]).index.values.astype(float)
-            v = self.predict(times)
+            times = get_loc(cls.event_table.ix[(cls.event_table['censored'] > 0)]).index.values.astype(float)
+            v = cls.predict(times)
             kwargs['ax'].plot(times, v, linestyle='None',
                               color=kwargs['color'], **cs)
 
@@ -372,7 +372,7 @@ def plot_estimate(self, estimate):
                                    linewidth=1.0)
 
         if at_risk_counts:
-            add_at_risk_counts(self, ax=kwargs['ax'])
+            add_at_risk_counts(cls, ax=kwargs['ax'])
 
         return kwargs['ax']
     plot.__doc__ = doc_string

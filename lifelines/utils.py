@@ -854,3 +854,116 @@ def _smart_search(minimizing_function, n, *args):
     from scipy.optimize import fmin_powell
     x = np.ones(n)
     return fmin_powell(minimizing_function, x, args=args, disp=False)
+
+
+def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
+    """
+    Called to compute the Kaplan Meier and Nelson-Aalen estimates.
+
+    """
+    if reverse:
+        events = events.sort_index(ascending=False)
+        population = events['entrance'].sum() - events['removed'].cumsum().shift(1).fillna(0)
+        deaths = events['observed'].shift(1).fillna(0)
+        estimate_ = np.cumsum(_additive_f(population, deaths)).ffill().sort_index()
+        var_ = np.cumsum(_additive_var(population, deaths)).ffill().sort_index()
+    else:
+        deaths = events['observed']
+        population = events['entrance'].cumsum() - events['removed'].cumsum().shift(1).fillna(0)  # slowest line here.
+        estimate_ = np.cumsum(_additive_f(population, deaths))
+        var_ = np.cumsum(_additive_var(population, deaths))
+
+    timeline = sorted(timeline)
+    estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
+    var_ = var_.reindex(timeline, method='pad')
+    var_.index.name = 'timeline'
+    estimate_.index.name = 'timeline'
+
+    return estimate_, var_
+
+
+def preprocess_inputs(durations, event_observed, timeline, entry):
+
+    n = len(durations)
+    durations = np.asarray(durations).reshape((n,))
+
+    # set to all observed if event_observed is none
+    if event_observed is None:
+        event_observed = np.ones(n, dtype=int)
+    else:
+        event_observed = np.asarray(event_observed).reshape((n,)).copy().astype(int)
+
+    if entry is not None:
+        entry = np.asarray(entry).reshape((n,))
+
+    event_table = survival_table_from_events(durations, event_observed, entry)
+    if timeline is None:
+        timeline = event_table.index.values
+    else:
+        timeline = np.asarray(timeline)
+
+    return durations, event_observed, timeline.astype(float), entry, event_table
+
+
+def qth_survival_times(q, survival_functions):
+    """
+    This can be done much better.
+
+    Parameters:
+      q: a float between 0 and 1.
+      survival_functions: a (n,d) dataframe or numpy array.
+        If dataframe, will return index values (actual times)
+        If numpy array, will return indices.
+
+    Returns:
+      v: if d==1, returns a float, np.inf if infinity.
+         if d > 1, an DataFrame containing the first times the value was crossed.
+
+    """
+    q = pd.Series(q)
+    assert (q <= 1).all() and (0 <= q).all(), 'q must be between 0 and 1'
+    survival_functions = pd.DataFrame(survival_functions)
+    if survival_functions.shape[1] == 1 and q.shape == (1,):
+        return survival_functions.apply(lambda s: qth_survival_time(q[0], s)).ix[0]
+    else:
+        return pd.DataFrame({q_: survival_functions.apply(lambda s: qth_survival_time(q_, s)) for q_ in q})
+
+
+def qth_survival_time(q, survival_function):
+    """
+    Expects a Pandas series, returns the time when the qth probability is reached.
+    """
+    if survival_function.iloc[-1] > q:
+        return np.inf
+    v = (survival_function <= q).idxmax(0)
+    return v
+
+
+def median_survival_times(survival_functions):
+    return qth_survival_times(0.5, survival_functions)
+
+
+def _conditional_time_to_event_(fitter):
+    """
+    Return a DataFrame, with index equal to survival_function_, that estimates the median
+    duration remaining until the death event, given survival up until time t. For example, if an
+    individual exists until age 1, their expected life remaining *given they lived to time 1*
+    might be 9 years.
+
+    Returns:
+        conditional_time_to_: DataFrame, with index equal to survival_function_
+
+    """
+    age = fitter.survival_function_.index.values[:, None]
+    columns = ['%s - Conditional time remaining to event' % fitter._label]
+    return pd.DataFrame(qth_survival_times(fitter.survival_function_[fitter._label] * 0.5, fitter.survival_function_).T.sort(ascending=False).values,
+                        index=fitter.survival_function_.index,
+                        columns=columns) - age
+
+def _get_index(X):
+    if isinstance(X, pd.DataFrame):
+        index = list(X.index)
+    else:
+        # If it's not a dataframe, order is up to user
+        index = list(range(X.shape[0]))
+    return index
