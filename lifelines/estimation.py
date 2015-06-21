@@ -643,9 +643,6 @@ class AalenAdditiveFitter(BaseFitter):
             timeline: reformat the estimates index to a new timeline.
             id_col: (only for time-varying covariates) name of the id column in the dataframe
             progress_bar: include a fancy progress bar =)
-            max_unique_durations: memory can be an issue if there are too many
-              unique durations. If the max is surpassed, max_unique_durations bins
-              will be used.
 
         Returns:
           self, with new methods like plot, smoothed_hazards_ and properties like cumulative_hazards_
