@@ -1,10 +1,43 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+from __future__ import print_function, division
 import numpy as np
 import pandas as pd
 from numpy.linalg import solve, norm, inv
 from lifelines._base_fitter import UnivariateFitter
 from lifelines.utils import inv_normal_cdf
+
+def _negative_log_likelihood(lambda_rho, T, E):
+    if np.any(lambda_rho < 0):
+        return np.inf
+    lambda_, rho = lambda_rho
+    return - np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
+
+
+def _lambda_gradient(lambda_rho, T, E):
+    lambda_, rho = lambda_rho
+    return - rho * (E / lambda_ - (lambda_ * T) ** rho / lambda_).sum()
+
+
+def _rho_gradient(lambda_rho, T, E):
+    lambda_, rho = lambda_rho
+    return - E.sum() / rho - (np.log(lambda_ * T) * E).sum() + (np.log(lambda_ * T) * (lambda_ * T) ** rho).sum()
+    # - D/p - D Log[m t] + (m t)^p Log[m t]
+
+
+def _d_rho_d_rho(lambda_rho, T, E):
+    lambda_, rho = lambda_rho
+    return (1. / rho ** 2 * E + (np.log(lambda_ * T) ** 2 * (lambda_ * T) ** rho)).sum()
+    # (D/p^2) + (m t)^p Log[m t]^2
+
+
+def _d_lambda_d_lambda_(lambda_rho, T, E):
+    lambda_, rho = lambda_rho
+    return (rho / lambda_ ** 2) * (E + (rho - 1) * (lambda_ * T) ** rho).sum()
+
+
+def _d_rho_d_lambda_(lambda_rho, T, E):
+    lambda_, rho = lambda_rho
+    return (-1. / lambda_) * (E - (lambda_ * T) ** rho - rho * (lambda_ * T) ** rho * np.log(lambda_ * T)).sum()
 
 
 class WeibullFitter(UnivariateFitter):
@@ -89,8 +122,6 @@ class WeibullFitter(UnivariateFitter):
 
     def _newton_rhaphson(self, T, E, precision=1e-5):
         from lifelines.utils import _smart_search
-        from lifelines._univariate_weibull import _d_lambda_d_lambda_, _d_rho_d_lambda_,\
-            _d_rho_d_rho, _lambda_gradient, _rho_gradient, _negative_log_likelihood
 
         def jacobian_function(parameters, T, E):
             return np.array([
