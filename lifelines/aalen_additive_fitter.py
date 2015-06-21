@@ -2,13 +2,11 @@
 from __future__ import print_function
 import numpy as np
 import pandas as pd
-
-from numpy import dot, exp
 from numpy.linalg import LinAlgError
 from scipy.integrate import trapz
 from lifelines._base_fitter import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
-         ridge_regression as lr, qth_survival_times
+    ridge_regression as lr, qth_survival_times
 from lifelines.progress_bar import progress_bar
 from lifelines.plotting import plot_regressions
 
@@ -410,4 +408,3 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict(self, X):
         return self.predict_median(X)
-

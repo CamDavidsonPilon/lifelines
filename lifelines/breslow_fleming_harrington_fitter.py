@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import numpy as np
-import pandas as pd
 
 from lifelines._base_fitter import UnivariateFitter
 from lifelines.nelson_aalen_fitter import NelsonAalenFitter
-from lifelines.utils import preprocess_inputs, _additive_estimate, median_survival_times,\
-    inv_normal_cdf
+from lifelines.utils import median_survival_times
 
 
 class BreslowFlemingHarringtonFitter(UnivariateFitter):
@@ -69,4 +67,3 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         self.plot = self._plot_estimate("survival_function_")
         self.plot_survival_function = self.plot
         return self
-

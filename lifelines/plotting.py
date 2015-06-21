@@ -330,7 +330,7 @@ def plot_estimate(cls, estimate):
             estimate_ = cls.smoothed_hazard_(bandwidth)
             confidence_interval_ = \
                 cls.smoothed_hazard_confidence_intervals_(bandwidth,
-                                                           hazard_=estimate_.values[:, 0])
+                                                          hazard_=estimate_.values[:, 0])
         else:
             confidence_interval_ = getattr(cls, 'confidence_interval_')
             estimate_ = getattr(cls, estimate)

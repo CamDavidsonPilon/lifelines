@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 
 from lifelines._base_fitter import UnivariateFitter
-from lifelines.utils import preprocess_inputs, _additive_estimate, StatError, inv_normal_cdf,\
-        median_survival_times
+from lifelines.utils import _preprocess_inputs, _additive_estimate, StatError, inv_normal_cdf,\
+    median_survival_times
 
 
 class KaplanMeierFitter(UnivariateFitter):
@@ -28,7 +28,7 @@ class KaplanMeierFitter(UnivariateFitter):
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated (not left-censored) observations. If None, all members of the population 
+             useful for left-truncated (not left-censored) observations. If None, all members of the population
              were born at time 0.
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
@@ -44,7 +44,7 @@ class KaplanMeierFitter(UnivariateFitter):
         """
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
-        v = preprocess_inputs(durations, event_observed, timeline, entry)
+        v = _preprocess_inputs(durations, event_observed, timeline, entry)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
         self._label = label
         alpha = alpha if alpha else self.alpha

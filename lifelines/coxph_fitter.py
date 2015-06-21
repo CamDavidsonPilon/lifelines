@@ -10,7 +10,7 @@ import scipy.stats as stats
 
 from lifelines._base_fitter import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
-        significance_code, concordance_index, _get_index, qth_survival_times
+    significance_code, concordance_index, _get_index, qth_survival_times
 
 
 class CoxPHFitter(BaseFitter):

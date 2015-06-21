@@ -6,6 +6,7 @@ import pandas as pd
 from lifelines._base_fitter import UnivariateFitter
 from lifelines.utils import inv_normal_cdf
 
+
 class ExponentialFitter(UnivariateFitter):
 
     """
