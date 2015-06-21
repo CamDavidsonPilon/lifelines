@@ -145,31 +145,34 @@ def test_qth_survival_times_with_multivariate_q():
     assert utils.qth_survival_times(0.5, sf_multi_df['sf']) == 25
 
 
-def test_datetimes_to_durations_days():
+def test_datetimes_to_durations_with_different_frequencies():
+    # days
     start_date = ['2013-10-10 0:00:00', '2013-10-09', '2012-10-10']
     end_date = ['2013-10-13', '2013-10-10 0:00:00', '2013-10-15']
     T, C = utils.datetimes_to_durations(start_date, end_date)
     npt.assert_almost_equal(T, np.array([3, 1, 5 + 365]))
     npt.assert_almost_equal(C, np.array([1, 1, 1], dtype=bool))
-    return
 
-
-def test_datetimes_to_durations_years():
+    # years
     start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
     end_date = ['2013-10-13', '2013-10-10', '2013-10-15']
     T, C = utils.datetimes_to_durations(start_date, end_date, freq='Y')
     npt.assert_almost_equal(T, np.array([0, 0, 1]))
     npt.assert_almost_equal(C, np.array([1, 1, 1], dtype=bool))
-    return
 
-
-def test_datetimes_to_durations_hours():
+    # hours
     start_date = ['2013-10-10 17:00:00', '2013-10-09 0:00:00', '2013-10-10 23:00:00']
     end_date = ['2013-10-10 18:00:00', '2013-10-10 0:00:00', '2013-10-11 2:00:00']
     T, C = utils.datetimes_to_durations(start_date, end_date, freq='h')
     npt.assert_almost_equal(T, np.array([1, 24, 3]))
     npt.assert_almost_equal(C, np.array([1, 1, 1], dtype=bool))
-    return
+
+
+def test_datetimes_to_durations_will_handle_dates_above_fill_date():
+    start_date = ['2013-10-08', '2013-10-09', '2013-10-10']
+    end_date = ['2013-10-10', '2013-10-12', '2013-10-15']
+    T, C = utils.datetimes_to_durations(start_date, end_date, freq='Y', fill_date='2013-10-12')
+    npt.assert_almost_equal(C, np.array([1, 1, 0], dtype=bool))
 
 
 def test_datetimes_to_durations_censor():
@@ -177,15 +180,13 @@ def test_datetimes_to_durations_censor():
     end_date = ['2013-10-13', None, '']
     T, C = utils.datetimes_to_durations(start_date, end_date, freq='Y')
     npt.assert_almost_equal(C, np.array([1, 0, 0], dtype=bool))
-    return
 
 
 def test_datetimes_to_durations_custom_censor():
     start_date = ['2013-10-10', '2013-10-09', '2012-10-10']
     end_date = ['2013-10-13', "NaT", '']
-    T, C = utils.datetimes_to_durations(start_date, end_date, freq='Y', na_values="NaT")
+    T, C = utils.datetimes_to_durations(start_date, end_date, freq='Y', na_values=["NaT", ""])
     npt.assert_almost_equal(C, np.array([1, 0, 0], dtype=bool))
-    return
 
 
 def test_survival_table_to_events():

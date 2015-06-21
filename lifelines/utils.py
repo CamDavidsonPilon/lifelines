@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
-
+import warnings
 from datetime import datetime
 
 import numpy as np
@@ -595,33 +595,32 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
         end_times: an array, series or dataframe of end times. These can be strings, or datetimes.
                    These values can be None, or an empty string, which corresponds to censorship.
         fill_date: the date to use if end_times is a None or empty string. This corresponds to last date
-                  of observation. Anything above this date is also censored. Default: datetime.today()
+                  of observation. Anything after this date is also censored. Default: datetime.today()
         freq: the units of time to use.  See pandas 'freq'. Default 'D' for days.
         day_first: convert assuming European-style dates, i.e. day/month/year.
-        na_values : Additional string to recognize as NA/NaN. Ex: ['']
+        na_values : list of values to recognize as NA/NaN. Ex: ['', 'NaT']
 
     Returns:
         T: a array of floats representing the durations with time units given by freq.
         C: a boolean array of event observations: 1 if death observed, 0 else.
 
     """
+    fill_date = pd.to_datetime(fill_date)
     freq_string = 'timedelta64[%s]' % freq
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
-    start_times_ = to_datetime(start_times, dayfirst=dayfirst)
 
-    C = ~(pd.isnull(end_times).values | (end_times == "") | (end_times == na_values))
+    C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
     end_times[~C] = fill_date
-    """
-    c =  (to_datetime(end_times, dayfirst=dayfirst, coerce=True) > fill_date)
-    end_times[c] = fill_date
-    C += c
-    """
+    start_times_ = to_datetime(start_times, dayfirst=dayfirst)
     end_times_ = to_datetime(end_times, dayfirst=dayfirst, coerce=True)
+
+    deaths_after_cutoff = end_times_ > fill_date
+    C[deaths_after_cutoff] = False
 
     T = (end_times_ - start_times_).map(lambda x: x.astype(freq_string).astype(float))
     if (T < 0).sum():
-        print("Warning: some values of start_times are before end_times")
+        warnings.warn("Warning: some values of start_times are after end_times")
     return T.values, C.values
 
 
