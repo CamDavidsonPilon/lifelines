@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from lifelines._base_fitter import BaseFitter
 from lifelines.weibull_fitter import WeibullFitter
 from lifelines.exponential_fitter import ExponentialFitter
 from lifelines.nelson_aalen_fitter import NelsonAalenFitter
