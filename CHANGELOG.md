@@ -1,5 +1,16 @@
 ### Changelogs
 
+#### 0.7.1 
+- addition of a l2 `penalizer` to `CoxPHFitter`.
+- dropped Fortran implementation of efficient Python version. Lifelines is pure python once again!
+- addition of `strata` keyword argument to `CoxPHFitter` to allow for stratification of a single or set of 
+categorical variables in your dataset.
+- `datetimes_to_durations` now accepts a list as `na_values`, so multiple values can be checked. 
+- fixed a bug in `datetimes_to_durations` where `fill_date` was not properly being applied.
+- Changed warning in `datetimes_to_durations` to be correct. 
+- refactor each fitter into it's own submodule. For now, the tests are still in the same file. This will also *not* break the API. 
+
+
 #### 0.7.0
 - allow for multiple fitters to be passed into `k_fold_cross_validation`. 
 - statistical tests in `lifelines.statistics`. now return a `StatisticalResult` object with properties like `p_value`, `test_results`, and `summary`.  
