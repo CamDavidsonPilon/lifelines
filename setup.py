@@ -44,7 +44,6 @@ setup(
             "../README.txt",
             "../LICENSE",
             "../MANIFEST.in",
-            "../*.ipynb",
             "datasets/*",
         ]
     },
