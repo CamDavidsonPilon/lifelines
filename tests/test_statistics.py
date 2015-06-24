@@ -4,8 +4,8 @@ import pandas as pd
 import numpy.testing as npt
 import pytest
 
-from .. import statistics as stats
-from ..datasets import load_waltons, load_g3
+from lifelines import statistics as stats
+from lifelines.datasets import load_waltons, load_g3
 
 
 def test_unequal_intensity_with_random_data():

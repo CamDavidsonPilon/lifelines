@@ -3,9 +3,9 @@ from __future__ import print_function
 import os
 import pytest
 import numpy as np
-from ..estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter
-from ..generate_datasets import generate_random_lifetimes, generate_hazard_rates
-from ..plotting import plot_lifetimes
+from lifelines.estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter
+from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
+from lifelines.plotting import plot_lifetimes
 
 
 @pytest.mark.plottest

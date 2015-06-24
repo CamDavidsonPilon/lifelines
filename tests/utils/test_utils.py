@@ -7,9 +7,10 @@ from pandas.util.testing import assert_frame_equal
 import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
-from ..estimation import CoxPHFitter
-from ..datasets import (load_regression_dataset, load_larynx,
+from lifelines.estimation import CoxPHFitter
+from lifelines.datasets import (load_regression_dataset, load_larynx,
                         load_waltons, load_rossi)
+
 from lifelines import utils
 from lifelines.utils import _concordance_index as fast_cindex
 from lifelines.utils import _naive_concordance_index as slow_cindex

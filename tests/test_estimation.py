@@ -9,14 +9,14 @@ import pytest
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 
-from ..utils import k_fold_cross_validation, StatError
-from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
+from lifelines.utils import k_fold_cross_validation, StatError
+from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter
-from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
+from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test, load_g3, load_holly_molly_polly
-from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
-from ..utils import concordance_index
+from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
+from lifelines.utils import concordance_index
 
 
 @pytest.fixture
