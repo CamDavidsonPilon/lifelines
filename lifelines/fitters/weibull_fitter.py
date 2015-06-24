@@ -3,7 +3,7 @@ from __future__ import print_function, division
 import numpy as np
 import pandas as pd
 from numpy.linalg import solve, norm, inv
-from lifelines._base_fitter import UnivariateFitter
+from lifelines.fitters import UnivariateFitter
 from lifelines.utils import inv_normal_cdf
 
 def _negative_log_likelihood(lambda_rho, T, E):

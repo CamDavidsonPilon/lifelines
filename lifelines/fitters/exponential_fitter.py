@@ -3,7 +3,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from lifelines._base_fitter import UnivariateFitter
+from lifelines.fitters import UnivariateFitter
 from lifelines.utils import inv_normal_cdf
 
 
