@@ -1,6 +1,6 @@
 
 import numpy as np
-from lifelines import weibull_fitter as wf
+from lifelines.fitters import weibull_fitter as wf
 
 
 def test_lambda_gradient():
