@@ -5,8 +5,8 @@ import os
 import pytest
 import matplotlib.pyplot as plt
 
-from ..estimation import KaplanMeierFitter, NelsonAalenFitter
-from ..generate_datasets import exponential_survival_data
+from lifelines.estimation import KaplanMeierFitter, NelsonAalenFitter
+from lifelines.generate_datasets import exponential_survival_data
 
 
 def test_exponential_data_sets_correct_censor():
