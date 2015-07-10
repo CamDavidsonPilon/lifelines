@@ -121,6 +121,9 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
     unique_groups = groups.unique()
 
     # set first group
+
+    ### This function is terrible. clean it up! 
+
     g = unique_groups[0]
     ix = (groups == g)
     T = durations[ix]
@@ -147,7 +150,8 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
 
 def survival_table_from_events(death_times, event_observed, birth_times=None,
-                               columns=["removed", "observed", "censored", "entrance"], weights=None):
+                               columns=["removed", "observed", "censored", "entrance", "at_risk"], 
+                               weights=None):
     """
     Parameters:
         death_times: (n,) array of event times
@@ -167,21 +171,18 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
          left the population due to event_observed)
 
     Example:
-        #input
-        survival_table_from_events( waltonT, np.ones_like(waltonT)) #available in test suite
 
-        #output
-
-                  removed  observed  censored  entrance
+                  removed  observed  censored  entrance   at_risk
         event_at
-        0               0         0         0        11
-        6               1         1         0         0
-        7               2         2         0         0
-        9               3         3         0         0
-        13              3         3         0         0
-        15              2         2         0         0
+        0               0         0         0        11        11
+        6               1         1         0         0        11
+        7               2         2         0         0        10
+        9               3         3         0         0         8
+        13              3         3         0         0         5
+        15              2         2         0         0         2    
 
     """
+    removed, observed, censored, entrance, at_risk = columns
     death_times = np.asarray(death_times)
     if birth_times is None:
         birth_times = min(0, death_times.min()) * np.ones(death_times.shape[0])
@@ -192,17 +193,18 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
-    df[columns[0]] = 1 if weights is None else weights
-    df[columns[1]] = np.asarray(event_observed)
+    df[removed] = 1 if weights is None else weights
+    df[observed] = np.asarray(event_observed)
     death_table = df.groupby("event_at").sum()
-    death_table[columns[2]] = (death_table[columns[0]] - death_table[columns[1]]).astype(int)
+    death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
 
     # deal with late births
     births = pd.DataFrame(birth_times, columns=['event_at'])
-    births[columns[3]] = 1
+    births[entrance] = 1
     births_table = births.groupby('event_at').sum()
 
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
+    event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
     return event_table.astype(float)
 
 
