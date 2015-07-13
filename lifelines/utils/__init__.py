@@ -584,13 +584,13 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         events = events.sort_index(ascending=False)
         at_risk = events['at_risk']
         deaths = events['observed'].shift(1).fillna(0)
-        estimate_ = np.cumsum(_additive_f(population, deaths)).ffill().sort_index()
-        var_ = np.cumsum(_additive_var(population, deaths)).ffill().sort_index()
+        estimate_ = np.cumsum(_additive_f(at_risk, deaths)).ffill().sort_index()
+        var_ = np.cumsum(_additive_var(at_risk, deaths)).ffill().sort_index()
     else:
         deaths = events['observed']
         at_risk = events['at_risk']
-        estimate_ = np.cumsum(_additive_f(population, deaths))
-        var_ = np.cumsum(_additive_var(population, deaths))
+        estimate_ = np.cumsum(_additive_f(at_risk, deaths))
+        var_ = np.cumsum(_additive_var(at_risk, deaths))
 
     timeline = sorted(timeline)
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
