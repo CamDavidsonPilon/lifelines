@@ -156,6 +156,27 @@ time (months, days, ...)      observed deaths       censored
     print C # np.array([1,1,1,1,1,1,1,0,1,1, ...])
 
 
+Alternatively, perhaps you are interested in viewing the survival table given some durations and censorship vectors.
+
+
+.. code:: python
+    
+    from lifelines.utils import survival_table_from_events
+
+    table = survival_table_from_events(T, C)
+    print table.head()
+    
+    """
+              removed  observed  censored  entrance  at_risk
+    event_at
+    0               0         0         0        60       60
+    2               2         1         1         0       60
+    3               3         1         2         0       58
+    4               5         3         2         0       55
+    5              12         6         6         0       50
+    """
+
+
 
 Plotting multiple figures on an plot 
 ##############################################
