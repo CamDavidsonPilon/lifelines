@@ -108,8 +108,10 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
         ]
 
     """
+
     n = np.max(groups.shape)
     assert n == np.max(durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
+    
     if birth_times is None:
         # Create some birth times
         birth_times = np.zeros(np.max(durations.shape))
@@ -117,35 +119,26 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
     assert n == np.max(birth_times.shape), "inputs must be of the same length."
 
-    groups, durations, event_observed, birth_times = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, durations, event_observed, birth_times])
+    groups, durations, event_observed, birth_times = [pd.Series(np.reshape(data, (n,))) for data in [groups, durations, event_observed, birth_times]]
     unique_groups = groups.unique()
 
-    # set first group
-
-    ### This function is terrible. clean it up! 
-
-    g = unique_groups[0]
-    ix = (groups == g)
-    T = durations[ix]
-    C = event_observed[ix]
-    B = birth_times[ix]
-
-    g_name = str(g)
-    data = survival_table_from_events(T, C, B,
-                                      columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name])
-    for g in unique_groups[1:]:
-        ix = groups == g
+    for i, group in enumerate(unique_groups):
+        ix = groups == group
         T = durations[ix]
         C = event_observed[ix]
         B = birth_times[ix]
-        g_name = str(g)
-        data = data.join(survival_table_from_events(T, C, B,
-                                                    columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
-                         how='outer')
+        group_name = str(group)
+        columns = [event_name + ":" + group_name for event_name in ['removed', 'observed', 'censored', 'entrance', 'at_risk']]
+        if i == 0:
+            data = survival_table_from_events(T, C, B, columns=columns)
+        else:
+            data = data.join(survival_table_from_events(T, C, B, columns=columns), how='outer')
+
     data = data.fillna(0)
     # hmmm pandas its too bad I can't do data.ix[:limit] and leave out the if.
     if int(limit) != -1:
         data = data.ix[:limit]
+
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
 
