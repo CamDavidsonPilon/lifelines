@@ -349,12 +349,14 @@ class TestKaplanMeierFitter():
         assert not hasattr(kmf, 'survival_function_')
 
     def test_kmf_left_censorship_stats(self):
+        # from http://www.public.iastate.edu/~pdixon/stat505/Chapter%2011.pdf
         T = [3, 5, 5, 5, 6, 6, 10, 12]
-        C = [1, 0, 0, 1, 1, 1, 0, 1]
+        C = [1, 0, 0, 1, 1, 1,  0,  1]
         kmf = KaplanMeierFitter()
         kmf.fit(T, C, left_censorship=True)
-        assert kmf.cumulative_density_[kmf._label].ix[0] == 0.0
-        assert kmf.cumulative_density_[kmf._label].ix[12] == 1.0
+
+        actual = kmf.cumulative_density_[kmf._label].values 
+        npt.assert_almost_equal(actual, np.array([0, 0.437500, 0.5833333, 0.875, 0.875, 1]))
 
     def test_shifting_durations_doesnt_affect_survival_function_values(self):
         T = np.random.exponential(10, size=100)
