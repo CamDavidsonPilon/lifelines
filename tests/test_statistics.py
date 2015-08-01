@@ -7,6 +7,15 @@ import pytest
 from lifelines import statistics as stats
 from lifelines.datasets import load_waltons, load_g3
 
+def test_sample_size_necessary_under_cph():
+    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.8, 0.2, 0.139) == (14, 14)
+    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.5, 0.5, 1.2) == (950, 950)
+    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2) == (1231, 821)
+    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2, alpha=0.01) == (1832, 1221)
+
+def test_power_under_cph():
+    assert abs(stats.power_under_cph(12,12, 0.8, 0.2, 0.139) - 0.744937) < 10e-6
+    assert abs(stats.power_under_cph(12,20, 0.8, 0.2, 1.2) - 0.05178317) < 10e-6
 
 def test_unequal_intensity_with_random_data():
     data1 = np.random.exponential(5, size=(2000, 1))
