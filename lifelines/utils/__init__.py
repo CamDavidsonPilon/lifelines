@@ -111,7 +111,7 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
     n = np.max(groups.shape)
     assert n == np.max(durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
-    
+
     if birth_times is None:
         # Create some birth times
         birth_times = np.zeros(np.max(durations.shape))
@@ -143,7 +143,7 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
 
 def survival_table_from_events(death_times, event_observed, birth_times=None,
-                               columns=["removed", "observed", "censored", "entrance", "at_risk"], 
+                               columns=["removed", "observed", "censored", "entrance", "at_risk"],
                                weights=None):
     """
     Parameters:
@@ -172,7 +172,7 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
         7               2         2         0         0        10
         9               3         3         0         0         8
         13              3         3         0         0         5
-        15              2         2         0         0         2    
+        15              2         2         0         0         2
 
     """
     removed, observed, censored, entrance, at_risk = columns

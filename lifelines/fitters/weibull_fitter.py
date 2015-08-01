@@ -7,6 +7,7 @@ from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import inv_normal_cdf
 
+
 def _negative_log_likelihood(lambda_rho, T, E):
     if np.any(lambda_rho < 0):
         return np.inf
