@@ -108,8 +108,10 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
         ]
 
     """
+
     n = np.max(groups.shape)
     assert n == np.max(durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
+    
     if birth_times is None:
         # Create some birth times
         birth_times = np.zeros(np.max(durations.shape))
@@ -117,37 +119,32 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
     assert n == np.max(birth_times.shape), "inputs must be of the same length."
 
-    groups, durations, event_observed, birth_times = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, durations, event_observed, birth_times])
+    groups, durations, event_observed, birth_times = [pd.Series(np.reshape(data, (n,))) for data in [groups, durations, event_observed, birth_times]]
     unique_groups = groups.unique()
 
-    # set first group
-    g = unique_groups[0]
-    ix = (groups == g)
-    T = durations[ix]
-    C = event_observed[ix]
-    B = birth_times[ix]
-
-    g_name = str(g)
-    data = survival_table_from_events(T, C, B,
-                                      columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name])
-    for g in unique_groups[1:]:
-        ix = groups == g
+    for i, group in enumerate(unique_groups):
+        ix = groups == group
         T = durations[ix]
         C = event_observed[ix]
         B = birth_times[ix]
-        g_name = str(g)
-        data = data.join(survival_table_from_events(T, C, B,
-                                                    columns=['removed:' + g_name, "observed:" + g_name, 'censored:' + g_name, 'entrance' + g_name]),
-                         how='outer')
+        group_name = str(group)
+        columns = [event_name + ":" + group_name for event_name in ['removed', 'observed', 'censored', 'entrance', 'at_risk']]
+        if i == 0:
+            data = survival_table_from_events(T, C, B, columns=columns)
+        else:
+            data = data.join(survival_table_from_events(T, C, B, columns=columns), how='outer')
+
     data = data.fillna(0)
     # hmmm pandas its too bad I can't do data.ix[:limit] and leave out the if.
     if int(limit) != -1:
         data = data.ix[:limit]
+
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
 
 def survival_table_from_events(death_times, event_observed, birth_times=None,
-                               columns=["removed", "observed", "censored", "entrance"], weights=None):
+                               columns=["removed", "observed", "censored", "entrance", "at_risk"], 
+                               weights=None):
     """
     Parameters:
         death_times: (n,) array of event times
@@ -167,21 +164,18 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
          left the population due to event_observed)
 
     Example:
-        #input
-        survival_table_from_events( waltonT, np.ones_like(waltonT)) #available in test suite
 
-        #output
-
-                  removed  observed  censored  entrance
+                  removed  observed  censored  entrance   at_risk
         event_at
-        0               0         0         0        11
-        6               1         1         0         0
-        7               2         2         0         0
-        9               3         3         0         0
-        13              3         3         0         0
-        15              2         2         0         0
+        0               0         0         0        11        11
+        6               1         1         0         0        11
+        7               2         2         0         0        10
+        9               3         3         0         0         8
+        13              3         3         0         0         5
+        15              2         2         0         0         2    
 
     """
+    removed, observed, censored, entrance, at_risk = columns
     death_times = np.asarray(death_times)
     if birth_times is None:
         birth_times = min(0, death_times.min()) * np.ones(death_times.shape[0])
@@ -192,17 +186,18 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
-    df[columns[0]] = 1 if weights is None else weights
-    df[columns[1]] = np.asarray(event_observed)
+    df[removed] = 1 if weights is None else weights
+    df[observed] = np.asarray(event_observed)
     death_table = df.groupby("event_at").sum()
-    death_table[columns[2]] = (death_table[columns[0]] - death_table[columns[1]]).astype(int)
+    death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
 
     # deal with late births
     births = pd.DataFrame(birth_times, columns=['event_at'])
-    births[columns[3]] = 1
+    births[entrance] = 1
     births_table = births.groupby('event_at').sum()
 
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
+    event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
     return event_table.astype(float)
 
 
@@ -587,15 +582,17 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     """
     if reverse:
         events = events.sort_index(ascending=False)
-        population = events['entrance'].sum() - events['removed'].cumsum().shift(1).fillna(0)
-        deaths = events['observed'].shift(1).fillna(0)
-        estimate_ = np.cumsum(_additive_f(population, deaths)).ffill().sort_index()
-        var_ = np.cumsum(_additive_var(population, deaths)).ffill().sort_index()
+        at_risk = events['entrance'].sum() - events['removed'].cumsum().shift(1).fillna(0)
+        
+        deaths = events['observed']
+        
+        estimate_ = np.cumsum(_additive_f(at_risk, deaths)).sort_index().shift(-1).fillna(0)
+        var_ = np.cumsum(_additive_var(at_risk, deaths)).sort_index().shift(-1).fillna(0)
     else:
         deaths = events['observed']
-        population = events['entrance'].cumsum() - events['removed'].cumsum().shift(1).fillna(0)  # slowest line here.
-        estimate_ = np.cumsum(_additive_f(population, deaths))
-        var_ = np.cumsum(_additive_var(population, deaths))
+        at_risk = events['at_risk']
+        estimate_ = np.cumsum(_additive_f(at_risk, deaths))
+        var_ = np.cumsum(_additive_var(at_risk, deaths))
 
     timeline = sorted(timeline)
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)

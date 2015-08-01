@@ -114,6 +114,27 @@ Lifelines has some utility functions to transform this dataset into durations an
     T, C = datetimes_to_durations(start_times, end_times, freq='h')
 
 
+Alternatively, perhaps you are interested in viewing the survival table given some durations and censorship vectors.
+
+
+.. code:: python
+    
+    from lifelines.utils import survival_table_from_events
+
+    table = survival_table_from_events(T, C)
+    print table.head()
+
+    """
+              removed  observed  censored  entrance  at_risk
+    event_at
+    0               0         0         0        60       60
+    2               2         1         1         0       60
+    3               3         1         2         0       58
+    4               5         3         2         0       55
+    5              12         6         6         0       50
+    """
+
+
 Survival Regression
 ---------------------------------
 
