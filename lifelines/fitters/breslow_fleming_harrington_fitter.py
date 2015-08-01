@@ -2,8 +2,8 @@
 from __future__ import print_function
 import numpy as np
 
-from lifelines._base_fitter import UnivariateFitter
-from lifelines.nelson_aalen_fitter import NelsonAalenFitter
+from lifelines.fitters import UnivariateFitter
+from lifelines.fitters.nelson_aalen_fitter import NelsonAalenFitter
 from lifelines.utils import median_survival_times
 
 

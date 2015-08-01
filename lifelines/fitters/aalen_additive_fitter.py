@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 import numpy as np
 import pandas as pd
 from numpy.linalg import LinAlgError
 from scipy.integrate import trapz
-from lifelines._base_fitter import BaseFitter
+
+from lifelines.fitters import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
     ridge_regression as lr, qth_survival_times
-from lifelines.progress_bar import progress_bar
+from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import plot_regressions
 
 

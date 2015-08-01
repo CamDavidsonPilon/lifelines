@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 import numpy as np
 import pandas as pd
+
 from lifelines.plotting import plot_estimate
 from lifelines.utils import qth_survival_times
 

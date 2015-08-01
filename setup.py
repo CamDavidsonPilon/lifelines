@@ -25,7 +25,9 @@ setup(
     url="https://github.com/CamDavidsonPilon/lifelines",
     packages=['lifelines',
               'lifelines.datasets',
-              'lifelines.tests'],
+              'lifelines.fitters',
+              'lifelines.utils',
+              ],
     long_description=read('README.txt'),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -44,7 +46,6 @@ setup(
             "../README.txt",
             "../LICENSE",
             "../MANIFEST.in",
-            "../*.ipynb",
             "datasets/*",
         ]
     },

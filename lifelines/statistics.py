@@ -9,6 +9,64 @@ import pandas as pd
 from lifelines.utils import group_survival_table_from_events
 
 
+def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con,
+                                    postulated_hazard_ratio, alpha=0.05):
+    """
+    This computes the sample size for needed power to compare two groups under a Cox
+    Proportional Hazard model.
+
+    References:
+        https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
+
+    Parameters:
+        power: power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
+        ratio_of_participants: ratio of participants in experimental group over control group.
+        p_exp: probability of failure in experimental group over period of study.
+        p_con: probability of failure in control group over period of study
+        postulated_hazard_ratio: the postulated hazard ratio
+        alpha: type I error rate
+
+    Returns:
+        n_exp, n_con: the samples sizes need for the experiment and control group, respectively, to achieve desired power
+    """
+    z = lambda p: stats.norm.ppf(p)
+
+    m = 1.0 / ratio_of_participants \
+        * ((ratio_of_participants * postulated_hazard_ratio + 1.0) / (postulated_hazard_ratio - 1.0)) ** 2 \
+        * (z(1. - alpha / 2.) + z(power)) ** 2
+
+    n_exp = m * ratio_of_participants / (ratio_of_participants * p_exp + p_con)
+    n_con = m / (ratio_of_participants * p_exp + p_con)
+
+    return int(np.ceil(n_exp)), int(np.ceil(n_con))
+
+
+def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
+    """
+    This computes the sample size for needed power to compare two groups under a Cox
+    Proportional Hazard model.
+
+    References:
+        https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
+
+    Parameters:
+        n_exp: size of the experiment group.
+        n_con: size of the control group.
+        p_exp: probability of failure in experimental group over period of study.
+        p_con: probability of failure in control group over period of study
+        postulated_hazard_ratio: the postulated hazard ratio
+        alpha: type I error rate
+
+    Returns:
+        power: power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
+    """
+    z = lambda p: stats.norm.ppf(p)
+
+    m = n_exp * p_exp + n_con * p_con
+    k = float(n_exp) / float(n_con)
+    return stats.norm.cdf(np.sqrt(k * m) * abs(postulated_hazard_ratio - 1) / (k * postulated_hazard_ratio + 1) - z(1 - alpha / 2.))
+
+
 def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_observed_B=None,
                  alpha=0.95, t_0=-1, **kwargs):
     """

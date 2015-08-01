@@ -28,7 +28,7 @@ install:
   - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas matplotlib pytest
   - source activate test-environment
   # Build in place so we can run tests
-  - python setup.py build_ext --inplace
+  - python setup.py install
   - pip install coveralls
   - pip install pytest-cov
 # command to run tests

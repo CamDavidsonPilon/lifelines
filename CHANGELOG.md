@@ -1,5 +1,15 @@
 ### Changelogs
 
+#### 0.8.0
+ - reorganized lifelines directories: 
+    - moved test files out of main directory. 
+    - moved `utils.py` into it's down directory.
+    - moved all estimators `fitters` directory.
+ - added a `at_risk` column to the output of `group_survival_table_from_events` and `survival_table_from_events`
+ - added sample size and power calculations for statistical tests. See `lifeline.statistics. sample_size_necessary_under_cph` and `lifelines.statistics. power_under_cph`. 
+ - fixed a bug when using KaplanMeierFitter for left-censored data. 
+
+
 #### 0.7.1 
 - addition of a l2 `penalizer` to `CoxPHFitter`.
 - dropped Fortran implementation of efficient Python version. Lifelines is pure python once again!

@@ -9,14 +9,14 @@ import pytest
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 
-from ..utils import k_fold_cross_validation, StatError
-from ..estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
+from lifelines.utils import k_fold_cross_validation, StatError
+from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter
-from ..datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
+from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test, load_g3, load_holly_molly_polly
-from ..generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
-from ..utils import concordance_index
+from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
+from lifelines.utils import concordance_index
 
 
 @pytest.fixture
@@ -349,12 +349,14 @@ class TestKaplanMeierFitter():
         assert not hasattr(kmf, 'survival_function_')
 
     def test_kmf_left_censorship_stats(self):
+        # from http://www.public.iastate.edu/~pdixon/stat505/Chapter%2011.pdf
         T = [3, 5, 5, 5, 6, 6, 10, 12]
-        C = [1, 0, 0, 1, 1, 1, 0, 1]
+        C = [1, 0, 0, 1, 1, 1,  0,  1]
         kmf = KaplanMeierFitter()
         kmf.fit(T, C, left_censorship=True)
-        assert kmf.cumulative_density_[kmf._label].ix[0] == 0.0
-        assert kmf.cumulative_density_[kmf._label].ix[12] == 1.0
+
+        actual = kmf.cumulative_density_[kmf._label].values 
+        npt.assert_almost_equal(actual, np.array([0, 0.437500, 0.5833333, 0.875, 0.875, 1]))
 
     def test_shifting_durations_doesnt_affect_survival_function_values(self):
         T = np.random.exponential(10, size=100)
