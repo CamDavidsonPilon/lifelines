@@ -1,11 +1,16 @@
+# This allows it to run on faster containers.
+sudo: false
+
 language: python
 python:
    - "2.7"
    - "3.3"
    - "3.4"
-before_install:
-  - sudo apt-get update
-  - sudo apt-get install gfortran gcc
+addons:
+  apt:
+    packages:
+    - gcc
+    - gfortran
 # See http://conda.pydata.org/docs/travis.html
 install:
   # You may want to periodically update this, although the conda update
