@@ -396,7 +396,7 @@ New in 0.4.0 is the implementation of the Propotional Hazard's regression model 
 R under ``coxph``). It has a similar API to Aalen's Additive model. Like R, it has a ``print_summary``
 function that prints a tabuluar view of coefficients and related stats. 
 
-This example data is from the paper `here <http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf>`_.
+This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_.
 
 .. code:: python
 
