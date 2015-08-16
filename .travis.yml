@@ -33,13 +33,13 @@ install:
   - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas matplotlib pytest
   - source activate test-environment
   # Build in place so we can run tests
-  - python setup.py install
+  - pip install .
   - pip install coveralls
   - pip install pytest-cov
 # command to run tests
-script: py.test --cov lifelines -vv
+script: py.test --cov==lifelines lifelines -vv
 after_success:
-  coveralls debug
+  coveralls
 # Don't want notifications
 notifications:
   email: false
