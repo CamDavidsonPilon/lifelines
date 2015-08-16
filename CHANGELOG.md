@@ -3,7 +3,7 @@
 #### 0.8.0
  - reorganized lifelines directories: 
     - moved test files out of main directory. 
-    - moved `utils.py` into it's down directory.
+    - moved `utils.py` into it's own directory.
     - moved all estimators `fitters` directory.
  - added a `at_risk` column to the output of `group_survival_table_from_events` and `survival_table_from_events`
  - added sample size and power calculations for statistical tests. See `lifeline.statistics. sample_size_necessary_under_cph` and `lifelines.statistics. power_under_cph`. 

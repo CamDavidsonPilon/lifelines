@@ -35,6 +35,7 @@ install:
 script: py.test --cov lifelines -vv
 after_success:
   coveralls
+  coveralls debug
 # Don't want notifications
 notifications:
   email: false

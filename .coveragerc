@@ -2,4 +2,3 @@
 [run]
 omit = 
     lifelines/plotting.py
-    lifelines/tests/*.py
