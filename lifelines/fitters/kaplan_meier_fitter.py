@@ -52,6 +52,9 @@ class KaplanMeierFitter(UnivariateFitter):
                                                                    self._additive_f, self._additive_var,
                                                                    left_censorship)
 
+        self.active = self.event_table['at_risk']
+        self.lost = self.event_table['observed']
+
         if entry is not None:
             # a serious problem with KM is that when the sample size is small and there are too few early
             # truncation times, it may happen that is the number of patients at risk and the number of deaths is the same.
