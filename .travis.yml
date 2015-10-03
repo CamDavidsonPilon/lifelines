@@ -2,16 +2,42 @@
 sudo: false
 
 language: python
-python:
-   - "2.7"
-   - "3.3"
-   - "3.4"
-   - "3.5"
+
+matrix:
+  include:
+    - python: 2.7
+      env: MATPLOTLIB_VERSION=v1.4.3
+    - python: 3.3
+      env: MATPLOTLIB_VERSION=v1.4.3
+    - python: 3.4
+      env: MATPLOTLIB_VERSION=v1.4.3
+    - python: 3.5
+      env: MATPLOTLIB_VERSION=v1.4.3
+    - python: "nightly"
+      env: MATPLOTLIB_VERSION=v1.4.3
+    - python: 2.7
+      env: MATPLOTLIB_VERSION=v1.5.0rc2
+    - python: 3.5
+      env: MATPLOTLIB_VERSION=v1.5.0rc2
+  allow_failures:
+    - python: "nightly"
+
 addons:
   apt:
     packages:
     - gcc
     - gfortran
+    # Deps for matplotlib, can remove once 1.5.0 is released and installable via conda
+    - inkscape
+    - libav-tools
+    - gdb
+    - mencoder
+    - dvipng
+    - texlive-latex-base
+    - texlive-latex-extra
+    - texlive-fonts-recommended
+    - texlive-latex-recommended
+    - graphviz
 # See http://conda.pydata.org/docs/travis.html
 install:
   # You may want to periodically update this, although the conda update
@@ -31,8 +57,16 @@ install:
   - conda info -a
 
   # Should match requirements.txt
-  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas matplotlib pytest
+  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas pytest
   - source activate test-environment
+
+  # When 1.5.0 is released, can use only conda.
+  - if [[ "$MATPLOTLIB_VERSION" == "1.4.3" ]]; then
+      conda install -n test-environment matplotlib=$MATPLOTLIB_VERSION;
+    else
+      pip install git+https://github.com/matplotlib/matplotlib.git@$MATPLOTLIB_VERSION;
+    fi
+
   # Build in place so we can run tests
   - pip install .
   - pip install coveralls
