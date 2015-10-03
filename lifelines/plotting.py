@@ -305,6 +305,7 @@ def plot_estimate(cls, estimate):
              bandwidth=None, **kwargs):
 
         from matplotlib import pyplot as plt
+        import matplotlib as mpl
 
         if censor_styles is None:
             censor_styles = {}
@@ -314,8 +315,15 @@ def plot_estimate(cls, estimate):
 
         if "ax" not in kwargs:
             kwargs["ax"] = plt.figure().add_subplot(111)
-        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
-                                   next(kwargs["ax"]._get_lines.color_cycle))
+
+        if int(mpl.__version__.split('.')[1]) > 4:
+            # https://github.com/CamDavidsonPilon/lifelines/issues/191#issuecomment-145275656
+            kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
+                                       next(kwargs["ax"]._get_lines.prop_cycler)['color'])
+        else:
+            kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
+                                       next(kwargs["ax"]._get_lines.color_cycle))
+
         kwargs['drawstyle'] = coalesce(kwargs.get('drawstyle'), 'steps-post')
 
         # R-style graphics
