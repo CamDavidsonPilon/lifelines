@@ -3,6 +3,10 @@ sudo: false
 
 language: python
 
+# To be able to run plotting tests
+env:
+  - DISPLAY=:99.0
+
 matrix:
   include:
     - python: 2.7
@@ -36,6 +40,11 @@ addons:
     - texlive-fonts-recommended
     - texlive-latex-recommended
     - graphviz
+
+# To be able to run plotting tests
+before_install:
+  - sh -e /etc/init.d/xvfb start
+
 # See http://conda.pydata.org/docs/travis.html
 install:
   # You may want to periodically update this, although the conda update
