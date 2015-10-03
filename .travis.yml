@@ -71,9 +71,8 @@ install:
     fi
 
   # Build in place so we can run tests
+  - pip install coveralls pytest-cov
   - pip install .
-  - pip install coveralls
-  - pip install pytest-cov
 # command to run tests
 script: py.test --cov=lifelines -vv
 after_success:

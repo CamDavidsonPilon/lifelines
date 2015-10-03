@@ -25,7 +25,7 @@ class TestPlotting():
         kmf.fit(T, C)
         ax = kmf.plot()
         self.plt.title('test_negative_times_still_plots')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_kmf_plotting(self):
@@ -40,7 +40,7 @@ class TestPlotting():
         kmf.fit(data3, label='test label 3')
         kmf.plot(ax=ax)
         self.plt.title("test_kmf_plotting")
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_kmf_with_risk_counts(self):
@@ -49,7 +49,7 @@ class TestPlotting():
         kmf.fit(data1)
         kmf.plot(at_risk_counts=True)
         self.plt.title("test_kmf_with_risk_counts")
-        self.plt.show()
+        self.plt.show(block=False)
 
     def test_naf_plotting_with_custom_colours(self):
         data1 = np.random.exponential(5, size=(200, 1))
@@ -60,7 +60,7 @@ class TestPlotting():
         naf.fit(data2)
         naf.plot(ax=ax, c="k")
         self.plt.title('test_naf_plotting_with_custom_coloirs')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_aalen_additive_plot(self):
@@ -82,7 +82,7 @@ class TestPlotting():
         ax = aaf.plot(iloc=slice(0, aaf.cumulative_hazards_.shape[0] - 100))
         ax.set_xlabel("time")
         ax.set_title('test_aalen_additive_plot')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_aalen_additive_smoothed_plot(self):
@@ -103,7 +103,7 @@ class TestPlotting():
         ax = aaf.smoothed_hazards_(1).iloc[0:aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
         ax.set_title('test_aalen_additive_smoothed_plot')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_naf_plotting_slice(self):
@@ -115,7 +115,7 @@ class TestPlotting():
         naf.fit(data2)
         naf.plot(ax=ax, ci_force_lines=True, iloc=slice(100, 180))
         self.plt.title('test_naf_plotting_slice')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_plot_lifetimes_calendar(self):
@@ -126,7 +126,7 @@ class TestPlotting():
         current = 10
         birthtimes = current * np.random.uniform(size=(N,))
         T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
-        plot_lifetimes(T, event_observed=C, birthtimes=birthtimes)
+        plot_lifetimes(T, event_observed=C, birthtimes=birthtimes, block=False)
 
     def test_plot_lifetimes_relative(self):
         self.plt.figure()
@@ -134,7 +134,7 @@ class TestPlotting():
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
         N = 20
         T, C = generate_random_lifetimes(hz, t, size=N, censor=True)
-        plot_lifetimes(T, event_observed=C)
+        plot_lifetimes(T, event_observed=C, block=False)
 
     def test_naf_plot_cumulative_hazard(self):
         data1 = np.random.exponential(5, size=(200, 1))
@@ -143,7 +143,7 @@ class TestPlotting():
         ax = naf.plot()
         naf.plot_cumulative_hazard(ax=ax, ci_force_lines=True)
         self.plt.title("I should have plotted the same thing, but different styles + color!")
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_naf_plot_cumulative_hazard_bandwidth_2(self):
@@ -152,7 +152,7 @@ class TestPlotting():
         naf.fit(data1)
         naf.plot_hazard(bandwidth=1., ix=slice(0, 7.))
         self.plt.title('test_naf_plot_cumulative_hazard_bandwidth_2')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_naf_plot_cumulative_hazard_bandwith_1(self):
@@ -161,7 +161,7 @@ class TestPlotting():
         naf.fit(data1)
         naf.plot_hazard(bandwidth=5., iloc=slice(0, 1700))
         self.plt.title('test_naf_plot_cumulative_hazard_bandwith_1')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_show_censor_with_discrete_date(self):
@@ -170,7 +170,7 @@ class TestPlotting():
         kmf = KaplanMeierFitter()
         kmf.fit(T, C).plot(show_censors=True)
         self.plt.title('test_show_censor_with_discrete_date')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_show_censor_with_index_0(self):
@@ -179,7 +179,7 @@ class TestPlotting():
         kmf = KaplanMeierFitter()
         kmf.fit(T, C).plot(show_censors=True)
         self.plt.title('test_show_censor_with_index_0')
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_flat_style_and_marker(self):
@@ -193,7 +193,7 @@ class TestPlotting():
         kmf.fit(data2, C2, label='test label 2')
         kmf.plot(ax=ax, censor_styles={'marker': 'o', 'ms': 7}, flat=True)
         self.plt.title("testing kmf flat styling + marker")
-        self.plt.show()
+        self.plt.show(block=False)
         return
 
     def test_flat_style_no_censor(self):
@@ -202,5 +202,5 @@ class TestPlotting():
         kmf.fit(data1, label='test label 1')
         ax = kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
         self.plt.title('test_flat_style_no_censor')
-        self.plt.show()
+        self.plt.show(block=False)
         return

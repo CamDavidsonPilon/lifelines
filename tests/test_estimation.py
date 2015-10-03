@@ -355,7 +355,7 @@ class TestKaplanMeierFitter():
         kmf = KaplanMeierFitter()
         kmf.fit(T, C, left_censorship=True)
 
-        actual = kmf.cumulative_density_[kmf._label].values 
+        actual = kmf.cumulative_density_[kmf._label].values
         npt.assert_almost_equal(actual, np.array([0, 0.437500, 0.5833333, 0.875, 0.875, 1]))
 
     def test_shifting_durations_doesnt_affect_survival_function_values(self):
@@ -387,7 +387,7 @@ class TestKaplanMeierFitter():
 
         kmf.fit(basin_trough['T'], basin_trough['C'], left_censorship=True, label='basin_trough')
         ax = kmf.plot(ax=ax)
-        plt.show()
+        plt.show(block=False)
         return
 
     def test_kmf_survival_curve_output_against_R(self):
@@ -1059,7 +1059,7 @@ class TestAalenAdditiveFitter():
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
             ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
-        plt.show()
+        plt.show(block=False)
         return
 
     @pytest.mark.plottest
@@ -1089,7 +1089,8 @@ class TestAalenAdditiveFitter():
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
             ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
-        plt.show()
+        plt.show(block=False)
+        return
 
     def test_dataframe_input_with_nonstandard_index(self):
         aaf = AalenAdditiveFitter()
