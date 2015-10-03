@@ -6,17 +6,17 @@ language: python
 matrix:
   include:
     - python: 2.7
-      env: MATPLOTLIB_VERSION=v1.4.3
+      env: MATPLOTLIB_VERSION=1.4.3
     - python: 3.3
-      env: MATPLOTLIB_VERSION=v1.4.3
+      env: MATPLOTLIB_VERSION=1.4.3
     - python: 3.4
-      env: MATPLOTLIB_VERSION=v1.4.3
+      env: MATPLOTLIB_VERSION=1.4.3
     - python: 3.5
-      env: MATPLOTLIB_VERSION=v1.4.3
+      env: MATPLOTLIB_VERSION=1.4.3
     - python: 2.7
-      env: MATPLOTLIB_VERSION=v1.5.0rc2
+      env: MATPLOTLIB_VERSION=1.5.0rc2
     - python: 3.5
-      env: MATPLOTLIB_VERSION=v1.5.0rc2
+      env: MATPLOTLIB_VERSION=1.5.0rc2
 #  allow_failures:
 #    - python: "nightly"
 
@@ -62,7 +62,7 @@ install:
   - if [[ "$MATPLOTLIB_VERSION" == "1.4.3" ]]; then
       conda install -n test-environment matplotlib=$MATPLOTLIB_VERSION;
     else
-      pip install git+https://github.com/matplotlib/matplotlib.git@$MATPLOTLIB_VERSION;
+      pip install git+https://github.com/matplotlib/matplotlib.git@v$MATPLOTLIB_VERSION;
     fi
 
   # Build in place so we can run tests
