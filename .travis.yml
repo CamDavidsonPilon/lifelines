@@ -74,7 +74,7 @@ install:
   - pip install coveralls pytest-cov
   - pip install .
 # command to run tests
-script: py.test --cov=lifelines -vv
+script: py.test --cov=lifelines -vv --block=False
 after_success:
   coveralls
 # Don't want notifications

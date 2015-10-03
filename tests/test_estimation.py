@@ -374,7 +374,7 @@ class TestKaplanMeierFitter():
 
     @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_kmf_left_censorship_plots(self):
+    def test_kmf_left_censorship_plots(self, block):
         matplotlib = pytest.importorskip("matplotlib")
         from matplotlib import pyplot as plt
 
@@ -387,7 +387,7 @@ class TestKaplanMeierFitter():
 
         kmf.fit(basin_trough['T'], basin_trough['C'], left_censorship=True, label='basin_trough')
         ax = kmf.plot(ax=ax)
-        plt.show(block=False)
+        plt.show(block=block)
         return
 
     def test_kmf_survival_curve_output_against_R(self):
@@ -1035,7 +1035,7 @@ class TestAalenAdditiveFitter():
 
     @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_aalen_additive_fit_no_censor(self):
+    def test_aalen_additive_fit_no_censor(self, block):
         # this is a visual test of the fitting the cumulative
         # hazards.
         matplotlib = pytest.importorskip("matplotlib")
@@ -1059,12 +1059,12 @@ class TestAalenAdditiveFitter():
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
             ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
-        plt.show(block=False)
+        plt.show(block=block)
         return
 
     @pytest.mark.plottest
     @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_aalen_additive_fit_with_censor(self):
+    def test_aalen_additive_fit_with_censor(self, block):
         # this is a visual test of the fitting the cumulative
         # hazards.
         matplotlib = pytest.importorskip("matplotlib")
@@ -1089,7 +1089,7 @@ class TestAalenAdditiveFitter():
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
             ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
-        plt.show(block=False)
+        plt.show(block=block)
         return
 
     def test_dataframe_input_with_nonstandard_index(self):

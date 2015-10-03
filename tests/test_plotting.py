@@ -17,7 +17,7 @@ class TestPlotting():
         from matplotlib import pyplot as plt
         self.plt = plt
 
-    def test_negative_times_still_plots(self):
+    def test_negative_times_still_plots(self, block):
         n = 40
         T = np.linspace(-2, 3, n)
         C = np.random.randint(2, size=n)
@@ -25,10 +25,10 @@ class TestPlotting():
         kmf.fit(T, C)
         ax = kmf.plot()
         self.plt.title('test_negative_times_still_plots')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_kmf_plotting(self):
+    def test_kmf_plotting(self, block):
         data1 = np.random.exponential(10, size=(100))
         data2 = np.random.exponential(2, size=(200, 1))
         data3 = np.random.exponential(4, size=(500, 1))
@@ -40,18 +40,18 @@ class TestPlotting():
         kmf.fit(data3, label='test label 3')
         kmf.plot(ax=ax)
         self.plt.title("test_kmf_plotting")
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_kmf_with_risk_counts(self):
+    def test_kmf_with_risk_counts(self, block):
         data1 = np.random.exponential(10, size=(100))
         kmf = KaplanMeierFitter()
         kmf.fit(data1)
         kmf.plot(at_risk_counts=True)
         self.plt.title("test_kmf_with_risk_counts")
-        self.plt.show(block=False)
+        self.plt.show(block=block)
 
-    def test_naf_plotting_with_custom_colours(self):
+    def test_naf_plotting_with_custom_colours(self, block):
         data1 = np.random.exponential(5, size=(200, 1))
         data2 = np.random.exponential(1, size=(500))
         naf = NelsonAalenFitter()
@@ -60,10 +60,10 @@ class TestPlotting():
         naf.fit(data2)
         naf.plot(ax=ax, c="k")
         self.plt.title('test_naf_plotting_with_custom_coloirs')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_aalen_additive_plot(self):
+    def test_aalen_additive_plot(self, block):
         # this is a visual test of the fitting the cumulative
         # hazards.
         n = 2500
@@ -82,10 +82,10 @@ class TestPlotting():
         ax = aaf.plot(iloc=slice(0, aaf.cumulative_hazards_.shape[0] - 100))
         ax.set_xlabel("time")
         ax.set_title('test_aalen_additive_plot')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_aalen_additive_smoothed_plot(self):
+    def test_aalen_additive_smoothed_plot(self, block):
         # this is a visual test of the fitting the cumulative
         # hazards.
         n = 2500
@@ -103,10 +103,10 @@ class TestPlotting():
         ax = aaf.smoothed_hazards_(1).iloc[0:aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
         ax.set_title('test_aalen_additive_smoothed_plot')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_naf_plotting_slice(self):
+    def test_naf_plotting_slice(self, block):
         data1 = np.random.exponential(5, size=(200, 1))
         data2 = np.random.exponential(1, size=(200, 1))
         naf = NelsonAalenFitter()
@@ -115,10 +115,10 @@ class TestPlotting():
         naf.fit(data2)
         naf.plot(ax=ax, ci_force_lines=True, iloc=slice(100, 180))
         self.plt.title('test_naf_plotting_slice')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_plot_lifetimes_calendar(self):
+    def test_plot_lifetimes_calendar(self, block):
         self.plt.figure()
         t = np.linspace(0, 20, 1000)
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
@@ -126,63 +126,63 @@ class TestPlotting():
         current = 10
         birthtimes = current * np.random.uniform(size=(N,))
         T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
-        plot_lifetimes(T, event_observed=C, birthtimes=birthtimes, block=False)
+        plot_lifetimes(T, event_observed=C, birthtimes=birthtimes, block=block)
 
-    def test_plot_lifetimes_relative(self):
+    def test_plot_lifetimes_relative(self, block):
         self.plt.figure()
         t = np.linspace(0, 20, 1000)
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
         N = 20
         T, C = generate_random_lifetimes(hz, t, size=N, censor=True)
-        plot_lifetimes(T, event_observed=C, block=False)
+        plot_lifetimes(T, event_observed=C, block=block)
 
-    def test_naf_plot_cumulative_hazard(self):
+    def test_naf_plot_cumulative_hazard(self, block):
         data1 = np.random.exponential(5, size=(200, 1))
         naf = NelsonAalenFitter()
         naf.fit(data1)
         ax = naf.plot()
         naf.plot_cumulative_hazard(ax=ax, ci_force_lines=True)
         self.plt.title("I should have plotted the same thing, but different styles + color!")
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_naf_plot_cumulative_hazard_bandwidth_2(self):
+    def test_naf_plot_cumulative_hazard_bandwidth_2(self, block):
         data1 = np.random.exponential(5, size=(2000, 1))
         naf = NelsonAalenFitter()
         naf.fit(data1)
         naf.plot_hazard(bandwidth=1., ix=slice(0, 7.))
         self.plt.title('test_naf_plot_cumulative_hazard_bandwidth_2')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_naf_plot_cumulative_hazard_bandwith_1(self):
+    def test_naf_plot_cumulative_hazard_bandwith_1(self, block):
         data1 = np.random.exponential(5, size=(2000, 1)) ** 2
         naf = NelsonAalenFitter()
         naf.fit(data1)
         naf.plot_hazard(bandwidth=5., iloc=slice(0, 1700))
         self.plt.title('test_naf_plot_cumulative_hazard_bandwith_1')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_show_censor_with_discrete_date(self):
+    def test_show_censor_with_discrete_date(self, block):
         T = np.random.binomial(20, 0.1, size=100)
         C = np.random.binomial(1, 0.8, size=100)
         kmf = KaplanMeierFitter()
         kmf.fit(T, C).plot(show_censors=True)
         self.plt.title('test_show_censor_with_discrete_date')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_show_censor_with_index_0(self):
+    def test_show_censor_with_index_0(self, block):
         T = np.random.binomial(20, 0.9, size=100)  # lifelines should auto put a 0 in.
         C = np.random.binomial(1, 0.8, size=100)
         kmf = KaplanMeierFitter()
         kmf.fit(T, C).plot(show_censors=True)
         self.plt.title('test_show_censor_with_index_0')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_flat_style_and_marker(self):
+    def test_flat_style_and_marker(self, block):
         data1 = np.random.exponential(10, size=200)
         data2 = np.random.exponential(2, size=200)
         C1 = np.random.binomial(1, 0.9, size=200)
@@ -193,14 +193,14 @@ class TestPlotting():
         kmf.fit(data2, C2, label='test label 2')
         kmf.plot(ax=ax, censor_styles={'marker': 'o', 'ms': 7}, flat=True)
         self.plt.title("testing kmf flat styling + marker")
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
 
-    def test_flat_style_no_censor(self):
+    def test_flat_style_no_censor(self, block):
         data1 = np.random.exponential(10, size=200)
         kmf = KaplanMeierFitter()
         kmf.fit(data1, label='test label 1')
         ax = kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
         self.plt.title('test_flat_style_no_censor')
-        self.plt.show(block=False)
+        self.plt.show(block=block)
         return
