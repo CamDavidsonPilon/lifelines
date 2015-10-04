@@ -217,6 +217,7 @@ def shaded_plot(x, y, y_upper, y_lower, **kwargs):
     ax = kwargs.pop('ax', plt.gca())
     print("x", x)
     print("y", y)
+    print("y_upper", y_upper)
     print("kwargs", kwargs)
     result = ax.plot(x, y, drawstyle='steps-post', **kwargs)
     print(result)
