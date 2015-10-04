@@ -215,7 +215,9 @@ def shaded_plot(x, y, y_upper, y_lower, **kwargs):
     from matplotlib import pyplot as plt
 
     ax = kwargs.pop('ax', plt.gca())
-    base_line, = ax.plot(x, y, drawstyle='steps-post', **kwargs)
+    result = ax.plot(x, y, drawstyle='steps-post', **kwargs)
+    print(result)
+    base_line = result[0]
     fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25,
                        color=base_line.get_color(), linewidth=1.0)
     return
