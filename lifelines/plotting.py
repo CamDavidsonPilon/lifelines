@@ -215,6 +215,9 @@ def shaded_plot(x, y, y_upper, y_lower, **kwargs):
     from matplotlib import pyplot as plt
 
     ax = kwargs.pop('ax', plt.gca())
+    print("x", x)
+    print("y", y)
+    print("kwargs", kwargs)
     result = ax.plot(x, y, drawstyle='steps-post', **kwargs)
     print(result)
     base_line = result[0]
