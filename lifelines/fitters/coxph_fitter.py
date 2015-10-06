@@ -309,6 +309,7 @@ class CoxPHFitter(BaseFitter):
             self._norm_std = df.std(0)
             df = normalize(df)
 
+
         E = E.astype(bool)
 
         hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
@@ -321,10 +322,26 @@ class CoxPHFitter(BaseFitter):
 
         self.durations = T
         self.event_observed = E
+        self.baseline_hazard_ = pd.DataFrame(index=self.durations.unique())
+        # strata have different baseline hazard functions
+        # for this reason we need to estimate them separately
+        if self.strata:
+            for current_strata in np.unique(df.index):
+                # Create dataframe of all strata baseline hazards
+                self.baseline_hazard_ = pd.merge(self.baseline_hazard_, 
+                                                self._compute_baseline_hazard(data=df.loc[[current_strata]], durations=T.loc[[current_strata]], event_observed=E.loc[[current_strata]]), 
+                                                left_index=True, 
+                                                right_index=True, 
+                                                how='outer')
+            # Rename columns to be the name of the strata
+            self.baseline_hazard_.columns = np.unique(df.index)
 
-        self.baseline_hazard_ = self._compute_baseline_hazard()
+        else:
+            self.baseline_hazard_ = self._compute_baseline_hazard(data=df, durations=T, event_observed=E)
+
         self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
         self.baseline_survival_ = exp(-self.baseline_cumulative_hazard_)
+
         return self
 
     def _check_values(self, X):
@@ -447,15 +464,28 @@ class CoxPHFitter(BaseFitter):
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-
-        Returns the cumulative hazard for the individuals.
         """
-        v = self.predict_partial_hazard(X)
         s_0 = self.baseline_survival_
-        col = _get_index(X)
-        return pd.DataFrame(-np.dot(np.log(s_0), v.T), index=self.baseline_survival_.index, columns=col)
 
-    def predict_survival_function(self, X):
+        v = self.predict_partial_hazard(X)
+        # X is (n,d) covariate matrix
+        # self.hazards_ is (d,1) with one strata, but (d,n_strata) with multiple strata
+        # perform manipulation to calculate cumulative hazard for each n individuals in each strata
+        n_strata = s_0.shape[1]
+        v_eye = [np.eye(n_strata)*val for val in v.values]
+        v = np.hstack(map(np.transpose,map(np.vstack, zip(*v_eye)))).T
+
+        col = _get_index(X)
+        cols = []
+        for strata_name in s_0.columns:
+            for col_name in col:
+                cols.append(strata_name+"_"+str(col_name))
+
+
+        return pd.DataFrame(-np.dot(np.log(s_0), v.T), index=self.baseline_survival_.index, columns=cols)
+
+
+    def predict_survival_function(self, X, strata=None):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
@@ -463,6 +493,7 @@ class CoxPHFitter(BaseFitter):
 
         Returns the estimated survival functions for the individuals
         """
+
         return exp(-self.predict_cumulative_hazard(X))
 
     def predict_percentile(self, X, p=0.5):
@@ -499,19 +530,18 @@ class CoxPHFitter(BaseFitter):
         v = self.predict_survival_function(X)[index]
         return pd.DataFrame(trapz(v.values.T, v.index), index=index)
 
-    def _compute_baseline_hazard(self):
+    def _compute_baseline_hazard(self, data, durations, event_observed):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        ind_hazards = self.predict_partial_hazard(self.data).values
+        ind_hazards = self.predict_partial_hazard(data).values
 
-        event_table = survival_table_from_events(self.durations.values,
-                                                 self.event_observed.values)
+        event_table = survival_table_from_events(durations,event_observed)
 
         baseline_hazard_ = pd.DataFrame(np.zeros((event_table.shape[0], 1)),
                                         index=event_table.index,
                                         columns=['baseline hazard'])
 
         for t, s in event_table.iterrows():
-            less = np.array(self.durations >= t)
+            less = np.array(durations >= t)
             if ind_hazards[less].sum() == 0:
                 v = 0
             else:
