@@ -2,15 +2,45 @@
 sudo: false
 
 language: python
-python:
-   - "2.7"
-   - "3.3"
-   - "3.4"
+
+matrix:
+  include:
+    - python: 2.7
+      env: MATPLOTLIB_VERSION=1.4.3 DISPLAY=:99.0
+    - python: 3.3
+      env: MATPLOTLIB_VERSION=1.4.3 DISPLAY=:99.0
+    - python: 3.4
+      env: MATPLOTLIB_VERSION=1.4.3 DISPLAY=:99.0
+    - python: 3.5
+      env: MATPLOTLIB_VERSION=1.4.3 DISPLAY=:99.0
+    - python: 2.7
+      env: MATPLOTLIB_VERSION=1.5.0rc2 DISPLAY=:99.0
+    - python: 3.5
+      env: MATPLOTLIB_VERSION=1.5.0rc2 DISPLAY=:99.0
+#  allow_failures:
+#    - python: "nightly"
+
 addons:
   apt:
     packages:
     - gcc
     - gfortran
+    # Deps for matplotlib, can remove once 1.5.0 is released and installable via conda
+    - inkscape
+    - libav-tools
+    - gdb
+    - mencoder
+    - dvipng
+    - texlive-latex-base
+    - texlive-latex-extra
+    - texlive-fonts-recommended
+    - texlive-latex-recommended
+    - graphviz
+
+# To be able to run plotting tests
+before_install:
+  - sh -e /etc/init.d/xvfb start
+
 # See http://conda.pydata.org/docs/travis.html
 install:
   # You may want to periodically update this, although the conda update
@@ -30,14 +60,21 @@ install:
   - conda info -a
 
   # Should match requirements.txt
-  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas matplotlib pytest
+  - conda create -n test-environment python=$TRAVIS_PYTHON_VERSION pip numpy scipy pandas pytest
   - source activate test-environment
+
+  # When 1.5.0 is released, can use only conda.
+  - if [[ "$MATPLOTLIB_VERSION" == "1.4.3" ]]; then
+      conda install -n test-environment matplotlib=$MATPLOTLIB_VERSION;
+    else
+      pip install git+https://github.com/matplotlib/matplotlib.git@v$MATPLOTLIB_VERSION;
+    fi
+
   # Build in place so we can run tests
+  - pip install coveralls pytest-cov
   - pip install .
-  - pip install coveralls
-  - pip install pytest-cov
 # command to run tests
-script: py.test --cov=lifelines -vv
+script: py.test --cov=lifelines -vv --block=False
 after_success:
   coveralls
 # Don't want notifications

@@ -42,7 +42,7 @@ class coeff_func(object):
 
     def __call__(self, *args, **kwargs):
         def __repr__():
-            s = self.f.__doc__.replace("alpha", "%.2f" % kwargs["alpha"]).replace("beta", "%.2f" % kwargs["beta"])
+            s = self.f.__doc__.replace("alpha", "%.4f" % kwargs["alpha"]).replace("beta", "%.4f" % kwargs["beta"])
             return s
         self.__doc__ = __repr__()
         self.__repr__ = __repr__
