@@ -441,29 +441,16 @@ class CoxPHFitter(BaseFitter):
         return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
 
 
-    def predict_cumulative_hazard(self, X):
+    def predict_cumulative_hazard(self, X, s_0):
         """
         X: a (n,d) covariate matrix
         Returns the cumulative hazard for the individuals.
         """
-        s_0 = self.baseline_survival_
 
+        s_0 = np.matrix(s_0).T
         v = self.predict_partial_hazard(X)
-        # X is (n,d) covariate matrix
-        # self.hazards_ is (d,1) with one strata, but (d,n_strata) with multiple strata
-        # perform manipulation to calculate cumulative hazard for each n individuals in each strata
-        n_strata = s_0.shape[1]
-        v_eye = [np.eye(n_strata)*val for val in v.values]
-        v = np.hstack(map(np.transpose,map(np.vstack, zip(*v_eye)))).T
 
-        col = _get_index(X)
-        cols = []
-        for strata_name in s_0.columns:
-            for col_name in col:
-                cols.append(strata_name+"_"+str(col_name))
-
-
-        return pd.DataFrame(-np.dot(np.log(s_0), v.T), index=self.baseline_survival_.index, columns=cols)
+        return pd.DataFrame(-np.dot(np.log(s_0), v.T), index=self.baseline_survival_.index)
 
 
     def predict_survival_function(self, X, strata=None):
@@ -473,7 +460,25 @@ class CoxPHFitter(BaseFitter):
         Returns the survival functions for the individuals
         """
 
-        return exp(-self.predict_cumulative_hazard(X))
+        self.survival = pd.DataFrame(index=self.durations.unique())
+        col = _get_index(X)
+        
+        for strata_name in self.baseline_survival_:
+
+            new_names = []
+            for col_name in col:
+                new_names.append(strata_name+"_"+str(col_name))
+
+            pch = self.predict_cumulative_hazard(X, self.baseline_survival_[strata_name])
+            pch.columns = new_names
+
+            self.survival = pd.merge(self.survival,
+                                    exp(-pch),
+                                    left_index=True, 
+                                    right_index=True, 
+                                    how='outer')
+
+        return self.survival
 
     def predict_percentile(self, X, p=0.5):
         """
