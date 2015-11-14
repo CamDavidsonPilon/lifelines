@@ -75,7 +75,7 @@ situation.
     print "Observed lifetimes at time %d:\n"%(current_time), observed_lifetimes
 
 
-.. image:: SurvivalAnalysisintro_files/SurvivalAnalysisintro_4_0.png
+.. image:: images/survival_analysis_intro_censorship.png
 
 
 .. parsed-literal::
@@ -106,7 +106,7 @@ information at :math:`t=10`).
     plot_lifetimes(actual_lifetimes, event_observed=observed)
 
 
-.. image:: Survival Analysis intro_files/Survival Analysis intro_6_0.png
+.. image:: images/survival_analysis_intro_censorship_revealed.png
 
 
 Survival analysis was originally developed to solve this type of

@@ -230,7 +230,7 @@ The property is a Pandas DataFrame, so we can call ``plot`` on it:
     kmf.survival_function_.plot()
     plt.title('Survival function of political regimes');
 
-
+.. image:: images/lifelines_intro_kmf_curve.png
    
 
 How do we interpret this? The y-axis represents the probability a leader is still
@@ -248,7 +248,7 @@ to plot both the KM estimate and its confidence intervals:
 
     kmf.plot()
 
-.. image:: Introtolifelines_files/Introtolifelines_15_1.png
+.. image:: images/lifelines_intro_kmf_fitter.png
 
 .. note::  Don't like the shaded area for confidence intervals? See below for examples on how to change this.
 
@@ -287,7 +287,7 @@ an ``axis`` object, that can be used for plotting further estimates:
     plt.title("Lifespans of different global regimes");
 
 
-.. image:: Introtolifelines_files/Introtolifelines_19_0.png
+.. image:: images/lifelines_intro_multi_kmf_fitter.png
 
 
 We might be interested in estimating the probabilities in between some
@@ -319,7 +319,7 @@ probabilties of survival at those points:
     dtype: float64
 
 
-.. image:: Introtolifelines_files/Introtolifelines_21_1.png
+.. image:: images/lifelines_intro_multi_kmf_fitter_2.png
 
 
 It is incredible how much longer these non-democratic regimes exist for.
@@ -378,12 +378,10 @@ Lets compare the different *types* of regimes present in the dataset:
         plt.xlim(0,50)
         if i==0:
             plt.ylabel('Frac. in power after $n$ years')
-        if i == 3:
-            plt.xlabel("Years in power")
     plt.tight_layout()
 
 
-.. image:: Introtolifelines_files/Introtolifelines_25_0.png
+.. image:: images/lifelines_intro_all_regimes.png
 
 
 --------------
@@ -484,7 +482,7 @@ a DataFrame:
 
 
 
-.. image:: Introtolifelines_files/Introtolifelines_34_1.png
+.. image:: images/lifelines_intro_naf_fitter.png
 
 
 The cumulative hazard has less immediate understanding than the survival
@@ -510,7 +508,7 @@ years:
     plt.title("Cumulative hazard function of different global regimes");
 
 
-.. image:: Introtolifelines_files/Introtolifelines_36_0.png
+.. image:: images/lifelines_intro_naf_fitter_multi.png
 
 
 Looking at the rates of change, I would say that both political
@@ -551,7 +549,7 @@ intervals, similar to the traditional ``plot`` functionality.
     plt.xlim(0,25);
 
 
-.. image:: Introtolifelines_files/Introtolifelines_39_0.png
+.. image:: images/lifelines_intro_naf_smooth_multi.png
 
 
 It is more clear here which group has the higher hazard, and like
@@ -572,7 +570,7 @@ here. (My advice: stick with the cumulative hazard function.)
 
 
 
-.. image:: Introtolifelines_files/Introtolifelines_41_1.png
+.. image:: images/lifelines_intro_naf_smooth_multi_2.png
 
 
 
@@ -594,11 +592,12 @@ instruments could only detect the measurement was *less* than some upperbound.
 
 .. code:: python
 
-    from lifelines.datasets import generate_lcd_dataset
-    lcd_dataset = generate_lcd_dataset()
+    from lifelines.datasets import load_lcd
+    lcd_dataset = load_lcd()
 
-    T = lcd_dataset['alluvial_fan']['T']
-    C = lcd_dataset['alluvial_fan']['C'] #boolean array, True if observed.
+    ix = lcd_dataset['group'] == 'alluvial_fan'
+    T = lcd_dataset[ix]['T']
+    C = lcd_dataset[ix]['C'] #boolean array, True if observed.
 
     kmf = KaplanMeierFitter()
     kmf.fit(T,C, left_censorship=True)  
@@ -611,6 +610,8 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
     kmf.cumulative_density_
     kmf.plot() #will plot the CDF
 
+
+.. image:: images/lifelines_intro_lcd.png
 
 Left Truncated Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
