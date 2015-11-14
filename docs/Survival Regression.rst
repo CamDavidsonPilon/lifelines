@@ -345,7 +345,7 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
   aaf.plot( columns=[ 'regime[T.Presidential Dem]', 'baseline', 'un_continent_name[Europe]' ], ix=slice(1,15) )
 
 
-.. image:: images/cumulative_hazards_.png
+.. image:: images/survival_regression_aaf.png
 
 
 Regression is most interesting if we use it on data we have not yet
@@ -357,10 +357,9 @@ Prime Minister Stephen Harper.
 
 .. code:: python
 
-    ix = (data['ctryname'] == 'Canada')
-    harper = X[ix,:][-1,:][None,:]
-    harper[0,-1] = 2003
-    print "Harper's unique data point"
+    ix = (data['ctryname'] == 'Canada') * (data['start_year'] == 2006)
+    harper = X.ix[ix]
+    print "Harper's unique data point", harper
 
 .. parsed-literal::
 
@@ -380,13 +379,13 @@ Prime Minister Stephen Harper.
 
     ax = plt.subplot(2,1,1)
 
-    aaf.predict_cumulative_hazard(harper, columns=["Harper's hazard rate"]).plot(ax=ax)
+    aaf.predict_cumulative_hazard(harper).plot(ax=ax)
     ax = plt.subplot(2,1,2)
 
-    aaf.predict_survival_function(harper, columns=["Harper's survival function"]).plot(ax=ax);
+    aaf.predict_survival_function(harper).plot(ax=ax);
 
 
-.. image:: Introtolifelines_files/Introtolifelines_57_2.png
+.. image:: images/survival_regression_harper.png
 
 
 Cox's Proportional Hazard model
@@ -484,8 +483,8 @@ into a training set and a testing set, fits itself on the training set, and eval
         cf = CoxPHFitter()
         scores = k_fold_cross_validation(cf, regression_dataset, 'T', event_col='E', k=3)
         print scores
-        print scores.mean()
-        print scores.std()
+        print np.mean(scores)
+        print np.std(scores)
         
         #[ 0.5896  0.5358  0.5028]
         # 0.542
