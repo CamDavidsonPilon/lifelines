@@ -121,17 +121,17 @@ Alternatively, perhaps you are interested in viewing the survival table given so
     
     from lifelines.utils import survival_table_from_events
 
-    table = survival_table_from_events(T, C)
+    table = survival_table_from_events(T, E)
     print table.head()
 
     """
               removed  observed  censored  entrance  at_risk
     event_at
-    0               0         0         0        60       60
-    2               2         1         1         0       60
-    3               3         1         2         0       58
-    4               5         3         2         0       55
-    5              12         6         6         0       50
+    0               0         0         0       163      163
+    6               1         1         0         0      163
+    7               2         1         1         0      162
+    9               3         3         0         0      160
+    13              3         3         0         0      157
     """
 
 
@@ -172,6 +172,7 @@ After fitting, you'll have access to properties like ``cumulative_hazards_`` and
     x = regression_dataset[regression_dataset.columns - ['E','T']]
     aaf.predict_survival_function(x.ix[10:12]).plot() #get the unique survival functions of the first two subjects 
 
+.. image:: images/quickstart_predict_aaf.png  
 
 Like the above estimators, there is also a built-in plotting method:
 

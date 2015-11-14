@@ -1,9 +1,0 @@
-Results
-   df: 1
-   alpha: 0.99
-   t 0: -1
-   test: logrank
-   null distribution: chi squared
-
-   __ p-value ___|__ test statistic __|__ test results __
-         0.00000 |              208.306 |     True   
