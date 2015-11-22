@@ -25,7 +25,7 @@ class AalenAdditiveFitter(BaseFitter):
     Parameters:
       fit_intercept: If False, do not attach an intercept (column of ones) to the covariate matrix. The
         intercept, b_0(t) acts as a baseline hazard.
-      alpha: the level in the confidence intervals.
+      alpha: the alpha value for 100(1-alpha)% confidence intervals, and alpha value for statistical significance.
       coef_penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the absolute value of c_{i,t}. Recommended, even if a small value.
@@ -34,7 +34,7 @@ class AalenAdditiveFitter(BaseFitter):
 
     """
 
-    def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.5, smoothing_penalizer=0.):
+    def __init__(self, fit_intercept=True, alpha=0.05, coef_penalizer=0.5, smoothing_penalizer=0.):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         if coef_penalizer < 0 or smoothing_penalizer < 0:
@@ -321,7 +321,7 @@ class AalenAdditiveFitter(BaseFitter):
                             columns=self.hazards_.columns, index=self.timeline)
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
+        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
         n = self.timeline.shape[0]
         d = self.cumulative_hazards_.shape[1]
         index = [['upper'] * n + ['lower'] * n, np.concatenate([self.timeline, self.timeline])]

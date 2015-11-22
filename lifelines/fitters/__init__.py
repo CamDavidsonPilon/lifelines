@@ -10,7 +10,7 @@ from lifelines.utils import qth_survival_times
 
 class BaseFitter(object):
 
-    def __init__(self, alpha=0.95):
+    def __init__(self, alpha=0.05):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         self.alpha = alpha

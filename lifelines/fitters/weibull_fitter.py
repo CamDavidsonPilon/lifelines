@@ -75,7 +75,7 @@ class WeibullFitter(UnivariateFitter):
              useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
+          alpha: the alpha value for 100(1-alpha)% confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           ci_labels: add custom column names to the generated confidence intervals
                 as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
@@ -164,6 +164,11 @@ class WeibullFitter(UnivariateFitter):
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
+
+        if ci_labels is None:
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+        assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
+        
         var_lambda_, var_rho_ = inv(self._jacobian).diagonal()
 
         def _dH_d_lambda(lambda_, rho, T):
@@ -176,10 +181,6 @@ class WeibullFitter(UnivariateFitter):
             return var_lambda_ * _dH_d_lambda(lambda_, rho, T) ** 2 + var_rho_ * _dH_d_rho(lambda_, rho, T) ** 2
 
         std_cumulative_hazard = np.sqrt(sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline))
-
-        if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
-        assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
         df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
