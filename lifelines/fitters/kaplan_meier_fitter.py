@@ -13,10 +13,9 @@ class KaplanMeierFitter(UnivariateFitter):
     """
     Class for fitting the Kaplan-Meier estimate for the survival function.
 
-    KaplanMeierFitter( alpha=0.95)
+    KaplanMeierFitter(alpha=0.05)
 
-    alpha: The alpha value associated with the confidence intervals.
-
+    alpha: the alpha value for 100(1-alpha)% confidence intervals.
     """
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None, label='KM_estimate',
@@ -31,7 +30,7 @@ class KaplanMeierFitter(UnivariateFitter):
              useful for left-truncated (not left-censored) observations. If None, all members of the population
              were born at time 0.
           label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
+          alpha: the alpha value for 100(1-alpha)% confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           left_censorship: True if durations and event_observed refer to left censorship events. Default False
           ci_labels: add custom column names to the generated confidence intervals
@@ -42,12 +41,9 @@ class KaplanMeierFitter(UnivariateFitter):
           self, with new properties like 'survival_function_'.
 
         """
-        # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
-        estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
         v = _preprocess_inputs(durations, event_observed, timeline, entry)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
         self._label = label
-        alpha = alpha if alpha else self.alpha
         log_survival_function, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
                                                                    self._additive_f, self._additive_var,
                                                                    left_censorship)
@@ -63,6 +59,8 @@ class KaplanMeierFitter(UnivariateFitter):
                 raise StatError("""There are too few early truncation times and too many events. S(t)==0 for all t>%.1f. Recommend BreslowFlemingHarringtonFitter.""" % ix)
 
         # estimation
+        estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
+        alpha = alpha if alpha is not None else self.alpha
         setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[self._label]))
         self.__estimate = getattr(self, estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
