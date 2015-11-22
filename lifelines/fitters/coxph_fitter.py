@@ -223,17 +223,19 @@ class CoxPHFitter(BaseFitter):
             delta = solve(-h, step_size * g.T)
             if np.any(np.isnan(delta)):
                 raise ValueError("delta contains nan value(s). Convergence halted.")
+                
+            # Save these as pending result
+            hessian, gradient = h, g
+
+            if norm(delta) < precision:
+                converging = False
+
             # Only allow small steps
             if norm(delta) > 10:
                 step_size *= 0.5
                 continue
 
             beta += delta
-            # Save these as pending result
-            hessian, gradient = h, g
-
-            if norm(delta) < precision:
-                converging = False
 
             if ((i % 10) == 0) and show_progress:
                 print("Iteration %d: delta = %.5f" % (i, norm(delta)))
