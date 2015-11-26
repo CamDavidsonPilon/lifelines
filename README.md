@@ -42,7 +42,7 @@ See the common [problems/solutions for installing lifelines](https://github.com/
 
 You can optionally run the test suite after install with
 
-    python -m lifelines.tests
+    py.test
 
 
 ### *lifelines* Documentation and an Intro to Survival Analysis
