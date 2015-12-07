@@ -13,15 +13,15 @@ class NelsonAalenFitter(UnivariateFitter):
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard.
 
-    NelsonAalenFitter( alpha=0.95, nelson_aalen_smoothing=True)
+    NelsonAalenFitter(alpha=0.05, nelson_aalen_smoothing=True)
 
-    alpha: The alpha value associated with the confidence intervals.
-    nelson_aalen_smoothing: If the event times are naturally discrete (like discrete years, minutes, etc.)
+      alpha: the alpha value for 100(1-alpha)% confidence intervals.
+      nelson_aalen_smoothing: If the event times are naturally discrete (like discrete years, minutes, etc.)
       then it is advisable to turn this parameter to False. See [1], pg.84.
 
     """
 
-    def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
+    def __init__(self, alpha=0.05, nelson_aalen_smoothing=True):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         self.alpha = alpha
@@ -46,7 +46,7 @@ class NelsonAalenFitter(UnivariateFitter):
              useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
+          alpha: the alpha value for 100(1-alpha)% confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           ci_labels: add custom column names to the generated confidence intervals
                 as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
