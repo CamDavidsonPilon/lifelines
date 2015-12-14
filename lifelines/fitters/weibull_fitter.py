@@ -56,7 +56,7 @@ class WeibullFitter(UnivariateFitter):
 
     and the hazard rate is:
 
-      h(t) = rho*lambda(lambda*t)**rho
+      h(t) = rho*lambda(lambda*t)**(rho-1)
 
     After calling the `.fit` method, you have access to properties like:
     `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
