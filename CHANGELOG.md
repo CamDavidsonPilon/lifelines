@@ -1,5 +1,13 @@
 ### Changelogs
 
+#### 0.8.1
+ - supports matplotlib 1.5.
+ - introduction of a param `nn_cumulative_hazards` in AalenAdditiveModel's `__init__` (default True). This parameter will truncate all non-negative cumulative hazards in prediction methods to 0. 
+ - bug fixes including:
+    - fixed issue where the while loop in `_newton_rhaphson` would break too early causing a variable not to be set properly. 
+    - scaling of smooth hazards in NelsonAalenFitter was off by a factor of 0.5. 
+
+
 #### 0.8.0
  - reorganized lifelines directories: 
     - moved test files out of main directory. 
