@@ -81,6 +81,12 @@ def data_nus():
     return data_nus
 
 
+@pytest.fixture
+def rossi():
+    return load_rossi()
+
+
+
 class TestBaseFitter():
 
     def test_repr_without_fitter(self):
@@ -581,11 +587,10 @@ class TestRegressionFitters():
 
 class TestCoxPHFitter():
 
-    def test_summary(self):
+    def test_summary(self, rossi):
 
         cp = CoxPHFitter()
-        df = load_rossi()
-        cp.fit(df, duration_col='week', event_col='arrest')
+        cp.fit(rossi, duration_col='week', event_col='arrest')
         summDf = cp.summary
         expectedColumns = ['coef',
                            'exp(coef)',
@@ -596,7 +601,7 @@ class TestCoxPHFitter():
                            'upper 0.95']
         assert all([col in summDf.columns for col in expectedColumns])
 
-    def test_print_summary(self):
+    def test_print_summary(self, rossi):
 
         import sys
         try:
@@ -610,8 +615,7 @@ class TestCoxPHFitter():
             sys.stdout = out
 
             cp = CoxPHFitter()
-            df = load_rossi()
-            cp.fit(df, duration_col='week', event_col='arrest')
+            cp.fit(rossi, duration_col='week', event_col='arrest')
             cp.print_summary()
             output = out.getvalue().strip().split()
             expected = """n=432, number of events=114
@@ -825,7 +829,7 @@ Concordance = 0.640""".strip().split()
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert mean_score > expected, msg.format(expected, mean_score)
 
-    def test_output_against_R(self):
+    def test_output_against_R(self, rossi):
         # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         # Link is now broken, but this is the code:
         #
@@ -834,12 +838,11 @@ Concordance = 0.640""".strip().split()
         #     data=rossi)
         # cat(round(mod.allison$coefficients, 4), sep=", ")
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
-        df = load_rossi()
         cf = CoxPHFitter(normalize=False)
-        cf.fit(df, duration_col='week', event_col='arrest')
+        cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
-    def test_penalized_output_against_R(self):
+    def test_penalized_output_against_R(self, rossi):
         # R code:
         #
         # rossi <- read.csv('.../lifelines/datasets/rossi.csv')
@@ -847,9 +850,8 @@ Concordance = 0.640""".strip().split()
         #                                                 theta=1.0, scale=FALSE), data=rossi)
         # cat(round(mod.allison$coefficients, 4), sep=", ")
         expected = np.array([[-0.3641, -0.0580, 0.2894, -0.1496, -0.3837, -0.0822, 0.0913]])
-        df = load_rossi()
         cf = CoxPHFitter(normalize=False, penalizer=1.0)
-        cf.fit(df, duration_col='week', event_col='arrest')
+        cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
     def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
@@ -887,17 +889,15 @@ Concordance = 0.640""".strip().split()
         expected_p = np.array([0.1847, 0.7644,  0.0730, 0.00])
         npt.assert_array_almost_equal(actual_p, expected_p, decimal=2)
 
-    def test_input_column_order_is_equal_to_output_hazards_order(self):
-        rossi = load_rossi()
+    def test_input_column_order_is_equal_to_output_hazards_order(self, rossi):
         cp = CoxPHFitter()
         expected = ['fin', 'age', 'race', 'wexp', 'mar', 'paro', 'prio']
         cp.fit(rossi, event_col='week', duration_col='arrest')
         assert list(cp.hazards_.columns) == expected
 
-    def test_strata_removes_variable_from_summary_output(self):
-        df = load_rossi()
+    def test_strata_removes_variable_from_summary_output(self, rossi):
         cp = CoxPHFitter()
-        cp.fit(df, 'week', 'arrest', strata=['race'])
+        cp.fit(rossi, 'week', 'arrest', strata=['race'])
         assert 'race' not in cp.summary.index
 
     def test_strata_works_if_only_a_single_element_is_in_the_strata(self):
@@ -909,7 +909,7 @@ Concordance = 0.640""".strip().split()
         cp.fit(df, 'T', 'Status', strata=['Stratum'])
         assert True
 
-    def test_strata_against_r_output(self):
+    def test_strata_against_r_output(self, rossi):
         """
         > r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
             paro, mar, wexp) + prio, data = rossi)
@@ -917,9 +917,8 @@ Concordance = 0.640""".strip().split()
         > r$loglik
         """
 
-        df = load_rossi()
         cp = CoxPHFitter(normalize=False)
-        cp.fit(df, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'], include_likelihood=True)
+        cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'], include_likelihood=True)
 
         npt.assert_almost_equal(cp.summary['coef'].values, [-0.335, -0.059, 0.100], decimal=3)
         assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
@@ -927,11 +926,22 @@ Concordance = 0.640""".strip().split()
 
 class TestAalenAdditiveFitter():
 
-    def test_using_a_custom_timeline_in_static_fitting(self):
-        rossi = load_rossi()
+    def test_nn_cumulative_hazard_will_set_cum_hazards_to_0(self, rossi):
+        aaf = AalenAdditiveFitter(nn_cumulative_hazard=False)
+        aaf.fit(rossi, event_col='arrest', duration_col='week')
+        cum_hazards = aaf.predict_cumulative_hazard(rossi)
+        assert (cum_hazards < 0).stack().mean() > 0
+
+        aaf = AalenAdditiveFitter(nn_cumulative_hazard=True)
+        aaf.fit(rossi, event_col='arrest', duration_col='week')
+        cum_hazards = aaf.predict_cumulative_hazard(rossi)
+        assert (cum_hazards < 0).stack().mean() == 0
+
+
+    def test_using_a_custom_timeline_in_static_fitting(self, rossi):
         aaf = AalenAdditiveFitter()
         timeline = np.arange(10)
-        aaf.fit(rossi, event_col='week', duration_col='arrest', timeline=timeline)
+        aaf.fit(rossi, event_col='arrest', duration_col='week', timeline=timeline)
         npt.assert_array_equal(aaf.hazards_.index.values, timeline)
         npt.assert_array_equal(aaf.cumulative_hazards_.index.values, timeline)
         npt.assert_array_equal(aaf.variance_.index.values, timeline)
@@ -947,34 +957,31 @@ class TestAalenAdditiveFitter():
         npt.assert_array_equal(aaf.variance_.index.values, timeline)
         npt.assert_array_equal(aaf.timeline, timeline)
 
-    def test_penalizer_reduces_norm_of_hazards(self):
+    def test_penalizer_reduces_norm_of_hazards(self, rossi):
         from numpy.linalg import norm
-        rossi = load_rossi()
 
         aaf_without_penalizer = AalenAdditiveFitter(coef_penalizer=0., smoothing_penalizer=0.)
         assert aaf_without_penalizer.coef_penalizer == aaf_without_penalizer.smoothing_penalizer == 0.0
-        aaf_without_penalizer.fit(rossi, event_col='week', duration_col='arrest')
+        aaf_without_penalizer.fit(rossi, event_col='arrest', duration_col='week')
 
         aaf_with_penalizer = AalenAdditiveFitter(coef_penalizer=10., smoothing_penalizer=10.)
-        aaf_with_penalizer.fit(rossi, event_col='week', duration_col='arrest')
+        aaf_with_penalizer.fit(rossi, event_col='arrest', duration_col='week')
         assert norm(aaf_with_penalizer.cumulative_hazards_) <= norm(aaf_without_penalizer.cumulative_hazards_)
 
-    def test_input_column_order_is_equal_to_output_hazards_order(self):
-        rossi = load_rossi()
+    def test_input_column_order_is_equal_to_output_hazards_order(self, rossi):
         aaf = AalenAdditiveFitter()
         expected = ['fin', 'age', 'race', 'wexp', 'mar', 'paro', 'prio']
-        aaf.fit(rossi, event_col='week', duration_col='arrest')
+        aaf.fit(rossi, event_col='arrest', duration_col='week')
         assert list(aaf.cumulative_hazards_.columns.drop('baseline')) == expected
 
         aaf = AalenAdditiveFitter(fit_intercept=False)
         expected = ['fin', 'age', 'race', 'wexp', 'mar', 'paro', 'prio']
-        aaf.fit(rossi, event_col='week', duration_col='arrest')
+        aaf.fit(rossi, event_col='arrest', duration_col='week')
         assert list(aaf.cumulative_hazards_.columns) == expected
 
-    def test_swapping_order_of_columns_in_a_df_is_okay(self):
-        rossi = load_rossi()
+    def test_swapping_order_of_columns_in_a_df_is_okay(self, rossi):
         aaf = AalenAdditiveFitter()
-        aaf.fit(rossi, event_col='week', duration_col='arrest')
+        aaf.fit(rossi, event_col='arrest', duration_col='week')
 
         misorder = ['age', 'race', 'wexp', 'mar', 'paro', 'prio', 'fin']
         natural_order = rossi.columns.drop(['week', 'arrest'])
@@ -983,7 +990,7 @@ class TestAalenAdditiveFitter():
         assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
 
         aaf = AalenAdditiveFitter(fit_intercept=False)
-        aaf.fit(rossi, event_col='week', duration_col='arrest')
+        aaf.fit(rossi, event_col='arrest', duration_col='week')
         assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
         assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
 

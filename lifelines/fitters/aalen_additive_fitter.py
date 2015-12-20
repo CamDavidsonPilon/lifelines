@@ -31,10 +31,11 @@ class AalenAdditiveFitter(BaseFitter):
         For example, this shrinks the absolute value of c_{i,t}. Recommended, even if a small value.
       smoothing_penalizer: Attach a L2 penalizer to difference between adjacent (over time) coefficents. For
         example, this shrinks the absolute value of c_{i,t} - c_{i,t+1}.
+      nn_cumulative_hazard: If True, forces the negative values in cumulative hazards to be 0 instead. Default True. 
 
     """
 
-    def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.5, smoothing_penalizer=0.):
+    def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.5, smoothing_penalizer=0., nn_cumulative_hazard=True):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         if coef_penalizer < 0 or smoothing_penalizer < 0:
@@ -44,6 +45,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.alpha = alpha
         self.coef_penalizer = coef_penalizer
         self.smoothing_penalizer = smoothing_penalizer
+        self.nn_cumulative_hazard = nn_cumulative_hazard
 
     def fit(self, dataframe, duration_col, event_col=None,
             timeline=None, id_col=None, show_progress=True):
@@ -360,7 +362,12 @@ class AalenAdditiveFitter(BaseFitter):
         else:
             X_ = X.copy()
         X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
-        return pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=cols)
+        individual_cumulative_hazards_ = pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=cols)
+
+        if self.nn_cumulative_hazard:
+            individual_cumulative_hazards_[individual_cumulative_hazards_ < 0.] = 0.
+
+        return individual_cumulative_hazards_
 
     def predict_survival_function(self, X):
         """
