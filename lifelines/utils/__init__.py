@@ -444,6 +444,7 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
                Default is "predict_median"
                The interface for the method is:
                    predict(self, data, **optional_kwargs)
+    fitter_kwargs: keyword args to pass into fitter.fit method
     predictor_kwargs: keyword args to pass into predictor-method.
 
     Returns:
