@@ -416,7 +416,8 @@ def inv_normal_cdf(p):
 
 def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
                             k=5, evaluation_measure=concordance_index,
-                            predictor="predict_median", predictor_kwargs={}):
+                            predictor="predict_median", fitter_kwargs={},
+                            predictor_kwargs={}):
     """
     Perform cross validation on a dataset. If multiple models are provided,
     all models will train on each of the k subsets.
@@ -443,6 +444,7 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
                Default is "predict_median"
                The interface for the method is:
                    predict(self, data, **optional_kwargs)
+    fitter_kwargs: keyword arge to pass into fitter.fit method
     predictor_kwargs: keyword args to pass into predictor-method.
 
     Returns:
@@ -482,7 +484,8 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
 
         for fitter, scores in zip(fitters, fitterscores):
             # fit the fitter to the training data
-            fitter.fit(training_data, duration_col=duration_col, event_col=event_col)
+            fitter.fit(training_data, duration_col=duration_col,
+                       event_col=event_col, **fitter_kwargs)
             T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
 
             try:
