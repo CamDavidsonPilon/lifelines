@@ -924,6 +924,25 @@ Concordance = 0.640""".strip().split()
         assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
 
 
+    def test_predict_log_hazard_relative_to_mean_with_normalization(self, rossi):
+        cox = CoxPHFitter(normalize=True)
+        cox.fit(rossi, 'week', 'arrest')
+
+        # they are equal because the data is normalized, so the mean of the covarites is all 0,
+        # thus exp(beta * 0) == 1, so exp(beta * X)/exp(beta * 0) = exp(beta * X)
+        assert_frame_equal(cox.predict_log_hazard_relative_to_mean(rossi), np.log(cox.predict_partial_hazard(rossi)))
+
+
+    def test_predict_log_hazard_relative_to_mean_without_normalization(self, rossi):
+        cox = CoxPHFitter(normalize=False)
+        cox.fit(rossi, 'week', 'arrest')
+        log_relative_hazards = cox.predict_log_hazard_relative_to_mean(rossi)
+        means = rossi.mean(0).to_frame().T
+        assert cox.predict_partial_hazard(means).values[0][0] != 1.0  
+        assert_frame_equal(log_relative_hazards, np.log(cox.predict_partial_hazard(rossi) / cox.predict_partial_hazard(means).squeeze()))
+
+
+
 class TestAalenAdditiveFitter():
 
     def test_nn_cumulative_hazard_will_set_cum_hazards_to_0(self, rossi):
