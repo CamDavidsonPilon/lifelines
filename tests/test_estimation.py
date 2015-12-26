@@ -2,9 +2,16 @@ from __future__ import print_function
 from collections import Counter, Iterable
 import os
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 import numpy as np
 import pandas as pd
 import pytest
+
+
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
@@ -514,6 +521,13 @@ class TestBreslowFlemingHarringtonFitter():
 
 class TestRegressionFitters():
 
+    def test_pickle(self, rossi):
+        from pickle import dump
+        for fitter in [CoxPHFitter, AalenAdditiveFitter]:
+            output = StringIO()
+            f = fitter().fit(rossi, 'week', 'arrest')
+            dump(f, output)
+
     def test_fit_methods_require_duration_col(self):
         X = load_regression_dataset()
 
@@ -544,7 +558,6 @@ class TestRegressionFitters():
 
     def test_predict_methods_in_regression_return_same_types(self):
         X = load_regression_dataset()
-        x = X[X.columns - ['T', 'E']]
 
         aaf = AalenAdditiveFitter()
         cph = CoxPHFitter()
@@ -553,7 +566,7 @@ class TestRegressionFitters():
         cph.fit(X, duration_col='T', event_col='E')
 
         for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict', 'predict_cumulative_hazard']:
-            assert isinstance(getattr(aaf, fit_method)(x), type(getattr(cph, fit_method)(x)))
+            assert isinstance(getattr(aaf, fit_method)(X), type(getattr(cph, fit_method)(X)))
 
     def test_duration_vector_can_be_normalized(self):
         df = load_kidney_transplant()
@@ -604,11 +617,6 @@ class TestCoxPHFitter():
     def test_print_summary(self, rossi):
 
         import sys
-        try:
-            from StringIO import StringIO
-        except:
-            from io import StringIO
-
         saved_stdout = sys.stdout
         try:
             out = StringIO()
