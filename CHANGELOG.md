@@ -1,5 +1,9 @@
 ### Changelogs
 
+#### Forthcoming 0.9.0
+ - new prediction function in `CoxPHFitter`, `predict_log_hazard_relative_to_mean`, that mimics what R's `predict.coxph` does.
+ - changing the default `predict` method in lifelines to return _not the median_, but another value dependent on the fitter that is calling it. This is because too often the `predict_median` function was returning inf values which would significantly damage measure of concordence index. 
+
 #### 0.8.1
  - supports matplotlib 1.5.
  - introduction of a param `nn_cumulative_hazards` in AalenAdditiveModel's `__init__` (default True). This parameter will truncate all non-negative cumulative hazards in prediction methods to 0. 
