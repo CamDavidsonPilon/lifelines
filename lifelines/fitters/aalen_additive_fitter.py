@@ -414,17 +414,6 @@ class AalenAdditiveFitter(BaseFitter):
         t = self.cumulative_hazards_.index
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
-    def predict(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-        Returns the median lifetimes for the individuals. Alias for predict_median
-        """
-        return self.predict_median(X)
-
-
     def plot(self, ix=None, iloc=None, columns=[], legend=True, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:

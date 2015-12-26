@@ -497,18 +497,6 @@ class CoxPHFitter(BaseFitter):
         v = self.predict_survival_function(X)[index]
         return pd.DataFrame(trapz(v.values.T, v.index), index=index)
 
-    def predict(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.        
-
-        Returns the median predicted lifetime. This is different from R's predict.coxph, which returns
-        the  the linear predictor for the log-hazard relative to a mean survival estimate (this is 
-        available in predict_log_hazard_relative_to_mean)
-        """
-        return self.predict_median(X)
-
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         ind_hazards = self.predict_partial_hazard(self.data).values

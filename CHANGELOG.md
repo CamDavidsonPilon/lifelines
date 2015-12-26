@@ -2,7 +2,8 @@
 
 #### Forthcoming 0.9.0
  - new prediction function in `CoxPHFitter`, `predict_log_hazard_relative_to_mean`, that mimics what R's `predict.coxph` does.
- - changing the default `predict` method in lifelines to return _not the median_, but another value dependent on the fitter that is calling it. This is because too often the `predict_median` function was returning inf values which would significantly damage measure of concordence index. 
+ - removing the `predict` method in CoxPHFitter and AalenAdditiveFitter. This is because the choice of `predict_median` as a default was causing too much confusion, and no other natual choice as a default was available. All other `predict_` methods remain. 
+ - Default predict method to `k_fold_cross_validation` is `predict_expectation`
 
 #### 0.8.1
  - supports matplotlib 1.5.
