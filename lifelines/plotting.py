@@ -211,60 +211,6 @@ def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
     return
 
 
-def shaded_plot(x, y, y_upper, y_lower, **kwargs):
-    from matplotlib import pyplot as plt
-
-    ax = kwargs.pop('ax', plt.gca())
-    base_line, = ax.plot(x, y, drawstyle='steps-post', **kwargs)
-    fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25,
-                       color=base_line.get_color(), linewidth=1.0)
-    return
-
-
-def plot_regressions(self):
-    def plot(ix=None, iloc=None, columns=[], legend=True, **kwargs):
-        """"
-        A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
-
-          ix: specify a time-based subsection of the curves to plot, ex:
-                   .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.
-          iloc: specify a location-based subsection of the curves to plot, ex:
-                   .plot(iloc=slice(0,10)) will plot the first 10 time points.
-          columns: If not empty, plot a subset of columns from the cumulative_hazards_. Default all.
-          legend: show legend in figure.
-
-        """
-        from matplotlib import pyplot as plt
-
-        assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot'
-
-        get_method = "ix" if ix is not None else "iloc"
-        if iloc == ix is None:
-            user_submitted_ix = slice(0, None)
-        else:
-            user_submitted_ix = ix if ix is not None else iloc
-        get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
-
-        if len(columns) == 0:
-            columns = self.cumulative_hazards_.columns
-
-        if "ax" not in kwargs:
-            kwargs["ax"] = plt.figure().add_subplot(111)
-
-        x = get_loc(self.cumulative_hazards_).index.values.astype(float)
-        for column in columns:
-            y = get_loc(self.cumulative_hazards_[column]).values
-            y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
-            y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
-            shaded_plot(x, y, y_upper, y_lower, ax=kwargs["ax"], label=coalesce(kwargs.get('label'), column))
-
-        if legend:
-            kwargs["ax"].legend()
-
-        return kwargs["ax"]
-    return plot
-
-
 def set_kwargs_ax(kwargs):
     from matplotlib import pyplot as plt
     if "ax" not in kwargs:
@@ -281,7 +227,7 @@ def set_kwargs_color(kwargs):
                                    next(kwargs["ax"]._get_lines.color_cycle))
 
 def set_kwargs_drawstyle(kwargs):
-    kwargs['drawstyle'] = coalesce(kwargs.get('drawstyle'), 'steps-post')
+    kwargs['drawstyle'] = kwargs.get('drawstyle', 'steps-post')
 
 
 def create_dataframe_slicer(iloc, ix):
