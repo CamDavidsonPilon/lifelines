@@ -3,9 +3,9 @@ from collections import Counter, Iterable
 import os
 
 try:
-    from StringIO import StringIO
+    from StringIO import StringIO as stringio, StringIO
 except ImportError:
-    from io import StringIO
+    from io import StringIO, BytesIO as stringio
 
 import numpy as np
 import pandas as pd
@@ -524,7 +524,7 @@ class TestRegressionFitters():
     def test_pickle(self, rossi):
         from pickle import dump
         for fitter in [CoxPHFitter, AalenAdditiveFitter]:
-            output = StringIO()
+            output = stringio()
             f = fitter().fit(rossi, 'week', 'arrest')
             dump(f, output)
 
