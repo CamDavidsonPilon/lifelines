@@ -565,7 +565,7 @@ class TestRegressionFitters():
         aaf.fit(X, duration_col='T', event_col='E')
         cph.fit(X, duration_col='T', event_col='E')
 
-        for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict', 'predict_cumulative_hazard']:
+        for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict_cumulative_hazard']:
             assert isinstance(getattr(aaf, fit_method)(X), type(getattr(cph, fit_method)(X)))
 
     def test_duration_vector_can_be_normalized(self):
@@ -588,13 +588,11 @@ class TestRegressionFitters():
         cph.fit(data_pred2, duration_col='t', event_col='E')
         npt.assert_array_equal(cph.predict_partial_hazard(x).index, expected_index)
         npt.assert_array_equal(cph.predict_percentile(x).index, expected_index)
-        npt.assert_array_equal(cph.predict(x).index, expected_index)
         npt.assert_array_equal(cph.predict_expectation(x).index, expected_index)
 
         aaf = AalenAdditiveFitter()
         aaf.fit(data_pred2, duration_col='t', event_col='E')
         npt.assert_array_equal(aaf.predict_percentile(x).index, expected_index)
-        npt.assert_array_equal(aaf.predict(x).index, expected_index)
         npt.assert_array_equal(aaf.predict_expectation(x).index, expected_index)
 
 
@@ -1145,7 +1143,7 @@ class TestAalenAdditiveFitter():
 
             expected = 0.90
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
-            assert np.mean(mean_scores) > expected, msg.format(expected, scores.mean())
+            assert np.mean(mean_scores) > expected, msg.format(expected, np.mean(scores))
 
     def test_predict_cumulative_hazard_inputs(self, data_pred1):
         aaf = AalenAdditiveFitter()
