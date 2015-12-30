@@ -3,7 +3,7 @@
 #### Forthcoming 0.9.0
  - new prediction function in `CoxPHFitter`, `predict_log_hazard_relative_to_mean`, that mimics what R's `predict.coxph` does.
  - removing the `predict` method in CoxPHFitter and AalenAdditiveFitter. This is because the choice of `predict_median` as a default was causing too much confusion, and no other natual choice as a default was available. All other `predict_` methods remain. 
- - Default predict method to `k_fold_cross_validation` is `predict_expectation`
+ - Default predict method in `k_fold_cross_validation` is now `predict_expectation`
 
 #### 0.8.1
  - supports matplotlib 1.5.
