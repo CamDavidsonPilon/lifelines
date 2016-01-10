@@ -8,9 +8,10 @@ from scipy.integrate import trapz
 
 from lifelines.fitters import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
-    ridge_regression as lr, qth_survival_times
+    ridge_regression as lr, qth_survival_times, coalesce
+
 from lifelines.utils.progress_bar import progress_bar
-from lifelines.plotting import plot_regressions
+from lifelines.plotting import fill_between_steps
 
 
 class AalenAdditiveFitter(BaseFitter):
@@ -218,7 +219,6 @@ class AalenAdditiveFitter(BaseFitter):
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
-        self.plot = plot_regressions(self)
 
         return
 
@@ -310,7 +310,6 @@ class AalenAdditiveFitter(BaseFitter):
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
-        self.plot = plot_regressions(self)
 
         return
 
@@ -415,12 +414,55 @@ class AalenAdditiveFitter(BaseFitter):
         t = self.cumulative_hazards_.index
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
-    def predict(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
+    def plot(self, ix=None, iloc=None, columns=[], legend=True, **kwargs):
+        """"
+        A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
-        Returns the median lifetimes for the individuals. Alias for predict_median
+          ix: specify a time-based subsection of the curves to plot, ex:
+                   .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.
+          iloc: specify a location-based subsection of the curves to plot, ex:
+                   .plot(iloc=slice(0,10)) will plot the first 10 time points.
+          columns: If not empty, plot a subset of columns from the cumulative_hazards_. Default all.
+          legend: show legend in figure.
+
         """
-        return self.predict_median(X)
+        from matplotlib import pyplot as plt
+
+
+        def shaded_plot(ax, x, y, y_upper, y_lower, **kwargs):
+            base_line, = ax.plot(x, y, drawstyle='steps-post', **kwargs)
+            fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25,
+                               color=base_line.get_color(), linewidth=1.0)
+
+
+        assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot'
+
+        get_method = "ix" if ix is not None else "iloc"
+        if iloc == ix is None:
+            user_submitted_ix = slice(0, None)
+        else:
+            user_submitted_ix = ix if ix is not None else iloc
+        get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
+
+        if len(columns) == 0:
+            columns = self.cumulative_hazards_.columns
+
+        if 'ax' in kwargs:
+            # don't use a .get here, as the default parameter will be called. In this case, 
+            # plt.figure().add_subplot(111), which instantiates a new window
+            ax = kwargs['ax']
+        else:
+            ax = plt.figure().add_subplot(111)
+
+        x = get_loc(self.cumulative_hazards_).index.values.astype(float)
+
+        for column in columns:
+            y = get_loc(self.cumulative_hazards_[column]).values
+            y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
+            y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
+            shaded_plot(ax, x, y, y_upper, y_lower, label=kwargs.get('label', column))
+
+        if legend:
+            ax.legend()
+
+        return ax
