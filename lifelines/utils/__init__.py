@@ -416,8 +416,8 @@ def inv_normal_cdf(p):
 
 def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
                             k=5, evaluation_measure=concordance_index,
-                            predictor="predict_median", fitter_kwargs={},
-                            predictor_kwargs={}):
+                            predictor="predict_expectation", predictor_kwargs={},
+                            fitter_kwargs={}):
     """
     Perform cross validation on a dataset. If multiple models are provided,
     all models will train on each of the k subsets.
@@ -441,7 +441,7 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
                         between two series of event times
     predictor: a string that matches a prediction method on the fitter instances.
                For example, "predict_expectation" or "predict_percentile".
-               Default is "predict_median"
+               Default is "predict_expectation"
                The interface for the method is:
                    predict(self, data, **optional_kwargs)
     fitter_kwargs: keyword args to pass into fitter.fit method

@@ -2,9 +2,16 @@ from __future__ import print_function
 from collections import Counter, Iterable
 import os
 
+try:
+    from StringIO import StringIO as stringio, StringIO
+except ImportError:
+    from io import StringIO, BytesIO as stringio
+
 import numpy as np
 import pandas as pd
 import pytest
+
+
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
@@ -514,6 +521,13 @@ class TestBreslowFlemingHarringtonFitter():
 
 class TestRegressionFitters():
 
+    def test_pickle(self, rossi):
+        from pickle import dump
+        for fitter in [CoxPHFitter, AalenAdditiveFitter]:
+            output = stringio()
+            f = fitter().fit(rossi, 'week', 'arrest')
+            dump(f, output)
+
     def test_fit_methods_require_duration_col(self):
         X = load_regression_dataset()
 
@@ -544,7 +558,6 @@ class TestRegressionFitters():
 
     def test_predict_methods_in_regression_return_same_types(self):
         X = load_regression_dataset()
-        x = X[X.columns - ['T', 'E']]
 
         aaf = AalenAdditiveFitter()
         cph = CoxPHFitter()
@@ -552,8 +565,8 @@ class TestRegressionFitters():
         aaf.fit(X, duration_col='T', event_col='E')
         cph.fit(X, duration_col='T', event_col='E')
 
-        for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict', 'predict_cumulative_hazard']:
-            assert isinstance(getattr(aaf, fit_method)(x), type(getattr(cph, fit_method)(x)))
+        for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict_cumulative_hazard']:
+            assert isinstance(getattr(aaf, fit_method)(X), type(getattr(cph, fit_method)(X)))
 
     def test_duration_vector_can_be_normalized(self):
         df = load_kidney_transplant()
@@ -575,13 +588,11 @@ class TestRegressionFitters():
         cph.fit(data_pred2, duration_col='t', event_col='E')
         npt.assert_array_equal(cph.predict_partial_hazard(x).index, expected_index)
         npt.assert_array_equal(cph.predict_percentile(x).index, expected_index)
-        npt.assert_array_equal(cph.predict(x).index, expected_index)
         npt.assert_array_equal(cph.predict_expectation(x).index, expected_index)
 
         aaf = AalenAdditiveFitter()
         aaf.fit(data_pred2, duration_col='t', event_col='E')
         npt.assert_array_equal(aaf.predict_percentile(x).index, expected_index)
-        npt.assert_array_equal(aaf.predict(x).index, expected_index)
         npt.assert_array_equal(aaf.predict_expectation(x).index, expected_index)
 
 
@@ -604,11 +615,6 @@ class TestCoxPHFitter():
     def test_print_summary(self, rossi):
 
         import sys
-        try:
-            from StringIO import StringIO
-        except:
-            from io import StringIO
-
         saved_stdout = sys.stdout
         try:
             out = StringIO()
@@ -924,6 +930,25 @@ Concordance = 0.640""".strip().split()
         assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
 
 
+    def test_predict_log_hazard_relative_to_mean_with_normalization(self, rossi):
+        cox = CoxPHFitter(normalize=True)
+        cox.fit(rossi, 'week', 'arrest')
+
+        # they are equal because the data is normalized, so the mean of the covarites is all 0,
+        # thus exp(beta * 0) == 1, so exp(beta * X)/exp(beta * 0) = exp(beta * X)
+        assert_frame_equal(cox.predict_log_hazard_relative_to_mean(rossi), np.log(cox.predict_partial_hazard(rossi)))
+
+
+    def test_predict_log_hazard_relative_to_mean_without_normalization(self, rossi):
+        cox = CoxPHFitter(normalize=False)
+        cox.fit(rossi, 'week', 'arrest')
+        log_relative_hazards = cox.predict_log_hazard_relative_to_mean(rossi)
+        means = rossi.mean(0).to_frame().T
+        assert cox.predict_partial_hazard(means).values[0][0] != 1.0  
+        assert_frame_equal(log_relative_hazards, np.log(cox.predict_partial_hazard(rossi) / cox.predict_partial_hazard(means).squeeze()))
+
+
+
 class TestAalenAdditiveFitter():
 
     def test_nn_cumulative_hazard_will_set_cum_hazards_to_0(self, rossi):
@@ -1118,7 +1143,7 @@ class TestAalenAdditiveFitter():
 
             expected = 0.90
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
-            assert np.mean(mean_scores) > expected, msg.format(expected, scores.mean())
+            assert np.mean(mean_scores) > expected, msg.format(expected, np.mean(scores))
 
     def test_predict_cumulative_hazard_inputs(self, data_pred1):
         aaf = AalenAdditiveFitter()

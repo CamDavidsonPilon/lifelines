@@ -401,7 +401,9 @@ class CoxPHFitter(BaseFitter):
 
     def predict_partial_hazard(self, X):
         """
-        X: a (n,d) covariate matrix
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.        
 
         If covariates were normalized during fitting, they are normalized
         in the same way here.
@@ -425,9 +427,24 @@ class CoxPHFitter(BaseFitter):
 
         return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
 
+    def predict_log_hazard_relative_to_mean(self, X):
+        """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.        
+
+        Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour 
+        of R's predict.coxph.
+        """
+        mean_covariates = self.data.mean(0).to_frame().T
+        return np.log(self.predict_partial_hazard(X)/self.predict_partial_hazard(mean_covariates).squeeze())
+
+
     def predict_cumulative_hazard(self, X):
         """
-        X: a (n,d) covariate matrix
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.        
 
         Returns the cumulative hazard for the individuals.
         """
@@ -438,16 +455,21 @@ class CoxPHFitter(BaseFitter):
 
     def predict_survival_function(self, X):
         """
-        X: a (n,d) covariate matrix
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.        
 
-        Returns the survival functions for the individuals
+        Returns the estimated survival functions for the individuals
         """
         return exp(-self.predict_cumulative_hazard(X))
 
     def predict_percentile(self, X, p=0.5):
         """
-        X: a (n,d) covariate matrix
-        Returns the median lifetimes for the individuals.
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.   
+
+        By default, returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
         index = _get_index(X)
@@ -455,21 +477,25 @@ class CoxPHFitter(BaseFitter):
 
     def predict_median(self, X):
         """
-        X: a (n,d) covariate matrix
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.   
+
         Returns the median lifetimes for the individuals
         """
         return self.predict_percentile(X, 0.5)
 
     def predict_expectation(self, X):
         """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data. 
+                   
         Compute the expected lifetime, E[T], using covarites X.
         """
         index = _get_index(X)
         v = self.predict_survival_function(X)[index]
         return pd.DataFrame(trapz(v.values.T, v.index), index=index)
-
-    def predict(self, X):
-        return self.predict_median(X)
 
     def _compute_baseline_hazard(self):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
