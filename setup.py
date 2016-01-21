@@ -1,7 +1,6 @@
 import os
-import sys
 
-from distutils.core import setup
+from setuptools import setup
 
 
 # Utility function to read the README file.

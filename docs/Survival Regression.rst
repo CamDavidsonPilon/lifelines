@@ -465,7 +465,7 @@ of AUC, another common loss function, and is interpretted similarly:
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-The measure is implemented in lifelines under `lifelines.statistics.concordance_index` and accepts the actual times (along with any censorships), and the predicted times.
+The measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships), and the predicted times.
 
 Cross Validation
 ######################################
