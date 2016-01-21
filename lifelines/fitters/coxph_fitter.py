@@ -21,7 +21,7 @@ class CoxPHFitter(BaseFitter):
     h(t|x) = h_0(t)*exp(x'*beta)
 
     Parameters:
-      alpha: the level in the confidence intervals.
+      alpha: the alpha value for 100(1-alpha)% confidence intervals, and alpha value for statistical significance.
       tie_method: specify how the fitter should deal with ties. Currently only
         'Efron' is available.
       normalize: substract the mean and divide by standard deviation of each covariate
@@ -32,7 +32,7 @@ class CoxPHFitter(BaseFitter):
         The penalty is 1/2 * penalizer * ||beta||^2.
     """
 
-    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True, penalizer=0.0):
+    def __init__(self, alpha=0.05, tie_method='Efron', normalize=True, penalizer=0.0):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         if penalizer < 0:
