@@ -52,7 +52,7 @@ please check out the [Documentation and Tutorials page](http://lifelines.readthe
 
 ### Citing lifelines
 
- - Davidson-Pilon, C., Lifelines, (2015), Github repository, https://github.com/CamDavidsonPilon/lifelines 
+ - Davidson-Pilon, C., Lifelines, (2016), Github repository, https://github.com/CamDavidsonPilon/lifelines 
  
 or with bibTex here: 
 
@@ -60,11 +60,11 @@ or with bibTex here:
 @misc{Lifelines,
   author = {C., Davidson-Pilon},
   title = {Lifelines},
-  year = {2015},
+  year = {2016},
   publisher = {GitHub},
   journal = {GitHub repository},
   howpublished = {\url{https://github.com/camdavidsonpilon/lifelines}},
-  commit = {63fc4f0ada0c61248957a478f3544efb4eeb2ccf}
+  commit = {latest_commit}
 }
 ```
 ![lifelines](http://i.imgur.com/QXW71zA.png)
