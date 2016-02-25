@@ -71,10 +71,10 @@ install:
     fi
 
   # Build in place so we can run tests
-  - pip install coveralls pytest-cov
+  - pip install python-coveralls pytest-cov
   - pip install .
 # command to run tests
-script: py.test --cov=lifelines -vv --block=False
+script: py.test --cov=lifelines -vv --block=False --cov-report term-missing
 after_success:
   coveralls
 # Don't want notifications
