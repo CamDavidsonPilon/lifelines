@@ -2,7 +2,7 @@
 from __future__ import print_function, division
 import numpy as np
 import pandas as pd
-import scipy.stats as stats
+
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import inv_normal_cdf
@@ -190,15 +190,14 @@ class WeibullFitter(UnivariateFitter):
         return pd.DataFrame([[np.sqrt(var_lambda_), np.sqrt(var_rho_)]],
                             index=['se'], columns=['lambda_', 'rho_'])
 
-
     def _compute_confidence_bounds_of_parameters(self):
         se = self._compute_standard_errors().ix['se']
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
         return pd.DataFrame([
-                np.array([self.lambda_, self.rho_]) + alpha2*se,
-                np.array([self.lambda_, self.rho_]) - alpha2*se,
-            ], columns=['lambda_', 'rho_'], index=['upper-bound', 'lower-bound'])
-        
+                np.array([self.lambda_, self.rho_]) + alpha2 * se,
+                np.array([self.lambda_, self.rho_]) - alpha2 * se,
+               ], columns=['lambda_', 'rho_'], index=['upper-bound', 'lower-bound'])
+
     @property
     def summary(self):
         """Summary statistics describing the fit.
