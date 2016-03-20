@@ -275,10 +275,10 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
     deaths_after_cutoff = end_times_ > fill_date
     C[deaths_after_cutoff] = False
 
-    T = (end_times_ - start_times_).map(lambda x: x.astype(freq_string).astype(float))
+    T = (end_times_ - start_times_).values.astype(freq_string).astype(float)
     if (T < 0).sum():
         warnings.warn("Warning: some values of start_times are after end_times")
-    return T.values, C.values
+    return T, C.values
 
 
 def l1_log_loss(event_times, predicted_event_times, event_observed=None):

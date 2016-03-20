@@ -184,3 +184,47 @@ class WeibullFitter(UnivariateFitter):
         df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
         df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
         return df
+
+    def _compute_standard_errors(self):
+        var_lambda_, var_rho_ = inv(self._jacobian).diagonal()
+        return pd.DataFrame([[np.sqrt(var_lambda_), np.sqrt(var_rho_)]],
+                            index=['se'], columns=['lambda_', 'rho_'])
+
+    def _compute_confidence_bounds_of_parameters(self):
+        se = self._compute_standard_errors().ix['se']
+        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
+        return pd.DataFrame([
+                np.array([self.lambda_, self.rho_]) + alpha2 * se,
+                np.array([self.lambda_, self.rho_]) - alpha2 * se,
+               ], columns=['lambda_', 'rho_'], index=['upper-bound', 'lower-bound'])
+
+    @property
+    def summary(self):
+        """Summary statistics describing the fit.
+        Set alpha property in the object before calling.
+
+        Returns
+        -------
+        df : pd.DataFrame
+            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
+        lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
+        df = pd.DataFrame(index=['lambda_', 'rho_'])
+        df['coef'] = [self.lambda_, self.rho_]
+        df['se(coef)'] = self._compute_standard_errors().ix['se']
+        df['lower %.2f' % self.alpha] = lower_upper_bounds.ix['lower-bound']
+        df['upper %.2f' % self.alpha] = lower_upper_bounds.ix['upper-bound']
+        return df
+
+    def print_summary(self):
+        """
+        Print summary statistics describing the fit.
+
+        """
+        df = self.summary
+
+        # Print information about data first
+        print('n={}, number of events={}'.format(self.durations.shape[0],
+                                                 np.where(self.event_observed)[0].shape[0]),
+              end='\n\n')
+        print(df.to_string(float_format=lambda f: '{:.3e}'.format(f)))
+        return
