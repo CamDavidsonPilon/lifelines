@@ -7,3 +7,4 @@ from lifelines.fitters.kaplan_meier_fitter import KaplanMeierFitter
 from lifelines.fitters.breslow_fleming_harrington_fitter import BreslowFlemingHarringtonFitter
 from lifelines.fitters.coxph_fitter import CoxPHFitter
 from lifelines.fitters.aalen_additive_fitter import AalenAdditiveFitter
+from lifelines.fitters.SBGSurvival import SBGSurvival
