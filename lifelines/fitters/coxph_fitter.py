@@ -282,7 +282,7 @@ class CoxPHFitter(BaseFitter):
         """
         df = df.copy()
         # Sort on time
-        df.sort(duration_col, inplace=True)
+        df.sort_values(by=duration_col, inplace=True)
 
         # remove strata coefs
         self.strata = strata

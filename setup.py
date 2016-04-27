@@ -37,7 +37,7 @@ setup(
     install_requires=[
         "numpy",
         "scipy",
-        "pandas>=0.14",
+        "pandas>=0.18",
     ],
     package_data={
         "lifelines": [
