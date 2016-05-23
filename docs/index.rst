@@ -31,7 +31,6 @@ Contents:
   Quickstart
   Survival Analysis intro
   Intro to lifelines
-  Univarite Survival Models
   Survival Regression
   Examples
 
