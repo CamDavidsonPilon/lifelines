@@ -223,7 +223,7 @@ class CoxPHFitter(BaseFitter):
             delta = solve(-h, step_size * g.T)
             if np.any(np.isnan(delta)):
                 raise ValueError("delta contains nan value(s). Convergence halted.")
-                
+
             # Save these as pending result
             hessian, gradient = h, g
 
@@ -403,7 +403,7 @@ class CoxPHFitter(BaseFitter):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
-            same order as the training data.        
+            same order as the training data.
 
         If covariates were normalized during fitting, they are normalized
         in the same way here.
@@ -431,20 +431,19 @@ class CoxPHFitter(BaseFitter):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
-            same order as the training data.        
+            same order as the training data.
 
-        Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour 
+        Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
         of R's predict.coxph.
         """
         mean_covariates = self.data.mean(0).to_frame().T
-        return np.log(self.predict_partial_hazard(X)/self.predict_partial_hazard(mean_covariates).squeeze())
-
+        return np.log(self.predict_partial_hazard(X) / self.predict_partial_hazard(mean_covariates).squeeze())
 
     def predict_cumulative_hazard(self, X):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
-            same order as the training data.        
+            same order as the training data.
 
         Returns the cumulative hazard for the individuals.
         """
@@ -457,7 +456,7 @@ class CoxPHFitter(BaseFitter):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
-            same order as the training data.        
+            same order as the training data.
 
         Returns the estimated survival functions for the individuals
         """
@@ -467,7 +466,7 @@ class CoxPHFitter(BaseFitter):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
-            same order as the training data.   
+            same order as the training data.
 
         By default, returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
@@ -479,7 +478,7 @@ class CoxPHFitter(BaseFitter):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
-            same order as the training data.   
+            same order as the training data.
 
         Returns the median lifetimes for the individuals
         """
@@ -489,8 +488,8 @@ class CoxPHFitter(BaseFitter):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
-            same order as the training data. 
-                   
+            same order as the training data.
+
         Compute the expected lifetime, E[T], using covarites X.
         """
         index = _get_index(X)

@@ -216,6 +216,7 @@ def set_kwargs_ax(kwargs):
     if "ax" not in kwargs:
         kwargs["ax"] = plt.figure().add_subplot(111)
 
+
 def set_kwargs_color(kwargs):
     import matplotlib as mpl
     if int(mpl.__version__.split('.')[1]) > 4:
@@ -225,6 +226,7 @@ def set_kwargs_color(kwargs):
     else:
         kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
                                    next(kwargs["ax"]._get_lines.color_cycle))
+
 
 def set_kwargs_drawstyle(kwargs):
     kwargs['drawstyle'] = kwargs.get('drawstyle', 'steps-post')
@@ -304,7 +306,6 @@ def plot_estimate(cls, estimate):
             estimate_ = getattr(cls, estimate)
             confidence_interval_ = getattr(cls, 'confidence_interval_')
 
-
         dataframe_slicer = create_dataframe_slicer(iloc, ix)
 
         # plot censors
@@ -313,15 +314,15 @@ def plot_estimate(cls, estimate):
 
         if show_censors and cls.event_table['censored'].sum() > 0:
             cs = {
-                'marker': '+', 
-                'ms': 12, 
+                'marker': '+',
+                'ms': 12,
                 'mew': 1
             }
             cs.update(censor_styles)
             times = dataframe_slicer(cls.event_table.ix[(cls.event_table['censored'] > 0)]).index.values.astype(float)
             v = cls.predict(times)
             ax.plot(times, v, linestyle='None',
-                              color=colour, **cs)
+                    color=colour, **cs)
 
         # plot estimate
         dataframe_slicer(estimate_).plot(**kwargs)
@@ -330,9 +331,9 @@ def plot_estimate(cls, estimate):
         if ci_show:
             if ci_force_lines:
                 dataframe_slicer(confidence_interval_).plot(linestyle="-", linewidth=1,
-                                                   color=[colour], legend=True,
-                                                   drawstyle=kwargs.get('drawstyle', 'default'),
-                                                   ax=ax, alpha=0.6)
+                                                            color=[colour], legend=True,
+                                                            drawstyle=kwargs.get('drawstyle', 'default'),
+                                                            ax=ax, alpha=0.6)
             else:
                 x = dataframe_slicer(confidence_interval_).index.values.astype(float)
                 lower = dataframe_slicer(confidence_interval_.filter(like='lower')).values[:, 0]
