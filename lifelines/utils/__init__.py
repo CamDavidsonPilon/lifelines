@@ -899,8 +899,6 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
     paircount = 0.0
     csum = 0.0
 
-    import pdb
-    pdb.set_trace()
     for a in range(0, len(event_times)):
         time_a = event_times[a]
         pred_a = predicted_event_times[a]
