@@ -302,6 +302,13 @@ def test_concordance_index_returns_same_after_shifting():
     assert utils.concordance_index(T, T_) == utils.concordance_index(T - 5, T_ - 5) == utils.concordance_index(T, T_ - 5) == utils.concordance_index(T - 5, T_)
 
 
+def test_both_concordance_index_function_deal_with_ties_the_same_way():
+    actual_times = np.array([1, 1, 2])
+    predicted_times = np.array([1, 2, 3])
+    obs = np.ones(3)
+    assert fast_cindex(actual_times, predicted_times, obs) == slow_cindex(actual_times, predicted_times, obs) == 1.0 
+
+
 def test_survival_table_from_events_with_non_negative_T_and_no_lagged_births():
     n = 10
     T = np.arange(n)

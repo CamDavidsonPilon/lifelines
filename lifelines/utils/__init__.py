@@ -864,6 +864,9 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
         num_correct += correct
         num_tied += tied
 
+    if num_pairs == 0:
+        raise ZeroDivisionError("No admissable pairs in the dataset.")
+
     return (num_correct + num_tied / 2) / num_pairs
 
 
@@ -913,4 +916,6 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
                 paircount += 1.0
                 csum += concordance_value(time_a, time_b, pred_a, pred_b)
 
+    if paircount == 0:
+        raise ZeroDivisionError("No admissable pairs in the dataset.")
     return csum / paircount
