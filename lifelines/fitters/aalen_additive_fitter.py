@@ -32,7 +32,7 @@ class AalenAdditiveFitter(BaseFitter):
         For example, this shrinks the absolute value of c_{i,t}. Recommended, even if a small value.
       smoothing_penalizer: Attach a L2 penalizer to difference between adjacent (over time) coefficents. For
         example, this shrinks the absolute value of c_{i,t} - c_{i,t+1}.
-      nn_cumulative_hazard: If True, forces the negative values in cumulative hazards to be 0 instead. Default True. 
+      nn_cumulative_hazard: If True, forces the negative values in cumulative hazards to be 0 instead. Default True.
 
     """
 
@@ -428,12 +428,10 @@ class AalenAdditiveFitter(BaseFitter):
         """
         from matplotlib import pyplot as plt
 
-
         def shaded_plot(ax, x, y, y_upper, y_lower, **kwargs):
             base_line, = ax.plot(x, y, drawstyle='steps-post', **kwargs)
             fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25,
                                color=base_line.get_color(), linewidth=1.0)
-
 
         assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot'
 
@@ -448,7 +446,7 @@ class AalenAdditiveFitter(BaseFitter):
             columns = self.cumulative_hazards_.columns
 
         if 'ax' in kwargs:
-            # don't use a .get here, as the default parameter will be called. In this case, 
+            # don't use a .get here, as the default parameter will be called. In this case,
             # plt.figure().add_subplot(111), which instantiates a new window
             ax = kwargs['ax']
         else:

@@ -194,9 +194,9 @@ class WeibullFitter(UnivariateFitter):
         se = self._compute_standard_errors().ix['se']
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
         return pd.DataFrame([
-                np.array([self.lambda_, self.rho_]) + alpha2 * se,
-                np.array([self.lambda_, self.rho_]) - alpha2 * se,
-               ], columns=['lambda_', 'rho_'], index=['upper-bound', 'lower-bound'])
+            np.array([self.lambda_, self.rho_]) + alpha2 * se,
+            np.array([self.lambda_, self.rho_]) - alpha2 * se,
+        ], columns=['lambda_', 'rho_'], index=['upper-bound', 'lower-bound'])
 
     @property
     def summary(self):
