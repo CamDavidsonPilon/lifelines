@@ -246,8 +246,8 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
 def generate_observational_matrix(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
     hz, coeff, covariates = generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_binary=0, model=model)
     R = generate_random_lifetimes(hz, timelines)
-    covariates["event_at"] = R.T
-    return covariates.sort("event_at"), pd.DataFrame(cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines)
+    covariates["event_at"] = R.T[0]
+    return covariates.sort_values(by="event_at"), pd.DataFrame(cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines)
 
 
 def cumulative_integral(fx, x):

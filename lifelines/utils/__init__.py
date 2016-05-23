@@ -465,12 +465,12 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
         event_col = 'E'
         df[event_col] = 1.
 
-    df = df.reindex(np.random.permutation(df.index)).sort(event_col)
+    df = df.reindex(np.random.permutation(df.index)).sort_values(event_col)
 
     assignments = np.array((n // k + 1) * list(range(1, k + 1)))
     assignments = assignments[:n]
 
-    testing_columns = df.columns - [duration_col, event_col]
+    testing_columns = df.columns.difference([duration_col, event_col])
 
     for i in range(1, k + 1):
 
@@ -899,6 +899,8 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
     paircount = 0.0
     csum = 0.0
 
+    import pdb
+    pdb.set_trace()
     for a in range(0, len(event_times)):
         time_a = event_times[a]
         pred_a = predicted_event_times[a]
