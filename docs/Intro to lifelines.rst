@@ -17,7 +17,7 @@ For this example, we will be investigating the lifetimes of political
 leaders around the world. A political leader in this case is defined by a single
 individual's time in office who controls the ruling regime. This could be an
 elected president, unelected dictator, monarch, etc. The birth event is
-the start of the individual's tenor, and the death event is the retirement of the
+the start of the individual's tenure, and the death event is the retirement of the
 individual. Censorship can occur if they are a) still in offices at the
 time of dataset complilation (2008), or b) die while in office (this
 includes assassinations).
