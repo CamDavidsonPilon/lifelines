@@ -41,9 +41,9 @@ variables ``un_continent_name`` (eg: Asia, North America,...), the
 ``regime`` type (eg: monarchy, civilan,...) and the year the regime
 started in, ``start_year``.
 
-Aalens additive model typically does not estimate the individual
+Aalen's additive model typically does not estimate the individual
 :math:`b_i(t)` but instead estimates :math:`\int_0^t b_i(s) \; ds`
-(similar to estimate of the hazard rate using ``NelsonAalenFitter``
+(similar to the estimate of the hazard rate using ``NelsonAalenFitter``
 above). This is important to keep in mind when analzying the output.
 
 .. code:: python
@@ -156,7 +156,7 @@ above). This is important to keep in mind when analzying the output.
 
 
 
-I'm using the lovely library ``patsy`` <https://github.com/pydata/patsy>`__ here to create a
+I'm using the lovely library `patsy <https://github.com/pydata/patsy>`__ here to create a
 covariance matrix from my original dataframe.
 
 .. code:: python
@@ -391,9 +391,9 @@ Prime Minister Stephen Harper.
 Cox's Proportional Hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-New in 0.4.0 is the implementation of the Propotional Hazard's regression model (implemented in 
-R under ``coxph``). It has a similar API to Aalen's Additive model. Like R, it has a ``print_summary``
-function that prints a tabuluar view of coefficients and related stats. 
+New in 0.4.0 is the implementation of the Cox propotional hazards regression model (implemented in 
+R under ``coxph``). It has a similar API to Aalen's additive model. Like R, it has a ``print_summary``
+function that prints a tabular view of coefficients and related stats. 
 
 This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_.
 
@@ -459,7 +459,7 @@ Model Selection in Survival Regression
 With censorship, it's not correct to use a loss function like mean-squared-error or 
 mean-absolute-loss. Instead, one measure is the c-index, or concordance-index. This measure
 evaluates the ordering of predicted times: how correct is the ordering? It is infact a generalization
-of AUC, another common loss function, and is interpretted similarly: 
+of AUC, another common loss function, and is interpreted similarly: 
 
 * 0.5 is the expected result from random predictions,
 * 1.0 is perfect concordance and,

@@ -112,11 +112,11 @@ information at :math:`t=10`).
 Survival analysis was originally developed to solve this type of
 problem, that is, to deal with estimation when our data is
 right-censored. Even in the case where all events have been
-observed, i.e. no censorship, survival analysis is still a very useful
+observed, i.e. no censorship, survival analysis is still a very useful tool
 to understand durations.
 
 The observations need not always start at zero, either. This was done
-only for understanding in the above example. Consider the example of
+only for understanding in the above example. Consider the example where
 a customer entering a store is a birth: a customer can enter at
 any time, and not necessarily at time zero. In survival analysis, durations
 are relative: individuals may start at different times. (We actually only need the *duration* of the observation, and not
