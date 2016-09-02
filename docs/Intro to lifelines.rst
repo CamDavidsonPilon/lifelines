@@ -522,7 +522,7 @@ Smoothing the hazard curve
 
 Interpretation of the cumulative hazard function can be difficult -- it
 is not how we usually interpret functions. (On the other hand, most
-survival analysis is done using the cumulative hazard fuction, so understanding
+survival analysis is done using the cumulative hazard function, so understanding
 it is recommended).
 
 Alternatively, we can derive the more-interpretable hazard curve, but
@@ -544,7 +544,7 @@ intervals, similar to the traditional ``plot`` functionality.
     ax = naf.plot_hazard(bandwidth=b)
     naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
-    plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
+    plt.title("Hazard function of different global regimes | bandwidth=%.1f"%b);
     plt.ylim(0,0.4)
     plt.xlim(0,25);
 
@@ -555,8 +555,8 @@ intervals, similar to the traditional ``plot`` functionality.
 It is more clear here which group has the higher hazard, and like
 hypothesized above, both hazard rates are close to being constant.
 
-There is no obvious way to choose a bandwith, and different
-bandwidth can produce different inferences, so best to be very careful
+There is no obvious way to choose a bandwidth, and different
+bandwidths can produce different inferences, so best to be very careful
 here. (My advice: stick with the cumulative hazard function.)
 
 .. code:: python
@@ -566,7 +566,7 @@ here. (My advice: stick with the cumulative hazard function.)
     ax = naf.plot_hazard(bandwidth=b)
     naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
-    plt.title("Hazard function of different global regimes | bandwith=%.1f"%b);
+    plt.title("Hazard function of different global regimes | bandwidth=%.1f"%b);
 
 
 
@@ -607,7 +607,7 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 
 .. code:: python
     
-    kmf.cumulative_density_
+    print kmf.cumulative_density_
     kmf.plot() #will plot the CDF
 
 
@@ -617,7 +617,7 @@ Left Truncated Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Another form of bias that can be introduced into a dataset is called left-truncation. (Also a form of censorship). 
-This occurs when individuals may die even before ever entrying into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional arugment for ``entry``, which is an array of equal size to the duration array.
+This occurs when individuals may die even before ever entering into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional arugment for ``entry``, which is an array of equal size to the duration array.
 It describes the offset from birth to entering the study. This is also useful when subjects enter the study at different
 points in their lifetime. For example, if you are measuring time to death of prisoners in 
 prison, the prisoners will enter the study at different ages. 
