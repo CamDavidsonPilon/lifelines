@@ -119,7 +119,7 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
     assert n == np.max(birth_times.shape), "inputs must be of the same length."
 
-    groups, durations, event_observed, birth_times = [pd.Series(np.reshape(data, (n,))) for data in [groups, durations, event_observed, birth_times]]
+    groups, durations, event_observed, birth_times = [pd.Series(np.asarray(data).reshape(n,)) for data in [groups, durations, event_observed, birth_times]]
     unique_groups = groups.unique()
 
     for i, group in enumerate(unique_groups):
@@ -198,7 +198,7 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
 
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
-    return event_table.astype(float)
+    return event_table.astype(int)
 
 
 def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):

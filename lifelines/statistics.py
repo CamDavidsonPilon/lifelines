@@ -134,7 +134,7 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None,
 
     n = np.max(event_durations.shape)
     assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
-    groups, event_durations, event_observed = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, event_durations, event_observed])
+    groups, event_durations, event_observed = map(lambda x: pd.Series(np.asarray(x).reshape(n,)), [groups, event_durations, event_observed])
 
     unique_groups = np.unique(groups)
 
@@ -194,7 +194,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
 
     n = np.max(event_durations.shape)
     assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
-    groups, event_durations, event_observed = map(lambda x: pd.Series(np.reshape(x, (n,))), [groups, event_durations, event_observed])
+    groups, event_durations, event_observed = map(lambda x: pd.Series(np.asarray(x).reshape(n,)), [groups, event_durations, event_observed])
 
     unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, limit=t_0)
     n_groups = unique_groups.shape[0]

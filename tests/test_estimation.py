@@ -1010,7 +1010,7 @@ class TestAalenAdditiveFitter():
 
         misorder = ['age', 'race', 'wexp', 'mar', 'paro', 'prio', 'fin']
         natural_order = rossi.columns.drop(['week', 'arrest'])
-        deleted_order = rossi.columns - ['week', 'arrest']
+        deleted_order = rossi.columns.difference(['week', 'arrest'])
         assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
         assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
 

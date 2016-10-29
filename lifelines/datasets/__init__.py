@@ -15,7 +15,7 @@ def load_dataset(filename, **kwargs):
     '''
     return pd.read_csv(resource_filename('lifelines',
                                          'datasets/' + filename),
-                       **kwargs)
+                       engine='python', **kwargs)
 
 
 def load_recur(**kwargs):

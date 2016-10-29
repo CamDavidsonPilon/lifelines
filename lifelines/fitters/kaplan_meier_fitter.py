@@ -93,7 +93,7 @@ class KaplanMeierFitter(UnivariateFitter):
         return df
 
     def _additive_f(self, population, deaths):
-        np.seterr(invalid='ignore')
+        np.seterr(invalid='ignore', divide='ignore')
         return (np.log(population - deaths) - np.log(population))
 
     def _additive_var(self, population, deaths):

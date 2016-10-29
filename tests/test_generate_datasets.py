@@ -10,7 +10,6 @@ from lifelines.generate_datasets import exponential_survival_data
 
 
 def test_exponential_data_sets_correct_censor():
-    print(os.environ)
     N = 20000
     censorship = 0.2
     T, C = exponential_survival_data(N, censorship, scale=10)
