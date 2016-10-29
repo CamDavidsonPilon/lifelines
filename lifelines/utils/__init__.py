@@ -270,7 +270,7 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
     C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
     end_times[~C] = fill_date
     start_times_ = to_datetime(start_times, dayfirst=dayfirst)
-    end_times_ = to_datetime(end_times, dayfirst=dayfirst, coerce=True)
+    end_times_ = to_datetime(end_times, dayfirst=dayfirst, errors='coerce')
 
     deaths_after_cutoff = end_times_ > fill_date
     C[deaths_after_cutoff] = False
