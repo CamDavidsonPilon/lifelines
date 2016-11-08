@@ -2,4 +2,3 @@
 pytest
 python-coveralls
 pytest-cov
-matplotlib
