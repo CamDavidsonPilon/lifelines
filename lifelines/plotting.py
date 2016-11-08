@@ -221,12 +221,13 @@ def set_kwargs_color(kwargs):
     import matplotlib as mpl
     major_version, minor_version = mpl.__version__.split('.')[:2]
     if int(major_version) == 1 and int(minor_version) < 5:
-        # https://github.com/CamDavidsonPilon/lifelines/issues/191#issuecomment-145275656
-        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
-                                   next(kwargs["ax"]._get_lines.color_cycle)['color'])
-    else:
+        raise ValueError('Matplotlib versions less than 1.5 no longer supported.')
+    elif int(major_version) == 2:
         kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
                                    kwargs["ax"]._get_lines.get_next_color())
+    else:
+        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
+                                   next(kwargs["ax"]._get_lines.prop_cycler)['color'])
 
 
 def set_kwargs_drawstyle(kwargs):
