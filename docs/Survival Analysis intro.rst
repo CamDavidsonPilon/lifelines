@@ -15,14 +15,14 @@ Traditionally, survival analysis was developed to measure lifespans of
 individuals. An actuary or health professional would ask questions like
 "how long does this population live for?", and answer it using survival analysis. For example, the
 population may be a nation's population (for actuaries), or a population
-sticken by a disease (in the medical professional's case).
+stricken by a disease (in the medical professional's case).
 Traditionally, sort of a morbid subject.
 
 The analysis can be further applied to not just traditional *births and
-deaths*, but any duration. Medical professional might be interested in
+deaths*, but any duration. Medical professionals might be interested in
 the *time between childbirths*, where a birth in this case is the event
-of having a child , and a death is becoming pregnant again! (obviously,
-we are loose with our definitions of *birth and death*) Another example
+of having a child, and a death is becoming pregnant again! (obviously,
+we are loose with our definitions of *birth and death*)! Another example
 is users subscribing to a service: a birth is a user who joins the
 service, and a death is when the user leaves the service.
 
@@ -51,7 +51,7 @@ Consider a case where the population is actually made up of two
 subpopulations, :math:`A` and :math:`B`. Population :math:`A` has a very
 small lifespan, say 2 months on average, and population :math:`B`
 enjoys a much larger lifespan, say 12 months on average. We might
-not know this distinction before hand. At :math:`t=10`, we
+not know this distinction before hand. At :math:`t=10, we
 wish to investigate the average lifespan. Below is an example of such a
 situation.
 
@@ -134,13 +134,13 @@ Survival function
 Let :math:`T` be a (possibly infinite, but always non-negative) random
 lifetime taken from the population under study. For example, the
 amount of time a couple is married. Or the time it takes a user to enter
-a webpage (an infinite time if they never do). The survival function,
-:math:`S(t)`, of a population is defined as
+a webpage (an infinite time if they never do). The survival function - 
+:math:`S(t)` - of a population is defined as
 
 .. math::  S(t) = Pr( T > t) 
 
-In human language: the survival function defines the probability the death event has not occured yet at time
-:math:`t`, or equivalently, the probability of surviving until atleast time
+In plain English: the survival function defines the probability the death event has not occured yet at time
+:math:`t`, or equivalently, the probability of surviving past time
 :math:`t`. Note the following properties of the survival function:
 
 1. :math:`0 \le S(t) \le 1`
@@ -152,8 +152,8 @@ Hazard curve
 --------------------------------
 
 
-We are also interested in the probability of dying in the next instant,
-given we haven't expired yet. Mathematically, that is:
+We are also interested in the probability of the death event occurring at time :math:`t`,
+given that the death event has not occurred until time :math:`t`. Mathematically, that is:
 
 .. math::  \lim_{\delta t \rightarrow 0 } \; Pr( t \le T \le t + \delta t | T > t) 
 
