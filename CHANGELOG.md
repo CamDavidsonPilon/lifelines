@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.9.3 (in dev)
+ - adding `plot_loglogs` to `KaplanMeierFitter`
+
 #### 0.9.2
  - deprecates Pandas versions before 0.18.
  - throw an error if no admissable pairs in the c-index calculation. Previosly a NaN was returned.

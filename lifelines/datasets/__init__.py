@@ -52,14 +52,12 @@ def load_holly_molly_polly(**kwargs):
     From https://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_10.pdf
     Used as a toy example for CoxPH in recurrent SA.
 
-     ID Status Stratum Start(days) Stop(days) tx T
-     M 1 1 0 100 1 100
-     M 1 2 100 105 1 5
-     H 1 1 0 30 0 30
-     H 1 2 30 50 0 20
-     P 1 1 0 20 0 20
-     P 1 2 20 60 0 40
-     P 1 3 60 85 0 25
+      ID  Status  Stratum  Start(days)  Stop(days)  tx    T
+    0  M       1        1            0         100   1  100
+    1  M       1        2          100         105   1    5
+    2  H       1        1            0          30   0   30
+    3  H       1        2           30          50   0   20
+    4  P       1        1            0          20   0   20
 
     """
     return load_dataset('holly_molly_polly.tsv', sep="\s", **kwargs)
