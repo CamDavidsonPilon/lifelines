@@ -181,23 +181,11 @@ class TestPlotting():
         self.plt.show(block=block)
         return
 
-    def test_flat_style_and_marker(self, block, kmf):
-        data1 = np.random.exponential(10, size=200)
-        data2 = np.random.exponential(2, size=200)
-        C1 = np.random.binomial(1, 0.9, size=200)
-        C2 = np.random.binomial(1, 0.95, size=200)
-        kmf.fit(data1, C1, label='test label 1')
-        ax = kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
-        kmf.fit(data2, C2, label='test label 2')
-        kmf.plot(ax=ax, censor_styles={'marker': 'o', 'ms': 7}, flat=True)
-        self.plt.title("testing kmf flat styling + marker")
-        self.plt.show(block=block)
-        return
-
-    def test_flat_style_no_censor(self, block, kmf):
+    def test_flat_style_with_customer_censor_styles(self, block, kmf):
         data1 = np.random.exponential(10, size=200)
         kmf.fit(data1, label='test label 1')
-        kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
+        kmf.plot(ci_force_lines=True, show_censors=True,
+                 censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
         self.plt.title('test_flat_style_no_censor')
         self.plt.show(block=block)
         return
