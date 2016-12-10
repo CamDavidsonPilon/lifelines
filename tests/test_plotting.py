@@ -12,27 +12,29 @@ from lifelines.plotting import plot_lifetimes
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting():
 
+    @pytest.fixture
+    def kmf(self):
+        return KaplanMeierFitter()
+
     def setup_method(self, method):
         pytest.importorskip("matplotlib")
         from matplotlib import pyplot as plt
         self.plt = plt
 
-    def test_negative_times_still_plots(self, block):
+    def test_negative_times_still_plots(self, block, kmf):
         n = 40
         T = np.linspace(-2, 3, n)
         C = np.random.randint(2, size=n)
-        kmf = KaplanMeierFitter()
         kmf.fit(T, C)
         ax = kmf.plot()
         self.plt.title('test_negative_times_still_plots')
         self.plt.show(block=block)
         return
 
-    def test_kmf_plotting(self, block):
+    def test_kmf_plotting(self, block, kmf):
         data1 = np.random.exponential(10, size=(100))
         data2 = np.random.exponential(2, size=(200, 1))
         data3 = np.random.exponential(4, size=(500, 1))
-        kmf = KaplanMeierFitter()
         kmf.fit(data1, label='test label 1')
         ax = kmf.plot()
         kmf.fit(data2, label='test label 2')
@@ -43,9 +45,8 @@ class TestPlotting():
         self.plt.show(block=block)
         return
 
-    def test_kmf_with_risk_counts(self, block):
+    def test_kmf_with_risk_counts(self, block, kmf):
         data1 = np.random.exponential(10, size=(100))
-        kmf = KaplanMeierFitter()
         kmf.fit(data1)
         kmf.plot(at_risk_counts=True)
         self.plt.title("test_kmf_with_risk_counts")
@@ -164,30 +165,27 @@ class TestPlotting():
         self.plt.show(block=block)
         return
 
-    def test_show_censor_with_discrete_date(self, block):
+    def test_show_censor_with_discrete_date(self, block, kmf):
         T = np.random.binomial(20, 0.1, size=100)
         C = np.random.binomial(1, 0.8, size=100)
-        kmf = KaplanMeierFitter()
         kmf.fit(T, C).plot(show_censors=True)
         self.plt.title('test_show_censor_with_discrete_date')
         self.plt.show(block=block)
         return
 
-    def test_show_censor_with_index_0(self, block):
+    def test_show_censor_with_index_0(self, block, kmf):
         T = np.random.binomial(20, 0.9, size=100)  # lifelines should auto put a 0 in.
         C = np.random.binomial(1, 0.8, size=100)
-        kmf = KaplanMeierFitter()
         kmf.fit(T, C).plot(show_censors=True)
         self.plt.title('test_show_censor_with_index_0')
         self.plt.show(block=block)
         return
 
-    def test_flat_style_and_marker(self, block):
+    def test_flat_style_and_marker(self, block, kmf):
         data1 = np.random.exponential(10, size=200)
         data2 = np.random.exponential(2, size=200)
         C1 = np.random.binomial(1, 0.9, size=200)
         C2 = np.random.binomial(1, 0.95, size=200)
-        kmf = KaplanMeierFitter()
         kmf.fit(data1, C1, label='test label 1')
         ax = kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
         kmf.fit(data2, C2, label='test label 2')
@@ -196,11 +194,23 @@ class TestPlotting():
         self.plt.show(block=block)
         return
 
-    def test_flat_style_no_censor(self, block):
+    def test_flat_style_no_censor(self, block, kmf):
         data1 = np.random.exponential(10, size=200)
-        kmf = KaplanMeierFitter()
         kmf.fit(data1, label='test label 1')
-        ax = kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
+        kmf.plot(flat=True, censor_styles={'marker': '+', 'mew': 2, 'ms': 7})
         self.plt.title('test_flat_style_no_censor')
+        self.plt.show(block=block)
+        return
+
+    def test_loglogs_plot(self, block, kmf):
+        data1 = np.random.exponential(10, size=200)
+        data2 = np.random.exponential(5, size=200)
+        kmf.fit(data1, label='test label 1')
+        ax = kmf.plot_loglogs()
+
+        kmf.fit(data2, label='test label 2')
+        ax = kmf.plot_loglogs(ax=ax)
+
+        self.plt.title('test_loglogs_plot')
         self.plt.show(block=block)
         return

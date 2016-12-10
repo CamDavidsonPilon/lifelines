@@ -284,7 +284,10 @@ def plot_loglogs(cls):
 
         # plot estimate
         dataframe_slicer(loglog(cls.survival_function_)).plot(**kwargs)
+        ax.set_xlabel('log(timeline)')
+        ax.set_ylabel('log(-log(survival_function_))')
         return ax
+
     _plot_loglogs.__doc__ = doc_string
     return _plot_loglogs
 
@@ -327,8 +330,6 @@ def plot_estimate(cls, estimate):
              censor_styles=None, ci_legend=False, ci_force_lines=False,
              ci_alpha=0.25, ci_show=True, at_risk_counts=False,
              bandwidth=None, **kwargs):
-
-        from matplotlib import pyplot as plt
 
         if censor_styles is None:
             censor_styles = {}
