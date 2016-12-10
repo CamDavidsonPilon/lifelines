@@ -427,6 +427,21 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
 
 To access the coefficients and the baseline hazard, you can use ``cf.hazards_`` and ``cf.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_hazard(X)``, ``.predict_survival_function(X)``, etc. 
 
+Checking the proportional hazards assumption
+################
+
+A quick and visual way to check the proportional hazards assumption of a variable is to plot the survival curves segmented by the values of the variable. If the survival curves are the same "shape", and differ only by constant factor, then the assumption holds. A more clear way to see this is to plot what's called the loglogs curve: the log(-log(survival curve)) vs log(time). If the curves are parallel (and hence do not cross each other), then it's likely the variable satisfies the assumption. If the curves do cross, likely you'll have to "stratify" the variable (see next section). In lifelines, the ``KaplanMeierFitter`` object has a ``.plot_loglogs`` function for this purpose. 
+
+The following is the loglogs curves of two variables in our regime dataset. The first is the democracy type, which does have (close to) parallel lines, hence satisfies our assumption:
+
+.. image:: images/lls_democracy.png
+
+
+The second variable is the regime type, and this variable does not follow the proportional hazards assumption.
+
+.. image:: images/lls_regime_type.png
+
+
 Stratification
 ################
 

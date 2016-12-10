@@ -168,6 +168,7 @@ def add_at_risk_counts(*fitters, **kwargs):
     return ax
 
 
+
 def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
                    order=False, block=True):
     """
@@ -240,6 +241,52 @@ def create_dataframe_slicer(iloc, ix):
 
     get_method = "ix" if ix is not None else "iloc"
     return lambda df: getattr(df, get_method)[user_submitted_slice]
+
+
+def plot_loglogs(cls):
+    doc_string = """
+    Specifies a plot of the log(-log(SV)) versus log(time) where SV is the estimated survival function.
+    """
+
+    def _plot_loglogs(ix=None, iloc=None, show_censors=False, censor_styles=None, **kwargs):
+
+        loglog = lambda s: np.log(-np.log(s))
+
+        if (ix is not None) and (iloc is not None):
+            raise ValueError('Cannot set both ix and iloc in call to .plot().')
+
+        if censor_styles is None:
+            censor_styles = {}
+
+        set_kwargs_ax(kwargs)
+        set_kwargs_color(kwargs)
+        set_kwargs_drawstyle(kwargs)
+        kwargs['logx'] = True
+
+        dataframe_slicer = create_dataframe_slicer(iloc, ix)
+
+        # plot censors
+        ax = kwargs['ax']
+        colour = kwargs['color']
+
+        if show_censors and cls.event_table['censored'].sum() > 0:
+            cs = {
+                'marker': '+',
+                'ms': 12,
+                'mew': 1
+            }
+            cs.update(censor_styles)
+            times = dataframe_slicer(cls.event_table.ix[(cls.event_table['censored'] > 0)]).index.values.astype(float)
+            v = cls.predict(times)
+            # don't log times, as Pandas will take care of all log-scaling later.
+            ax.plot(times, loglog(v), linestyle='None',
+                    color=colour, **cs)
+
+        # plot estimate
+        dataframe_slicer(loglog(cls.survival_function_)).plot(**kwargs)
+        return ax
+    _plot_loglogs.__doc__ = doc_string
+    return _plot_loglogs
 
 
 def plot_estimate(cls, estimate):
