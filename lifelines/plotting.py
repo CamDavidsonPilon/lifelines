@@ -299,8 +299,6 @@ def plot_estimate(cls, estimate):
         Matplotlib plot arguments can be passed in inside the kwargs, plus
 
         Parameters:
-          flat: an opiniated design style with stepped lines and no shading.
-                Similar to R's plotting. Default: False
           show_censors: place markers at censorship events. Default: False
           censor_styles: If show_censors, this dictionary will be passed into
                          the plot call.
@@ -326,7 +324,7 @@ def plot_estimate(cls, estimate):
           ax: a pyplot axis object
         """ % estimate
 
-    def plot(ix=None, iloc=None, flat=False, show_censors=False,
+    def plot(ix=None, iloc=None, show_censors=False,
              censor_styles=None, ci_legend=False, ci_force_lines=False,
              ci_alpha=0.25, ci_show=True, at_risk_counts=False,
              bandwidth=None, **kwargs):
@@ -340,11 +338,6 @@ def plot_estimate(cls, estimate):
         set_kwargs_ax(kwargs)
         set_kwargs_color(kwargs)
         set_kwargs_drawstyle(kwargs)
-
-        # R-style graphics
-        if flat:
-            ci_force_lines = True
-            show_censors = True
 
         if estimate == "hazard_":
             if bandwidth is None:

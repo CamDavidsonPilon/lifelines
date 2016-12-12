@@ -2,6 +2,7 @@
 
 #### 0.9.3 (in dev)
  - adding `plot_loglogs` to `KaplanMeierFitter`
+ - removing `flat` argument in `plot` methods. It was causing confusion. To replicate it, one can set `ci_force_lines=True` and `show_censors=True`.
 
 #### 0.9.2
  - deprecates Pandas versions before 0.18.
