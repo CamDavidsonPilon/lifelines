@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -300,6 +301,7 @@ class CoxPHFitter(BaseFitter):
 
         # Store original non-normalized data
         self.data = df if self.strata is None else df.reset_index()
+        self._check_values(df)
 
         if self.normalize:
             # Need to normalize future inputs as well
@@ -308,7 +310,6 @@ class CoxPHFitter(BaseFitter):
             df = normalize(df)
 
         E = E.astype(bool)
-        self._check_values(df)
 
         hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
                                          show_progress=show_progress,
@@ -330,8 +331,10 @@ class CoxPHFitter(BaseFitter):
         low_var = (X.var(0) < 10e-5)
         if low_var.any():
             cols = str(list(X.columns[low_var]))
-            print("Warning: column(s) %s have very low variance.\
- This may harm convergence." % cols)
+            warning_text = "Column(s) %s have very low variance.\
+ This may harm convergence. Try dropping this redundant column before fitting\
+ if convergence fails." % cols
+            warnings.warn(warning_text, RuntimeWarning)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
