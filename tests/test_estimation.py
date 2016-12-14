@@ -959,7 +959,6 @@ Concordance = 0.640""".strip().split()
             assert "variance" in str(w[-1].message)
 
 
-
 class TestAalenAdditiveFitter():
 
     def test_nn_cumulative_hazard_will_set_cum_hazards_to_0(self, rossi):

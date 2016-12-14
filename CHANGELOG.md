@@ -2,6 +2,7 @@
 
 #### 0.9.3 (in dev)
  - adding `plot_loglogs` to `KaplanMeierFitter`
+ - added a (correct) check to see if some columns in a dataset will cause convergence problems.
  - removing `flat` argument in `plot` methods. It was causing confusion. To replicate it, one can set `ci_force_lines=True` and `show_censors=True`.
 
 #### 0.9.2
