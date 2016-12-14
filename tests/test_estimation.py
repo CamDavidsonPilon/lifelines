@@ -1,6 +1,7 @@
 from __future__ import print_function
 from collections import Counter, Iterable
 import os
+import warnings
 
 try:
     from StringIO import StringIO as stringio, StringIO
@@ -10,8 +11,6 @@ except ImportError:
 import numpy as np
 import pandas as pd
 import pytest
-
-
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
@@ -929,7 +928,6 @@ Concordance = 0.640""".strip().split()
         npt.assert_almost_equal(cp.summary['coef'].values, [-0.335, -0.059, 0.100], decimal=3)
         assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
 
-
     def test_predict_log_hazard_relative_to_mean_with_normalization(self, rossi):
         cox = CoxPHFitter(normalize=True)
         cox.fit(rossi, 'week', 'arrest')
@@ -938,14 +936,27 @@ Concordance = 0.640""".strip().split()
         # thus exp(beta * 0) == 1, so exp(beta * X)/exp(beta * 0) = exp(beta * X)
         assert_frame_equal(cox.predict_log_hazard_relative_to_mean(rossi), np.log(cox.predict_partial_hazard(rossi)))
 
-
     def test_predict_log_hazard_relative_to_mean_without_normalization(self, rossi):
         cox = CoxPHFitter(normalize=False)
         cox.fit(rossi, 'week', 'arrest')
         log_relative_hazards = cox.predict_log_hazard_relative_to_mean(rossi)
         means = rossi.mean(0).to_frame().T
-        assert cox.predict_partial_hazard(means).values[0][0] != 1.0  
+        assert cox.predict_partial_hazard(means).values[0][0] != 1.0
         assert_frame_equal(log_relative_hazards, np.log(cox.predict_partial_hazard(rossi) / cox.predict_partial_hazard(means).squeeze()))
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column(self, rossi):
+        cox = CoxPHFitter()
+        rossi['constant'] = 1.0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                cox.fit(rossi, 'week', 'arrest')
+            except:
+                pass
+            assert len(w) == 1
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "variance" in str(w[-1].message)
 
 
 
