@@ -374,7 +374,7 @@ def plot_estimate(cls, estimate):
         if ci_show:
             if ci_force_lines:
                 dataframe_slicer(confidence_interval_).plot(linestyle="-", linewidth=1,
-                                                            color=[colour], legend=True,
+                                                            color=[colour], legend=ci_legend,
                                                             drawstyle=kwargs.get('drawstyle', 'default'),
                                                             ax=ax, alpha=0.6)
             else:
@@ -384,6 +384,7 @@ def plot_estimate(cls, estimate):
                 fill_between_steps(x, lower, y2=upper, ax=ax,
                                    alpha=ci_alpha, color=colour,
                                    linewidth=1.0)
+
 
         if at_risk_counts:
             add_at_risk_counts(cls, ax=ax)
