@@ -456,9 +456,9 @@ class CoxPHFitter(BaseFitter):
                 v = self.predict_partial_hazard(stratified_X)
                 cumulative_hazard_ = cumulative_hazard_.merge(pd.DataFrame(-np.dot(np.log(s_0), v.T), index=s_0.index, columns=col), how='outer', right_index=True, left_index=True)
         else:
-            v = self.predict_partial_hazard(X)
             s_0 = self.baseline_survival_
             col = _get_index(X)
+            v = self.predict_partial_hazard(X)
             cumulative_hazard_ = pd.DataFrame(-np.dot(np.log(s_0), v.T), columns=col, index=s_0.index)
 
         return cumulative_hazard_

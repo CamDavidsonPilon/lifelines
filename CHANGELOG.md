@@ -5,10 +5,11 @@
  - added a (correct) check to see if some columns in a dataset will cause convergence problems.
  - removing `flat` argument in `plot` methods. It was causing confusion. To replicate it, one can set `ci_force_lines=True` and `show_censors=True`.
  - adding `strata` keyword argument to `CoxPHFitter` on initialization (ex: `CoxPHFitter(strata=['v1', 'v2'])`. Why? Fitters initialized with `strata` can now be passed into `k_fold_cross_validation`, plus it makes unit testing `strata` fitters easier. 
+ - If using `strata` in `CoxPHFitter`, access to strata specific baseline hazards and survival functions are available (previously it was a blended valie). Prediction also uses the specific baseline hazards/survivals. 
 
 #### 0.9.2
  - deprecates Pandas versions before 0.18.
- - throw an error if no admissable pairs in the c-index calculation. Previosly a NaN was returned.
+ - throw an error if no admissable pairs in the c-index calculation. Previously a NaN was returned.
 
 #### 0.9.1
  - add two summary functions to Weibull and Exponential fitter, solves #224
