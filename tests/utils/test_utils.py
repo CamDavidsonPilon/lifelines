@@ -275,7 +275,6 @@ def test_cross_validator_with_specific_loss_function():
     results_con = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col='T', event_col='E')
     assert list(results_sq) != list(results_con)
 
-
 def test_concordance_index():
     size = 1000
     T = np.random.normal(size=size)

@@ -2,6 +2,7 @@ from __future__ import print_function
 from collections import Counter, Iterable
 import os
 import warnings
+from itertools import combinations
 
 try:
     from StringIO import StringIO as stringio, StringIO
@@ -520,79 +521,61 @@ class TestBreslowFlemingHarringtonFitter():
 
 class TestRegressionFitters():
 
-    def test_pickle(self, rossi):
+    @pytest.fixture
+    def regression_models(self):
+        return [CoxPHFitter(), AalenAdditiveFitter(), CoxPHFitter(strata=['race', 'paro', 'mar', 'wexp'])]
+
+    def test_pickle(self, rossi, regression_models):
         from pickle import dump
-        for fitter in [CoxPHFitter, AalenAdditiveFitter]:
+        for fitter in regression_models:
             output = stringio()
-            f = fitter().fit(rossi, 'week', 'arrest')
+            f = fitter.fit(rossi, 'week', 'arrest')
             dump(f, output)
 
-    def test_fit_methods_require_duration_col(self):
-        X = load_regression_dataset()
+    def test_fit_methods_require_duration_col(self, rossi, regression_models):
+        for fitter in regression_models:
+            with pytest.raises(TypeError):
+                fitter.fit(rossi)
 
-        aaf = AalenAdditiveFitter()
-        cph = CoxPHFitter()
+    def test_fit_methods_can_accept_optional_event_col_param(self, regression_models, rossi):
+        for model in regression_models:
+            model.fit(rossi, 'week', event_col='arrest')
+            assert_series_equal(model.event_observed.sort_index(), rossi['arrest'].astype(bool), check_names=False)
 
-        with pytest.raises(TypeError):
-            aaf.fit(X)
-        with pytest.raises(TypeError):
-            cph.fit(X)
+            model.fit(rossi, 'week')
+            npt.assert_array_equal(model.event_observed.values, np.ones(rossi.shape[0]))
 
-    def test_fit_methods_can_accept_optional_event_col_param(self):
-        X = load_regression_dataset()
+    def test_predict_methods_in_regression_return_same_types(self, regression_models, rossi):
 
-        aaf = AalenAdditiveFitter()
-        aaf.fit(X, 'T', event_col='E')
-        assert_series_equal(aaf.event_observed.sort_index(), X['E'].astype(bool), check_names=False)
-
-        aaf.fit(X, 'T')
-        npt.assert_array_equal(aaf.event_observed.values, np.ones(X.shape[0]))
-
-        cph = CoxPHFitter()
-        cph.fit(X, 'T', event_col='E')
-        assert_series_equal(cph.event_observed.sort_index(), X['E'].astype(bool), check_names=False)
-
-        cph.fit(X, 'T')
-        npt.assert_array_equal(cph.event_observed.values, np.ones(X.shape[0]))
-
-    def test_predict_methods_in_regression_return_same_types(self):
-        X = load_regression_dataset()
-
-        aaf = AalenAdditiveFitter()
-        cph = CoxPHFitter()
-
-        aaf.fit(X, duration_col='T', event_col='E')
-        cph.fit(X, duration_col='T', event_col='E')
+        fitted_regression_models = map(lambda model: model.fit(rossi, duration_col='week', event_col='arrest'), regression_models)
 
         for fit_method in ['predict_percentile', 'predict_median', 'predict_expectation', 'predict_survival_function', 'predict_cumulative_hazard']:
-            assert isinstance(getattr(aaf, fit_method)(X), type(getattr(cph, fit_method)(X)))
+            for fitter1, fitter2 in combinations(fitted_regression_models, 2):
+                assert isinstance(getattr(fitter1, fit_method)(rossi), type(getattr(fitter2, fit_method)(rossi)))
 
-    def test_duration_vector_can_be_normalized(self):
-        df = load_kidney_transplant()
-        t = df['time']
-        normalized_df = df.copy()
-        normalized_df['time'] = (normalized_df['time'] - t.mean()) / t.std()
+    def test_duration_vector_can_be_normalized(self, regression_models, rossi):
+        t = rossi['week']
+        normalized_rossi = rossi.copy()
+        normalized_rossi['week'] = (normalized_rossi['week'] - t.mean()) / t.std()
 
-        for fitter in [CoxPHFitter(), AalenAdditiveFitter()]:
+        for fitter in regression_models:
             # we drop indexs since aaf will have a different "time" index.
-            hazards = fitter.fit(df, duration_col='time', event_col='death').hazards_.reset_index(drop=True)
-            hazards_norm = fitter.fit(normalized_df, duration_col='time', event_col='death').hazards_.reset_index(drop=True)
+            hazards = fitter.fit(rossi, duration_col='week', event_col='arrest').hazards_.reset_index(drop=True)
+            hazards_norm = fitter.fit(normalized_rossi, duration_col='week', event_col='arrest').hazards_.reset_index(drop=True)
             assert_frame_equal(hazards, hazards_norm)
 
-    def test_prediction_methods_respect_index(self, data_pred2):
-        x = data_pred2[['x1', 'x2']].ix[:3].sort_index(ascending=False)
+    def test_prediction_methods_respect_index(self, regression_models, rossi):
+        X = rossi.ix[:3].sort_index(ascending=False)
         expected_index = pd.Index(np.array([3, 2, 1, 0]))
 
-        cph = CoxPHFitter()
-        cph.fit(data_pred2, duration_col='t', event_col='E')
-        npt.assert_array_equal(cph.predict_partial_hazard(x).index, expected_index)
-        npt.assert_array_equal(cph.predict_percentile(x).index, expected_index)
-        npt.assert_array_equal(cph.predict_expectation(x).index, expected_index)
-
-        aaf = AalenAdditiveFitter()
-        aaf.fit(data_pred2, duration_col='t', event_col='E')
-        npt.assert_array_equal(aaf.predict_percentile(x).index, expected_index)
-        npt.assert_array_equal(aaf.predict_expectation(x).index, expected_index)
+        for fitter in regression_models:
+            fitter.fit(rossi, duration_col='week', event_col='arrest')
+            npt.assert_array_equal(fitter.predict_percentile(X).index, expected_index)
+            npt.assert_array_equal(fitter.predict_expectation(X).index, expected_index)
+            try:
+                npt.assert_array_equal(fitter.predict_partial_hazard(X).index, expected_index)
+            except AttributeError:
+                pass
 
 
 class TestCoxPHFitter():
