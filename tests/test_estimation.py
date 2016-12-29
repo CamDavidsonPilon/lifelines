@@ -921,7 +921,7 @@ Concordance = 0.640""".strip().split()
         > basehaz(r, centered=FALSE)
         """
         cp = CoxPHFitter(normalize=False)
-        cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'], include_likelihood=True)
+        cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].ix[[14, 35, 37, 43, 52]].values, [0.28665890, 0.63524149, 1.01822603, 1.48403930, 1.48403930], decimal=2)
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].ix[[27, 43, 48, 52]].values, [0.35738173, 0.76415714, 1.26635373, 1.26635373], decimal=2)
 

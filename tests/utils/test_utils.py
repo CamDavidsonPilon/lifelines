@@ -207,13 +207,15 @@ def test_group_survival_table_from_events_on_waltons_data():
     assert all(removed.index == observed.index)
     assert all(removed.index == censored.index)
 
+
 def test_survival_table_from_events_at_risk_column():
     df = load_waltons()
     # from R
-    expected = [163.0, 162.0, 160.0, 157.0, 154.0, 152.0, 151.0, 148.0, 144.0, 139.0, 134.0, 133.0, 130.0, 128.0, 126.0, 119.0, 118.0, 
+    expected = [163.0, 162.0, 160.0, 157.0, 154.0, 152.0, 151.0, 148.0, 144.0, 139.0, 134.0, 133.0, 130.0, 128.0, 126.0, 119.0, 118.0,
                 108.0, 107.0, 99.0, 96.0, 89.0, 87.0, 69.0, 65.0, 49.0, 38.0, 36.0, 27.0, 24.0, 14.0, 1.0]
     df = utils.survival_table_from_events(df['T'], df['E'])
-    assert list(df['at_risk'][1:]) == expected # skip the first event as that is the birth time, 0.
+    assert list(df['at_risk'][1:]) == expected  # skip the first event as that is the birth time, 0.
+
 
 def test_survival_table_to_events_casts_to_float():
     T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([True, False, True, True, True, True])
@@ -311,7 +313,7 @@ def test_both_concordance_index_function_deal_with_ties_the_same_way():
     actual_times = np.array([1, 1, 2])
     predicted_times = np.array([1, 2, 3])
     obs = np.ones(3)
-    assert fast_cindex(actual_times, predicted_times, obs) == slow_cindex(actual_times, predicted_times, obs) == 1.0 
+    assert fast_cindex(actual_times, predicted_times, obs) == slow_cindex(actual_times, predicted_times, obs) == 1.0
 
 
 def test_survival_table_from_events_with_non_negative_T_and_no_lagged_births():
