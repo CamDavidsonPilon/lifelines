@@ -265,6 +265,11 @@ def test_cross_validator_with_predictor_and_kwargs():
     assert len(results_06) == 3
 
 
+def test_cross_validator_with_stratified_cox_model():
+    cf = CoxPHFitter(strata=['race'])
+    utils.k_fold_cross_validation(cf, load_rossi(), duration_col='week', event_col='arrest')
+
+
 def test_cross_validator_with_specific_loss_function():
     def square_loss(y_actual, y_pred):
         return ((y_actual - y_pred) ** 2).mean()
@@ -274,6 +279,7 @@ def test_cross_validator_with_specific_loss_function():
                                                duration_col='T', event_col='E')
     results_con = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col='T', event_col='E')
     assert list(results_sq) != list(results_con)
+
 
 def test_concordance_index():
     size = 1000
