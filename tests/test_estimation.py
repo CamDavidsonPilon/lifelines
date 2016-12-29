@@ -899,9 +899,10 @@ Concordance = 0.640""".strip().split()
 
     def test_strata_against_r_output(self, rossi):
         """
+        > library(survival)
+        > ross = read.csv('rossi.csv')
         > r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
             paro, mar, wexp) + prio, data = rossi)
-        > r
         > r$loglik
         """
 
@@ -910,6 +911,19 @@ Concordance = 0.640""".strip().split()
 
         npt.assert_almost_equal(cp.summary['coef'].values, [-0.335, -0.059, 0.100], decimal=3)
         assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
+
+    def test_hazard_works_as_intended_with_strata_against_R_output(self, rossi):
+        """
+        > library(survival)
+        > ross = read.csv('rossi.csv')
+        > r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
+            paro, mar, wexp) + prio, data = rossi)
+        > basehaz(r, centered=FALSE)
+        """
+        cp = CoxPHFitter(normalize=False)
+        cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].ix[[14, 35, 37, 43, 52]].values, [0.28665890, 0.63524149, 1.01822603, 1.48403930, 1.48403930], decimal=2)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].ix[[27, 43, 48, 52]].values, [0.35738173, 0.76415714, 1.26635373, 1.26635373], decimal=2)
 
     def test_predict_log_hazard_relative_to_mean_with_normalization(self, rossi):
         cox = CoxPHFitter(normalize=True)
