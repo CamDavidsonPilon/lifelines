@@ -468,19 +468,20 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
     Concordance = 0.638
     """
 
+
 Model Selection in Survival Regression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With censorship, it's not correct to use a loss function like mean-squared-error or 
-mean-absolute-loss. Instead, one measure is the c-index, or concordance-index. This measure
-evaluates the ordering of predicted times: how correct is the ordering? It is infact a generalization
+If censorship is present, it's not appropriate to use a loss function like mean-squared-error or 
+mean-absolute-loss. Instead, one measure is the concordance-index, also known as the c-index. This measure
+evaluates the accuracy of the ordering of predicted time. It is infact a generalization
 of AUC, another common loss function, and is interpreted similarly: 
 
 * 0.5 is the expected result from random predictions,
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-The measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships), and the predicted times.
+The measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships) and the predicted times.
 
 Cross Validation
 ######################################
