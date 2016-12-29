@@ -33,7 +33,7 @@ class CoxPHFitter(BaseFitter):
         The penalty is 1/2 * penalizer * ||beta||^2.
     """
 
-    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True, penalizer=0.0):
+    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True, penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         if penalizer < 0:
@@ -45,7 +45,7 @@ class CoxPHFitter(BaseFitter):
         self.normalize = normalize
         self.tie_method = tie_method
         self.penalizer = penalizer
-        self.strata = None
+        self.strata = strata
 
     def _get_efron_values(self, X, beta, T, E, include_likelihood=False):
         """

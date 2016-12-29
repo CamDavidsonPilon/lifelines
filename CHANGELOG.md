@@ -4,6 +4,7 @@
  - adding `plot_loglogs` to `KaplanMeierFitter`
  - added a (correct) check to see if some columns in a dataset will cause convergence problems.
  - removing `flat` argument in `plot` methods. It was causing confusion. To replicate it, one can set `ci_force_lines=True` and `show_censors=True`.
+ - adding `strata` keyword argument to `CoxPHFitter` on initialization (ex: `CoxPHFitter(strata=['v1', 'v2'])`. Why? Fitters initialized with `strata` can now be passed into `k_fold_cross_validation`, plus it makes unit testing `strata` fitters easier. 
 
 #### 0.9.2
  - deprecates Pandas versions before 0.18.
