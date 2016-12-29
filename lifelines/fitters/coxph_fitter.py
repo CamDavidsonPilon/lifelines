@@ -322,11 +322,9 @@ class CoxPHFitter(BaseFitter):
         self.durations = T
         self.event_observed = E
 
-
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
         self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
         self.baseline_survival_ = exp(-self.baseline_cumulative_hazard_)
-
         return self
 
     def _check_values(self, X):
@@ -472,8 +470,6 @@ class CoxPHFitter(BaseFitter):
         Returns the estimated survival functions for the individuals
         """
         return exp(-self.predict_cumulative_hazard(X))
-
-
 
     def predict_percentile(self, X, p=0.5):
         """
