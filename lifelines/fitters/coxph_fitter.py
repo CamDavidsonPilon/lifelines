@@ -309,7 +309,6 @@ class CoxPHFitter(BaseFitter):
             self._norm_std = df.std(0)
             df = normalize(df)
 
-
         E = E.astype(bool)
 
         hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
@@ -322,23 +321,9 @@ class CoxPHFitter(BaseFitter):
 
         self.durations = T
         self.event_observed = E
-        self.baseline_hazard_ = pd.DataFrame(index=self.durations.unique())
-        # strata have different baseline hazard functions
-        # for this reason we need to estimate them separately
-        if self.strata:
-            for current_strata in np.unique(df.index):
-                # Create dataframe of all strata baseline hazards
-                self.baseline_hazard_ = pd.merge(self.baseline_hazard_, 
-                                                self._compute_baseline_hazard(data=df.loc[[current_strata]], durations=T.loc[[current_strata]], event_observed=E.loc[[current_strata]]), 
-                                                left_index=True, 
-                                                right_index=True, 
-                                                how='outer')
-            # Rename columns to be the name of the strata
-            self.baseline_hazard_.columns = np.unique(df.index)
 
-        else:
-            self.baseline_hazard_ = self._compute_baseline_hazard(data=df, durations=T, event_observed=E)
 
+        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
         self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
         self.baseline_survival_ = exp(-self.baseline_cumulative_hazard_)
 
@@ -459,20 +444,26 @@ class CoxPHFitter(BaseFitter):
         mean_covariates = self.data.mean(0).to_frame().T
         return np.log(self.predict_partial_hazard(X) / self.predict_partial_hazard(mean_covariates).squeeze())
 
-    def predict_cumulative_hazard(self, X, s_0):
+    def predict_cumulative_hazard(self, X):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         """
+        if self.strata:
+            cumulative_hazard_ = pd.DataFrame()
+            for stratum, stratified_X in X.groupby(self.strata):
+                s_0 = self.baseline_survival_[[stratum]]
+                v = self.predict_partial_hazard(stratified_X)
+                cumulative_hazard_ = cumulative_hazard_.append(pd.DataFrame(-np.dot(np.log(s_0), v.T), index=s_0.index))
 
-        s_0 = np.matrix(s_0).T
-        v = self.predict_partial_hazard(X)
+        else:
+            v = self.predict_partial_hazard(X)
+            s_0 = self.baseline_survival_
+            cumulative_hazard_ = pd.DataFrame(-np.dot(np.log(s_0), v.T), index=s_0.index)
+        return cumulative_hazard_
 
-        return pd.DataFrame(-np.dot(np.log(s_0), v.T), index=self.baseline_survival_.index)
-
-
-    def predict_survival_function(self, X, strata=None):
+    def predict_survival_function(self, X):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
@@ -480,26 +471,9 @@ class CoxPHFitter(BaseFitter):
 
         Returns the estimated survival functions for the individuals
         """
+        return exp(-self.predict_cumulative_hazard(X))
 
-        self.survival = pd.DataFrame(index=self.durations.unique())
-        col = _get_index(X)
-        
-        for strata_name in self.baseline_survival_:
 
-            new_names = []
-            for col_name in col:
-                new_names.append(strata_name+"_"+str(col_name))
-
-            pch = self.predict_cumulative_hazard(X, self.baseline_survival_[strata_name])
-            pch.columns = new_names
-
-            self.survival = pd.merge(self.survival,
-                                    exp(-pch),
-                                    left_index=True, 
-                                    right_index=True, 
-                                    how='outer')
-
-        return self.survival
 
     def predict_percentile(self, X, p=0.5):
         """
@@ -535,15 +509,15 @@ class CoxPHFitter(BaseFitter):
         v = self.predict_survival_function(X)[index]
         return pd.DataFrame(trapz(v.values.T, v.index), index=index)
 
-    def _compute_baseline_hazard(self, data, durations, event_observed):
+    def _compute_baseline_hazard(self, data, durations, event_observed, name):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         ind_hazards = self.predict_partial_hazard(data).values
 
-        event_table = survival_table_from_events(durations,event_observed)
+        event_table = survival_table_from_events(durations, event_observed)
 
         baseline_hazard_ = pd.DataFrame(np.zeros((event_table.shape[0], 1)),
                                         index=event_table.index,
-                                        columns=['baseline hazard'])
+                                        columns=[name])
 
         for t, s in event_table.iterrows():
             less = np.array(durations >= t)
@@ -554,3 +528,17 @@ class CoxPHFitter(BaseFitter):
             baseline_hazard_.ix[t] = v
 
         return baseline_hazard_
+
+    def _compute_baseline_hazards(self, df, T, E):
+        if self.strata:
+            baseline_hazards_ = pd.DataFrame(index=self.durations.unique())
+            for stratum in df.index.unique():
+                baseline_hazards_ = baseline_hazards_.merge(
+                                                 self._compute_baseline_hazard(data=df.ix[[stratum]], durations=T.ix[[stratum]], event_observed=E.ix[[stratum]], name=stratum),
+                                                 left_index=True,
+                                                 right_index=True,
+                                                 how='left')
+            return baseline_hazards_.fillna(0)
+
+        else:
+            return self._compute_baseline_hazard(data=df, durations=T, event_observed=E, name='baseline hazard')
