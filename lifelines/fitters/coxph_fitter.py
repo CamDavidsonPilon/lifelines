@@ -83,7 +83,7 @@ class CoxPHFitter(BaseFitter):
         tie_count = 0
 
         # Iterate backwards to utilize recursive relationship
-        for ti, ei, i in reversed((zip(T, E, range(n)))):
+        for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
             # Doing it like this to preserve shape
             xi = X[i:i + 1]
             # Calculate phi values
