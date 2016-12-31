@@ -511,26 +511,15 @@ class CoxPHFitter(BaseFitter):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         ind_hazards = self.predict_partial_hazard(data)
         ind_hazards['event_at'] = durations
-        ind_hazards = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
+        ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
+        ind_hazards_summed_over_durations.name = 'hazards'
 
         event_table = survival_table_from_events(durations, event_observed)
-        baseline_hazard_ = []
+        event_table = event_table.join(ind_hazards_summed_over_durations)
+        baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name])
+        return baseline_hazard.fillna(0)
 
-        for t, s in event_table.iterrows():
-            if s['observed'] == 0:
-                baseline_hazard_.append(0)
-                continue
 
-            sum_of_future_hazards = ind_hazards.ix[t]
-            if sum_of_future_hazards == 0:
-                v = 0
-            else:
-                v = (s['observed'] / sum_of_future_hazards)
-            baseline_hazard_.append(v)
-
-        return pd.DataFrame(baseline_hazard_,
-                            index=event_table.index,
-                            columns=[name])
 
     def _compute_baseline_hazards(self, df, T, E):
         if self.strata:
