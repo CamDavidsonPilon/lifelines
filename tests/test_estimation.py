@@ -818,17 +818,31 @@ Concordance = 0.640""".strip().split()
             assert mean_score > expected, msg.format(expected, mean_score)
 
     def test_output_against_R(self, rossi):
-        # from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
-        # Link is now broken, but this is the code:
-        #
-        # rossi <- read.csv('.../lifelines/datasets/rossi.csv')
-        # mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
-        #     data=rossi)
-        # cat(round(mod.allison$coefficients, 4), sep=", ")
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+        
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        cat(round(mod.allison$coefficients, 4), sep=", ")
+        """
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         cf = CoxPHFitter(normalize=False)
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+
+    def test_output_with_strata_against_R(self, rossi):
+        """
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
+                    paro, mar, wexp) + prio, data = rossi)
+        """
+        expected = np.array([[-0.335, -0.059, 0.100]])
+        cf = CoxPHFitter(normalize=False)
+        cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'])
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+
 
     def test_penalized_output_against_R(self, rossi):
         # R code:
