@@ -516,10 +516,8 @@ class CoxPHFitter(BaseFitter):
 
         event_table = survival_table_from_events(durations, event_observed)
         event_table = event_table.join(ind_hazards_summed_over_durations)
-        baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name])
-        return baseline_hazard.fillna(0)
-
-
+        baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name]).fillna(0)
+        return baseline_hazard
 
     def _compute_baseline_hazards(self, df, T, E):
         if self.strata:
