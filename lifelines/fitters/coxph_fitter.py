@@ -89,7 +89,7 @@ class CoxPHFitter(BaseFitter):
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
             phi_x_i = dot(phi_i, xi)
-            phi_x_x_i = dot(xi.T, xi) * phi_i
+            phi_x_x_i = dot(xi.T, phi_i * xi)
 
             # Calculate sums of Risk set
             risk_phi += phi_i
@@ -120,10 +120,6 @@ class CoxPHFitter(BaseFitter):
 
                 denom = (risk_phi - c * tie_phi)
                 z = (risk_phi_x - c * tie_phi_x)
-
-                if denom == 0:
-                    # Can't divide by zero
-                    raise ValueError("Denominator was zero")
 
                 # Gradient
                 partial_gradient += z / denom
