@@ -195,7 +195,6 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
     births = pd.DataFrame(birth_times, columns=['event_at'])
     births[entrance] = 1
     births_table = births.groupby('event_at').sum()
-
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
     return event_table.astype(int)
