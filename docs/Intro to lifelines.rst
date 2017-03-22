@@ -408,7 +408,7 @@ leader rarely makes it past 10 years, and then have a very short
 lifetime past that.
 
 Here the difference between survival functions is very obvious, and
-performing a statistical test seems pendantic. If the curves are more
+performing a statistical test seems pedantic. If the curves are more
 similar, or we possess less data, we may be interested in performing a
 statistical test. In this case, *lifelines* contains routines in
 ``lifelines.statistics`` to compare two survival curves. Below we
