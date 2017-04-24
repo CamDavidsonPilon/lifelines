@@ -4,7 +4,7 @@ import warnings
 from datetime import datetime
 
 import numpy as np
-from numpy.linalg import inv
+from numpy.linalg import solve
 import pandas as pd
 from pandas import to_datetime
 
@@ -564,11 +564,11 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     if offset is None:
         offset = np.zeros((d,))
 
-    V_1 = inv(np.dot(X.T, X) + penalizer_matrix)
-    V_2 = (np.dot(X.T, Y) + c2 * offset)
-    beta = np.dot(V_1, V_2)
+    A = (np.dot(X.T, X) + penalizer_matrix)
+    b = (np.dot(X.T, Y) + c2 * offset)
 
-    return beta, np.dot(V_1, X.T)
+    # rather than explicitly computing the inverse, just solve the system of equations
+    return (solve(A, b), solve(A, X.T))
 
 
 def _smart_search(minimizing_function, n, *args):
