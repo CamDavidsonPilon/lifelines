@@ -53,7 +53,7 @@ def test_lstsq_returns_correct_values():
     X = np.array([[-1.0, -1.0], [-1.0, 0], [-.8, -1.0],
                   [1.0, 1.0], [1.0, 0.0]])
     y = [1, 1, 1, -1, -1]
-    beta,V = ridge_regression(X, y)
+    beta,V = utils.ridge_regression(X, y)
     expected_beta = [-0.98684211, -0.07894737]
     expected_v = [[-0.03289474, -0.49342105, 0.06578947, 0.03289474, 0.49342105],
 		  [-0.30263158, 0.46052632, -0.39473684, 0.30263158, -0.46052632]]
