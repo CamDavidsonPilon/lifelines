@@ -821,7 +821,7 @@ Concordance = 0.640""".strip().split()
         """
         from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         Link is now broken, but this is the code:
-        
+
         rossi <- read.csv('.../lifelines/datasets/rossi.csv')
         mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
             data=rossi)
@@ -982,7 +982,6 @@ class TestAalenAdditiveFitter():
         aaf.fit(rossi, event_col='arrest', duration_col='week')
         cum_hazards = aaf.predict_cumulative_hazard(rossi)
         assert (cum_hazards < 0).stack().mean() == 0
-
 
     def test_using_a_custom_timeline_in_static_fitting(self, rossi):
         aaf = AalenAdditiveFitter()

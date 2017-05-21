@@ -50,6 +50,8 @@ You can optionally run the test suite after install with
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
 please check out the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
 
+Also around on [Gitter](https://gitter.im/python-lifelines/)
+
 
 ### Citing lifelines
 
