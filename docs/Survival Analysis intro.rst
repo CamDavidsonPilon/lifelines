@@ -7,15 +7,14 @@ Introduction to Survival Analysis
 '''''''''''''''''''''''''''''''''
 
 Applications
---------------------------------
+------------
 
 
-
-Traditionally, survival analysis was developed to measure lifespans of
-individuals. An actuary or health professional would ask questions like
-"how long does this population live for?", and answer it using survival analysis. For example, the
-population may be a nation's population (for actuaries), or a population
-stricken by a disease (in the medical professional's case).
+Traditionally, survival analysis was developed to measure lifespans of individuals.
+An actuary or health professional would ask questions like
+"how long does this population live for?", and answer it using survival analysis.
+For example, the population may be a nation's population (for actuaries),
+or a population stricken by a disease (in the medical professional's case).
 Traditionally, sort of a morbid subject.
 
 The analysis can be further applied to not just traditional *births and
@@ -27,7 +26,7 @@ is users subscribing to a service: a birth is a user who joins the
 service, and a death is when the user leaves the service.
 
 Censorship
---------------------------------
+----------
 
 
 At the time you want to make inferences about durations, it is possible, likely
@@ -37,14 +36,15 @@ study to pass away before investigating -- he or she is interested in
 the effectiveness of improving lifetimes after only a few years, or months possibly.
 
 The individuals in a population who have not been subject to the death
-event are labeled as *right-censored*, i.e. we did not (or can not) view the rest of their life history 
+event are labeled as *right-censored*, i.e.,
+we did not (or can not) view the rest of their life history 
 due to some external circumstances. All the information we have on
 these individuals are their current lifetime durations (which is
 naturally *less* than their actual lifetimes).
 
 .. note:: There is also left-censorship, where an individuals birth event is not seen.
 
-A common mistake data analysts make is  choosing to ignore the
+A common mistake data analysts make is choosing to ignore the
 right-censored individuals. We shall see why this is a mistake next:
 
 Consider a case where the population is actually made up of two
@@ -63,16 +63,16 @@ situation.
     
     N = 25
     current_time = 10
-    actual_lifetimes = np.array([[exponential(12), exponential(2)][uniform()<0.5] for i in range(N)])
-    observed_lifetimes = np.minimum(actual_lifetimes,current_time)
-    observed= actual_lifetimes < current_time
+    actual_lifetimes = np.array([[exponential(12), exponential(2)][uniform() < 0.5] for i in range(N)])
+    observed_lifetimes = np.minimum(actual_lifetimes, current_time)
+    observed = actual_lifetimes < current_time
     
-    plt.xlim(0,25)
-    plt.vlines(10,0,30,lw=2, linestyles="--")
-    plt.xlabel('time')
-    plt.title('Births and deaths of our population, at $t=10$')
+    plt.xlim(0, 25)
+    plt.vlines(10, 0, 30, lw=2, linestyles='--')
+    plt.xlabel("time")
+    plt.title("Births and deaths of our population, at $t=10$")
     plot_lifetimes(observed_lifetimes, event_observed=observed)
-    print "Observed lifetimes at time %d:\n"%(current_time), observed_lifetimes
+    print("Observed lifetimes at time %d:\n" % (current_time), observed_lifetimes)
 
 
 .. image:: images/survival_analysis_intro_censorship.png
@@ -102,7 +102,7 @@ information at :math:`t=10`).
 .. code:: python
 
     plt.xlim(0,25)
-    plt.vlines(10,0,30,lw=2,linestyles="--")
+    plt.vlines(10, 0, 30, lw=2, linestyles='--')
     plot_lifetimes(actual_lifetimes, event_observed=observed)
 
 
@@ -119,7 +119,8 @@ The observations need not always start at zero, either. This was done
 only for understanding in the above example. Consider the example where
 a customer entering a store is a birth: a customer can enter at
 any time, and not necessarily at time zero. In survival analysis, durations
-are relative: individuals may start at different times. (We actually only need the *duration* of the observation, and not
+are relative: individuals may start at different times.
+(We actually only need the *duration* of the observation, and not
 the necessarily the start and end time.)
 
 We next introduce the two fundamental objects in survival analysis, the
@@ -128,7 +129,7 @@ We next introduce the two fundamental objects in survival analysis, the
 --------------
 
 Survival function
---------------------------------
+-----------------
 
 
 Let :math:`T` be a (possibly infinite, but always non-negative) random
@@ -149,7 +150,7 @@ In plain English: the survival function defines the probability the death event 
 
 
 Hazard curve
---------------------------------
+------------
 
 
 We are also interested in the probability of the death event occurring at time :math:`t`,
@@ -170,7 +171,7 @@ It can be shown with quite elementary probability that this is equal to:
 and solving this differential equation (yes, it is a differential
 equation), we get:
 
-.. math:: S(t) = \exp\left( -\int_0^t \lambda(z) dz \right)
+.. math:: S(t) = \exp\left( -\int_0^t \lambda(z) \mathrm{d}z \right)
 
 What I love about the above equation is that it defines **all** survival
 functions, and because the hazard function is arbitrary (i.e. there is
@@ -181,7 +182,7 @@ survival function, :math:`S(t)`, or the hazard function,
 also gives us another, albeit less useful, expression for :math:`T`:
 Upon differentiation and some algebra, we recover:
 
-.. math:: f_T(t) = \lambda(t)\exp\left( -\int_0^t \lambda(z) dz \right)
+.. math:: f_T(t) = \lambda(t)\exp\left( -\int_0^t \lambda(z) \mathrm{d}z \right)
 
 Of course, we do not observe the true survival curve of a population. We
 must use the observed data to estimate it. We also want to continue to
