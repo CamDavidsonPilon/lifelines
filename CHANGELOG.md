@@ -1,5 +1,10 @@
 ### Changelogs
 
+#### 0.9.5
+ - corrected bug that was returning the wrong baseline survival and hazard values in `CoxPHFitter` is `normalize=True`. 
+ - correcting column name in `CoxPHFitter.baseline_survival_`
+ - compatibility changes with Pandas 0.20.0
+
 #### 0.9.4
  - adding `plot_loglogs` to `KaplanMeierFitter`
  - added a (correct) check to see if some columns in a dataset will cause convergence problems.

@@ -320,7 +320,7 @@ class CoxPHFitter(BaseFitter):
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
         self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
-        self.baseline_survival_ = exp(-self.baseline_cumulative_hazard_)
+        self.baseline_survival_ = self._compute_baseline_survival()
         return self
 
     def _check_values(self, X):
@@ -394,7 +394,7 @@ class CoxPHFitter(BaseFitter):
               end='\n\n')
         print("Concordance = {:.3f}"
               .format(concordance_index(self.durations,
-                                        -self.predict_partial_hazard(self.data).values.ravel(),
+                                        -self._predict_partial_hazard(self.data).values.ravel(),
                                         self.event_observed)))
         return
 
@@ -414,8 +414,6 @@ class CoxPHFitter(BaseFitter):
         Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to \exp{\beta X}
         """
-        index = _get_index(X)
-
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.columns
             X = X[order]
@@ -424,6 +422,19 @@ class CoxPHFitter(BaseFitter):
             # Assuming correct ordering and number of columns
             X = normalize(X, self._norm_mean.values, self._norm_std.values)
 
+        return self._predict_partial_hazard(X)
+
+    def _predict_partial_hazard(self, X):
+        """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+
+
+        Returns the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to \exp{\beta X}
+        """
+        index = _get_index(X)
         return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
 
     def predict_log_hazard_relative_to_mean(self, X):
@@ -505,7 +516,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_baseline_hazard(self, data, durations, event_observed, name):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        ind_hazards = self.predict_partial_hazard(data)
+        ind_hazards = self._predict_partial_hazard(data)
         ind_hazards['event_at'] = durations
         ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
         ind_hazards_summed_over_durations.name = 'hazards'
@@ -520,11 +531,17 @@ class CoxPHFitter(BaseFitter):
             baseline_hazards_ = pd.DataFrame(index=self.durations.unique())
             for stratum in df.index.unique():
                 baseline_hazards_ = baseline_hazards_.merge(
-                                                 self._compute_baseline_hazard(data=df.ix[[stratum]], durations=T.ix[[stratum]], event_observed=E.ix[[stratum]], name=stratum),
-                                                 left_index=True,
-                                                 right_index=True,
-                                                 how='left')
+                    self._compute_baseline_hazard(data=df.ix[[stratum]], durations=T.ix[[stratum]], event_observed=E.ix[[stratum]], name=stratum),
+                    left_index=True,
+                    right_index=True,
+                    how='left')
             return baseline_hazards_.fillna(0)
 
         else:
             return self._compute_baseline_hazard(data=df, durations=T, event_observed=E, name='baseline hazard')
+
+    def _compute_baseline_survival(self):
+        survival_df = exp(-self.baseline_cumulative_hazard_)
+        if self.strata is None:
+            survival_df.columns = ['baseline survival']
+        return survival_df
