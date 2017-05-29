@@ -33,7 +33,7 @@ class CoxPHFitter(BaseFitter):
         The penalty is 1/2 * penalizer * ||beta||^2.
     """
 
-    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True, penalizer=0.0, strata=None):
+    def __init__(self, alpha=0.95, tie_method='Efron', penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         if penalizer < 0:
@@ -42,7 +42,6 @@ class CoxPHFitter(BaseFitter):
             raise NotImplementedError("Only Efron is available atm.")
 
         self.alpha = alpha
-        self.normalize = normalize
         self.tie_method = tie_method
         self.penalizer = penalizer
         self.strata = strata
@@ -295,15 +294,11 @@ class CoxPHFitter(BaseFitter):
             E = df[event_col]
             del df[event_col]
 
-        # Store original non-normalized data
         self.data = df if self.strata is None else df.reset_index()
         self._check_values(df)
-
-        if self.normalize:
-            # Need to normalize future inputs as well
-            self._norm_mean = df.mean(0)
-            self._norm_std = df.std(0)
-            df = normalize(df)
+        self._norm_mean = df.mean(0)
+        self._norm_std = df.std(0)
+        df = normalize(df, self._norm_mean, self._norm_std)
 
         E = E.astype(bool)
 
@@ -311,16 +306,15 @@ class CoxPHFitter(BaseFitter):
                                          show_progress=show_progress,
                                          include_likelihood=include_likelihood)
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns,
-                                     index=['coef'])
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
         self.durations = T
         self.event_observed = E
 
-        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
+        self.baseline_hazard_ = self._compute_baseline_hazards(normalize(df, 0, 1 / self._norm_std), T, E)
         self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
-        self.baseline_survival_ = exp(-self.baseline_cumulative_hazard_)
+        self.baseline_survival_ = self._compute_baseline_survival()
         return self
 
     def _check_values(self, X):
@@ -342,7 +336,7 @@ class CoxPHFitter(BaseFitter):
                             columns=self.hazards_.columns)
 
     def _compute_standard_errors(self):
-        se = np.sqrt(inv(-self._hessian_).diagonal())
+        se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
@@ -404,8 +398,6 @@ class CoxPHFitter(BaseFitter):
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        If covariates were normalized during fitting, they are normalized
-        in the same way here.
 
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
@@ -414,17 +406,28 @@ class CoxPHFitter(BaseFitter):
         Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to \exp{\beta X}
         """
-        index = _get_index(X)
+        return exp(self.predict_log_partial_hazard(X))
 
+    def predict_log_partial_hazard(self, X):
+        """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+
+
+        If X is a dataframe, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+
+        Returns the log of the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to \beta X
+        """
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.columns
             X = X[order]
 
-        if self.normalize:
-            # Assuming correct ordering and number of columns
-            X = normalize(X, self._norm_mean.values, self._norm_std.values)
-
-        return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
+        index = _get_index(X)
+        return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
     def predict_log_hazard_relative_to_mean(self, X):
         """
@@ -433,29 +436,31 @@ class CoxPHFitter(BaseFitter):
             same order as the training data.
 
         Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
-        of R's predict.coxph.
+        of R's predict.coxph. Equal to \beta X - \beta \bar{X}
         """
         mean_covariates = self.data.mean(0).to_frame().T
-        return np.log(self.predict_partial_hazard(X) / self.predict_partial_hazard(mean_covariates).squeeze())
+        return self.predict_log_partial_hazard(X) - self.predict_log_partial_hazard(mean_covariates).squeeze()
 
     def predict_cumulative_hazard(self, X):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+
+        Returns the cumulative hazard of individuals.
         """
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
             for stratum, stratified_X in X.groupby(self.strata):
-                s_0 = self.baseline_survival_[[stratum]]
+                c_0 = self.baseline_cumulative_hazard_[[stratum]]
                 col = _get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
-                cumulative_hazard_ = cumulative_hazard_.merge(pd.DataFrame(-np.dot(np.log(s_0), v.T), index=s_0.index, columns=col), how='outer', right_index=True, left_index=True)
+                cumulative_hazard_ = cumulative_hazard_.merge(pd.DataFrame(np.dot(c_0, v.T), index=c_0.index, columns=col), how='outer', right_index=True, left_index=True)
         else:
-            s_0 = self.baseline_survival_
+            c_0 = self.baseline_cumulative_hazard_
             col = _get_index(X)
             v = self.predict_partial_hazard(X)
-            cumulative_hazard_ = pd.DataFrame(-np.dot(np.log(s_0), v.T), columns=col, index=s_0.index)
+            cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
 
         return cumulative_hazard_
 
@@ -520,11 +525,17 @@ class CoxPHFitter(BaseFitter):
             baseline_hazards_ = pd.DataFrame(index=self.durations.unique())
             for stratum in df.index.unique():
                 baseline_hazards_ = baseline_hazards_.merge(
-                                                 self._compute_baseline_hazard(data=df.ix[[stratum]], durations=T.ix[[stratum]], event_observed=E.ix[[stratum]], name=stratum),
-                                                 left_index=True,
-                                                 right_index=True,
-                                                 how='left')
+                    self._compute_baseline_hazard(data=df.ix[[stratum]], durations=T.ix[[stratum]], event_observed=E.ix[[stratum]], name=stratum),
+                    left_index=True,
+                    right_index=True,
+                    how='left')
             return baseline_hazards_.fillna(0)
 
         else:
             return self._compute_baseline_hazard(data=df, durations=T, event_observed=E, name='baseline hazard')
+
+    def _compute_baseline_survival(self):
+        survival_df = exp(-self.baseline_cumulative_hazard_)
+        if self.strata is None:
+            survival_df.columns = ['baseline survival']
+        return survival_df
