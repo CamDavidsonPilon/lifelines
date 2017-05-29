@@ -1,9 +1,10 @@
 ### Changelogs
 
-#### 0.9.5
- - corrected bug that was returning the wrong baseline survival and hazard values in `CoxPHFitter` is `normalize=True`. 
+#### 0.10.0
+ - corrected bug that was returning the wrong baseline survival and hazard values in `CoxPHFitter` when `normalize=True`. 
+ - removed  `normalize` kwarg in `CoxPHFitter`. This was causing lots of confusion for users, and added code complexity. It's really nice to be able to remove it.
  - correcting column name in `CoxPHFitter.baseline_survival_`
- - compatibility changes with Pandas 0.20.0
+ - `CoxPHFitter.baseline_cumulative_hazard_` is always centered, to mimic R's `basehaz` API.
 
 #### 0.9.4
  - adding `plot_loglogs` to `KaplanMeierFitter`

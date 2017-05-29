@@ -619,7 +619,7 @@ prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-0
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Concordance = 0.635""".strip().split()
+Concordance = 0.640""".strip().split()
             for i in [0, 1, 2, -2, -1]:
                 assert output[i] == expected[i]
         finally:
@@ -678,13 +678,13 @@ Concordance = 0.635""".strip().split()
         assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus):
-        cf = CoxPHFitter(normalize=False)
+        cf = CoxPHFitter()
         cf.fit(data_nus, duration_col='t', event_col='E')
         assert np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001
 
     def test_using_dataframes_vs_numpy_arrays(self, data_pred2):
         # First without normalization
-        cf = CoxPHFitter(normalize=False)
+        cf = CoxPHFitter()
         cf.fit(data_pred2, 't', 'E')
 
         X = data_pred2[cf.data.columns]
@@ -694,22 +694,12 @@ Concordance = 0.635""".strip().split()
         hazards_n = cf.predict_partial_hazard(np.array(X))
         assert np.all(hazards == hazards_n)
 
-        # Now with normalization
-        cf = CoxPHFitter(normalize=True)
-        cf.fit(data_pred2, 't', 'E')
-
-        hazards = cf.predict_partial_hazard(X)
-
-        # Compare with array argument
-        hazards_n = cf.predict_partial_hazard(np.array(X))
-        assert np.all(hazards == hazards_n)
-
     def test_data_normalization(self, data_pred2):
         # During fit, CoxPH copies the training data and normalizes it.
         # Future calls should be normalized in the same way and
         # internal training set should not be saved in a normalized state.
 
-        cf = CoxPHFitter(normalize=True)
+        cf = CoxPHFitter()
         cf.fit(data_pred2, duration_col='t', event_col='E')
 
         # Internal training set
@@ -731,20 +721,17 @@ Concordance = 0.635""".strip().split()
         e = data_pred2['E']
         X = data_pred2[['x1', 'x2']]
 
-        for normalize in [True, False]:
-            msg = ("Predict methods should get the same concordance" +
-                   " when {}normalizing".format('' if normalize else 'not '))
-            cf = CoxPHFitter(normalize=normalize)
-            cf.fit(data_pred2, duration_col='t', event_col='E')
+        cf = CoxPHFitter()
+        cf.fit(data_pred2, duration_col='t', event_col='E')
 
-            # Base comparison is partial_hazards
-            ci_ph = concordance_index(t, -cf.predict_partial_hazard(X).values, e)
+        # Base comparison is partial_hazards
+        ci_ph = concordance_index(t, -cf.predict_partial_hazard(X).values, e)
 
-            ci_med = concordance_index(t, cf.predict_median(X).ravel(), e)
-            assert ci_ph == ci_med, msg
+        ci_med = concordance_index(t, cf.predict_median(X).ravel(), e)
+        assert ci_ph == ci_med
 
-            ci_exp = concordance_index(t, cf.predict_expectation(X).ravel(), e)
-            assert ci_ph == ci_exp, msg
+        ci_exp = concordance_index(t, cf.predict_expectation(X).ravel(), e)
+        assert ci_ph == ci_exp
 
     def test_crossval_for_cox_ph_with_normalizing_times(self, data_pred2, data_pred1):
         cf = CoxPHFitter()
@@ -828,7 +815,7 @@ Concordance = 0.635""".strip().split()
         cat(round(mod.allison$coefficients, 4), sep=", ")
         """
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
-        cf = CoxPHFitter(normalize=False)
+        cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
@@ -839,20 +826,19 @@ Concordance = 0.635""".strip().split()
                     paro, mar, wexp) + prio, data = rossi)
         """
         expected = np.array([[-0.335, -0.059, 0.100]])
-        cf = CoxPHFitter(normalize=False)
+        cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'])
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
-
 
     def test_penalized_output_against_R(self, rossi):
         # R code:
         #
         # rossi <- read.csv('.../lifelines/datasets/rossi.csv')
         # mod.allison <- coxph(Surv(week, arrest) ~ ridge(fin, age, race, wexp, mar, paro, prio,
-        #                                                 theta=1.0, scale=FALSE), data=rossi)
+        #                                                 theta=1.0, scale=TRUE), data=rossi)
         # cat(round(mod.allison$coefficients, 4), sep=", ")
-        expected = np.array([[-0.3641, -0.0580, 0.2894, -0.1496, -0.3837, -0.0822, 0.0913]])
-        cf = CoxPHFitter(normalize=False, penalizer=1.0)
+        expected = np.array([[-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909]])
+        cf = CoxPHFitter(penalizer=1.0)
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
@@ -861,7 +847,7 @@ Concordance = 0.635""".strip().split()
         df = load_kidney_transplant(usecols=['time', 'death',
                                              'black_male', 'white_male',
                                              'black_female'])
-        cf = CoxPHFitter(normalize=False)
+        cf = CoxPHFitter()
         cf.fit(df, duration_col='time', event_col='death')
 
         # coefs
@@ -872,7 +858,7 @@ Concordance = 0.635""".strip().split()
     def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
         df = load_larynx()
-        cf = CoxPHFitter(normalize=False)
+        cf = CoxPHFitter()
         cf.fit(df, duration_col='time', event_col='death')
 
         # standard errors
@@ -911,16 +897,16 @@ Concordance = 0.635""".strip().split()
         cp.fit(df, 'T', 'Status', strata=['Stratum'])
         assert True
 
-    def test_strata_against_r_output(self, rossi):
+    def test_strata_against_R_output(self, rossi):
         """
         > library(survival)
-        > ross = read.csv('rossi.csv')
+        > rossi = read.csv('.../lifelines/datasets/rossi.csv')
         > r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
             paro, mar, wexp) + prio, data = rossi)
         > r$loglik
         """
 
-        cp = CoxPHFitter(normalize=False)
+        cp = CoxPHFitter()
         cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'], include_likelihood=True)
 
         npt.assert_almost_equal(cp.summary['coef'].values, [-0.335, -0.059, 0.100], decimal=3)
@@ -929,26 +915,18 @@ Concordance = 0.635""".strip().split()
     def test_hazard_works_as_intended_with_strata_against_R_output(self, rossi):
         """
         > library(survival)
-        > ross = read.csv('rossi.csv')
+        > rossi = read.csv('.../lifelines/datasets/rossi.csv')
         > r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
             paro, mar, wexp) + prio, data = rossi)
-        > basehaz(r, centered=FALSE)
+        > basehaz(r, centered=TRUE)
         """
-        cp = CoxPHFitter(normalize=False)
+        cp = CoxPHFitter()
         cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].ix[[14, 35, 37, 43, 52]].values, [0.28665890, 0.63524149, 1.01822603, 1.48403930, 1.48403930], decimal=2)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].ix[[27, 43, 48, 52]].values, [0.35738173, 0.76415714, 1.26635373, 1.26635373], decimal=2)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].ix[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=2)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].ix[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=2)
 
-    def test_predict_log_hazard_relative_to_mean_with_normalization(self, rossi):
-        cox = CoxPHFitter(normalize=True)
-        cox.fit(rossi, 'week', 'arrest')
-
-        # they are equal because the data is normalized, so the mean of the covarites is all 0,
-        # thus exp(beta * 0) == 1, so exp(beta * X)/exp(beta * 0) = exp(beta * X)
-        assert_frame_equal(cox.predict_log_hazard_relative_to_mean(rossi), np.log(cox.predict_partial_hazard(rossi)))
-
-    def test_predict_log_hazard_relative_to_mean_without_normalization(self, rossi):
-        cox = CoxPHFitter(normalize=False)
+    def test_predict_log_hazard_relative_to_mean(self, rossi):
+        cox = CoxPHFitter()
         cox.fit(rossi, 'week', 'arrest')
         log_relative_hazards = cox.predict_log_hazard_relative_to_mean(rossi)
         means = rossi.mean(0).to_frame().T

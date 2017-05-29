@@ -33,7 +33,7 @@ class CoxPHFitter(BaseFitter):
         The penalty is 1/2 * penalizer * ||beta||^2.
     """
 
-    def __init__(self, alpha=0.95, tie_method='Efron', normalize=True, penalizer=0.0, strata=None):
+    def __init__(self, alpha=0.95, tie_method='Efron', penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         if penalizer < 0:
@@ -42,7 +42,6 @@ class CoxPHFitter(BaseFitter):
             raise NotImplementedError("Only Efron is available atm.")
 
         self.alpha = alpha
-        self.normalize = normalize
         self.tie_method = tie_method
         self.penalizer = penalizer
         self.strata = strata
@@ -295,15 +294,11 @@ class CoxPHFitter(BaseFitter):
             E = df[event_col]
             del df[event_col]
 
-        # Store original non-normalized data
         self.data = df if self.strata is None else df.reset_index()
         self._check_values(df)
-
-        if self.normalize:
-            # Need to normalize future inputs as well
-            self._norm_mean = df.mean(0)
-            self._norm_std = df.std(0)
-            df = normalize(df)
+        self._norm_mean = df.mean(0)
+        self._norm_std = df.std(0)
+        df = normalize(df, self._norm_mean, self._norm_std)
 
         E = E.astype(bool)
 
@@ -311,14 +306,13 @@ class CoxPHFitter(BaseFitter):
                                          show_progress=show_progress,
                                          include_likelihood=include_likelihood)
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns,
-                                     index=['coef'])
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
         self.durations = T
         self.event_observed = E
 
-        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
+        self.baseline_hazard_ = self._compute_baseline_hazards(normalize(df, 0, 1 / self._norm_std), T, E)
         self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
         self.baseline_survival_ = self._compute_baseline_survival()
         return self
@@ -342,7 +336,7 @@ class CoxPHFitter(BaseFitter):
                             columns=self.hazards_.columns)
 
     def _compute_standard_errors(self):
-        se = np.sqrt(inv(-self._hessian_).diagonal())
+        se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
@@ -417,10 +411,6 @@ class CoxPHFitter(BaseFitter):
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.columns
             X = X[order]
-
-        if self.normalize:
-            # Assuming correct ordering and number of columns
-            X = normalize(X, self._norm_mean.values, self._norm_std.values)
 
         return self._predict_partial_hazard(X)
 
