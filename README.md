@@ -20,6 +20,8 @@ lesser-known technique, for example:
 ### Installation:
 #### Dependencies:
 
+[![Join the chat at https://gitter.im/python-lifelines/Lobby](https://badges.gitter.im/python-lifelines/Lobby.svg)](https://gitter.im/python-lifelines/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 The usual Python data stack: NumPy, SciPy, Pandas (a modern version please). Matplotlib is optional (as of 0.6.0+). 
 
 #### Installing
