@@ -420,7 +420,7 @@ class CoxPHFitter(BaseFitter):
         same as the training dataset.
 
         Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \exp{\beta X}
+        baseline hazard is not included. Equal to \beta X
         """
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.columns
@@ -436,7 +436,7 @@ class CoxPHFitter(BaseFitter):
             same order as the training data.
 
         Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
-        of R's predict.coxph.
+        of R's predict.coxph. Equal to \beta X - \beta \bar{X}
         """
         mean_covariates = self.data.mean(0).to_frame().T
         return self.predict_log_partial_hazard(X) - self.predict_log_partial_hazard(mean_covariates).squeeze()
@@ -446,6 +446,8 @@ class CoxPHFitter(BaseFitter):
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+
+        Returns the cumulative hazard of individuals.
         """
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
