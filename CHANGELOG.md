@@ -5,6 +5,7 @@
  - removed  `normalize` kwarg in `CoxPHFitter`. This was causing lots of confusion for users, and added code complexity. It's really nice to be able to remove it.
  - correcting column name in `CoxPHFitter.baseline_survival_`
  - `CoxPHFitter.baseline_cumulative_hazard_` is always centered, to mimic R's `basehaz` API.
+ - new `predict_log_partial_hazards` to `CoxPHFitter`
 
 #### 0.9.4
  - adding `plot_loglogs` to `KaplanMeierFitter`

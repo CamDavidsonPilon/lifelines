@@ -825,7 +825,7 @@ Concordance = 0.640""".strip().split()
         r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
                     paro, mar, wexp) + prio, data = rossi)
         """
-        expected = np.array([[-0.335, -0.059, 0.100]])
+        expected = np.array([[-0.3355, -0.0590, 0.1002]])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'])
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
