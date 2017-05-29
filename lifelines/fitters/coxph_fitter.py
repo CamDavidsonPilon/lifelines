@@ -388,7 +388,7 @@ class CoxPHFitter(BaseFitter):
               end='\n\n')
         print("Concordance = {:.3f}"
               .format(concordance_index(self.durations,
-                                        -self._predict_partial_hazard(self.data).values.ravel(),
+                                        -self.predict_partial_hazard(self.data).values.ravel(),
                                         self.event_observed)))
         return
 
@@ -398,8 +398,6 @@ class CoxPHFitter(BaseFitter):
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        If covariates were normalized during fitting, they are normalized
-        in the same way here.
 
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
@@ -412,18 +410,6 @@ class CoxPHFitter(BaseFitter):
             order = self.hazards_.columns
             X = X[order]
 
-        return self._predict_partial_hazard(X)
-
-    def _predict_partial_hazard(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-
-        Returns the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \exp{\beta X}
-        """
         index = _get_index(X)
         return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
 
@@ -506,7 +492,7 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_baseline_hazard(self, data, durations, event_observed, name):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        ind_hazards = self._predict_partial_hazard(data)
+        ind_hazards = self.predict_partial_hazard(data)
         ind_hazards['event_at'] = durations
         ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
         ind_hazards_summed_over_durations.name = 'hazards'
