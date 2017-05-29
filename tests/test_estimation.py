@@ -20,7 +20,7 @@ from lifelines.utils import k_fold_cross_validation, StatError
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter
-from lifelines.datasets importg load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
+from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test, load_g3, load_holly_molly_polly
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
 from lifelines.utils import concordance_index
