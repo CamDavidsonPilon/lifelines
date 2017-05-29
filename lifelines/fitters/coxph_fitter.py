@@ -406,12 +406,28 @@ class CoxPHFitter(BaseFitter):
         Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to \exp{\beta X}
         """
+        return exp(self.predict_log_partial_hazard(X))
+
+    def predict_log_partial_hazard(self, X):
+        """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+
+
+        If X is a dataframe, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+
+        Returns the log of the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to \exp{\beta X}
+        """
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.columns
             X = X[order]
 
         index = _get_index(X)
-        return pd.DataFrame(exp(np.dot(X, self.hazards_.T)), index=index)
+        return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
     def predict_log_hazard_relative_to_mean(self, X):
         """
@@ -423,7 +439,7 @@ class CoxPHFitter(BaseFitter):
         of R's predict.coxph.
         """
         mean_covariates = self.data.mean(0).to_frame().T
-        return np.log(self.predict_partial_hazard(X) / self.predict_partial_hazard(mean_covariates).squeeze())
+        return self.predict_log_partial_hazard(X) - self.predict_log_partial_hazard(mean_covariates).squeeze()
 
     def predict_cumulative_hazard(self, X):
         """
@@ -434,15 +450,15 @@ class CoxPHFitter(BaseFitter):
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
             for stratum, stratified_X in X.groupby(self.strata):
-                s_0 = self.baseline_survival_[[stratum]]
+                c_0 = self.baseline_cumulative_hazard_[[stratum]]
                 col = _get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
-                cumulative_hazard_ = cumulative_hazard_.merge(pd.DataFrame(-np.dot(np.log(s_0), v.T), index=s_0.index, columns=col), how='outer', right_index=True, left_index=True)
+                cumulative_hazard_ = cumulative_hazard_.merge(pd.DataFrame(np.dot(c_0, v.T), index=c_0.index, columns=col), how='outer', right_index=True, left_index=True)
         else:
-            s_0 = self.baseline_survival_
+            c_0 = self.baseline_cumulative_hazard_
             col = _get_index(X)
             v = self.predict_partial_hazard(X)
-            cumulative_hazard_ = pd.DataFrame(-np.dot(np.log(s_0), v.T), columns=col, index=s_0.index)
+            cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
 
         return cumulative_hazard_
 
