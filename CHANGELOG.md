@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.10.1
+ - fix in internal normalization for `CoxPHFitter` predict methods.
+
 #### 0.10.0
  - corrected bug that was returning the wrong baseline survival and hazard values in `CoxPHFitter` when `normalize=True`. 
  - removed  `normalize` kwarg in `CoxPHFitter`. This was causing lots of confusion for users, and added code complexity. It's really nice to be able to remove it.
