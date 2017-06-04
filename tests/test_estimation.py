@@ -1016,9 +1016,6 @@ Concordance = 0.640""".strip().split()
             assert issubclass(w[-1].category, RuntimeWarning)
             assert "variance" in str(w[-1].message)
 
-    def test_that_baseline_survival_and_enterin(self):
-        pass
-
 
 class TestAalenAdditiveFitter():
 
