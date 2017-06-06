@@ -312,7 +312,7 @@ class CoxPHFitter(BaseFitter):
         self.durations = T
         self.event_observed = E
 
-        self.baseline_hazard_ = self._compute_baseline_hazards(normalize(df, 0, 1 / self._norm_std), T, E)
+        self.baseline_hazard_ = self._compute_baseline_hazards(df * self._norm_std + self._norm_mean, T, E)
         self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
         self.baseline_survival_ = self._compute_baseline_survival()
         return self
@@ -427,6 +427,7 @@ class CoxPHFitter(BaseFitter):
             X = X[order]
 
         index = _get_index(X)
+        X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
     def predict_log_hazard_relative_to_mean(self, X):
