@@ -170,7 +170,7 @@ def add_at_risk_counts(*fitters, **kwargs):
 
 
 def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
-                   order=False, block=True):
+                   order=False):
     """
     Parameters:
       lifetimes: an (n,) numpy array of lifetimes.
@@ -208,7 +208,7 @@ def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
         plt.scatter((birthtimes[i]) + lifetimes[i], N - 1 - i, color=c, s=30, marker=m)
 
     plt.ylim(-0.5, N)
-    plt.show(block=block)
+    plt.show()
     return
 
 
