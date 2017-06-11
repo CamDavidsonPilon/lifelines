@@ -404,7 +404,7 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
 
     rossi_dataset = load_rossi()
     cf = CoxPHFitter()
-    cf.fit(rossi_dataset, 'week', event_col='arrest')
+    cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
     cf.print_summary()  # access the results using cf.summary
 
@@ -426,6 +426,27 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
     """
 
 To access the coefficients and the baseline hazard, you can use ``cf.hazards_`` and ``cf.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_hazard(X)``, ``.predict_survival_function(X)``, etc. 
+
+
+Plotting the coefficients
+################
+
+With a fitted model, an altervative way to view the coefficients and their ranges is to use the ``plot`` method.
+
+.. code:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi_dataset = load_rossi()
+    cf = CoxPHFitter()
+    cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
+
+    cf.plot()
+
+.. image:: images/coxph_plot.png
+
+
 
 Checking the proportional hazards assumption
 ################

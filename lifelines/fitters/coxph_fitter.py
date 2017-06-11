@@ -381,7 +381,7 @@ class CoxPHFitter(BaseFitter):
         print('n={}, number of events={}'.format(self.data.shape[0],
                                                  np.where(self.event_observed)[0].shape[0]),
               end='\n\n')
-        print(df.to_string(float_format=lambda f: '{:.3e}'.format(f)))
+        print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
@@ -540,3 +540,35 @@ class CoxPHFitter(BaseFitter):
         if self.strata is None:
             survival_df.columns = ['baseline survival']
         return survival_df
+
+    def plot(self, standardized=False):
+        """
+        standardized: standardize each estimated coefficient and confidence interval endpoints by the standard error of the estimate.
+
+        """
+        from matplotlib import pyplot as plt
+
+        ax = plt.figure().add_subplot(111)
+        yaxis_locations = xrange(len(self.hazards_.columns))
+
+        summary = self.summary
+        lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
+        upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
+        hazards = self.hazards_.values[0].copy()
+
+        if standardized:
+            se = summary['se(coef)']
+            lower_bound /= se
+            upper_bound /= se
+            hazards /= se
+
+        order = np.argsort(hazards)
+        ax.scatter(upper_bound.values[order], yaxis_locations, marker='|', c='k')
+        ax.scatter(lower_bound.values[order], yaxis_locations, marker='|', c='k')
+        ax.scatter(hazards[order], yaxis_locations, marker='o', c='k')
+        ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color='k', lw=1)
+
+        tick_labels = [c + significance_code(p).strip() for (c, p) in summary['p'][order].iteritems()]
+        plt.yticks(yaxis_locations, tick_labels)
+        plt.xlabel("standardized coef" if standardized else "coef")
+        return ax
