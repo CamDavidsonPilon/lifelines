@@ -32,7 +32,7 @@ class AalenAdditiveFitter(BaseFitter):
         For example, this shrinks the absolute value of c_{i,t}. Recommended, even if a small value.
       smoothing_penalizer: Attach a L2 penalizer to difference between adjacent (over time) coefficents. For
         example, this shrinks the absolute value of c_{i,t} - c_{i,t+1}.
-      nn_cumulative_hazard: If True, forces the negative values in cumulative hazards to be 0 instead. Default True.
+      nn_cumulative_hazard: If True, forces the negative values in predicted cumulative hazards to be 0 instead. Default True.
 
     """
 
@@ -40,7 +40,7 @@ class AalenAdditiveFitter(BaseFitter):
         if not (0 < alpha <= 1.):
             raise ValueError('alpha parameter must be between 0 and 1.')
         if coef_penalizer < 0 or smoothing_penalizer < 0:
-            raise ValueError("penalizer parameter must be >= 0.")
+            raise ValueError("penalizer parameters must be >= 0.")
 
         self.fit_intercept = fit_intercept
         self.alpha = alpha
