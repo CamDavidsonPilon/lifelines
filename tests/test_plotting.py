@@ -112,7 +112,7 @@ class TestPlotting():
         data2 = np.random.exponential(1, size=(200, 1))
         naf = NelsonAalenFitter()
         naf.fit(data1)
-        ax = naf.plot(ix=slice(0, None))
+        ax = naf.plot(loc=slice(0, None))
         naf.fit(data2)
         naf.plot(ax=ax, ci_force_lines=True, iloc=slice(100, 180))
         self.plt.title('test_naf_plotting_slice')
@@ -151,7 +151,7 @@ class TestPlotting():
         data1 = np.random.exponential(5, size=(2000, 1))
         naf = NelsonAalenFitter()
         naf.fit(data1)
-        naf.plot_hazard(bandwidth=1., ix=slice(0, 7.))
+        naf.plot_hazard(bandwidth=1., loc=slice(0, 7.))
         self.plt.title('test_naf_plot_cumulative_hazard_bandwidth_2')
         self.plt.show(block=block)
         return

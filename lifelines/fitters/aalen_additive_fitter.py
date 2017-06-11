@@ -414,12 +414,12 @@ class AalenAdditiveFitter(BaseFitter):
         t = self.cumulative_hazards_.index
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
-    def plot(self, ix=None, iloc=None, columns=[], legend=True, **kwargs):
+    def plot(self, loc=None, iloc=None, columns=[], legend=True, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
           ix: specify a time-based subsection of the curves to plot, ex:
-                   .plot(ix=slice(0.,10.)) will plot the time values between t=0. and t=10.
+                   .plot(loc=slice(0.,10.)) will plot the time values between t=0. and t=10.
           iloc: specify a location-based subsection of the curves to plot, ex:
                    .plot(iloc=slice(0,10)) will plot the first 10 time points.
           columns: If not empty, plot a subset of columns from the cumulative_hazards_. Default all.
@@ -433,13 +433,13 @@ class AalenAdditiveFitter(BaseFitter):
             fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25,
                                color=base_line.get_color(), linewidth=1.0)
 
-        assert (ix is None or iloc is None), 'Cannot set both ix and iloc in call to .plot'
+        assert (loc is None or iloc is None), 'Cannot set both loc and iloc in call to .plot'
 
-        get_method = "ix" if ix is not None else "iloc"
-        if iloc == ix is None:
+        get_method = "loc" if loc is not None else "iloc"
+        if iloc == loc is None:
             user_submitted_ix = slice(0, None)
         else:
-            user_submitted_ix = ix if ix is not None else iloc
+            user_submitted_ix = loc if loc is not None else iloc
         get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
 
         if len(columns) == 0:

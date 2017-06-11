@@ -1157,7 +1157,7 @@ class TestAalenAdditiveFitter():
             ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
+            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show(block=block)
         return
 
@@ -1187,7 +1187,7 @@ class TestAalenAdditiveFitter():
             ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
             ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
+            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show(block=block)
         return
 

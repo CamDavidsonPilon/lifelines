@@ -235,11 +235,11 @@ def set_kwargs_drawstyle(kwargs):
     kwargs['drawstyle'] = kwargs.get('drawstyle', 'steps-post')
 
 
-def create_dataframe_slicer(iloc, ix):
-    user_did_not_specify_certain_indexes = (iloc is None) and (ix is None)
-    user_submitted_slice = slice(None) if user_did_not_specify_certain_indexes else coalesce(ix, iloc)
+def create_dataframe_slicer(iloc, loc):
+    user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
+    user_submitted_slice = slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
 
-    get_method = "ix" if ix is not None else "iloc"
+    get_method = "loc" if loc is not None else "iloc"
     return lambda df: getattr(df, get_method)[user_submitted_slice]
 
 
@@ -248,12 +248,12 @@ def plot_loglogs(cls):
     Specifies a plot of the log(-log(SV)) versus log(time) where SV is the estimated survival function.
     """
 
-    def _plot_loglogs(ix=None, iloc=None, show_censors=False, censor_styles=None, **kwargs):
+    def _plot_loglogs(loc=None, iloc=None, show_censors=False, censor_styles=None, **kwargs):
 
         loglog = lambda s: np.log(-np.log(s))
 
-        if (ix is not None) and (iloc is not None):
-            raise ValueError('Cannot set both ix and iloc in call to .plot().')
+        if (loc is not None) and (iloc is not None):
+            raise ValueError('Cannot set both loc and iloc in call to .plot().')
 
         if censor_styles is None:
             censor_styles = {}
@@ -263,7 +263,7 @@ def plot_loglogs(cls):
         set_kwargs_drawstyle(kwargs)
         kwargs['logx'] = True
 
-        dataframe_slicer = create_dataframe_slicer(iloc, ix)
+        dataframe_slicer = create_dataframe_slicer(iloc, loc)
 
         # plot censors
         ax = kwargs['ax']
@@ -311,8 +311,8 @@ def plot_estimate(cls, estimate):
                      the lines' labels to the legend. Default: False
           at_risk_counts: show group sizes at time points. See function
                           'add_at_risk_counts' for details. Default: False
-          ix: specify a time-based subsection of the curves to plot, ex:
-                   .plot(ix=slice(0.,10.))
+          loc: specify a time-based subsection of the curves to plot, ex:
+                   .plot(loc=slice(0.,10.))
               will plot the time values between t=0. and t=10.
           iloc: specify a location-based subsection of the curves to plot, ex:
                    .plot(iloc=slice(0,10))
@@ -324,7 +324,7 @@ def plot_estimate(cls, estimate):
           ax: a pyplot axis object
         """ % estimate
 
-    def plot(ix=None, iloc=None, show_censors=False,
+    def plot(loc=None, iloc=None, show_censors=False,
              censor_styles=None, ci_legend=False, ci_force_lines=False,
              ci_alpha=0.25, ci_show=True, at_risk_counts=False,
              bandwidth=None, **kwargs):
@@ -332,8 +332,8 @@ def plot_estimate(cls, estimate):
         if censor_styles is None:
             censor_styles = {}
 
-        if (ix is not None) and (iloc is not None):
-            raise ValueError('Cannot set both ix and iloc in call to .plot().')
+        if (loc is not None) and (iloc is not None):
+            raise ValueError('Cannot set both loc and iloc in call to .plot().')
 
         set_kwargs_ax(kwargs)
         set_kwargs_color(kwargs)
@@ -349,7 +349,7 @@ def plot_estimate(cls, estimate):
             estimate_ = getattr(cls, estimate)
             confidence_interval_ = getattr(cls, 'confidence_interval_')
 
-        dataframe_slicer = create_dataframe_slicer(iloc, ix)
+        dataframe_slicer = create_dataframe_slicer(iloc, loc)
 
         # plot censors
         ax = kwargs['ax']

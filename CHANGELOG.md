@@ -1,7 +1,8 @@
 ### Changelogs
 
-#### 0.10.2
+#### 0.11.0
  - introduce a new `.plot` function to a fitted `CoxPHFitter` instance. This plots the hazard coefficients and their confidence intervals. 
+ - in all plot methods, the `ix` kwarg has been deprecated in favour of a new `loc` kwarg. This is to align with Pandas deprecating `ix`
 
 #### 0.10.1
  - fix in internal normalization for `CoxPHFitter` predict methods.
