@@ -572,14 +572,14 @@ gets smaller (as seen by the decreasing rate of change). Let's break the
 regimes down between democratic and non-democratic, during the first 20
 years:
 
-.. note::  We are using the ``ix`` argument in the call to ``plot`` here: it accepts a ``slice`` and plots only points within that slice.
+.. note::  We are using the ``loc`` argument in the call to ``plot`` here: it accepts a ``slice`` and plots only points within that slice.
 
 .. code:: python
 
     naf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
-    ax = naf.plot(ix=slice(0,20))
+    ax = naf.plot(loc=slice(0,20))
     naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
-    naf.plot(ax=ax, ix=slice(0,20))
+    naf.plot(ax=ax, loc=slice(0,20))
     plt.title("Cumulative hazard function of different global regimes");
 
 
