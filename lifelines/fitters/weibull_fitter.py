@@ -191,7 +191,7 @@ class WeibullFitter(UnivariateFitter):
                             index=['se'], columns=['lambda_', 'rho_'])
 
     def _compute_confidence_bounds_of_parameters(self):
-        se = self._compute_standard_errors().ix['se']
+        se = self._compute_standard_errors().loc['se']
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
         return pd.DataFrame([
             np.array([self.lambda_, self.rho_]) + alpha2 * se,
@@ -210,9 +210,9 @@ class WeibullFitter(UnivariateFitter):
         lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
         df = pd.DataFrame(index=['lambda_', 'rho_'])
         df['coef'] = [self.lambda_, self.rho_]
-        df['se(coef)'] = self._compute_standard_errors().ix['se']
-        df['lower %.2f' % self.alpha] = lower_upper_bounds.ix['lower-bound']
-        df['upper %.2f' % self.alpha] = lower_upper_bounds.ix['upper-bound']
+        df['se(coef)'] = self._compute_standard_errors().loc['se']
+        df['lower %.2f' % self.alpha] = lower_upper_bounds.loc['lower-bound']
+        df['upper %.2f' % self.alpha] = lower_upper_bounds.loc['upper-bound']
         return df
 
     def print_summary(self):

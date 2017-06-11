@@ -140,8 +140,8 @@ def test_qth_survival_times_multi_dim_input():
     sf = np.linspace(1, 0, 50)
     sf_multi_df = pd.DataFrame({'sf': sf, 'sf**2': sf ** 2})
     medians = utils.qth_survival_times(0.5, sf_multi_df)
-    assert medians.ix['sf'][0.5] == 25
-    assert medians.ix['sf**2'][0.5] == 15
+    assert medians.loc['sf'][0.5] == 25
+    assert medians.loc['sf**2'][0.5] == 15
 
 
 def test_qth_survival_time_returns_inf():

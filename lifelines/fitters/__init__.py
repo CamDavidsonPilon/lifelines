@@ -85,7 +85,7 @@ class UnivariateFitter(BaseFitter):
           """ % (class_name, class_name)
 
         def predict(time):
-            predictor = lambda t: getattr(self, estimate).ix[:t].iloc[-1][label]
+            predictor = lambda t: getattr(self, estimate).loc[:t].iloc[-1][label]
             try:
                 return np.array([predictor(t) for t in time])
             except TypeError:

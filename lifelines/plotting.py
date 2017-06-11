@@ -276,7 +276,7 @@ def plot_loglogs(cls):
                 'mew': 1
             }
             cs.update(censor_styles)
-            times = dataframe_slicer(cls.event_table.ix[(cls.event_table['censored'] > 0)]).index.values.astype(float)
+            times = dataframe_slicer(cls.event_table.loc[(cls.event_table['censored'] > 0)]).index.values.astype(float)
             v = cls.predict(times)
             # don't log times, as Pandas will take care of all log-scaling later.
             ax.plot(times, loglog(v), linestyle='None',
@@ -362,7 +362,7 @@ def plot_estimate(cls, estimate):
                 'mew': 1
             }
             cs.update(censor_styles)
-            times = dataframe_slicer(cls.event_table.ix[(cls.event_table['censored'] > 0)]).index.values.astype(float)
+            times = dataframe_slicer(cls.event_table.loc[(cls.event_table['censored'] > 0)]).index.values.astype(float)
             v = cls.predict(times)
             ax.plot(times, v, linestyle='None',
                     color=colour, **cs)

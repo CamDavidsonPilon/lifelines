@@ -37,7 +37,7 @@ def qth_survival_times(q, survival_functions):
     assert (q <= 1).all() and (0 <= q).all(), 'q must be between 0 and 1'
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
-        return survival_functions.apply(lambda s: qth_survival_time(q[0], s)).ix[0]
+        return survival_functions.apply(lambda s: qth_survival_time(q[0], s)).iloc[0]
     else:
         return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q})
 
@@ -135,9 +135,9 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
             data = data.join(survival_table_from_events(T, C, B, columns=columns), how='outer')
 
     data = data.fillna(0)
-    # hmmm pandas its too bad I can't do data.ix[:limit] and leave out the if.
+    # hmmm pandas its too bad I can't do data.loc[:limit] and leave out the if.
     if int(limit) != -1:
-        data = data.ix[:limit]
+        data = data.loc[:limit]
 
     return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
 
@@ -474,8 +474,8 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
     for i in range(1, k + 1):
 
         ix = assignments == i
-        training_data = df.ix[~ix]
-        testing_data = df.ix[ix]
+        training_data = df.loc[~ix]
+        testing_data = df.loc[ix]
 
         T_actual = testing_data[duration_col].values
         E_actual = testing_data[event_col].values

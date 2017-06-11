@@ -148,14 +148,14 @@ class TestUnivariateFitters():
         kmf = KaplanMeierFitter()
         kmf.fit(T)
         time = 1
-        assert abs(kmf.predict(time) - kmf.survival_function_.ix[time].values) < 10e-8
+        assert abs(kmf.predict(time) - kmf.survival_function_.iloc[time].values) < 10e-8
 
     def test_predict_method_returns_gives_values_prior_to_the_value_in_the_survival_function(self):
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
-        assert abs(kmf.predict(0.5) - kmf.survival_function_.ix[0].values) < 10e-8
-        assert abs(kmf.predict(1.9999) - kmf.survival_function_.ix[1].values) < 10e-8
+        assert abs(kmf.predict(0.5) - kmf.survival_function_.iloc[0].values) < 10e-8
+        assert abs(kmf.predict(1.9999) - kmf.survival_function_.iloc[1].values) < 10e-8
 
     def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
@@ -397,8 +397,8 @@ class TestKaplanMeierFitter():
 
         kmf = KaplanMeierFitter()
         lcd_dataset = load_lcd()
-        alluvial_fan = lcd_dataset.ix[lcd_dataset['group'] == 'alluvial_fan']
-        basin_trough = lcd_dataset.ix[lcd_dataset['group'] == 'basin_trough']
+        alluvial_fan = lcd_dataset.loc[lcd_dataset['group'] == 'alluvial_fan']
+        basin_trough = lcd_dataset.loc[lcd_dataset['group'] == 'basin_trough']
         kmf.fit(alluvial_fan['T'], alluvial_fan['C'], left_censorship=True, label='alluvial_fan')
         ax = kmf.plot()
 
@@ -413,11 +413,11 @@ class TestKaplanMeierFitter():
         kmf = KaplanMeierFitter()
 
         expected = np.array([[0.909, 0.779]]).T
-        kmf.fit(df.ix[ix]['time'], df.ix[ix]['event'], timeline=[25, 53])
+        kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[25, 53])
         npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=3)
 
         expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
-        kmf.fit(df.ix[~ix]['time'], df.ix[~ix]['event'], timeline=[9, 19, 32, 34])
+        kmf.fit(df.loc[~ix]['time'], df.loc[~ix]['event'], timeline=[9, 19, 32, 34])
         npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=3)
 
     def test_kmf_confidence_intervals_output_against_R(self):
@@ -425,7 +425,7 @@ class TestKaplanMeierFitter():
         df = load_g3()
         ix = df['group'] != 'RIT'
         kmf = KaplanMeierFitter()
-        kmf.fit(df.ix[ix]['time'], df.ix[ix]['event'], timeline=[9, 19, 32, 34])
+        kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[9, 19, 32, 34])
 
         expected_lower_bound = np.array([0.2731, 0.1946, 0.1109, 0.0461])
         npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_lower_0.95'].values,
@@ -472,9 +472,9 @@ class TestNelsonAalenFitter():
         naf.fit(T, C)
         npt.assert_almost_equal(naf.cumulative_hazard_.values, self.nelson_aalen(T, C))
 
-    def test_ix_slicing(self, waltons_dataset):
+    def test_loc_slicing(self, waltons_dataset):
         naf = NelsonAalenFitter().fit(waltons_dataset['T'])
-        assert naf.cumulative_hazard_.ix[0:10].shape[0] == 4
+        assert naf.cumulative_hazard_.loc[0:10].shape[0] == 4
 
     def test_iloc_slicing(self, waltons_dataset):
         naf = NelsonAalenFitter().fit(waltons_dataset['T'])
@@ -569,7 +569,7 @@ class TestRegressionFitters():
             assert_frame_equal(hazards, hazards_norm)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
-        X = rossi.ix[:3].sort_index(ascending=False)
+        X = rossi.iloc[:4].sort_index(ascending=False)
         expected_index = pd.Index(np.array([3, 2, 1, 0]))
 
         for fitter in regression_models:
@@ -684,7 +684,7 @@ Concordance = 0.640""".strip().split()
     def test_fit_method(self, data_nus):
         cf = CoxPHFitter()
         cf.fit(data_nus, duration_col='t', event_col='E')
-        assert np.abs(cf.hazards_.ix[0][0] - -0.0335) < 0.0001
+        assert np.abs(cf.hazards_.iloc[0][0] - -0.0335) < 0.0001
 
     def test_using_dataframes_vs_numpy_arrays(self, data_pred2):
         cf = CoxPHFitter()
@@ -924,8 +924,8 @@ Concordance = 0.640""".strip().split()
         """
         cp = CoxPHFitter()
         cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].ix[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=2)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].ix[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=2)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].loc[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=2)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=2)
 
     def test_baseline_survival_is_the_same_indp_of_location(self, regression_dataset):
         df = regression_dataset.copy()
@@ -963,8 +963,8 @@ Concordance = 0.640""".strip().split()
         cp2.fit(df_demeaned, event_col='E', duration_col='T')
 
         assert_frame_equal(
-            cp1.predict_survival_function(df.ix[[0]][['var1', 'var2', 'var3']]),
-            cp2.predict_survival_function(df_demeaned.ix[[0]][['var1', 'var2', 'var3']])
+            cp1.predict_survival_function(df.iloc[[0]][['var1', 'var2', 'var3']]),
+            cp2.predict_survival_function(df_demeaned.iloc[[0]][['var1', 'var2', 'var3']])
         )
 
     def test_baseline_survival_is_the_same_indp_of_scale(self, regression_dataset):
@@ -991,8 +991,8 @@ Concordance = 0.640""".strip().split()
         cp2.fit(df_scaled, event_col='E', duration_col='T')
 
         assert_frame_equal(
-            cp1.predict_survival_function(df.ix[[0]][['var1', 'var2', 'var3']]),
-            cp2.predict_survival_function(df_scaled.ix[[0]][['var1', 'var2', 'var3']])
+            cp1.predict_survival_function(df.iloc[[0]][['var1', 'var2', 'var3']]),
+            cp2.predict_survival_function(df_scaled.iloc[[0]][['var1', 'var2', 'var3']])
         )
 
     def test_predict_log_hazard_relative_to_mean(self, rossi):
@@ -1156,7 +1156,7 @@ class TestAalenAdditiveFitter():
         for i in range(d + 1):
             ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
+            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
             ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show(block=block)
         return
@@ -1186,7 +1186,7 @@ class TestAalenAdditiveFitter():
         for i in range(d + 1):
             ax = plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].ix[:15].plot(legend=False, ax=ax)
+            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
             ax = aaf.plot(ix=slice(0, 15), ax=ax, columns=[col], legend=False)
         plt.show(block=block)
         return
@@ -1215,7 +1215,7 @@ class TestAalenAdditiveFitter():
     def test_predict_cumulative_hazard_inputs(self, data_pred1):
         aaf = AalenAdditiveFitter()
         aaf.fit(data_pred1, duration_col='t', event_col='E',)
-        x = data_pred1.ix[:5].drop(['t', 'E'], axis=1)
+        x = data_pred1.iloc[:5].drop(['t', 'E'], axis=1)
         y_df = aaf.predict_cumulative_hazard(x)
         y_np = aaf.predict_cumulative_hazard(x.values)
         assert_frame_equal(y_df, y_np)

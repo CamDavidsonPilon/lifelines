@@ -27,8 +27,8 @@ def test_unequal_intensity_with_random_data():
 def test_logrank_test_output_against_R_1():
     df = load_g3()
     ix = (df['group'] == 'RIT')
-    d1, e1 = df.ix[ix]['time'], df.ix[ix]['event']
-    d2, e2 = df.ix[~ix]['time'], df.ix[~ix]['event']
+    d1, e1 = df.loc[ix]['time'], df.loc[ix]['event']
+    d2, e2 = df.loc[~ix]['time'], df.loc[~ix]['event']
 
     expected = 0.0138
     result = stats.logrank_test(d1, d2, event_observed_A=e1, event_observed_B=e2)
@@ -115,8 +115,8 @@ def test_unequal_intensity_with_negative_data():
 def test_waltons_dataset():
     df = load_waltons()
     ix = df['group'] == 'miR-137'
-    waltonT1 = df.ix[ix]['T']
-    waltonT2 = df.ix[~ix]['T']
+    waltonT1 = df.loc[ix]['T']
+    waltonT2 = df.loc[~ix]['T']
     result = stats.logrank_test(waltonT1, waltonT2)
     assert result.is_significant
 

@@ -152,8 +152,8 @@ def pairwise_logrank_test(event_durations, groups, event_observed=None,
         g1, g2 = unique_groups[[i1, i2]]
         ix1, ix2 = (groups == g1), (groups == g2)
         test_name = str(g1) + " vs. " + str(g2)
-        result = logrank_test(event_durations.ix[ix1], event_durations.ix[ix2],
-                              event_observed.ix[ix1], event_observed.ix[ix2],
+        result = logrank_test(event_durations.loc[ix1], event_durations.loc[ix2],
+                              event_observed.loc[ix1], event_observed.loc[ix2],
                               alpha=alpha, t_0=t_0, use_bonferroni=bonferroni,
                               test_name=test_name, **kwargs)
         R[i1, i2], R[i2, i1] = result, result
