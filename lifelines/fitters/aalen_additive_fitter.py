@@ -189,8 +189,8 @@ class AalenAdditiveFitter(BaseFitter):
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
 
-            hazards_.ix[time, id] = v.T
-            variance_.ix[time, id] = V[:, relevant_individuals][:, 0] ** 2
+            hazards_.loc[time, id] = v.T
+            variance_.loc[time, id] = V[:, relevant_individuals][:, 0] ** 2
             previous_hazard = v.T
 
             # update progress bar
@@ -279,8 +279,8 @@ class AalenAdditiveFitter(BaseFitter):
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
 
-            hazards_.ix[id, time] = v.T
-            variance_.ix[id, time] = V[:, relevant_individuals][:, 0] ** 2
+            hazards_.loc[id, time] = v.T
+            variance_.loc[id, time] = V[:, relevant_individuals][:, 0] ** 2
             previous_hazard = v.T
 
             # update progress bar
@@ -332,10 +332,10 @@ class AalenAdditiveFitter(BaseFitter):
                                                   columns=self.cumulative_hazards_.columns
                                                   )
 
-        self.confidence_intervals_.ix['upper'] = self.cumulative_hazards_.values + \
+        self.confidence_intervals_.loc['upper'] = self.cumulative_hazards_.values + \
             alpha2 * np.sqrt(self.variance_.cumsum().values)
 
-        self.confidence_intervals_.ix['lower'] = self.cumulative_hazards_.values - \
+        self.confidence_intervals_.loc['lower'] = self.cumulative_hazards_.values - \
             alpha2 * np.sqrt(self.variance_.cumsum().values)
         return
 
@@ -456,8 +456,8 @@ class AalenAdditiveFitter(BaseFitter):
 
         for column in columns:
             y = get_loc(self.cumulative_hazards_[column]).values
-            y_upper = get_loc(self.confidence_intervals_[column].ix['upper']).values
-            y_lower = get_loc(self.confidence_intervals_[column].ix['lower']).values
+            y_upper = get_loc(self.confidence_intervals_[column].loc['upper']).values
+            y_lower = get_loc(self.confidence_intervals_[column].loc['lower']).values
             shaded_plot(ax, x, y, y_upper, y_lower, label=kwargs.get('label', column))
 
         if legend:

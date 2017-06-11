@@ -341,8 +341,8 @@ class CoxPHFitter(BaseFitter):
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
-        return (self.hazards_.ix['coef'] /
-                self._compute_standard_errors().ix['se'])
+        return (self.hazards_.loc['coef'] /
+                self._compute_standard_errors().loc['se'])
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -359,13 +359,13 @@ class CoxPHFitter(BaseFitter):
             Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
 
         df = pd.DataFrame(index=self.hazards_.columns)
-        df['coef'] = self.hazards_.ix['coef'].values
-        df['exp(coef)'] = exp(self.hazards_.ix['coef'].values)
-        df['se(coef)'] = self._compute_standard_errors().ix['se'].values
+        df['coef'] = self.hazards_.loc['coef'].values
+        df['exp(coef)'] = exp(self.hazards_.loc['coef'].values)
+        df['se(coef)'] = self._compute_standard_errors().loc['se'].values
         df['z'] = self._compute_z_values()
         df['p'] = self._compute_p_values()
-        df['lower %.2f' % self.alpha] = self.confidence_intervals_.ix['lower-bound'].values
-        df['upper %.2f' % self.alpha] = self.confidence_intervals_.ix['upper-bound'].values
+        df['lower %.2f' % self.alpha] = self.confidence_intervals_.loc['lower-bound'].values
+        df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
     def print_summary(self):
@@ -526,7 +526,7 @@ class CoxPHFitter(BaseFitter):
             baseline_hazards_ = pd.DataFrame(index=self.durations.unique())
             for stratum in df.index.unique():
                 baseline_hazards_ = baseline_hazards_.merge(
-                    self._compute_baseline_hazard(data=df.ix[[stratum]], durations=T.ix[[stratum]], event_observed=E.ix[[stratum]], name=stratum),
+                    self._compute_baseline_hazard(data=df.loc[[stratum]], durations=T.loc[[stratum]], event_observed=E.loc[[stratum]], name=stratum),
                     left_index=True,
                     right_index=True,
                     how='left')

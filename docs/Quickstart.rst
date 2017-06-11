@@ -169,7 +169,7 @@ After fitting, you'll have access to properties like ``cumulative_hazards_`` and
 .. code:: python
     
     x = regression_dataset[regression_dataset.columns - ['E', 'T']]
-    aaf.predict_survival_function(x.ix[10:12]).plot()  # get the unique survival functions of the first two subjects 
+    aaf.predict_survival_function(x.iloc[10:12]).plot()  # get the unique survival functions of the first two subjects 
 
 .. image:: images/quickstart_predict_aaf.png  
 

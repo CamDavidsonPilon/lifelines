@@ -358,7 +358,7 @@ Prime Minister Stephen Harper.
 .. code:: python
 
     ix = (data['ctryname'] == 'Canada') * (data['start_year'] == 2006)
-    harper = X.ix[ix]
+    harper = X.loc[ix]
     print "Harper's unique data point", harper
 
 .. parsed-literal::
