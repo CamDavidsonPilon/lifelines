@@ -58,19 +58,9 @@ Also around on [Gitter](https://gitter.im/python-lifelines/)
 
 ### Citing lifelines
 
- - Davidson-Pilon, C., Lifelines, (2016), Github repository, https://github.com/CamDavidsonPilon/lifelines 
- 
-or with bibTex here: 
+You can use this badge below to generate a DOI and reference text for the lastest releated version of lifelines:
 
-```
-@misc{Lifelines,
-  author = {C., Davidson-Pilon},
-  title = {Lifelines},
-  year = {2016},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/camdavidsonpilon/lifelines}},
-  commit = {latest_commit}
-}
-```
+ [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
+
+ 
 ![lifelines](http://i.imgur.com/QXW71zA.png)
