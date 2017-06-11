@@ -548,6 +548,7 @@ class CoxPHFitter(BaseFitter):
         """
         from matplotlib import pyplot as plt
 
+        df = self.summary
         ax = plt.figure().add_subplot(111)
         yaxis_locations = xrange(len(self.hazards_.columns))
 
@@ -556,7 +557,7 @@ class CoxPHFitter(BaseFitter):
         hazards = self.hazards_.values[0].copy()
 
         if standardized:
-            se = self._compute_standard_errors().loc['se']
+            se = df['se(coef)']
             lower_bound /= se
             upper_bound /= se
             hazards /= se
@@ -567,6 +568,7 @@ class CoxPHFitter(BaseFitter):
         ax.scatter(hazards[order], yaxis_locations, marker='o', c='k')
         ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color='k', lw=1)
 
-        plt.yticks(yaxis_locations, self.hazards_.columns[order])
+        tick_labels = [c + significance_code(p).strip() for (c, p) in df['p'][order].iteritems()]
+        plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax
