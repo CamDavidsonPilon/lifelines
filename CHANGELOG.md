@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.10.2
+ - introduce a new `.plot` function to a fitted `CoxPHFitter` instance. This plots the hazard coefficients and their confidence intervals. 
+
 #### 0.10.1
  - fix in internal normalization for `CoxPHFitter` predict methods.
 
