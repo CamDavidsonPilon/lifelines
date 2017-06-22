@@ -329,6 +329,14 @@ def test_both_concordance_index_function_deal_with_ties_the_same_way():
     assert fast_cindex(actual_times, predicted_times, obs) == slow_cindex(actual_times, predicted_times, obs) == 1.0
 
 
+def test_concordance_index_function_exits():
+    N = 10 * 1000
+    actual_times = np.random.exponential(1, size=N)
+    predicted_times = np.random.exponential(1, size=N)
+    obs = np.ones(N)
+    assert fast_cindex(actual_times, predicted_times, obs)
+
+
 def test_survival_table_from_events_with_non_negative_T_and_no_lagged_births():
     n = 10
     T = np.arange(n)

@@ -224,11 +224,11 @@ def set_kwargs_color(kwargs):
     if int(major_version) == 1 and int(minor_version) < 5:
         raise ValueError('Matplotlib versions less than 1.5 no longer supported.')
     elif int(major_version) == 2:
-        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
-                                   kwargs["ax"]._get_lines.get_next_color())
+        kwargs['c'] = coalesce(kwargs.get('c'), kwargs.get('color'),
+                               kwargs["ax"]._get_lines.get_next_color())
     else:
-        kwargs['color'] = coalesce(kwargs.get('c'), kwargs.get('color'),
-                                   next(kwargs["ax"]._get_lines.prop_cycler)['color'])
+        kwargs['c'] = coalesce(kwargs.get('c'), kwargs.get('color'),
+                               next(kwargs["ax"]._get_lines.prop_cycler)['color'])
 
 
 def set_kwargs_drawstyle(kwargs):
@@ -267,7 +267,7 @@ def plot_loglogs(cls):
 
         # plot censors
         ax = kwargs['ax']
-        colour = kwargs['color']
+        colour = kwargs['c']
 
         if show_censors and cls.event_table['censored'].sum() > 0:
             cs = {
@@ -353,7 +353,7 @@ def plot_estimate(cls, estimate):
 
         # plot censors
         ax = kwargs['ax']
-        colour = kwargs['color']
+        colour = kwargs['c']
 
         if show_censors and cls.event_table['censored'].sum() > 0:
             cs = {
