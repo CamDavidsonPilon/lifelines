@@ -549,7 +549,7 @@ class CoxPHFitter(BaseFitter):
         from matplotlib import pyplot as plt
 
         ax = plt.figure().add_subplot(111)
-        yaxis_locations = xrange(len(self.hazards_.columns))
+        yaxis_locations = range(len(self.hazards_.columns))
 
         summary = self.summary
         lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
