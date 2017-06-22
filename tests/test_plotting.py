@@ -3,10 +3,11 @@ from __future__ import print_function
 import os
 import pytest
 import numpy as np
-from lifelines.estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter
+from lifelines.estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter,\
+    CoxPHFitter
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes
-from lifelines.datasets import load_waltons
+from lifelines.datasets import load_waltons, load_regression_dataset
 
 
 @pytest.mark.plottest
@@ -220,3 +221,19 @@ class TestPlotting():
         self.plt.show(block=block)
         _, err = capsys.readouterr()
         assert err == ""
+
+    def test_coxph_plotting(self, block):
+        df = load_regression_dataset()
+        cp = CoxPHFitter()
+        cp.fit(df, "T", "E")
+        cp.plot()
+        self.plt.title('test_coxph_plotting')
+        self.plt.show(block=block)
+
+    def test_coxph_plotting_normalized(self, block):
+        df = load_regression_dataset()
+        cp = CoxPHFitter()
+        cp.fit(df, "T", "E")
+        cp.plot(True)
+        self.plt.title('test_coxph_plotting')
+        self.plt.show(block=block)
