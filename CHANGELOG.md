@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.11.1
+ - Python3 fix for `CoxPHFitter.plot`.
+
 #### 0.11.0
  - fixes regression in `KaplanMeierFitter.plot` when using Seaborn and lifelines.
  - introduce a new `.plot` function to a fitted `CoxPHFitter` instance. This plots the hazard coefficients and their confidence intervals. 
