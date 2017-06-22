@@ -7,8 +7,12 @@ matrix:
   include:
     - python: 2.7
       env: MATPLOTLIB_VERSION=1.5.3 DISPLAY=:99.0
+    - python: 2.7
+      env: MATPLOTLIB_VERSION=2.0.2 DISPLAY=:99.0
     - python: 3.5
       env: MATPLOTLIB_VERSION=1.5.3 DISPLAY=:99.0
+    - python: 3.5
+      env: MATPLOTLIB_VERSION=2.0.2 DISPLAY=:99.0
 #  allow_failures:
 #    - python: "nightly"
 
