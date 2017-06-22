@@ -58,7 +58,7 @@ install:
   - pip install git+https://github.com/matplotlib/matplotlib.git@v$MATPLOTLIB_VERSION;
 
   # Build in place so we can run tests
-  - pip install python-coveralls pytest-cov
+  - pip install python-coveralls pytest-cov seaborn
   - pip install .
 # command to run tests
 script: py.test -s --cov=lifelines -vv --block=False --cov-report term-missing

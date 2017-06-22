@@ -6,6 +6,7 @@ import numpy as np
 from lifelines.estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes
+from lifelines.datasets import load_waltons
 
 
 @pytest.mark.plottest
@@ -202,3 +203,20 @@ class TestPlotting():
         self.plt.title('test_loglogs_plot')
         self.plt.show(block=block)
         return
+
+    def test_seaborn_doesnt_cause_kmf_plot_error(self, block, kmf, capsys):
+        import seaborn as sns
+
+        df = load_waltons()
+
+        T = df['T']
+        E = df['E']
+
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, event_observed=E)
+        kmf.plot()
+
+        self.plt.title('test_seaborn_doesnt_cause_kmf_plot_error')
+        self.plt.show(block=block)
+        _, err = capsys.readouterr()
+        assert err == ""

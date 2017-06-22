@@ -1,6 +1,7 @@
 ### Changelogs
 
 #### 0.11.0
+ - fixes regression in `KaplanMeierFitter.plot` when using Seaborn and lifelines.
  - introduce a new `.plot` function to a fitted `CoxPHFitter` instance. This plots the hazard coefficients and their confidence intervals. 
  - in all plot methods, the `ix` kwarg has been deprecated in favour of a new `loc` kwarg. This is to align with Pandas deprecating `ix`
 
