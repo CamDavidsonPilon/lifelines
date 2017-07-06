@@ -511,6 +511,17 @@ class TestNelsonAalenFitter():
         df = naf.smoothed_hazard_(bandwidth=0.1)
         assert df.iloc[0].values[0] > df.iloc[1].values[0]
 
+    def test_nelson_aalen_smoothing(self):
+        np.random.seed(1)
+        N = 10**4
+        t = np.random.exponential(1, size=N)
+        c = np.random.binomial(1, 0.9, size=N)
+        naf = NelsonAalenFitter(nelson_aalen_smoothing=True)
+        naf.fit(t, c)
+        assert abs(naf.cumulative_hazard_['NA_estimate'].iloc[-1] - 8.545665) < 1e-6
+        assert abs(naf.confidence_interval_['NA_estimate_upper_0.95'].iloc[-1] - 11.316361) < 1e-6
+        assert abs(naf.confidence_interval_['NA_estimate_lower_0.95'].iloc[-1] - 6.453346) < 1e-6
+
 
 class TestBreslowFlemingHarringtonFitter():
 

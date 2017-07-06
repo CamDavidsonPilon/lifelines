@@ -19,6 +19,8 @@ class NelsonAalenFitter(UnivariateFitter):
     nelson_aalen_smoothing: If the event times are naturally discrete (like discrete years, minutes, etc.)
       then it is advisable to turn this parameter to False. See [1], pg.84.
 
+    [1] Aalen, O., Borgan, O., Gjessing, H., 2008. Survival and Event History Analysis
+
     """
 
     def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
@@ -89,22 +91,23 @@ class NelsonAalenFitter(UnivariateFitter):
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
         self.ci_labels = ci_labels
 
-        df[ci_labels[0]] = self.cumulative_hazard_.values * \
-            np.exp(alpha2 * np.sqrt(cumulative_sq_) / self.cumulative_hazard_.values)
-        df[ci_labels[1]] = self.cumulative_hazard_.values * \
-            np.exp(-alpha2 * np.sqrt(cumulative_sq_) / self.cumulative_hazard_.values)
+        cum_hazard_ = self.cumulative_hazard_.values
+        df[ci_labels[0]] = cum_hazard_ * \
+            np.exp(alpha2 * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_))
+        df[ci_labels[1]] = cum_hazard_ * \
+            np.exp(-alpha2 * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_))
         return df
 
     def _variance_f_smooth(self, population, deaths):
-        df = pd.DataFrame({'N': population, 'd': deaths})
-        return df.apply(lambda N_d: np.sum((1. / (N_d[0] - i) ** 2 for i in range(int(N_d[1])))), axis=1)
+        cum_ = np.cumsum(1. / np.arange(1, population.iloc[0] + 1)**2)
+        return pd.Series(cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0), index=population.index)
 
     def _variance_f_discrete(self, population, deaths):
         return 1. * (population - deaths) * deaths / population ** 3
 
     def _additive_f_smooth(self, population, deaths):
-        df = pd.DataFrame({'N': population, 'd': deaths})
-        return df.apply(lambda N_d: np.sum((1. / (N_d[0] - i) for i in range(int(N_d[1])))), axis=1)
+        cum_ = np.cumsum(1. / np.arange(1, population.iloc[0] + 1))
+        return pd.Series(cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0), index=population.index)
 
     def _additive_f_discrete(self, population, deaths):
         return (1. * deaths / population).replace([np.inf], 0)
@@ -149,9 +152,3 @@ class NelsonAalenFitter(UnivariateFitter):
     @property
     def conditional_time_to_event_(self):
         raise NotImplementedError
-
-"""
-References:
-[1] Aalen, O., Borgan, O., Gjessing, H., 2008. Survival and Event History Analysis
-
-"""
