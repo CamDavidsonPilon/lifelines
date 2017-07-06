@@ -185,6 +185,7 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
             raise ValueError('birth time must be less than time of death.')
 
     # deal with deaths and censorships
+
     df = pd.DataFrame(death_times, columns=["event_at"])
     df[removed] = 1 if weights is None else weights
     df[observed] = np.asarray(event_observed)
