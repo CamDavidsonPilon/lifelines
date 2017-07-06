@@ -512,6 +512,7 @@ class TestNelsonAalenFitter():
         assert df.iloc[0].values[0] > df.iloc[1].values[0]
 
     def test_nelson_aalen_smoothing(self):
+        # this test was included because I was refactoring the estimators.
         np.random.seed(1)
         N = 10**4
         t = np.random.exponential(1, size=N)

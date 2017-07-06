@@ -99,14 +99,14 @@ class NelsonAalenFitter(UnivariateFitter):
         return df
 
     def _variance_f_smooth(self, population, deaths):
-        cum_ = np.cumsum(1. / np.arange(1, population.iloc[0] + 1)**2)
+        cum_ = np.cumsum(1. / np.arange(1, np.max(population) + 1)**2)
         return pd.Series(cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0), index=population.index)
 
     def _variance_f_discrete(self, population, deaths):
         return 1. * (population - deaths) * deaths / population ** 3
 
     def _additive_f_smooth(self, population, deaths):
-        cum_ = np.cumsum(1. / np.arange(1, population.iloc[0] + 1))
+        cum_ = np.cumsum(1. / np.arange(1, np.max(population) + 1))
         return pd.Series(cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0), index=population.index)
 
     def _additive_f_discrete(self, population, deaths):
