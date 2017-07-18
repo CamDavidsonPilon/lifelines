@@ -3,3 +3,4 @@ pytest
 python-coveralls
 pytest-cov
 seaborn
+pypandoc
