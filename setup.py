@@ -15,7 +15,7 @@ try:
     import pypandoc
     readme_rst = pypandoc.convert_file(readme_md, 'rst')
 except(ImportError):
-    long_description = open(readme_md).read()
+    readme_rst = open(readme_md).read()
 
 
 setup(
