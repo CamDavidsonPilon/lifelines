@@ -28,11 +28,12 @@ On the other hand, Aalen's additive model assumes the following form:
 
 .. math:: \lambda(t) = b_0(t) + b_1(t)x_1 + ... + b_N(t)x_T
 
-.. warning:: These are still experimental.
 
 
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning:: This model is still experimental.
 
 The estimator to fit unknown coefficients in Aalen's additive model is
 located in ``estimators`` under ``AalenAdditiveFitter``. For this
@@ -155,16 +156,13 @@ above). This is important to keep in mind when analzying the output.
     </div>
 
 
-
 I'm using the lovely library `patsy <https://github.com/pydata/patsy>`__ here to create a
 covariance matrix from my original dataframe.
 
 .. code:: python
 
     import patsy
-    # the '-1' term 
-    # refers to not adding an intercept column (a column of all 1s).
-    # It can be added to the Fitter class.
+    # the '-1' term refers to not adding an intercept column (a column of all 1s).
     X = patsy.dmatrix('un_continent_name + regime + start_year -1', data, return_type='dataframe') 
 
 .. code:: python
@@ -188,7 +186,7 @@ covariance matrix from my original dataframe.
      'start_year']
 
 
-Below we create our Fitter class. Since we did not supply an intercept
+Below we create our fitter class. Since we did not supply an intercept
 column in our matrix we have included the keyword ``fit_intercept=True``
 (``True`` by default) which will append the column of ones to our
 matrix. (Sidenote: the intercept term, :math:`b_0(t)` in survival
@@ -198,14 +196,13 @@ We have also included the ``coef_penalizer`` option. During the estimation, a
 linear regression is computed at each step. Often the regression can be
 unstable (due to high
 `co-linearity <http://camdp.com/blogs/machine-learning-counter-examples-pt1>`__
-or small sample sizes) -- adding a penalizer term controls the stability. I recommend always starting with a small penalizer term -- if
-the estimates still appear to be too unstable, try increasing it.
+or small sample sizes) -- adding a penalizer term controls the stability. I recommend always starting with a small penalizer term -- if the estimates still appear to be too unstable, try increasing it.
 
 .. code:: python
 
     aaf = AalenAdditiveFitter(coef_penalizer=1.0, fit_intercept=True)
 
-Like the API syntax above, an instance of ``AalenAdditiveFitter``
+An instance of ``AalenAdditiveFitter``
 includes a ``fit`` method that performs the inference on the coefficients. This method accepts a pandas DataFrame: each row is an individual and columns are the covariates and 
 two special columns: a *duration* column and a boolean *event occured* column (where event occured refers to the event of interest - expulsion from government in this case)
 
@@ -216,9 +213,6 @@ two special columns: a *duration* column and a boolean *event occured* column (w
 
     X['T'] = data['duration']
     X['E'] = data['observed'] 
-
-
-**The api for .fit was different prior to lifelines 0.3, below refers to the 0.3+ versions**
 
 
 .. code:: python
@@ -338,11 +332,12 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
     </div>
 
 
+
 ``AalenAdditiveFitter`` also has built in plotting:
 
 .. code:: python
 
-  aaf.plot( columns=[ 'regime[T.Presidential Dem]', 'baseline', 'un_continent_name[Europe]' ], ix=slice(1,15) )
+  aaf.plot(columns=['regime[T.Presidential Dem]', 'baseline', 'un_continent_name[Europe]'], iloc=slice(1,15))
 
 
 .. image:: images/survival_regression_aaf.png
@@ -351,8 +346,8 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
 Regression is most interesting if we use it on data we have not yet
 seen, i.e. prediction! We can use what we have learned to predict
 individual hazard rates, survival functions, and median survival time.
-The dataset we are using is limited to 2008, so let's use this data to
-predict the (though already partly seen) possible duration of Canadian
+The dataset we are using is aviable up until 2008, so let's use this data to
+predict the (already partly seen) possible duration of Canadian
 Prime Minister Stephen Harper.
 
 .. code:: python
@@ -364,7 +359,6 @@ Prime Minister Stephen Harper.
 .. parsed-literal::
 
     Harper's unique data point
-
 
 
 
@@ -387,11 +381,13 @@ Prime Minister Stephen Harper.
 
 .. image:: images/survival_regression_harper.png
 
+.. warning:: Because of the nature of the model, estimated survival functions of individuals can increase. This is an expected artifact of Aalen's additive model.
+
 
 Cox's Proportional Hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-New in 0.4.0 is the implementation of the Cox propotional hazards regression model (implemented in 
+Lifelines has an implementation of the Cox propotional hazards regression model (implemented in 
 R under ``coxph``). It has a similar API to Aalen's additive model. Like R, it has a ``print_summary``
 function that prints a tabular view of coefficients and related stats. 
 
@@ -403,33 +399,37 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
     from lifelines import CoxPHFitter
 
     rossi_dataset = load_rossi()
-    cf = CoxPHFitter()
-    cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
-    cf.print_summary()  # access the results using cf.summary
+    cph.print_summary()  # access the results using cph.summary
 
     """
     n=432, number of events=114
 
-               coef  exp(coef)  se(coef)          z         p  lower 0.95  upper 0.95
-    fin  -1.897e-01  8.272e-01 9.579e-02 -1.981e+00 4.763e-02  -3.775e-01  -1.938e-03   *
-    age  -3.500e-01  7.047e-01 1.344e-01 -2.604e+00 9.210e-03  -6.134e-01  -8.651e-02  **
-    race  1.032e-01  1.109e+00 1.012e-01  1.020e+00 3.078e-01  -9.516e-02   3.015e-01
-    wexp -7.486e-02  9.279e-01 1.051e-01 -7.124e-01 4.762e-01  -2.809e-01   1.311e-01
-    mar  -1.421e-01  8.675e-01 1.254e-01 -1.134e+00 2.570e-01  -3.880e-01   1.037e-01
-    paro -4.134e-02  9.595e-01 9.522e-02 -4.341e-01 6.642e-01  -2.280e-01   1.453e-01
-    prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-01  **
+            coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+    fin  -0.3790     0.6845    0.1914 -1.9806 0.0476     -0.7542     -0.0039   *
+    age  -0.0572     0.9444    0.0220 -2.6042 0.0092     -0.1003     -0.0142  **
+    race  0.3141     1.3691    0.3080  1.0198 0.3078     -0.2897      0.9180
+    wexp -0.1511     0.8597    0.2121 -0.7124 0.4762     -0.5670      0.2647
+    mar  -0.4328     0.6487    0.3818 -1.1335 0.2570     -1.1813      0.3157
+    paro -0.0850     0.9185    0.1957 -0.4341 0.6642     -0.4687      0.2988
+    prio  0.0911     1.0954    0.0286  3.1824 0.0015      0.0350      0.1472  **
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-    Concordance = 0.642
+    Concordance = 0.640
     """
 
-To access the coefficients and the baseline hazard, you can use ``cf.hazards_`` and ``cf.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_hazard(X)``, ``.predict_survival_function(X)``, etc. 
+To access the coefficients and the baseline hazard, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
+
+.. code:: python
+    
+    cph.predict_partial_hazard(rossi_dataset.drop(["week", "arrest"], axis=1))
 
 
 Plotting the coefficients
-################
+###########################################
 
 With a fitted model, an altervative way to view the coefficients and their ranges is to use the ``plot`` method.
 
@@ -439,17 +439,17 @@ With a fitted model, an altervative way to view the coefficients and their range
     from lifelines import CoxPHFitter
 
     rossi_dataset = load_rossi()
-    cf = CoxPHFitter()
-    cf.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
-    cf.plot()
+    cph.plot()
 
 .. image:: images/coxph_plot.png
 
 
 
 Checking the proportional hazards assumption
-################
+#############################################
 
 A quick and visual way to check the proportional hazards assumption of a variable is to plot the survival curves segmented by the values of the variable. If the survival curves are the same "shape", and differ only by constant factor, then the assumption holds. A more clear way to see this is to plot what's called the loglogs curve: the log(-log(survival curve)) vs log(time). If the curves are parallel (and hence do not cross each other), then it's likely the variable satisfies the assumption. If the curves do cross, likely you'll have to "stratify" the variable (see next section). In lifelines, the ``KaplanMeierFitter`` object has a ``.plot_loglogs`` function for this purpose. 
 
@@ -470,19 +470,20 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
 
 .. code:: python
 
-    cf.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
+    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
 
-    cf.print_summary()  # access the results using cf.summary
+    cph.print_summary()  # access the results using cph.summary
+
     """
     n=432, number of events=114
 
-               coef  exp(coef)  se(coef)          z         p  lower 0.95  upper 0.95
-    fin  -1.890e-01  8.278e-01 9.576e-02 -1.973e+00 4.848e-02  -3.767e-01  -1.218e-03   *
-    age  -3.503e-01  7.045e-01 1.343e-01 -2.608e+00 9.106e-03  -6.137e-01  -8.700e-02  **
-    wexp -7.107e-02  9.314e-01 1.053e-01 -6.746e-01 4.999e-01  -2.776e-01   1.355e-01
-    mar  -1.452e-01  8.649e-01 1.255e-01 -1.157e+00 2.473e-01  -3.911e-01   1.008e-01
-    paro -4.079e-02  9.600e-01 9.524e-02 -4.283e-01 6.684e-01  -2.275e-01   1.459e-01
-    prio  2.661e-01  1.305e+00 8.319e-02  3.198e+00 1.381e-03   1.030e-01   4.292e-01  **
+            coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+    fin  -0.3775     0.6856    0.1913 -1.9731 0.0485     -0.7525     -0.0024   *
+    age  -0.0573     0.9443    0.0220 -2.6081 0.0091     -0.1004     -0.0142  **
+    wexp -0.1435     0.8664    0.2127 -0.6746 0.4999     -0.5603      0.2734
+    mar  -0.4419     0.6428    0.3820 -1.1570 0.2473     -1.1907      0.3068
+    paro -0.0839     0.9196    0.1958 -0.4283 0.6684     -0.4677      0.3000
+    prio  0.0919     1.0962    0.0287  3.1985 0.0014      0.0356      0.1482  **
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -517,8 +518,8 @@ into a training set and a testing set, fits itself on the training set, and eval
         from lifelines.utils import k_fold_cross_validation
 
         regression_dataset = load_regression_dataset()
-        cf = CoxPHFitter()
-        scores = k_fold_cross_validation(cf, regression_dataset, 'T', event_col='E', k=3)
+        cph = CoxPHFitter()
+        scores = k_fold_cross_validation(cph, regression_dataset, 'T', event_col='E', k=3)
         print scores
         print np.mean(scores)
         print np.std(scores)

@@ -52,9 +52,9 @@ Let's start by importing some data. We need the durations that individuals are o
 
     from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
-    kmf.fit(T, event_observed=E)  # more succiently, kmf.fit(T, E)
+    kmf.fit(T, event_observed=E)  # or, more succiently, kmf.fit(T, E)
 
-After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Pandas internal plotting library. 
+After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Panda's internal plotting library. 
 
 .. code:: python
     
@@ -102,7 +102,7 @@ Often you'll have data that looks like:
 
 *start_time*, *end_time*
 
-Lifelines has some utility functions to transform this dataset into durations and censorships:
+Lifelines has some utility functions to transform this dataset into duration and censorship vectors:
 
 .. code:: python
     
@@ -110,7 +110,7 @@ Lifelines has some utility functions to transform this dataset into durations an
 
     # start_times is a vector of datetime objects
     # end_times is a vector of (possibly missing) datetime objects. 
-    T, C = datetimes_to_durations(start_times, end_times, freq='h')
+    T, E = datetimes_to_durations(start_times, end_times, freq='h')
 
 
 Alternatively, perhaps you are interested in viewing the survival table given some durations and censorship vectors.
@@ -137,7 +137,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
 Survival Regression
 -------------------
 
-While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter`` or ``CoxPHFitter``.
+While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter`` and ``CoxPHFitter``.
 
 .. code:: python
     
@@ -147,29 +147,51 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
     regression_dataset.head()
 
 
-
-The input of the ``fit`` method's API on ``AalenAdditiveFitter`` is different than above. All the data, including durations, censorships and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occured column must be specified in the call to ``fit``. 
+The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorships and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occured column must be specified in the call to ``fit``. 
 
 .. code:: python
     
-    from lifelines import AalenAdditiveFitter, CoxPHFitter
+    from lifelines import CoxPHFitter
 
     # Using Cox Proportional Hazards model
-    cf = CoxPHFitter()
-    cf.fit(regression_dataset, 'T', event_col='E')
-    cf.print_summary()
+    cph = CoxPHFitter()
+    cph.fit(regression_dataset, 'T', event_col='E')
+    cph.print_summary()
+
+    """
+    n=200, number of events=189
+
+           coef  exp(coef)  se(coef)      z      p  lower 0.95  upper 0.95
+    var1 0.2213     1.2477    0.0743 2.9796 0.0029      0.0757      0.3669  **
+    var2 0.0509     1.0522    0.0829 0.6139 0.5393     -0.1116      0.2134
+    var3 0.2186     1.2443    0.0758 2.8836 0.0039      0.0700      0.3672  **
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    Concordance = 0.580
+    """
+
+    cph.plot()
+
+.. image:: http://i.imgur.com/ko1tzcCl.png
+
+
+If we focus on Aalen's Additive model, 
+
+.. code:: python
 
     # Using Aalen's Additive model
+    from lifelines import AalenAdditiveFitter
     aaf = AalenAdditiveFitter(fit_intercept=False)
     aaf.fit(regression_dataset, 'T', event_col='E')
 
 
-After fitting, you'll have access to properties like ``cumulative_hazards_`` and methods like ``plot``, ``predict_cumulative_hazards``, and ``predict_survival_function``. The latter two methods require an additional argument of individual covariates:
+Like ``CoxPHFitter``, after fitting you'll have access to properties like ``cumulative_hazards_`` and methods like ``plot``, ``predict_cumulative_hazards``, and ``predict_survival_function``. The latter two methods require an additional argument of individual covariates:
 
 .. code:: python
     
-    x = regression_dataset[regression_dataset.columns - ['E', 'T']]
-    aaf.predict_survival_function(x.iloc[10:12]).plot()  # get the unique survival functions of the first two subjects 
+    X = regression_dataset.drop(['E', 'T'], axis=1)
+    aaf.predict_survival_function(X.iloc[10:12]).plot()  # get the unique survival functions of two subjects 
 
 .. image:: images/quickstart_predict_aaf.png  
 

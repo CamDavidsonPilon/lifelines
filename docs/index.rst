@@ -30,7 +30,7 @@ Contents:
 
   Quickstart
   Survival Analysis intro
-  Intro to lifelines
+  Survival analysis with lifelines
   Survival Regression
   Examples
 
@@ -47,7 +47,7 @@ Source code and Issue Tracker
 ------------------------------
 
 Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_
-Please report bugs, issues and feature extensions there. 
+Please report bugs, issues and feature extensions there. We also have `Gitter channel <https://gitter.im/python-lifelines/Lobby>`_ open to discuss lifelines: 
 
 
 Indices and tables
