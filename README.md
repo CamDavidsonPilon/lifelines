@@ -1,4 +1,4 @@
-![logo](http://i.imgur.com/EOowdSD.png)
+![](http://i.imgur.com/EOowdSD.png)
 
 [![PyPI version](https://badge.fury.io/py/lifelines.svg)](https://badge.fury.io/py/lifelines)
 [![Build Status](https://travis-ci.org/CamDavidsonPilon/lifelines.svg?branch=master)](https://travis-ci.org/CamDavidsonPilon/lifelines)
@@ -48,12 +48,14 @@ You can optionally run the test suite after install with
     py.test
 
 
-### *lifelines* Documentation and an Intro to Survival Analysis
+### lifelines Documentation and an intro to survival analysis
 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
 please check out the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
 
-Also around on [Gitter](https://gitter.im/python-lifelines/)
+
+### Contacting
+There is a [Gitter](https://gitter.im/python-lifelines/) channel available. The main author, Cam Davidson-Pilon, is also available for contact on email and twitter.
 
 
 ### Citing lifelines
@@ -63,4 +65,4 @@ You can use this badge below to generate a DOI and reference text for the lastes
  [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
 
  
-![lifelines](http://i.imgur.com/QXW71zA.png)
+![](http://i.imgur.com/QXW71zA.png)

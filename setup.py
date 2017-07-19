@@ -3,15 +3,20 @@ import os
 from setuptools import setup
 
 
-# Utility function to read the README file.
-# Used for the long_description.  It's nice, because now 1) we have a top level
-# README file and 2) it's easier to type in the README file than to put a raw
-# string in below ...
-def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+def filepath(fname):
+    return os.path.join(os.path.dirname(__file__), fname)
 
 exec(compile(open('lifelines/version.py').read(),
                   'lifelines/version.py', 'exec'))
+
+readme_md = filepath('README.md')
+
+try:
+    import pypandoc
+    readme_rst = pypandoc.convert_file(readme_md, 'rst')
+except(ImportError):
+    readme_rst = open(readme_md).read()
+
 
 setup(
     name="lifelines",
@@ -27,7 +32,7 @@ setup(
               'lifelines.fitters',
               'lifelines.utils',
               ],
-    long_description=read('README.txt'),
+    long_description=readme_rst,
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: MIT License",
