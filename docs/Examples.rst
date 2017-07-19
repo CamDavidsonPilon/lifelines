@@ -8,7 +8,7 @@ More Examples and Recipes
 This section goes through some examples and recipes to help you use *lifelines*. 
 
 
-Compare two populations statistically
+Statistically compare two populations
 ##############################################
 
 (though this applies just as well to Nelson-Aalen estimates). Often researchers want to compare
@@ -37,7 +37,7 @@ compares whether the "death" generation process of the two populations are equal
     
     from lifelines.statistics import logrank_test
 
-    results = logrank_test(T1, T2, event_observed_A=C1, event_observed_B=C2)
+    results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
     results.print_summary()
 
     """
@@ -147,13 +147,13 @@ time (months, days, ...)      observed deaths       censored
     import pandas as pd
     
     # your argument in the function call below will be different
-    df = pd.read_csv('file.csv', index_cols=[0], columns = ['observed deaths', 'censored'] )
+    df = pd.read_csv('file.csv', index_cols=[0], columns = ['observed deaths', 'censored'])
 
     from lifelines.utils import survival_events_from_table
 
-    T,C = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
+    T, E = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
     print T # np.array([0,0,0,0,0,0,0,1,2,2, ...])
-    print C # np.array([1,1,1,1,1,1,1,0,1,1, ...])
+    print E # np.array([1,1,1,1,1,1,1,0,1,1, ...])
 
 
 Alternatively, perhaps you are interested in viewing the survival table given some durations and censorship vectors.
@@ -163,7 +163,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
     
     from lifelines.utils import survival_table_from_events
 
-    table = survival_table_from_events(T, C)
+    table = survival_table_from_events(T, E)
     print table.head()
     
     """
@@ -192,7 +192,7 @@ When `.plot` is called, an `axis` object is returned which can be passed into fu
     ax = kmf.plot(ax=ax)
 
 
-If you have a pandas `DataFrame` with columns "group", "T", and "C", then something like the following would work:
+If you have a pandas `DataFrame` with columns "group", "T", and "E", then something like the following would work:
 
 .. code-block:: python
     
@@ -204,7 +204,7 @@ If you have a pandas `DataFrame` with columns "group", "T", and "C", then someth
     kmf = KaplanMeierFitter()
     for group in df['group'].unique():
         data = grouped_data.get_group(group)
-        kmf.fit(data["T"], data["C"], label=group)
+        kmf.fit(data["T"], data["E"], label=group)
         kmf.plot(ax=ax)
     
 
@@ -219,7 +219,7 @@ Standard
 .. code-block:: python
     
     kmf = KaplanMeierFitter()
-    kmf.fit(T,C,label="kmf.plot()")
+    kmf.fit(T, E, label="kmf.plot()")
     kmf.plot()
 
 .. image:: /images/normal_plot.png 
@@ -243,7 +243,7 @@ Show censorships
 
 .. code-block:: python
 
-    kmf.fit(T,C,label="kmf.plot(show_censors=True)")
+    kmf.fit(T, C, label="kmf.plot(show_censors=True)")
     kmf.plot(show_censors=True)
 
 .. image:: images/show_censors_plot.png 
@@ -358,8 +358,8 @@ Below is a way to get an example dataset from a relational database (this may va
 
     SELECT 
       id, 
-      DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE) ) AS "T", 
-      (ended_at IS NOT NULL) AS "C" 
+      DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE)) AS "T", 
+      (ended_at IS NOT NULL) AS "E" 
     FROM some_tables
 
 Explanation
@@ -369,7 +369,7 @@ Each row is an `id`, a duration, and a boolean indicating whether the event occu
 "True" if the event *did* occur, that is, `ended_at` is filled in (we observed the `ended_at`). Ex: 
 
 ==================   ============   ============
-id                   T                      C
+id                   T                      E
 ==================   ============   ============
 10                   40                 True
 11                   42                 False
@@ -377,8 +377,3 @@ id                   T                      C
 13                   36                 True
 14                   33                 True
 ==================   ============   ============
-
-
-
-
-

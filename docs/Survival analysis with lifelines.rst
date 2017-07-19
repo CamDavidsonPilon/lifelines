@@ -2,7 +2,7 @@
 
 -------------------------------------
 
-Introduction to using lifelines
+Survival analysis with lifelines
 =====================================
 
 In the previous :doc:`section</Survival Analysis intro>`,
@@ -55,7 +55,7 @@ Let's bring in our dataset.
 
 .. code:: python
 
-    data.sample(10)
+    data.sample(6)
     #the boolean columns `observed` refers to whether the death (leaving office)
     #was observed or not.
 
@@ -173,69 +173,9 @@ Let's bring in our dataset.
           <td>2</td>
           <td>1</td>
         </tr>
-        <tr>
-          <th>804</th>
-          <td>Italy</td>
-          <td>325</td>
-          <td>325.0</td>
-          <td>Southern Europe</td>
-          <td>Europe</td>
-          <td>Mariano Rumor</td>
-          <td>Mariano Rumor.Italy.1968.1969.Parliamentary Dem</td>
-          <td>Democracy</td>
-          <td>Parliamentary Dem</td>
-          <td>1968</td>
-          <td>2</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <th>746</th>
-          <td>Indonesia</td>
-          <td>850</td>
-          <td>850.0</td>
-          <td>South-Eastern Asia</td>
-          <td>Asia</td>
-          <td>Sukarno</td>
-          <td>Sukarno.Indonesia.1949.1965.Civilian Dict</td>
-          <td>Non-democracy</td>
-          <td>Civilian Dict</td>
-          <td>1949</td>
-          <td>17</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <th>35</th>
-          <td>Argentina</td>
-          <td>160</td>
-          <td>160.0</td>
-          <td>South America</td>
-          <td>Americas</td>
-          <td>Pedro Eugenio Aramburu Cilveti</td>
-          <td>Pedro Eugenio Aramburu Cilveti.Argentina.1955....</td>
-          <td>Non-democracy</td>
-          <td>Military Dict</td>
-          <td>1955</td>
-          <td>3</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <th>398</th>
-          <td>Democratic Republic of the Congo (Zaire, Congo...</td>
-          <td>490</td>
-          <td>490.0</td>
-          <td>Middle Africa</td>
-          <td>Africa</td>
-          <td>Joseph Kasabuvu</td>
-          <td>Joseph Kasabuvu.Democratic Republic of the Con...</td>
-          <td>Non-democracy</td>
-          <td>Civilian Dict</td>
-          <td>1960</td>
-          <td>5</td>
-          <td>1</td>
-        </tr>
       </tbody>
     </table>
-    <p>10 rows × 12 columns</p>
+    <p>6 rows × 12 columns</p>
     </div>
 
 
@@ -254,39 +194,45 @@ office, and whether or not they were observed to have left office
 this data was record at, do not have observed death events)
 
 We next use the ``KaplanMeierFitter`` method ``fit`` to fit the model to
-the data. (This is similar to, and inspired by, another popular
-Python library `scikit-learn's <http://scikit-learn.org/stable/>`__
+the data. (This is similar to, and inspired by,
+`scikit-learn's <http://scikit-learn.org/stable/>`__
 fit/predict API)
 
 .. code:: 
 
-  KaplanMeierFitter.fit(event_times, event_observed=None, 
-                        timeline=None, label='KM-estimate', 
-                        alpha=None)
+  KaplanMeierFitter.fit(durations, event_observed=None, 
+                        timeline=None, entry=None, label='KM_estimate', 
+                        alpha=None, left_censorship=False, ci_labels=None)
+
   Parameters:
-    event_times: an array, or pd.Series, of length n of times that
-           the death event occured at
-    event_observed: an array, or pd.Series, of length n -- True if 
-          the death was observed, False if the event was lost 
-          (right-censored). Defaults all True if event_observed==None
-    timeline: set the index of the survival curve to this postively increasing array.
+    duration: an array, or pd.Series, of length n -- duration subject was observed for
+    timeline: return the best estimate at the values in timelines (postively increasing)
+    event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+       was lost (right-censored). Defaults all True if event_observed==None
+    entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+       useful for left-truncated (not left-censored) observations. If None, all members of the population
+       were born at time 0.
     label: a string to name the column of the estimate.
-    alpha: the alpha value in the confidence intervals.
-           Overrides the initializing alpha for this call to fit only.
+    alpha: the alpha value in the confidence intervals. Overrides the initializing
+       alpha for this call to fit only.
+    left_censorship: True if durations and event_observed refer to left censorship events. Default False
+    ci_labels: add custom column names to the generated confidence intervals
+          as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+
 
   Returns:
-    self, with new properties like 'survival_function_'.
+    a modified self, with new properties like 'survival_function_'.
 
 
-Below we fit our data to the fitter: 
+Below we fit our data with the ``KaplanMeierFitter``: 
 
 
 .. code:: python
 
     T = data["duration"] 
-    C = data["observed"] 
+    E = data["observed"] 
 
-    kmf.fit(T, event_observed=C )
+    kmf.fit(T, event_observed=E)
 
 
 
@@ -312,9 +258,11 @@ How do we interpret this? The y-axis represents the probability a leader is stil
 around after :math:`t` years, where :math:`t` years is on the x-axis. We
 see that very few leaders make it past 20 years in office. Of course,
 like all good stats, we need to report how uncertain we are about these
-point estimates, i.e. we need confidence intervals. They are computed on
+point estimates, i.e. we need confidence intervals. They are computed in
 the call to ``fit``, and are located under the ``confidence_interval_``
-property.
+property. (The mathematics can be found in `these notes <http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdf>`_.)
+
+.. math::  S(t) = Pr( T > t) 
 
 Alternatively, we can call ``plot`` on the ``KaplanMeierFitter`` itself
 to plot both the KM estimate and its confidence intervals:
@@ -353,12 +301,12 @@ an ``axis`` object, that can be used for plotting further estimates:
     ax = plt.subplot(111)
     
     dem = (data["democracy"] == "Democracy")
-    kmf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
+    kmf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     kmf.plot(ax=ax, ci_force_lines=True)
-    kmf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
+    kmf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     kmf.plot(ax=ax, ci_force_lines=True)
     
-    plt.ylim(0,1);
+    plt.ylim(0, 1);
     plt.title("Lifespans of different global regimes");
 
 
@@ -374,12 +322,12 @@ probabilties of survival at those points:
 
     ax = subplot(111)
     
-    t = np.linspace(0,50,51)
-    kmf.fit(T[dem], event_observed=C[dem], timeline=t, label="Democratic Regimes")
+    t = np.linspace(0, 50, 51)
+    kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
     ax = kmf.plot(ax=ax)
     print "Median survival time of democratic:", kmf.median_
     
-    kmf.fit(T[~dem], event_observed=C[~dem], timeline=t, label="Non-democratic Regimes")
+    kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
     ax = kmf.plot(ax=ax)
     print "Median survival time of non-democratic:", kmf.median_
 
@@ -421,7 +369,7 @@ we rule that the series have different generators.
 
     from lifelines.statistics import logrank_test
     
-    results = logrank_test(T[dem], T[~dem], C[dem], C[~dem], alpha=.99 )
+    results = logrank_test(T[dem], T[~dem], E[dem], E[~dem], alpha=.99)
 
     results.print_summary()
 
@@ -445,12 +393,12 @@ Lets compare the different *types* of regimes present in the dataset:
     regime_types = data['regime'].unique()
     
     for i,regime_type in enumerate(regime_types):
-        ax = plt.subplot(2,3,i+1)
+        ax = plt.subplot(2, 3, i+1)
         ix = data['regime'] == regime_type
-        kmf.fit( T[ix], C[ix], label=regime_type )
+        kmf.fit( T[ix], E[ix], label=regime_type)
         kmf.plot(ax=ax, legend=False)
         plt.title(regime_type)
-        plt.xlim(0,50)
+        plt.xlim(0, 50)
         if i==0:
             plt.ylabel('Frac. in power after $n$ years')
     plt.tight_layout()
@@ -466,14 +414,14 @@ Getting data into the right format
 
 *lifelines* data format is consistent across all estimator class and
 functions: an array of individual durations, and the individuals
-event observation (if any). These are often denoted ``T`` and ``C``
+event observation (if any). These are often denoted ``T`` and ``E``
 respectively. For example:
 
 ::
 
     T = [0,3,3,2,1,2]
-    C = [1,1,0,0,1,1]
-    kmf.fit(T, event_observed=C )
+    E = [1,1,0,0,1,1]
+    kmf.fit(T, event_observed=E)
 
 The raw data is not always available in this format -- *lifelines*
 includes some helper functions to transform data formats to *lifelines*
@@ -488,14 +436,14 @@ end times/dates (or ``None`` if not observed):
     
     start_date = ['2013-10-10 0:00:00', '2013-10-09', '2013-10-10']
     end_date = ['2013-10-13', '2013-10-10', None]
-    T,C = datetimes_to_durations(start_date, end_date, fill_date='2013-10-15')
+    T, E = datetimes_to_durations(start_date, end_date, fill_date='2013-10-15')
     print 'T (durations): ', T
-    print 'C (event_observed): ',C
+    print 'E (event_observed): ', E
 
 .. parsed-literal::
 
     T (durations):  [ 3.  1.  5.]
-    C (event_observed):  [ True  True False]
+    E (event_observed):  [ True  True False]
 
 
 The function ``datetimes_to_durations`` is very flexible, and has many
@@ -528,12 +476,12 @@ In *lifelines*, this estimator is available as the ``NelsonAalenFitter``. Let's 
 .. code:: python
 
     T = data["duration"]
-    C = data["observed"]
+    E = data["observed"]
 
     from lifelines import NelsonAalenFitter
     naf = NelsonAalenFitter()
 
-    naf.fit(T,event_observed=C)
+    naf.fit(T,event_observed=E)
 
 
 After fitting, the class exposes the property ``cumulative_hazard_`` as
@@ -576,10 +524,10 @@ years:
 
 .. code:: python
 
-    naf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
-    ax = naf.plot(loc=slice(0,20))
-    naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
-    naf.plot(ax=ax, loc=slice(0,20))
+    naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
+    ax = naf.plot(loc=slice(0, 20))
+    naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
+    naf.plot(ax=ax, loc=slice(0, 20))
     plt.title("Cumulative hazard function of different global regimes");
 
 
@@ -615,13 +563,13 @@ intervals, similar to the traditional ``plot`` functionality.
 .. code:: python
 
     b = 3.
-    naf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
+    naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     ax = naf.plot_hazard(bandwidth=b)
-    naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
+    naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwidth=%.1f"%b);
-    plt.ylim(0,0.4)
-    plt.xlim(0,25);
+    plt.ylim(0, 0.4)
+    plt.xlim(0, 25);
 
 
 .. image:: images/lifelines_intro_naf_smooth_multi.png
@@ -637,9 +585,9 @@ here. (My advice: stick with the cumulative hazard function.)
 .. code:: python
 
     b = 8.
-    naf.fit(T[dem], event_observed=C[dem], label="Democratic Regimes")
+    naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     ax = naf.plot_hazard(bandwidth=b)
-    naf.fit(T[~dem], event_observed=C[~dem], label="Non-democratic Regimes")
+    naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=b)
     plt.title("Hazard function of different global regimes | bandwidth=%.1f"%b);
 
@@ -672,10 +620,10 @@ instruments could only detect the measurement was *less* than some upperbound.
 
     ix = lcd_dataset['group'] == 'alluvial_fan'
     T = lcd_dataset[ix]['T']
-    C = lcd_dataset[ix]['C'] #boolean array, True if observed.
+    E = lcd_dataset[ix]['E'] #boolean array, True if observed.
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T,C, left_censorship=True)  
+    kmf.fit(T, E, left_censorship=True)  
 
 Instead of producing a survival function, left-censored data is more interested in the cumulative density function
 of time to birth. This is available as the ``cumulative_density_`` property after fitting the data.
