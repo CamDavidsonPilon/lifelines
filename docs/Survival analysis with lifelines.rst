@@ -34,7 +34,7 @@ as the censorship event. This is also an example where the current time
 is not the only cause of censorship -- there are alternative
 events (eg: death in office) that can censor.)
 
-To estimate the survival function, we use the `Kaplan-Meier
+To estimate the survival function, we first will use the `Kaplan-Meier
 Estimate <http://en.wikipedia.org/wiki/Kaplan%E2%80%93Meier_estimator>`__,
 defined:
 
@@ -43,6 +43,7 @@ defined:
 where :math:`d_i` are the number of death events at time :math:`t` and
 :math:`n_i` is the number of subjects at risk of death just prior to time
 :math:`t`.
+
 
 Let's bring in our dataset. 
 
@@ -58,7 +59,6 @@ Let's bring in our dataset.
     data.sample(6)
     #the boolean columns `observed` refers to whether the death (leaving office)
     #was observed or not.
-
 
 
 .. raw:: html
@@ -187,6 +187,8 @@ From the ``lifelines`` library, we'll need the
 
     from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
+
+..  note:: Other ways to estimate the survival function in lifelines are ``BreslowFlemingHarringtonFitter``, ``WeibullFitter``, ``ExponentialFitter``
 
 For this estimation, we need the duration each leader was/has been in
 office, and whether or not they were observed to have left office
