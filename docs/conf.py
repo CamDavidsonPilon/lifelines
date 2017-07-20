@@ -31,7 +31,6 @@ import os
 # ones.
 extensions = [
     'sphinx.ext.coverage',
-    'sphinx.ext.pngmath',
     'sphinx.ext.mathjax',
     'sphinx.ext.autodoc',
 ]
