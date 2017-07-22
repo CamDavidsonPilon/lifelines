@@ -455,6 +455,30 @@ A quick and visual way to check the proportional hazards assumption of a variabl
 
 The following is the loglogs curves of two variables in our regime dataset. The first is the democracy type, which does have (close to) parallel lines, hence satisfies our assumption:
 
+.. code:: python
+
+    from lifelines.datasets import load_dd
+    from lifelines import KaplanMeierFitter
+
+    data = load_dd()
+
+    democracy_0 = data.loc[data['democracy'] == 'Non-democracy']
+    democracy_1 = data.loc[data['democracy'] == 'Democracy']
+
+    kmf0 = KaplanMeierFitter()
+    kmf0.fit(democracy_0['duration'], event_observed=democracy_0['observed'])
+
+    kmf1 = KaplanMeierFitter()
+    kmf1.fit(democracy_1['duration'], event_observed=democracy_1['observed'])
+
+    fig, axes = plt.subplots()
+    kmf0.plot_loglogs(ax=axes)
+    kmf1.plot_loglogs(ax=axes)
+
+    axes.legend(['Non-democracy', 'Democracy'])
+
+    plt.show()
+
 .. image:: images/lls_democracy.png
 
 
