@@ -377,3 +377,40 @@ id                   T                      E
 13                   36                 True
 14                   33                 True
 ==================   ============   ============
+
+
+Sample size determination under a CoxPH model
+##############################################
+
+Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. That is, we want to evaluate the hypothesis
+H0: relative hazard ratio = 1 vs H1: relative hazard ratio != 1, where the relative hazard ratio is :math:`\exp{\left(\beta\right)}` for the experiment group vs the control group. Apriori, we are interested in the sample sizes of the two groups necessary to achieve a certain statistical power. To do this in lifelines, there is the ``lifelines.statistics.sample_size_necessary_under_cph`` function. For example:
+
+.. code-block:: python
+    from lifelines.statistics import sample_size_necessary_under_cph
+
+    desired_power = 0.8
+    ratio_of_participants = 1.
+    p_exp = 0.25
+    p_con = 0.35
+    postulated_hazard_ratio = 0.7
+    n_exp, n_con = sample_size_necessary_under_cph(desired_power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio)
+    # (421, 421)
+
+This assumes you have estimates of the probability of event occuring for both the experiment and control group. This could be determined from previous experiments.
+
+Power determination under a CoxPH model
+##############################################
+
+Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. To determine the statistical power of a hazard ratio hypothesis test, under the CoxPH model, we can use ``lifelines.statistics.power_under_cph``. That is, suppose we want to know the probability that we reject the null hypothesis that the relative hazard ratio is 1, assuming the relative hazard ratio is truely different from 1. This function will give you that probability. 
+
+
+.. code-block:: python
+    from lifelines.statistics import power_under_cph
+
+    n_exp = 50
+    n_con = 100
+    p_exp = 0.25
+    p_con = 0.35
+    postulated_hazard_ratio = 0.5
+    power = power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio)
+    # 0.4957

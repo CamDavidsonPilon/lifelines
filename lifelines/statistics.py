@@ -43,8 +43,8 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con,
 
 def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
     """
-    This computes the sample size for needed power to compare two groups under a Cox
-    Proportional Hazard model.
+    This computes the power of the hypothesis test that the two groups, experiment and control,
+    have different hazards (that is, the relative hazard ratio is different from 1.)
 
     References:
         https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
