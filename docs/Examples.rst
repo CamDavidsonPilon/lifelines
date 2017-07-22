@@ -386,6 +386,7 @@ Suppose you wish to measure the hazard ratio between two populations under the C
 H0: relative hazard ratio = 1 vs H1: relative hazard ratio != 1, where the relative hazard ratio is :math:`\exp{\left(\beta\right)}` for the experiment group vs the control group. Apriori, we are interested in the sample sizes of the two groups necessary to achieve a certain statistical power. To do this in lifelines, there is the ``lifelines.statistics.sample_size_necessary_under_cph`` function. For example:
 
 .. code-block:: python
+
     from lifelines.statistics import sample_size_necessary_under_cph
 
     desired_power = 0.8
@@ -405,6 +406,7 @@ Suppose you wish to measure the hazard ratio between two populations under the C
 
 
 .. code-block:: python
+
     from lifelines.statistics import power_under_cph
 
     n_exp = 50
