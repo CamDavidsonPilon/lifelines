@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.11.3
+ - No longer support matplotlib 1.X
+
 #### 0.11.2
  - Changing liscense to valilla MIT. 
  - Speed up `NelsonAalenFitter.fit` considerably. 
