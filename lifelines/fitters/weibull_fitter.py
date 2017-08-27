@@ -100,10 +100,10 @@ class WeibullFitter(UnivariateFitter):
         self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.cumulative_hazard_ = pd.DataFrame(self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
-        self.median_ = 1. / self.lambda_ * (np.log(2)) ** (1. / self.rho_)
+        self.median_ = self._inv_survival_function_closed_form(0.5)
 
         # estimation functions - Cumulative hazard takes priority.
-        self.predict = self._predict("cumulative_hazard_", self._label)
+        self.predict = self._predict(self.cumulative_hazard_at_times, self._label)
         self.subtract = self._subtract("cumulative_hazard_")
         self.divide = self._divide("cumulative_hazard_")
 
@@ -113,6 +113,9 @@ class WeibullFitter(UnivariateFitter):
 
         return self
 
+    def _inv_survival_function_closed_form(self, p):
+        return 1. / self.lambda_ * (np.log(1 / p) ** (1. / self.rho_))
+
     def hazard_at_times(self, times):
         return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
 
@@ -120,9 +123,10 @@ class WeibullFitter(UnivariateFitter):
         return np.exp(-self.cumulative_hazard_at_times(times))
 
     def cumulative_hazard_at_times(self, times):
+        times = np.asarray(times)
         return (self.lambda_ * times) ** self.rho_
 
-    def _newton_rhaphson(self, T, E, precision=1e-5):
+    def _newton_rhaphson(self, T, E, precision=1e-5, max_iterations=50):
         from lifelines.utils import _smart_search
 
         def jacobian_function(parameters, T, E):
@@ -137,11 +141,11 @@ class WeibullFitter(UnivariateFitter):
         # initialize the parameters. This shows dramatic improvements.
         parameters = _smart_search(_negative_log_likelihood, 2, T, E)
 
-        iter = 1
+        iterations = 1
         step_size = 1.
         converging = True
 
-        while converging and iter < 50:
+        while converging and iterations < max_iterations:
             # Do not override hessian and gradient in case of garbage
             j, g = jacobian_function(parameters, T, E), gradient_function(parameters, T, E)
 
@@ -156,7 +160,7 @@ class WeibullFitter(UnivariateFitter):
 
             if norm(delta) < precision:
                 converging = False
-            iter += 1
+            iterations += 1
 
         self._jacobian = jacobian
         return parameters

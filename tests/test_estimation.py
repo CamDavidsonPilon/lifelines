@@ -137,25 +137,12 @@ class TestUnivariateFitters():
             fitter.fit(T)
             assert hasattr(fitter, 'plot')
 
-    def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, sample_lifetimes):
-        kmf = KaplanMeierFitter()
-        kmf.fit(sample_lifetimes[0])
-        assert not isinstance(kmf.predict(1), Iterable)
-        assert isinstance(kmf.predict([1, 2]), Iterable)
-
-    def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
-        T = [1, 2, 3]
-        kmf = KaplanMeierFitter()
-        kmf.fit(T)
-        time = 1
-        assert abs(kmf.predict(time) - kmf.survival_function_.iloc[time].values) < 10e-8
-
-    def test_predict_method_returns_gives_values_prior_to_the_value_in_the_survival_function(self):
-        T = [1, 2, 3]
-        kmf = KaplanMeierFitter()
-        kmf.fit(T)
-        assert abs(kmf.predict(0.5) - kmf.survival_function_.iloc[0].values) < 10e-8
-        assert abs(kmf.predict(1.9999) - kmf.survival_function_.iloc[1].values) < 10e-8
+    def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, positive_sample_lifetimes, univariate_fitters):
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(positive_sample_lifetimes[0])
+            assert not isinstance(fitter.predict(1), Iterable)
+            assert isinstance(fitter.predict([1, 2]), Iterable)
 
     def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
@@ -297,6 +284,11 @@ class TestWeibullFitter():
             assert abs(1 - wf.rho_ / rho) < 5 / np.sqrt(N)
             assert abs(1 - wf.lambda_ / lambda_) < 5 / np.sqrt(N)
 
+    def test_weibull_median_calculation(self, waltons_dataset):
+        wf = WeibullFitter()
+        wf.fit(waltons_dataset['T'], waltons_dataset['E'])
+        assert abs(wf.median_ - 50.116681793) < 1e-9
+
 
 class TestExponentialFitter():
 
@@ -434,6 +426,20 @@ class TestKaplanMeierFitter():
         expected_upper_bound = np.array([0.975, 0.904, 0.804, 0.676])
         npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
                                       expected_upper_bound, decimal=3)
+
+    def test_predict_method_returns_exact_value_if_given_an_observed_time(self, positive_sample_lifetimes, univariate_fitters):
+        T = [1, 2, 3]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T)
+        time = 1
+        assert abs(kmf.predict(time) - kmf.survival_function_.iloc[time].values) < 10e-8
+
+    def test_predict_method_returns_gives_values_nearest_to_the_value_in_the_survival_function(self):
+        T = [1, 2, 3]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T)
+        assert abs(kmf.predict(0.5) - kmf.survival_function_.iloc[1].values) < 10e-8
+        assert abs(kmf.predict(1.9999) - kmf.survival_function_.iloc[2].values) < 10e-8
 
 
 class TestNelsonAalenFitter():

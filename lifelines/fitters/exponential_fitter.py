@@ -62,10 +62,10 @@ class ExponentialFitter(UnivariateFitter):
         self._lambda_variance_ = self.lambda_ / T
         self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_ * self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
-        self.median_ = 1. / self.lambda_ * (np.log(2))
+        self.median_ = self._inv_survival_function_closed_form(0.5)
 
         # estimation functions
-        self.predict = self._predict("survival_function_", self._label)
+        self.predict = self._predict(self._survival_function_closed_form, self._label)
         self.subtract = self._subtract("survival_function_")
         self.divide = self._divide("survival_function_")
 
@@ -74,6 +74,13 @@ class ExponentialFitter(UnivariateFitter):
         self.plot_survival_function_ = self.plot
 
         return self
+
+    def _survival_function_closed_form(self, times):
+        times = np.asarray(times)
+        return np.exp(-times / self.lambda_)
+
+    def _inv_survival_function_closed_form(self, p):
+        return -1. / self.lambda_ * np.log(p)
 
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
