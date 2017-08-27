@@ -3,6 +3,7 @@ from .estimation import KaplanMeierFitter, NelsonAalenFitter, \
     AalenAdditiveFitter, BreslowFlemingHarringtonFitter, CoxPHFitter, \
     WeibullFitter, ExponentialFitter
 
+
 import lifelines.datasets
 
 from .version import __version__
