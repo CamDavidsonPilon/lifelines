@@ -1,5 +1,9 @@
 ### Changelogs
 
+#### 0.11.2
+ - Changing liscense to valilla MIT. 
+ - Speed up `NelsonAalenFitter.fit` considerably. 
+
 #### 0.11.1
  - Python3 fix for `CoxPHFitter.plot`.
 
