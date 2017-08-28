@@ -18,7 +18,7 @@ class StatError(Exception):
         return repr(self.msg)
 
 
-def qth_survival_times(q, survival_functions):
+def qth_survival_times(q, survival_functions, cdf=False):
     """
     This can be done much better.
 
@@ -37,23 +37,28 @@ def qth_survival_times(q, survival_functions):
     assert (q <= 1).all() and (0 <= q).all(), 'q must be between 0 and 1'
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
-        return survival_functions.apply(lambda s: qth_survival_time(q[0], s)).iloc[0]
+        return survival_functions.apply(lambda s: qth_survival_time(q[0], s, cdf=cdf)).iloc[0]
     else:
         return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q})
 
 
-def qth_survival_time(q, survival_function):
+def qth_survival_time(q, survival_function, cdf=False):
     """
     Expects a Pandas series, returns the time when the qth probability is reached.
     """
-    if survival_function.iloc[-1] > q:
-        return np.inf
-    v = (survival_function <= q).idxmax(0)
+    if cdf:
+        if survival_function.iloc[0] > q:
+            return np.inf
+        v = (survival_function <= q).idxmin(0)
+    else:
+        if survival_function.iloc[-1] > q:
+            return np.inf
+        v = (survival_function <= q).idxmax(0)
     return v
 
 
-def median_survival_times(survival_functions):
-    return qth_survival_times(0.5, survival_functions)
+def median_survival_times(density_or_survival_function, left_censorship=False):
+    return qth_survival_times(0.5, density_or_survival_function, cdf=left_censorship)
 
 
 def group_survival_table_from_events(groups, durations, event_observed, birth_times=None, limit=-1):

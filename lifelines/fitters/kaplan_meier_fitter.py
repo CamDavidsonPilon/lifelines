@@ -67,7 +67,7 @@ class KaplanMeierFitter(UnivariateFitter):
         setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[self._label]))
         self.__estimate = getattr(self, estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
-        self.median_ = median_survival_times(self.__estimate)
+        self.median_ = median_survival_times(self.__estimate, left_censorship=left_censorship)
 
         # estimation methods
         self.predict = self._predict(estimate_name, label)

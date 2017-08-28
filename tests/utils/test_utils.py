@@ -159,6 +159,11 @@ def test_qth_survival_times_with_multivariate_q():
     assert utils.qth_survival_times(0.5, sf_multi_df['sf']) == 25
 
 
+def test_qth_survival_time_with_cdf_instead_of_survival_function():
+    cdf = np.linspace(0, 1, 50)
+    assert utils.qth_survival_times(0.5, cdf, cdf=True) == 25
+
+
 def test_datetimes_to_durations_with_different_frequencies():
     # days
     start_date = ['2013-10-10 0:00:00', '2013-10-09', '2012-10-10']
