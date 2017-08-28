@@ -441,7 +441,7 @@ class TestKaplanMeierFitter():
         E[np.argmax(T)] = 0
         kmf = KaplanMeierFitter()
         kmf.fit(T, E)
-        assert T.survival_function_[-1] > 0
+        assert kmf.survival_function_['KM_estimate'].iloc[-1] > 0
 
 
 class TestNelsonAalenFitter():
