@@ -72,7 +72,7 @@ class UnivariateFitter(BaseFitter):
         divide.__doc__ = doc_string
         return divide
 
-    def _predict(self, estimate, label):
+    def _predict(self, estimate_or_callable, label):
         class_name = self.__class__.__name__
         doc_string = """
           Predict the %s at certain point in time.
@@ -84,8 +84,16 @@ class UnivariateFitter(BaseFitter):
             predictions: a scalar if time is a scalar, a numpy array if time in an array.
           """ % (class_name, class_name)
 
+        if callable(estimate_or_callable):
+            return estimate_or_callable
+
+        estimate = estimate_or_callable
+
         def predict(time):
-            predictor = lambda t: getattr(self, estimate).loc[:t].iloc[-1][label]
+            def predictor(t):
+                ix = getattr(self, estimate).index.get_loc(t, method='nearest')
+                return getattr(self, estimate).iloc[ix][label]
+
             try:
                 return np.array([predictor(t) for t in time])
             except TypeError:
