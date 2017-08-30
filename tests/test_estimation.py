@@ -435,6 +435,14 @@ class TestKaplanMeierFitter():
         npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
                                       expected_upper_bound, decimal=3)
 
+    def test_kmf_does_not_drop_to_zero_if_last_point_is_censored(self):
+        T = np.arange(0, 50, 0.5)
+        E = np.random.binomial(1, 0.7, 100)
+        E[np.argmax(T)] = 0
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, E)
+        assert kmf.survival_function_['KM_estimate'].iloc[-1] > 0
+
 
 class TestNelsonAalenFitter():
 
