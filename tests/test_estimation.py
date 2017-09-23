@@ -150,12 +150,12 @@ class TestUnivariateFitters():
         time = 1
         assert abs(kmf.predict(time) - kmf.survival_function_.iloc[time].values) < 10e-8
 
-    def test_predict_method_returns_gives_values_prior_to_the_value_in_the_survival_function(self):
+    def test_predict_method_returns_an_approximation_if_not_in_the_index(self):
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
-        assert abs(kmf.predict(0.5) - kmf.survival_function_.iloc[0].values) < 10e-8
-        assert abs(kmf.predict(1.9999) - kmf.survival_function_.iloc[1].values) < 10e-8
+        assert abs(kmf.predict(0.5) - 5/6.) < 10e-8
+        assert abs(kmf.predict(1.9999) - 0.3333666666) < 10e-8
 
     def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
@@ -604,8 +604,8 @@ class TestRegressionFitters():
 
 class TestCoxPHFitter():
 
-    def test_summary(self, rossi):
 
+    def test_summary(self, rossi):
         cp = CoxPHFitter()
         cp.fit(rossi, duration_col='week', event_col='arrest')
         summDf = cp.summary
@@ -716,6 +716,18 @@ Concordance = 0.640""".strip().split()
             cf.predict_partial_hazard(X)
         )
 
+    def test_prediction_methods_will_accept_a_times_arg_to_reindex_the_predictions(self, data_pred2):
+        cf = CoxPHFitter()
+        cf.fit(data_pred2, duration_col='t', event_col='E')
+        times_of_interest = np.arange(0, 10, 0.5)
+
+        actual_index = cf.predict_survival_function(data_pred2.drop(["t", "E"], axis=1), times=times_of_interest).index
+        np.testing.assert_allclose(actual_index.values, times_of_interest)
+
+        actual_index = cf.predict_cumulative_hazard(data_pred2.drop(["t", "E"], axis=1), times=times_of_interest).index
+        np.testing.assert_allclose(actual_index.values, times_of_interest)
+
+
     def test_data_normalization(self, data_pred2):
         # During fit, CoxPH copies the training data and normalizes it.
         # Future calls should be normalized in the same way and
@@ -754,6 +766,7 @@ Concordance = 0.640""".strip().split()
 
         ci_exp = concordance_index(t, cf.predict_expectation(X).ravel(), e)
         assert ci_ph == ci_exp
+
 
     def test_crossval_for_cox_ph_with_normalizing_times(self, data_pred2, data_pred1):
         cf = CoxPHFitter()

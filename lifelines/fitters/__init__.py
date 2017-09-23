@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import collections
 
 import numpy as np
 import pandas as pd
@@ -72,10 +73,11 @@ class UnivariateFitter(BaseFitter):
         divide.__doc__ = doc_string
         return divide
 
-    def _predict(self, estimate, label):
+    def _predict(self, estimate_name, label):
         class_name = self.__class__.__name__
         doc_string = """
-          Predict the %s at certain point in time.
+          Predict the %s at certain point in time. Uses a linear interpolation if
+             points in time are not in the index.
 
           Parameters:
             time: a scalar or an array of times to predict the value of %s at.
@@ -84,12 +86,15 @@ class UnivariateFitter(BaseFitter):
             predictions: a scalar if time is a scalar, a numpy array if time in an array.
           """ % (class_name, class_name)
 
-        def predict(time):
-            predictor = lambda t: getattr(self, estimate).loc[:t].iloc[-1][label]
-            try:
-                return np.array([predictor(t) for t in time])
-            except TypeError:
-                return predictor(time)
+        def predict(times):
+            def _to_list(x):
+                if not isinstance(x, collections.Iterable):
+                    return [x]
+                return x
+
+            estimate = getattr(self, estimate_name)
+            # non-linear interpolations can push the survival curves above 1 and below 0.
+            return estimate.reindex(estimate.index.union(_to_list(times))).interpolate("index").loc[times].squeeze()
 
         predict.__doc__ = doc_string
         return predict
