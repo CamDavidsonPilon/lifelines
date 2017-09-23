@@ -313,9 +313,12 @@ class CoxPHFitter(BaseFitter):
         self.event_observed = E
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df * self._norm_std + self._norm_mean, T, E)
-        self.baseline_cumulative_hazard_ = self.baseline_hazard_.cumsum()
+        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(self.baseline_hazard_)
         self.baseline_survival_ = self._compute_baseline_survival()
         return self
+
+    def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
+        return baseline_hazard_.cumsum()
 
     def _check_values(self, X):
         low_var = (X.var(0) < 10e-5)
@@ -442,14 +445,18 @@ class CoxPHFitter(BaseFitter):
         mean_covariates = self.data.mean(0).to_frame().T
         return self.predict_log_partial_hazard(X) - self.predict_log_partial_hazard(mean_covariates).squeeze()
 
-    def predict_cumulative_hazard(self, X):
+    def predict_cumulative_hazard(self, X, times=None):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        times: an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved). Uses a linear interpolation if
+            points in time are not in the index.
 
         Returns the cumulative hazard of individuals.
         """
+
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
             for stratum, stratified_X in X.groupby(self.strata):
@@ -463,17 +470,23 @@ class CoxPHFitter(BaseFitter):
             v = self.predict_partial_hazard(X)
             cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
 
-        return cumulative_hazard_
+        if times is not None:
+            # non-linear interpolations can push the survival curves above 1 and below 0.
+            return cumulative_hazard_.reindex(cumulative_hazard_.index.union(times)).interpolate("index").loc[times]
+        else:
+            return cumulative_hazard_
 
-    def predict_survival_function(self, X):
+    def predict_survival_function(self, X, times=None):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        times: an iterable of increasing times to predict the survival function at. Default
+            is the set of all durations (observed and unobserved)
 
         Returns the estimated survival functions for the individuals
         """
-        return exp(-self.predict_cumulative_hazard(X))
+        return exp(-self.predict_cumulative_hazard(X, times=times))
 
     def predict_percentile(self, X, p=0.5):
         """
@@ -523,7 +536,8 @@ class CoxPHFitter(BaseFitter):
 
     def _compute_baseline_hazards(self, df, T, E):
         if self.strata:
-            baseline_hazards_ = pd.DataFrame(index=self.durations.unique())
+            index = self.durations.unique()
+            baseline_hazards_ = pd.DataFrame(index=index)
             for stratum in df.index.unique():
                 baseline_hazards_ = baseline_hazards_.merge(
                     self._compute_baseline_hazard(data=df.loc[[stratum]], durations=T.loc[[stratum]], event_observed=E.loc[[stratum]], name=stratum),
