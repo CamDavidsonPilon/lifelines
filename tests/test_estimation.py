@@ -615,7 +615,7 @@ class TestRegressionFitters():
             'categoryb_': pd.Series(['a', 'b', 'a'], dtype='category')
         })
 
-g        for fitter in regression_models:
+        for fitter in regression_models:
             for subset in [
                 ['t', 'categorya_'],
                 ['t', 'categoryb_'],
