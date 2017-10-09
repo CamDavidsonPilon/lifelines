@@ -103,7 +103,7 @@ class WeibullFitter(UnivariateFitter):
         self.median_ = 1. / self.lambda_ * (np.log(2)) ** (1. / self.rho_)
 
         # estimation functions - Cumulative hazard takes priority.
-        self.predict = self._predict("cumulative_hazard_", self._label)
+        self.predict = self._predict(lambda t: np.exp(-(self.lambda_ * t) ** self.rho_), self._label)
         self.subtract = self._subtract("cumulative_hazard_")
         self.divide = self._divide("cumulative_hazard_")
 

@@ -3,6 +3,7 @@
 #### 0.11.3
  - No longer support matplotlib 1.X
  - Adding `times` argument to `CoxPHFitter`'s `predict_survival_function` and `predict_cumulative_hazard` to predict the estimates at, instead uses the default times of observation or censorship.
+ - More accurate prediction methods parametrics univariate models. 
 
 #### 0.11.2
  - Changing liscense to valilla MIT. 
