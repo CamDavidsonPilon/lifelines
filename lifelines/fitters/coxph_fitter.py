@@ -295,7 +295,7 @@ class CoxPHFitter(BaseFitter):
             E = df[event_col]
             del df[event_col]
 
-        self.data = df if self.strata is None else df.reset_index(drop=True)
+        self.data = df if self.strata is None else df.reset_index()
         self._check_values(df)
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
