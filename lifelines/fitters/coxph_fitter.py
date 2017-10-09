@@ -11,7 +11,8 @@ import scipy.stats as stats
 
 from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
-    significance_code, concordance_index, _get_index, qth_survival_times
+    significance_code, concordance_index, _get_index, qth_survival_times,\
+    pass_for_numeric_dtypes_or_raise
 
 
 class CoxPHFitter(BaseFitter):
@@ -294,7 +295,7 @@ class CoxPHFitter(BaseFitter):
             E = df[event_col]
             del df[event_col]
 
-        self.data = df if self.strata is None else df.reset_index()
+        self.data = df if self.strata is None else df.reset_index(drop=True)
         self._check_values(df)
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
@@ -328,6 +329,7 @@ class CoxPHFitter(BaseFitter):
  This may harm convergence. Try dropping this redundant column before fitting\
  if convergence fails." % cols
             warnings.warn(warning_text, RuntimeWarning)
+        pass_for_numeric_dtypes_or_raise(X)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
