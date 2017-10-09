@@ -73,7 +73,7 @@ class UnivariateFitter(BaseFitter):
         divide.__doc__ = doc_string
         return divide
 
-    def _predict(self, estimate_name, label):
+    def _predict(self, estimate_name_or_function, label):
         class_name = self.__class__.__name__
         doc_string = """
           Predict the %s at certain point in time. Uses a linear interpolation if
@@ -87,14 +87,17 @@ class UnivariateFitter(BaseFitter):
           """ % (class_name, class_name)
 
         def predict(times):
-            def _to_list(x):
+            def _to_array(x):
                 if not isinstance(x, collections.Iterable):
-                    return [x]
-                return x
+                    return np.array([x])
+                return np.asarray(x)
 
-            estimate = getattr(self, estimate_name)
-            # non-linear interpolations can push the survival curves above 1 and below 0.
-            return estimate.reindex(estimate.index.union(_to_list(times))).interpolate("index").loc[times].squeeze()
+            if callable(estimate_name_or_function):
+                return pd.DataFrame(estimate_name_or_function(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
+            else:
+                estimate = getattr(self, estimate_name_or_function)
+                # non-linear interpolations can push the survival curves above 1 and below 0.
+                return estimate.reindex(estimate.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
 
         predict.__doc__ = doc_string
         return predict

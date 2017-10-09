@@ -65,7 +65,7 @@ class ExponentialFitter(UnivariateFitter):
         self.median_ = 1. / self.lambda_ * (np.log(2))
 
         # estimation functions
-        self.predict = self._predict("survival_function_", self._label)
+        self.predict = self._predict(lambda t: np.exp(-self.lambda_ * t), self._label)
         self.subtract = self._subtract("survival_function_")
         self.divide = self._divide("survival_function_")
 

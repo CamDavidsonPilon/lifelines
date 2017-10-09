@@ -137,11 +137,13 @@ class TestUnivariateFitters():
             fitter.fit(T)
             assert hasattr(fitter, 'plot')
 
-    def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, sample_lifetimes):
-        kmf = KaplanMeierFitter()
-        kmf.fit(sample_lifetimes[0])
-        assert not isinstance(kmf.predict(1), Iterable)
-        assert isinstance(kmf.predict([1, 2]), Iterable)
+    def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, positive_sample_lifetimes, univariate_fitters):
+        T = positive_sample_lifetimes[0]
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(T)
+            assert not isinstance(fitter.predict(1), Iterable)
+            assert isinstance(fitter.predict([1, 2]), Iterable)
 
     def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
         T = [1, 2, 3]
