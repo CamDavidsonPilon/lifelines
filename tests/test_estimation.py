@@ -608,13 +608,14 @@ class TestRegressionFitters():
             't': [1., 2., 3.],
             'bool_': [True, True, False],
             'int_': [1, -1, 0],
+            'uint8_': pd.Series([1, -1, 0], dtype="uint8"),
             'string_': ['test', 'a', '2.5'],
             'float_': [1.2, -0.5, 0.0],
             'categorya_': pd.Series([1, 2, 3], dtype='category'),
             'categoryb_': pd.Series(['a', 'b', 'a'], dtype='category')
         })
 
-        for fitter in regression_models:
+g        for fitter in regression_models:
             for subset in [
                 ['t', 'categorya_'],
                 ['t', 'categoryb_'],
@@ -627,6 +628,7 @@ class TestRegressionFitters():
                 ['t', 'bool_'],
                 ['t', 'int_'],
                 ['t', 'float_'],
+                ['t', 'uint8_'],
             ]:
                 fitter.fit(df[subset], duration_col='t')
 
