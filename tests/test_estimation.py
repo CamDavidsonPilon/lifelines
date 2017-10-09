@@ -603,9 +603,35 @@ class TestRegressionFitters():
             except AttributeError:
                 pass
 
+    def test_error_is_raised_if_using_non_numeric_data(self, regression_models):
+        df = pd.DataFrame.from_dict({
+            't': [1., 2., 3.],
+            'bool_': [True, True, False],
+            'int_': [1, -1, 0],
+            'string_': ['test', 'a', '2.5'],
+            'float_': [1.2, -0.5, 0.0],
+            'categorya_': pd.Series([1, 2, 3], dtype='category'),
+            'categoryb_': pd.Series(['a', 'b', 'a'], dtype='category')
+        })
+
+        for fitter in regression_models:
+            for subset in [
+                ['t', 'categorya_'],
+                ['t', 'categoryb_'],
+                ['t', 'string_'],
+            ]:
+                with pytest.raises(TypeError):
+                    fitter.fit(df[subset], duration_col='t')
+
+            for subset in [
+                ['t', 'bool_'],
+                ['t', 'int_'],
+                ['t', 'float_'],
+            ]:
+                fitter.fit(df[subset], duration_col='t')
+
 
 class TestCoxPHFitter():
-
 
     def test_summary(self, rossi):
         cp = CoxPHFitter()
@@ -729,7 +755,6 @@ Concordance = 0.640""".strip().split()
         actual_index = cf.predict_cumulative_hazard(data_pred2.drop(["t", "E"], axis=1), times=times_of_interest).index
         np.testing.assert_allclose(actual_index.values, times_of_interest)
 
-
     def test_data_normalization(self, data_pred2):
         # During fit, CoxPH copies the training data and normalizes it.
         # Future calls should be normalized in the same way and
@@ -768,7 +793,6 @@ Concordance = 0.640""".strip().split()
 
         ci_exp = concordance_index(t, cf.predict_expectation(X).ravel(), e)
         assert ci_ph == ci_exp
-
 
     def test_crossval_for_cox_ph_with_normalizing_times(self, data_pred2, data_pred1):
         cf = CoxPHFitter()

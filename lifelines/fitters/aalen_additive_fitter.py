@@ -8,7 +8,7 @@ from scipy.integrate import trapz
 
 from lifelines.fitters import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
-    ridge_regression as lr, qth_survival_times, coalesce
+    ridge_regression as lr, qth_survival_times, pass_for_numeric_dtypes_or_raise
 
 from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import fill_between_steps
@@ -48,13 +48,13 @@ class AalenAdditiveFitter(BaseFitter):
         self.smoothing_penalizer = smoothing_penalizer
         self.nn_cumulative_hazard = nn_cumulative_hazard
 
-    def fit(self, dataframe, duration_col, event_col=None,
+    def fit(self, df, duration_col, event_col=None,
             timeline=None, id_col=None, show_progress=True):
         """
         Perform inference on the coefficients of the Aalen additive model.
 
         Parameters:
-            dataframe: a pandas dataframe, with covariates and a duration_col and a event_col.
+            df: a pandas dataframe, with covariates and a duration_col and a event_col.
 
                 static covariates:
                     one row per individual. duration_col refers to how long the individual was
@@ -90,11 +90,10 @@ class AalenAdditiveFitter(BaseFitter):
         Returns:
           self, with new methods like plot, smoothed_hazards_ and properties like cumulative_hazards_
         """
-
         if id_col is None:
-            self._fit_static(dataframe, duration_col, event_col, timeline, show_progress)
+            self._fit_static(df, duration_col, event_col, timeline, show_progress)
         else:
-            self._fit_varying(dataframe, duration_col, event_col, id_col, timeline, show_progress)
+            self._fit_varying(df, duration_col, event_col, id_col, timeline, show_progress)
 
         return self
 
@@ -142,6 +141,7 @@ class AalenAdditiveFitter(BaseFitter):
         T = pd.Series(df[duration_col].values, index=ids)
 
         df = df.set_index(id_col)
+        pass_for_numeric_dtypes_or_raise(df)
 
         ix = T.argsort()
         T, C = T.iloc[ix], C.iloc[ix]
@@ -234,6 +234,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         # each individual should have an ID of time of leaving study
         df = df.set_index([duration_col, id_col])
+        pass_for_numeric_dtypes_or_raise(df)
 
         # if no event_col is specified, assume all non-censorships
         if event_col is None:

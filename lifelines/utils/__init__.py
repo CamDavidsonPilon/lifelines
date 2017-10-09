@@ -924,3 +924,9 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
     if paircount == 0:
         raise ZeroDivisionError("No admissable pairs in the dataset.")
     return csum / paircount
+
+
+def pass_for_numeric_dtypes_or_raise(df):
+    nonnumeric_cols = df.select_dtypes(exclude=[np.number, bool]).columns.tolist()
+    if len(nonnumeric_cols) > 0:
+        raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
