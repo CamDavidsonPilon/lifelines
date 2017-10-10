@@ -81,7 +81,6 @@ class CoxPHFitter(BaseFitter):
 
         # Init number of ties
         tie_count = 0
-
         # Iterate backwards to utilize recursive relationship
         for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
             # Doing it like this to preserve shape
@@ -151,7 +150,7 @@ class CoxPHFitter(BaseFitter):
         else:
             return hessian, gradient
 
-    def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=1.,
+    def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=.5,
                          precision=10e-5, show_progress=True, include_likelihood=False):
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -191,12 +190,13 @@ class CoxPHFitter(BaseFitter):
         else:
             raise NotImplementedError("Only Efron is available.")
 
-        i = 1
+        i = 0
         converging = True
+
         # 50 iterations steps with N-R is a lot.
         # Expected convergence is ~10 steps
-        while converging and i < 50 and step_size > 0.001:
-
+        while converging and i < 50 and step_size > 0.0001:
+            i += 1
             if self.strata is None:
                 output = get_gradients(X.values, beta, T.values, E.values, include_likelihood=include_likelihood)
                 h, g = output[:2]
@@ -224,6 +224,9 @@ class CoxPHFitter(BaseFitter):
             # Save these as pending result
             hessian, gradient = h, g
 
+            if show_progress:
+                print("Iteration %d: norm_delta = %.5f" % (i, norm(delta)))
+
             if norm(delta) < precision:
                 converging = False
 
@@ -233,10 +236,6 @@ class CoxPHFitter(BaseFitter):
                 continue
 
             beta += delta
-
-            if ((i % 10) == 0) and show_progress:
-                print("Iteration %d: delta = %.5f" % (i, norm(delta)))
-            i += 1
 
         self._hessian_ = hessian
         self._score_ = gradient
@@ -248,7 +247,7 @@ class CoxPHFitter(BaseFitter):
 
     def fit(self, df, duration_col, event_col=None,
             show_progress=False, initial_beta=None, include_likelihood=False,
-            strata=None):
+            strata=None, step_size=0.5):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -305,7 +304,8 @@ class CoxPHFitter(BaseFitter):
 
         hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
                                          show_progress=show_progress,
-                                         include_likelihood=include_likelihood)
+                                         include_likelihood=include_likelihood,
+                                         step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
