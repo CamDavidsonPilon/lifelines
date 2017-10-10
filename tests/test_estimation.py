@@ -916,7 +916,7 @@ Concordance = 0.640""".strip().split()
         # coefs
         actual_coefs = cf.hazards_.values
         expected_coefs = np.array([[0.1596, 0.2484, 0.6567]])
-        npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=4)
+        npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=3)
 
     def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
