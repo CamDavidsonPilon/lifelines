@@ -475,7 +475,7 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
     assignments = np.array((n // k + 1) * list(range(1, k + 1)))
     assignments = assignments[:n]
 
-    testing_columns = df.columns.difference([duration_col, event_col])
+    testing_columns = df.columns.drop([duration_col, event_col])
 
     for i in range(1, k + 1):
 
