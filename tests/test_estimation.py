@@ -1073,9 +1073,37 @@ Concordance = 0.640""".strip().split()
                 cox.fit(rossi, 'week', 'arrest')
             except:
                 pass
-            assert len(w) == 1
+            assert len(w) == 3
             assert issubclass(w[-1].category, RuntimeWarning)
-            assert "variance" in str(w[-1].message)
+            assert "variance" in str(w[0].message)
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, rossi):
+        # check for a warning if we have complete seperation
+        cox = CoxPHFitter()
+        ix = rossi['arrest'] == 1
+        rossi.loc[ix, 'paro'] = 1
+        rossi.loc[~ix, 'paro'] = 0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                cox.fit(rossi, 'week', 'arrest')
+            except:
+                pass
+            assert len(w) == 2
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "Complete seperation" in str(w[-1].message)
+
+    @pytest.mark.xfail
+    def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
+        # this is known as complete seperation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
+        cp = CoxPHFitter()
+        ix = rossi['arrest'] == 1
+        rossi.loc[ix, 'paro'] = 1
+        rossi.loc[~ix, 'paro'] = 0
+        cp.fit(rossi, 'week', 'arrest', show_progress=True)
+        assert cp.summary.loc['paro', 'exp(coef)'] > 100
+        assert False
 
 
 class TestAalenAdditiveFitter():

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import warnings
 import numpy as np
 import pandas as pd
 
@@ -12,7 +11,7 @@ import scipy.stats as stats
 from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
-    pass_for_numeric_dtypes_or_raise
+    pass_for_numeric_dtypes_or_raise, check_low_var
 
 
 class CoxPHFitter(BaseFitter):
@@ -296,7 +295,7 @@ class CoxPHFitter(BaseFitter):
             del df[event_col]
 
         self.data = df if self.strata is None else df.reset_index()
-        self._check_values(df)
+        self._check_values(df, E)
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
         df = normalize(df, self._norm_mean, self._norm_std)
@@ -321,15 +320,13 @@ class CoxPHFitter(BaseFitter):
     def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
         return baseline_hazard_.cumsum()
 
-    def _check_values(self, X):
-        low_var = (X.var(0) < 10e-5)
-        if low_var.any():
-            cols = str(list(X.columns[low_var]))
-            warning_text = "Column(s) %s have very low variance.\
- This may harm convergence. Try dropping this redundant column before fitting\
- if convergence fails." % cols
-            warnings.warn(warning_text, RuntimeWarning)
-        pass_for_numeric_dtypes_or_raise(X)
+    @staticmethod
+    def _check_values(df, E):
+        deaths = E == 1
+        check_low_var(df)
+        check_low_var(df.loc[deaths], "Complete seperation possibly detected. ", " See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/")
+        check_low_var(df.loc[~deaths], "Complete seperation possibly detected. ", " See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/")
+        pass_for_numeric_dtypes_or_raise(df)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
@@ -557,14 +554,14 @@ class CoxPHFitter(BaseFitter):
             survival_df.columns = ['baseline survival']
         return survival_df
 
-    def plot(self, standardized=False):
+    def plot(self, standardized=False, **kwargs):
         """
         standardized: standardize each estimated coefficient and confidence interval endpoints by the standard error of the estimate.
 
         """
         from matplotlib import pyplot as plt
 
-        ax = plt.figure().add_subplot(111)
+        ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
         yaxis_locations = range(len(self.hazards_.columns))
 
         summary = self.summary

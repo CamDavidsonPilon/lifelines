@@ -930,3 +930,13 @@ def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = df.select_dtypes(exclude=[np.number, bool]).columns.tolist()
     if len(nonnumeric_cols) > 0:
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
+
+
+def check_low_var(X, prescript="", postscript=""):
+    low_var = (X.var(0) < 10e-5)
+    if low_var.any():
+        cols = str(list(X.columns[low_var]))
+        warning_text = "%sColumn(s) %s have very low variance. \
+This may harm convergence. Try dropping this redundant column before fitting \
+if convergence fails.%s" % (prescript, cols, postscript)
+        warnings.warn(warning_text, RuntimeWarning)
