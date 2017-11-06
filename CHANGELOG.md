@@ -1,5 +1,10 @@
 ### Changelogs
 
+#### 0.12.0
+ - removes  `include_likelihood` from `CoxPHFitter.fit` - it was not slowing things down much (empirically), and often I wanted it for debugging (I suppose others do too). It's also another exit condition, so we many exit from the NR iterations faster. 
+ - added `step_size` param to `CoxPHFitter.fit` - the default is good, but for extremely large or small datasets this may want to be set manually.
+ - 
+
 #### 0.11.3
  - No longer support matplotlib 1.X
  - Adding `times` argument to `CoxPHFitter`'s `predict_survival_function` and `predict_cumulative_hazard` to predict the estimates at, instead uses the default times of observation or censorship.
