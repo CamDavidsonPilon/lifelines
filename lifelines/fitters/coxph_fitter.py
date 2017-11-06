@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -226,6 +227,7 @@ class CoxPHFitter(BaseFitter):
             elif i >= 50:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
+                warnings.warn("Newton-Rhapson failed to converge sufficiently in 50 steps.", RuntimeWarning)
                 converging = False
             elif step_size <= 0.0001:
                 converging = False

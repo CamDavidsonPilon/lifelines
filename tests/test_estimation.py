@@ -1100,10 +1100,15 @@ Concordance = 0.640""".strip().split()
         cp = CoxPHFitter()
         ix = rossi['arrest'] == 1
         rossi.loc[ix, 'paro'] = 1
-        rossi.loc[~ix, 'paro'] = 0
         cp.fit(rossi, 'week', 'arrest', show_progress=True)
-        assert cp.summary.loc['paro', 'exp(coef)'] > 100
-        assert False
+        assert cp.summary.loc['paro', 'exp(coef)'] < 100
+
+    @pytest.mark.xfail
+    def test_what_happens_with_colinear_inputs(self, rossi):
+        cp = CoxPHFitter()
+        rossi['duped'] = rossi['paro'] + rossi['prio']
+        cp.fit(rossi, 'week', 'arrest', show_progress=True)
+        assert cp.summary.loc['duped', 'se(coef)'] < 100
 
 
 class TestAalenAdditiveFitter():
