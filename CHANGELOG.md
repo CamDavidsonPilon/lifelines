@@ -3,6 +3,7 @@
 #### 0.12.0
  - removes  `include_likelihood` from `CoxPHFitter.fit` - it was not slowing things down much (empirically), and often I wanted it for debugging (I suppose others do too). It's also another exit condition, so we many exit from the NR iterations faster. 
  - added `step_size` param to `CoxPHFitter.fit` - the default is good, but for extremely large or small datasets this may want to be set manually.
+ - added a warning to `CoxPHFitter` to check for complete seperation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
  - 
 
 #### 0.11.3
