@@ -681,7 +681,7 @@ Concordance = 0.640""".strip().split()
 
     def test_log_likelihood_is_available_in_output(self, data_nus):
         cox = CoxPHFitter()
-        cox.fit(data_nus, duration_col='t', event_col='E', include_likelihood=True)
+        cox.fit(data_nus, duration_col='t', event_col='E')
         assert abs(cox._log_likelihood - -12.7601409152) < 0.001
 
     def test_efron_computed_by_hand_examples(self, data_nus):
@@ -702,7 +702,7 @@ Concordance = 0.640""".strip().split()
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
-        l, u = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E)
         l = -l
 
         assert np.abs(l[0][0] - 77.13) < 0.05
@@ -710,7 +710,7 @@ Concordance = 0.640""".strip().split()
         beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
 
-        l, u = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E)
         l = -l
 
         assert np.abs(l[0][0] - 72.83) < 0.05
@@ -718,7 +718,7 @@ Concordance = 0.640""".strip().split()
         beta = beta + u / l
         assert np.abs(beta - -0.0325) < 0.01
 
-        l, u = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E)
         l = -l
 
         assert np.abs(l[0][0] - 72.70) < 0.01
@@ -890,7 +890,7 @@ Concordance = 0.640""".strip().split()
         """
         expected = np.array([[-0.3355, -0.0590, 0.1002]])
         cf = CoxPHFitter()
-        cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'])
+        cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'], show_progress=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
 
     def test_penalized_output_against_R(self, rossi):
@@ -970,7 +970,7 @@ Concordance = 0.640""".strip().split()
         """
 
         cp = CoxPHFitter()
-        cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'], include_likelihood=True)
+        cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
 
         npt.assert_almost_equal(cp.summary['coef'].values, [-0.335, -0.059, 0.100], decimal=3)
         assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
@@ -1073,9 +1073,42 @@ Concordance = 0.640""".strip().split()
                 cox.fit(rossi, 'week', 'arrest')
             except:
                 pass
-            assert len(w) == 1
+            assert len(w) == 3
             assert issubclass(w[-1].category, RuntimeWarning)
-            assert "variance" in str(w[-1].message)
+            assert "variance" in str(w[0].message)
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, rossi):
+        # check for a warning if we have complete seperation
+        cox = CoxPHFitter()
+        ix = rossi['arrest'] == 1
+        rossi.loc[ix, 'paro'] = 1
+        rossi.loc[~ix, 'paro'] = 0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                cox.fit(rossi, 'week', 'arrest')
+            except:
+                pass
+            assert len(w) == 2
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "Complete seperation" in str(w[-1].message)
+
+    @pytest.mark.xfail
+    def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
+        # this is known as complete seperation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
+        cp = CoxPHFitter()
+        ix = rossi['arrest'] == 1
+        rossi.loc[ix, 'paro'] = 1
+        cp.fit(rossi, 'week', 'arrest', show_progress=True)
+        assert cp.summary.loc['paro', 'exp(coef)'] < 100
+
+    @pytest.mark.xfail
+    def test_what_happens_with_colinear_inputs(self, rossi):
+        cp = CoxPHFitter()
+        rossi['duped'] = rossi['paro'] + rossi['prio']
+        cp.fit(rossi, 'week', 'arrest', show_progress=True)
+        assert cp.summary.loc['duped', 'se(coef)'] < 100
 
 
 class TestAalenAdditiveFitter():

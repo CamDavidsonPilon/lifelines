@@ -60,7 +60,7 @@ class KaplanMeierFitter(UnivariateFitter):
             n = self.event_table.shape[0]
             net_population = (self.event_table['entrance'] - self.event_table['removed']).cumsum()
             if net_population.iloc[:int(n / 2)].min() == 0:
-                ix = net_population.iloc[:int(n / 2)].argmin()
+                ix = net_population.iloc[:int(n / 2)].idxmin()
                 raise StatError("""There are too few early truncation times and too many events. S(t)==0 for all t>%.1f. Recommend BreslowFlemingHarringtonFitter.""" % ix)
 
         # estimation

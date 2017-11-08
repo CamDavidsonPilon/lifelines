@@ -421,7 +421,7 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
     Concordance = 0.640
     """
 
-To access the coefficients and the baseline hazard, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
+To access the coefficients and the baseline hazard, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. The likelihood is available too using ``cph._log_likelihood`` After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
 
 .. code:: python
     

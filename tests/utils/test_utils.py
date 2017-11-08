@@ -248,6 +248,18 @@ def test_group_survival_table_from_events_works_with_series():
     npt.assert_array_equal(ug, np.array([3, 2]))
 
 
+def test_survival_table_from_events_will_collapse_if_asked():
+    T, C = np.array([1, 3, 4, 5]), np.array([True, True, True, True])
+    table = utils.survival_table_from_events(T, C, collapse=True)
+    assert table.index.tolist() == [pd.Interval(0, 3.5089999999999999, closed='right'), pd.Interval(3.5089999999999999,  7.0179999999999998, closed='right')]
+
+
+def test_survival_table_from_events_will_collapse_to_desired_bins():
+    T, C = np.array([1, 3, 4, 5]), np.array([True, True, True, True])
+    table = utils.survival_table_from_events(T, C, collapse=True, intervals=[0, 4, 8])
+    assert table.index.tolist() == [pd.Interval(0, 4, closed='right'), pd.Interval(4,  8, closed='right')]
+
+
 def test_cross_validator_returns_k_results():
     cf = CoxPHFitter()
     results = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col='T', event_col='E', k=3)

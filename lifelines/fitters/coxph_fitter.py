@@ -12,7 +12,7 @@ import scipy.stats as stats
 from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
-    pass_for_numeric_dtypes_or_raise
+    pass_for_numeric_dtypes_or_raise, check_low_var
 
 
 class CoxPHFitter(BaseFitter):
@@ -47,12 +47,10 @@ class CoxPHFitter(BaseFitter):
         self.penalizer = penalizer
         self.strata = strata
 
-    def _get_efron_values(self, X, beta, T, E, include_likelihood=False):
+    def _get_efron_values(self, X, beta, T, E):
         """
         Calculates the first and second order vector differentials,
-        with respect to beta. If 'include_likelihood' is True, then
-        the log likelihood is also calculated. This is omitted by default
-        to speed up the fit.
+        with respect to beta.
 
         Note that X, T, E are assumed to be sorted on T!
 
@@ -65,7 +63,7 @@ class CoxPHFitter(BaseFitter):
         Returns:
             hessian: (d, d) numpy array,
             gradient: (1, d) numpy array
-            log_likelihood: double, if include_likelihood=True
+            log_likelihood: double
         """
 
         n, d = X.shape
@@ -130,13 +128,11 @@ class CoxPHFitter(BaseFitter):
 
                 hessian -= (a1 - a2)
 
-                if include_likelihood:
-                    log_lik -= np.log(denom).ravel()[0]
+                log_lik -= np.log(denom).ravel()[0]
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
-            if include_likelihood:
-                log_lik += dot(x_tie_sum, beta).ravel()[0]
+            log_lik += dot(x_tie_sum, beta).ravel()[0]
 
             # reset tie values
             tie_count = 0
@@ -145,13 +141,10 @@ class CoxPHFitter(BaseFitter):
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
 
-        if include_likelihood:
-            return hessian, gradient, log_lik
-        else:
-            return hessian, gradient
+        return hessian, gradient, log_lik
 
     def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=.5,
-                         precision=10e-5, show_progress=True, include_likelihood=False):
+                         precision=10e-6, show_progress=True):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -166,7 +159,6 @@ class CoxPHFitter(BaseFitter):
             step_size: float > 0.001 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
-            include_likelihood: saves the final log-likelihood to the CoxPHFitter under _log_likelihood.
 
         Returns:
             beta: (1,d) numpy array.
@@ -192,25 +184,25 @@ class CoxPHFitter(BaseFitter):
 
         i = 0
         converging = True
+        ll = 0
+        previous_ll = 0
 
-        # 50 iterations steps with N-R is a lot.
-        # Expected convergence is ~10 steps
-        while converging and i < 50 and step_size > 0.0001:
+        while converging:
             i += 1
             if self.strata is None:
-                output = get_gradients(X.values, beta, T.values, E.values, include_likelihood=include_likelihood)
-                h, g = output[:2]
+                output = get_gradients(X.values, beta, T.values, E.values)
+                h, g, ll = output
             else:
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for strata in np.unique(X.index):
                     stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
-                    output = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, include_likelihood=include_likelihood)
-                    _h, _g = output[:2]
+                    output = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values)
+                    _h, _g, _ll = output
                     g += _g
                     h += _h
-                    ll += output[2] if include_likelihood else 0
+                    ll += _ll
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -225,28 +217,40 @@ class CoxPHFitter(BaseFitter):
             hessian, gradient = h, g
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f" % (i, norm(delta)))
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
 
+            # convergence criteria
             if norm(delta) < precision:
+                converging = False
+            elif abs(ll - previous_ll) < precision:
+                converging = False
+            elif i >= 50:
+                # 50 iterations steps with N-R is a lot.
+                # Expected convergence is ~10 steps
+                warnings.warn("Newton-Rhapson failed to converge sufficiently in 50 steps.", RuntimeWarning)
+                converging = False
+            elif step_size <= 0.0001:
                 converging = False
 
             # Only allow small steps
             if norm(delta) > 10:
                 step_size *= 0.5
-                continue
+
+            # anneal the step size down.
+            step_size *= 0.99
 
             beta += delta
+            previous_ll = ll
 
         self._hessian_ = hessian
         self._score_ = gradient
-        if include_likelihood:
-            self._log_likelihood = output[-1] if self.strata is None else ll
+        self._log_likelihood = ll
         if show_progress:
             print("Convergence completed after %d iterations." % (i))
         return beta
 
     def fit(self, df, duration_col, event_col=None,
-            show_progress=False, initial_beta=None, include_likelihood=False,
+            show_progress=False, initial_beta=None,
             strata=None, step_size=0.5):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
@@ -265,8 +269,6 @@ class CoxPHFitter(BaseFitter):
              diagnostics.
           initial_beta: initialize the starting point of the iterative
              algorithm. Default is the zero vector.
-          include_likelihood: saves the final log-likelihood to the CoxPHFitter under
-             the property _log_likelihood.
           strata: specify a list of columns to use in stratification. This is useful if a
              catagorical covariate does not obey the proportional hazard assumption. This
              is used similar to the `strata` expression in R.
@@ -294,8 +296,9 @@ class CoxPHFitter(BaseFitter):
             E = df[event_col]
             del df[event_col]
 
+        self._check_values(df, E)
+        df = df.astype(float)
         self.data = df if self.strata is None else df.reset_index()
-        self._check_values(df)
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
         df = normalize(df, self._norm_mean, self._norm_std)
@@ -304,7 +307,6 @@ class CoxPHFitter(BaseFitter):
 
         hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
                                          show_progress=show_progress,
-                                         include_likelihood=include_likelihood,
                                          step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
@@ -321,15 +323,13 @@ class CoxPHFitter(BaseFitter):
     def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
         return baseline_hazard_.cumsum()
 
-    def _check_values(self, X):
-        low_var = (X.var(0) < 10e-5)
-        if low_var.any():
-            cols = str(list(X.columns[low_var]))
-            warning_text = "Column(s) %s have very low variance.\
- This may harm convergence. Try dropping this redundant column before fitting\
- if convergence fails." % cols
-            warnings.warn(warning_text, RuntimeWarning)
-        pass_for_numeric_dtypes_or_raise(X)
+    @staticmethod
+    def _check_values(df, E):
+        deaths = E == 1
+        check_low_var(df)
+        check_low_var(df.loc[deaths], "Complete seperation possibly detected. ", " See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/")
+        check_low_var(df.loc[~deaths], "Complete seperation possibly detected. ", " See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/")
+        pass_for_numeric_dtypes_or_raise(df)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
@@ -557,14 +557,14 @@ class CoxPHFitter(BaseFitter):
             survival_df.columns = ['baseline survival']
         return survival_df
 
-    def plot(self, standardized=False):
+    def plot(self, standardized=False, **kwargs):
         """
         standardized: standardize each estimated coefficient and confidence interval endpoints by the standard error of the estimate.
 
         """
         from matplotlib import pyplot as plt
 
-        ax = plt.figure().add_subplot(111)
+        ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
         yaxis_locations = range(len(self.hazards_.columns))
 
         summary = self.summary
