@@ -149,7 +149,9 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
 def survival_table_from_events(death_times, event_observed, birth_times=None,
                                columns=["removed", "observed", "censored", "entrance", "at_risk"],
-                               weights=None):
+                               weights=None,
+                               collapse=False,
+                               intervals=None):
     """
     Parameters:
         death_times: (n,) array of event times
@@ -160,8 +162,11 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
         columns: a 3-length array to call the, in order, removed individuals, observed deaths
           and censorships.
         weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
+        collapse: Default False. If True, collapses survival table into lifetable to show events in interval bins
+        intervals: Default None, otherwise a list/(n,1) array of interval edge measures. If left as None
+          while collapse=True, then Freedman-Diaconis rule for histogram bins will be used to determine intervals.
     Returns:
-        Pandas DataFrame with index as the unique times in event_times. The columns named
+        Pandas DataFrame with index as the unique times or intervals in event_times. The columns named
         'removed' refers to the number of individuals who were removed from the population
         by the end of the period. The column 'observed' refers to the number of removed
         individuals who were observed to have died (i.e. not censored.) The column
@@ -170,6 +175,7 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
 
     Example:
 
+        Uncollapsed
                   removed  observed  censored  entrance   at_risk
         event_at
         0               0         0         0        11        11
@@ -178,6 +184,17 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
         9               3         3         0         0         8
         13              3         3         0         0         5
         15              2         2         0         0         2
+
+        Collapsed
+                 removed observed censored at_risk
+                     sum      sum      sum     max
+        event_at
+        (0, 2]        34       33        1     312
+        (2, 4]        84       42       42     278
+        (4, 6]        64       17       47     194
+        (6, 8]        63       16       47     130
+        (8, 10]       35       12       23      67
+        (10, 12]      24        5       19      32
 
     """
     removed, observed, censored, entrance, at_risk = columns
@@ -203,6 +220,28 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
     births_table = births.groupby('event_at').sum()
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
+
+    # group by intervals
+    if collapse:
+        event_table = event_table.reset_index()
+
+        # use Freedman-Diaconis rule to determine bin size if user doesn't define intervals
+        if intervals is None:
+            event_max = np.max(event_table['event_at'])
+
+            # need interquartile range for bin width
+            q75, q25 = np.percentile(event_table['event_at'], [75, 25])
+            event_iqr = q75 - q25
+
+            bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1/3))
+
+            intervals = np.arange(0, event_max + bin_width, bin_width)
+
+        event_table = event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed':['sum'],
+                                                                                           'observed':['sum'],
+                                                                                           'censored':['sum'],
+                                                                                           'at_risk':['max']})
+
     return event_table.astype(int)
 
 
