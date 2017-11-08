@@ -144,7 +144,7 @@ class CoxPHFitter(BaseFitter):
         return hessian, gradient, log_lik
 
     def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=.5,
-                         precision=10e-6, show_progress=True):
+                         precision=10e-5, show_progress=True):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
