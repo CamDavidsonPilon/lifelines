@@ -12,7 +12,7 @@ import scipy.stats as stats
 from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
-    pass_for_numeric_dtypes_or_raise, check_low_var
+    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce
 
 
 class CoxPHFitter(BaseFitter):
@@ -282,10 +282,9 @@ class CoxPHFitter(BaseFitter):
         # Sort on time
         df.sort_values(by=duration_col, inplace=True)
 
-        # remove strata coefs
-        self.strata = strata
-        if strata is not None:
-            df = df.set_index(strata)
+        self.strata = coalesce(strata, self.strata)
+        if self.strata is not None:
+            df = df.set_index(self.strata)
 
         # Extract time and event
         T = df[duration_col]

@@ -988,6 +988,18 @@ Concordance = 0.640""".strip().split()
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].loc[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=2)
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=2)
 
+    def test_strata_from_init_is_used_in_fit_later(self, rossi):
+        strata = ['race', 'paro', 'mar']
+        cp_with_strata_in_init = CoxPHFitter(strata=strata)
+        cp_with_strata_in_init.fit(rossi, 'week', 'arrest')
+        assert cp_with_strata_in_init.strata == strata
+
+        cp_with_strata_in_fit = CoxPHFitter()
+        cp_with_strata_in_fit.fit(rossi, 'week', 'arrest', strata=strata)
+        assert cp_with_strata_in_fit.strata == strata
+
+        assert cp_with_strata_in_init._log_likelihood == cp_with_strata_in_fit._log_likelihood
+
     def test_baseline_survival_is_the_same_indp_of_location(self, regression_dataset):
         df = regression_dataset.copy()
         cp1 = CoxPHFitter()
