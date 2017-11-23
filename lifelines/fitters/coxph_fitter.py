@@ -323,9 +323,8 @@ class CoxPHFitter(BaseFitter):
         self._train_concordance = concordance_index(self.durations,
                                                     -self.predict_partial_hazard(self.data).values.ravel(),
                                                     self.event_observed)
-        self._mean_covariates = self.data.mean(0).to_frame().T
         self._train_columns = self.data.columns
-        self._train_log_partial_hazard = self.predict_log_partial_hazard(self._mean_covariates)
+        self._train_log_partial_hazard = self.predict_log_partial_hazard(self.data.mean(0).to_frame().T)
         self.data = None
         return self
 
