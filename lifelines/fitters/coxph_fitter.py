@@ -298,8 +298,9 @@ class CoxPHFitter(BaseFitter):
 
         self._check_values(df, E)
         df = df.astype(float)
-        self.data = df if self.strata is None else df.reset_index()
-        self._n_examples = self.data.shape[0]
+        original_df = df if self.strata is None else df.reset_index()
+
+        self._n_examples = df.shape[0]
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
         df = normalize(df, self._norm_mean, self._norm_std)
@@ -321,11 +322,11 @@ class CoxPHFitter(BaseFitter):
         self.baseline_survival_ = self._compute_baseline_survival()
 
         self._train_concordance = concordance_index(self.durations,
-                                                    -self.predict_partial_hazard(self.data).values.ravel(),
+                                                    -self.predict_partial_hazard(original_df).values.ravel(),
                                                     self.event_observed)
-        self._train_columns = self.data.columns
-        self._train_log_partial_hazard = self.predict_log_partial_hazard(self.data.mean(0).to_frame().T)
-        self.data = None
+
+        self._train_log_partial_hazard = self.predict_log_partial_hazard(original_df.mean(0).to_frame().T)
+
         return self
 
     def _compute_baseline_cumulative_hazard(self, baseline_hazard_):

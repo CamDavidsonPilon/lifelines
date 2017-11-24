@@ -740,7 +740,7 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(data_pred2, 't', 'E')
 
-        X = data_pred2[cf._train_columns]
+        X = data_pred2[data_pred2.columns.difference(['t', 'E'])]
         assert_frame_equal(
             cf.predict_partial_hazard(np.array(X)),
             cf.predict_partial_hazard(X)
