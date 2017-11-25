@@ -215,7 +215,6 @@ class AalenAdditiveFitter(BaseFitter):
         else:
             self.timeline = self.hazards_.index.values.astype(float)
 
-        self.data = dataframe
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
@@ -306,7 +305,6 @@ class AalenAdditiveFitter(BaseFitter):
         else:
             self.timeline = self.hazards_.index.values.astype(float)
 
-        self.data = wp
 
         self.durations = T
         self.event_observed = C
