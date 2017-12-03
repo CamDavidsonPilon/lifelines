@@ -60,7 +60,7 @@ There is a [Gitter](https://gitter.im/python-lifelines/) channel available. The 
 
 ### Citing lifelines
 
-You can use this badge below to generate a DOI and reference text for the lastest releated version of lifelines:
+You can use this badge below to generate a DOI and reference text for the latest related version of lifelines:
 
  [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
 

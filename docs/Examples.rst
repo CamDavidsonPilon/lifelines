@@ -176,7 +176,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
 
 
 
-Plotting multiple figures on an plot 
+Plotting multiple figures on a plot 
 ##############################################
 
 When `.plot` is called, an `axis` object is returned which can be passed into future calls of `.plot`:

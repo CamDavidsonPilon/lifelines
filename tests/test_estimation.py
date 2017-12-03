@@ -747,7 +747,7 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(data_pred2, 't', 'E')
 
-        X = data_pred2[cf.data.columns]
+        X = data_pred2[data_pred2.columns.difference(['t', 'E'])]
         assert_frame_equal(
             cf.predict_partial_hazard(np.array(X)),
             cf.predict_partial_hazard(X)
@@ -773,9 +773,7 @@ Concordance = 0.640""".strip().split()
         cf.fit(data_pred2, duration_col='t', event_col='E')
 
         # Internal training set
-        ci_trn = concordance_index(cf.durations,
-                                   -cf.predict_partial_hazard(cf.data).values,
-                                   cf.event_observed)
+        ci_trn = cf._train_concordance
         # New data should normalize in the exact same way
         ci_org = concordance_index(data_pred2['t'],
                                    -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).values,
