@@ -6,7 +6,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 
-from lifelines.utils import group_survival_table_from_events
+from lifelines.utils import group_survival_table_from_events, significance_code
 
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con,
@@ -226,7 +226,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     # compute the p-values and tests
     test_result, p_value = chisq_test(U, n_groups - 1, alpha)
 
-    return StatisticalResult(test_result, p_value, U, t_0=t_0, test='logrank',
+    return StatisticalResult(test_result, p_value, U, t_0=t_0,
                              alpha=alpha, null_distribution='chi squared',
                              df=n_groups - 1, **kwargs)
 
@@ -236,8 +236,6 @@ class StatisticalResult(object):
     def __init__(self, test_result, p_value, test_statistic, **kwargs):
         self.p_value = p_value
         self.test_statistic = test_statistic
-        self.test_result = "Reject Null" if test_result else "Cannot Reject Null"
-        self.is_significant = test_result is True
 
         for kw, value in kwargs.items():
             setattr(self, kw, value)
@@ -249,27 +247,27 @@ class StatisticalResult(object):
 
     @property
     def summary(self):
-        cols = ['p-value', 'test_statistic', 'test_result', 'is_significant']
-        return pd.DataFrame([[self.p_value, self.test_statistic, self.test_result, self.is_significant]], columns=cols)
+        cols = ['test_statistic', 'p']
+        return pd.DataFrame([[self.test_statistic, self.p_value]], columns=cols)
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
 
     def __unicode__(self):
-        HEADER = "   __ p-value ___|__ test statistic __|____ test result ____|__ is significant __"
         meta_data = self._pretty_print_meta_data(self._kwargs)
+        df = self.summary
+        df[''] = significance_code(self.p_value)
+
         s = ""
-        s += "Results\n"
-        s += meta_data + "\n"
-        s += HEADER + "\n"
-        s += '{:>16.5f} | {:>18.3f} |  {: ^19}| {: ^18}'.format(self.p_value, self.test_statistic, self.test_result, 'True' if self.is_significant else 'False')
+        s += "\n" + meta_data + "\n\n"
+        s += df.to_string(float_format=lambda f: '{:4.4f}'.format(f), index=False)
+
+        s += '\n---'
+        s += "\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 "
         return s
 
     def _pretty_print_meta_data(self, dictionary):
-        s = ""
-        for k, v in dictionary.items():
-            s += "   " + str(k).replace('_', ' ') + ": " + str(v) + "\n"
-        return s
+        return ", ".join([str(k) + "=" + str(v) for k, v in dictionary.items()])
 
 
 def chisq_test(U, degrees_freedom, alpha):

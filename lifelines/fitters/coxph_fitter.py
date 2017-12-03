@@ -279,11 +279,13 @@ class CoxPHFitter(BaseFitter):
 
         """
         df = df.copy()
+
         # Sort on time
-        df.sort_values(by=duration_col, inplace=True)
+        df = df.sort_values(by=duration_col)
 
         self.strata = coalesce(strata, self.strata)
         if self.strata is not None:
+            original_index = df.index.copy()
             df = df.set_index(self.strata)
 
         # Extract time and event
@@ -297,7 +299,16 @@ class CoxPHFitter(BaseFitter):
 
         self._check_values(df, E)
         df = df.astype(float)
-        self.data = df if self.strata is None else df.reset_index()
+
+        # save fitting data for later
+        self.data = df
+        self.durations = T.copy()
+        self.event_observed = E.copy()
+        if self.strata:
+            self.durations.index = original_index
+            self.event_observed.index = original_index
+        self.event_observed = self.event_observed.astype(bool)
+
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
         df = normalize(df, self._norm_mean, self._norm_std)
@@ -311,12 +322,13 @@ class CoxPHFitter(BaseFitter):
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self.durations = T
-        self.event_observed = E
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df * self._norm_std + self._norm_mean, T, E)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(self.baseline_hazard_)
         self.baseline_survival_ = self._compute_baseline_survival()
+        self.score_ = concordance_index(self.durations,
+                                        -self.predict_partial_hazard(self.data).values.ravel(),
+                                        self.event_observed)
         return self
 
     def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
@@ -391,9 +403,7 @@ class CoxPHFitter(BaseFitter):
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
         print("Concordance = {:.3f}"
-              .format(concordance_index(self.durations,
-                                        -self.predict_partial_hazard(self.data).values.ravel(),
-                                        self.event_observed)))
+              .format(self.score_))
         return
 
     def predict_partial_hazard(self, X):
