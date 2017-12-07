@@ -1,5 +1,10 @@
 ### Changelogs
 
+#### 0.13.0
+ - removes `is_significant` and `test_result` from `StatisticalResult`. Users can instead choose their significance level by comparing to `p_value`. The string representation of this class has changed aswell.
+ - `CoxPHFitter` and `AalenAdditiveFitter` now have a `score_` property that is the concordance-index of the dataset to the fitted model.
+ - `CoxPHFitter` and `AalenAdditiveFitter` now longer have the `data` property. It was an _almost_ duplicate of the training data, but was causing the model to be very large when serialized.
+
 #### 0.12.0
  - removes  `include_likelihood` from `CoxPHFitter.fit` - it was not slowing things down much (empirically), and often I wanted it for debugging (I suppose others do too). It's also another exit condition, so we many exit from the NR iterations faster. 
  - added `step_size` param to `CoxPHFitter.fit` - the default is good, but for extremely large or small datasets this may want to be set manually.

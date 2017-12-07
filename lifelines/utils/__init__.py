@@ -432,7 +432,10 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
 
 
 def coalesce(*args):
-    return next(s for s in args if s is not None)
+    for arg in args:
+        if arg is not None:
+            return arg
+    return None
 
 
 def inv_normal_cdf(p):

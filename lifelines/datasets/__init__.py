@@ -299,7 +299,6 @@ def load_g3(**kwargs):
     """
     return load_dataset('g3.csv', **kwargs)
 
-
 def load_stanford_heart_transplants(**kwargs):
     """
     This is a classic dataset for survival regression with time
@@ -321,3 +320,27 @@ def load_stanford_heart_transplants(**kwargs):
 
     """
     return load_dataset('stanford_heart.csv', **kwargs)
+
+def load_gbsg2(**kwargs):
+    """
+    A data frame containing the observations from the GBSG2 study of 686 women. 
+
+    W. Sauerbrei and P. Royston (1999). Building multivariable prognostic and diagnostic models: transformation of the predictors by using fractional polynomials. Journal of the Royal Statistics Society Series A, Volume 162(1), 71–94
+
+    M. Schumacher, G. Basert, H. Bojar, K. Huebner, M. Olschewski, W. Sauerbrei, C. Schmoor, C. Beyerle, R.L.A. Neumann and H.F. Rauschecker for the German Breast Cancer Study Group (1994), Randomized 2 × 2 trial evaluating hormonal treatment and the duration of chemotherapy in node- positive breast cancer patients. Journal of Clinical Oncology, 12, 2086–2093
+    
+    Size: (686,10)
+    Example:
+        horTh           yes
+        age             56
+        menostat        Post
+        tsize           12
+        tgrade          II
+        pnodes          7
+        progrec         61
+        estrec          77
+        time            2018
+        cens            1
+    """
+    return load_dataset('gbsg2.csv', **kwargs)
+

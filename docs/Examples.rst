@@ -41,18 +41,16 @@ compares whether the "death" generation process of the two populations are equal
     results.print_summary()
 
     """
-    Results
-        df: 1
-       alpha: 0.95
-       t 0: -1
-       test: logrank
-       null distribution: chi squared
+   df=1, alpha=0.95, t0=-1, test=logrank, null distribution=chi squared
 
-       __ p-value ___|__ test statistic __|____ test results ____|__ significant __
-             0.46759 |              0.528 |  Cannot Reject Null  |      False
+   test_statistic        p
+            3.528  0.00034  ** 
+
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
    """
 
-   print results.p_value     # 0.46759 
+   print results.p_value        # 0.46759 
    print results.test_statistic # 0.528
    print results.is_significant # False
 
@@ -178,7 +176,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
 
 
 
-Plotting multiple figures on an plot 
+Plotting multiple figures on a plot 
 ##############################################
 
 When `.plot` is called, an `axis` object is returned which can be passed into future calls of `.plot`:
@@ -428,3 +426,5 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
  - Adding a very small ``penalizer_coef`` significantly changes the results. This probably means that the step size is too large. Try decreasing it, and returning the ``penalizer_coef`` term to 0. 
 
  - ``LinAlgError: Singular matrix`` is thrown. This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset. 
+
+ - If using the ``strata`` arugment, make sure your stratification group sizes are not too small. 

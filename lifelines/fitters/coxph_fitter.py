@@ -279,11 +279,15 @@ class CoxPHFitter(BaseFitter):
 
         """
         df = df.copy()
-        # Sort on time
-        df.sort_values(by=duration_col, inplace=True)
 
+        # Sort on time
+        df = df.sort_values(by=duration_col)
+        
+        original_df = df
+        self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
         if self.strata is not None:
+            original_index = df.index.copy()
             df = df.set_index(self.strata)
 
         # Extract time and event
@@ -297,7 +301,15 @@ class CoxPHFitter(BaseFitter):
 
         self._check_values(df, E)
         df = df.astype(float)
-        self.data = df if self.strata is None else df.reset_index()
+        
+        # save fitting data for later
+        self.durations = T.copy()
+        self.event_observed = E.copy()
+        if self.strata is not None:
+            self.durations.index = original_index
+            self.event_observed.index = original_index
+        self.event_observed = self.event_observed.astype(bool)
+
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
         df = normalize(df, self._norm_mean, self._norm_std)
@@ -311,12 +323,14 @@ class CoxPHFitter(BaseFitter):
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self.durations = T
-        self.event_observed = E
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df * self._norm_std + self._norm_mean, T, E)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(self.baseline_hazard_)
         self.baseline_survival_ = self._compute_baseline_survival()
+        self.score_ = concordance_index(self.durations,
+                                        -self.predict_partial_hazard(self.data).values.ravel(),
+                                        self.event_observed)
+        self._train_log_partial_hazard = self.predict_log_partial_hazard(original_df.mean(0).to_frame().T)
         return self
 
     def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
@@ -382,7 +396,7 @@ class CoxPHFitter(BaseFitter):
         df[''] = [significance_code(p) for p in df['p']]
 
         # Print information about data first
-        print('n={}, number of events={}'.format(self.data.shape[0],
+        print('n={}, number of events={}'.format(self._n_examples,
                                                  np.where(self.event_observed)[0].shape[0]),
               end='\n\n')
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
@@ -390,10 +404,7 @@ class CoxPHFitter(BaseFitter):
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
-        print("Concordance = {:.3f}"
-              .format(concordance_index(self.durations,
-                                        -self.predict_partial_hazard(self.data).values.ravel(),
-                                        self.event_observed)))
+        print("Concordance = {:.3f}".format(self.score_))
         return
 
     def predict_partial_hazard(self, X):
@@ -443,8 +454,8 @@ class CoxPHFitter(BaseFitter):
         Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
         of R's predict.coxph. Equal to \beta X - \beta \bar{X}
         """
-        mean_covariates = self.data.mean(0).to_frame().T
-        return self.predict_log_partial_hazard(X) - self.predict_log_partial_hazard(mean_covariates).squeeze()
+
+        return self.predict_log_partial_hazard(X) - self._train_log_partial_hazard.squeeze()
 
     def predict_cumulative_hazard(self, X, times=None):
         """

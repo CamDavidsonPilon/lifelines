@@ -615,7 +615,7 @@ class TestRegressionFitters():
             'categoryb_': pd.Series(['a', 'b', 'a'], dtype='category')
         })
 
-        for fitter in regression_models:
+        for fitter in [CoxPHFitter(), AalenAdditiveFitter()]:
             for subset in [
                 ['t', 'categorya_'],
                 ['t', 'categoryb_'],
@@ -631,6 +631,13 @@ class TestRegressionFitters():
                 ['t', 'uint8_'],
             ]:
                 fitter.fit(df[subset], duration_col='t')
+
+    def test_regression_model_has_score_(self, regression_models, rossi):
+
+        for fitter in regression_models:
+            assert not hasattr(fitter, 'score_')
+            fitter.fit(rossi, duration_col='week', event_col='arrest')
+            assert hasattr(fitter, 'score_')
 
 
 class TestCoxPHFitter():
@@ -740,7 +747,7 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(data_pred2, 't', 'E')
 
-        X = data_pred2[cf.data.columns]
+        X = data_pred2[data_pred2.columns.difference(['t', 'E'])]
         assert_frame_equal(
             cf.predict_partial_hazard(np.array(X)),
             cf.predict_partial_hazard(X)
@@ -766,9 +773,7 @@ Concordance = 0.640""".strip().split()
         cf.fit(data_pred2, duration_col='t', event_col='E')
 
         # Internal training set
-        ci_trn = concordance_index(cf.durations,
-                                   -cf.predict_partial_hazard(cf.data).values,
-                                   cf.event_observed)
+        ci_trn = cf._train_concordance
         # New data should normalize in the exact same way
         ci_org = concordance_index(data_pred2['t'],
                                    -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).values,
@@ -867,11 +872,12 @@ Concordance = 0.640""".strip().split()
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert mean_score > expected, msg.format(expected, mean_score)
 
-    def test_output_against_R(self, rossi):
+    def test_coef_output_against_R(self, rossi):
         """
         from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         Link is now broken, but this is the code:
 
+        library(survival)
         rossi <- read.csv('.../lifelines/datasets/rossi.csv')
         mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
             data=rossi)
@@ -881,6 +887,55 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+
+    def test_standard_error_coef_output_against_R(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = np.array([0.19138, 0.02200, 0.30799, 0.21222, 0.38187, 0.19576, 0.02865])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.summary['se(coef)'].values, expected, decimal=3)
+
+    def test_z_value_output_against_R_to_2_decimal_places(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = np.array([-1.983, -2.611, 1.019, -0.706, -1.136, -0.434, 3.194])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.summary['z'].values, expected, decimal=2)
+
+    @pytest.mark.xfail
+    def test_z_value_output_against_R_to_3_decimal_places(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = np.array([-1.983, -2.611, 1.019, -0.706, -1.136, -0.434, 3.194])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.summary['z'].values, expected, decimal=3)
 
     def test_output_with_strata_against_R(self, rossi):
         """
