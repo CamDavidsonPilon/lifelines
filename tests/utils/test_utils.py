@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pandas.util.testing import assert_frame_equal
+from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
@@ -500,3 +500,11 @@ class TestTimeLine(object):
                       .pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')
 
         assert_frame_equal(df21, df12, check_like=True)
+
+    def test_enum_flag(self, seed_df, cv1, cv2):
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E', add_enum=True)\
+                    .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E', add_enum=True)
+
+        idx = df['id'] == 1
+        n = idx.sum()
+        assert_series_equal(df['enum'].loc[idx], pd.Series(np.arange(1, n + 1)), check_names=False)

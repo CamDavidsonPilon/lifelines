@@ -989,7 +989,7 @@ def to_long_format(df, duration_col):
                  .drop(duration_col, axis=1)
 
 
-def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col):
+def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=True):
 
     def transform_cv_to_long_format(cv):
         cv = cv.rename({duration_col: 'start'}, axis=1)
@@ -1011,19 +1011,23 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col):
 
         timeline = construct_new_timeline(df['start'], cv['start'])
         n = len(timeline)
-        new_df = pd.DataFrame(timeline, columns=['start'])
-        new_df = new_df.merge(df, how='left', on='start')
-        new_df = new_df.merge(cv, how='left', on='start')
+        expanded_df = pd.DataFrame(timeline, columns=['start'])
+        expanded_df = expanded_df.merge(df, how='left', on='start')
+        expanded_df = expanded_df.merge(cv, how='left', on='start')
 
-        new_df['stop'] = new_df['start'].shift(-1)
-        new_df[id_col] = id_
-        new_df[event_col] = 0
-        new_df.at[n - 1, event_col] = 1
-        new_df.at[n - 1, 'stop'] = final_stop_time
-        return new_df.ffill()
+        expanded_df['stop'] = expanded_df['start'].shift(-1)
+        expanded_df[id_col] = id_
+        expanded_df[event_col] = 0
+        expanded_df.at[n - 1, event_col] = 1
+        expanded_df.at[n - 1, 'stop'] = final_stop_time
+
+        if add_enum:
+            expanded_df['enum'] = np.arange(1, n+1)
+
+        return expanded_df.ffill()
 
     cvs = transform_cv_to_long_format(cv)\
         .groupby(id_col)
     df = df.groupby(id_col, group_keys=False)\
-        .apply(lambda g: expand(g, cvs))
+        .apply(expand, cvs=cvs)
     return df.reset_index(drop=True)
