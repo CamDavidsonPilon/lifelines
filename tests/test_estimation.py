@@ -615,7 +615,7 @@ class TestRegressionFitters():
             'categoryb_': pd.Series(['a', 'b', 'a'], dtype='category')
         })
 
-        for fitter in regression_models:
+        for fitter in [CoxPHFitter(), AalenAdditiveFitter()]:
             for subset in [
                 ['t', 'categorya_'],
                 ['t', 'categoryb_'],
@@ -631,6 +631,13 @@ class TestRegressionFitters():
                 ['t', 'uint8_'],
             ]:
                 fitter.fit(df[subset], duration_col='t')
+
+    def test_regression_model_has_score_(self, regression_models, rossi):
+
+        for fitter in regression_models:
+            assert not hasattr(fitter, 'score_')
+            fitter.fit(rossi, duration_col='week', event_col='arrest')
+            assert hasattr(fitter, 'score_')
 
 
 class TestCoxPHFitter():
@@ -865,11 +872,12 @@ Concordance = 0.640""".strip().split()
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert mean_score > expected, msg.format(expected, mean_score)
 
-    def test_output_against_R(self, rossi):
+    def test_coef_output_against_R(self, rossi):
         """
         from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         Link is now broken, but this is the code:
 
+        library(survival)
         rossi <- read.csv('.../lifelines/datasets/rossi.csv')
         mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
             data=rossi)
@@ -879,6 +887,55 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+
+    def test_standard_error_coef_output_against_R(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = np.array([0.19138, 0.02200, 0.30799, 0.21222, 0.38187, 0.19576, 0.02865])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.summary['se(coef)'].values, expected, decimal=3)
+
+    def test_z_value_output_against_R_to_2_decimal_places(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = np.array([-1.983, -2.611, 1.019, -0.706, -1.136, -0.434, 3.194])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.summary['z'].values, expected, decimal=2)
+
+    @pytest.mark.xfail
+    def test_z_value_output_against_R_to_3_decimal_places(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = np.array([-1.983, -2.611, 1.019, -0.706, -1.136, -0.434, 3.194])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.summary['z'].values, expected, decimal=3)
 
     def test_output_with_strata_against_R(self, rossi):
         """
@@ -985,6 +1042,18 @@ Concordance = 0.640""".strip().split()
         cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].loc[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=2)
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=2)
+
+    def test_strata_from_init_is_used_in_fit_later(self, rossi):
+        strata = ['race', 'paro', 'mar']
+        cp_with_strata_in_init = CoxPHFitter(strata=strata)
+        cp_with_strata_in_init.fit(rossi, 'week', 'arrest')
+        assert cp_with_strata_in_init.strata == strata
+
+        cp_with_strata_in_fit = CoxPHFitter()
+        cp_with_strata_in_fit.fit(rossi, 'week', 'arrest', strata=strata)
+        assert cp_with_strata_in_fit.strata == strata
+
+        assert cp_with_strata_in_init._log_likelihood == cp_with_strata_in_fit._log_likelihood
 
     def test_baseline_survival_is_the_same_indp_of_location(self, regression_dataset):
         df = regression_dataset.copy()

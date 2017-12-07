@@ -12,7 +12,7 @@ import scipy.stats as stats
 from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
-    pass_for_numeric_dtypes_or_raise, check_low_var
+    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce
 
 
 class CoxPHFitter(BaseFitter):
@@ -279,13 +279,16 @@ class CoxPHFitter(BaseFitter):
 
         """
         df = df.copy()
-        # Sort on time
-        df.sort_values(by=duration_col, inplace=True)
 
-        # remove strata coefs
-        self.strata = strata
-        if strata is not None:
-            df = df.set_index(strata)
+        # Sort on time
+        df = df.sort_values(by=duration_col)
+        
+        original_df = df
+        self._n_examples = df.shape[0]
+        self.strata = coalesce(strata, self.strata)
+        if self.strata is not None:
+            original_index = df.index.copy()
+            df = df.set_index(self.strata)
 
         # Extract time and event
         T = df[duration_col]
@@ -298,9 +301,15 @@ class CoxPHFitter(BaseFitter):
 
         self._check_values(df, E)
         df = df.astype(float)
-        original_df = df if self.strata is None else df.reset_index()
+        
+        # save fitting data for later
+        self.durations = T.copy()
+        self.event_observed = E.copy()
+        if self.strata is not None:
+            self.durations.index = original_index
+            self.event_observed.index = original_index
+        self.event_observed = self.event_observed.astype(bool)
 
-        self._n_examples = df.shape[0]
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
         df = normalize(df, self._norm_mean, self._norm_std)
@@ -314,19 +323,14 @@ class CoxPHFitter(BaseFitter):
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self.durations = T
-        self.event_observed = E
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df * self._norm_std + self._norm_mean, T, E)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(self.baseline_hazard_)
         self.baseline_survival_ = self._compute_baseline_survival()
-
-        self._train_concordance = concordance_index(self.durations,
-                                                    -self.predict_partial_hazard(original_df).values.ravel(),
-                                                    self.event_observed)
-
+        self.score_ = concordance_index(self.durations,
+                                        -self.predict_partial_hazard(self.data).values.ravel(),
+                                        self.event_observed)
         self._train_log_partial_hazard = self.predict_log_partial_hazard(original_df.mean(0).to_frame().T)
-
         return self
 
     def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
@@ -400,8 +404,7 @@ class CoxPHFitter(BaseFitter):
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
-        print("Concordance = {:.3f}"
-              .format(self._train_concordance))
+        print("Concordance = {:.3f}".format(self.score_))
         return
 
     def predict_partial_hazard(self, X):

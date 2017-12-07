@@ -8,7 +8,8 @@ from scipy.integrate import trapz
 
 from lifelines.fitters import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
-    ridge_regression as lr, qth_survival_times, pass_for_numeric_dtypes_or_raise
+    ridge_regression as lr, qth_survival_times, pass_for_numeric_dtypes_or_raise,\
+    concordance_index
 
 from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import fill_between_steps
@@ -94,7 +95,6 @@ class AalenAdditiveFitter(BaseFitter):
             self._fit_static(df, duration_col, event_col, timeline, show_progress)
         else:
             self._fit_varying(df, duration_col, event_col, id_col, timeline, show_progress)
-
         return self
 
     def _fit_static(self, dataframe, duration_col, event_col=None,
@@ -218,7 +218,9 @@ class AalenAdditiveFitter(BaseFitter):
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
-
+        self.score_ = concordance_index(self.durations,
+                                        self.predict_median(self.data).values.ravel(),
+                                        self.event_observed)
         return
 
     def _fit_varying(self, dataframe, duration_col="T", event_col="E",
