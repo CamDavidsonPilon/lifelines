@@ -767,13 +767,12 @@ Concordance = 0.640""".strip().split()
     def test_data_normalization(self, data_pred2):
         # During fit, CoxPH copies the training data and normalizes it.
         # Future calls should be normalized in the same way and
-        # internal training set should not be saved in a normalized state.
 
         cf = CoxPHFitter()
         cf.fit(data_pred2, duration_col='t', event_col='E')
 
         # Internal training set
-        ci_trn = cf._train_concordance
+        ci_trn = cf.score_
         # New data should normalize in the exact same way
         ci_org = concordance_index(data_pred2['t'],
                                    -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).values,

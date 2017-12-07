@@ -282,7 +282,7 @@ class CoxPHFitter(BaseFitter):
 
         # Sort on time
         df = df.sort_values(by=duration_col)
-        
+
         original_df = df
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
@@ -301,7 +301,7 @@ class CoxPHFitter(BaseFitter):
 
         self._check_values(df, E)
         df = df.astype(float)
-        
+
         # save fitting data for later
         self.durations = T.copy()
         self.event_observed = E.copy()
@@ -312,25 +312,23 @@ class CoxPHFitter(BaseFitter):
 
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
-        df = normalize(df, self._norm_mean, self._norm_std)
 
         E = E.astype(bool)
 
-        hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
+        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), T, E, initial_beta=initial_beta,
                                          show_progress=show_progress,
                                          step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-
-        self.baseline_hazard_ = self._compute_baseline_hazards(df * self._norm_std + self._norm_mean, T, E)
+        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(self.baseline_hazard_)
         self.baseline_survival_ = self._compute_baseline_survival()
         self.score_ = concordance_index(self.durations,
-                                        -self.predict_partial_hazard(self.data).values.ravel(),
+                                        -self.predict_partial_hazard(df).values.ravel(),
                                         self.event_observed)
-        self._train_log_partial_hazard = self.predict_log_partial_hazard(original_df.mean(0).to_frame().T)
+        self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
         return self
 
     def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
