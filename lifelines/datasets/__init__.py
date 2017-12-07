@@ -299,6 +299,27 @@ def load_g3(**kwargs):
     """
     return load_dataset('g3.csv', **kwargs)
 
+def load_stanford_heart_transplants(**kwargs):
+    """
+    This is a classic dataset for survival regression with time
+    varying covariates. The original dataset is from [1], and
+    this dataset is from R's survival library.
+
+    [1] J Crowley and M Hu. Covariance analysis of heart transplant survival data. J American
+        Statistical Assoc, 72:27–36, 1977.
+
+
+    Size: (172, 8)
+    Example:
+           start  stop  event        age      year  surgery  transplant  id
+        0    0.0  50.0      1 -17.155373  0.123203        0           0   1
+        1    0.0   6.0      1   3.835729  0.254620        0           0   2
+        2    0.0   1.0      0   6.297057  0.265572        0           0   3
+        3    1.0  16.0      1   6.297057  0.265572        0           1   3
+        4    0.0  36.0      0  -7.737166  0.490075        0           0   4
+
+    """
+    return load_dataset('stanford_heart.csv', **kwargs)
 
 def load_gbsg2(**kwargs):
     """
@@ -322,3 +343,4 @@ def load_gbsg2(**kwargs):
         cens            1
     """
     return load_dataset('gbsg2.csv', **kwargs)
+

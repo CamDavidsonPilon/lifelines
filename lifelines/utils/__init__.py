@@ -982,3 +982,48 @@ def check_low_var(df, prescript="", postscript=""):
 This may harm convergence. Try dropping this redundant column before fitting \
 if convergence fails.%s" % (prescript, cols, postscript)
         warnings.warn(warning_text, RuntimeWarning)
+
+
+def to_long_format(df, duration_col):
+        return df.assign(start=0, stop=lambda s: s[duration_col])\
+                 .drop(duration_col, axis=1)
+
+
+def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col):
+
+    def transform_cv_to_long_format(cv):
+        cv = cv.rename({duration_col: 'start'}, axis=1)
+        return cv
+
+    def construct_new_timeline(series_r, series_l):
+        return np.sort(series_r.append(series_l).unique())
+
+    def expand(df, cvs):
+        id_ = df.name
+        try:
+            cv = cvs.get_group(id_)
+        except KeyError:
+            return df
+
+        final_stop_time = df['stop'].iloc[-1]
+        df = df.drop([id_col, event_col, 'stop'], axis=1)
+        cv = cv.drop([id_col], axis=1)
+
+        timeline = construct_new_timeline(df['start'], cv['start'])
+        n = len(timeline)
+        new_df = pd.DataFrame(timeline, columns=['start'])
+        new_df = new_df.merge(df, how='left', on='start')
+        new_df = new_df.merge(cv, how='left', on='start')
+
+        new_df['stop'] = new_df['start'].shift(-1)
+        new_df[id_col] = id_
+        new_df[event_col] = 0
+        new_df.at[n - 1, event_col] = 1
+        new_df.at[n - 1, 'stop'] = final_stop_time
+        return new_df.ffill()
+
+    cvs = transform_cv_to_long_format(cv)\
+        .groupby(id_col)
+    df = df.groupby(id_col, group_keys=False)\
+        .apply(lambda g: expand(g, cvs))
+    return df.reset_index(drop=True)

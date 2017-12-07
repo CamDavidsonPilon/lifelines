@@ -463,3 +463,40 @@ def test_concordance_index_fast_is_same_as_slow():
     E = cp.event_observed.values.ravel()
 
     assert slow_cindex(T, P, E) == fast_cindex(T, P, E)
+
+
+class TestTimeLine(object):
+
+    @pytest.fixture
+    def seed_df(self):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'var1': 0.1, 'T': 10, 'E': 1},
+            {'id': 2, 'var1': 0.5, 'T': 12, 'E': 0}
+        ])
+        return utils.to_long_format(df, 'T')
+
+    @pytest.fixture
+    def cv1(self):
+        return pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var2': 1.4},
+            {'id': 1, 't': 4, 'var2': 1.2},
+            {'id': 1, 't': 8, 'var2': 1.5},
+            {'id': 2, 't': 0, 'var2': 1.6},
+        ])
+
+    @pytest.fixture
+    def cv2(self):
+        return pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': 6, 'var3': 1},
+            {'id': 2, 't': 0, 'var3': 0},
+        ])
+
+    def test_order_of_adding_covariates_doesnt_matter(self, seed_df, cv1, cv2):
+        df12 = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')\
+                      .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
+
+        df21 = seed_df.pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')\
+                      .pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')
+
+        assert_frame_equal(df21, df12, check_like=True)
