@@ -1,4 +1,6 @@
 from __future__ import print_function
+from __future__ import division
+
 from collections import Counter, Iterable
 import os
 import warnings

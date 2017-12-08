@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import division
 import warnings
 import numpy as np
 import pandas as pd
@@ -13,10 +14,6 @@ from lifelines.utils import inv_normal_cdf, \
     significance_code,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation
-
-
-def at_(df, t):
-    return df.iloc[(df.index.get_level_values(0).get_loc(t))]
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -35,7 +32,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.alpha = alpha
         self.penalizer = penalizer
 
-    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=0.5):
+    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=1.0):
 
         df = df.copy()
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
@@ -202,6 +199,9 @@ class CoxTimeVaryingFitter(BaseFitter):
             gradient: (1, d) numpy array
             log_likelihood: double
         """
+
+        def at_(df, t):
+            return df.iloc[(df.index.get_level_values(0).get_loc(t))]
 
         _, d = df.shape
         hessian = np.zeros((d, d))
