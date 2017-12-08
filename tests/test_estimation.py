@@ -1179,6 +1179,11 @@ Concordance = 0.640""".strip().split()
         cp.fit(rossi, 'week', 'arrest', show_progress=True)
         assert cp.summary.loc['duped', 'se(coef)'] < 100
 
+    def test_durations_of_zero_are_okay(self, rossi):
+        cp = CoxPHFitter()
+        rossi.loc[range(10), 'week'] = 0
+        cp.fit(rossi, 'week', 'arrest')
+
 
 class TestAalenAdditiveFitter():
 
