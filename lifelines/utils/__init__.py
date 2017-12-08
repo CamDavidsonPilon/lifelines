@@ -1034,8 +1034,12 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=
         cv = cv.rename({duration_col: 'start'}, axis=1)
         return cv
 
-    def construct_new_timeline(series_r, series_l, final_stop_time):
-        a = np.sort(series_r.append(series_l).unique())
+    def construct_new_timeline(original_timeline, additional_timeline, final_stop_time):
+        if additional_timeline.min() < original_timeline.min():
+            warning_text = "There exists at least one row in the covariates dataset that is before the earlist \
+known observation. This could case null values in the resulting dataframe."
+            warnings.warn(warning_text, RuntimeWarning)
+        a = np.sort(original_timeline.append(additional_timeline).unique())
         return a[a <= final_stop_time]
 
     def expand(df, cvs):
@@ -1072,6 +1076,7 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=
     cvs = cv.pipe(remove_redundant_rows)\
             .pipe(transform_cv_to_long_format)\
             .groupby(id_col)
+
     df = df.groupby(id_col, group_keys=False)\
         .apply(expand, cvs=cvs)
     return df.reset_index(drop=True)

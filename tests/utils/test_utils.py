@@ -2,6 +2,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import pytest
+import warnings
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
@@ -581,3 +582,16 @@ class TestTimeLine(object):
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')\
                     .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
         assert df.shape[0] == 3
+
+    def test_warning_is_raised_if_cvs_has_an_observation_before_the_earliest_obs_in_the_original_df(self, seed_df):
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': -1, 'var3': 1},
+            {'id': 2, 't': 0, 'var3': 0.5},
+        ])
+
+        with warnings.catch_warnings(record=True) as w:
+            utils.add_covariate_to_timeline(seed_df, cv, 'id', 't', 'E')
+            assert len(w) == 1
+            assert issubclass(w[0].category, RuntimeWarning)
+            assert "before" in str(w[0].message)
