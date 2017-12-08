@@ -233,14 +233,14 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
             q75, q25 = np.percentile(event_table['event_at'], [75, 25])
             event_iqr = q75 - q25
 
-            bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1/3))
+            bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1 / 3))
 
             intervals = np.arange(0, event_max + bin_width, bin_width)
 
-        event_table = event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed':['sum'],
-                                                                                           'observed':['sum'],
-                                                                                           'censored':['sum'],
-                                                                                           'at_risk':['max']})
+        event_table = event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed': ['sum'],
+                                                                                           'observed': ['sum'],
+                                                                                           'censored': ['sum'],
+                                                                                           'at_risk': ['max']})
 
     return event_table.astype(int)
 
@@ -1067,6 +1067,7 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=
 
         return expanded_df.ffill()
 
+    cv = cv.dropna()
     cv = cv.sort_values([id_col, duration_col])
     cvs = cv.pipe(remove_redundant_rows)\
             .pipe(transform_cv_to_long_format)\

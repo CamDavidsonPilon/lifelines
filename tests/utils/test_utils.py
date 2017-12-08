@@ -553,3 +553,31 @@ class TestTimeLine(object):
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
         assert df.shape[0] == 3
+
+    def test_cvs_with_null_values_are_dropped(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+        cv = pd.DataFrame.from_records([
+            {'id': None, 't': 0, 'var3': 0},
+            {'id': 1, 't': None, 'var3': 1},
+            {'id': 2, 't': 0, 'var3': None},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 1
+
+    def test_a_new_row_is_not_created_if_start_times_are_the_same(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+        cv1 = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': 5, 'var3': 1},
+        ])
+
+        cv2 = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var4': 0},
+            {'id': 1, 't': 5, 'var4': 1.5},
+            {'id': 1, 't': 6, 'var4': 1.7},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')\
+                    .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
+        assert df.shape[0] == 3
