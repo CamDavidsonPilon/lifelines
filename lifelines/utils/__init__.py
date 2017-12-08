@@ -974,8 +974,21 @@ def pass_for_numeric_dtypes_or_raise(df):
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
 
+def check_for_overlapping_intervals(df):
+    # only useful for time varying coefs, after we've done
+    # some index creation
+    if not df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic).all():
+        raise ValueError("The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
+to help find:\
+df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic)")
+
+
+def _low_var(df):
+    return (df.var(0) < 10e-5)
+
+
 def check_low_var(df, prescript="", postscript=""):
-    low_var = (df.var(0) < 10e-5)
+    low_var = _low_var(df)
     if low_var.any():
         cols = str(list(df.columns[low_var]))
         warning_text = "%sColumn(s) %s have very low variance. \
@@ -984,19 +997,46 @@ if convergence fails.%s" % (prescript, cols, postscript)
         warnings.warn(warning_text, RuntimeWarning)
 
 
+def check_complete_separation(df, events):
+    events = events.astype(bool)
+    rhs = df.columns[_low_var(df.loc[events])]
+    lhs = df.columns[_low_var(df.loc[~events])]
+    inter = lhs.intersection(rhs).tolist()
+    if inter:
+        warning_text = "Column(s) %s have very low variance when conditioned on \
+death event or not. This may harm convergence. This is a form of 'complete separation'. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
+        warnings.warn(warning_text, RuntimeWarning)
+
+
 def to_long_format(df, duration_col):
         return df.assign(start=0, stop=lambda s: s[duration_col])\
                  .drop(duration_col, axis=1)
 
 
-def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col):
+def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=False):
+
+    def remove_redundant_rows(cv):
+        """
+        Removes rows where no change occurs. Ex:
+
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0, 'var4': 1},
+            {'id': 1, 't': 1, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 6, 'var3': 1, 'var4': 1},
+        ])
+        """
+        cols = cv.columns.difference([duration_col])
+        cv = cv.loc[(cv[cols].shift() != cv[cols]).any(axis=1)]
+        return cv
 
     def transform_cv_to_long_format(cv):
         cv = cv.rename({duration_col: 'start'}, axis=1)
         return cv
 
-    def construct_new_timeline(series_r, series_l):
-        return np.sort(series_r.append(series_l).unique())
+    def construct_new_timeline(series_r, series_l, final_stop_time):
+        a = np.sort(series_r.append(series_l).unique())
+        return a[a <= final_stop_time]
 
     def expand(df, cvs):
         id_ = df.name
@@ -1005,25 +1045,32 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col):
         except KeyError:
             return df
 
+        final_state = bool(df[event_col].iloc[-1])
         final_stop_time = df['stop'].iloc[-1]
         df = df.drop([id_col, event_col, 'stop'], axis=1)
         cv = cv.drop([id_col], axis=1)
 
-        timeline = construct_new_timeline(df['start'], cv['start'])
+        timeline = construct_new_timeline(df['start'], cv['start'], final_stop_time)
         n = len(timeline)
-        new_df = pd.DataFrame(timeline, columns=['start'])
-        new_df = new_df.merge(df, how='left', on='start')
-        new_df = new_df.merge(cv, how='left', on='start')
+        expanded_df = pd.DataFrame(timeline, columns=['start'])
+        expanded_df = expanded_df.merge(df, how='left', on='start')
+        expanded_df = expanded_df.merge(cv, how='left', on='start')
 
-        new_df['stop'] = new_df['start'].shift(-1)
-        new_df[id_col] = id_
-        new_df[event_col] = 0
-        new_df.at[n - 1, event_col] = 1
-        new_df.at[n - 1, 'stop'] = final_stop_time
-        return new_df.ffill()
+        expanded_df['stop'] = expanded_df['start'].shift(-1)
+        expanded_df[id_col] = id_
+        expanded_df[event_col] = False
+        expanded_df.at[n - 1, event_col] = final_state
+        expanded_df.at[n - 1, 'stop'] = final_stop_time
 
-    cvs = transform_cv_to_long_format(cv)\
-        .groupby(id_col)
+        if add_enum:
+            expanded_df['enum'] = np.arange(1, n + 1)
+
+        return expanded_df.ffill()
+
+    cv = cv.sort_values([id_col, duration_col])
+    cvs = cv.pipe(remove_redundant_rows)\
+            .pipe(transform_cv_to_long_format)\
+            .groupby(id_col)
     df = df.groupby(id_col, group_keys=False)\
-        .apply(lambda g: expand(g, cvs))
+        .apply(expand, cvs=cvs)
     return df.reset_index(drop=True)

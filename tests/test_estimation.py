@@ -1,4 +1,6 @@
 from __future__ import print_function
+from __future__ import division
+
 from collections import Counter, Iterable
 import os
 import warnings
@@ -15,13 +17,15 @@ import pytest
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
+from numpy.linalg.linalg import LinAlgError
 
 from lifelines.utils import k_fold_cross_validation, StatError
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-    WeibullFitter, BaseFitter
+    WeibullFitter, BaseFitter, CoxTimeVaryingFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
-    load_lcd, load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset
+    load_lcd, load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
+    load_stanford_heart_transplants
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
 from lifelines.utils import concordance_index
 
@@ -156,7 +160,7 @@ class TestUnivariateFitters():
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
-        assert abs(kmf.predict(0.5) - 5/6.) < 10e-8
+        assert abs(kmf.predict(0.5) - 5 / 6.) < 10e-8
         assert abs(kmf.predict(1.9999) - 0.3333666666) < 10e-8
 
     def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
@@ -243,10 +247,9 @@ class TestUnivariateFitters():
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
     def test_valueerror_is_thrown_if_alpha_out_of_bounds(self, univariate_fitters):
-        T2 = np.arange(1, 50)
         for fitter in univariate_fitters:
             with pytest.raises(ValueError):
-                f = fitter(alpha=95)
+                fitter(alpha=95)
 
 
 class TestWeibullFitter():
@@ -1137,9 +1140,9 @@ Concordance = 0.640""".strip().split()
             warnings.simplefilter("always")
             try:
                 cox.fit(rossi, 'week', 'arrest')
-            except:
+            except (LinAlgError, ValueError):
                 pass
-            assert len(w) == 3
+            assert len(w) == 2
             assert issubclass(w[-1].category, RuntimeWarning)
             assert "variance" in str(w[0].message)
 
@@ -1154,11 +1157,11 @@ Concordance = 0.640""".strip().split()
             warnings.simplefilter("always")
             try:
                 cox.fit(rossi, 'week', 'arrest')
-            except:
+            except LinAlgError:
                 pass
-            assert len(w) == 2
+            assert len(w) == 1
             assert issubclass(w[-1].category, RuntimeWarning)
-            assert "Complete seperation" in str(w[-1].message)
+            assert "complete separation" in str(w[-1].message)
 
     @pytest.mark.xfail
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
@@ -1379,3 +1382,75 @@ class TestAalenAdditiveFitter():
         y_df = aaf.predict_cumulative_hazard(x)
         y_np = aaf.predict_cumulative_hazard(x.values)
         assert_frame_equal(y_df, y_np)
+
+
+class TestCoxTimeVaryingFitter():
+
+    @pytest.fixture()
+    def ctv(self):
+        return CoxTimeVaryingFitter()
+
+    @pytest.fixture()
+    def dfcv(self):
+        from lifelines.datasets import load_dfcv
+        return load_dfcv()
+
+    @pytest.fixture()
+    def heart(self):
+        return load_stanford_heart_transplants()
+
+    def test_inference_against_known_R_output(self, ctv, dfcv):
+        # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757, 0.705963], decimal=3)
+        npt.assert_almost_equal(ctv.summary['se(coef)'].values, [1.229, 1.206], decimal=3)
+        npt.assert_almost_equal(ctv.summary['p'].values, [0.14, 0.56], decimal=2)
+
+    def test_fitter_will_raise_an_error_if_overlapping_intervals(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 10, 'var': 1., 'event': 0},
+            {'id': 1, 'start': 5, 'stop': 10, 'var': 1., 'event': 0},
+        ])
+
+        with pytest.raises(ValueError):
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column(self, ctv, dfcv):
+        dfcv['constant'] = 1.0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except LinAlgError:
+                pass
+            assert len(w) == 2
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "variance" in str(w[0].message)
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, ctv, dfcv):
+        # check for a warning if we have complete seperation
+        ix = dfcv['event']
+        dfcv.loc[ix, 'var3'] = 1
+        dfcv.loc[~ix, 'var3'] = 0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except LinAlgError:
+                pass
+            assert len(w) == 2
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "complete separation" in str(w[-1].message)
+
+    def test_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
+        """
+        library(survival)
+        data(heart)
+        coxph(Surv(start, stop, event) ~ age + transplant + surgery + year, data= heart)
+        """
+        ctv.fit(heart, id_col='id', event_col='event')
+        npt.assert_almost_equal(ctv.summary['coef'].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3)
+        npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
+        npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)

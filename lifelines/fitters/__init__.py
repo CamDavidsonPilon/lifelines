@@ -20,7 +20,7 @@ class BaseFitter(object):
         classname = self.__class__.__name__
         try:
             s = """<lifelines.%s: fitted with %d observations, %d censored>""" % (
-                classname, self.event_observed.shape[0], (1 - self.event_observed).sum())
+                classname, self.event_observed.shape[0], self.event_observed.shape[0] - np.where(self.event_observed)[0].shape[0])
         except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pandas.util.testing import assert_frame_equal
+from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
@@ -500,3 +500,56 @@ class TestTimeLine(object):
                       .pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')
 
         assert_frame_equal(df21, df12, check_like=True)
+
+    def test_enum_flag(self, seed_df, cv1, cv2):
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E', add_enum=True)\
+                    .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E', add_enum=True)
+
+        idx = df['id'] == 1
+        n = idx.sum()
+        assert_series_equal(df['enum'].loc[idx], pd.Series(np.arange(1, n + 1)), check_names=False)
+
+    def test_event_col_is_properly_inserted(self, seed_df, cv2):
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
+        assert df.groupby('id').last()['E'].tolist() == [1, 0]
+
+    def test_redundant_cv_columns_are_dropped(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0, 'var4': 1},
+            {'id': 1, 't': 1, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 3, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 6, 'var3': 1, 'var4': 1},
+            {'id': 1, 't': 9, 'var3': 1, 'var4': 1},  # redundant, as nothing changed during the interval
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 2
+
+    def test_will_convert_event_column_to_bools(self, seed_df, cv1):
+        seed_df['E'] = seed_df['E'].astype(int)
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')
+        assert df.dtypes['E'] == bool
+
+    def test_if_cvs_include_a_start_time_after_the_final_time_it_is_excluded(self, seed_df):
+        max_T = seed_df['stop'].max()
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': max_T + 10, 'var3': 1},  # will be excluded
+            {'id': 2, 't': 0, 'var3': 0},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 2
+
+    def test_if_cvs_include_a_start_time_before_it_is_included(self, seed_df):
+        min_T = seed_df['start'].min()
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': min_T - 1, 'var3': 1},
+            {'id': 2, 't': 0, 'var3': 0},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 3

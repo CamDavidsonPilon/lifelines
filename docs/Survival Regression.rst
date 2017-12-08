@@ -19,14 +19,14 @@ methods like linear regression.
 
 There are two popular competing techniques in survival regression: Cox's
 model and Aalen's additive model. Both models attempt to represent the
-hazard rate :math:`\lambda(t)`. In Cox's model, the relationship is
+hazard rate :math:`\lambda(t | x)` as a function of :math:`t` and some covariates :math:`x`. In Cox's model, the relationship is
 defined:
 
-.. math:: \lambda(t) = b_0(t)\exp\left( b_1x_1 + ... + b_Nx_n\right)
+.. math:: \lambda(t | x) = b_0(t)\exp\left( b_1x_1 + ... + b_dx_d\right)
 
 On the other hand, Aalen's additive model assumes the following form:
 
-.. math:: \lambda(t) = b_0(t) + b_1(t)x_1 + ... + b_N(t)x_T
+.. math:: \lambda(t | x) = b_0(t) + b_1(t)x_1 + ... + b_d(t)x_d
 
 
 
@@ -59,96 +59,90 @@ above). This is important to keep in mind when analzying the output.
     <table border="1" class="dataframe">
       <thead>
         <tr style="text-align: right;">
-          <th></th>
-          <th>ctryname</th>
-          <th>cowcode2</th>
-          <th>politycode</th>
-          <th>un_region_name</th>
-          <th>un_continent_name</th>
-          <th>ehead</th>
-          <th>leaderspellreg</th>
-          <th>democracy</th>
-          <th>regime</th>
-          <th>start_year</th>
-          <th>duration</th>
-          <th>observed</th>
+          <th style="padding:8px;">ctryname</th>
+          <th style="padding:8px;">cowcode2</th>
+          <th style="padding:8px;">politycode</th>
+          <th style="padding:8px;">un_region_name</th>
+          <th style="padding:8px;">un_continent_name</th>
+          <th style="padding:8px;">ehead</th>
+          <th style="padding:8px;">leaderspellreg</th>
+          <th style="padding:8px;">democracy</th>
+          <th style="padding:8px;">regime</th>
+          <th style="padding:8px;">start_year</th>
+          <th style="padding:8px;">duration</th>
+          <th style="padding:8px;">observed</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <th>1</th>
-          <td> Afghanistan</td>
-          <td> 700</td>
-          <td> 700</td>
-          <td> Southern Asia</td>
-          <td> Asia</td>
-          <td>   Mohammad Zahir Shah</td>
-          <td> Mohammad Zahir Shah.Afghanistan.1946.1952.Mona...</td>
-          <td> Non-democracy</td>
-          <td>      Monarchy</td>
-          <td> 1946</td>
-          <td>  7</td>
-          <td> 1</td>
+          <td style="padding: 8px;"> Afghanistan</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> Southern Asia</td>
+          <td style="padding: 8px;"> Asia</td>
+          <td style="padding: 8px;">   Mohammad Zahir Shah</td>
+          <td style="padding: 8px;"> Mohammad Zahir Shah.Afghanistan.1946.1952.Mona...</td>
+          <td style="padding: 8px;"> Non-democracy</td>
+          <td style="padding: 8px;">      Monarchy</td>
+          <td style="padding: 8px;"> 1946</td>
+          <td style="padding: 8px;">  7</td>
+          <td style="padding: 8px;"> 1</td>
         </tr>
         <tr>
-          <th>2</th>
-          <td> Afghanistan</td>
-          <td> 700</td>
-          <td> 700</td>
-          <td> Southern Asia</td>
-          <td> Asia</td>
-          <td> Sardar Mohammad Daoud</td>
-          <td> Sardar Mohammad Daoud.Afghanistan.1953.1962.Ci...</td>
-          <td> Non-democracy</td>
-          <td> Civilian Dict</td>
-          <td> 1953</td>
-          <td> 10</td>
-          <td> 1</td>
+          <td style="padding: 8px;"> Afghanistan</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> Southern Asia</td>
+          <td style="padding: 8px;"> Asia</td>
+          <td style="padding: 8px;"> Sardar Mohammad Daoud</td>
+          <td style="padding: 8px;"> Sardar Mohammad Daoud.Afghanistan.1953.1962.Ci...</td>
+          <td style="padding: 8px;"> Non-democracy</td>
+          <td style="padding: 8px;"> Civilian Dict</td>
+          <td style="padding: 8px;"> 1953</td>
+          <td style="padding: 8px;"> 10</td>
+          <td style="padding: 8px;"> 1</td>
         </tr>
         <tr>
-          <th>3</th>
-          <td> Afghanistan</td>
-          <td> 700</td>
-          <td> 700</td>
-          <td> Southern Asia</td>
-          <td> Asia</td>
-          <td>   Mohammad Zahir Shah</td>
-          <td> Mohammad Zahir Shah.Afghanistan.1963.1972.Mona...</td>
-          <td> Non-democracy</td>
-          <td>      Monarchy</td>
-          <td> 1963</td>
-          <td> 10</td>
-          <td> 1</td>
+          <td style="padding: 8px;"> Afghanistan</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> Southern Asia</td>
+          <td style="padding: 8px;"> Asia</td>
+          <td style="padding: 8px;">   Mohammad Zahir Shah</td>
+          <td style="padding: 8px;"> Mohammad Zahir Shah.Afghanistan.1963.1972.Mona...</td>
+          <td style="padding: 8px;"> Non-democracy</td>
+          <td style="padding: 8px;">      Monarchy</td>
+          <td style="padding: 8px;"> 1963</td>
+          <td style="padding: 8px;"> 10</td>
+          <td style="padding: 8px;"> 1</td>
         </tr>
         <tr>
-          <th>4</th>
-          <td> Afghanistan</td>
-          <td> 700</td>
-          <td> 700</td>
-          <td> Southern Asia</td>
-          <td> Asia</td>
-          <td> Sardar Mohammad Daoud</td>
-          <td> Sardar Mohammad Daoud.Afghanistan.1973.1977.Ci...</td>
-          <td> Non-democracy</td>
-          <td> Civilian Dict</td>
-          <td> 1973</td>
-          <td>  5</td>
-          <td> 0</td>
+          <td style="padding: 8px;"> Afghanistan</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> Southern Asia</td>
+          <td style="padding: 8px;"> Asia</td>
+          <td style="padding: 8px;"> Sardar Mohammad Daoud</td>
+          <td style="padding: 8px;"> Sardar Mohammad Daoud.Afghanistan.1973.1977.Ci...</td>
+          <td style="padding: 8px;"> Non-democracy</td>
+          <td style="padding: 8px;"> Civilian Dict</td>
+          <td style="padding: 8px;"> 1973</td>
+          <td style="padding: 8px;">  5</td>
+          <td style="padding: 8px;"> 0</td>
         </tr>
         <tr>
-          <th>5</th>
-          <td> Afghanistan</td>
-          <td> 700</td>
-          <td> 700</td>
-          <td> Southern Asia</td>
-          <td> Asia</td>
-          <td>   Nur Mohammad Taraki</td>
-          <td> Nur Mohammad Taraki.Afghanistan.1978.1978.Civi...</td>
-          <td> Non-democracy</td>
-          <td> Civilian Dict</td>
-          <td> 1978</td>
-          <td>  1</td>
-          <td> 0</td>
+          <td style="padding: 8px;"> Afghanistan</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> 700</td>
+          <td style="padding: 8px;"> Southern Asia</td>
+          <td style="padding: 8px;"> Asia</td>
+          <td style="padding: 8px;">   Nur Mohammad Taraki</td>
+          <td style="padding: 8px;"> Nur Mohammad Taraki.Afghanistan.1978.1978.Civi...</td>
+          <td style="padding: 8px;"> Non-democracy</td>
+          <td style="padding: 8px;"> Civilian Dict</td>
+          <td style="padding: 8px;"> 1978</td>
+          <td style="padding: 8px;">  1</td>
+          <td style="padding: 8px;"> 0</td>
         </tr>
       </tbody>
     </table>
@@ -236,99 +230,94 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
     <table border="1" class="dataframe">
       <thead>
         <tr style="text-align: right;">
-          <th></th>
-          <th>un_continent_name[Africa]</th>
-          <th>un_continent_name[Americas]</th>
-          <th>un_continent_name[Asia]</th>
-          <th>un_continent_name[Europe]</th>
-          <th>un_continent_name[Oceania]</th>
-          <th>regime[T.Military Dict]</th>
-          <th>regime[T.Mixed Dem]</th>
-          <th>regime[T.Monarchy]</th>
-          <th>regime[T.Parliamentary Dem]</th>
-          <th>regime[T.Presidential Dem]</th>
-          <th>start_year</th>
-          <th>baseline</th>
+          <th style="padding:8px;">un_continent_name[Africa]</th>
+          <th style="padding:8px;">un_continent_name[Americas]</th>
+          <th style="padding:8px;">un_continent_name[Asia]</th>
+          <th style="padding:8px;">un_continent_name[Europe]</th>
+          <th style="padding:8px;">un_continent_name[Oceania]</th>
+          <th style="padding:8px;">regime[T.Military Dict]</th>
+          <th style="padding:8px;">regime[T.Mixed Dem]</th>
+          <th style="padding:8px;">regime[T.Monarchy]</th>
+          <th style="padding:8px;">regime[T.Parliamentary Dem]</th>
+          <th style="padding:8px;">regime[T.Presidential Dem]</th>
+          <th style="padding:8px;">start_year</th>
+          <th style="padding:8px;">baseline</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <th>1</th>
-          <td>-0.051595</td>
-          <td>-0.082406</td>
-          <td> 0.010666</td>
-          <td> 0.154493</td>
-          <td>-0.060438</td>
-          <td> 0.075333</td>
-          <td> 0.086274</td>
-          <td>-0.133938</td>
-          <td> 0.048077</td>
-          <td> 0.127171</td>
-          <td> 0.000116</td>
-          <td>-0.029280</td>
+          <td style="padding: 8px;">-0.051595</td>
+          <td style="padding: 8px;">-0.082406</td>
+          <td style="padding: 8px;"> 0.010666</td>
+          <td style="padding: 8px;"> 0.154493</td>
+          <td style="padding: 8px;">-0.060438</td>
+          <td style="padding: 8px;"> 0.075333</td>
+          <td style="padding: 8px;"> 0.086274</td>
+          <td style="padding: 8px;">-0.133938</td>
+          <td style="padding: 8px;"> 0.048077</td>
+          <td style="padding: 8px;"> 0.127171</td>
+          <td style="padding: 8px;"> 0.000116</td>
+          <td style="padding: 8px;">-0.029280</td>
         </tr>
         <tr>
-          <th>2</th>
-          <td>-0.014713</td>
-          <td>-0.039471</td>
-          <td> 0.095668</td>
-          <td> 0.194251</td>
-          <td>-0.092696</td>
-          <td> 0.115033</td>
-          <td> 0.358702</td>
-          <td>-0.226233</td>
-          <td> 0.168783</td>
-          <td> 0.121862</td>
-          <td> 0.000053</td>
-          <td> 0.143039</td>
+          <td style="padding: 8px;">-0.014713</td>
+          <td style="padding: 8px;">-0.039471</td>
+          <td style="padding: 8px;"> 0.095668</td>
+          <td style="padding: 8px;"> 0.194251</td>
+          <td style="padding: 8px;">-0.092696</td>
+          <td style="padding: 8px;"> 0.115033</td>
+          <td style="padding: 8px;"> 0.358702</td>
+          <td style="padding: 8px;">-0.226233</td>
+          <td style="padding: 8px;"> 0.168783</td>
+          <td style="padding: 8px;"> 0.121862</td>
+          <td style="padding: 8px;"> 0.000053</td>
+          <td style="padding: 8px;"> 0.143039</td>
         </tr>
         <tr>
-          <th>3</th>
-          <td> 0.007389</td>
-          <td>-0.064758</td>
-          <td> 0.115121</td>
-          <td> 0.170549</td>
-          <td> 0.069371</td>
-          <td> 0.161490</td>
-          <td> 0.677347</td>
-          <td>-0.271183</td>
-          <td> 0.328483</td>
-          <td> 0.146234</td>
-          <td> 0.000004</td>
-          <td> 0.297672</td>
+          <td style="padding: 8px;"> 0.007389</td>
+          <td style="padding: 8px;">-0.064758</td>
+          <td style="padding: 8px;"> 0.115121</td>
+          <td style="padding: 8px;"> 0.170549</td>
+          <td style="padding: 8px;"> 0.069371</td>
+          <td style="padding: 8px;"> 0.161490</td>
+          <td style="padding: 8px;"> 0.677347</td>
+          <td style="padding: 8px;">-0.271183</td>
+          <td style="padding: 8px;"> 0.328483</td>
+          <td style="padding: 8px;"> 0.146234</td>
+          <td style="padding: 8px;"> 0.000004</td>
+          <td style="padding: 8px;"> 0.297672</td>
         </tr>
         <tr>
-          <th>4</th>
-          <td>-0.058418</td>
-          <td> 0.011399</td>
-          <td> 0.091784</td>
-          <td> 0.205824</td>
-          <td> 0.125722</td>
-          <td> 0.220028</td>
-          <td> 0.932674</td>
-          <td>-0.294900</td>
-          <td> 0.365604</td>
-          <td> 0.422617</td>
-          <td> 0.000002</td>
-          <td> 0.376311</td>
+          <td style="padding: 8px;">-0.058418</td>
+          <td style="padding: 8px;"> 0.011399</td>
+          <td style="padding: 8px;"> 0.091784</td>
+          <td style="padding: 8px;"> 0.205824</td>
+          <td style="padding: 8px;"> 0.125722</td>
+          <td style="padding: 8px;"> 0.220028</td>
+          <td style="padding: 8px;"> 0.932674</td>
+          <td style="padding: 8px;">-0.294900</td>
+          <td style="padding: 8px;"> 0.365604</td>
+          <td style="padding: 8px;"> 0.422617</td>
+          <td style="padding: 8px;"> 0.000002</td>
+          <td style="padding: 8px;"> 0.376311</td>
         </tr>
         <tr>
-          <th>5</th>
-          <td>-0.099282</td>
-          <td> 0.106641</td>
-          <td> 0.112083</td>
-          <td> 0.150708</td>
-          <td> 0.091900</td>
-          <td> 0.241575</td>
-          <td> 1.123860</td>
-          <td>-0.391103</td>
-          <td> 0.536185</td>
-          <td> 0.743913</td>
-          <td> 0.000057</td>
-          <td> 0.362049</td>
+          <td style="padding: 8px;">-0.099282</td>
+          <td style="padding: 8px;"> 0.106641</td>
+          <td style="padding: 8px;"> 0.112083</td>
+          <td style="padding: 8px;"> 0.150708</td>
+          <td style="padding: 8px;"> 0.091900</td>
+          <td style="padding: 8px;"> 0.241575</td>
+          <td style="padding: 8px;"> 1.123860</td>
+          <td style="padding: 8px;">-0.391103</td>
+          <td style="padding: 8px;"> 0.536185</td>
+          <td style="padding: 8px;"> 0.743913</td>
+          <td style="padding: 8px;"> 0.000057</td>
+          <td style="padding: 8px;"> 0.362049</td>
         </tr>
       </tbody>
     </table>
+    <p>5 rows × 12 columns</p>
     </div>
 
 
@@ -354,7 +343,7 @@ Prime Minister Stephen Harper.
 
     ix = (data['ctryname'] == 'Canada') * (data['start_year'] == 2006)
     harper = X.loc[ix]
-    print "Harper's unique data point", harper
+    print("Harper's unique data point", harper)
 
 .. parsed-literal::
 
@@ -388,10 +377,18 @@ Cox's Proportional Hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Lifelines has an implementation of the Cox propotional hazards regression model (implemented in 
-R under ``coxph``). It has a similar API to Aalen's additive model. Like R, it has a ``print_summary``
-function that prints a tabular view of coefficients and related stats. 
+R under ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
-This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_.
+.. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i\right)}
+
+Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the second term is only a scalar factor that only increases or decreases the baseline hazard. Thus a change in a covariate will only increase or decrease this baseline hazard. 
+
+Lifelines implementation
+###########################################
+
+The implementation of the Cox model in lifelines, called ``CoxPHFitter`` has a similar API to ``AalensAdditiveFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats. 
+
+This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_, avaible as ``load_rossi`` in lifelines. 
 
 .. code:: python
 
@@ -421,7 +418,28 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
     Concordance = 0.640
     """
 
-To access the coefficients and the baseline hazard, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. The likelihood is available too using ``cph._log_likelihood`` After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
+To access the coefficients and the baseline hazard directly, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. 
+
+
+Convergence 
+###########################################
+
+Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
+
+After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively. The ``_hessian_`` can be used the find the covariance matrix of the coefficients. 
+
+
+Goodness of fit and prediction
+###########################################
+
+After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? a small spread between these two curves means that the impact of the exponential in the Cox model does very little, whereas a large spread means *most* of the changes in individual hazard can be attributed to the exponential term). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
+
+.. image:: images/goodfit.png
+
+.. image:: images/badfit.png
+
+
+After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
 
 .. code:: python
     
@@ -515,6 +533,249 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
     """
 
 
+Cox's Time Varying Proportional Hazard model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Often an individual will have a covariate change over time. An example of this is hospital patients who enter the study, and at some future time, they may recieve a heart transplant. We would like to know the effect of the transplant and the other variables, but we cannot condition on whether they recieved the transplant naively. Consider that if patients needed to wait at least 1 year before getting a transplant, then everyone who dies before that year is considered as a non-transplant patient, and hence this would overestimate the hazard of not recieving a transplant. 
+
+We can incorporate changes over time into our survival analysis by using a modification of the Cox model above. The general mathematical description is:
+
+.. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i(t)\right)}
+
+Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset required is unique, so we will spend some time describing this. 
+
+Dataset for time-varying regression
+####################################
+
+Lifelines requires that the dataset be in what is called the *long* format. This looks like one row per state change, including an ID, the left (exclusive), and right (inclusive) time points. For example:
+
+.. raw:: html
+
+    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
+      <table border="1" class="dataframe">
+        <thead>
+          <tr style="text-align: right;">
+            <th style="padding:8px;">start</th>
+            <th style="padding:8px;">group</th>
+            <th style="padding:8px;">z</th>
+            <th style="padding:8px;">stop</th>
+            <th style="padding:8px;">id</th>
+            <th style="padding:8px;">event</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">8.0</td>
+            <td style="padding: 8px;">8</td>
+            <td style="padding: 8px;">False</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">5.0</td>
+            <td style="padding: 8px;">9</td>
+            <td style="padding: 8px;">False</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">5</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">9.0</td>
+            <td style="padding: 8px;">9</td>
+            <td style="padding: 8px;">True</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">3.0</td>
+            <td style="padding: 8px;">10</td>
+            <td style="padding: 8px;">False</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">3</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">10.0</td>
+            <td style="padding: 8px;">10</td>
+            <td style="padding: 8px;">True</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>5 rows × 6 columns</p>
+    </div>
+
+In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. This is the desired dataset, but it needs to be built up first from smaller datasets. To do this we can use some helper functions provided in lifelines. 
+
+Typically, data will be in a format that looks like it comes out of a relational database, or close to. You may have a "base" table with ids, durations, and a censorsed flag, and possibly with static covariates. Ex: 
+
+.. raw:: html
+
+    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
+      <table border="1" class="dataframe">
+        <thead>
+          <tr style="text-align: right;">
+            <th style="padding:8px;">id</th>
+            <th style="padding:8px;">duration</th>
+            <th style="padding:8px;">event</th>
+            <th style="padding:8px;">var1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">10</td>
+            <td style="padding: 8px;">True</td>
+            <td style="padding: 8px;">0.1</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">2</td>
+            <td style="padding: 8px;">12</td>
+            <td style="padding: 8px;">False</td>
+            <td style="padding: 8px;">0.5</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>2 rows × 4 columns</p>
+    </div>
+
+You'll also have secondary data pulls that reference taking future measurements. Example:
+
+.. raw:: html
+
+    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
+      <table border="1" class="dataframe">
+        <thead>
+          <tr style="text-align: right;">
+            <th style="padding:8px;">id</th>
+            <th style="padding:8px;">time</th>
+            <th style="padding:8px;">var2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">1.4</td>
+          </tr>          
+          <tr>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">4</td>
+            <td style="padding: 8px;">1.2</td>
+          </tr>          
+          <tr>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">8</td>
+            <td style="padding: 8px;">1.5</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">2</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">1.6</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>4 rows × 3 columns</p>
+    </div>
+
+where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at time 4 and time 8. We can use ``to_long_format`` to transform the base dataset into a long format and ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
+
+.. code:: python
+    
+      from lifelines.utils import to_long_format
+      from lifelines.utils import add_covariate_to_timeline
+
+      base_df = to_long_format(base_df, duration_col="T")
+      df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="event")
+
+
+.. raw:: html
+
+    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
+      <table border="1" class="dataframe">
+        <thead>
+          <tr style="text-align: right;">
+            <th style="padding: 8px;">start</th>
+            <th style="padding: 8px;">var1</th>
+            <th style="padding: 8px;">var2</th>
+            <th style="padding: 8px;">stop</th>
+            <th style="padding: 8px;">id</th>
+            <th style="padding: 8px;">E</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">0.1</td>
+            <td style="padding: 8px;">1.4</td>
+            <td style="padding: 8px;">4</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">False</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">4</td>
+            <td style="padding: 8px;">0.1</td>
+            <td style="padding: 8px;">1.2</td>
+            <td style="padding: 8px;">8</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">False</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">8</td>
+            <td style="padding: 8px;">0.1</td>
+            <td style="padding: 8px;">1.5</td>
+            <td style="padding: 8px;">10</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">True</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">0.5</td>
+            <td style="padding: 8px;">1.6</td>
+            <td style="padding: 8px;">12</td>
+            <td style="padding: 8px;">2</td>
+            <td style="padding: 8px;">False</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>4 rows × 6 columns</p>
+    </div>
+
+From the above output, we can see that individual 1 changed state twice over the observation period, and the ``start`` (exclusive) and ``stop`` (inclusive) columns denote the time windows of their state. You may have multiple covariates you wish to add, so the above could be streamlined like so:
+
+.. code:: python
+    
+      from lifelines.utils import to_long_format
+      from lifelines.utils import add_covariate_to_timeline
+
+      base_df = to_long_format(base_df, duration_col="T")
+      df = base_df.pipe(add_covariate_to_timeline, cv1, duration_col="time", id_col="id", event_col="event")\
+                  .pipe(add_covariate_to_timeline, cv2, duration_col="time", id_col="id", event_col="event")\
+                  .pipe(add_covariate_to_timeline, cv3, duration_col="time", id_col="id", event_col="event")
+
+
+For an example of pulling datasets like this from a SQL-sore, see :ref:`Example SQL queries and transformations to get time varying data`.
+
+
+Fitting the model
+####################################
+
+Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. 
+
+.. code:: python
+
+    from lifelines import CoxTimeVaryingFitter
+
+    ctv = CoxTimeVaryingFitter()
+    ctv.fit(df, id_col="id", event_col="event", start_col="start", stop_col="stop")
+    ctv.print_summary()
+
+
 Model Selection in Survival Regression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -529,10 +790,11 @@ of AUC, another common loss function, and is interpreted similarly:
 
 The measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships) and the predicted times.
 
+
 Cross Validation
 ######################################
 
-Lifelines has an implementation of k-fold cross validation under `lifelines.utils.k_fold_cross_validation`. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus `k` (the number of folds to perform, default 5). On each fold, it splits the data 
+Lifelines has an implementation of k-fold cross validation under ``lifelines.utils.k_fold_cross_validation``. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus `k` (the number of folds to perform, default 5). On each fold, it splits the data 
 into a training set and a testing set, fits itself on the training set, and evaluates itself on the testing set (using the concordance measure). 
 
 .. code:: python
@@ -544,9 +806,9 @@ into a training set and a testing set, fits itself on the training set, and eval
         regression_dataset = load_regression_dataset()
         cph = CoxPHFitter()
         scores = k_fold_cross_validation(cph, regression_dataset, 'T', event_col='E', k=3)
-        print scores
-        print np.mean(scores)
-        print np.std(scores)
+        print(scores)
+        print(np.mean(scores))
+        print(np.std(scores))
         
         #[ 0.5896  0.5358  0.5028]
         # 0.542
