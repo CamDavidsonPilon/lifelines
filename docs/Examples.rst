@@ -50,9 +50,9 @@ compares whether the "death" generation process of the two populations are equal
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
    """
 
-   print results.p_value        # 0.46759 
-   print results.test_statistic # 0.528
-   print results.is_significant # False
+   print(results.p_value)        # 0.46759 
+   print(results.test_statistic) # 0.528
+   print(results.is_significant) # False
 
 
 If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares
@@ -82,9 +82,9 @@ If using *lifelines* for prediction work, it's ideal that you perform some sort 
     aaf_2 = AalenAdditiveFitter(coef_penalizer=10)
     cph = CoxPHFitter() 
 
-    print np.mean(k_fold_cross_validation(cph, df, duration_col='T', event_col='E'))
-    print np.mean(k_fold_cross_validation(aaf_1, df, duration_col='T', event_col='E'))
-    print np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E'))
+    print(np.mean(k_fold_cross_validation(cph, df, duration_col='T', event_col='E')))
+    print(np.mean(k_fold_cross_validation(aaf_1, df, duration_col='T', event_col='E')))
+    print(np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E')))
 
 From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
 
@@ -150,8 +150,8 @@ time (months, days, ...)      observed deaths       censored
     from lifelines.utils import survival_events_from_table
 
     T, E = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
-    print T # np.array([0,0,0,0,0,0,0,1,2,2, ...])
-    print E # np.array([1,1,1,1,1,1,1,0,1,1, ...])
+    print(T # np.array([0,0,0,0,0,0,0,1,2,2, ...]))
+    print(E # np.array([1,1,1,1,1,1,1,0,1,1, ...]))
 
 
 Alternatively, perhaps you are interested in viewing the survival table given some durations and censorship vectors.
@@ -162,7 +162,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
     from lifelines.utils import survival_table_from_events
 
     table = survival_table_from_events(T, E)
-    print table.head()
+    print(table.head())
     
     """
               removed  observed  censored  entrance  at_risk
@@ -268,7 +268,7 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
 
 .. code-block:: python
     
-    print kmf.survival_function_ 
+    print(kmf.survival_function_)
 
         KM-estimate
     0          1.00
@@ -305,7 +305,7 @@ existing for times 72 or 73) This is especially useful for comparing multiple su
 .. code-block:: python
 
     naf.fit( T, timeline=range(40,75))
-    print kmf.survival_function_ 
+    print(kmf.survival_function_)
 
         KM-estimate
     40         1.00
@@ -347,8 +347,8 @@ existing for times 72 or 73) This is especially useful for comparing multiple su
 
 *lifelines* will intelligently forward-fill the estimates to unseen time points.
 
-Example SQL query to get data from a table
-##############################################
+Example SQL query to get survival data from a table
+#####################################################
 
 Below is a way to get an example dataset from a relational database (this may vary depending on your database):
 
@@ -358,7 +358,7 @@ Below is a way to get an example dataset from a relational database (this may va
       id, 
       DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE)) AS "T", 
       (ended_at IS NOT NULL) AS "E" 
-    FROM some_tables
+    FROM table
 
 Explanation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -375,6 +375,48 @@ id                   T                      E
 13                   36                 True
 14                   33                 True
 ==================   ============   ============
+
+
+Example SQL queries and transformations to get time varying data
+####################################################################
+
+For Cox time-varying models, we discussed what the dataset should look like in :ref:`Dataset for time-varying regression`. Typically we have a base dataset, and then we fold in the covariate datasets. Below are some SQL queries and Python transformations from end-to-end.
+
+
+Base dataset: ``base_df``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: mysql
+
+    SELECT 
+      id, 
+      group,
+      DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE)) AS "T", 
+      (ended_at IS NOT NULL) AS "E"
+    FROM dimension_table dt
+
+
+Time varying dataset: ``cv``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: mysql
+
+    SELECT 
+      id, 
+      DATEDIFF('dd', dt.started_at, ft.event_at) AS "time", 
+      ft.var1
+    FROM fact_table ft
+    JOIN dimension_table dt
+       USING(id)
+
+
+.. code-block:: python
+
+      from lifelines.utils import to_long_format
+      from lifelines.utils import add_covariate_to_timeline
+
+      base_df = to_long_format(base_df, duration_col="T")
+      df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
 
 
 Sample size determination under a CoxPH model
@@ -415,16 +457,15 @@ Suppose you wish to measure the hazard ratio between two populations under the C
     power = power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio)
     # 0.4957
 
-
 Problems with convergence in the Cox Proportional Hazard Model
 ################################################################
 
 Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there is sometimes a problem with convergence. Here are some common symptoms and possible resolutions:
 
- - Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is equally as large. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object. Look for a ``RuntimeWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models). Or, the data is completely seperable, which means that there exists a covariate the completely determines whether an event occured or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Another problem may be a colinear relationship in your dataset - see the third point below. 
+ - Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is equally as large. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object. Look for a ``RuntimeWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models). Or, the data is completely separable, which means that there exists a covariate the completely determines whether an event occured or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Another problem may be a colinear relationship in your dataset - see the third point below. 
 
  - Adding a very small ``penalizer_coef`` significantly changes the results. This probably means that the step size is too large. Try decreasing it, and returning the ``penalizer_coef`` term to 0. 
 
  - ``LinAlgError: Singular matrix`` is thrown. This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset. 
 
- - If using the ``strata`` arugment, make sure your stratification group sizes are not too small. 
+ - If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).count()``.
