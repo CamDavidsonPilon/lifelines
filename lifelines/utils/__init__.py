@@ -974,6 +974,15 @@ def pass_for_numeric_dtypes_or_raise(df):
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
 
+def check_for_overlapping_intervals(df):
+    # only useful for time varying coefs, after we've done
+    # some index creation
+    if not df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic).all():
+        raise ValueError("The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
+to help find:\
+df.groupby(level=1).apply(lambda g: g.index.is_monotonic_increasing)")
+
+
 def check_low_var(df, prescript="", postscript=""):
     low_var = (df.var(0) < 10e-5)
     if low_var.any():
@@ -989,7 +998,21 @@ def to_long_format(df, duration_col):
                  .drop(duration_col, axis=1)
 
 
-def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=True):
+def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=False):
+
+    def remove_redundant_rows(cv):
+        """
+        Removes rows where no change occurs. Ex:
+
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0, 'var4': 1},
+            {'id': 1, 't': 1, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 6, 'var3': 1, 'var4': 1},
+        ])
+        """
+        cols = cv.columns.difference([duration_col])
+        cv = cv.loc[(cv[cols].shift() != cv[cols]).any(axis=1)]
+        return cv
 
     def transform_cv_to_long_format(cv):
         cv = cv.rename({duration_col: 'start'}, axis=1)
@@ -1005,6 +1028,7 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=
         except KeyError:
             return df
 
+        final_state = bool(df[event_col].iloc[-1])
         final_stop_time = df['stop'].iloc[-1]
         df = df.drop([id_col, event_col, 'stop'], axis=1)
         cv = cv.drop([id_col], axis=1)
@@ -1017,17 +1041,19 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=
 
         expanded_df['stop'] = expanded_df['start'].shift(-1)
         expanded_df[id_col] = id_
-        expanded_df[event_col] = 0
-        expanded_df.at[n - 1, event_col] = 1
+        expanded_df[event_col] = False
+        expanded_df.at[n - 1, event_col] = final_state
         expanded_df.at[n - 1, 'stop'] = final_stop_time
 
         if add_enum:
-            expanded_df['enum'] = np.arange(1, n+1)
+            expanded_df['enum'] = np.arange(1, n + 1)
 
         return expanded_df.ffill()
 
-    cvs = transform_cv_to_long_format(cv)\
-        .groupby(id_col)
+    cv = cv.sort_values([id_col, duration_col])
+    cvs = cv.pipe(remove_redundant_rows)\
+            .pipe(transform_cv_to_long_format)\
+            .groupby(id_col)
     df = df.groupby(id_col, group_keys=False)\
         .apply(expand, cvs=cvs)
     return df.reset_index(drop=True)

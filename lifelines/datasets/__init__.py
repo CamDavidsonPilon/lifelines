@@ -321,14 +321,15 @@ def load_stanford_heart_transplants(**kwargs):
     """
     return load_dataset('stanford_heart.csv', **kwargs)
 
+
 def load_gbsg2(**kwargs):
     """
-    A data frame containing the observations from the GBSG2 study of 686 women. 
+    A data frame containing the observations from the GBSG2 study of 686 women.
 
     W. Sauerbrei and P. Royston (1999). Building multivariable prognostic and diagnostic models: transformation of the predictors by using fractional polynomials. Journal of the Royal Statistics Society Series A, Volume 162(1), 71–94
 
     M. Schumacher, G. Basert, H. Bojar, K. Huebner, M. Olschewski, W. Sauerbrei, C. Schmoor, C. Beyerle, R.L.A. Neumann and H.F. Rauschecker for the German Breast Cancer Study Group (1994), Randomized 2 × 2 trial evaluating hormonal treatment and the duration of chemotherapy in node- positive breast cancer patients. Journal of Clinical Oncology, 12, 2086–2093
-    
+
     Size: (686,10)
     Example:
         horTh           yes
@@ -344,3 +345,11 @@ def load_gbsg2(**kwargs):
     """
     return load_dataset('gbsg2.csv', **kwargs)
 
+
+def load_dfcv_dataset():
+    """
+    A toy example of a time dependent dataset.
+
+    """
+    from lifelines.datasets.dfcv_dataset import dfcv
+    return dfcv

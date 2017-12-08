@@ -508,3 +508,26 @@ class TestTimeLine(object):
         idx = df['id'] == 1
         n = idx.sum()
         assert_series_equal(df['enum'].loc[idx], pd.Series(np.arange(1, n + 1)), check_names=False)
+
+    def test_event_col_is_properly_inserted(self, seed_df, cv2):
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
+        assert df.groupby('id').last()['E'].tolist() == [1, 0]
+
+    def test_redundant_cv_columns_are_dropped(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0, 'var4': 1},
+            {'id': 1, 't': 1, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 3, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 6, 'var3': 1, 'var4': 1},
+            {'id': 1, 't': 9, 'var3': 1, 'var4': 1},  # redundant, as nothing changed during the interval
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 2
+
+    def test_will_convert_event_column_to_bools(self, seed_df, cv1):
+        seed_df['E'] = seed_df['E'].astype(int)
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')
+        assert df.dtypes['E'] == bool

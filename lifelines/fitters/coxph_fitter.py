@@ -26,12 +26,11 @@ class CoxPHFitter(BaseFitter):
       alpha: the level in the confidence intervals.
       tie_method: specify how the fitter should deal with ties. Currently only
         'Efron' is available.
-      normalize: substract the mean and divide by standard deviation of each covariate
-        in the input data before performing any fitting.
       penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the absolute value of beta_i. Recommended, even if a small value.
         The penalty is 1/2 * penalizer * ||beta||^2.
+      strata: TODO
     """
 
     def __init__(self, alpha=0.95, tie_method='Efron', penalizer=0.0, strata=None):
@@ -85,7 +84,7 @@ class CoxPHFitter(BaseFitter):
             xi = X[i:i + 1]
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
-            phi_x_i = dot(phi_i, xi)
+            phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_i * xi)
 
             # Calculate sums of Risk set
@@ -166,9 +165,6 @@ class CoxPHFitter(BaseFitter):
         assert precision <= 1., "precision must be less than or equal to 1."
         n, d = X.shape
 
-        # Want as bools
-        E = E.astype(bool)
-
         # make sure betas are correct size.
         if initial_beta is not None:
             assert initial_beta.shape == (d, 1)
@@ -184,22 +180,19 @@ class CoxPHFitter(BaseFitter):
 
         i = 0
         converging = True
-        ll = 0
-        previous_ll = 0
+        ll, previous_ll = 0, 0
 
         while converging:
             i += 1
             if self.strata is None:
-                output = get_gradients(X.values, beta, T.values, E.values)
-                h, g, ll = output
+                h, g, ll = get_gradients(X.values, beta, T.values, E.values)
             else:
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for strata in np.unique(X.index):
                     stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
-                    output = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values)
-                    _h, _g, _ll = output
+                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values)
                     g += _g
                     h += _h
                     ll += _ll
@@ -233,7 +226,7 @@ class CoxPHFitter(BaseFitter):
                 converging = False
 
             # Only allow small steps
-            if norm(delta) > 10:
+            if norm(delta) > 10.0:
                 step_size *= 0.5
 
             # anneal the step size down.

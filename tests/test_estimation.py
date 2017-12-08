@@ -19,7 +19,7 @@ import numpy.testing as npt
 from lifelines.utils import k_fold_cross_validation, StatError
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-    WeibullFitter, BaseFitter
+    WeibullFitter, BaseFitter, CoxTimeVaryingFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
@@ -156,7 +156,7 @@ class TestUnivariateFitters():
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
-        assert abs(kmf.predict(0.5) - 5/6.) < 10e-8
+        assert abs(kmf.predict(0.5) - 5 / 6.) < 10e-8
         assert abs(kmf.predict(1.9999) - 0.3333666666) < 10e-8
 
     def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
@@ -243,10 +243,9 @@ class TestUnivariateFitters():
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
     def test_valueerror_is_thrown_if_alpha_out_of_bounds(self, univariate_fitters):
-        T2 = np.arange(1, 50)
         for fitter in univariate_fitters:
             with pytest.raises(ValueError):
-                f = fitter(alpha=95)
+                fitter(alpha=95)
 
 
 class TestWeibullFitter():
@@ -1379,3 +1378,27 @@ class TestAalenAdditiveFitter():
         y_df = aaf.predict_cumulative_hazard(x)
         y_np = aaf.predict_cumulative_hazard(x.values)
         assert_frame_equal(y_df, y_np)
+
+
+class TestCoxTimeVaryingFitter():
+
+    @pytest.fixture()
+    def ctv(self):
+        return CoxTimeVaryingFitter()
+
+    def test_inference_against_known_R_output(self, ctv):
+        # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
+        from lifelines.datasets import load_dfcv_dataset
+        dfcv = load_dfcv_dataset()
+
+        ctv.fit(dfcv, id_col="ID", start_col="start", stop_col="stop", event_col="event")
+        npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757,  0.705963], decimal=3)
+
+    def test_fitter_will_raise_an_error_if_overlapping_intervals(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 10, 'var': 1., 'event': 0},
+            {'id': 1, 'start': 5, 'stop': 10, 'var': 1., 'event': 0},
+        ])
+
+        with pytest.raises(ValueError):
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
