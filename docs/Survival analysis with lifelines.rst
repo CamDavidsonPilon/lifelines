@@ -327,11 +327,11 @@ probabilties of survival at those points:
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
     ax = kmf.plot(ax=ax)
-    print "Median survival time of democratic:", kmf.median_
+    print("Median survival time of democratic:", kmf.median_)
     
     kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
     ax = kmf.plot(ax=ax)
-    print "Median survival time of non-democratic:", kmf.median_
+    print("Median survival time of non-democratic:", kmf.median_)
 
     plt.ylim(0,1)
     plt.title("Lifespans of different global regimes");
@@ -439,8 +439,8 @@ end times/dates (or ``None`` if not observed):
     start_date = ['2013-10-10 0:00:00', '2013-10-09', '2013-10-10']
     end_date = ['2013-10-13', '2013-10-10', None]
     T, E = datetimes_to_durations(start_date, end_date, fill_date='2013-10-15')
-    print 'T (durations): ', T
-    print 'E (event_observed): ', E
+    print('T (durations): ', T)
+    print('E (event_observed): ', E)
 
 .. parsed-literal::
 
@@ -491,7 +491,7 @@ a DataFrame:
 
 .. code:: python
 
-    print naf.cumulative_hazard_.head()
+    print(naf.cumulative_hazard_.head())
     naf.plot()
 
 .. parsed-literal::
@@ -632,7 +632,7 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 
 .. code:: python
     
-    print kmf.cumulative_density_
+    print(kmf.cumulative_density_)
     kmf.plot() #will plot the CDF
 
 

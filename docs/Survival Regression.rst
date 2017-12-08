@@ -343,7 +343,7 @@ Prime Minister Stephen Harper.
 
     ix = (data['ctryname'] == 'Canada') * (data['start_year'] == 2006)
     harper = X.loc[ix]
-    print "Harper's unique data point", harper
+    print("Harper's unique data point", harper)
 
 .. parsed-literal::
 
@@ -806,9 +806,9 @@ into a training set and a testing set, fits itself on the training set, and eval
         regression_dataset = load_regression_dataset()
         cph = CoxPHFitter()
         scores = k_fold_cross_validation(cph, regression_dataset, 'T', event_col='E', k=3)
-        print scores
-        print np.mean(scores)
-        print np.std(scores)
+        print(scores)
+        print(np.mean(scores))
+        print(np.std(scores))
         
         #[ 0.5896  0.5358  0.5028]
         # 0.542
