@@ -15,6 +15,7 @@ import pytest
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
+from numpy.linalg.linalg import LinAlgError
 
 from lifelines.utils import k_fold_cross_validation, StatError
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
@@ -1136,7 +1137,7 @@ Concordance = 0.640""".strip().split()
             warnings.simplefilter("always")
             try:
                 cox.fit(rossi, 'week', 'arrest')
-            except:
+            except (LinAlgError, ValueError):
                 pass
             assert len(w) == 2
             assert issubclass(w[-1].category, RuntimeWarning)
@@ -1153,7 +1154,7 @@ Concordance = 0.640""".strip().split()
             warnings.simplefilter("always")
             try:
                 cox.fit(rossi, 'week', 'arrest')
-            except:
+            except LinAlgError:
                 pass
             assert len(w) == 1
             assert issubclass(w[-1].category, RuntimeWarning)
@@ -1386,11 +1387,13 @@ class TestCoxTimeVaryingFitter():
     def ctv(self):
         return CoxTimeVaryingFitter()
 
-    def test_inference_against_known_R_output(self, ctv):
-        # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
+    @pytest.fixture()
+    def dfcv(self):
         from lifelines.datasets import load_dfcv_dataset
-        dfcv = load_dfcv_dataset()
+        return load_dfcv_dataset()
 
+    def test_inference_against_known_R_output(self, ctv, dfcv):
+        # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
         ctv.fit(dfcv, id_col="ID", start_col="start", stop_col="stop", event_col="event")
         npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757,  0.705963], decimal=3)
 
@@ -1402,3 +1405,32 @@ class TestCoxTimeVaryingFitter():
 
         with pytest.raises(ValueError):
             ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column(self, ctv, dfcv):
+        dfcv['constant'] = 1.0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except LinAlgError:
+                pass
+            assert len(w) == 2
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "variance" in str(w[0].message)
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, ctv, dfcv):
+        # check for a warning if we have complete seperation
+        ix = dfcv['event']
+        dfcv.loc[ix, 'var3'] = 1
+        dfcv.loc[~ix, 'var3'] = 0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except LinAlgError:
+                pass
+            assert len(w) == 2
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "complete separation" in str(w[-1].message)

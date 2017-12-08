@@ -10,9 +10,9 @@ from numpy.linalg import solve, norm, inv
 from lifelines.fitters import BaseFitter
 
 from lifelines.utils import inv_normal_cdf, \
-    significance_code, qth_survival_times,\
+    significance_code,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
-    check_for_overlapping_intervals
+    check_for_overlapping_intervals, check_complete_separation
 
 
 def at_(df, t):
@@ -38,6 +38,9 @@ class CoxTimeVaryingFitter(BaseFitter):
     def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=0.5):
 
         df = df.copy()
+        if not (id_col in df and event_col in df and start_col in df and stop_col in df):
+            raise KeyError("A column specified in the call to `fit` does not exist in the dataframe provided.")
+
         df = df.rename(columns={id_col: 'id', event_col: 'event', start_col: 'start', stop_col: 'stop'})
         df['event'] = df['event'].astype(bool)
 
@@ -45,7 +48,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df = df.drop(['start'], axis=1)\
                .set_index(['interval', 'id'])
 
-        self._check_values(df.drop(["event", "stop"], axis=1))
+        self._check_values(df.drop(["event", "stop"], axis=1), df['event'])
         hazards_ = self._newton_rhaphson(df, show_progress=show_progress,
                                          step_size=step_size)
 
@@ -55,9 +58,10 @@ class CoxTimeVaryingFitter(BaseFitter):
         return self
 
     @staticmethod
-    def _check_values(df):
+    def _check_values(df, E):
         check_for_overlapping_intervals(df)
         check_low_var(df)
+        check_complete_separation(df, E)
         pass_for_numeric_dtypes_or_raise(df)
 
     def _compute_standard_errors(self):
