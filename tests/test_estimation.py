@@ -1138,7 +1138,7 @@ Concordance = 0.640""".strip().split()
                 cox.fit(rossi, 'week', 'arrest')
             except:
                 pass
-            assert len(w) == 3
+            assert len(w) == 2
             assert issubclass(w[-1].category, RuntimeWarning)
             assert "variance" in str(w[0].message)
 
@@ -1155,9 +1155,9 @@ Concordance = 0.640""".strip().split()
                 cox.fit(rossi, 'week', 'arrest')
             except:
                 pass
-            assert len(w) == 2
+            assert len(w) == 1
             assert issubclass(w[-1].category, RuntimeWarning)
-            assert "Complete seperation" in str(w[-1].message)
+            assert "complete separation" in str(w[-1].message)
 
     @pytest.mark.xfail
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):

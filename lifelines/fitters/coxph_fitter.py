@@ -12,7 +12,8 @@ import scipy.stats as stats
 from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
-    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce
+    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
+    check_complete_separation
 
 
 class CoxPHFitter(BaseFitter):
@@ -30,7 +31,10 @@ class CoxPHFitter(BaseFitter):
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the absolute value of beta_i. Recommended, even if a small value.
         The penalty is 1/2 * penalizer * ||beta||^2.
-      strata: TODO
+      strata: specify a list of columns to use in stratification. This is useful if a
+         catagorical covariate does not obey the proportional hazard assumption. This
+         is used similar to the `strata` expression in R.
+         See http://courses.washington.edu/b515/l17.pdf.
     """
 
     def __init__(self, alpha=0.95, tie_method='Efron', penalizer=0.0, strata=None):
@@ -316,7 +320,7 @@ class CoxPHFitter(BaseFitter):
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
-        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(self.baseline_hazard_)
+        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
         self.score_ = concordance_index(self.durations,
                                         -self.predict_partial_hazard(df).values.ravel(),
@@ -324,15 +328,13 @@ class CoxPHFitter(BaseFitter):
         self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
         return self
 
-    def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
-        return baseline_hazard_.cumsum()
+    def _compute_baseline_cumulative_hazard(self):
+        return self.baseline_hazard_.cumsum()
 
     @staticmethod
     def _check_values(df, E):
-        deaths = E == 1
         check_low_var(df)
-        check_low_var(df.loc[deaths], "Complete seperation possibly detected. ", " See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/")
-        check_low_var(df.loc[~deaths], "Complete seperation possibly detected. ", " See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/")
+        check_complete_separation(df, E)
         pass_for_numeric_dtypes_or_raise(df)
 
     def _compute_confidence_intervals(self):

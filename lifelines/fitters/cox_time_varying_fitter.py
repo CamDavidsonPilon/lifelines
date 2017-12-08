@@ -10,8 +10,8 @@ from numpy.linalg import solve, norm, inv
 from lifelines.fitters import BaseFitter
 
 from lifelines.utils import inv_normal_cdf, \
-    significance_code, concordance_index, qth_survival_times,\
-    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
+    significance_code, qth_survival_times,\
+    pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals
 
 
@@ -51,6 +51,8 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef'])
         self.confidence_intervals_ = self._compute_confidence_intervals()
+
+        return self
 
     @staticmethod
     def _check_values(df):
@@ -177,6 +179,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self._hessian_ = hessian
         self._score_ = gradient
         self._log_likelihood = ll
+        self.event_observed = events
         if show_progress:
             print("Convergence completed after %d iterations." % (i))
         return beta
@@ -275,5 +278,16 @@ class CoxTimeVaryingFitter(BaseFitter):
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
-        print("Concordance = {:.3f}".format(self.score_))
         return
+
+    def _compute_baseline_hazard(self, data, durations, event_observed, name):
+        # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
+        ind_hazards = self.predict_partial_hazard(data)
+        ind_hazards['event_at'] = durations
+        ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
+        ind_hazards_summed_over_durations.name = 'hazards'
+
+        event_table = survival_table_from_events(durations, event_observed)
+        event_table = event_table.join(ind_hazards_summed_over_durations)
+        baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name]).fillna(0)
+        return baseline_hazard

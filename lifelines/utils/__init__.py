@@ -980,16 +980,32 @@ def check_for_overlapping_intervals(df):
     if not df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic).all():
         raise ValueError("The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
 to help find:\
-df.groupby(level=1).apply(lambda g: g.index.is_monotonic_increasing)")
+df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic)")
+
+
+def _low_var(df):
+    return (df.var(0) < 10e-5)
 
 
 def check_low_var(df, prescript="", postscript=""):
-    low_var = (df.var(0) < 10e-5)
+    low_var = _low_var(df)
     if low_var.any():
         cols = str(list(df.columns[low_var]))
         warning_text = "%sColumn(s) %s have very low variance. \
 This may harm convergence. Try dropping this redundant column before fitting \
 if convergence fails.%s" % (prescript, cols, postscript)
+        warnings.warn(warning_text, RuntimeWarning)
+
+
+def check_complete_separation(df, events):
+    events = events.astype(bool)
+    rhs = df.columns[_low_var(df.loc[events])]
+    lhs = df.columns[_low_var(df.loc[~events])]
+    inter = lhs.intersection(rhs).tolist()
+    if inter:
+        warning_text = "Column(s) %s have very low variance when conditioned on \
+death event or not. This may harm convergence. This is a form of 'complete separation'. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
         warnings.warn(warning_text, RuntimeWarning)
 
 
@@ -1018,8 +1034,9 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=
         cv = cv.rename({duration_col: 'start'}, axis=1)
         return cv
 
-    def construct_new_timeline(series_r, series_l):
-        return np.sort(series_r.append(series_l).unique())
+    def construct_new_timeline(series_r, series_l, final_stop_time):
+        a = np.sort(series_r.append(series_l).unique())
+        return a[a <= final_stop_time]
 
     def expand(df, cvs):
         id_ = df.name
@@ -1033,7 +1050,7 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=
         df = df.drop([id_col, event_col, 'stop'], axis=1)
         cv = cv.drop([id_col], axis=1)
 
-        timeline = construct_new_timeline(df['start'], cv['start'])
+        timeline = construct_new_timeline(df['start'], cv['start'], final_stop_time)
         n = len(timeline)
         expanded_df = pd.DataFrame(timeline, columns=['start'])
         expanded_df = expanded_df.merge(df, how='left', on='start')
