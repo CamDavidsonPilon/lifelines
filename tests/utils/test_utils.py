@@ -553,15 +553,3 @@ class TestTimeLine(object):
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
         assert df.shape[0] == 3
-
-    def test_if_cvs_include_a_start_time_before_it_is_included_2(self, seed_df):
-        min_T = seed_df['start'].min()
-        cv = pd.DataFrame.from_records([
-            {'id': 1, 't': -1, 'var1': 5},
-            {'id': 1, 't': 0, 'var3': 0},
-            {'id': 1, 't': min_T - 1, 'var3': 1},
-            {'id': 2, 't': 0, 'var3': 0},
-        ])
-
-        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
-        assert df.shape[0] == 2
