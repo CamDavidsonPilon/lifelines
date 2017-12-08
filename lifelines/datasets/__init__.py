@@ -299,6 +299,7 @@ def load_g3(**kwargs):
     """
     return load_dataset('g3.csv', **kwargs)
 
+
 def load_stanford_heart_transplants(**kwargs):
     """
     This is a classic dataset for survival regression with time
@@ -346,10 +347,19 @@ def load_gbsg2(**kwargs):
     return load_dataset('gbsg2.csv', **kwargs)
 
 
-def load_dfcv_dataset():
+def load_dfcv():
     """
-    A toy example of a time dependent dataset.
+    A toy example of a time dependent dataset. From http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
 
+
+    Size: (14, 6)
+    Example:
+
+        start  group  z  stop  id  event
+    0       0    1.0  0   3.0   1   True
+    1       0    1.0  0   5.0   2  False
+    2       0    1.0  1   5.0   3   True
+    3       0    1.0  0   6.0   4   True
     """
     from lifelines.datasets.dfcv_dataset import dfcv
     return dfcv

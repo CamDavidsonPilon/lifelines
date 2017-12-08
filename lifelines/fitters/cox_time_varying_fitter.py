@@ -54,6 +54,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef'])
         self.confidence_intervals_ = self._compute_confidence_intervals()
+        self._n_examples = df.shape[0]
 
         return self
 
@@ -207,14 +208,11 @@ class CoxTimeVaryingFitter(BaseFitter):
         gradient = np.zeros((1, d))
         log_lik = 0
 
-        unique_death_times = np.sort(stop_times.loc[events])
+        unique_death_times = np.sort(stop_times.loc[events].unique())
 
         for t in unique_death_times:
-            x_tie_sum = np.zeros((1, d))
-            tie_phi = 0
-            tie_phi_x = np.zeros((1, d))
-            tie_phi_x_x = np.zeros((d, d))
-            risk_phi = 0
+            x_death_sum = np.zeros((1, d))
+            tie_phi, risk_phi = 0, 0
             risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
             risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
@@ -231,8 +229,9 @@ class CoxTimeVaryingFitter(BaseFitter):
             # Calculate the sums of Tie set
             deaths = (at_(stop_times, t) == t) & (at_(events, t))
             death_counts = deaths.sum()
+
             xi_deaths = xi.loc[deaths]
-            x_tie_sum += xi_deaths.sum(0).values.reshape((1, d))
+            x_death_sum += xi_deaths.sum(0).values.reshape((1, d))
 
             tie_phi += phi_i[deaths.values].sum()
             tie_phi_x += phi_x_i.loc[deaths].sum(0).values.reshape((1, d))
@@ -259,8 +258,8 @@ class CoxTimeVaryingFitter(BaseFitter):
                 log_lik -= np.log(denom).ravel()[0]
 
             # Values outside tie sum
-            gradient += x_tie_sum - partial_gradient
-            log_lik += dot(x_tie_sum, beta).ravel()[0]
+            gradient += x_death_sum - partial_gradient
+            log_lik += dot(x_death_sum, beta).ravel()[0]
 
         return hessian, gradient, log_lik
 
@@ -283,15 +282,3 @@ class CoxTimeVaryingFitter(BaseFitter):
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
         return
-
-    def _compute_baseline_hazard(self, data, durations, event_observed, name):
-        # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        ind_hazards = self.predict_partial_hazard(data)
-        ind_hazards['event_at'] = durations
-        ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
-        ind_hazards_summed_over_durations.name = 'hazards'
-
-        event_table = survival_table_from_events(durations, event_observed)
-        event_table = event_table.join(ind_hazards_summed_over_durations)
-        baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name]).fillna(0)
-        return baseline_hazard

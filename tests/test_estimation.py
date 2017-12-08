@@ -22,7 +22,8 @@ from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFi
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter, CoxTimeVaryingFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
-    load_lcd, load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset
+    load_lcd, load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
+    load_stanford_heart_transplants
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
 from lifelines.utils import concordance_index
 
@@ -1389,13 +1390,19 @@ class TestCoxTimeVaryingFitter():
 
     @pytest.fixture()
     def dfcv(self):
-        from lifelines.datasets import load_dfcv_dataset
-        return load_dfcv_dataset()
+        from lifelines.datasets import load_dfcv
+        return load_dfcv()
+
+    @pytest.fixture()
+    def heart(self):
+        return load_stanford_heart_transplants()
 
     def test_inference_against_known_R_output(self, ctv, dfcv):
         # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
-        ctv.fit(dfcv, id_col="ID", start_col="start", stop_col="stop", event_col="event")
-        npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757,  0.705963], decimal=3)
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757, 0.705963], decimal=3)
+        npt.assert_almost_equal(ctv.summary['se(coef)'].values, [1.229, 1.206], decimal=3)
+        npt.assert_almost_equal(ctv.summary['p'].values, [0.14, 0.56], decimal=2)
 
     def test_fitter_will_raise_an_error_if_overlapping_intervals(self, ctv):
         df = pd.DataFrame.from_records([
@@ -1434,3 +1441,14 @@ class TestCoxTimeVaryingFitter():
             assert len(w) == 2
             assert issubclass(w[-1].category, RuntimeWarning)
             assert "complete separation" in str(w[-1].message)
+
+    def test_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
+        """
+        library(survival)
+        data(heart)
+        coxph(Surv(start, stop, event) ~ age + transplant + surgery + year, data= heart)
+        """
+        ctv.fit(heart, id_col='id', event_col='event')
+        npt.assert_almost_equal(ctv.summary['coef'].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3)
+        npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
+        npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
