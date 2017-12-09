@@ -1,17 +1,18 @@
 from __future__ import print_function
-import numpy as np
-import pandas as pd
-import pytest
+import sys
 import warnings
 
+import pytest
+import numpy as np
+import pandas as pd
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
+
 from lifelines.estimation import CoxPHFitter
 from lifelines.datasets import (load_regression_dataset, load_larynx,
                                 load_waltons, load_rossi)
-
 from lifelines import utils
 from lifelines.utils import _concordance_index as fast_cindex
 from lifelines.utils import _naive_concordance_index as slow_cindex
@@ -583,6 +584,7 @@ class TestTimeLine(object):
                     .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
         assert df.shape[0] == 3
 
+    @pytest.mark.skipif(sys.version_info < (3,0), reason="requires python3 to pass")
     def test_warning_is_raised_if_cvs_has_an_observation_before_the_earliest_obs_in_the_original_df(self, seed_df):
         cv = pd.DataFrame.from_records([
             {'id': 1, 't': 0, 'var3': 0},
