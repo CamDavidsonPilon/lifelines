@@ -425,6 +425,20 @@ class TestKaplanMeierFitter():
         kmf.fit(df.loc[~ix]['time'], df.loc[~ix]['event'], timeline=[9, 19, 32, 34])
         npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=3)
 
+    @pytest.mark.xfail()
+    def test_kmf_survival_curve_output_against_R_super_accurate(self):
+        df = load_g3()
+        ix = df['group'] == 'RIT'
+        kmf = KaplanMeierFitter()
+
+        expected = np.array([[0.909, 0.779]]).T
+        kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[25, 53])
+        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=4)
+
+        expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
+        kmf.fit(df.loc[~ix]['time'], df.loc[~ix]['event'], timeline=[9, 19, 32, 34])
+        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=4)
+
     def test_kmf_confidence_intervals_output_against_R(self):
         # this uses conf.type = 'log-log'
         df = load_g3()
@@ -439,6 +453,21 @@ class TestKaplanMeierFitter():
         expected_upper_bound = np.array([0.975, 0.904, 0.804, 0.676])
         npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
                                       expected_upper_bound, decimal=3)
+
+    def test_kmf_confidence_intervals_output_against_R_super_accurate(self):
+        # this uses conf.type = 'log-log'
+        df = load_g3()
+        ix = df['group'] != 'RIT'
+        kmf = KaplanMeierFitter()
+        kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[9, 19, 32, 34])
+
+        expected_lower_bound = np.array([0.2731, 0.1946, 0.1109, 0.0461])
+        npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_lower_0.95'].values,
+                                      expected_lower_bound, decimal=4)
+
+        expected_upper_bound = np.array([0.975, 0.904, 0.804, 0.676])
+        npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
+                                      expected_upper_bound, decimal=4)
 
     def test_kmf_does_not_drop_to_zero_if_last_point_is_censored(self):
         T = np.arange(0, 50, 0.5)
@@ -874,7 +903,7 @@ Concordance = 0.640""".strip().split()
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert mean_score > expected, msg.format(expected, mean_score)
 
-    def test_coef_output_against_R(self, rossi):
+    def test_coef_output_against_R_super_accurate(self, rossi):
         """
         from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         Link is now broken, but this is the code:
@@ -888,7 +917,7 @@ Concordance = 0.640""".strip().split()
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
-        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_standard_error_coef_output_against_R(self, rossi):
         """
@@ -904,25 +933,8 @@ Concordance = 0.640""".strip().split()
         expected = np.array([0.19138, 0.02200, 0.30799, 0.21222, 0.38187, 0.19576, 0.02865])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
-        npt.assert_array_almost_equal(cf.summary['se(coef)'].values, expected, decimal=3)
+        npt.assert_array_almost_equal(cf.summary['se(coef)'].values, expected, decimal=4)
 
-    def test_z_value_output_against_R_to_2_decimal_places(self, rossi):
-        """
-        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
-        Link is now broken, but this is the code:
-
-        library(survival)
-        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
-        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
-            data=rossi)
-        summary(mod.allison)
-        """
-        expected = np.array([-1.983, -2.611, 1.019, -0.706, -1.136, -0.434, 3.194])
-        cf = CoxPHFitter()
-        cf.fit(rossi, duration_col='week', event_col='arrest')
-        npt.assert_array_almost_equal(cf.summary['z'].values, expected, decimal=2)
-
-    @pytest.mark.xfail
     def test_z_value_output_against_R_to_3_decimal_places(self, rossi):
         """
         from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
@@ -948,7 +960,7 @@ Concordance = 0.640""".strip().split()
         expected = np.array([[-0.3355, -0.0590, 0.1002]])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'], show_progress=True)
-        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_penalized_output_against_R(self, rossi):
         # R code:
@@ -960,7 +972,7 @@ Concordance = 0.640""".strip().split()
         expected = np.array([[-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909]])
         cf = CoxPHFitter(penalizer=1.0)
         cf.fit(rossi, duration_col='week', event_col='arrest')
-        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
@@ -984,7 +996,7 @@ Concordance = 0.640""".strip().split()
         # standard errors
         actual_se = cf._compute_standard_errors().values
         expected_se = np.array([[0.0143,  0.4623,  0.3561,  0.4222]])
-        npt.assert_array_almost_equal(actual_se, expected_se, decimal=2)
+        npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 
     def test_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
@@ -1042,8 +1054,8 @@ Concordance = 0.640""".strip().split()
         """
         cp = CoxPHFitter()
         cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].loc[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=2)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=2)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].loc[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=4)
 
     def test_strata_from_init_is_used_in_fit_later(self, rossi):
         strata = ['race', 'paro', 'mar']
@@ -1407,7 +1419,7 @@ class TestCoxTimeVaryingFitter():
     def test_inference_against_known_R_output(self, ctv, dfcv):
         # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
         ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
-        npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757, 0.705963], decimal=3)
+        npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757, 0.705963], decimal=4)
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [1.229, 1.206], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.14, 0.56], decimal=2)
 
