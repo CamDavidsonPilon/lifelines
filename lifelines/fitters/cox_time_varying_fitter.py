@@ -32,7 +32,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.alpha = alpha
         self.penalizer = penalizer
 
-    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=1.0):
+    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=False, step_size=1.0):
 
         df = df.copy()
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
@@ -104,7 +104,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
-    def _newton_rhaphson(self, df, show_progress=True, step_size=0.5, precision=10e-6,):
+    def _newton_rhaphson(self, df, show_progress=False, step_size=0.5, precision=10e-6,):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -125,6 +125,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         stop_times = df.pop("stop")
         events = df.pop("event")
+        stop_times_events = pd.concat([stop_times, events], axis=1)
 
         _, d = df.shape
 
@@ -138,7 +139,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         while converging:
             i += 1
-            h, g, ll = self._get_gradients(df, stop_times, events, beta)
+            h, g, ll = self._get_gradients(df, stop_times_events, beta)
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -186,7 +187,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             print("Convergence completed after %d iterations." % (i))
         return beta
 
-    def _get_gradients(self, df, stop_times, events, beta):
+    def _get_gradients(self, df, stops_events, beta):
         """
         return the gradient, hessian, and log-like
         """
@@ -208,7 +209,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         gradient = np.zeros((1, d))
         log_lik = 0
 
-        unique_death_times = np.sort(stop_times.loc[events].unique())
+        unique_death_times = np.sort(stops_events['stop'].loc[stops_events['event']].unique())
 
         for t in unique_death_times:
             x_death_sum = np.zeros((1, d))
@@ -216,10 +217,11 @@ class CoxTimeVaryingFitter(BaseFitter):
             risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
             risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-            xi = at_(df, t)
-            phi_i = exp(dot(xi, beta))
-            phi_x_i = phi_i * xi
-            phi_x_x_i = dot(xi.T, phi_i * xi)
+            df_at_t = at_(df, t)
+            stops_events_at_t = at_(stops_events, t)
+            phi_i = exp(dot(df_at_t, beta))
+            phi_x_i = phi_i * df_at_t
+            phi_x_x_i = dot(df_at_t.T, phi_i * df_at_t)
 
             # Calculate sums of Risk set
             risk_phi += phi_i.sum()
@@ -227,28 +229,36 @@ class CoxTimeVaryingFitter(BaseFitter):
             risk_phi_x_x += phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = (at_(stop_times, t) == t) & (at_(events, t))
+            deaths = stops_events_at_t['event'] & (stops_events_at_t['stop'] == t)
             death_counts = deaths.sum()
 
-            xi_deaths = xi.loc[deaths]
+            xi_deaths = df_at_t.loc[deaths]
             x_death_sum += xi_deaths.sum(0).values.reshape((1, d))
 
-            tie_phi += phi_i[deaths.values].sum()
-            tie_phi_x += phi_x_i.loc[deaths].sum(0).values.reshape((1, d))
-            tie_phi_x_x += dot(xi_deaths.T, phi_i[deaths.values] * xi_deaths)
+            if death_counts > 1:
+                # it's faster if we can skip computing these when we don't need to.
+                tie_phi += phi_i[deaths.values].sum()
+                tie_phi_x += phi_x_i.loc[deaths].sum(0).values.reshape((1, d))
+                tie_phi_x_x += dot(xi_deaths.T, phi_i[deaths.values] * xi_deaths)
 
             partial_gradient = np.zeros((1, d))
 
             for l in range(death_counts):
-                c = l / death_counts
 
-                denom = (risk_phi - c * tie_phi)
-                z = (risk_phi_x - c * tie_phi_x)
+                if death_counts > 1:
+                    c = l / death_counts
+                    denom = (risk_phi - c * tie_phi)
+                    z = (risk_phi_x - c * tie_phi_x)
+                    # Hessian
+                    a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
+                else:
+                    denom = risk_phi
+                    z = risk_phi_x
+                    # Hessian
+                    a1 = risk_phi_x_x / denom
 
                 # Gradient
                 partial_gradient += z / denom
-                # Hessian
-                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
                 # In case z and denom both are really small numbers,
                 # make sure to do division before multiplications
                 a2 = dot(z.T / denom, z / denom)
@@ -282,3 +292,35 @@ class CoxTimeVaryingFitter(BaseFitter):
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
         return
+
+    def plot(self, standardized=False, **kwargs):
+        """
+        standardized: standardize each estimated coefficient and confidence interval endpoints by the standard error of the estimate.
+
+        """
+        from matplotlib import pyplot as plt
+
+        ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
+        yaxis_locations = range(len(self.hazards_.columns))
+
+        summary = self.summary
+        lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
+        upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
+        hazards = self.hazards_.values[0].copy()
+
+        if standardized:
+            se = summary['se(coef)']
+            lower_bound /= se
+            upper_bound /= se
+            hazards /= se
+
+        order = np.argsort(hazards)
+        ax.scatter(upper_bound.values[order], yaxis_locations, marker='|', c='k')
+        ax.scatter(lower_bound.values[order], yaxis_locations, marker='|', c='k')
+        ax.scatter(hazards[order], yaxis_locations, marker='o', c='k')
+        ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color='k', lw=1)
+
+        tick_labels = [c + significance_code(p).strip() for (c, p) in summary['p'][order].iteritems()]
+        plt.yticks(yaxis_locations, tick_labels)
+        plt.xlabel("standardized coef" if standardized else "coef")
+        return ax
