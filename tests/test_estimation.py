@@ -452,22 +452,7 @@ class TestKaplanMeierFitter():
 
         expected_upper_bound = np.array([0.975, 0.904, 0.804, 0.676])
         npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
-                                      expected_upper_bound, decimal=3)
-
-    def test_kmf_confidence_intervals_output_against_R_super_accurate(self):
-        # this uses conf.type = 'log-log'
-        df = load_g3()
-        ix = df['group'] != 'RIT'
-        kmf = KaplanMeierFitter()
-        kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[9, 19, 32, 34])
-
-        expected_lower_bound = np.array([0.2731, 0.1946, 0.1109, 0.0461])
-        npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_lower_0.95'].values,
-                                      expected_lower_bound, decimal=4)
-
-        expected_upper_bound = np.array([0.975, 0.904, 0.804, 0.676])
-        npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
-                                      expected_upper_bound, decimal=4)
+                                      expected_upper_bound, decimal=3)g
 
     def test_kmf_does_not_drop_to_zero_if_last_point_is_censored(self):
         T = np.arange(0, 50, 0.5)
