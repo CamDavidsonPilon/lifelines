@@ -11,7 +11,7 @@ from numpy.linalg import solve, norm, inv
 from lifelines.fitters import BaseFitter
 
 from lifelines.utils import inv_normal_cdf, \
-    significance_code,\
+    significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation
 
@@ -46,10 +46,17 @@ class CoxTimeVaryingFitter(BaseFitter):
                .set_index(['interval', 'id'])
 
         self._check_values(df.drop(["event", "stop"], axis=1), df['event'])
-        hazards_ = self._newton_rhaphson(df, show_progress=show_progress,
+
+        stop_times_events = df[["event", "stop"]]
+        df = df.drop(["event", "stop"], axis=1)
+
+        self._norm_mean = df.mean(0)
+        self._norm_std = df.std(0)
+
+        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), stop_times_events, show_progress=show_progress,
                                          step_size=step_size)
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef'])
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._n_examples = df.shape[0]
 
@@ -63,7 +70,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         pass_for_numeric_dtypes_or_raise(df)
 
     def _compute_standard_errors(self):
-        se = np.sqrt(inv(-self._hessian_).diagonal())
+        se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
@@ -104,7 +111,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
-    def _newton_rhaphson(self, df, show_progress=False, step_size=0.5, precision=10e-6,):
+    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=0.5, precision=10e-6,):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -122,10 +129,6 @@ class CoxTimeVaryingFitter(BaseFitter):
             beta: (1,d) numpy array.
         """
         assert precision <= 1., "precision must be less than or equal to 1."
-
-        stop_times = df.pop("stop")
-        events = df.pop("event")
-        stop_times_events = pd.concat([stop_times, events], axis=1)
 
         _, d = df.shape
 
@@ -182,7 +185,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self._hessian_ = hessian
         self._score_ = gradient
         self._log_likelihood = ll
-        self.event_observed = events
+        self.event_observed = stop_times_events['event']
         if show_progress:
             print("Convergence completed after %d iterations." % (i))
         return beta

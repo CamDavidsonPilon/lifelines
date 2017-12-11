@@ -1336,7 +1336,7 @@ class TestCoxTimeVaryingFitter():
             warnings.simplefilter("always")
             try:
                 ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
-            except LinAlgError:
+            except (LinAlgError, ValueError):
                 pass
             assert len(w) == 2
             assert issubclass(w[-1].category, RuntimeWarning)
@@ -1352,7 +1352,7 @@ class TestCoxTimeVaryingFitter():
             warnings.simplefilter("always")
             try:
                 ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
-            except LinAlgError:
+            except (LinAlgError, ValueError):
                 pass
             assert len(w) == 2
             assert issubclass(w[-1].category, RuntimeWarning)

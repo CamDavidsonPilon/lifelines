@@ -282,7 +282,6 @@ class CoxPHFitter(BaseFitter):
         # Sort on time
         df = df.sort_values(by=duration_col)
 
-        original_df = df
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
         if self.strata is not None:
