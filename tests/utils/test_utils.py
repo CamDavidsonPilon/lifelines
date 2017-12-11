@@ -584,7 +584,7 @@ class TestTimeLine(object):
                     .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
         assert df.shape[0] == 3
 
-    @pytest.mark.skipif(sys.version_info < (3,0), reason="requires python3 to pass")
+    @pytest.mark.skipif(sys.version_info < (3, 0), reason="requires python3 to pass")
     def test_warning_is_raised_if_cvs_has_an_observation_before_the_earliest_obs_in_the_original_df(self, seed_df):
         cv = pd.DataFrame.from_records([
             {'id': 1, 't': 0, 'var3': 0},

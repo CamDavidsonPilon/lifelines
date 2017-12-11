@@ -200,9 +200,13 @@ class CoxTimeVaryingFitter(BaseFitter):
             gradient: (1, d) numpy array
             log_likelihood: double
         """
+        # the below INDEX_ is a faster way to use the at_ function. See https://stackoverflow.com/questions/47621886
+        # def at_(df, t):
+        #     # this adds about a 100%+ runtime increase =(
+        #     return df.iloc[(df.index.get_level_values(0).get_loc(t))]
 
-        def at_(df, t):
-            return df.iloc[(df.index.get_level_values(0).get_loc(t))]
+        INDEX_df = df.index.get_level_values(0)
+        INDEX_stops_events = stops_events.index.get_level_values(0)
 
         _, d = df.shape
         hessian = np.zeros((d, d))
@@ -217,8 +221,9 @@ class CoxTimeVaryingFitter(BaseFitter):
             risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
             risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-            df_at_t = at_(df, t)
-            stops_events_at_t = at_(stops_events, t)
+            df_at_t = df.iloc[INDEX_df.get_loc(t)]
+            stops_events_at_t = stops_events.iloc[INDEX_stops_events.get_loc(t)]
+
             phi_i = exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
             phi_x_x_i = dot(df_at_t.T, phi_i * df_at_t)
@@ -230,7 +235,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             # Calculate the sums of Tie set
             deaths = stops_events_at_t['event'] & (stops_events_at_t['stop'] == t)
-            death_counts = deaths.sum()
+            death_counts = deaths.sum()  # should always be atleast 1.
 
             xi_deaths = df_at_t.loc[deaths]
             x_death_sum += xi_deaths.sum(0).values.reshape((1, d))

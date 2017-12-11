@@ -24,9 +24,9 @@ from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFi
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter, CoxTimeVaryingFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
-    load_lcd, load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
+    load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
     load_stanford_heart_transplants
-from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
+from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
 from lifelines.utils import concordance_index
 
 
@@ -393,24 +393,6 @@ class TestKaplanMeierFitter():
 
         T_shifted = T - 200
         npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
-
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_kmf_left_censorship_plots(self, block):
-        matplotlib = pytest.importorskip("matplotlib")
-        from matplotlib import pyplot as plt
-
-        kmf = KaplanMeierFitter()
-        lcd_dataset = load_lcd()
-        alluvial_fan = lcd_dataset.loc[lcd_dataset['group'] == 'alluvial_fan']
-        basin_trough = lcd_dataset.loc[lcd_dataset['group'] == 'basin_trough']
-        kmf.fit(alluvial_fan['T'], alluvial_fan['C'], left_censorship=True, label='alluvial_fan')
-        ax = kmf.plot()
-
-        kmf.fit(basin_trough['T'], basin_trough['C'], left_censorship=True, label='basin_trough')
-        ax = kmf.plot(ax=ax)
-        plt.show(block=block)
-        return
 
     def test_kmf_survival_curve_output_against_R(self):
         df = load_g3()
@@ -1260,17 +1242,6 @@ class TestAalenAdditiveFitter():
         aaf = AalenAdditiveFitter()
         aaf.fit(X, duration_col='T')
 
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_aaf_panel_dataset(self):
-        matplotlib = pytest.importorskip("matplotlib")
-        from matplotlib import pyplot as plt
-
-        panel_dataset = load_panel_test()
-        aaf = AalenAdditiveFitter()
-        aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
-        aaf.plot()
-
     def test_aaf_panel_dataset_with_no_censorship(self):
         panel_dataset = load_panel_test()
         aaf = AalenAdditiveFitter()
@@ -1296,65 +1267,6 @@ class TestAalenAdditiveFitter():
         # predictions
         T_pred = aaf.predict_median(X[list(range(6))])
         assert abs((T_pred.values > T).mean() - 0.5) < 0.05
-
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_aalen_additive_fit_no_censor(self, block):
-        # this is a visual test of the fitting the cumulative
-        # hazards.
-        matplotlib = pytest.importorskip("matplotlib")
-        from matplotlib import pyplot as plt
-
-        n = 2500
-        d = 6
-        timeline = np.linspace(0, 70, 10000)
-        hz, coef, X = generate_hazard_rates(n, d, timeline)
-        X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
-                                          index=timeline, columns=coef.columns)
-        T = generate_random_lifetimes(hz, timeline)
-        X['T'] = T
-        X['E'] = np.random.binomial(1, 1, n)
-        aaf = AalenAdditiveFitter()
-        aaf.fit(X, 'T', 'E')
-
-        for i in range(d + 1):
-            ax = plt.subplot(d + 1, 1, i + 1)
-            col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
-        plt.show(block=block)
-        return
-
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_aalen_additive_fit_with_censor(self, block):
-        # this is a visual test of the fitting the cumulative
-        # hazards.
-        matplotlib = pytest.importorskip("matplotlib")
-        from matplotlib import pyplot as plt
-
-        n = 2500
-        d = 6
-        timeline = np.linspace(0, 70, 10000)
-        hz, coef, X = generate_hazard_rates(n, d, timeline)
-        X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
-                                          index=timeline, columns=coef.columns)
-        T = generate_random_lifetimes(hz, timeline)
-        X['T'] = T
-        X['E'] = np.random.binomial(1, 0.99, n)
-
-        aaf = AalenAdditiveFitter()
-        aaf.fit(X, 'T', 'E')
-
-        for i in range(d + 1):
-            ax = plt.subplot(d + 1, 1, i + 1)
-            col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
-        plt.show(block=block)
-        return
 
     def test_dataframe_input_with_nonstandard_index(self):
         aaf = AalenAdditiveFitter()
