@@ -647,7 +647,7 @@ Typically, data will be in a format that looks like it comes out of a relational
       <p>2 rows × 4 columns</p>
     </div>
 
-You'll also have secondary data pulls that reference taking future measurements. Example:
+You'll also have secondary dataset that reference taking future measurements. Example:
 
 .. raw:: html
 
@@ -686,7 +686,7 @@ You'll also have secondary data pulls that reference taking future measurements.
       <p>4 rows × 3 columns</p>
     </div>
 
-where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at time 4 and time 8. We can use ``to_long_format`` to transform the base dataset into a long format and ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
+where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at the end of time 4 and at the end of time 8. We can use ``to_long_format`` to transform the base dataset into a long format and ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
 
 .. code:: python
     
@@ -703,45 +703,45 @@ where ``time`` is the duration from the entry event. Here we see subject 1 had a
       <table border="1" class="dataframe">
         <thead>
           <tr style="text-align: right;">
+            <th style="padding: 8px;">id</th>
             <th style="padding: 8px;">start</th>
+            <th style="padding: 8px;">stop</th>
             <th style="padding: 8px;">var1</th>
             <th style="padding: 8px;">var2</th>
-            <th style="padding: 8px;">stop</th>
-            <th style="padding: 8px;">id</th>
-            <th style="padding: 8px;">E</th>
+            <th style="padding: 8px;">event</th>
           </tr>
         </thead>
         <tbody>
           <tr>
+            <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">4</td>
             <td style="padding: 8px;">0.1</td>
             <td style="padding: 8px;">1.4</td>
-            <td style="padding: 8px;">4</td>
-            <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">False</td>
           </tr>
           <tr>
+            <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">4</td>
+            <td style="padding: 8px;">8</td>
             <td style="padding: 8px;">0.1</td>
             <td style="padding: 8px;">1.2</td>
-            <td style="padding: 8px;">8</td>
-            <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">False</td>
           </tr>
           <tr>
+            <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">8</td>
+            <td style="padding: 8px;">10</td>
             <td style="padding: 8px;">0.1</td>
             <td style="padding: 8px;">1.5</td>
-            <td style="padding: 8px;">10</td>
-            <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">True</td>
           </tr>
           <tr>
+            <td style="padding: 8px;">2</td>
             <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">12</td>
             <td style="padding: 8px;">0.5</td>
             <td style="padding: 8px;">1.6</td>
-            <td style="padding: 8px;">12</td>
-            <td style="padding: 8px;">2</td>
             <td style="padding: 8px;">False</td>
           </tr>
         </tbody>
@@ -749,7 +749,9 @@ where ``time`` is the duration from the entry event. Here we see subject 1 had a
       <p>4 rows × 6 columns</p>
     </div>
 
-From the above output, we can see that individual 1 changed state twice over the observation period, and the ``start`` (exclusive) and ``stop`` (inclusive) columns denote the time windows of their state. You may have multiple covariates you wish to add, so the above could be streamlined like so:
+From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost them after time 2.
+
+ You may have multiple covariates you wish to add, so the above could be streamlined like so:
 
 .. code:: python
     
@@ -762,11 +764,11 @@ From the above output, we can see that individual 1 changed state twice over the
                   .pipe(add_covariate_to_timeline, cv3, duration_col="time", id_col="id", event_col="event")
 
 
-For an example of pulling datasets like this from a SQL-sore, see :ref:`Example SQL queries and transformations to get time varying data`.
+For an example of pulling datasets like this from a SQL-store, see :ref:`Example SQL queries and transformations to get time varying data`.
 
 
-Fitting the model
-####################################
+Fitting the model & a short note on prediction
+###############################################
 
 Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. 
 
@@ -777,6 +779,10 @@ Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitt
     ctv = CoxTimeVaryingFitter()
     ctv.fit(df, id_col="id", event_col="event", start_col="start", stop_col="stop")
     ctv.print_summary()
+    ctv.plot()
+
+
+Unlike the other regression models, prediction in a time-varying setting is not possible normally. To predict, we would need to know the covariates values beyond the current time, but if we knew that, we would also know if the subject was still alive or not. For this reason, there are no prediction methods attached to ``CoxTimeVaryingFitter``. 
 
 
 Model Selection in Survival Regression
