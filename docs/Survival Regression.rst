@@ -33,7 +33,7 @@ On the other hand, Aalen's additive model assumes the following form:
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. warning:: This model is still experimental.
+.. warning:: This implementation is still experimental.
 
 The estimator to fit unknown coefficients in Aalen's additive model is
 located in ``estimators`` under ``AalenAdditiveFitter``. For this
@@ -536,19 +536,20 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
 Cox's Time Varying Proportional Hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. warning:: This implementation is still experimental.
 
-Often an individual will have a covariate change over time. An example of this is hospital patients who enter the study, and at some future time, they may recieve a heart transplant. We would like to know the effect of the transplant and the other variables, but we cannot condition on whether they recieved the transplant naively. Consider that if patients needed to wait at least 1 year before getting a transplant, then everyone who dies before that year is considered as a non-transplant patient, and hence this would overestimate the hazard of not recieving a transplant. 
+Often an individual will have a covariate change over time. An example of this is hospital patients who enter the study and, at some future time, may recieve a heart transplant. We would like to know the effect of the transplant, but we cannot condition on whether they recieved the transplant naively. Consider that if patients needed to wait at least 1 year before getting a transplant, then everyone who dies before that year is considered as a non-transplant patient, and hence this would overestimate the hazard of not recieving a transplant. 
 
 We can incorporate changes over time into our survival analysis by using a modification of the Cox model above. The general mathematical description is:
 
 .. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i(t)\right)}
 
-Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset required is unique, so we will spend some time describing this. 
+Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this. 
 
 Dataset for time-varying regression
 ####################################
 
-Lifelines requires that the dataset be in what is called the *long* format. This looks like one row per state change, including an ID, the left (exclusive), and right (inclusive) time points. For example:
+Lifelines requires that the dataset be in what is called the *long* format. This looks like one row per state change, including an ID, the left (exclusive) time point, and right (inclusive) time point. For example, the following dataset tracks three unique subjects. 
 
 .. raw:: html
 
@@ -556,53 +557,53 @@ Lifelines requires that the dataset be in what is called the *long* format. This
       <table border="1" class="dataframe">
         <thead>
           <tr style="text-align: right;">
+            <th style="padding:8px;">id</th>
             <th style="padding:8px;">start</th>
+            <th style="padding:8px;">stop</th>
             <th style="padding:8px;">group</th>
             <th style="padding:8px;">z</th>
-            <th style="padding:8px;">stop</th>
-            <th style="padding:8px;">id</th>
             <th style="padding:8px;">event</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding: 8px;">0</td>
             <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">8.0</td>
             <td style="padding: 8px;">8</td>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">0</td>
             <td style="padding: 8px;">False</td>
           </tr>
           <tr>
+            <td style="padding: 8px;">2</td>
             <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">5.0</td>
-            <td style="padding: 8px;">9</td>
-            <td style="padding: 8px;">False</td>
-          </tr>
-          <tr>
             <td style="padding: 8px;">5</td>
             <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">False</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">2</td>
+            <td style="padding: 8px;">5</td>
+            <td style="padding: 8px;">8</td>
+            <td style="padding: 8px;">0</td>
             <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">9.0</td>
-            <td style="padding: 8px;">9</td>
             <td style="padding: 8px;">True</td>
           </tr>
           <tr>
+            <td style="padding: 8px;">3</td>
             <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">3</td>
             <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">3.0</td>
-            <td style="padding: 8px;">10</td>
             <td style="padding: 8px;">False</td>
           </tr>
           <tr>
             <td style="padding: 8px;">3</td>
+            <td style="padding: 8px;">3</td>
+            <td style="padding: 8px;">12</td>
             <td style="padding: 8px;">1</td>
             <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">10.0</td>
-            <td style="padding: 8px;">10</td>
             <td style="padding: 8px;">True</td>
           </tr>
         </tbody>
@@ -610,9 +611,11 @@ Lifelines requires that the dataset be in what is called the *long* format. This
       <p>5 rows × 6 columns</p>
     </div>
 
-In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. This is the desired dataset, but it needs to be built up first from smaller datasets. To do this we can use some helper functions provided in lifelines. 
+In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. For example, subject ID 2 had variable ``z=0`` up to and including the end of time period 5 (we can think that measurements happen at end of the time period.), after which it was set to 1.
 
-Typically, data will be in a format that looks like it comes out of a relational database, or close to. You may have a "base" table with ids, durations, and a censorsed flag, and possibly with static covariates. Ex: 
+So if this is the desired dataset, it can be built up first from smaller datasets. To do this we can use some helper functions provided in lifelines. 
+
+Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations, and a censorsed flag, and possibly static covariates. Ex: 
 
 .. raw:: html
 

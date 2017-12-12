@@ -32,7 +32,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.alpha = alpha
         self.penalizer = penalizer
 
-    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=False, step_size=1.0):
+    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=0.95):
 
         df = df.copy()
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
@@ -121,7 +121,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             df: (n,d+2) Pandas DataFrame of observations with specific Interval multiindex.
             initial_beta: (1,d) numpy array of initial starting point for
                           NR algorithm. Default 0.
-            step_size: float > 0.001 to determine a starting step size in NR algorithm.
+            step_size: float > 0 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
 
@@ -278,7 +278,6 @@ class CoxTimeVaryingFitter(BaseFitter):
             # Values outside tie sum
             gradient += x_death_sum - partial_gradient
             log_lik += dot(x_death_sum, beta).ravel()[0]
-
         return hessian, gradient, log_lik
 
     def print_summary(self):
