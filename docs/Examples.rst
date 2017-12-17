@@ -5,7 +5,7 @@
 More Examples and Recipes
 ==================================
 
-This section goes through some examples and recipes to help you use *lifelines*. 
+This section goes through some examples and recipes to help you use lifelines. 
 
 
 Statistically compare two populations
@@ -30,7 +30,7 @@ will produce the difference at every relevant time point. A similar function exi
 Compare using a hypothesis test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For rigorous testing of differences, *lifelines* comes with a statistics library. The ``logrank_test`` function
+For rigorous testing of differences, lifelines comes with a statistics library. The ``logrank_test`` function
 compares whether the "death" generation process of the two populations are equal:
 
 .. code-block:: python
@@ -62,12 +62,12 @@ hypothesis that all the populations have the same "death" generation process).
 
 
 
-Model selection using *lifelines*
+Model selection using lifelines
 #####################################################
 
-If using *lifelines* for prediction work, it's ideal that you perform some sort of cross-validation scheme. This allows you to be confident that your out-of-sample predictions will work well in practice. It also allows you to choose between multiple models.
+If using lifelines for prediction work, it's ideal that you perform some sort of cross-validation scheme. This allows you to be confident that your out-of-sample predictions will work well in practice. It also allows you to choose between multiple models.
 
-*lifelines* has a built in k-fold cross-validation function. For example, consider the following example:
+lifelines has a built in k-fold cross-validation function. For example, consider the following example:
 
 .. code-block:: python
     
@@ -121,7 +121,7 @@ Alternatively, you can add this at the call to ``plot``: ``kmf.plot(at_risk_coun
 
 
 Transforming survival-table data into lifelines format
-#####################################################
+######################################################
 
 Lifelines classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into lifelines format.
 
@@ -305,7 +305,7 @@ existing for times 72 or 73) This is especially useful for comparing multiple su
 
 .. code-block:: python
 
-    naf.fit( T, timeline=range(40,75))
+    kmf.fit(T, timeline=range(40,75))
     print(kmf.survival_function_)
 
         KM-estimate
@@ -346,7 +346,7 @@ existing for times 72 or 73) This is especially useful for comparing multiple su
     74         0.00
 
 
-*lifelines* will intelligently forward-fill the estimates to unseen time points.
+Lifelines will intelligently forward-fill the estimates to unseen time points.
 
 Example SQL query to get survival data from a table
 #####################################################
