@@ -20,8 +20,6 @@ class StatError(Exception):
 
 def qth_survival_times(q, survival_functions, cdf=False):
     """
-    This can be done much better.
-
     Parameters:
       q: a float between 0 and 1.
       survival_functions: a (n,d) dataframe or numpy array.
@@ -1010,11 +1008,38 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
 
 def to_long_format(df, duration_col):
-        return df.assign(start=0, stop=lambda s: s[duration_col])\
-                 .drop(duration_col, axis=1)
+    """
+    Parameters:
+        df: a Dataframe in the standard survival analysis form (one for per observation, with covariates, duration and event flag)
+        duration_col: string representing the column in df that represents the durations of each subject.
+    Returns:
+        long_form_df: A DataFrame with columns. This can be fed into `add_covariate_to_timeline`
+    """
+    return df.assign(start=0, stop=lambda s: s[duration_col])\
+             .drop(duration_col, axis=1)
 
 
-def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=False):
+def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col, add_enum=False, overwrite=True):
+    """
+    Parameters:
+        long_form_df: a DataFrame that has the intial or intermediate "long" form of time-varying observations. Must contain
+            columns id_col, 'start', 'stop', and event_col. See function `to_long_format` to transform data into long form.
+        cv: a DataFrame that contains (possibly more than) one covariate to track over time. Must contain columns
+            id_col and duration_col. duration_col represents time since the start of the subject's life.
+        id_col: the column in long_form_df and cv representing a unique identifier for subjects.
+        duration_col: the column in cv that represents the time-since-birth the observation occured at.
+        event_col: the column in df that represents if the event-of-interest occured
+        add_enum: a Boolean flag to denote whether to add a column enumerating rows per subject. Useful to specify a specific
+            observation, ex: df[df['enum'] == 1] will grab the first observations per subject.
+        overwrite: if True, covariate values in long_form_df will be overwritten by covariate values in cv if the column exists in both
+            cv and long_form_df and the timestamps are identical. If False, the default behaviour will be to sum
+            the values together.
+
+    Returns:
+        long_form_df: A DataFrame with updated rows to reflect the novel times slices (if any) being added from cv, and novel (or updated) columns
+            of new covariates from cv
+
+    """
 
     def remove_redundant_rows(cv):
         """
@@ -1039,8 +1064,7 @@ def add_covariate_to_timeline(df, cv, id_col, duration_col, event_col, add_enum=
             warning_text = "There exists at least one row in the covariates dataset that is before the earlist \
 known observation. This could case null values in the resulting dataframe."
             warnings.warn(warning_text, RuntimeWarning)
-        a = np.sort(original_timeline.append(additional_timeline).unique())
-        return a[a <= final_stop_time]
+        return np.sort(original_timeline.append(additional_timeline).unique())
 
     def expand(df, cvs):
         id_ = df.name
@@ -1051,15 +1075,25 @@ known observation. This could case null values in the resulting dataframe."
 
         final_state = bool(df[event_col].iloc[-1])
         final_stop_time = df['stop'].iloc[-1]
-        df = df.drop([id_col, event_col, 'stop'], axis=1)
-        cv = cv.drop([id_col], axis=1)
+        df = df.drop([id_col, event_col, 'stop'], axis=1).set_index("start")
+        cv = cv.drop([id_col], axis=1)\
+               .set_index("start")\
+               .loc[:final_stop_time]
 
-        timeline = construct_new_timeline(df['start'], cv['start'], final_stop_time)
+        timeline = construct_new_timeline(df.index, cv.index, final_stop_time)
         n = len(timeline)
-        expanded_df = pd.DataFrame(timeline, columns=['start'])
-        expanded_df = expanded_df.merge(df, how='left', on='start')
-        expanded_df = expanded_df.merge(cv, how='left', on='start')
+        expanded_df = pd.DataFrame(timeline, columns=['start']).set_index("start")
+        expanded_df = expanded_df.join(df, how='left')
 
+        # How do I want to merge existing columns at the same time - could be
+        # new observations (update) or new treatment applied (sum).
+        # There may be more options in the future.
+        if not overwrite:
+            expanded_df = cv.combine(expanded_df, lambda s1, s2: s1 + s2, fill_value=0, overwrite=False)
+        elif overwrite:
+            expanded_df = cv.combine_first(expanded_df)
+
+        expanded_df = expanded_df.reset_index()
         expanded_df['stop'] = expanded_df['start'].shift(-1)
         expanded_df[id_col] = id_
         expanded_df[event_col] = False
@@ -1071,12 +1105,15 @@ known observation. This could case null values in the resulting dataframe."
 
         return expanded_df.ffill()
 
+    if 'stop' not in long_form_df.columns or 'start' not in long_form_df.columns:
+        raise IndexError("The columns `stop` and `start` must be in long_form_df - perhaps you need to use `lifelines.utils.to_long_format` first?")
+
     cv = cv.dropna()
     cv = cv.sort_values([id_col, duration_col])
     cvs = cv.pipe(remove_redundant_rows)\
             .pipe(transform_cv_to_long_format)\
             .groupby(id_col)
 
-    df = df.groupby(id_col, group_keys=False)\
-        .apply(expand, cvs=cvs)
-    return df.reset_index(drop=True)
+    long_form_df = long_form_df.groupby(id_col, group_keys=False)\
+                               .apply(expand, cvs=cvs)
+    return long_form_df.reset_index(drop=True)

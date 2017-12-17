@@ -503,6 +503,52 @@ class TestTimeLine(object):
 
         assert_frame_equal(df21, df12, check_like=True)
 
+    def test_adding_cvs_with_the_same_column_name_will_insert_appropriately(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 1, 'var1': 1.0},
+            {'id': 1, 't': 2, 'var1': 2.0},
+        ])
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        expected = pd.DataFrame.from_records([
+            {'E': False, 'id': 1, 'stop': 1.0, 'start': 0, 'var1': 0.1},
+            {'E': False, 'id': 1, 'stop': 2.0, 'start': 1,  'var1': 1.0},
+            {'E': True, 'id': 1, 'stop': 10.0, 'start': 2, 'var1': 2.0},
+        ])
+        assert_frame_equal(df, expected, check_like=True)
+
+    def test_adding_cvs_with_the_same_column_name_will_sum_update_appropriately(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+
+        new_value_at_time_0 = 1.0
+        old_value_at_time_0 = seed_df['var1'].iloc[0]
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var1': new_value_at_time_0, 'var2': 2.0},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E', overwrite=False)
+
+        expected = pd.DataFrame.from_records([
+            {'E': True, 'id': 1, 'stop': 10.0, 'start': 0, 'var1': new_value_at_time_0 + old_value_at_time_0, 'var2': 2.0},
+        ])
+        assert_frame_equal(df, expected, check_like=True)
+
+    def test_adding_cvs_with_the_same_column_name_will_overwrite_update_appropriately(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+
+        new_value_at_time_0 = 1.0
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var1': new_value_at_time_0},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E', overwrite=True)
+
+        expected = pd.DataFrame.from_records([
+            {'E': True, 'id': 1, 'stop': 10.0, 'start': 0, 'var1': new_value_at_time_0},
+        ])
+        assert_frame_equal(df, expected, check_like=True)
+
     def test_enum_flag(self, seed_df, cv1, cv2):
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E', add_enum=True)\
                     .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E', add_enum=True)
@@ -553,8 +599,9 @@ class TestTimeLine(object):
             {'id': 2, 't': 0, 'var3': 0},
         ])
 
-        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
-        assert df.shape[0] == 3
+        with warnings.catch_warnings(record=True):
+            df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+            assert df.shape[0] == 3
 
     def test_cvs_with_null_values_are_dropped(self, seed_df):
         seed_df = seed_df[seed_df['id'] == 1]
@@ -597,3 +644,8 @@ class TestTimeLine(object):
             assert len(w) == 1
             assert issubclass(w[0].category, RuntimeWarning)
             assert "before" in str(w[0].message)
+
+    def test_error_is_raised_if_columns_are_missing_in_seed_df(self, seed_df, cv1):
+        del seed_df['start']
+        with pytest.raises(IndexError):
+            utils.add_covariate_to_timeline(seed_df, cv1, 'id', 't', 'E')
