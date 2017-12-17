@@ -5,6 +5,7 @@ from datetime import datetime
 
 import numpy as np
 from numpy.linalg import solve
+from scipy import stats
 import pandas as pd
 from pandas import to_datetime
 
@@ -437,26 +438,7 @@ def coalesce(*args):
 
 
 def inv_normal_cdf(p):
-
-    def AandS_approximation(p):
-        # Formula 26.2.23 from A&S and help from John Cook ;)
-        # http://www.johndcook.com/normal_cdf_inverse.html
-        c_0 = 2.515517
-        c_1 = 0.802853
-        c_2 = 0.010328
-
-        d_1 = 1.432788
-        d_2 = 0.189269
-        d_3 = 0.001308
-
-        t = np.sqrt(-2 * np.log(p))
-
-        return t - (c_0 + c_1 * t + c_2 * t ** 2) / (1 + d_1 * t + d_2 * t * t + d_3 * t ** 3)
-
-    if p < 0.5:
-        return -AandS_approximation(p)
-    else:
-        return AandS_approximation(1 - p)
+    return stats.norm.ppf(p)
 
 
 def k_fold_cross_validation(fitters, df, duration_col, event_col=None,

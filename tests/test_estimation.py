@@ -529,8 +529,8 @@ class TestNelsonAalenFitter():
         naf = NelsonAalenFitter(nelson_aalen_smoothing=True)
         naf.fit(t, c)
         assert abs(naf.cumulative_hazard_['NA_estimate'].iloc[-1] - 8.545665) < 1e-6
-        assert abs(naf.confidence_interval_['NA_estimate_upper_0.95'].iloc[-1] - 11.316361) < 1e-6
-        assert abs(naf.confidence_interval_['NA_estimate_lower_0.95'].iloc[-1] - 6.453346) < 1e-6
+        assert abs(naf.confidence_interval_['NA_estimate_upper_0.95'].iloc[-1] - 11.315662) < 1e-6
+        assert abs(naf.confidence_interval_['NA_estimate_lower_0.95'].iloc[-1] - 6.4537448) < 1e-6
 
 
 class TestBreslowFlemingHarringtonFitter():

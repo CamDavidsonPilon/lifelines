@@ -21,11 +21,11 @@ class CoxTimeVaryingFitter(BaseFitter):
     """
     This class implements fitting Cox's proportional hazard model:
 
-    h(t|x) = h_0(t)*exp(x'*beta)
+    h(t|x(t)) = h_0(t)*exp(x(t)'*beta)
 
     Parameters:
       alpha: the level in the confidence intervals.
-      penalizer:
+      penalizer: the coefficient of an l2 penalizer in the regression
     """
 
     def __init__(self, alpha=0.95, penalizer=0.0):
