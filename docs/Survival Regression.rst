@@ -157,7 +157,7 @@ covariance matrix from my original dataframe.
 
     import patsy
     # the '-1' term refers to not adding an intercept column (a column of all 1s).
-    X = patsy.dmatrix('un_continent_name + regime + start_year -1', data, return_type='dataframe') 
+    X = patsy.dmatrix('un_continent_name + regime + start_year - 1', data, return_type='dataframe') 
 
 .. code:: python
 
