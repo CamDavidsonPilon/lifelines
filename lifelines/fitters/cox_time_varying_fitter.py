@@ -32,7 +32,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.alpha = alpha
         self.penalizer = penalizer
 
-    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=0.95):
+    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=0.60):
 
         df = df.copy()
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
@@ -64,7 +64,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     @staticmethod
     def _check_values(df, E):
-        check_for_overlapping_intervals(df)
+        # check_for_overlapping_intervals(df) # this is currenty too slow for production.
         check_low_var(df)
         check_complete_separation(df, E)
         pass_for_numeric_dtypes_or_raise(df)
@@ -111,7 +111,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
-    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=0.5, precision=10e-6,):
+    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=0.5, precision=10e-6):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -157,7 +157,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             hessian, gradient = h, g
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
+                print("Iteration %d: norm_delta = %.6f, step_size = %.3f, ll = %.6f" % (i, norm(delta), step_size, ll))
 
             # convergence criteria
             if norm(delta) < precision:

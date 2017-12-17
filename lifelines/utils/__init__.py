@@ -957,6 +957,7 @@ def pass_for_numeric_dtypes_or_raise(df):
 def check_for_overlapping_intervals(df):
     # only useful for time varying coefs, after we've done
     # some index creation
+    # so slow.
     if not df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic).all():
         raise ValueError("The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
 to help find:\
@@ -1001,7 +1002,7 @@ def to_long_format(df, duration_col):
              .drop(duration_col, axis=1)
 
 
-def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col, add_enum=False, overwrite=True):
+def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col, add_enum=False, overwrite=True, cumulative_sum=False, cumulative_sum_prefix="cumsum_"):
     """
     Parameters:
         long_form_df: a DataFrame that has the intial or intermediate "long" form of time-varying observations. Must contain
@@ -1016,6 +1017,8 @@ def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col,
         overwrite: if True, covariate values in long_form_df will be overwritten by covariate values in cv if the column exists in both
             cv and long_form_df and the timestamps are identical. If False, the default behaviour will be to sum
             the values together.
+        cumulative_sum: sum over time the new covariates. Makes sense if the covariates are new additions, and not state changes (ex:
+            administering more drugs vs taking a temperature.)
 
     Returns:
         long_form_df: A DataFrame with updated rows to reflect the novel times slices (if any) being added from cv, and novel (or updated) columns
@@ -1033,6 +1036,8 @@ def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col,
             {'id': 1, 't': 6, 'var3': 1, 'var4': 1},
         ])
         """
+        if cumulative_sum:
+            return cv
         cols = cv.columns.difference([duration_col])
         cv = cv.loc[(cv[cols].shift() != cv[cols]).any(axis=1)]
         return cv
@@ -1062,19 +1067,19 @@ known observation. This could case null values in the resulting dataframe."
                .set_index("start")\
                .loc[:final_stop_time]
 
-        timeline = construct_new_timeline(df.index, cv.index, final_stop_time)
-        n = len(timeline)
-        expanded_df = pd.DataFrame(timeline, columns=['start']).set_index("start")
-        expanded_df = expanded_df.join(df, how='left')
+        if cumulative_sum:
+            cv = cv.cumsum()
+            cv = cv.add_prefix(cumulative_sum_prefix)
 
         # How do I want to merge existing columns at the same time - could be
         # new observations (update) or new treatment applied (sum).
         # There may be more options in the future.
         if not overwrite:
-            expanded_df = cv.combine(expanded_df, lambda s1, s2: s1 + s2, fill_value=0, overwrite=False)
+            expanded_df = cv.combine(df, lambda s1, s2: s1 + s2, fill_value=0, overwrite=False)
         elif overwrite:
-            expanded_df = cv.combine_first(expanded_df)
+            expanded_df = cv.combine_first(df)
 
+        n = expanded_df.shape[0]
         expanded_df = expanded_df.reset_index()
         expanded_df['stop'] = expanded_df['start'].shift(-1)
         expanded_df[id_col] = id_
@@ -1084,6 +1089,9 @@ known observation. This could case null values in the resulting dataframe."
 
         if add_enum:
             expanded_df['enum'] = np.arange(1, n + 1)
+
+        if cumulative_sum:
+            expanded_df[cv.columns] = expanded_df[cv.columns].fillna(0)
 
         return expanded_df.ffill()
 

@@ -420,6 +420,58 @@ Time varying dataset: ``cv``
       df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
 
 
+Example cumulative total using ``add_covariate_to_timeline``
+############################################################
+
+Often we have transactional covariate datasets and state covariate datasets. In a transaction dataset, it may make sense to sum up the covariates to represent administration of the treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
+
+Suppose we have an initial DataFrame of start-ups like:
+
+.. code-block:: python
+
+    seed_df = pd.DataFrame.from_records([
+        {'id': 'FB', 'E': True, 'T': 12, 'funding': 0},
+        {'id': 'SU', 'E': True, 'T': 10, 'funding': 0},
+    ])
+
+
+And a covariate dataframe representing funding rounds like:
+
+
+.. code-block:: python
+
+    cv = pd.DataFrame.from_records([
+        {'id': 'FB', 'funding': 30, 't': 5},
+        {'id': 'FB', 'funding': 15, 't': 10},
+        {'id': 'FB', 'funding': 50, 't': 15},
+        {'id': 'SU', 'funding': 10, 't': 6},
+        {'id': 'SU', 'funding': 9,  't':  10},
+    ])
+
+
+We can do the following to get both the cumulative funding recieved and the latest round of funding:
+
+.. code-block:: python
+
+    from lifelines.utils import to_long_format
+    from lifelines.utils import add_covariate_to_timeline
+    
+    df = seed_df.pipe(to_long_format, 'T')\
+                .pipe(add_covariate_to_timeline, cv, 'id', 't', 'E', cumulative_sum=True)\
+                .pipe(add_covariate_to_timeline, cv, 'id', 't', 'E', cumulative_sum=False)
+
+
+    """
+       start  cumsum_funding  funding  stop  id      E
+    0      0             0.0      0.0   5.0  FB  False
+    1      5            30.0     30.0  10.0  FB  False
+    2     10            45.0     15.0  12.0  FB   True
+    3      0             0.0      0.0   6.0  SU  False
+    4      6            10.0     10.0  10.0  SU  False
+    5     10            19.0      9.0  10.0  SU   True
+    """
+
+
 Sample size determination under a CoxPH model
 ##############################################
 

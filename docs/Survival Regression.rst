@@ -764,11 +764,13 @@ From the above output, we can see that subject 1 changed state twice over the ob
                   .pipe(add_covariate_to_timeline, cv3, duration_col="time", id_col="id", event_col="event")
 
 
+One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want to the covariate to reflect how much we have administered since the start. In contrast, a covariate the measure the temperature of the patient is a state update. See :ref:`Example cumulative total using ``add_covariate_to_timeline``` to see an example of this.
+
 For an example of pulling datasets like this from a SQL-store, see :ref:`Example SQL queries and transformations to get time varying data`.
 
 
-Fitting the model & a short note on prediction
-###############################################
+Fitting the model and a short note on prediction
+################################################
 
 Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. 
 

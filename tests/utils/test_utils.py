@@ -1,6 +1,4 @@
 from __future__ import print_function
-import sys
-import warnings
 
 import pytest
 import numpy as np
@@ -599,9 +597,8 @@ class TestTimeLine(object):
             {'id': 2, 't': 0, 'var3': 0},
         ])
 
-        with warnings.catch_warnings(record=True):
-            df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
-            assert df.shape[0] == 3
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 3
 
     def test_cvs_with_null_values_are_dropped(self, seed_df):
         seed_df = seed_df[seed_df['id'] == 1]
@@ -631,21 +628,23 @@ class TestTimeLine(object):
                     .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
         assert df.shape[0] == 3
 
-    @pytest.mark.skipif(sys.version_info < (3, 0), reason="requires python3 to pass")
-    def test_warning_is_raised_if_cvs_has_an_observation_before_the_earliest_obs_in_the_original_df(self, seed_df):
-        cv = pd.DataFrame.from_records([
-            {'id': 1, 't': 0, 'var3': 0},
-            {'id': 1, 't': -1, 'var3': 1},
-            {'id': 2, 't': 0, 'var3': 0.5},
-        ])
-
-        with warnings.catch_warnings(record=True) as w:
-            utils.add_covariate_to_timeline(seed_df, cv, 'id', 't', 'E')
-            assert len(w) == 1
-            assert issubclass(w[0].category, RuntimeWarning)
-            assert "before" in str(w[0].message)
-
     def test_error_is_raised_if_columns_are_missing_in_seed_df(self, seed_df, cv1):
         del seed_df['start']
         with pytest.raises(IndexError):
             utils.add_covariate_to_timeline(seed_df, cv1, 'id', 't', 'E')
+
+    def test_cumulative_sum(self):
+        seed_df = pd.DataFrame.from_records([{'id': 1, 'start': 0, 'stop': 5, 'E': 1}])
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var4': 1},
+            {'id': 1, 't': 1, 'var4': 1},
+            {'id': 1, 't': 3, 'var4': 1},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E', cumulative_sum=True)
+        expected = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 1.0, 'cumsum_var4': 1, 'E': False},
+            {'id': 1, 'start': 1, 'stop': 3.0, 'cumsum_var4': 2, 'E': False},
+            {'id': 1, 'start': 3, 'stop': 5.0, 'cumsum_var4': 3, 'E': True},
+        ])
+        assert_frame_equal(expected, df, check_like=True)
