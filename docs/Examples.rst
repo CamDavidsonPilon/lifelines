@@ -120,11 +120,10 @@ will display
 Alternatively, you can add this at the call to ``plot``: ``kmf.plot(at_risk_counts=True)``
 
 
-Getting survival-table data into *lifelines* format
+Transforming survival-table data into lifelines format
 #####################################################
 
-*lifelines* classes are designed for lists or arrays that represent one individual per element. If you instead have data in 
-a *survival table* format, there exists a utility method to get it into *lifelines* format.
+Lifelines classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into lifelines format.
 
 **Example:** Suppose you have a csv file with data that looks like this:
 
@@ -143,18 +142,20 @@ time (months, days, ...)      observed deaths       censored
 .. code-block:: python
     
     import pandas as pd
-    
-    # your argument in the function call below will be different
-    df = pd.read_csv('file.csv', index_cols=[0], columns = ['observed deaths', 'censored'])
-
     from lifelines.utils import survival_events_from_table
 
+    df = pd.read_csv('file.csv', columns = ['observed deaths', 'censored'])
+
     T, E = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
-    print(T) # np.array([0,0,0,0,0,0,0,1,2,2, ...])
-    print(E) # np.array([1,1,1,1,1,1,1,0,1,1, ...])
+    
+    print(T) # array([0,0,0,0,0,0,0,1,...])
+    print(E) # array([1,1,1,1,1,1,1,0,...])
 
 
-Alternatively, perhaps you are interested in viewing the survival table given some durations and censorship vectors.
+Transforming observational data into survival-table format
+##########################################################
+
+Perhaps you are interested in viewing the survival table given some durations and censorship vectors.
 
 
 .. code:: python
