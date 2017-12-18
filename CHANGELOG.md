@@ -5,7 +5,9 @@
  - `CoxPHFitter` and `AalenAdditiveFitter` now have a `score_` property that is the concordance-index of the dataset to the fitted model.
  - `CoxPHFitter` and `AalenAdditiveFitter` now longer have the `data` property. It was an _almost_ duplicate of the training data, but was causing the model to be very large when serialized.
  - Implements a new fitter `CoxTimeVaryingFitter` available under the `lifelines` namespace. This model implements the Cox model for time-varying covariates.
+ - Utils for creating time varying datasets available in 
  - less noisy check for complete separation.
+ - removed `datasets` namespace from the main `lifelines` namespace
 
 #### 0.12.0
  - removes  `include_likelihood` from `CoxPHFitter.fit` - it was not slowing things down much (empirically), and often I wanted it for debugging (I suppose others do too). It's also another exit condition, so we many exit from the NR iterations faster. 

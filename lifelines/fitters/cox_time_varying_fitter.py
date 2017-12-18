@@ -32,7 +32,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.alpha = alpha
         self.penalizer = penalizer
 
-    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=0.60):
+    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=0.50):
 
         df = df.copy()
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):

@@ -15,7 +15,7 @@ class KaplanMeierFitter(UnivariateFitter):
     """
     Class for fitting the Kaplan-Meier estimate for the survival function.
 
-    KaplanMeierFitter( alpha=0.95)
+    KaplanMeierFitter(alpha=0.95)
 
     alpha: The alpha value associated with the confidence intervals.
 
