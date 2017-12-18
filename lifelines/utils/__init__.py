@@ -1071,8 +1071,6 @@ known observation. This could case null values in the resulting dataframe."
             cv = cv.cumsum()
             cv = cv.add_prefix(cumulative_sum_prefix)
 
-        #import pdb
-        #pdb.set_trace()
         # How do I want to merge existing columns at the same time - could be
         # new observations (update) or new treatment applied (sum).
         # There may be more options in the future.
