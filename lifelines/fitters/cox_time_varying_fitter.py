@@ -32,7 +32,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.alpha = alpha
         self.penalizer = penalizer
 
-    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=True, step_size=0.50):
+    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=False, step_size=None):
 
         df = df.copy()
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
@@ -41,14 +41,12 @@ class CoxTimeVaryingFitter(BaseFitter):
         df = df.rename(columns={id_col: 'id', event_col: 'event', start_col: 'start', stop_col: 'stop'})
         df['event'] = df['event'].astype(bool)
 
-        df['interval'] = df.apply(lambda r: pd.Interval(r['start'], r['stop']), axis=1)
-        df = df.drop(['start'], axis=1)\
-               .set_index(['interval', 'id'])
+        df = df.set_index(['id'])
 
-        self._check_values(df.drop(["event", "stop"], axis=1), df['event'])
+        self._check_values(df.drop(["event", "stop", "start"], axis=1), df['event'])
 
-        stop_times_events = df[["event", "stop"]]
-        df = df.drop(["event", "stop"], axis=1)
+        stop_times_events = df[["event", "stop", "start"]]
+        df = df.drop(["event", "stop", "start"], axis=1)
 
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
@@ -111,7 +109,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
-    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=0.5, precision=10e-6):
+    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=None, precision=10e-6):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -130,15 +128,17 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
         assert precision <= 1., "precision must be less than or equal to 1."
 
-        _, d = df.shape
+        n, d = df.shape
 
         # make sure betas are correct size.
         beta = np.zeros((d, 1))
 
         i = 0
         converging = True
-        ll = 0
-        previous_ll = 0
+
+        if step_size is None:
+            # empirically determined
+            step_size = 0.95 if n < 1000 else 0.5
 
         while converging:
             i += 1
@@ -162,8 +162,6 @@ class CoxTimeVaryingFitter(BaseFitter):
             # convergence criteria
             if norm(delta) < precision:
                 converging = False
-            elif abs(ll - previous_ll) < precision:
-                converging = False
             elif i >= 50:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
@@ -176,11 +174,10 @@ class CoxTimeVaryingFitter(BaseFitter):
             if norm(delta) > 10:
                 step_size *= 0.5
 
-            # anneal the step size down.
-            step_size *= 0.99
+            # temper the step size down.
+            step_size *= 0.995
 
             beta += delta
-            previous_ll = ll
 
         self._hessian_ = hessian
         self._score_ = gradient
@@ -203,13 +200,6 @@ class CoxTimeVaryingFitter(BaseFitter):
             gradient: (1, d) numpy array
             log_likelihood: double
         """
-        # the below INDEX_ is a faster way to use the at_ function. See https://stackoverflow.com/questions/47621886
-        # def at_(df, t):
-        #     # this adds about a 100%+ runtime increase =(
-        #     return df.iloc[(df.index.get_level_values(0).get_loc(t))]
-
-        INDEX_df = df.index.get_level_values(0)
-        INDEX_stops_events = stops_events.index.get_level_values(0)
 
         _, d = df.shape
         hessian = np.zeros((d, d))
@@ -224,8 +214,9 @@ class CoxTimeVaryingFitter(BaseFitter):
             risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
             risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-            df_at_t = df.iloc[INDEX_df.get_loc(t)]
-            stops_events_at_t = stops_events.iloc[INDEX_stops_events.get_loc(t)]
+            ix = (stops_events['start'] < t) & (t <= stops_events['stop'])
+            df_at_t = df.loc[ix]
+            stops_events_at_t = stops_events.loc[ix]
 
             phi_i = exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t

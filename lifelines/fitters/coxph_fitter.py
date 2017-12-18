@@ -148,7 +148,7 @@ class CoxPHFitter(BaseFitter):
 
         return hessian, gradient, log_lik
 
-    def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=.8,
+    def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=None,
                          precision=10e-6, show_progress=True):
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -177,6 +177,10 @@ class CoxPHFitter(BaseFitter):
             beta = initial_beta
         else:
             beta = np.zeros((d, 1))
+
+        if step_size is None:
+            # empirically determined
+            step_size = 0.95 if n < 1000 else 0.5
 
         # Method of choice is just efron right now
         if self.tie_method == 'Efron':
@@ -235,8 +239,8 @@ class CoxPHFitter(BaseFitter):
             if norm(delta) > 10.0:
                 step_size *= 0.5
 
-            # anneal the step size down.
-            step_size *= 0.99
+            # temper the step size down.
+            step_size *= 0.995
 
             beta += delta
             previous_ll = ll
@@ -250,7 +254,7 @@ class CoxPHFitter(BaseFitter):
 
     def fit(self, df, duration_col, event_col=None,
             show_progress=False, initial_beta=None,
-            strata=None, step_size=0.5):
+            strata=None, step_size=None):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
