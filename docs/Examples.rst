@@ -123,7 +123,7 @@ Alternatively, you can add this at the call to ``plot``: ``kmf.plot(at_risk_coun
 Transforming survival-table data into lifelines format
 ######################################################
 
-Lifelines classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into lifelines format.
+Some lifelines classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into lifelines format.
 
 **Example:** Suppose you have a csv file with data that looks like this:
 

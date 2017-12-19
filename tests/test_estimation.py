@@ -696,6 +696,7 @@ Concordance = 0.640""".strip().split()
         X = data_nus['x'][:, None]
         T = data_nus['t']
         E = data_nus['E']
+        weights = np.ones_like(T)
 
         # Enforce numpy arrays
         X = np.array(X)
@@ -708,7 +709,7 @@ Concordance = 0.640""".strip().split()
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
         l = -l
 
         assert np.abs(l[0][0] - 77.13) < 0.05
@@ -716,7 +717,7 @@ Concordance = 0.640""".strip().split()
         beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
         l = -l
 
         assert np.abs(l[0][0] - 72.83) < 0.05
@@ -724,7 +725,7 @@ Concordance = 0.640""".strip().split()
         beta = beta + u / l
         assert np.abs(beta - -0.0325) < 0.01
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
         l = -l
 
         assert np.abs(l[0][0] - 72.70) < 0.01
@@ -734,8 +735,8 @@ Concordance = 0.640""".strip().split()
 
     def test_efron_newtons_method(self, data_nus):
         newton = CoxPHFitter()._newton_rhaphson
-        X, T, E = data_nus[['x']], data_nus['t'], data_nus['E']
-        assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
+        X, T, E, W = data_nus[['x']], data_nus['t'], data_nus['E'], np.ones_like(data_nus['t'])
+        assert np.abs(newton(X, T, E, W)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus):
         cf = CoxPHFitter()
@@ -884,6 +885,17 @@ Concordance = 0.640""".strip().split()
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
+
+    def test_coef_output_against_R_using_weights(self, rossi):
+        rossi_ = rossi.copy()
+        rossi_['weights'] = 1.
+        rossi_ = rossi_.groupby(rossi.columns.tolist())['weights'].sum()\
+                       .reset_index()
+
+        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
+        cf = CoxPHFitter()
+        cf.fit(rossi_, duration_col='week', event_col='arrest', weights_col='weights')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_standard_error_coef_output_against_R(self, rossi):

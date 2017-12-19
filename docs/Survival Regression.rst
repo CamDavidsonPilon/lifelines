@@ -465,7 +465,6 @@ With a fitted model, an altervative way to view the coefficients and their range
 .. image:: images/coxph_plot.png
 
 
-
 Checking the proportional hazards assumption
 #############################################
 

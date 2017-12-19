@@ -9,6 +9,7 @@
  - less noisy check for complete separation.
  - removed `datasets` namespace from the main `lifelines` namespace
  - `CoxPHFitter` has a slightly more intelligent (barely...) way to pick a step size, so convergence should generally be faster.
+ - `CoxPHFitter.fit` now has accepts a `weight_col` kwarg so one can pass in weights per observation. This is very useful if you have many subjects, and the space of covariates is not large. Thus you can group the same subjects together and give that observation a weight equal to the count. Altogether, this means a much faster regression.
 
 #### 0.12.0
  - removes  `include_likelihood` from `CoxPHFitter.fit` - it was not slowing things down much (empirically), and often I wanted it for debugging (I suppose others do too). It's also another exit condition, so we many exit from the NR iterations faster. 

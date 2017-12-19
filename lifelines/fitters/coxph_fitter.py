@@ -52,103 +52,98 @@ class CoxPHFitter(BaseFitter):
         self.penalizer = penalizer
         self.strata = strata
 
-    def _get_efron_values(self, X, beta, T, E):
+    def fit(self, df, duration_col, event_col=None,
+            show_progress=False, initial_beta=None,
+            strata=None, step_size=None, weights_col=None):
         """
-        Calculates the first and second order vector differentials,
-        with respect to beta.
-
-        Note that X, T, E are assumed to be sorted on T!
+        Fit the Cox Propertional Hazard model to a dataset. Tied survival times
+        are handled using Efron's tie-method.
 
         Parameters:
-            X: (n,d) numpy array of observations.
-            beta: (1, d) numpy array of coefficients.
-            T: (n) numpy array representing observed durations.
-            E: (n) numpy array representing death events.
+          df: a Pandas dataframe with necessary columns `duration_col` and
+             `event_col`, plus other covariates. `duration_col` refers to
+             the lifetimes of the subjects. `event_col` refers to whether
+             the 'death' events was observed: 1 if observed, 0 else (censored).
+          duration_col: the column in dataframe that contains the subjects'
+             lifetimes.
+          event_col: the column in dataframe that contains the subjects' death
+             observation. If left as None, assume all individuals are non-censored.
+          weights_col: an optional column in the dataframe that denotes the weight per subject.
+             This column is expelled and not used as a covariate, but as a weight in the
+             final regression. Default weight is 1.
+          show_progress: since the fitter is iterative, show convergence
+             diagnostics.
+          initial_beta: initialize the starting point of the iterative
+             algorithm. Default is the zero vector.
+          strata: specify a list of columns to use in stratification. This is useful if a
+             catagorical covariate does not obey the proportional hazard assumption. This
+             is used similar to the `strata` expression in R.
+             See http://courses.washington.edu/b515/l17.pdf.
 
         Returns:
-            hessian: (d, d) numpy array,
-            gradient: (1, d) numpy array
-            log_likelihood: double
+            self, with additional properties: hazards_
+
         """
+        df = df.copy()
 
-        n, d = X.shape
-        hessian = np.zeros((d, d))
-        gradient = np.zeros((1, d))
-        log_lik = 0
+        # Sort on time
+        df = df.sort_values(by=duration_col)
 
-        # Init risk and tie sums to zero
-        x_tie_sum = np.zeros((1, d))
-        risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
-        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
+        self._n_examples = df.shape[0]
+        self.strata = coalesce(strata, self.strata)
+        if self.strata is not None:
+            original_index = df.index.copy()
+            df = df.set_index(self.strata)
 
-        # Init number of ties
-        tie_count = 0
-        # Iterate backwards to utilize recursive relationship
-        for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
-            # Doing it like this to preserve shape
-            xi = X[i:i + 1]
-            # Calculate phi values
-            phi_i = exp(dot(xi, beta))
-            phi_x_i = phi_i * xi
-            phi_x_x_i = dot(xi.T, phi_i * xi)
+        # Extract time and event
+        T = df[duration_col]
+        del df[duration_col]
+        if event_col is None:
+            E = pd.Series(np.ones(df.shape[0]), index=df.index)
+        else:
+            E = df[event_col]
+            del df[event_col]
 
-            # Calculate sums of Risk set
-            risk_phi += phi_i
-            risk_phi_x += phi_x_i
-            risk_phi_x_x += phi_x_x_i
-            # Calculate sums of Ties, if this is an event
-            if ei:
-                x_tie_sum += xi
-                tie_phi += phi_i
-                tie_phi_x += phi_x_i
-                tie_phi_x_x += phi_x_x_i
+        if weights_col:
+            weights = df.pop(weights_col).values
+        else:
+            weights = np.ones(self._n_examples)
 
-                # Keep track of count
-                tie_count += 1
+        self._check_values(df, E)
+        df = df.astype(float)
 
-            if i > 0 and T[i - 1] == ti:
-                # There are more ties/members of the risk set
-                continue
-            elif tie_count == 0:
-                # Only censored with current time, move on
-                continue
+        # save fitting data for later
+        self.durations = T.copy()
+        self.event_observed = E.copy()
+        if self.strata is not None:
+            self.durations.index = original_index
+            self.event_observed.index = original_index
+        self.event_observed = self.event_observed.astype(bool)
 
-            # There was atleast one event and no more ties remain. Time to sum.
-            partial_gradient = np.zeros((1, d))
+        self._norm_mean = df.mean(0)
+        self._norm_std = df.std(0)
 
-            for l in range(tie_count):
-                c = l / tie_count
+        E = E.astype(bool)
 
-                denom = (risk_phi - c * tie_phi)
-                z = (risk_phi_x - c * tie_phi_x)
+        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), T, E,
+                                         weights=weights,
+                                         initial_beta=initial_beta,
+                                         show_progress=show_progress,
+                                         step_size=step_size)
 
-                # Gradient
-                partial_gradient += z / denom
-                # Hessian
-                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
-                # In case z and denom both are really small numbers,
-                # make sure to do division before multiplications
-                a2 = dot(z.T / denom, z / denom)
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
+        self.confidence_intervals_ = self._compute_confidence_intervals()
 
-                hessian -= (a1 - a2)
+        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
+        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
+        self.baseline_survival_ = self._compute_baseline_survival()
+        self.score_ = concordance_index(self.durations,
+                                        -self.predict_partial_hazard(df).values.ravel(),
+                                        self.event_observed)
+        self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
+        return self
 
-                log_lik -= np.log(denom).ravel()[0]
-
-            # Values outside tie sum
-            gradient += x_tie_sum - partial_gradient
-            log_lik += dot(x_tie_sum, beta).ravel()[0]
-
-            # reset tie values
-            tie_count = 0
-            x_tie_sum = np.zeros((1, d))
-            tie_phi = 0
-            tie_phi_x = np.zeros((1, d))
-            tie_phi_x_x = np.zeros((d, d))
-
-        return hessian, gradient, log_lik
-
-    def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=None,
+    def _newton_rhaphson(self, X, T, E, weights=None, initial_beta=None, step_size=None,
                          precision=10e-6, show_progress=True):
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -159,6 +154,7 @@ class CoxPHFitter(BaseFitter):
             X: (n,d) Pandas DataFrame of observations.
             T: (n) Pandas Series representing observed durations.
             E: (n) Pandas Series representing death events.
+            weights: (n) an iterable representing weights per observation.
             initial_beta: (1,d) numpy array of initial starting point for
                           NR algorithm. Default 0.
             step_size: float > 0.001 to determine a starting step size in NR algorithm.
@@ -195,14 +191,14 @@ class CoxPHFitter(BaseFitter):
         while converging:
             i += 1
             if self.strata is None:
-                h, g, ll = get_gradients(X.values, beta, T.values, E.values)
+                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights)
             else:
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for strata in np.unique(X.index):
                     stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
-                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values)
+                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, weights)
                     g += _g
                     h += _h
                     ll += _ll
@@ -252,86 +248,105 @@ class CoxPHFitter(BaseFitter):
             print("Convergence completed after %d iterations." % (i))
         return beta
 
-    def fit(self, df, duration_col, event_col=None,
-            show_progress=False, initial_beta=None,
-            strata=None, step_size=None):
+    def _get_efron_values(self, X, beta, T, E, weights):
         """
-        Fit the Cox Propertional Hazard model to a dataset. Tied survival times
-        are handled using Efron's tie-method.
+        Calculates the first and second order vector differentials,
+        with respect to beta.
+
+        Note that X, T, E are assumed to be sorted on T!
 
         Parameters:
-          df: a Pandas dataframe with necessary columns `duration_col` and
-             `event_col`, plus other covariates. `duration_col` refers to
-             the lifetimes of the subjects. `event_col` refers to whether
-             the 'death' events was observed: 1 if observed, 0 else (censored).
-          duration_col: the column in dataframe that contains the subjects'
-             lifetimes.
-          event_col: the column in dataframe that contains the subjects' death
-             observation. If left as None, assume all individuals are non-censored.
-          show_progress: since the fitter is iterative, show convergence
-             diagnostics.
-          initial_beta: initialize the starting point of the iterative
-             algorithm. Default is the zero vector.
-          strata: specify a list of columns to use in stratification. This is useful if a
-             catagorical covariate does not obey the proportional hazard assumption. This
-             is used similar to the `strata` expression in R.
-             See http://courses.washington.edu/b515/l17.pdf.
+            X: (n,d) numpy array of observations.
+            beta: (1, d) numpy array of coefficients.
+            T: (n) numpy array representing observed durations.
+            E: (n) numpy array representing death events.
+            weights: (n) an array representing weights per observation.
+
 
         Returns:
-            self, with additional properties: hazards_
-
+            hessian: (d, d) numpy array,
+            gradient: (1, d) numpy array
+            log_likelihood: double
         """
-        df = df.copy()
 
-        # Sort on time
-        df = df.sort_values(by=duration_col)
+        n, d = X.shape
+        hessian = np.zeros((d, d))
+        gradient = np.zeros((1, d))
+        log_lik = 0
 
-        self._n_examples = df.shape[0]
-        self.strata = coalesce(strata, self.strata)
-        if self.strata is not None:
-            original_index = df.index.copy()
-            df = df.set_index(self.strata)
+        # Init risk and tie sums to zero
+        x_tie_sum = np.zeros((1, d))
+        risk_phi, tie_phi = 0, 0
+        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-        # Extract time and event
-        T = df[duration_col]
-        del df[duration_col]
-        if event_col is None:
-            E = pd.Series(np.ones(df.shape[0]), index=df.index)
-        else:
-            E = df[event_col]
-            del df[event_col]
+        # Init number of ties
+        tie_count = 0
+        # Iterate backwards to utilize recursive relationship
+        for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
+            # Doing it like this to preserve shape
+            xi = X[i:i + 1]
+            w = weights[i]
 
-        self._check_values(df, E)
-        df = df.astype(float)
+            # Calculate phi values
+            phi_i = exp(dot(xi, beta))
+            phi_x_i = phi_i * xi
+            phi_x_x_i = dot(xi.T, phi_i * xi)
 
-        # save fitting data for later
-        self.durations = T.copy()
-        self.event_observed = E.copy()
-        if self.strata is not None:
-            self.durations.index = original_index
-            self.event_observed.index = original_index
-        self.event_observed = self.event_observed.astype(bool)
+            # Calculate sums of Risk set
+            risk_phi += w * phi_i
+            risk_phi_x += w * phi_x_i
+            risk_phi_x_x += w * phi_x_x_i
+            # Calculate sums of Ties, if this is an event
+            if ei:
+                x_tie_sum += w * xi
+                tie_phi += w * phi_i
+                tie_phi_x += w * phi_x_i
+                tie_phi_x_x += w * phi_x_x_i
 
-        self._norm_mean = df.mean(0)
-        self._norm_std = df.std(0)
+                # Keep track of count
+                tie_count += int(w)
 
-        E = E.astype(bool)
+            if i > 0 and T[i - 1] == ti:
+                # There are more ties/members of the risk set
+                continue
+            elif tie_count == 0:
+                # Only censored with current time, move on
+                continue
 
-        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), T, E, initial_beta=initial_beta,
-                                         show_progress=show_progress,
-                                         step_size=step_size)
+            # There was atleast one event and no more ties remain. Time to sum.
+            partial_gradient = np.zeros((1, d))
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
-        self.confidence_intervals_ = self._compute_confidence_intervals()
+            for l in range(tie_count):
+                c = l / tie_count
 
-        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
-        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
-        self.baseline_survival_ = self._compute_baseline_survival()
-        self.score_ = concordance_index(self.durations,
-                                        -self.predict_partial_hazard(df).values.ravel(),
-                                        self.event_observed)
-        self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
-        return self
+                denom = (risk_phi - c * tie_phi)
+                z = (risk_phi_x - c * tie_phi_x)
+
+                # Gradient
+                partial_gradient += z / denom
+                # Hessian
+                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
+                # In case z and denom both are really small numbers,
+                # make sure to do division before multiplications
+                a2 = dot(z.T / denom, z / denom)
+
+                hessian -= (a1 - a2)
+
+                log_lik -= np.log(denom).ravel()[0]
+
+            # Values outside tie sum
+            gradient += x_tie_sum - partial_gradient
+            log_lik += dot(x_tie_sum, beta).ravel()[0]
+
+            # reset tie values
+            tie_count = 0
+            x_tie_sum = np.zeros((1, d))
+            tie_phi = 0
+            tie_phi_x = np.zeros((1, d))
+            tie_phi_x_x = np.zeros((d, d))
+
+        return hessian, gradient, log_lik
 
     def _compute_baseline_cumulative_hazard(self):
         return self.baseline_hazard_.cumsum()
