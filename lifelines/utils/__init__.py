@@ -1035,6 +1035,8 @@ def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col,
             {'id': 1, 't': 1, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
             {'id': 1, 't': 6, 'var3': 1, 'var4': 1},
         ])
+
+        If cumulative_sum, then redundant rows are not redundant.
         """
         if cumulative_sum:
             return cv

@@ -3,7 +3,7 @@
 #### 0.13.0
  - removes `is_significant` and `test_result` from `StatisticalResult`. Users can instead choose their significance level by comparing to `p_value`. The string representation of this class has changed aswell.
  - `CoxPHFitter` and `AalenAdditiveFitter` now have a `score_` property that is the concordance-index of the dataset to the fitted model.
- - `CoxPHFitter` and `AalenAdditiveFitter` now longer have the `data` property. It was an _almost_ duplicate of the training data, but was causing the model to be very large when serialized.
+ - `CoxPHFitter` and `AalenAdditiveFitter` no longer have the `data` property. It was an _almost_ duplicate of the training data, but was causing the model to be very large when serialized.
  - Implements a new fitter `CoxTimeVaryingFitter` available under the `lifelines` namespace. This model implements the Cox model for time-varying covariates.
  - Utils for creating time varying datasets available in `utils`.
  - less noisy check for complete separation.
