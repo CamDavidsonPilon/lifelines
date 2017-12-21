@@ -10,7 +10,7 @@ from lifelines.utils import inv_normal_cdf
 
 def _negative_log_likelihood(lambda_rho, T, E):
     if np.any(lambda_rho < 0):
-        return np.inf
+        return 10e9
     lambda_, rho = lambda_rho
     return - np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
 
@@ -68,9 +68,9 @@ class WeibullFitter(UnivariateFitter):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the estimate at the values in timeline (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
+          timeline: return the estimate at the values in timeline (postively increasing)
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
              useful for left-truncated observations, i.e the birth event was not observed.
              If None, defaults to all 0 (all birth events observed.)
@@ -138,7 +138,7 @@ class WeibullFitter(UnivariateFitter):
         parameters = _smart_search(_negative_log_likelihood, 2, T, E)
 
         iter = 1
-        step_size = 1.
+        step_size = 0.9
         converging = True
 
         while converging and iter < 50:
@@ -226,5 +226,5 @@ class WeibullFitter(UnivariateFitter):
         print('n={}, number of events={}'.format(self.durations.shape[0],
                                                  np.where(self.event_observed)[0].shape[0]),
               end='\n\n')
-        print(df.to_string(float_format=lambda f: '{:.3e}'.format(f)))
+        print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         return

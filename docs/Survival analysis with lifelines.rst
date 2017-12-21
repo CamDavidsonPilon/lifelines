@@ -50,9 +50,9 @@ Let's bring in our dataset.
 .. code:: python
 
     import pandas as pd
-    import lifelines 
+    from lifelines.datasets import load_dd
 
-    data = lifelines.datasets.load_dd()
+    data = load_dd()
 
 .. code:: python
 
@@ -450,6 +450,29 @@ end times/dates (or ``None`` if not observed):
 
 The function ``datetimes_to_durations`` is very flexible, and has many
 keywords to tinker with.
+
+
+Fitting to a Weibull model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Another very popular model for survival data is the Weibull model. In contrast the the Kaplan Meier estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Kaplan Meier estimator has no parameters to fit too). Mathematically, the survival function looks like:
+
+
+ ..math::  S(t) = \exp\left(-(\lambda t)**\rho\right),   \lambda >0, \rho > 0,
+
+ Apriori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In lifelines, this is implemented in the ``WeibullFitter``
+
+.. code:: python
+
+    from lifelines import WeibullFitter
+  
+    T = data['duration']
+    E = data['observed']
+
+    wf = WeibullFitter()
+    wf.fit(T, E)
+    print(wf.lambda_, wf.rho_)
+
 
 Estimating hazard rates using Nelson-Aalen
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

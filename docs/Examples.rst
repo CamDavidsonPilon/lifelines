@@ -61,7 +61,6 @@ hypothesis that all the populations have the same "death" generation process).
 
 
 
-
 Model selection using lifelines
 #####################################################
 
@@ -87,6 +86,7 @@ lifelines has a built in k-fold cross-validation function. For example, consider
     print(np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E')))
 
 From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
+
 
 Displaying at-risk counts below plots
 #####################################################
@@ -347,6 +347,7 @@ existing for times 72 or 73) This is especially useful for comparing multiple su
 
 
 Lifelines will intelligently forward-fill the estimates to unseen time points.
+
 
 Example SQL query to get survival data from a table
 #####################################################
