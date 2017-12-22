@@ -23,14 +23,11 @@ def _lambda_gradient(lambda_rho, T, E):
 def _rho_gradient(lambda_rho, T, E):
     lambda_, rho = lambda_rho
     return - E.sum() / rho - (np.log(lambda_ * T) * E).sum() + (np.log(lambda_ * T) * (lambda_ * T) ** rho).sum()
-    # - D/p - D Log[m t] + (m t)^p Log[m t]
 
 
 def _d_rho_d_rho(lambda_rho, T, E):
     lambda_, rho = lambda_rho
     return (1. / rho ** 2 * E + (np.log(lambda_ * T) ** 2 * (lambda_ * T) ** rho)).sum()
-    # (D/p^2) + (m t)^p Log[m t]^2
-
 
 def _d_lambda_d_lambda_(lambda_rho, T, E):
     lambda_, rho = lambda_rho
@@ -48,15 +45,15 @@ class WeibullFitter(UnivariateFitter):
     This class implements a Weibull model for univariate data. The model has parameterized
     form:
 
-      S(t) = exp(-(lambda*t)**rho),   lambda >0, rho > 0,
+      S(t) = exp(-(lambda*t)^rho),   lambda > 0, rho > 0,
 
     which implies the cumulative hazard rate is
 
-      H(t) = (lambda*t)**rho,
+      H(t) = (lambda*t)^rho,
 
     and the hazard rate is:
 
-      h(t) = rho*lambda(lambda*t)**(rho-1)
+      h(t) = rho*lambda(lambda*t)^(rho-1)
 
     After calling the `.fit` method, you have access to properties like:
     `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.

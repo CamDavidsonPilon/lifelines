@@ -458,9 +458,9 @@ Fitting to a Weibull model
 Another very popular model for survival data is the Weibull model. In contrast the the Kaplan Meier estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Kaplan Meier estimator has no parameters to fit too). Mathematically, the survival function looks like:
 
 
- ..math::  S(t) = \exp\left(-(\lambda t)**\rho\right),   \lambda >0, \rho > 0,
+ ..math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
 
- Apriori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In lifelines, this is implemented in the ``WeibullFitter``
+ Apriori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In lifelines, this is implemented in the ``WeibullFitter``:
 
 .. code:: python
 
@@ -472,6 +472,7 @@ Another very popular model for survival data is the Weibull model. In contrast t
     wf = WeibullFitter()
     wf.fit(T, E)
     print(wf.lambda_, wf.rho_)
+    wf.print_summary()
 
 
 Estimating hazard rates using Nelson-Aalen
