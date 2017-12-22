@@ -5,7 +5,7 @@
 More Examples and Recipes
 ==================================
 
-This section goes through some examples and recipes to help you use *lifelines*. 
+This section goes through some examples and recipes to help you use lifelines. 
 
 
 Statistically compare two populations
@@ -30,7 +30,7 @@ will produce the difference at every relevant time point. A similar function exi
 Compare using a hypothesis test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For rigorous testing of differences, *lifelines* comes with a statistics library. The ``logrank_test`` function
+For rigorous testing of differences, lifelines comes with a statistics library. The ``logrank_test`` function
 compares whether the "death" generation process of the two populations are equal:
 
 .. code-block:: python
@@ -41,20 +41,18 @@ compares whether the "death" generation process of the two populations are equal
     results.print_summary()
 
     """
-    Results
-        df: 1
-       alpha: 0.95
-       t 0: -1
-       test: logrank
-       null distribution: chi squared
+   df=1, alpha=0.95, t0=-1, test=logrank, null distribution=chi squared
 
-       __ p-value ___|__ test statistic __|____ test results ____|__ significant __
-             0.46759 |              0.528 |  Cannot Reject Null  |      False
+   test_statistic        p
+            3.528  0.00034  ** 
+
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
    """
 
-   print results.p_value     # 0.46759 
-   print results.test_statistic # 0.528
-   print results.is_significant # False
+   print(results.p_value)        # 0.46759 
+   print(results.test_statistic) # 0.528
+   print(results.is_significant) # False
 
 
 If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares
@@ -63,13 +61,12 @@ hypothesis that all the populations have the same "death" generation process).
 
 
 
-
-Model selection using *lifelines*
+Model selection using lifelines
 #####################################################
 
-If using *lifelines* for prediction work, it's ideal that you perform some sort of cross-validation scheme. This allows you to be confident that your out-of-sample predictions will work well in practice. It also allows you to choose between multiple models.
+If using lifelines for prediction work, it's ideal that you perform some sort of cross-validation scheme. This allows you to be confident that your out-of-sample predictions will work well in practice. It also allows you to choose between multiple models.
 
-*lifelines* has a built in k-fold cross-validation function. For example, consider the following example:
+lifelines has a built in k-fold cross-validation function. For example, consider the following example:
 
 .. code-block:: python
     
@@ -84,11 +81,12 @@ If using *lifelines* for prediction work, it's ideal that you perform some sort 
     aaf_2 = AalenAdditiveFitter(coef_penalizer=10)
     cph = CoxPHFitter() 
 
-    print np.mean(k_fold_cross_validation(cph, df, duration_col='T', event_col='E'))
-    print np.mean(k_fold_cross_validation(aaf_1, df, duration_col='T', event_col='E'))
-    print np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E'))
+    print(np.mean(k_fold_cross_validation(cph, df, duration_col='T', event_col='E')))
+    print(np.mean(k_fold_cross_validation(aaf_1, df, duration_col='T', event_col='E')))
+    print(np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E')))
 
 From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
+
 
 Displaying at-risk counts below plots
 #####################################################
@@ -122,11 +120,10 @@ will display
 Alternatively, you can add this at the call to ``plot``: ``kmf.plot(at_risk_counts=True)``
 
 
-Getting survival-table data into *lifelines* format
-#####################################################
+Transforming survival-table data into lifelines format
+######################################################
 
-*lifelines* classes are designed for lists or arrays that represent one individual per element. If you instead have data in 
-a *survival table* format, there exists a utility method to get it into *lifelines* format.
+Some lifelines classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into lifelines format.
 
 **Example:** Suppose you have a csv file with data that looks like this:
 
@@ -145,18 +142,20 @@ time (months, days, ...)      observed deaths       censored
 .. code-block:: python
     
     import pandas as pd
-    
-    # your argument in the function call below will be different
-    df = pd.read_csv('file.csv', index_cols=[0], columns = ['observed deaths', 'censored'])
-
     from lifelines.utils import survival_events_from_table
 
+    df = pd.read_csv('file.csv', columns = ['observed deaths', 'censored'])
+
     T, E = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
-    print T # np.array([0,0,0,0,0,0,0,1,2,2, ...])
-    print E # np.array([1,1,1,1,1,1,1,0,1,1, ...])
+    
+    print(T) # array([0,0,0,0,0,0,0,1,...])
+    print(E) # array([1,1,1,1,1,1,1,0,...])
 
 
-Alternatively, perhaps you are interested in viewing the survival table given some durations and censorship vectors.
+Transforming observational data into survival-table format
+##########################################################
+
+Perhaps you are interested in viewing the survival table given some durations and censorship vectors.
 
 
 .. code:: python
@@ -164,7 +163,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
     from lifelines.utils import survival_table_from_events
 
     table = survival_table_from_events(T, E)
-    print table.head()
+    print(table.head())
     
     """
               removed  observed  censored  entrance  at_risk
@@ -270,7 +269,7 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
 
 .. code-block:: python
     
-    print kmf.survival_function_ 
+    print(kmf.survival_function_)
 
         KM-estimate
     0          1.00
@@ -306,8 +305,8 @@ existing for times 72 or 73) This is especially useful for comparing multiple su
 
 .. code-block:: python
 
-    naf.fit( T, timeline=range(40,75))
-    print kmf.survival_function_ 
+    kmf.fit(T, timeline=range(40,75))
+    print(kmf.survival_function_)
 
         KM-estimate
     40         1.00
@@ -347,10 +346,11 @@ existing for times 72 or 73) This is especially useful for comparing multiple su
     74         0.00
 
 
-*lifelines* will intelligently forward-fill the estimates to unseen time points.
+Lifelines will intelligently forward-fill the estimates to unseen time points.
 
-Example SQL query to get data from a table
-##############################################
+
+Example SQL query to get survival data from a table
+#####################################################
 
 Below is a way to get an example dataset from a relational database (this may vary depending on your database):
 
@@ -360,7 +360,7 @@ Below is a way to get an example dataset from a relational database (this may va
       id, 
       DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE)) AS "T", 
       (ended_at IS NOT NULL) AS "E" 
-    FROM some_tables
+    FROM table
 
 Explanation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -377,6 +377,100 @@ id                   T                      E
 13                   36                 True
 14                   33                 True
 ==================   ============   ============
+
+
+Example SQL queries and transformations to get time varying data
+####################################################################
+
+For Cox time-varying models, we discussed what the dataset should look like in :ref:`Dataset for time-varying regression`. Typically we have a base dataset, and then we fold in the covariate datasets. Below are some SQL queries and Python transformations from end-to-end.
+
+
+Base dataset: ``base_df``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: mysql
+
+    SELECT 
+      id, 
+      group,
+      DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE)) AS "T", 
+      (ended_at IS NOT NULL) AS "E"
+    FROM dimension_table dt
+
+
+Time varying dataset: ``cv``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: mysql
+
+    SELECT 
+      id, 
+      DATEDIFF('dd', dt.started_at, ft.event_at) AS "time", 
+      ft.var1
+    FROM fact_table ft
+    JOIN dimension_table dt
+       USING(id)
+
+
+.. code-block:: python
+
+      from lifelines.utils import to_long_format
+      from lifelines.utils import add_covariate_to_timeline
+
+      base_df = to_long_format(base_df, duration_col="T")
+      df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
+
+
+Example cumulative total using ``add_covariate_to_timeline``
+############################################################
+
+Often we have transactional covariate datasets and state covariate datasets. In a transaction dataset, it may make sense to sum up the covariates to represent administration of the treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
+
+Suppose we have an initial DataFrame of start-ups like:
+
+.. code-block:: python
+
+    seed_df = pd.DataFrame.from_records([
+        {'id': 'FB', 'E': True, 'T': 12, 'funding': 0},
+        {'id': 'SU', 'E': True, 'T': 10, 'funding': 0},
+    ])
+
+
+And a covariate dataframe representing funding rounds like:
+
+
+.. code-block:: python
+
+    cv = pd.DataFrame.from_records([
+        {'id': 'FB', 'funding': 30, 't': 5},
+        {'id': 'FB', 'funding': 15, 't': 10},
+        {'id': 'FB', 'funding': 50, 't': 15},
+        {'id': 'SU', 'funding': 10, 't': 6},
+        {'id': 'SU', 'funding': 9,  't':  10},
+    ])
+
+
+We can do the following to get both the cumulative funding recieved and the latest round of funding:
+
+.. code-block:: python
+
+    from lifelines.utils import to_long_format
+    from lifelines.utils import add_covariate_to_timeline
+    
+    df = seed_df.pipe(to_long_format, 'T')\
+                .pipe(add_covariate_to_timeline, cv, 'id', 't', 'E', cumulative_sum=True)\
+                .pipe(add_covariate_to_timeline, cv, 'id', 't', 'E', cumulative_sum=False)
+
+
+    """
+       start  cumsum_funding  funding  stop  id      E
+    0      0             0.0      0.0   5.0  FB  False
+    1      5            30.0     30.0  10.0  FB  False
+    2     10            45.0     15.0  12.0  FB   True
+    3      0             0.0      0.0   6.0  SU  False
+    4      6            10.0     10.0  10.0  SU  False
+    5     10            19.0      9.0  10.0  SU   True
+    """
 
 
 Sample size determination under a CoxPH model
@@ -417,14 +511,15 @@ Suppose you wish to measure the hazard ratio between two populations under the C
     power = power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio)
     # 0.4957
 
-
 Problems with convergence in the Cox Proportional Hazard Model
 ################################################################
 
 Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there is sometimes a problem with convergence. Here are some common symptoms and possible resolutions:
 
- - Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is equally as large. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object. Look for a ``RuntimeWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models). Or, the data is completely seperable, which means that there exists a covariate the completely determines whether an event occured or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Another problem may be a colinear relationship in your dataset - see the third point below. 
+ - Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is equally as large. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object. Look for a ``RuntimeWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models). Or, the data is completely separable, which means that there exists a covariate the completely determines whether an event occured or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Another problem may be a colinear relationship in your dataset - see the third point below. 
 
  - Adding a very small ``penalizer_coef`` significantly changes the results. This probably means that the step size is too large. Try decreasing it, and returning the ``penalizer_coef`` term to 0. 
 
  - ``LinAlgError: Singular matrix`` is thrown. This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset. 
+
+ - If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).count()``.

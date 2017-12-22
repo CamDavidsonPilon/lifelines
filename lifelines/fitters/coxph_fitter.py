@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import division
+
 import warnings
 import numpy as np
 import pandas as pd
@@ -12,7 +14,8 @@ import scipy.stats as stats
 from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
-    pass_for_numeric_dtypes_or_raise, check_low_var
+    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
+    check_complete_separation
 
 
 class CoxPHFitter(BaseFitter):
@@ -26,12 +29,14 @@ class CoxPHFitter(BaseFitter):
       alpha: the level in the confidence intervals.
       tie_method: specify how the fitter should deal with ties. Currently only
         'Efron' is available.
-      normalize: substract the mean and divide by standard deviation of each covariate
-        in the input data before performing any fitting.
       penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the absolute value of beta_i. Recommended, even if a small value.
         The penalty is 1/2 * penalizer * ||beta||^2.
+      strata: specify a list of columns to use in stratification. This is useful if a
+         catagorical covariate does not obey the proportional hazard assumption. This
+         is used similar to the `strata` expression in R.
+         See http://courses.washington.edu/b515/l17.pdf.
     """
 
     def __init__(self, alpha=0.95, tie_method='Efron', penalizer=0.0, strata=None):
@@ -47,7 +52,203 @@ class CoxPHFitter(BaseFitter):
         self.penalizer = penalizer
         self.strata = strata
 
-    def _get_efron_values(self, X, beta, T, E):
+    def fit(self, df, duration_col, event_col=None,
+            show_progress=False, initial_beta=None,
+            strata=None, step_size=None, weights_col=None):
+        """
+        Fit the Cox Propertional Hazard model to a dataset. Tied survival times
+        are handled using Efron's tie-method.
+
+        Parameters:
+          df: a Pandas dataframe with necessary columns `duration_col` and
+             `event_col`, plus other covariates. `duration_col` refers to
+             the lifetimes of the subjects. `event_col` refers to whether
+             the 'death' events was observed: 1 if observed, 0 else (censored).
+          duration_col: the column in dataframe that contains the subjects'
+             lifetimes.
+          event_col: the column in dataframe that contains the subjects' death
+             observation. If left as None, assume all individuals are non-censored.
+          weights_col: an optional column in the dataframe that denotes the weight per subject.
+             This column is expelled and not used as a covariate, but as a weight in the
+             final regression. Default weight is 1.
+          show_progress: since the fitter is iterative, show convergence
+             diagnostics.
+          initial_beta: initialize the starting point of the iterative
+             algorithm. Default is the zero vector.
+          strata: specify a list of columns to use in stratification. This is useful if a
+             catagorical covariate does not obey the proportional hazard assumption. This
+             is used similar to the `strata` expression in R.
+             See http://courses.washington.edu/b515/l17.pdf.
+
+        Returns:
+            self, with additional properties: hazards_
+
+        """
+        df = df.copy()
+
+        # Sort on time
+        df = df.sort_values(by=duration_col)
+
+        self._n_examples = df.shape[0]
+        self.strata = coalesce(strata, self.strata)
+        if self.strata is not None:
+            original_index = df.index.copy()
+            df = df.set_index(self.strata)
+
+        # Extract time and event
+        T = df[duration_col]
+        del df[duration_col]
+        if event_col is None:
+            E = pd.Series(np.ones(df.shape[0]), index=df.index)
+        else:
+            E = df[event_col]
+            del df[event_col]
+
+        if weights_col:
+            weights = df.pop(weights_col).values
+        else:
+            weights = np.ones(self._n_examples)
+
+        self._check_values(df, E)
+        df = df.astype(float)
+
+        # save fitting data for later
+        self.durations = T.copy()
+        self.event_observed = E.copy()
+        if self.strata is not None:
+            self.durations.index = original_index
+            self.event_observed.index = original_index
+        self.event_observed = self.event_observed.astype(bool)
+
+        self._norm_mean = df.mean(0)
+        self._norm_std = df.std(0)
+
+        E = E.astype(bool)
+
+        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), T, E,
+                                         weights=weights,
+                                         initial_beta=initial_beta,
+                                         show_progress=show_progress,
+                                         step_size=step_size)
+
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
+        self.confidence_intervals_ = self._compute_confidence_intervals()
+
+        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
+        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
+        self.baseline_survival_ = self._compute_baseline_survival()
+        self.score_ = concordance_index(self.durations,
+                                        -self.predict_partial_hazard(df).values.ravel(),
+                                        self.event_observed)
+        self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
+        return self
+
+    def _newton_rhaphson(self, X, T, E, weights=None, initial_beta=None, step_size=None,
+                         precision=10e-6, show_progress=True):
+        """
+        Newton Rhaphson algorithm for fitting CPH model.
+
+        Note that data is assumed to be sorted on T!
+
+        Parameters:
+            X: (n,d) Pandas DataFrame of observations.
+            T: (n) Pandas Series representing observed durations.
+            E: (n) Pandas Series representing death events.
+            weights: (n) an iterable representing weights per observation.
+            initial_beta: (1,d) numpy array of initial starting point for
+                          NR algorithm. Default 0.
+            step_size: float > 0.001 to determine a starting step size in NR algorithm.
+            precision: the convergence halts if the norm of delta between
+                     successive positions is less than epsilon.
+
+        Returns:
+            beta: (1,d) numpy array.
+        """
+        assert precision <= 1., "precision must be less than or equal to 1."
+        n, d = X.shape
+
+        # make sure betas are correct size.
+        if initial_beta is not None:
+            assert initial_beta.shape == (d, 1)
+            beta = initial_beta
+        else:
+            beta = np.zeros((d, 1))
+
+        if step_size is None:
+            # empirically determined
+            step_size = 0.95 if n < 1000 else 0.5
+
+        # Method of choice is just efron right now
+        if self.tie_method == 'Efron':
+            get_gradients = self._get_efron_values
+        else:
+            raise NotImplementedError("Only Efron is available.")
+
+        i = 0
+        converging = True
+        ll, previous_ll = 0, 0
+
+        while converging:
+            i += 1
+            if self.strata is None:
+                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights)
+            else:
+                g = np.zeros_like(beta).T
+                h = np.zeros((beta.shape[0], beta.shape[0]))
+                ll = 0
+                for strata in np.unique(X.index):
+                    stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
+                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, weights)
+                    g += _g
+                    h += _h
+                    ll += _ll
+
+            if self.penalizer > 0:
+                # add the gradient and hessian of the l2 term
+                g -= self.penalizer * beta.T
+                h.flat[::d + 1] -= self.penalizer
+
+            delta = solve(-h, step_size * g.T)
+            if np.any(np.isnan(delta)):
+                raise ValueError("delta contains nan value(s). Convergence halted.")
+
+            # Save these as pending result
+            hessian, gradient = h, g
+
+            if show_progress:
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
+
+            # convergence criteria
+            if norm(delta) < precision:
+                converging = False
+            elif abs(ll - previous_ll) < precision:
+                converging = False
+            elif i >= 50:
+                # 50 iterations steps with N-R is a lot.
+                # Expected convergence is ~10 steps
+                warnings.warn("Newton-Rhapson failed to converge sufficiently in 50 steps.", RuntimeWarning)
+                converging = False
+            elif step_size <= 0.0001:
+                converging = False
+
+            # Only allow small steps
+            if norm(delta) > 10.0:
+                step_size *= 0.5
+
+            # temper the step size down.
+            step_size *= 0.995
+
+            beta += delta
+            previous_ll = ll
+
+        self._hessian_ = hessian
+        self._score_ = gradient
+        self._log_likelihood = ll
+        if show_progress:
+            print("Convergence completed after %d iterations." % (i))
+        return beta
+
+    def _get_efron_values(self, X, beta, T, E, weights):
         """
         Calculates the first and second order vector differentials,
         with respect to beta.
@@ -59,6 +260,8 @@ class CoxPHFitter(BaseFitter):
             beta: (1, d) numpy array of coefficients.
             T: (n) numpy array representing observed durations.
             E: (n) numpy array representing death events.
+            weights: (n) an array representing weights per observation.
+
 
         Returns:
             hessian: (d, d) numpy array,
@@ -83,24 +286,26 @@ class CoxPHFitter(BaseFitter):
         for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
             # Doing it like this to preserve shape
             xi = X[i:i + 1]
+            w = weights[i]
+
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
-            phi_x_i = dot(phi_i, xi)
+            phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_i * xi)
 
             # Calculate sums of Risk set
-            risk_phi += phi_i
-            risk_phi_x += phi_x_i
-            risk_phi_x_x += phi_x_x_i
+            risk_phi += w * phi_i
+            risk_phi_x += w * phi_x_i
+            risk_phi_x_x += w * phi_x_x_i
             # Calculate sums of Ties, if this is an event
             if ei:
-                x_tie_sum += xi
-                tie_phi += phi_i
-                tie_phi_x += phi_x_i
-                tie_phi_x_x += phi_x_x_i
+                x_tie_sum += w * xi
+                tie_phi += w * phi_i
+                tie_phi_x += w * phi_x_i
+                tie_phi_x_x += w * phi_x_x_i
 
                 # Keep track of count
-                tie_count += 1
+                tie_count += int(w)
 
             if i > 0 and T[i - 1] == ti:
                 # There are more ties/members of the risk set
@@ -143,192 +348,13 @@ class CoxPHFitter(BaseFitter):
 
         return hessian, gradient, log_lik
 
-    def _newton_rhaphson(self, X, T, E, initial_beta=None, step_size=.5,
-                         precision=10e-6, show_progress=True):
-        """
-        Newton Rhaphson algorithm for fitting CPH model.
-
-        Note that data is assumed to be sorted on T!
-
-        Parameters:
-            X: (n,d) Pandas DataFrame of observations.
-            T: (n) Pandas Series representing observed durations.
-            E: (n) Pandas Series representing death events.
-            initial_beta: (1,d) numpy array of initial starting point for
-                          NR algorithm. Default 0.
-            step_size: float > 0.001 to determine a starting step size in NR algorithm.
-            precision: the convergence halts if the norm of delta between
-                     successive positions is less than epsilon.
-
-        Returns:
-            beta: (1,d) numpy array.
-        """
-        assert precision <= 1., "precision must be less than or equal to 1."
-        n, d = X.shape
-
-        # Want as bools
-        E = E.astype(bool)
-
-        # make sure betas are correct size.
-        if initial_beta is not None:
-            assert initial_beta.shape == (d, 1)
-            beta = initial_beta
-        else:
-            beta = np.zeros((d, 1))
-
-        # Method of choice is just efron right now
-        if self.tie_method == 'Efron':
-            get_gradients = self._get_efron_values
-        else:
-            raise NotImplementedError("Only Efron is available.")
-
-        i = 0
-        converging = True
-        ll = 0
-        previous_ll = 0
-
-        while converging:
-            i += 1
-            if self.strata is None:
-                output = get_gradients(X.values, beta, T.values, E.values)
-                h, g, ll = output
-            else:
-                g = np.zeros_like(beta).T
-                h = np.zeros((beta.shape[0], beta.shape[0]))
-                ll = 0
-                for strata in np.unique(X.index):
-                    stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
-                    output = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values)
-                    _h, _g, _ll = output
-                    g += _g
-                    h += _h
-                    ll += _ll
-
-            if self.penalizer > 0:
-                # add the gradient and hessian of the l2 term
-                g -= self.penalizer * beta.T
-                h.flat[::d + 1] -= self.penalizer
-
-            delta = solve(-h, step_size * g.T)
-            if np.any(np.isnan(delta)):
-                raise ValueError("delta contains nan value(s). Convergence halted.")
-
-            # Save these as pending result
-            hessian, gradient = h, g
-
-            if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
-
-            # convergence criteria
-            if norm(delta) < precision:
-                converging = False
-            elif abs(ll - previous_ll) < precision:
-                converging = False
-            elif i >= 50:
-                # 50 iterations steps with N-R is a lot.
-                # Expected convergence is ~10 steps
-                warnings.warn("Newton-Rhapson failed to converge sufficiently in 50 steps.", RuntimeWarning)
-                converging = False
-            elif step_size <= 0.0001:
-                converging = False
-
-            # Only allow small steps
-            if norm(delta) > 10:
-                step_size *= 0.5
-
-            # anneal the step size down.
-            step_size *= 0.99
-
-            beta += delta
-            previous_ll = ll
-
-        self._hessian_ = hessian
-        self._score_ = gradient
-        self._log_likelihood = ll
-        if show_progress:
-            print("Convergence completed after %d iterations." % (i))
-        return beta
-
-    def fit(self, df, duration_col, event_col=None,
-            show_progress=False, initial_beta=None,
-            strata=None, step_size=0.5):
-        """
-        Fit the Cox Propertional Hazard model to a dataset. Tied survival times
-        are handled using Efron's tie-method.
-
-        Parameters:
-          df: a Pandas dataframe with necessary columns `duration_col` and
-             `event_col`, plus other covariates. `duration_col` refers to
-             the lifetimes of the subjects. `event_col` refers to whether
-             the 'death' events was observed: 1 if observed, 0 else (censored).
-          duration_col: the column in dataframe that contains the subjects'
-             lifetimes.
-          event_col: the column in dataframe that contains the subjects' death
-             observation. If left as None, assume all individuals are non-censored.
-          show_progress: since the fitter is iterative, show convergence
-             diagnostics.
-          initial_beta: initialize the starting point of the iterative
-             algorithm. Default is the zero vector.
-          strata: specify a list of columns to use in stratification. This is useful if a
-             catagorical covariate does not obey the proportional hazard assumption. This
-             is used similar to the `strata` expression in R.
-             See http://courses.washington.edu/b515/l17.pdf.
-
-        Returns:
-            self, with additional properties: hazards_
-
-        """
-        df = df.copy()
-        # Sort on time
-        df.sort_values(by=duration_col, inplace=True)
-
-        # remove strata coefs
-        self.strata = strata
-        if strata is not None:
-            df = df.set_index(strata)
-
-        # Extract time and event
-        T = df[duration_col]
-        del df[duration_col]
-        if event_col is None:
-            E = pd.Series(np.ones(df.shape[0]), index=df.index)
-        else:
-            E = df[event_col]
-            del df[event_col]
-
-        self._check_values(df, E)
-        df = df.astype(float)
-        self.data = df if self.strata is None else df.reset_index()
-        self._norm_mean = df.mean(0)
-        self._norm_std = df.std(0)
-        df = normalize(df, self._norm_mean, self._norm_std)
-
-        E = E.astype(bool)
-
-        hazards_ = self._newton_rhaphson(df, T, E, initial_beta=initial_beta,
-                                         show_progress=show_progress,
-                                         step_size=step_size)
-
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
-        self.confidence_intervals_ = self._compute_confidence_intervals()
-
-        self.durations = T
-        self.event_observed = E
-
-        self.baseline_hazard_ = self._compute_baseline_hazards(df * self._norm_std + self._norm_mean, T, E)
-        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(self.baseline_hazard_)
-        self.baseline_survival_ = self._compute_baseline_survival()
-        return self
-
-    def _compute_baseline_cumulative_hazard(self, baseline_hazard_):
-        return baseline_hazard_.cumsum()
+    def _compute_baseline_cumulative_hazard(self):
+        return self.baseline_hazard_.cumsum()
 
     @staticmethod
     def _check_values(df, E):
-        deaths = E == 1
         check_low_var(df)
-        check_low_var(df.loc[deaths], "Complete seperation possibly detected. ", " See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/")
-        check_low_var(df.loc[~deaths], "Complete seperation possibly detected. ", " See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/")
+        check_complete_separation(df, E)
         pass_for_numeric_dtypes_or_raise(df)
 
     def _compute_confidence_intervals(self):
@@ -383,7 +409,7 @@ class CoxPHFitter(BaseFitter):
         df[''] = [significance_code(p) for p in df['p']]
 
         # Print information about data first
-        print('n={}, number of events={}'.format(self.data.shape[0],
+        print('n={}, number of events={}'.format(self._n_examples,
                                                  np.where(self.event_observed)[0].shape[0]),
               end='\n\n')
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
@@ -391,10 +417,7 @@ class CoxPHFitter(BaseFitter):
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
-        print("Concordance = {:.3f}"
-              .format(concordance_index(self.durations,
-                                        -self.predict_partial_hazard(self.data).values.ravel(),
-                                        self.event_observed)))
+        print("Concordance = {:.3f}".format(self.score_))
         return
 
     def predict_partial_hazard(self, X):
@@ -444,8 +467,8 @@ class CoxPHFitter(BaseFitter):
         Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
         of R's predict.coxph. Equal to \beta X - \beta \bar{X}
         """
-        mean_covariates = self.data.mean(0).to_frame().T
-        return self.predict_log_partial_hazard(X) - self.predict_log_partial_hazard(mean_covariates).squeeze()
+
+        return self.predict_log_partial_hazard(X) - self._train_log_partial_hazard.squeeze()
 
     def predict_cumulative_hazard(self, X, times=None):
         """

@@ -1,4 +1,6 @@
 from __future__ import print_function
+from __future__ import division
+
 from collections import Counter, Iterable
 import os
 import warnings
@@ -15,14 +17,16 @@ import pytest
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
+from numpy.linalg.linalg import LinAlgError
 
 from lifelines.utils import k_fold_cross_validation, StatError
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-    WeibullFitter, BaseFitter
+    WeibullFitter, BaseFitter, CoxTimeVaryingFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
-    load_lcd, load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset
-from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
+    load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
+    load_stanford_heart_transplants
+from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
 from lifelines.utils import concordance_index
 
 
@@ -156,7 +160,7 @@ class TestUnivariateFitters():
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
-        assert abs(kmf.predict(0.5) - 5/6.) < 10e-8
+        assert abs(kmf.predict(0.5) - 5 / 6.) < 10e-8
         assert abs(kmf.predict(1.9999) - 0.3333666666) < 10e-8
 
     def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
@@ -243,10 +247,9 @@ class TestUnivariateFitters():
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
     def test_valueerror_is_thrown_if_alpha_out_of_bounds(self, univariate_fitters):
-        T2 = np.arange(1, 50)
         for fitter in univariate_fitters:
             with pytest.raises(ValueError):
-                f = fitter(alpha=95)
+                fitter(alpha=95)
 
 
 class TestWeibullFitter():
@@ -391,24 +394,6 @@ class TestKaplanMeierFitter():
         T_shifted = T - 200
         npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
 
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_kmf_left_censorship_plots(self, block):
-        matplotlib = pytest.importorskip("matplotlib")
-        from matplotlib import pyplot as plt
-
-        kmf = KaplanMeierFitter()
-        lcd_dataset = load_lcd()
-        alluvial_fan = lcd_dataset.loc[lcd_dataset['group'] == 'alluvial_fan']
-        basin_trough = lcd_dataset.loc[lcd_dataset['group'] == 'basin_trough']
-        kmf.fit(alluvial_fan['T'], alluvial_fan['C'], left_censorship=True, label='alluvial_fan')
-        ax = kmf.plot()
-
-        kmf.fit(basin_trough['T'], basin_trough['C'], left_censorship=True, label='basin_trough')
-        ax = kmf.plot(ax=ax)
-        plt.show(block=block)
-        return
-
     def test_kmf_survival_curve_output_against_R(self):
         df = load_g3()
         ix = df['group'] == 'RIT'
@@ -421,6 +406,20 @@ class TestKaplanMeierFitter():
         expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
         kmf.fit(df.loc[~ix]['time'], df.loc[~ix]['event'], timeline=[9, 19, 32, 34])
         npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=3)
+
+    @pytest.mark.xfail()
+    def test_kmf_survival_curve_output_against_R_super_accurate(self):
+        df = load_g3()
+        ix = df['group'] == 'RIT'
+        kmf = KaplanMeierFitter()
+
+        expected = np.array([[0.909, 0.779]]).T
+        kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[25, 53])
+        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=4)
+
+        expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
+        kmf.fit(df.loc[~ix]['time'], df.loc[~ix]['event'], timeline=[9, 19, 32, 34])
+        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=4)
 
     def test_kmf_confidence_intervals_output_against_R(self):
         # this uses conf.type = 'log-log'
@@ -530,8 +529,8 @@ class TestNelsonAalenFitter():
         naf = NelsonAalenFitter(nelson_aalen_smoothing=True)
         naf.fit(t, c)
         assert abs(naf.cumulative_hazard_['NA_estimate'].iloc[-1] - 8.545665) < 1e-6
-        assert abs(naf.confidence_interval_['NA_estimate_upper_0.95'].iloc[-1] - 11.316361) < 1e-6
-        assert abs(naf.confidence_interval_['NA_estimate_lower_0.95'].iloc[-1] - 6.453346) < 1e-6
+        assert abs(naf.confidence_interval_['NA_estimate_upper_0.95'].iloc[-1] - 11.315662) < 1e-6
+        assert abs(naf.confidence_interval_['NA_estimate_lower_0.95'].iloc[-1] - 6.4537448) < 1e-6
 
 
 class TestBreslowFlemingHarringtonFitter():
@@ -615,7 +614,7 @@ class TestRegressionFitters():
             'categoryb_': pd.Series(['a', 'b', 'a'], dtype='category')
         })
 
-        for fitter in regression_models:
+        for fitter in [CoxPHFitter(), AalenAdditiveFitter()]:
             for subset in [
                 ['t', 'categorya_'],
                 ['t', 'categoryb_'],
@@ -631,6 +630,13 @@ class TestRegressionFitters():
                 ['t', 'uint8_'],
             ]:
                 fitter.fit(df[subset], duration_col='t')
+
+    def test_regression_model_has_score_(self, regression_models, rossi):
+
+        for fitter in regression_models:
+            assert not hasattr(fitter, 'score_')
+            fitter.fit(rossi, duration_col='week', event_col='arrest')
+            assert hasattr(fitter, 'score_')
 
 
 class TestCoxPHFitter():
@@ -690,6 +696,7 @@ Concordance = 0.640""".strip().split()
         X = data_nus['x'][:, None]
         T = data_nus['t']
         E = data_nus['E']
+        weights = np.ones_like(T)
 
         # Enforce numpy arrays
         X = np.array(X)
@@ -702,7 +709,7 @@ Concordance = 0.640""".strip().split()
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
         l = -l
 
         assert np.abs(l[0][0] - 77.13) < 0.05
@@ -710,7 +717,7 @@ Concordance = 0.640""".strip().split()
         beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
         l = -l
 
         assert np.abs(l[0][0] - 72.83) < 0.05
@@ -718,7 +725,7 @@ Concordance = 0.640""".strip().split()
         beta = beta + u / l
         assert np.abs(beta - -0.0325) < 0.01
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E)
+        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
         l = -l
 
         assert np.abs(l[0][0] - 72.70) < 0.01
@@ -728,8 +735,8 @@ Concordance = 0.640""".strip().split()
 
     def test_efron_newtons_method(self, data_nus):
         newton = CoxPHFitter()._newton_rhaphson
-        X, T, E = data_nus[['x']], data_nus['t'], data_nus['E']
-        assert np.abs(newton(X, T, E)[0][0] - -0.0335) < 0.0001
+        X, T, E, W = data_nus[['x']], data_nus['t'], data_nus['E'], np.ones_like(data_nus['t'])
+        assert np.abs(newton(X, T, E, W)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus):
         cf = CoxPHFitter()
@@ -740,7 +747,7 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(data_pred2, 't', 'E')
 
-        X = data_pred2[cf.data.columns]
+        X = data_pred2[data_pred2.columns.difference(['t', 'E'])]
         assert_frame_equal(
             cf.predict_partial_hazard(np.array(X)),
             cf.predict_partial_hazard(X)
@@ -760,15 +767,12 @@ Concordance = 0.640""".strip().split()
     def test_data_normalization(self, data_pred2):
         # During fit, CoxPH copies the training data and normalizes it.
         # Future calls should be normalized in the same way and
-        # internal training set should not be saved in a normalized state.
 
         cf = CoxPHFitter()
         cf.fit(data_pred2, duration_col='t', event_col='E')
 
         # Internal training set
-        ci_trn = concordance_index(cf.durations,
-                                   -cf.predict_partial_hazard(cf.data).values,
-                                   cf.event_observed)
+        ci_trn = cf.score_
         # New data should normalize in the exact same way
         ci_org = concordance_index(data_pred2['t'],
                                    -cf.predict_partial_hazard(data_pred2[['x1', 'x2']]).values,
@@ -867,11 +871,12 @@ Concordance = 0.640""".strip().split()
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert mean_score > expected, msg.format(expected, mean_score)
 
-    def test_output_against_R(self, rossi):
+    def test_coef_output_against_R_super_accurate(self, rossi):
         """
         from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
         Link is now broken, but this is the code:
 
+        library(survival)
         rossi <- read.csv('.../lifelines/datasets/rossi.csv')
         mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
             data=rossi)
@@ -880,7 +885,50 @@ Concordance = 0.640""".strip().split()
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
-        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
+
+    def test_coef_output_against_R_using_weights(self, rossi):
+        rossi_ = rossi.copy()
+        rossi_['weights'] = 1.
+        rossi_ = rossi_.groupby(rossi.columns.tolist())['weights'].sum()\
+                       .reset_index()
+
+        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
+        cf = CoxPHFitter()
+        cf.fit(rossi_, duration_col='week', event_col='arrest', weights_col='weights')
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
+
+    def test_standard_error_coef_output_against_R(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = np.array([0.19138, 0.02200, 0.30799, 0.21222, 0.38187, 0.19576, 0.02865])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.summary['se(coef)'].values, expected, decimal=4)
+
+    def test_z_value_output_against_R_to_3_decimal_places(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = np.array([-1.983, -2.611, 1.019, -0.706, -1.136, -0.434, 3.194])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        npt.assert_array_almost_equal(cf.summary['z'].values, expected, decimal=3)
 
     def test_output_with_strata_against_R(self, rossi):
         """
@@ -891,7 +939,7 @@ Concordance = 0.640""".strip().split()
         expected = np.array([[-0.3355, -0.0590, 0.1002]])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'], show_progress=True)
-        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_penalized_output_against_R(self, rossi):
         # R code:
@@ -903,7 +951,7 @@ Concordance = 0.640""".strip().split()
         expected = np.array([[-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909]])
         cf = CoxPHFitter(penalizer=1.0)
         cf.fit(rossi, duration_col='week', event_col='arrest')
-        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=3)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
@@ -927,7 +975,7 @@ Concordance = 0.640""".strip().split()
         # standard errors
         actual_se = cf._compute_standard_errors().values
         expected_se = np.array([[0.0143,  0.4623,  0.3561,  0.4222]])
-        npt.assert_array_almost_equal(actual_se, expected_se, decimal=2)
+        npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 
     def test_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
@@ -985,8 +1033,20 @@ Concordance = 0.640""".strip().split()
         """
         cp = CoxPHFitter()
         cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].loc[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=2)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=2)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].loc[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=4)
+
+    def test_strata_from_init_is_used_in_fit_later(self, rossi):
+        strata = ['race', 'paro', 'mar']
+        cp_with_strata_in_init = CoxPHFitter(strata=strata)
+        cp_with_strata_in_init.fit(rossi, 'week', 'arrest')
+        assert cp_with_strata_in_init.strata == strata
+
+        cp_with_strata_in_fit = CoxPHFitter()
+        cp_with_strata_in_fit.fit(rossi, 'week', 'arrest', strata=strata)
+        assert cp_with_strata_in_fit.strata == strata
+
+        assert cp_with_strata_in_init._log_likelihood == cp_with_strata_in_fit._log_likelihood
 
     def test_baseline_survival_is_the_same_indp_of_location(self, regression_dataset):
         df = regression_dataset.copy()
@@ -1071,9 +1131,9 @@ Concordance = 0.640""".strip().split()
             warnings.simplefilter("always")
             try:
                 cox.fit(rossi, 'week', 'arrest')
-            except:
+            except (LinAlgError, ValueError):
                 pass
-            assert len(w) == 3
+            assert len(w) == 2
             assert issubclass(w[-1].category, RuntimeWarning)
             assert "variance" in str(w[0].message)
 
@@ -1088,11 +1148,11 @@ Concordance = 0.640""".strip().split()
             warnings.simplefilter("always")
             try:
                 cox.fit(rossi, 'week', 'arrest')
-            except:
+            except LinAlgError:
                 pass
-            assert len(w) == 2
+            assert len(w) == 1
             assert issubclass(w[-1].category, RuntimeWarning)
-            assert "Complete seperation" in str(w[-1].message)
+            assert "complete separation" in str(w[-1].message)
 
     @pytest.mark.xfail
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
@@ -1109,6 +1169,11 @@ Concordance = 0.640""".strip().split()
         rossi['duped'] = rossi['paro'] + rossi['prio']
         cp.fit(rossi, 'week', 'arrest', show_progress=True)
         assert cp.summary.loc['duped', 'se(coef)'] < 100
+
+    def test_durations_of_zero_are_okay(self, rossi):
+        cp = CoxPHFitter()
+        rossi.loc[range(10), 'week'] = 0
+        cp.fit(rossi, 'week', 'arrest')
 
 
 class TestAalenAdditiveFitter():
@@ -1189,17 +1254,6 @@ class TestAalenAdditiveFitter():
         aaf = AalenAdditiveFitter()
         aaf.fit(X, duration_col='T')
 
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_aaf_panel_dataset(self):
-        matplotlib = pytest.importorskip("matplotlib")
-        from matplotlib import pyplot as plt
-
-        panel_dataset = load_panel_test()
-        aaf = AalenAdditiveFitter()
-        aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
-        aaf.plot()
-
     def test_aaf_panel_dataset_with_no_censorship(self):
         panel_dataset = load_panel_test()
         aaf = AalenAdditiveFitter()
@@ -1225,65 +1279,6 @@ class TestAalenAdditiveFitter():
         # predictions
         T_pred = aaf.predict_median(X[list(range(6))])
         assert abs((T_pred.values > T).mean() - 0.5) < 0.05
-
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_aalen_additive_fit_no_censor(self, block):
-        # this is a visual test of the fitting the cumulative
-        # hazards.
-        matplotlib = pytest.importorskip("matplotlib")
-        from matplotlib import pyplot as plt
-
-        n = 2500
-        d = 6
-        timeline = np.linspace(0, 70, 10000)
-        hz, coef, X = generate_hazard_rates(n, d, timeline)
-        X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
-                                          index=timeline, columns=coef.columns)
-        T = generate_random_lifetimes(hz, timeline)
-        X['T'] = T
-        X['E'] = np.random.binomial(1, 1, n)
-        aaf = AalenAdditiveFitter()
-        aaf.fit(X, 'T', 'E')
-
-        for i in range(d + 1):
-            ax = plt.subplot(d + 1, 1, i + 1)
-            col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
-        plt.show(block=block)
-        return
-
-    @pytest.mark.plottest
-    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
-    def test_aalen_additive_fit_with_censor(self, block):
-        # this is a visual test of the fitting the cumulative
-        # hazards.
-        matplotlib = pytest.importorskip("matplotlib")
-        from matplotlib import pyplot as plt
-
-        n = 2500
-        d = 6
-        timeline = np.linspace(0, 70, 10000)
-        hz, coef, X = generate_hazard_rates(n, d, timeline)
-        X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
-                                          index=timeline, columns=coef.columns)
-        T = generate_random_lifetimes(hz, timeline)
-        X['T'] = T
-        X['E'] = np.random.binomial(1, 0.99, n)
-
-        aaf = AalenAdditiveFitter()
-        aaf.fit(X, 'T', 'E')
-
-        for i in range(d + 1):
-            ax = plt.subplot(d + 1, 1, i + 1)
-            col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
-        plt.show(block=block)
-        return
 
     def test_dataframe_input_with_nonstandard_index(self):
         aaf = AalenAdditiveFitter()
@@ -1313,3 +1308,77 @@ class TestAalenAdditiveFitter():
         y_df = aaf.predict_cumulative_hazard(x)
         y_np = aaf.predict_cumulative_hazard(x.values)
         assert_frame_equal(y_df, y_np)
+
+
+class TestCoxTimeVaryingFitter():
+
+    @pytest.fixture()
+    def ctv(self):
+        return CoxTimeVaryingFitter()
+
+    @pytest.fixture()
+    def dfcv(self):
+        from lifelines.datasets import load_dfcv
+        return load_dfcv()
+
+    @pytest.fixture()
+    def heart(self):
+        return load_stanford_heart_transplants()
+
+    def test_inference_against_known_R_output(self, ctv, dfcv):
+        # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757, 0.705963], decimal=4)
+        npt.assert_almost_equal(ctv.summary['se(coef)'].values, [1.229, 1.206], decimal=3)
+        npt.assert_almost_equal(ctv.summary['p'].values, [0.14, 0.56], decimal=2)
+
+    @pytest.mark.xfail()
+    def test_fitter_will_raise_an_error_if_overlapping_intervals(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 10, 'var': 1., 'event': 0},
+            {'id': 1, 'start': 5, 'stop': 10, 'var': 1., 'event': 0},
+        ])
+
+        with warnings.catch_warnings(record=True):
+            with pytest.raises(ValueError):
+                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column(self, ctv, dfcv):
+        dfcv['constant'] = 1.0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except (LinAlgError, ValueError):
+                pass
+            assert len(w) == 2
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "variance" in str(w[0].message)
+
+    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, ctv, dfcv):
+        # check for a warning if we have complete seperation
+        ix = dfcv['event']
+        dfcv.loc[ix, 'var3'] = 1
+        dfcv.loc[~ix, 'var3'] = 0
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except (LinAlgError, ValueError):
+                pass
+            assert len(w) == 2
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "complete separation" in str(w[-1].message)
+
+    def test_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
+        """
+        library(survival)
+        data(heart)
+        coxph(Surv(start, stop, event) ~ age + transplant + surgery + year, data= heart)
+        """
+        ctv.fit(heart, id_col='id', event_col='event')
+        npt.assert_almost_equal(ctv.summary['coef'].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3)
+        npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
+        npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
