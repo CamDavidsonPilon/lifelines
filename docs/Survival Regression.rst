@@ -5,14 +5,14 @@
 Survival Regression
 =====================================
 
-Often we have additional data aside from the durations, and if
+Often we have additional data aside from the duration, and if
 applicable any censorships that occurred. In the regime dataset, we have
 the type of government the political leader was part of, the country
 they were head of, and the year they were elected. Can we use this data
 in survival analysis?
 
 Yes, the technique is called *survival regression* -- the name implies
-we regress covariates (eg: year elected, country, etc.) against a
+we regress covariates (e.g., year elected, country, etc.) against a
 another variable -- in this case durations and lifetimes. Similar to the
 logic in the first part of this tutorial, we cannot use traditional
 methods like linear regression.
@@ -39,14 +39,13 @@ The estimator to fit unknown coefficients in Aalen's additive model is
 located in ``estimators`` under ``AalenAdditiveFitter``. For this
 exercise, we will use the regime dataset and include the categorical
 variables ``un_continent_name`` (eg: Asia, North America,...), the
-``regime`` type (eg: monarchy, civilan,...) and the year the regime
+``regime`` type (e.g., monarchy, civilian,...) and the year the regime
 started in, ``start_year``.
 
 Aalen's additive model typically does not estimate the individual
 :math:`b_i(t)` but instead estimates :math:`\int_0^t b_i(s) \; ds`
 (similar to the estimate of the hazard rate using ``NelsonAalenFitter``
-above). This is important to keep in mind when analzying the output.
-
+above). This is important to keep in mind when analyzing the output.
 .. code:: python
 
     from lifelines import AalenAdditiveFitter
@@ -184,7 +183,7 @@ Below we create our fitter class. Since we did not supply an intercept
 column in our matrix we have included the keyword ``fit_intercept=True``
 (``True`` by default) which will append the column of ones to our
 matrix. (Sidenote: the intercept term, :math:`b_0(t)` in survival
-regression is often referred to as the *baseline* hazard.)
+regression is often known as the *baseline* hazard.)
 
 We have also included the ``coef_penalizer`` option. During the estimation, a
 linear regression is computed at each step. Often the regression can be
@@ -198,7 +197,7 @@ or small sample sizes) -- adding a penalizer term controls the stability. I reco
 
 An instance of ``AalenAdditiveFitter``
 includes a ``fit`` method that performs the inference on the coefficients. This method accepts a pandas DataFrame: each row is an individual and columns are the covariates and 
-two special columns: a *duration* column and a boolean *event occured* column (where event occured refers to the event of interest - expulsion from government in this case)
+two individual columns: a *duration* column and a boolean *event occurred* column (where event occurred refers to the event of interest - expulsion from government in this case)
 
 
 .. code:: python
@@ -333,9 +332,9 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
 
 
 Regression is most interesting if we use it on data we have not yet
-seen, i.e. prediction! We can use what we have learned to predict
+seen, i.e., prediction! We can use what we have learned to predict
 individual hazard rates, survival functions, and median survival time.
-The dataset we are using is aviable up until 2008, so let's use this data to
+The dataset we are using is available up until 2008, so let's use this data to
 predict the (already partly seen) possible duration of Canadian
 Prime Minister Stephen Harper.
 
@@ -385,6 +384,7 @@ Note a few facts about this model: the only time component is in the baseline ha
 
 Lifelines implementation
 ###########################################
+
 
 The implementation of the Cox model in lifelines, called ``CoxPHFitter`` has a similar API to ``AalensAdditiveFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats. 
 
@@ -468,7 +468,7 @@ With a fitted model, an altervative way to view the coefficients and their range
 Checking the proportional hazards assumption
 #############################################
 
-A quick and visual way to check the proportional hazards assumption of a variable is to plot the survival curves segmented by the values of the variable. If the survival curves are the same "shape", and differ only by constant factor, then the assumption holds. A more clear way to see this is to plot what's called the loglogs curve: the log(-log(survival curve)) vs log(time). If the curves are parallel (and hence do not cross each other), then it's likely the variable satisfies the assumption. If the curves do cross, likely you'll have to "stratify" the variable (see next section). In lifelines, the ``KaplanMeierFitter`` object has a ``.plot_loglogs`` function for this purpose. 
+A quick and visual way to check the proportional hazards assumption of a variable is to plot the survival curves segmented by the values of the variable. If the survival curves are the same "shape" and differ only by a constant factor, then the assumption holds. A more clear way to see this is to plot what's called the logs curve: the loglogs (-log(survival curve)) vs log(time). If the curves are parallel (and hence do not cross each other), then it's likely the variable satisfies the assumption. If the curves do cross, likely you'll have to "stratify" the variable (see next section). In lifelines, the ``KaplanMeierFitter`` object has a ``.plot_loglogs`` function for this purpose. 
 
 The following is the loglogs curves of two variables in our regime dataset. The first is the democracy type, which does have (close to) parallel lines, hence satisfies our assumption:
 
@@ -507,7 +507,7 @@ The second variable is the regime type, and this variable does not follow the pr
 Stratification
 ################
 
-Sometimes a covariate may not obey the proportional hazard assumption. In this case, we can allow a factor to be adjusted for without estimating its effect. To specify categorical variables to be used in stratification, we specify them in the call to ``fit``:
+Sometimes a covariate may not obey the proportional hazard assumption. In this case, we can allow a factor without estimating its effect to be adjusted. To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
 
 .. code:: python
 
@@ -804,8 +804,8 @@ The measure is implemented in lifelines under `lifelines.utils.concordance_index
 Cross Validation
 ######################################
 
-Lifelines has an implementation of k-fold cross validation under ``lifelines.utils.k_fold_cross_validation``. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus `k` (the number of folds to perform, default 5). On each fold, it splits the data 
-into a training set and a testing set, fits itself on the training set, and evaluates itself on the testing set (using the concordance measure). 
+Lifelines has an implementation of k-fold cross validation under `lifelines.utils.k_fold_cross_validation`. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus `k` (the number of folds to perform, default 5). On each fold, it splits the data 
+into a training set and a testing set fits itself on the training set and evaluates itself on the testing set (using the concordance measure). 
 
 .. code:: python
       
