@@ -19,7 +19,7 @@ Subtract the difference between survival curves
 
 If you are interested in taking the difference between two survival curves, simply trying to 
 subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately, 
-the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built in ``subtract`` method: 
+the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built-in ``subtract`` method: 
 
 .. code-block:: python
     
@@ -30,7 +30,7 @@ will produce the difference at every relevant time point. A similar function exi
 Compare using a hypothesis test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For rigorous testing of differences, *lifelines* comes with a statistics library. The ``logrank_test`` function
+For rigorous testing of differences, *lifelines* come with a statistics library. The ``logrank_test`` function
 compares whether the "death" generation process of the two populations are equal:
 
 .. code-block:: python
@@ -67,9 +67,9 @@ hypothesis that all the populations have the same "death" generation process).
 Model selection using *lifelines*
 #####################################################
 
-If using *lifelines* for prediction work, it's ideal that you perform some sort of cross-validation scheme. This allows you to be confident that your out-of-sample predictions will work well in practice. It also allows you to choose between multiple models.
+If using *lifelines* for prediction work, it's ideal that you perform some type of cross-validation scheme. This cross-validation allows you to be confident that your out-of-sample predictions will work well in practice. It also allows you to choose between multiple models.
 
-*lifelines* has a built in k-fold cross-validation function. For example, consider the following example:
+*lifelines* has a built-in k-fold cross-validation function. For example, consider the following example:
 
 .. code-block:: python
     
@@ -300,9 +300,9 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
     74         0.00
 
 
-What you would really like is to have a predictable and full index from 40 to 75. (Notice that
-in the above index, the last two time points are not adjacent -- this is caused by observing no lifetimes
-existing for times 72 or 73) This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a `timeline` argument: 
+What you would like is to have a predictable and full index from 40 to 75. (Notice that
+in the above index, the last two time points are not adjacent --  the cause is observing no lifetimes
+existing for times 72 or 73). This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a `timeline` argument: 
 
 .. code-block:: python
 
@@ -420,10 +420,9 @@ Suppose you wish to measure the hazard ratio between two populations under the C
 
 Problems with convergence in the Cox Proportional Hazard Model
 ################################################################
-
 Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there is sometimes a problem with convergence. Here are some common symptoms and possible resolutions:
 
- - Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is equally as large. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object. Look for a ``RuntimeWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models). Or, the data is completely seperable, which means that there exists a covariate the completely determines whether an event occured or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Another problem may be a colinear relationship in your dataset - see the third point below. 
+ - Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is equally as large. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object. Look for a ``RuntimeWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models). Or, the data is completely separable, which means that there exists a covariate the completely determines whether an event occurred or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Another problem may be a colinear relationship in your dataset - see the third point below. 
 
  - Adding a very small ``penalizer_coef`` significantly changes the results. This probably means that the step size is too large. Try decreasing it, and returning the ``penalizer_coef`` term to 0. 
 

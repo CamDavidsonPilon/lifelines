@@ -147,7 +147,7 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
     regression_dataset.head()
 
 
-The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorships and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occured column must be specified in the call to ``fit``. 
+The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorships and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``. 
 
 .. code:: python
     

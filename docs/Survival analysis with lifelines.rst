@@ -6,33 +6,31 @@ Survival analysis with lifelines
 =====================================
 
 In the previous :doc:`section</Survival Analysis intro>`,
-we introduced how survival analysis is used, needed, and the
-mathematical objects that it relies on. In this article, we will work
+we introduced the use of survival analysis, the need, and the
+mathematical objects on which it relies. In this article, we will work
 with real data and the *lifelines* library to estimate these mathematical objects.
 
 Estimating the Survival function using Kaplan-Meier
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 For this example, we will be investigating the lifetimes of political
-leaders around the world. A political leader in this case is defined by a single
-individual's time in office who controls the ruling regime. This could be an
-elected president, unelected dictator, monarch, etc. The birth event is
-the start of the individual's tenure, and the death event is the retirement of the
-individual. Censorship can occur if they are a) still in offices at the
-time of dataset complilation (2008), or b) die while in office (this
-includes assassinations).
+leaders around the world. A political leader, in this case, is defined by a single individual's 
+time in office who controls the ruling regime. This political leader could be an elected president, 
+unelected dictator, monarch, etc. The birth event is the start of the individual's tenure, and the death 
+event is the retirement of the individual. Censorship can occur if they are a) still in offices at the time 
+of dataset compilation (2008), or b) die while in power (this includes assassinations).
 
 For example, the Bush regime began in 2000 and officially ended in 2008
-upon his retirement, thus this regime's lifespan was 8 years and the
-"death" event was observed. On the other hand, the JFK regime lasted 2
+upon his retirement, thus this regime's lifespan was eight years, and there was a 
+"death" event observed. On the other hand, the JFK regime lasted 2
 years, from 1961 and 1963, and the regime's official death event *was
 not* observed -- JFK died before his official retirement.
 
 (This is an example that has gladly redefined the birth and death
-events, and infact completely flips the idea upside down by using deaths
+events, and in fact completely flips the idea upside down by using deaths
 as the censorship event. This is also an example where the current time
-is not the only cause of censorship -- there are alternative
-events (eg: death in office) that can censor.)
+is not the only cause of censorship; there are the alternative events (e.g., death in office) that can 
+be the cause of censorship.
 
 To estimate the survival function, we first will use the `Kaplan-Meier
 Estimate <http://en.wikipedia.org/wiki/Kaplan%E2%80%93Meier_estimator>`__,
@@ -255,14 +253,13 @@ The property is a Pandas DataFrame, so we can call ``plot`` on it:
 
 .. image:: images/lifelines_intro_kmf_curve.png
    
-
 How do we interpret this? The y-axis represents the probability a leader is still
 around after :math:`t` years, where :math:`t` years is on the x-axis. We
 see that very few leaders make it past 20 years in office. Of course,
 like all good stats, we need to report how uncertain we are about these
-point estimates, i.e. we need confidence intervals. They are computed in
-the call to ``fit``, and are located under the ``confidence_interval_``
-property. (The mathematics can be found in `these notes <http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdf>`_.)
+point estimates, i.e., we need confidence intervals. They are computed in
+the call to ``fit``, and located under the ``confidence_interval_``
+property. (The mathematics are found in `these notes <http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdf>`_.)
 
 .. math::  S(t) = Pr( T > t) 
 
@@ -290,8 +287,8 @@ average 1/2 of the population has expired, is a property:
 
 
 
-Interesting that it is only 3 years. That means, around the world, when
-a leader is elected there is a 50% chance he or she will be gone in 3
+Interesting that it is only three years. That means, around the world, elected leaders 
+have a 50% chance of cessation in three
 years!
 
 Let's segment on democratic regimes vs non-democratic regimes. Calling
@@ -317,8 +314,8 @@ an ``axis`` object, that can be used for plotting further estimates:
 
 We might be interested in estimating the probabilities in between some
 points. We can do that with the ``timeline`` argument. We specify the
-times we are interested in, and are returned a DataFrame with the
-probabilties of survival at those points:
+times we are interested in and are returned a DataFrame with the
+probabilities of survival at those points:
 
 .. code:: python
 
@@ -349,12 +346,12 @@ probabilties of survival at those points:
 
 It is incredible how much longer these non-democratic regimes exist for.
 A democratic regime does have a natural bias towards death though: both
-via elections and natural limits (the US imposes a strict 8 year limit).
-The median of a non-democractic is only about twice as large as a
-democratic regime, but the difference is really apparent in the tails:
+via elections and natural limits (the US imposes a strict eight-year limit).
+The median of a non-democratic is only about twice as large as a
+democratic regime, but the difference is apparent in the tails:
 if you're a non-democratic leader, and you've made it past the 10 year
 mark, you probably have a long life ahead. Meanwhile, a democratic
-leader rarely makes it past 10 years, and then have a very short
+leader rarely makes it past ten years, and then have a very short
 lifetime past that.
 
 Here the difference between survival functions is very obvious, and
@@ -364,7 +361,7 @@ statistical test. In this case, *lifelines* contains routines in
 ``lifelines.statistics`` to compare two survival curves. Below we
 demonstrate this routine. The function ``logrank_test`` is a common
 statistical test in survival analysis that compares two event series'
-generators. If the value returned exceeds some prespecified value, then
+generators. If the value returned exceeds some pre-specified value, then
 we rule that the series have different generators.
 
 .. code:: python
@@ -554,9 +551,10 @@ Alternatively, we can derive the more-interpretable hazard curve, but
 there is a catch. The derivation involves a kernel smoother (to smooth
 out the differences of the cumulative hazard curve) , and this requires
 us to specify a bandwidth parameter that controls the amount of
-smoothing. This functionality is provided in the ``smoothed_hazard_``
+smoothing. This functionality is in the ``smoothed_hazard_``
 and ``hazard_confidence_intervals_`` methods. (Why methods? They require
 an argument representing the bandwidth).
+
 
 There is also a ``plot_hazard`` function (that also requires a
 ``bandwidth`` keyword) that will plot the estimate plus the confidence
@@ -581,7 +579,7 @@ It is more clear here which group has the higher hazard, and like
 hypothesized above, both hazard rates are close to being constant.
 
 There is no obvious way to choose a bandwidth, and different
-bandwidths can produce different inferences, so best to be very careful
+bandwidths produce different inferences, so it's best to be very careful
 here. (My advice: stick with the cumulative hazard function.)
 
 .. code:: python
@@ -610,8 +608,8 @@ This situation is the most common one. Alternatively, there are situations where
 occurring. Consider the case where a doctor sees a delayed onset of symptoms of an underlying disease. The doctor
 is unsure *when* the disease was contracted (birth), but knows it was before the discovery. 
 
-Another situation where we have left censored data is when measurements have only an upperbound, that is, the measurements
-instruments could only detect the measurement was *less* than some upperbound.
+Another situation where we have left-censored data is when measurements have only an upper bound, that is, the measurements
+instruments could only detect the measurement was *less* than some upper bound.
 
 *lifelines* has support for left-censored datasets in the ``KaplanMeierFitter`` class, by adding the keyword ``left_censorship=True`` (default ``False``) to the call to ``fit``. 
 
@@ -641,8 +639,8 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 Left Truncated Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another form of bias that can be introduced into a dataset is called left-truncation. (Also a form of censorship). 
-This occurs when individuals may die even before ever entering into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional arugment for ``entry``, which is an array of equal size to the duration array.
+Another form of bias that is introduced into a dataset is called left-truncation. (Also a form of censorship). 
+Left-truncation occurs when individuals may die even before ever entering into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional argument for ``entry``, which is an array of equal size to the duration array.
 It describes the offset from birth to entering the study. This is also useful when subjects enter the study at different
 points in their lifetime. For example, if you are measuring time to death of prisoners in 
 prison, the prisoners will enter the study at different ages. 
