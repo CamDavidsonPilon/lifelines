@@ -300,14 +300,37 @@ def load_g3(**kwargs):
     return load_dataset('g3.csv', **kwargs)
 
 
+def load_stanford_heart_transplants(**kwargs):
+    """
+    This is a classic dataset for survival regression with time
+    varying covariates. The original dataset is from [1], and
+    this dataset is from R's survival library.
+
+    [1] J Crowley and M Hu. Covariance analysis of heart transplant survival data. J American
+        Statistical Assoc, 72:27–36, 1977.
+
+
+    Size: (172, 8)
+    Example:
+           start  stop  event        age      year  surgery  transplant  id
+        0    0.0  50.0      1 -17.155373  0.123203        0           0   1
+        1    0.0   6.0      1   3.835729  0.254620        0           0   2
+        2    0.0   1.0      0   6.297057  0.265572        0           0   3
+        3    1.0  16.0      1   6.297057  0.265572        0           1   3
+        4    0.0  36.0      0  -7.737166  0.490075        0           0   4
+
+    """
+    return load_dataset('stanford_heart.csv', **kwargs)
+
+
 def load_gbsg2(**kwargs):
     """
-    A data frame containing the observations from the GBSG2 study of 686 women. 
+    A data frame containing the observations from the GBSG2 study of 686 women.
 
     W. Sauerbrei and P. Royston (1999). Building multivariable prognostic and diagnostic models: transformation of the predictors by using fractional polynomials. Journal of the Royal Statistics Society Series A, Volume 162(1), 71–94
 
     M. Schumacher, G. Basert, H. Bojar, K. Huebner, M. Olschewski, W. Sauerbrei, C. Schmoor, C. Beyerle, R.L.A. Neumann and H.F. Rauschecker for the German Breast Cancer Study Group (1994), Randomized 2 × 2 trial evaluating hormonal treatment and the duration of chemotherapy in node- positive breast cancer patients. Journal of Clinical Oncology, 12, 2086–2093
-    
+
     Size: (686,10)
     Example:
         horTh           yes
@@ -322,3 +345,21 @@ def load_gbsg2(**kwargs):
         cens            1
     """
     return load_dataset('gbsg2.csv', **kwargs)
+
+
+def load_dfcv():
+    """
+    A toy example of a time dependent dataset. From http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
+
+
+    Size: (14, 6)
+    Example:
+
+        start  group  z  stop  id  event
+    0       0    1.0  0   3.0   1   True
+    1       0    1.0  0   5.0   2  False
+    2       0    1.0  1   5.0   3   True
+    3       0    1.0  0   6.0   4   True
+    """
+    from lifelines.datasets.dfcv_dataset import dfcv
+    return dfcv

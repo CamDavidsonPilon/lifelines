@@ -2,12 +2,15 @@ from __future__ import print_function
 
 import os
 import pytest
+import pandas as pd
 import numpy as np
 from lifelines.estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter,\
     CoxPHFitter
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes
-from lifelines.datasets import load_waltons, load_regression_dataset
+from lifelines.datasets import load_waltons, load_regression_dataset, load_lcd,\
+    load_panel_test
+from lifelines.generate_datasets import cumulative_integral
 
 
 @pytest.mark.plottest
@@ -237,3 +240,74 @@ class TestPlotting():
         cp.plot(True)
         self.plt.title('test_coxph_plotting')
         self.plt.show(block=block)
+
+    def test_kmf_left_censorship_plots(self, block):
+        kmf = KaplanMeierFitter()
+        lcd_dataset = load_lcd()
+        alluvial_fan = lcd_dataset.loc[lcd_dataset['group'] == 'alluvial_fan']
+        basin_trough = lcd_dataset.loc[lcd_dataset['group'] == 'basin_trough']
+        kmf.fit(alluvial_fan['T'], alluvial_fan['C'], left_censorship=True, label='alluvial_fan')
+        ax = kmf.plot()
+
+        kmf.fit(basin_trough['T'], basin_trough['C'], left_censorship=True, label='basin_trough')
+        ax = kmf.plot(ax=ax)
+        self.plt.title("test_kmf_left_censorship_plots")
+        self.plt.show(block=block)
+        return
+
+    def test_aaf_panel_dataset(self, block):
+
+        panel_dataset = load_panel_test()
+        aaf = AalenAdditiveFitter()
+        aaf.fit(panel_dataset, id_col='id', duration_col='t', event_col='E')
+        aaf.plot()
+        self.plt.title("test_aaf_panel_dataset")
+        self.plt.show(block=block)
+        return
+
+    def test_aalen_additive_fit_no_censor(self, block):
+        n = 2500
+        d = 6
+        timeline = np.linspace(0, 70, 10000)
+        hz, coef, X = generate_hazard_rates(n, d, timeline)
+        X.columns = coef.columns
+        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
+                                          index=timeline, columns=coef.columns)
+        T = generate_random_lifetimes(hz, timeline)
+        X['T'] = T
+        X['E'] = np.random.binomial(1, 1, n)
+        aaf = AalenAdditiveFitter()
+        aaf.fit(X, 'T', 'E')
+
+        for i in range(d + 1):
+            ax = self.plt.subplot(d + 1, 1, i + 1)
+            col = cumulative_hazards.columns[i]
+            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
+            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
+        self.plt.title("test_aalen_additive_fit_no_censor")
+        self.plt.show(block=block)
+        return
+
+    def test_aalen_additive_fit_with_censor(self, block):
+        n = 2500
+        d = 6
+        timeline = np.linspace(0, 70, 10000)
+        hz, coef, X = generate_hazard_rates(n, d, timeline)
+        X.columns = coef.columns
+        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
+                                          index=timeline, columns=coef.columns)
+        T = generate_random_lifetimes(hz, timeline)
+        X['T'] = T
+        X['E'] = np.random.binomial(1, 0.99, n)
+
+        aaf = AalenAdditiveFitter()
+        aaf.fit(X, 'T', 'E')
+
+        for i in range(d + 1):
+            ax = self.plt.subplot(d + 1, 1, i + 1)
+            col = cumulative_hazards.columns[i]
+            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
+            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
+        self.plt.title("test_aalen_additive_fit_with_censor")
+        self.plt.show(block=block)
+        return

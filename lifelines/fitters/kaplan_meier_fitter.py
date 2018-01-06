@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import division
 import numpy as np
 import pandas as pd
 
@@ -14,7 +15,7 @@ class KaplanMeierFitter(UnivariateFitter):
     """
     Class for fitting the Kaplan-Meier estimate for the survival function.
 
-    KaplanMeierFitter( alpha=0.95)
+    KaplanMeierFitter(alpha=0.95)
 
     alpha: The alpha value associated with the confidence intervals.
 

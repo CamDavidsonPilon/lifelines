@@ -1,16 +1,16 @@
 from __future__ import print_function
+
+import pytest
 import numpy as np
 import pandas as pd
-import pytest
-
-from pandas.util.testing import assert_frame_equal
+from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
+
 from lifelines.estimation import CoxPHFitter
 from lifelines.datasets import (load_regression_dataset, load_larynx,
                                 load_waltons, load_rossi)
-
 from lifelines import utils
 from lifelines.utils import _concordance_index as fast_cindex
 from lifelines.utils import _naive_concordance_index as slow_cindex
@@ -458,7 +458,193 @@ def test_concordance_index_fast_is_same_as_slow():
     cp.fit(df, duration_col='week', event_col='arrest')
 
     T = cp.durations.values.ravel()
-    P = -cp.predict_partial_hazard(cp.data).values.ravel()
+    P = -cp.predict_partial_hazard(df[df.columns.difference(["week", "arrest"])]).values.ravel()
+
     E = cp.event_observed.values.ravel()
 
     assert slow_cindex(T, P, E) == fast_cindex(T, P, E)
+
+
+class TestTimeLine(object):
+
+    @pytest.fixture
+    def seed_df(self):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'var1': 0.1, 'T': 10, 'E': 1},
+            {'id': 2, 'var1': 0.5, 'T': 12, 'E': 0}
+        ])
+        return utils.to_long_format(df, 'T')
+
+    @pytest.fixture
+    def cv1(self):
+        return pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var2': 1.4},
+            {'id': 1, 't': 4, 'var2': 1.2},
+            {'id': 1, 't': 8, 'var2': 1.5},
+            {'id': 2, 't': 0, 'var2': 1.6},
+        ])
+
+    @pytest.fixture
+    def cv2(self):
+        return pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': 6, 'var3': 1},
+            {'id': 2, 't': 0, 'var3': 0},
+        ])
+
+    def test_order_of_adding_covariates_doesnt_matter(self, seed_df, cv1, cv2):
+        df12 = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')\
+                      .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
+
+        df21 = seed_df.pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')\
+                      .pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')
+
+        assert_frame_equal(df21, df12, check_like=True)
+
+    def test_adding_cvs_with_the_same_column_name_will_insert_appropriately(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 1, 'var1': 1.0},
+            {'id': 1, 't': 2, 'var1': 2.0},
+        ])
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        expected = pd.DataFrame.from_records([
+            {'E': False, 'id': 1, 'stop': 1.0, 'start': 0, 'var1': 0.1},
+            {'E': False, 'id': 1, 'stop': 2.0, 'start': 1,  'var1': 1.0},
+            {'E': True, 'id': 1, 'stop': 10.0, 'start': 2, 'var1': 2.0},
+        ])
+        assert_frame_equal(df, expected, check_like=True)
+
+    def test_adding_cvs_with_the_same_column_name_will_sum_update_appropriately(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+
+        new_value_at_time_0 = 1.0
+        old_value_at_time_0 = seed_df['var1'].iloc[0]
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var1': new_value_at_time_0, 'var2': 2.0},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E', overwrite=False)
+
+        expected = pd.DataFrame.from_records([
+            {'E': True, 'id': 1, 'stop': 10.0, 'start': 0, 'var1': new_value_at_time_0 + old_value_at_time_0, 'var2': 2.0},
+        ])
+        assert_frame_equal(df, expected, check_like=True)
+
+    def test_adding_cvs_with_the_same_column_name_will_overwrite_update_appropriately(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+
+        new_value_at_time_0 = 1.0
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var1': new_value_at_time_0},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E', overwrite=True)
+
+        expected = pd.DataFrame.from_records([
+            {'E': True, 'id': 1, 'stop': 10.0, 'start': 0, 'var1': new_value_at_time_0},
+        ])
+        assert_frame_equal(df, expected, check_like=True)
+
+    def test_enum_flag(self, seed_df, cv1, cv2):
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E', add_enum=True)\
+                    .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E', add_enum=True)
+
+        idx = df['id'] == 1
+        n = idx.sum()
+        assert_series_equal(df['enum'].loc[idx], pd.Series(np.arange(1, n + 1)), check_names=False)
+
+    def test_event_col_is_properly_inserted(self, seed_df, cv2):
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
+        assert df.groupby('id').last()['E'].tolist() == [1, 0]
+
+    def test_redundant_cv_columns_are_dropped(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0, 'var4': 1},
+            {'id': 1, 't': 1, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 3, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 6, 'var3': 1, 'var4': 1},
+            {'id': 1, 't': 9, 'var3': 1, 'var4': 1},  # redundant, as nothing changed during the interval
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 2
+
+    def test_will_convert_event_column_to_bools(self, seed_df, cv1):
+        seed_df['E'] = seed_df['E'].astype(int)
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')
+        assert df.dtypes['E'] == bool
+
+    def test_if_cvs_include_a_start_time_after_the_final_time_it_is_excluded(self, seed_df):
+        max_T = seed_df['stop'].max()
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': max_T + 10, 'var3': 1},  # will be excluded
+            {'id': 2, 't': 0, 'var3': 0},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 2
+
+    def test_if_cvs_include_a_start_time_before_it_is_included(self, seed_df):
+        min_T = seed_df['start'].min()
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': min_T - 1, 'var3': 1},
+            {'id': 2, 't': 0, 'var3': 0},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 3
+
+    def test_cvs_with_null_values_are_dropped(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+        cv = pd.DataFrame.from_records([
+            {'id': None, 't': 0, 'var3': 0},
+            {'id': 1, 't': None, 'var3': 1},
+            {'id': 2, 't': 0, 'var3': None},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E')
+        assert df.shape[0] == 1
+
+    def test_a_new_row_is_not_created_if_start_times_are_the_same(self, seed_df):
+        seed_df = seed_df[seed_df['id'] == 1]
+        cv1 = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0},
+            {'id': 1, 't': 5, 'var3': 1},
+        ])
+
+        cv2 = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var4': 0},
+            {'id': 1, 't': 5, 'var4': 1.5},
+            {'id': 1, 't': 6, 'var4': 1.7},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')\
+                    .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')
+        assert df.shape[0] == 3
+
+    def test_error_is_raised_if_columns_are_missing_in_seed_df(self, seed_df, cv1):
+        del seed_df['start']
+        with pytest.raises(IndexError):
+            utils.add_covariate_to_timeline(seed_df, cv1, 'id', 't', 'E')
+
+    def test_cumulative_sum(self):
+        seed_df = pd.DataFrame.from_records([{'id': 1, 'start': 0, 'stop': 5, 'E': 1}])
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var4': 1},
+            {'id': 1, 't': 1, 'var4': 1},
+            {'id': 1, 't': 3, 'var4': 1},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv, 'id', 't', 'E', cumulative_sum=True)
+        expected = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 1.0, 'cumsum_var4': 1, 'E': False},
+            {'id': 1, 'start': 1, 'stop': 3.0, 'cumsum_var4': 2, 'E': False},
+            {'id': 1, 'start': 3, 'stop': 5.0, 'cumsum_var4': 3, 'E': True},
+        ])
+        assert_frame_equal(expected, df, check_like=True)

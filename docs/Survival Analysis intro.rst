@@ -190,8 +190,3 @@ be non-parametric, that is not assume anything about how the
 survival curve looks. The *best* method to recreate the survival
 function non-parametrically from the data is known as the Kaplan-Meier
 estimate, which brings us to :doc:`estimation using lifelines</Intro to lifelines>`.
-
-
-.. code:: python
-
-    

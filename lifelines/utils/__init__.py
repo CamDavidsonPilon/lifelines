@@ -5,6 +5,7 @@ from datetime import datetime
 
 import numpy as np
 from numpy.linalg import solve
+from scipy import stats
 import pandas as pd
 from pandas import to_datetime
 
@@ -20,8 +21,6 @@ class StatError(Exception):
 
 def qth_survival_times(q, survival_functions, cdf=False):
     """
-    This can be done much better.
-
     Parameters:
       q: a float between 0 and 1.
       survival_functions: a (n,d) dataframe or numpy array.
@@ -233,14 +232,14 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
             q75, q25 = np.percentile(event_table['event_at'], [75, 25])
             event_iqr = q75 - q25
 
-            bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1/3))
+            bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1 / 3))
 
             intervals = np.arange(0, event_max + bin_width, bin_width)
 
-        event_table = event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed':['sum'],
-                                                                                           'observed':['sum'],
-                                                                                           'censored':['sum'],
-                                                                                           'at_risk':['max']})
+        event_table = event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed': ['sum'],
+                                                                                           'observed': ['sum'],
+                                                                                           'censored': ['sum'],
+                                                                                           'at_risk': ['max']})
 
     return event_table.astype(int)
 
@@ -432,30 +431,14 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
 
 
 def coalesce(*args):
-    return next(s for s in args if s is not None)
+    for arg in args:
+        if arg is not None:
+            return arg
+    return None
 
 
 def inv_normal_cdf(p):
-
-    def AandS_approximation(p):
-        # Formula 26.2.23 from A&S and help from John Cook ;)
-        # http://www.johndcook.com/normal_cdf_inverse.html
-        c_0 = 2.515517
-        c_1 = 0.802853
-        c_2 = 0.010328
-
-        d_1 = 1.432788
-        d_2 = 0.189269
-        d_3 = 0.001308
-
-        t = np.sqrt(-2 * np.log(p))
-
-        return t - (c_0 + c_1 * t + c_2 * t ** 2) / (1 + d_1 * t + d_2 * t * t + d_3 * t ** 3)
-
-    if p < 0.5:
-        return -AandS_approximation(p)
-    else:
-        return AandS_approximation(1 - p)
+    return stats.norm.ppf(p)
 
 
 def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
@@ -971,11 +954,158 @@ def pass_for_numeric_dtypes_or_raise(df):
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
 
+def check_for_overlapping_intervals(df):
+    # only useful for time varying coefs, after we've done
+    # some index creation
+    # so slow.
+    if not df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic).all():
+        raise ValueError("The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
+to help find:\
+df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic)")
+
+
+def _low_var(df):
+    return (df.var(0) < 10e-5)
+
+
 def check_low_var(df, prescript="", postscript=""):
-    low_var = (df.var(0) < 10e-5)
+    low_var = _low_var(df)
     if low_var.any():
         cols = str(list(df.columns[low_var]))
         warning_text = "%sColumn(s) %s have very low variance. \
 This may harm convergence. Try dropping this redundant column before fitting \
 if convergence fails.%s" % (prescript, cols, postscript)
         warnings.warn(warning_text, RuntimeWarning)
+
+
+def check_complete_separation(df, events):
+    events = events.astype(bool)
+    rhs = df.columns[_low_var(df.loc[events])]
+    lhs = df.columns[_low_var(df.loc[~events])]
+    inter = lhs.intersection(rhs).tolist()
+    if inter:
+        warning_text = "Column(s) %s have very low variance when conditioned on \
+death event or not. This may harm convergence. This is a form of 'complete separation'. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
+        warnings.warn(warning_text, RuntimeWarning)
+
+
+def to_long_format(df, duration_col):
+    """
+    Parameters:
+        df: a Dataframe in the standard survival analysis form (one for per observation, with covariates, duration and event flag)
+        duration_col: string representing the column in df that represents the durations of each subject.
+    Returns:
+        long_form_df: A DataFrame with columns. This can be fed into `add_covariate_to_timeline`
+    """
+    return df.assign(start=0, stop=lambda s: s[duration_col])\
+             .drop(duration_col, axis=1)
+
+
+def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col, add_enum=False, overwrite=True, cumulative_sum=False, cumulative_sum_prefix="cumsum_"):
+    """
+    Parameters:
+        long_form_df: a DataFrame that has the intial or intermediate "long" form of time-varying observations. Must contain
+            columns id_col, 'start', 'stop', and event_col. See function `to_long_format` to transform data into long form.
+        cv: a DataFrame that contains (possibly more than) one covariate to track over time. Must contain columns
+            id_col and duration_col. duration_col represents time since the start of the subject's life.
+        id_col: the column in long_form_df and cv representing a unique identifier for subjects.
+        duration_col: the column in cv that represents the time-since-birth the observation occured at.
+        event_col: the column in df that represents if the event-of-interest occured
+        add_enum: a Boolean flag to denote whether to add a column enumerating rows per subject. Useful to specify a specific
+            observation, ex: df[df['enum'] == 1] will grab the first observations per subject.
+        overwrite: if True, covariate values in long_form_df will be overwritten by covariate values in cv if the column exists in both
+            cv and long_form_df and the timestamps are identical. If False, the default behaviour will be to sum
+            the values together.
+        cumulative_sum: sum over time the new covariates. Makes sense if the covariates are new additions, and not state changes (ex:
+            administering more drugs vs taking a temperature.)
+
+    Returns:
+        long_form_df: A DataFrame with updated rows to reflect the novel times slices (if any) being added from cv, and novel (or updated) columns
+            of new covariates from cv
+
+    """
+
+    def remove_redundant_rows(cv):
+        """
+        Removes rows where no change occurs. Ex:
+
+        cv = pd.DataFrame.from_records([
+            {'id': 1, 't': 0, 'var3': 0, 'var4': 1},
+            {'id': 1, 't': 1, 'var3': 0, 'var4': 1},  # redundant, as nothing changed during the interval
+            {'id': 1, 't': 6, 'var3': 1, 'var4': 1},
+        ])
+
+        If cumulative_sum, then redundant rows are not redundant.
+        """
+        if cumulative_sum:
+            return cv
+        cols = cv.columns.difference([duration_col])
+        cv = cv.loc[(cv[cols].shift() != cv[cols]).any(axis=1)]
+        return cv
+
+    def transform_cv_to_long_format(cv):
+        cv = cv.rename({duration_col: 'start'}, axis=1)
+        return cv
+
+    def construct_new_timeline(original_timeline, additional_timeline, final_stop_time):
+        if additional_timeline.min() < original_timeline.min():
+            warning_text = "There exists at least one row in the covariates dataset that is before the earlist \
+known observation. This could case null values in the resulting dataframe."
+            warnings.warn(warning_text, RuntimeWarning)
+        return np.sort(original_timeline.append(additional_timeline).unique())
+
+    def expand(df, cvs):
+        id_ = df.name
+        try:
+            cv = cvs.get_group(id_)
+        except KeyError:
+            return df
+
+        final_state = bool(df[event_col].iloc[-1])
+        final_stop_time = df['stop'].iloc[-1]
+        df = df.drop([id_col, event_col, 'stop'], axis=1).set_index("start")
+        cv = cv.drop([id_col], axis=1)\
+               .set_index("start")\
+               .loc[:final_stop_time]
+
+        if cumulative_sum:
+            cv = cv.cumsum()
+            cv = cv.add_prefix(cumulative_sum_prefix)
+
+        # How do I want to merge existing columns at the same time - could be
+        # new observations (update) or new treatment applied (sum).
+        # There may be more options in the future.
+        if not overwrite:
+            expanded_df = cv.combine(df, lambda s1, s2: s1 + s2, fill_value=0, overwrite=False)
+        elif overwrite:
+            expanded_df = cv.combine_first(df)
+
+        n = expanded_df.shape[0]
+        expanded_df = expanded_df.reset_index()
+        expanded_df['stop'] = expanded_df['start'].shift(-1)
+        expanded_df[id_col] = id_
+        expanded_df[event_col] = False
+        expanded_df.at[n - 1, event_col] = final_state
+        expanded_df.at[n - 1, 'stop'] = final_stop_time
+
+        if add_enum:
+            expanded_df['enum'] = np.arange(1, n + 1)
+
+        if cumulative_sum:
+            expanded_df[cv.columns] = expanded_df[cv.columns].fillna(0)
+
+        return expanded_df.ffill()
+
+    if 'stop' not in long_form_df.columns or 'start' not in long_form_df.columns:
+        raise IndexError("The columns `stop` and `start` must be in long_form_df - perhaps you need to use `lifelines.utils.to_long_format` first?")
+
+    cv = cv.dropna()
+    cv = cv.sort_values([id_col, duration_col])
+    cvs = cv.pipe(remove_redundant_rows)\
+            .pipe(transform_cv_to_long_format)\
+            .groupby(id_col)
+
+    long_form_df = long_form_df.groupby(id_col, group_keys=False)\
+                               .apply(expand, cvs=cvs)
+    return long_form_df.reset_index(drop=True)

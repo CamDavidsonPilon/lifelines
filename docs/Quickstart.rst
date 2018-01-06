@@ -30,7 +30,7 @@ Let's start by importing some data. We need the durations that individuals are o
     from lifelines.datasets import load_waltons
     df = load_waltons() # returns a Pandas DataFrame
 
-    print df.head()
+    print(df.head())
     """
         T  E    group
     0   6  1  miR-137
@@ -121,7 +121,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
     from lifelines.utils import survival_table_from_events
 
     table = survival_table_from_events(T, E)
-    print table.head()
+    print(table.head())
 
     """
               removed  observed  censored  entrance  at_risk

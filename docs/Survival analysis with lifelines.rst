@@ -48,9 +48,9 @@ Let's bring in our dataset.
 .. code:: python
 
     import pandas as pd
-    import lifelines 
+    from lifelines.datasets import load_dd
 
-    data = lifelines.datasets.load_dd()
+    data = load_dd()
 
 .. code:: python
 
@@ -324,11 +324,11 @@ probabilities of survival at those points:
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
     ax = kmf.plot(ax=ax)
-    print "Median survival time of democratic:", kmf.median_
+    print("Median survival time of democratic:", kmf.median_)
     
     kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
     ax = kmf.plot(ax=ax)
-    print "Median survival time of non-democratic:", kmf.median_
+    print("Median survival time of non-democratic:", kmf.median_)
 
     plt.ylim(0,1)
     plt.title("Lifespans of different global regimes");
@@ -436,8 +436,8 @@ end times/dates (or ``None`` if not observed):
     start_date = ['2013-10-10 0:00:00', '2013-10-09', '2013-10-10']
     end_date = ['2013-10-13', '2013-10-10', None]
     T, E = datetimes_to_durations(start_date, end_date, fill_date='2013-10-15')
-    print 'T (durations): ', T
-    print 'E (event_observed): ', E
+    print('T (durations): ', T)
+    print('E (event_observed): ', E)
 
 .. parsed-literal::
 
@@ -447,6 +447,30 @@ end times/dates (or ``None`` if not observed):
 
 The function ``datetimes_to_durations`` is very flexible, and has many
 keywords to tinker with.
+
+
+Fitting to a Weibull model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Another very popular model for survival data is the Weibull model. In contrast the the Kaplan Meier estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Kaplan Meier estimator has no parameters to fit too). Mathematically, the survival function looks like:
+
+
+ ..math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
+
+ Apriori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In lifelines, this is implemented in the ``WeibullFitter``:
+
+.. code:: python
+
+    from lifelines import WeibullFitter
+  
+    T = data['duration']
+    E = data['observed']
+
+    wf = WeibullFitter()
+    wf.fit(T, E)
+    print(wf.lambda_, wf.rho_)
+    wf.print_summary()
+
 
 Estimating hazard rates using Nelson-Aalen
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -488,7 +512,7 @@ a DataFrame:
 
 .. code:: python
 
-    print naf.cumulative_hazard_.head()
+    print(naf.cumulative_hazard_.head())
     naf.plot()
 
 .. parsed-literal::
@@ -630,7 +654,7 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 
 .. code:: python
     
-    print kmf.cumulative_density_
+    print(kmf.cumulative_density_)
     kmf.plot() #will plot the CDF
 
 
