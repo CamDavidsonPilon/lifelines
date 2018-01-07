@@ -1008,6 +1008,29 @@ Concordance = 0.640""".strip().split()
         cp.fit(df, 'T', 'Status', strata=['Stratum'])
         assert True
 
+    def test_coxph_throws_a_explainable_error_when_predict_sees_a_strata_it_hasnt_seen(self):
+        training_df = pd.DataFrame.from_records([
+            {'t': 1, 'e': 1, 's1': 0, 's2': 0, 'v': 1.},
+            {'t': 2, 'e': 1, 's1': 0, 's2': 0, 'v': 1.5},
+            {'t': 3, 'e': 1, 's1': 0, 's2': 0, 'v': 2.5},
+
+            {'t': 3, 'e': 1, 's1': 0, 's2': 1, 'v': 2.5},
+            {'t': 4, 'e': 1, 's1': 0, 's2': 1, 'v': 2.5},
+            {'t': 3, 'e': 1, 's1': 0, 's2': 1, 'v': 4.5},
+        ])
+
+        cp = CoxPHFitter()
+        cp.fit(training_df, 't', 'e', strata=['s1', 's2'])
+
+        testing_df = pd.DataFrame.from_records([
+            {'t': 1, 'e': 1, 's1': 1, 's2': 0, 'v': 0.},
+            {'t': 2, 'e': 1, 's1': 1, 's2': 0, 'v': 0.5},
+            {'t': 3, 'e': 1, 's1': 1, 's2': 0, 'v': -0.5},
+        ])
+
+        with pytest.raises(StatError):
+            cp.predict_median(testing_df)
+
     def test_strata_against_R_output(self, rossi):
         """
         > library(survival)

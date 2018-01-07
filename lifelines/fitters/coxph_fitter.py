@@ -15,7 +15,7 @@ from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
-    check_complete_separation
+    check_complete_separation, StatError
 
 
 class CoxPHFitter(BaseFitter):
@@ -485,7 +485,12 @@ class CoxPHFitter(BaseFitter):
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
             for stratum, stratified_X in X.groupby(self.strata):
-                c_0 = self.baseline_cumulative_hazard_[[stratum]]
+                try:
+                    c_0 = self.baseline_cumulative_hazard_[[stratum]]
+                except KeyError:
+                    raise StatError("""The stratum %s was not found in the original training data. For example, try
+the following on the original dataset, df: `df.groupby(%s).size()`. Expected is that %s is not present in the output.
+""" % (stratum, self.strata, stratum))
                 col = _get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
                 cumulative_hazard_ = cumulative_hazard_.merge(pd.DataFrame(np.dot(c_0, v.T), index=c_0.index, columns=col), how='outer', right_index=True, left_index=True)
@@ -522,8 +527,8 @@ class CoxPHFitter(BaseFitter):
         By default, returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
-        index = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X)[index])
+        subjects = _get_index(X)
+        return qth_survival_times(p, self.predict_survival_function(X)[subjects])
 
     def predict_median(self, X):
         """
@@ -543,9 +548,9 @@ class CoxPHFitter(BaseFitter):
 
         Compute the expected lifetime, E[T], using covarites X.
         """
-        index = _get_index(X)
-        v = self.predict_survival_function(X)[index]
-        return pd.DataFrame(trapz(v.values.T, v.index), index=index)
+        subjects = _get_index(X)
+        v = self.predict_survival_function(X)[subjects]
+        return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
     def _compute_baseline_hazard(self, data, durations, event_observed, name):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
