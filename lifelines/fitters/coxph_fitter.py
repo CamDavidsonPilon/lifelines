@@ -2,6 +2,7 @@
 from __future__ import print_function
 from __future__ import division
 
+from functools import partial
 import warnings
 import numpy as np
 import pandas as pd
@@ -16,6 +17,61 @@ from lifelines.utils import survival_table_from_events, inv_normal_cdf, normaliz
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
     check_complete_separation, StatError
+
+class Converger():
+    def __init__(self, initial_beta, precision, step_size, iterFunc, show_progress, max_steps=50, step_size_threshold=0.0001, step_size_decay_rate=0.99, delta_threshold=10, delta_threshold_exceeded_decay=0.5):
+        self.initial_beta=initial_beta
+        self.precision=precision
+        self.previous_ll = 0
+        self.step_size=step_size
+        self.iterFunc=iterFunc
+        self.show_progress=show_progress
+        self.max_steps=max_steps
+        self.step_size_threshold=step_size_threshold
+        self.step_size_decay_rate=step_size_decay_rate
+        self.delta_threshold=delta_threshold
+        self.delta_threshold_exceeded_decay=delta_threshold_exceeded_decay
+    
+    def stoppingCriteria(self, stepNumber, ll, deltaNorm):
+        converging = True
+        if deltaNorm < self.precision:
+            converging = False
+        elif abs(ll - self.previous_ll) < self.precision:
+            converging = False
+        elif stepNumber >= self.max_steps:
+            # 50 iterations steps with N-R is a lot.
+            # Expected convergence is ~10 steps
+            warnings.warn("Newton-Rhapson failed to converge sufficiently in "+self.max_steps+" steps.", RuntimeWarning)
+            converging = False
+        elif self.step_size <= self.step_size_threshold:
+            converging = False
+        self.previous_ll = ll
+        return converging
+    
+    def converge(self):
+        stepNumber = 0
+        ll = 0
+        converging = True
+        # make sure betas are correct size.
+        beta=self.initial_beta
+        while converging:
+            stepNumber += 1
+            ((hessian, gradient, ll), delta, beta)=self.iterFunc(beta, self.step_size)
+            
+            deltaNorm = norm(delta)
+            if self.show_progress:
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (stepNumber, deltaNorm, self.step_size, ll))
+
+            # convergence criteria
+            converging = self.stoppingCriteria(stepNumber, ll, deltaNorm)
+            
+            # Only allow small steps
+            if deltaNorm > self.delta_threshold:
+                self.step_size *= self.delta_threshold_exceeded_decay
+
+            # anneal the step size down.
+            self.step_size *= self.step_size_decay_rate
+        return (hessian, gradient, ll, beta)
 
 
 class CoxPHFitter(BaseFitter):
@@ -143,6 +199,53 @@ class CoxPHFitter(BaseFitter):
         self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
         return self
 
+    def _newtonRaphsonIteration(self, get_gradients, X, T, E, weights, beta, step_size):
+        if self.strata is None:
+            h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights)
+        else:
+            g = np.zeros_like(beta).T
+            h = np.zeros((beta.shape[0], beta.shape[0]))
+            ll = 0
+            for strata in np.unique(X.index):
+                stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
+                _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, weights)
+                g += _g
+                h += _h
+                ll += _ll
+
+        if self.penalizer > 0:
+            # add the gradient and hessian of the l2 term
+            g -= self.penalizer * beta.T
+            h.flat[::X.shape[1] + 1] -= self.penalizer
+
+        delta = solve(-h, step_size * g.T)
+        if np.any(np.isnan(delta)):
+            raise ValueError("delta contains nan value(s). Convergence halted.")
+
+        beta += delta
+        return ((h, g, ll), delta, beta)
+    
+    def _prepareArguments(self, X, E, initial_beta, step_size, precision):
+        assert precision <= 1., "precision must be less than or equal to 1."
+        n, d = X.shape
+
+        # make sure betas are correct size.
+        if initial_beta is not None:
+            assert initial_beta.shape == (d, 1)
+        else:
+            initial_beta = np.zeros((d, 1))
+
+        if step_size is None:
+            # empirically determined
+            step_size = 0.95 if n < 1000 else 0.5
+
+        # Method of choice is just efron right now
+        if self.tie_method == 'Efron':
+            get_gradients = self._get_efron_values
+        else:
+            raise NotImplementedError("Only Efron is available.")
+        return (initial_beta, step_size, precision, get_gradients)
+    
     def _newton_rhaphson(self, X, T, E, weights=None, initial_beta=None, step_size=None,
                          precision=10e-6, show_progress=True):
         """
@@ -164,88 +267,11 @@ class CoxPHFitter(BaseFitter):
         Returns:
             beta: (1,d) numpy array.
         """
-        assert precision <= 1., "precision must be less than or equal to 1."
-        n, d = X.shape
 
-        # make sure betas are correct size.
-        if initial_beta is not None:
-            assert initial_beta.shape == (d, 1)
-            beta = initial_beta
-        else:
-            beta = np.zeros((d, 1))
-
-        if step_size is None:
-            # empirically determined
-            step_size = 0.95 if n < 1000 else 0.5
-
-        # Method of choice is just efron right now
-        if self.tie_method == 'Efron':
-            get_gradients = self._get_efron_values
-        else:
-            raise NotImplementedError("Only Efron is available.")
-
-        i = 0
-        converging = True
-        ll, previous_ll = 0, 0
-
-        while converging:
-            i += 1
-            if self.strata is None:
-                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights)
-            else:
-                g = np.zeros_like(beta).T
-                h = np.zeros((beta.shape[0], beta.shape[0]))
-                ll = 0
-                for strata in np.unique(X.index):
-                    stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
-                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, weights)
-                    g += _g
-                    h += _h
-                    ll += _ll
-
-            if self.penalizer > 0:
-                # add the gradient and hessian of the l2 term
-                g -= self.penalizer * beta.T
-                h.flat[::d + 1] -= self.penalizer
-
-            delta = solve(-h, step_size * g.T)
-            if np.any(np.isnan(delta)):
-                raise ValueError("delta contains nan value(s). Convergence halted.")
-
-            # Save these as pending result
-            hessian, gradient = h, g
-
-            if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
-
-            # convergence criteria
-            if norm(delta) < precision:
-                converging = False
-            elif abs(ll - previous_ll) < precision:
-                converging = False
-            elif i >= 50:
-                # 50 iterations steps with N-R is a lot.
-                # Expected convergence is ~10 steps
-                warnings.warn("Newton-Rhapson failed to converge sufficiently in 50 steps.", RuntimeWarning)
-                converging = False
-            elif step_size <= 0.0001:
-                converging = False
-
-            # Only allow small steps
-            if norm(delta) > 10.0:
-                step_size *= 0.5
-
-            # temper the step size down.
-            step_size *= 0.995
-
-            beta += delta
-            previous_ll = ll
-
-        self._hessian_ = hessian
-        self._score_ = gradient
-        self._log_likelihood = ll
-        if show_progress:
-            print("Convergence completed after %d iterations." % (i))
+        (initial_beta, step_size, precision, get_gradients) = self._prepareArguments(X, E, initial_beta, step_size, precision)
+        cv = Converger(initial_beta, precision, step_size, partial(self._newtonRaphsonIteration, get_gradients, X, T, E, weights), show_progress)
+        
+        (self._hessian_, self._score_, self._log_likelihood, beta) = cv.converge()
         return beta
 
     def _get_efron_values(self, X, beta, T, E, weights):
