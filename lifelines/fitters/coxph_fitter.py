@@ -176,7 +176,7 @@ class CoxPHFitter(BaseFitter):
 
         if step_size is None:
             # empirically determined
-            step_size = 0.95 if n < 1000 else 0.5
+            step_size = 0.95 if n < 800 else 0.5
 
         # Method of choice is just efron right now
         if self.tie_method == 'Efron':
