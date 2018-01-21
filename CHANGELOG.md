@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.14.0
+ - adding `plot_covariate_groups` to `CoxPHFitter` to visualize what happens to survival as we vary a covariate, all else being equal.
+
 #### 0.13.0
  - removes `is_significant` and `test_result` from `StatisticalResult`. Users can instead choose their significance level by comparing to `p_value`. The string representation of this class has changed aswell.
  - `CoxPHFitter` and `AalenAdditiveFitter` now have a `score_` property that is the concordance-index of the dataset to the fitted model.

@@ -465,6 +465,26 @@ With a fitted model, an altervative way to view the coefficients and their range
 .. image:: images/coxph_plot.png
 
 
+Plotting the effect of varying a covariate
+#############################################
+
+After fitting, we can plot what the survival curves look like as we vary a single covarite while 
+holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the ``plot_covariate_groups`` method and give it the covariate of interest, and the values to display.
+
+.. code:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi_dataset = load_rossi()
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+
+    cph.plot_covariate_groups('prio', [0, 5, 10, 15])
+
+.. image:: images/coxph_plot_covarite_groups.png
+
+
 Checking the proportional hazards assumption
 #############################################
 

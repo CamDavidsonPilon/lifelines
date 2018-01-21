@@ -73,7 +73,7 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
           when the subject was first observed. A subject's death event is then at [birth times + duration observed].
           Normally set to all zeros, but can be positive or negative.
 
-    Output:
+    Returns:
         - np.array of unique groups
         - dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
         - dataframe of observed count data at event_times for each group, column names are 'observed:<group name>'

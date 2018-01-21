@@ -587,7 +587,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def plot(self, standardized=False, **kwargs):
         """
-        standardized: standardize each estimated coefficient and confidence interval endpoints by the standard error of the estimate.
+        Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
+
+        Parameters:
+            standardized: standardize each estimated coefficient and confidence interval
+                          endpoints by the standard error of the estimate.
+
+        Returns:
+            ax: the matplotlib axis that be edited.
 
         """
         from matplotlib import pyplot as plt
@@ -615,4 +622,34 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         tick_labels = [c + significance_code(p).strip() for (c, p) in summary['p'][order].iteritems()]
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
+        return ax
+
+    def plot_covariate_groups(self, covariate, groups, **kwargs):
+        """
+        Produces a visual representation comparing the baseline survival curve of the model versus
+        what happens when a covariate is varied over values in a group. This is useful to compare
+        subjects' survival as we vary a single covariate, all else being held equal. The baseline survival
+        curve is equal to the predicted survival curve at all average values in the original dataset.
+
+        Parameters:
+            covariate: a string of the covariate in the original dataset that we wish to vary.
+            groups: an iterable of the values we wish the covariate to take on.
+
+        Returns:
+            ax: the matplotlib axis that be edited.
+        """
+        from matplotlib import pyplot as plt
+
+        if covariate not in self.summary.index:
+            raise KeyError('covariate `%s` is not present in the original dataset' % covariate)
+
+        ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
+        x_bar = self._norm_mean.to_frame().T
+        X = pd.concat([x_bar] * len(groups))
+        X.index = ['%s=%s' % (covariate, g) for g in groups]
+        X[covariate] = groups
+
+
+        self.predict_survival_function(X).plot(ax=ax)
+        self.baseline_survival_.plot(ax=ax, ls='--')
         return ax
