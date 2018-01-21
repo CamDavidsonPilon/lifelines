@@ -117,11 +117,20 @@ class TestBaseFitter():
 
 class TestUnivariateFitters():
 
-    def test_univarite_fitters_with_survival_function_have_conditional_time_to(self, positive_sample_lifetimes, univariate_fitters):
+    def test_univarite_fitters_with_survival_function_have_conditional_time_to_(self, positive_sample_lifetimes, univariate_fitters):
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             if hasattr(f, 'survival_function_'):
                 assert all(f.conditional_time_to_event_.index == f.survival_function_.index)
+
+    def test_conditional_time_to_allows_custom_timelines(self, univariate_fitters):
+        t = np.random.binomial(50, 0.4, 100)
+        e = np.random.binomial(1, 0.8, 100)
+        for fitter in univariate_fitters:
+            f = fitter().fit(t, e, timeline=np.linspace(0, 40, 41))
+            if hasattr(f, 'survival_function_'):
+                assert all(f.conditional_time_to_event_.index == f.survival_function_.index)
+
 
     def test_univariate_fitters_allows_one_to_change_alpha_at_fit_time(self, positive_sample_lifetimes, univariate_fitters):
         alpha = 0.9

@@ -528,7 +528,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
         subjects = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X)[subjects])
+        return qth_survival_times(p, self.predict_survival_function(X)[subjects]).T
 
     def predict_median(self, X):
         """

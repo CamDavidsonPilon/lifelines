@@ -140,8 +140,8 @@ def test_qth_survival_times_multi_dim_input():
     sf = np.linspace(1, 0, 50)
     sf_multi_df = pd.DataFrame({'sf': sf, 'sf**2': sf ** 2})
     medians = utils.qth_survival_times(0.5, sf_multi_df)
-    assert medians.loc['sf'][0.5] == 25
-    assert medians.loc['sf**2'][0.5] == 15
+    assert medians['sf'].loc[0.5] == 25
+    assert medians['sf**2'].loc[0.5] == 15
 
 
 def test_qth_survival_time_returns_inf():
@@ -153,10 +153,19 @@ def test_qth_survival_times_with_multivariate_q():
     sf = np.linspace(1, 0, 50)
     sf_multi_df = pd.DataFrame({'sf': sf, 'sf**2': sf ** 2})
 
-    assert_frame_equal(utils.qth_survival_times([0.2, 0.5], sf_multi_df), pd.DataFrame([[40, 25], [28, 15]], columns=[0.2, 0.5], index=['sf', 'sf**2']))
-    assert_frame_equal(utils.qth_survival_times([0.2, 0.5], sf_multi_df['sf']), pd.DataFrame([[40, 25]], columns=[0.2, 0.5], index=['sf']))
-    assert_frame_equal(utils.qth_survival_times(0.5, sf_multi_df), pd.DataFrame([[25], [15]], columns=[0.5], index=['sf', 'sf**2']))
+    assert_frame_equal(utils.qth_survival_times([0.2, 0.5], sf_multi_df), pd.DataFrame([[40, 28], [25, 15]], index=[0.2, 0.5], columns=['sf', 'sf**2']))
+    assert_frame_equal(utils.qth_survival_times([0.2, 0.5], sf_multi_df['sf']), pd.DataFrame([40, 25], index=[0.2, 0.5], columns=['sf']))
+    assert_frame_equal(utils.qth_survival_times(0.5, sf_multi_df), pd.DataFrame([[25, 15]], index=[0.5], columns=['sf', 'sf**2']))
     assert utils.qth_survival_times(0.5, sf_multi_df['sf']) == 25
+
+
+def test_qth_survival_times_with_duplicate_q_returns_valid_index_and_shape():
+    sf = pd.DataFrame(np.linspace(1, 0, 50))
+
+    q = pd.Series([0.5, 0.5, 0.2, 0.0, 0.0])
+    actual = utils.qth_survival_times(q, sf)
+    assert actual.shape[0] == len(q)
+    npt.assert_almost_equal(actual.index.values, q.values)
 
 
 def test_qth_survival_time_with_cdf_instead_of_survival_function():

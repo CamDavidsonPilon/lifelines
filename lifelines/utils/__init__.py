@@ -33,12 +33,23 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
     """
     q = pd.Series(q)
-    assert (q <= 1).all() and (0 <= q).all(), 'q must be between 0 and 1'
+
+    if not((q <= 1).all() and (0 <= q).all()):
+        raise ValueError('q must be between 0 and 1')
+
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         return survival_functions.apply(lambda s: qth_survival_time(q[0], s, cdf=cdf)).iloc[0]
     else:
-        return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q})
+        #  Typically, one would expect that the output should equal the "height" of q.
+        #  An issue can arise if the Series q contains duplicate values. We handle this un-eligantly.
+        if q.duplicated().any():
+            return pd.DataFrame.from_items([
+                        (_q, survival_functions.apply(lambda s: qth_survival_time(_q, s))) for i, _q in enumerate(q)
+                    ], orient='index', columns=survival_functions.columns)
+        else:
+            return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+
 
 
 def qth_survival_time(q, survival_function, cdf=False):

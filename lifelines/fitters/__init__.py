@@ -119,6 +119,6 @@ class UnivariateFitter(BaseFitter):
         """
         age = self.survival_function_.index.values[:, None]
         columns = ['%s - Conditional time remaining to event' % self._label]
-        return pd.DataFrame(qth_survival_times(self.survival_function_[self._label] * 0.5, self.survival_function_).T.sort_index(ascending=False).values,
+        return pd.DataFrame(qth_survival_times(self.survival_function_[self._label] * 0.5, self.survival_function_).sort_index(ascending=False).values,
                             index=self.survival_function_.index,
                             columns=columns) - age
