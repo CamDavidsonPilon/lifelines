@@ -1045,8 +1045,7 @@ def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col,
         return cv
 
     def transform_cv_to_long_format(cv):
-        cv = cv.rename({duration_col: 'start'}, axis=1)
-        return cv
+        return cv.rename(columns={duration_col: 'start'})
 
     def construct_new_timeline(original_timeline, additional_timeline, final_stop_time):
         if additional_timeline.min() < original_timeline.min():
