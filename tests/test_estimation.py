@@ -453,6 +453,26 @@ class TestKaplanMeierFitter():
         kmf.fit(T, E)
         assert kmf.survival_function_['KM_estimate'].iloc[-1] > 0
 
+    def test_adding_weights_to_KaplanMeierFitter(self):
+        n = 100
+        df = pd.DataFrame()
+        df['T'] = np.random.binomial(40, 0.5, n)
+        df['E'] = np.random.binomial(1, 0.9, n)
+
+        kmf_no_weights = KaplanMeierFitter().fit(df['T'], df['E'])
+
+        df_grouped = df.groupby(['T', 'E']).size().reset_index()
+        kmf_w_weights = KaplanMeierFitter().fit(df_grouped['T'], df_grouped['E'], weights=df_grouped[0])
+
+        assert_frame_equal(kmf_w_weights.survival_function_, kmf_no_weights.survival_function_)
+
+    def test_weights_can_be_floats(self):
+        n = 100
+        T = np.random.binomial(40, 0.5, n)
+        E = np.random.binomial(1, 0.9, n)
+
+        kmf = KaplanMeierFitter().fit(T, E, weights=np.random.random(n))
+        assert True
 
 class TestNelsonAalenFitter():
 
@@ -541,15 +561,33 @@ class TestNelsonAalenFitter():
         assert abs(naf.confidence_interval_['NA_estimate_upper_0.95'].iloc[-1] - 11.315662) < 1e-6
         assert abs(naf.confidence_interval_['NA_estimate_lower_0.95'].iloc[-1] - 6.4537448) < 1e-6
 
+    def test_adding_weights_to_NelsonAalenFitter(self):
+        n = 100
+        df = pd.DataFrame()
+        df['T'] = np.random.binomial(40, 0.5, n)
+        df['E'] = np.random.binomial(1, 0.9, n)
+
+        naf_no_weights = NelsonAalenFitter().fit(df['T'], df['E'])
+
+        df_grouped = df.groupby(['T', 'E']).size().reset_index()
+        naf_w_weights = NelsonAalenFitter().fit(df_grouped['T'], df_grouped['E'], weights=df_grouped[0])
+
+        assert_frame_equal(naf_w_weights.cumulative_hazard_, naf_no_weights.cumulative_hazard_)
+
 
 class TestBreslowFlemingHarringtonFitter():
 
-    def test_BHF_fit(self):
+    def test_BHF_fit_when_KMF_throws_an_error(self):
         bfh = BreslowFlemingHarringtonFitter()
+        kmf = KaplanMeierFitter()
 
         observations = np.array([1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
                                  22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
         births = observations - 1
+
+        with pytest.raises(StatError):
+            kmf.fit(observations, entry=births)
+
         bfh.fit(observations, entry=births)
 
 

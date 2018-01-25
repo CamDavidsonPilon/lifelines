@@ -216,43 +216,49 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
         if np.any(birth_times > death_times):
             raise ValueError('birth time must be less than time of death.')
 
-    # deal with deaths and censorships
+    if weights is None:
+        weights = 1
 
+    # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
-    df[removed] = 1 if weights is None else weights
-    df[observed] = np.asarray(event_observed)
+    df[removed] = weights
+    df[observed] = weights * np.asarray(event_observed)
     death_table = df.groupby("event_at").sum()
     death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
 
     # deal with late births
     births = pd.DataFrame(birth_times, columns=['event_at'])
-    births[entrance] = 1
+    births[entrance] = weights
     births_table = births.groupby('event_at').sum()
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
 
     # group by intervals
     if collapse:
-        event_table = event_table.reset_index()
-
-        # use Freedman-Diaconis rule to determine bin size if user doesn't define intervals
-        if intervals is None:
-            event_max = np.max(event_table['event_at'])
-
-            # need interquartile range for bin width
-            q75, q25 = np.percentile(event_table['event_at'], [75, 25])
-            event_iqr = q75 - q25
-
-            bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1 / 3))
-
-            intervals = np.arange(0, event_max + bin_width, bin_width)
-
-        event_table = event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed': ['sum'],
-                                                                                           'observed': ['sum'],
-                                                                                           'censored': ['sum'],
-                                                                                           'at_risk': ['max']})
+        event_table = _group_event_table_by_intervals(event_table, intervals)
 
     return event_table.astype(int)
+
+
+def _group_event_table_by_intervals(event_table, intervals):
+    event_table = event_table.reset_index()
+
+    # use Freedman-Diaconis rule to determine bin size if user doesn't define intervals
+    if intervals is None:
+        event_max = event_table['event_at'].max()
+
+        # need interquartile range for bin width
+        q75, q25 = np.percentile(event_table['event_at'], [75, 25])
+        event_iqr = q75 - q25
+
+        bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1 / 3))
+
+        intervals = np.arange(0, event_max + bin_width, bin_width)
+
+    return event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed': ['sum'],
+                                                                                'observed': ['sum'],
+                                                                                'censored': ['sum'],
+                                                                                'at_risk': ['max']})
 
 
 def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
@@ -644,7 +650,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     return estimate_, var_
 
 
-def _preprocess_inputs(durations, event_observed, timeline, entry):
+def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     """
     Cleans and confirms input to what lifelines expects downstream
     """
@@ -661,7 +667,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry):
     if entry is not None:
         entry = np.asarray(entry).reshape((n,))
 
-    event_table = survival_table_from_events(durations, event_observed, entry)
+    event_table = survival_table_from_events(durations, event_observed, entry, weights=weights)
     if timeline is None:
         timeline = event_table.index.values
     else:
