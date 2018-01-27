@@ -48,7 +48,8 @@ class KaplanMeierFitter(UnivariateFitter):
         """
 
         check_nans(durations)
-        check_nans(event_observed)
+        if event_observed is not None:
+          check_nans(event_observed)
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'

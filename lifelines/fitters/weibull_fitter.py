@@ -81,8 +81,10 @@ class WeibullFitter(UnivariateFitter):
           self, with new properties like `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
 
         """
+
         check_nans(durations)
-        check_nans(event_observed)
+        if event_observed is not None:
+          check_nans(event_observed)
 
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.

@@ -49,8 +49,10 @@ class ExponentialFitter(UnivariateFitter):
           self, with new properties like 'survival_function_' and 'lambda_'.
 
         """
+
         check_nans(durations)
-        check_nans(event_observed)
+        if event_observed is not None:
+          check_nans(event_observed)
 
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
