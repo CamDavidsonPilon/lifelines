@@ -131,7 +131,6 @@ class TestUnivariateFitters():
             if hasattr(f, 'survival_function_'):
                 assert all(f.conditional_time_to_event_.index == f.survival_function_.index)
 
-
     def test_univariate_fitters_allows_one_to_change_alpha_at_fit_time(self, positive_sample_lifetimes, univariate_fitters):
         alpha = 0.9
         alpha_fit = 0.95
@@ -259,6 +258,20 @@ class TestUnivariateFitters():
         for fitter in univariate_fitters:
             with pytest.raises(ValueError):
                 fitter(alpha=95)
+
+    def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, univariate_fitters):
+        T = np.array([1.0, 2.0, 4.0, None, 8.0])
+        for fitter in univariate_fitters:
+            with pytest.raises(Exception):
+                fitter().fit(T)
+
+    def test_error_is_thrown_if_there_is_nans_in_the_event_col(self, univariate_fitters):
+        T = np.arange(5)
+        E = [1, 0, None, 1, 1]
+        for fitter in univariate_fitters:
+            with pytest.raises(Exception):
+                print(fitter)
+                fitter().fit(T)
 
 
 class TestWeibullFitter():
@@ -684,6 +697,18 @@ class TestRegressionFitters():
             assert not hasattr(fitter, 'score_')
             fitter.fit(rossi, duration_col='week', event_col='arrest')
             assert hasattr(fitter, 'score_')
+
+    def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, regression_models, rossi):
+        rossi.loc[3, 'week'] = None
+        for fitter in regression_models:
+            with pytest.raises(Exception):
+                fitter().fit('week', 'arrest')
+
+    def test_error_is_thrown_if_there_is_nans_in_the_event_col(self, regression_models, rossi):
+        rossi.loc[3, 'arrest'] = None
+        for fitter in regression_models:
+            with pytest.raises(Exception):
+                fitter().fit('week', 'arrest')
 
 
 class TestCoxPHFitter():

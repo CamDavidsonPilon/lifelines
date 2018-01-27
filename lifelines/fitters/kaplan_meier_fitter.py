@@ -6,7 +6,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import _preprocess_inputs, _additive_estimate, StatError, inv_normal_cdf,\
-    median_survival_times
+    median_survival_times, check_nans
 from lifelines.plotting import plot_loglogs
 
 
@@ -46,6 +46,9 @@ class KaplanMeierFitter(UnivariateFitter):
           self, with new properties like 'survival_function_'.
 
         """
+        check_nans(durations)
+        check_nans(events)
+
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)

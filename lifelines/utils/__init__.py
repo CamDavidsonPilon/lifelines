@@ -1007,6 +1007,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         warnings.warn(warning_text, RuntimeWarning)
 
 
+def check_nans(array):
+    if pd.isnull(series).any():
+        raise TypeError("NaNs were detected in the duration_col and/or the event_col")
+
+
 def to_long_format(df, duration_col):
     """
     Parameters:

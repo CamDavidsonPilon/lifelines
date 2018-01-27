@@ -15,7 +15,7 @@ from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
-    check_complete_separation, StatError
+    check_complete_separation, check_nans, StatError
 
 
 class CoxPHFitter(BaseFitter):
@@ -109,7 +109,7 @@ class CoxPHFitter(BaseFitter):
         else:
             weights = np.ones(self._n_examples)
 
-        self._check_values(df, E)
+        self._check_values(df, T, E)
         df = df.astype(float)
 
         # save fitting data for later
@@ -175,8 +175,8 @@ class CoxPHFitter(BaseFitter):
             beta = np.zeros((d, 1))
 
         if step_size is None:
-            # empirically determined
-            step_size = 0.95 if n < 800 else 0.5
+            # "empirically" determined
+            step_size = min(0.98, 3.0 / np.log10(n))
 
         # Method of choice is just efron right now
         if self.tie_method == 'Efron':
@@ -210,7 +210,9 @@ class CoxPHFitter(BaseFitter):
 
             delta = solve(-h, step_size * g.T)
             if np.any(np.isnan(delta)):
-                raise ValueError("delta contains nan value(s). Convergence halted.")
+                raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+""")
 
             # Save these as pending result
             hessian, gradient = h, g
@@ -352,7 +354,9 @@ class CoxPHFitter(BaseFitter):
         return self.baseline_hazard_.cumsum()
 
     @staticmethod
-    def _check_values(df, E):
+    def _check_values(df, T, E):
+        check_nans(T)
+        check_nans(E)
         check_low_var(df)
         check_complete_separation(df, E)
         pass_for_numeric_dtypes_or_raise(df)

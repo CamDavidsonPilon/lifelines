@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import inv_normal_cdf
+from lifelines.utils import inv_normal_cdf, check_nans
 
 
 class ExponentialFitter(UnivariateFitter):
@@ -49,7 +49,8 @@ class ExponentialFitter(UnivariateFitter):
           self, with new properties like 'survival_function_' and 'lambda_'.
 
         """
-
+        check_nans(durations)
+        check_nans(events)
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.arange(int(self.durations.min()), int(self.durations.max()) + 1)

@@ -5,7 +5,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import _preprocess_inputs, _additive_estimate, epanechnikov_kernel,\
-    inv_normal_cdf
+    inv_normal_cdf, check_nans
 
 
 class NelsonAalenFitter(UnivariateFitter):
@@ -60,6 +60,8 @@ class NelsonAalenFitter(UnivariateFitter):
           self, with new properties like 'cumulative_hazard_'.
 
         """
+        check_nans(durations)
+        check_nans(events)
 
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
