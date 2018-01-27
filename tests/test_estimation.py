@@ -262,16 +262,15 @@ class TestUnivariateFitters():
     def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, univariate_fitters):
         T = np.array([1.0, 2.0, 4.0, None, 8.0])
         for fitter in univariate_fitters:
-            with pytest.raises(Exception):
+            with pytest.raises(TypeError):
                 fitter().fit(T)
 
     def test_error_is_thrown_if_there_is_nans_in_the_event_col(self, univariate_fitters):
         T = np.arange(5)
         E = [1, 0, None, 1, 1]
         for fitter in univariate_fitters:
-            with pytest.raises(Exception):
-                print(fitter)
-                fitter().fit(T)
+            with pytest.raises(TypeError):
+                fitter().fit(T, E)
 
 
 class TestWeibullFitter():
@@ -701,13 +700,13 @@ class TestRegressionFitters():
     def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, regression_models, rossi):
         rossi.loc[3, 'week'] = None
         for fitter in regression_models:
-            with pytest.raises(Exception):
+            with pytest.raises(TypeError):
                 fitter().fit('week', 'arrest')
 
     def test_error_is_thrown_if_there_is_nans_in_the_event_col(self, regression_models, rossi):
         rossi.loc[3, 'arrest'] = None
         for fitter in regression_models:
-            with pytest.raises(Exception):
+            with pytest.raises(TypeError):
                 fitter().fit('week', 'arrest')
 
 

@@ -1008,7 +1008,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
 
 def check_nans(array):
-    if pd.isnull(series).any():
+    if pd.isnull(array).any():
         raise TypeError("NaNs were detected in the duration_col and/or the event_col")
 
 

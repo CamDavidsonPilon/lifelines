@@ -50,7 +50,8 @@ class ExponentialFitter(UnivariateFitter):
 
         """
         check_nans(durations)
-        check_nans(events)
+        check_nans(event_observed)
+
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.arange(int(self.durations.min()), int(self.durations.max()) + 1)

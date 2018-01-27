@@ -82,7 +82,8 @@ class WeibullFitter(UnivariateFitter):
 
         """
         check_nans(durations)
-        check_nans(events)
+        check_nans(event_observed)
+
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
