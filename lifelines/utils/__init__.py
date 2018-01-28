@@ -10,6 +10,21 @@ import pandas as pd
 from pandas import to_datetime
 
 
+# ipython autocomplete will pick these up, which are probably what users only need.
+__all__ = [
+    'qth_survival_times',
+    'qth_survival_time',
+    'median_survival_times',
+    'survival_table_from_events',
+    'datetimes_to_durations',
+    'concordance_index',
+    'k_fold_cross_validation',
+    'to_long_format',
+    'add_covariate_to_timeline',
+    'covariates_from_duration_matrix'
+]
+
+
 class StatError(Exception):
 
     def __init__(self, msg):
