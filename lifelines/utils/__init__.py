@@ -1177,7 +1177,8 @@ def covariates_from_duration_matrix(df, id_col):
         cv = covariates_from_duration_matrix(duration_df, 'id')
         long_form_df = add_covariate_to_timeline(long_form_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
 
-
+    Parameters:
+        id_col: the column in long_form_df and cv representing a unique identifier for subjects.
 
     """
     df = df.set_index(id_col)
@@ -1187,5 +1188,10 @@ def covariates_from_duration_matrix(df, id_col):
     return df.pivot_table(index=['id', 'duration'], columns='event', fill_value=0)['_counter'].reset_index()
 
 
-
+def wide_to_long(df):
+    df = pd.read_csv("https://raw.githubusercontent.com/London-R-Dojo/Dojo-repo/master/June-2015-Dojo/Rossi.txt", sep="\s+")
+    df['id'] = 1
+    df = df.rename(columns={'emp%d':i for i in range(1, 53)})
+    df_ = df.set_index(df.columns[:10].tolist() + ['id']).stack().dropna().reset_index()
+    df_.rename(columns={'level_11': 'time', 0:'emp'})
 

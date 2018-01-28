@@ -393,16 +393,17 @@ Base dataset: ``base_df``
     SELECT 
       id, 
       group,
-      DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE)) AS "T", 
+      DATEDIFF('dd', dt.started_at, COALESCE(dt.ended_at, CURRENT_DATE)) AS "T", 
       (ended_at IS NOT NULL) AS "E"
     FROM dimension_table dt
 
 
-Time varying dataset: ``cv``
+Time-varying variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: mysql
 
+    -- this could produce more than 1 row per subject
     SELECT 
       id, 
       DATEDIFF('dd', dt.started_at, ft.event_at) AS "time", 
@@ -414,11 +415,49 @@ Time varying dataset: ``cv``
 
 .. code-block:: python
 
-      from lifelines.utils import to_long_format
-      from lifelines.utils import add_covariate_to_timeline
+    from lifelines.utils import to_long_format
+    from lifelines.utils import add_covariate_to_timeline
 
-      base_df = to_long_format(base_df, duration_col="T")
-      df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
+    base_df = to_long_format(base_df, duration_col="T")
+    df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
+
+
+Event variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Another very common operation is to fold in event data. For example, a dataset that contains dates of events (and NULLS if the event didn't occur). For example:
+
+.. code-block:: mysql
+
+    SELECT 
+      id, 
+      DATEDIFF('dd', dt.started_at, ft.event1_at) AS "E1", 
+      DATEDIFF('dd', dt.started_at, ft.event2_at) AS "E2", 
+      DATEDIFF('dd', dt.started_at, ft.event3_at) AS "E3"
+      ... 
+    FROM dimension_table dt
+
+
+In Pandas, this may look like:
+
+.. code-block:: python
+
+        id    E1      E2     E3
+    0   1     1.0     NaN    2.0
+    1   2     NaN     5.0    NaN
+    2   3     3.0     5.0    7.0
+    ...
+
+Initially, this can't be added to our baseline dataframe. Using ``utils.covariates_from_duration_matrix`` we can convert a dataframe like this into one that can be easily added. 
+
+.. code-block:: python
+
+    from lifelines.utils import covariates_from_duration_matrix
+
+    cv = covariates_from_duration_matrix(df, 'id')
+    df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", cumulative_sum=True)
+
+
 
 
 Example cumulative total using ``add_covariate_to_timeline``
