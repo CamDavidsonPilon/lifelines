@@ -1026,6 +1026,11 @@ def to_long_format(df, duration_col):
 
 def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col, add_enum=False, overwrite=True, cumulative_sum=False, cumulative_sum_prefix="cumsum_"):
     """
+    This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
+    to be used iteratively as we add more and more covariates to track. If beginning to use this function, it is recommend
+    to view the docs at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-for-time-varying-regression.
+
+
     Parameters:
         long_form_df: a DataFrame that has the intial or intermediate "long" form of time-varying observations. Must contain
             columns id_col, 'start', 'stop', and event_col. See function `to_long_format` to transform data into long form.
@@ -1131,3 +1136,41 @@ known observation. This could case null values in the resulting dataframe."
     long_form_df = long_form_df.groupby(id_col, group_keys=False)\
                                .apply(expand, cvs=cvs)
     return long_form_df.reset_index(drop=True)
+
+
+def covariates_from_duration_matrix(df, id_col):
+    """
+    This is a helper function to handle binary event datastreams in a specific format and convert
+    it to a format that add_covariate_to_timeline will accept. For example, suppose you have a
+    dataset that looks like:
+
+       id  promotion  movement  raise
+    0   1        1.0       NaN    2.0
+    1   2        NaN       5.0    NaN
+    2   3        3.0       5.0    7.0
+
+
+    where the values (aside from the id column) represent when an event occured for a specific user, relative
+    to the subject's birth/entry. This is a common way format to pull data from a SQL table. We call this a duration matrix, and we
+    want to convert this dataframe to a format that can be included in a long form dataframe
+    (see add_covariate_to_timeline for more details on this).
+
+    The duration matrix should have 1 row per subject (but not necessarily all subjects).
+
+    Example:
+
+        cv = covariates_from_duration_matrix(duration_df, 'id')
+        long_form_df = add_covariate_to_timeline(long_form_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
+
+
+
+    """
+    df = df.set_index(id_col)
+    df = df.stack().reset_index()
+    df.columns = ['id', 'event', 'duration']
+    df['_counter'] = 1
+    return df.pivot_table(index=['id', 'duration'], columns='event', fill_value=0)['_counter'].reset_index()
+
+
+
+

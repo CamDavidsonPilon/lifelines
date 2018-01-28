@@ -474,7 +474,7 @@ def test_concordance_index_fast_is_same_as_slow():
     assert slow_cindex(T, P, E) == fast_cindex(T, P, E)
 
 
-class TestTimeLine(object):
+class TestLongDataFrameUtils(object):
 
     @pytest.fixture
     def seed_df(self):
@@ -657,3 +657,20 @@ class TestTimeLine(object):
             {'id': 1, 'start': 3, 'stop': 5.0, 'cumsum_var4': 3, 'E': True},
         ])
         assert_frame_equal(expected, df, check_like=True)
+
+
+    def test_covariates_from_duration_matrix(self):
+        df = pd.DataFrame([
+                [1,  1,    None, 2],
+                [2,  None, 5,    None],
+                [3,  3,    3,    7]
+             ], columns=['id', 'promotion', 'movement', 'raise'])
+
+        ldf = pd.DataFrame([[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]], columns=['id', 'start', 'stop', 'e'])
+
+        cv = utils.covariates_from_duration_matrix(df, 'id')
+        ldf = utils.add_covariate_to_timeline(ldf, cv, 'id', 'duration', 'e', cumulative_sum=True)
+        assert ldf.loc[ldf['id'] == 1]['cumsum_movement'].tolist() == [0, 0, 0]
+        assert ldf.loc[ldf['id'] == 1]['cumsum_promotion'].tolist() == [0, 1, 1]
+        assert ldf.loc[ldf['id'] == 1]['cumsum_raise'].tolist() == [0, 0, 1]
+        assert ldf.loc[ldf['id'] == 1]['start'].tolist() == [0, 1., 2.]
