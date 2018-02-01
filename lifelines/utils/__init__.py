@@ -1042,7 +1042,7 @@ def to_long_format(df, duration_col):
 def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col, add_enum=False, overwrite=True, cumulative_sum=False, cumulative_sum_prefix="cumsum_"):
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
-    to be used iteratively as we add more and more covariates to track. If beginning to use this function, it is recommend
+    to be used iteratively as one adds more and more covariates to track over time. If beginning to use this function, it is recommend
     to view the docs at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-for-time-varying-regression.
 
 
@@ -1183,15 +1183,6 @@ def covariates_from_duration_matrix(df, id_col):
     """
     df = df.set_index(id_col)
     df = df.stack().reset_index()
-    df.columns = ['id', 'event', 'duration']
+    df.columns = [id_col, 'event', 'duration']
     df['_counter'] = 1
-    return df.pivot_table(index=['id', 'duration'], columns='event', fill_value=0)['_counter'].reset_index()
-
-
-def wide_to_long(df):
-    df = pd.read_csv("https://raw.githubusercontent.com/London-R-Dojo/Dojo-repo/master/June-2015-Dojo/Rossi.txt", sep="\s+")
-    df['id'] = 1
-    df = df.rename(columns={'emp%d':i for i in range(1, 53)})
-    df_ = df.set_index(df.columns[:10].tolist() + ['id']).stack().dropna().reset_index()
-    df_.rename(columns={'level_11': 'time', 0:'emp'})
-
+    return df.pivot_table(index=[id_col, 'duration'], columns='event', fill_value=0)['_counter'].reset_index()

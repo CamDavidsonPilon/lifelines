@@ -661,9 +661,9 @@ class TestLongDataFrameUtils(object):
 
     def test_covariates_from_duration_matrix(self):
         df = pd.DataFrame([
-                [1,  1,    None, 2],
-                [2,  None, 5,    None],
-                [3,  3,    3,    7]
+                [1,   1,    None, 2   ],
+                [2,   None, 5,    None],
+                [3,   3,    3,    7   ]
              ], columns=['id', 'promotion', 'movement', 'raise'])
 
         ldf = pd.DataFrame([[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]], columns=['id', 'start', 'stop', 'e'])
