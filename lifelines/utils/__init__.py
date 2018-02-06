@@ -21,7 +21,7 @@ __all__ = [
     'k_fold_cross_validation',
     'to_long_format',
     'add_covariate_to_timeline',
-    'covariates_from_duration_matrix'
+    'covariates_from_event_matrix'
 ]
 
 
@@ -1153,7 +1153,7 @@ known observation. This could case null values in the resulting dataframe."
     return long_form_df.reset_index(drop=True)
 
 
-def covariates_from_duration_matrix(df, id_col):
+def covariates_from_event_matrix(df, id_col):
     """
     This is a helper function to handle binary event datastreams in a specific format and convert
     it to a format that add_covariate_to_timeline will accept. For example, suppose you have a
@@ -1174,7 +1174,7 @@ def covariates_from_duration_matrix(df, id_col):
 
     Example:
 
-        cv = covariates_from_duration_matrix(duration_df, 'id')
+        cv = covariates_from_event_matrix(duration_df, 'id')
         long_form_df = add_covariate_to_timeline(long_form_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
 
     Parameters:

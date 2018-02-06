@@ -659,7 +659,7 @@ class TestLongDataFrameUtils(object):
         assert_frame_equal(expected, df, check_like=True)
 
 
-    def test_covariates_from_duration_matrix(self):
+    def test_covariates_from_event_matrix(self):
         df = pd.DataFrame([
                 [1,   1,    None, 2   ],
                 [2,   None, 5,    None],
@@ -668,7 +668,7 @@ class TestLongDataFrameUtils(object):
 
         ldf = pd.DataFrame([[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]], columns=['id', 'start', 'stop', 'e'])
 
-        cv = utils.covariates_from_duration_matrix(df, 'id')
+        cv = utils.covariates_from_event_matrix(df, 'id')
         ldf = utils.add_covariate_to_timeline(ldf, cv, 'id', 'duration', 'e', cumulative_sum=True)
         assert ldf.loc[ldf['id'] == 1]['cumsum_movement'].tolist() == [0, 0, 0]
         assert ldf.loc[ldf['id'] == 1]['cumsum_promotion'].tolist() == [0, 1, 1]

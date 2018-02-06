@@ -425,7 +425,7 @@ Time-varying variables
 Event variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Another very common operation is to fold in event data. For example, a dataset that contains dates of events (and NULLS if the event didn't occur). For example:
+Another very common operation is to fold in event data. For example, a dataset that contains information about the dates of an event (and NULLS if the event didn't occur). For example:
 
 .. code-block:: mysql
 
@@ -448,13 +448,13 @@ In Pandas, this may look like:
     2   3     3.0     5.0    7.0
     ...
 
-Initially, this can't be added to our baseline dataframe. Using ``utils.covariates_from_duration_matrix`` we can convert a dataframe like this into one that can be easily added. 
+Initially, this can't be added to our baseline dataframe. Using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added. 
 
 .. code-block:: python
 
-    from lifelines.utils import covariates_from_duration_matrix
+    from lifelines.utils import covariates_from_event_matrix
 
-    cv = covariates_from_duration_matrix(df, 'id')
+    cv = covariates_from_event_matrix(df, 'id')
     df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", cumulative_sum=True)
 
 
@@ -463,7 +463,7 @@ Initially, this can't be added to our baseline dataframe. Using ``utils.covariat
 Example cumulative total using ``add_covariate_to_timeline``
 ############################################################
 
-Often we have transactional covariate datasets and state covariate datasets. In a transaction dataset, it may make sense to sum up the covariates to represent administration of the treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
+Often we have either __transactional covariate datasets__ or __state covariate datasets__. In a transactional dataset, it may make sense to sum up the covariates to represent administration of a treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
 
 Suppose we have an initial DataFrame of start-ups like:
 
