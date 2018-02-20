@@ -19,7 +19,7 @@ from lifelines.utils import inv_normal_cdf, \
 class CoxTimeVaryingFitter(BaseFitter):
 
     """
-    This class implements fitting Cox's proportional hazard model:
+    This class implements fitting Cox's time-varying proportional hazard model:
 
     h(t|x(t)) = h_0(t)*exp(x(t)'*beta)
 
@@ -91,13 +91,13 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     @property
     def summary(self):
-        """Summary statistics describing the fit.
+        """
+        Summary statistics describing the fit.
         Set alpha property in the object before calling.
 
-        Returns
-        -------
-        df : pd.DataFrame
-            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
+        Returns:
+            df:.DataFrame, Contains columns coef, exp(coef), se(coef), z, p, lower, upper
+        """
 
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.loc['coef'].values
@@ -116,8 +116,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         Note that data is assumed to be sorted on T!
 
         Parameters:
-            df: (n,d+2) Pandas DataFrame of observations with specific Interval multiindex.
-            initial_beta: (1,d) numpy array of initial starting point for
+            df: (n, d+2) Pandas DataFrame of observations with specific Interval multiindex.
+            initial_beta: (1, d) numpy array of initial starting point for
                           NR algorithm. Default 0.
             step_size: float > 0 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
@@ -189,11 +189,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     def _get_gradients(self, df, stops_events, beta):
         """
-        return the gradient, hessian, and log-like
-        """
-        """
-        Calculates the first and second order vector differentials,
-        with respect to beta.
+        Calculates the first and second order vector differentials, with respect to beta.
 
         Returns:
             hessian: (d, d) numpy array,
