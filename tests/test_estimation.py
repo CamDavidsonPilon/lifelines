@@ -19,7 +19,7 @@ import numpy.testing as npt
 from lifelines.utils import k_fold_cross_validation, StatError
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-    WeibullFitter, BaseFitter
+    WeibullFitter, BaseFitter, BayesianFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_lcd, load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, cumulative_integral
@@ -1313,3 +1313,29 @@ class TestAalenAdditiveFitter():
         y_df = aaf.predict_cumulative_hazard(x)
         y_np = aaf.predict_cumulative_hazard(x.values)
         assert_frame_equal(y_df, y_np)
+
+    @pytest.mark.plottest
+    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
+    def test_bayesian_fitter_low_data(self):
+        matplotlib = pytest.importorskip("matplotlib")
+        from matplotlib import pyplot as plt
+        waltons_dataset = load_waltons()
+        bf = BayesianFitter(samples=15)
+        ix = waltons_dataset['group'] == 'miR-137'
+        waltonT1 = waltons_dataset.loc[ix]['T']
+        waltonT2 = waltons_dataset.loc[~ix]['T']
+        bf.fit(waltonT1)
+        ax = bf.plot(alpha=.2)
+        bf.fit(waltonT2)
+        bf.plot(ax=ax, alpha=0.2, c='k')
+        plt.show()
+        return
+
+    def test_bayesian_fitter_large_data(self):
+        matplotlib = pytest.importorskip("matplotlib")
+        from matplotlib import pyplot as plt
+        bf = BayesianFitter()
+        bf.fit(np.random.exponential(10,size=1000))
+        bf.plot()
+        plt.show()
+        return

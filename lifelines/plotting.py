@@ -2,6 +2,8 @@
 from __future__ import print_function
 
 import numpy as np
+import pandas as pd
+
 from .utils import coalesce
 
 
@@ -432,3 +434,41 @@ def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
     ax.fill_between(xx, y1, y2=y2, **kwargs)
 
     return ax
+
+
+def schoenfeldresiduals(y, X, event, params, covar):
+    """
+    This is the function that returns scaled schoenfeld residuals
+    y is the 'time' variable, 'X' is the n by p data matrix,
+    'params' is the parameter values from the Cox proportional hazard model
+    'covar' is the variance-covariance matrix from the Cox proportional
+    hazard model
+    """
+    schoenfeldresiduals = pd.DataFrame(columns=[X.columns])
+    schoenfeldtime = pd.DataFrame(columns=['Time'])
+    X['Time'] = y
+    # Add the 'event' variable to the data matrix 'X'. This will be
+    # useful to select units who experienced the event
+    X['eventvar'] = event  # Sort 'X' based on time (ascending order)
+    X = X.sort_values(['Time'], axis=0)
+    # Get the number of units
+    numberofunits = len(X)
+    # Set the counter to zero
+    counter = 0
+    numberofevents = np.sum(event)
+    for patientindex in range(numberofunits):
+        if X['Eventoccured'].iloc[patientindex] == 1:
+            currenttime = X['Time'].iloc[patientindex]
+            sumhazards = np.sum(
+                    np.exp(np.dot(X.loc[X['Time'] >= currenttime].iloc[:, :len(X.columns) - 2], params)))
+            probabilityofdeathall = np.ravel(
+                np.exp(np.dot(X.loc[X['Time'] >= currenttime].iloc[:, :len(X.columns) - 2], params)) / sumhazards)
+            expectedcovariatevalues = np.dot(probabilityofdeathall,
+                                             X.loc[(X['Time'] >= currenttime)].iloc[:, :len(X.columns) - 2])
+            residuals = X.iloc[patientindex, :len(X.columns) - 2] - expectedcovariatevalues
+            scaledresiduals = numberofevents * np.dot(covar, residuals)
+            scaledresiduals.loc[counter] = scaledresiduals
+            schoenfeldtime.loc[counter] = currenttime
+            counter = counter + 1
+        schoenfeldresiduals['Time'] = schoenfeldtime
+        return schoenfeldresiduals

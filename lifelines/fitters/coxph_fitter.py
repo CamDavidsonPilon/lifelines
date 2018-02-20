@@ -270,7 +270,7 @@ class CoxPHFitter(BaseFitter):
           initial_beta: initialize the starting point of the iterative
              algorithm. Default is the zero vector.
           strata: specify a list of columns to use in stratification. This is useful if a
-             catagorical covariate does not obey the proportional hazard assumption. This
+             categorical covariate does not obey the proportional hazard assumption. This
              is used similar to the `strata` expression in R.
              See http://courses.washington.edu/b515/l17.pdf.
 
