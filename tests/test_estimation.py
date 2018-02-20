@@ -22,7 +22,7 @@ from numpy.linalg.linalg import LinAlgError
 from lifelines.utils import k_fold_cross_validation, StatError
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-    WeibullFitter, BaseFitter, CoxTimeVaryingFitter
+    WeibullFitter, BaseFitter, CoxTimeVaryingFitter, BayesianFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
     load_stanford_heart_transplants
@@ -1405,3 +1405,30 @@ class TestCoxTimeVaryingFitter():
         npt.assert_almost_equal(ctv.summary['coef'].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3)
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
+
+class TestBayesianFitter():
+    @pytest.mark.plottest
+    @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
+    def test_bayesian_fitter_low_data(self):
+        matplotlib = pytest.importorskip("matplotlib")
+        from matplotlib import pyplot as plt
+        waltons_dataset = load_waltons()
+        bf = BayesianFitter(samples=15)
+        ix = waltons_dataset['group'] == 'miR-137'
+        waltonT1 = waltons_dataset.loc[ix]['T']
+        waltonT2 = waltons_dataset.loc[~ix]['T']
+        bf.fit(waltonT1)
+        ax = bf.plot(alpha=.2)
+        bf.fit(waltonT2)
+        bf.plot(ax=ax, alpha=0.2, c='k')
+        plt.show()
+        return
+
+    def test_bayesian_fitter_large_data(self):
+        matplotlib = pytest.importorskip("matplotlib")
+        from matplotlib import pyplot as plt
+        bf = BayesianFitter()
+        bf.fit(np.random.exponential(10,size=1000))
+        bf.plot()
+        plt.show()
+        return
