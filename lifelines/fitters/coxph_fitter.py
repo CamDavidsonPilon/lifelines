@@ -293,7 +293,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
             phi_x_i = phi_i * xi
-            phi_x_x_i = dot(xi.T, phi_i * xi)
+            phi_x_x_i = dot(xi.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi += w * phi_i
@@ -335,11 +335,11 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 
                 hessian -= (a1 - a2)
 
-                log_lik -= np.log(denom).ravel()[0]
+                log_lik -= np.log(denom)[0][0]
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
-            log_lik += dot(x_tie_sum, beta).ravel()[0]
+            log_lik += dot(x_tie_sum, beta)[0][0]
 
             # reset tie values
             tie_count = 0

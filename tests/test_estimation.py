@@ -1476,3 +1476,4 @@ class TestCoxTimeVaryingFitter():
         npt.assert_almost_equal(ctv.summary['coef'].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3)
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
+

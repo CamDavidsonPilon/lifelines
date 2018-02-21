@@ -216,7 +216,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             phi_i = exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
-            phi_x_x_i = dot(df_at_t.T, phi_i * df_at_t)
+            phi_x_x_i = dot(df_at_t.T, phi_x_i) # dot(df_at_t.T, phi_i * df_at_t)
 
             # Calculate sums of Risk set
             risk_phi += phi_i.sum()
@@ -228,6 +228,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             death_counts = deaths.sum()  # should always be atleast 1.
 
             xi_deaths = df_at_t.loc[deaths]
+
             x_death_sum += xi_deaths.sum(0).values.reshape((1, d))
 
             if death_counts > 1:
@@ -260,11 +261,11 @@ class CoxTimeVaryingFitter(BaseFitter):
 
                 hessian -= (a1 - a2)
 
-                log_lik -= np.log(denom).ravel()[0]
+                log_lik -= np.log(denom)
 
             # Values outside tie sum
             gradient += x_death_sum - partial_gradient
-            log_lik += dot(x_death_sum, beta).ravel()[0]
+            log_lik += dot(x_death_sum, beta)[0][0]
         return hessian, gradient, log_lik
 
     def print_summary(self):
