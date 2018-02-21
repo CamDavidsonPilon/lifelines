@@ -415,6 +415,38 @@ class AalenAdditiveFitter(BaseFitter):
         t = self.cumulative_hazards_.index
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
+    @property
+    def summary(self):
+        """
+        Summary of the coefficients
+        Returns
+        -------
+        df: pd.DataFrame
+        """
+        df = self.hazards_
+        return df
+
+    def print_summary(self):
+        """
+        Print summary statistics describing the fit.
+        """
+        df = self.summary
+        print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
+        return
+
+    def plot_coefficients_bar_summary(self, **kwargs):
+        """
+        Plot a summary of the coefficients in Bar chart.
+        kwargs: standard Matplotlib plot arguments can be passed in
+        :return: ax2
+        """
+        from matplotlib import pyplot as plt
+        ax2 = kwargs.get('ax2', None) or plt.figure().add_subplot(111)
+        x_bar = self.hazards_.sum(axis=0)
+        x_bar.plot(ax=ax2, kind='barh')
+        return ax2
+
+
     def plot(self, loc=None, iloc=None, columns=[], legend=True, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
