@@ -443,7 +443,8 @@ class AalenAdditiveFitter(BaseFitter):
         from matplotlib import pyplot as plt
         ax2 = kwargs.get('ax2', None) or plt.figure().add_subplot(111)
         x_bar = self.hazards_.sum(axis=0)
-        x_bar.plot(ax=ax2, kind='bar', yerr=0.1)
+        errors = self.hazards_.std(axis=0)
+        x_bar.plot(ax=ax2, kind='barh', xerr=errors)
         return ax2
 
 
