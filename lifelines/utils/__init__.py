@@ -34,6 +34,15 @@ class StatError(Exception):
         return repr(self.msg)
 
 
+class ConvergenceWarning(RuntimeWarning):
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
 def qth_survival_times(q, survival_functions, cdf=False):
     """
     Parameters:
@@ -1007,19 +1016,32 @@ def check_low_var(df, prescript="", postscript=""):
         warning_text = "%sColumn(s) %s have very low variance. \
 This may harm convergence. Try dropping this redundant column before fitting \
 if convergence fails.%s" % (prescript, cols, postscript)
-        warnings.warn(warning_text, RuntimeWarning)
+        warnings.warn(warning_text, ConvergenceWarning)
 
 
-def check_complete_separation(df, events):
+def check_complete_separation_low_variance(df, events):
     events = events.astype(bool)
     rhs = df.columns[_low_var(df.loc[events])]
     lhs = df.columns[_low_var(df.loc[~events])]
     inter = lhs.intersection(rhs).tolist()
     if inter:
         warning_text = "Column(s) %s have very low variance when conditioned on \
-death event or not. This may harm convergence. This is a form of 'complete separation'. \
+death event or not. This may harm convergence. This could be a form of 'complete separation'. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
-        warnings.warn(warning_text, RuntimeWarning)
+        warnings.warn(warning_text, ConvergenceWarning)
+
+def check_complete_separation_close_to_perfect_correlation(df, durations):
+    THRESHOLD = 0.99
+    for col, series in df.iteritems():
+        if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
+            warning_text = "Column %s has high correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (col)
+            warnings.warn(warning_text, ConvergenceWarning)
+
+
+def check_complete_separation(df, events, durations):
+    check_complete_separation_low_variance(df, events)
+    check_complete_separation_close_to_perfect_correlation(df, durations)
 
 
 def check_nans(array):

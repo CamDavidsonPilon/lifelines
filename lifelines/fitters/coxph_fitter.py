@@ -15,7 +15,7 @@ from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
-    check_complete_separation, check_nans, StatError
+    check_complete_separation, check_nans, StatError, ConvergenceWarning
 
 
 class CoxPHFitter(BaseFitter):
@@ -144,7 +144,7 @@ class CoxPHFitter(BaseFitter):
         return self
 
     def _newton_rhaphson(self, X, T, E, weights=None, initial_beta=None, step_size=None,
-                         precision=10e-6, show_progress=True):
+                         precision=10e-6, show_progress=True, max_steps=50):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -160,10 +160,14 @@ class CoxPHFitter(BaseFitter):
             step_size: float > 0.001 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
+            show_progress: since the fitter is iterative, show convergence
+                     diagnostics.
+            max_steps: the maximum number of interations of the Newton-Rhaphson algorithm.
 
         Returns:
             beta: (1,d) numpy array.
         """
+        self.path = []
         assert precision <= 1., "precision must be less than or equal to 1."
         n, d = X.shape
 
@@ -186,9 +190,11 @@ class CoxPHFitter(BaseFitter):
 
         i = 0
         converging = True
+        warn_ll = True
         ll, previous_ll = 0, 0
 
         while converging:
+            self.path.append(beta.copy())
             i += 1
             if self.strata is None:
                 h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights)
@@ -219,19 +225,21 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 
             if show_progress:
                 print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
-
             # convergence criteria
             if norm(delta) < precision:
-                converging = False
+                converging, completed = False, True
             elif abs(ll - previous_ll) < precision:
-                converging = False
-            elif i >= 50:
+                converging, completed = False, True
+            elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
-                warnings.warn("Newton-Rhapson failed to converge sufficiently in 50 steps.", RuntimeWarning)
-                converging = False
-            elif step_size <= 0.0001:
-                converging = False
+                converging, completed = False, False
+            elif step_size <= 0.00001:
+                converging, completed = False, False
+            elif abs(ll) < 0.0001 and norm(delta) > 1.0:
+                warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
+                converging, completed = False, False
 
             # Only allow small steps
             if norm(delta) > 10.0:
@@ -246,8 +254,12 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
         self._hessian_ = hessian
         self._score_ = gradient
         self._log_likelihood = ll
-        if show_progress:
+
+        if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
+        if not completed:
+            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
+
         return beta
 
     def _get_efron_values(self, X, beta, T, E, weights):
@@ -347,7 +359,6 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
-
         return hessian, gradient, log_lik
 
     def _compute_baseline_cumulative_hazard(self):
@@ -355,11 +366,11 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 
     @staticmethod
     def _check_values(df, T, E):
+        pass_for_numeric_dtypes_or_raise(df)
         check_nans(T)
         check_nans(E)
         check_low_var(df)
-        check_complete_separation(df, E)
-        pass_for_numeric_dtypes_or_raise(df)
+        check_complete_separation(df, E, T)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)

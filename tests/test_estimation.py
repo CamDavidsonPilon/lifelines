@@ -19,7 +19,7 @@ from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg.linalg import LinAlgError
 
-from lifelines.utils import k_fold_cross_validation, StatError
+from lifelines.utils import k_fold_cross_validation, StatError, concordance_index, ConvergenceWarning
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter, CoxTimeVaryingFitter
@@ -27,7 +27,6 @@ from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant
     load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
     load_stanford_heart_transplants
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
-from lifelines.utils import concordance_index
 
 
 @pytest.fixture
@@ -1245,8 +1244,32 @@ Concordance = 0.640""".strip().split()
             except LinAlgError:
                 pass
             assert len(w) == 1
-            assert issubclass(w[-1].category, RuntimeWarning)
+            assert issubclass(w[-1].category, ConvergenceWarning)
             assert "complete separation" in str(w[-1].message)
+
+    def test_warning_is_raised_if_complete_seperation_is_present(self):
+        # check for a warning if we have complete seperation
+        cp = CoxPHFitter()
+
+        df = pd.DataFrame.from_records([
+            (-5, 1),
+            (-4, 2),
+            (-3, 3),
+            (-2, 4),
+            (-1, 5),
+            (1, 6),
+            (2, 7),
+            (3, 8),
+            (4, 9),
+        ], columns=['x', 'T'])
+        df['E'] = np.random.binomial(1, 0.9, df.shape[0])
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cp.fit(df, 'T', 'E')
+            assert len(w) == 3
+            assert issubclass(w[0].category, ConvergenceWarning)
+            assert "complete separation" in str(w[0].message)
 
     @pytest.mark.xfail
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
@@ -1446,8 +1469,8 @@ class TestCoxTimeVaryingFitter():
                 ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
             except (LinAlgError, ValueError):
                 pass
-            assert len(w) == 2
-            assert issubclass(w[-1].category, RuntimeWarning)
+            assert len(w) == 1
+            assert issubclass(w[-1].category, ConvergenceWarning)
             assert "variance" in str(w[0].message)
 
     def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, ctv, dfcv):
@@ -1463,8 +1486,8 @@ class TestCoxTimeVaryingFitter():
             except (LinAlgError, ValueError):
                 pass
             assert len(w) == 2
-            assert issubclass(w[-1].category, RuntimeWarning)
-            assert "complete separation" in str(w[-1].message)
+            assert issubclass(w[0].category, ConvergenceWarning)
+            assert "complete separation" in str(w[0].message)
 
     def test_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
