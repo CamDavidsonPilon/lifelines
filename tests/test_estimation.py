@@ -1226,8 +1226,9 @@ Concordance = 0.640""".strip().split()
                 cox.fit(rossi, 'week', 'arrest')
             except (LinAlgError, ValueError):
                 pass
+
+            w = list(filter(lambda w_: issubclass(w_.category, ConvergenceWarning), w))
             assert len(w) == 2
-            assert issubclass(w[-1].category, RuntimeWarning)
             assert "variance" in str(w[0].message)
 
     def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, rossi):
@@ -1469,7 +1470,7 @@ class TestCoxTimeVaryingFitter():
                 ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
             except (LinAlgError, ValueError):
                 pass
-            assert len(w) == 1
+            assert len(w) == 2
             assert issubclass(w[-1].category, ConvergenceWarning)
             assert "variance" in str(w[0].message)
 
@@ -1487,7 +1488,7 @@ class TestCoxTimeVaryingFitter():
                 pass
             assert len(w) == 2
             assert issubclass(w[0].category, ConvergenceWarning)
-            assert "complete separation" in str(w[0].message)
+            assert "complete separation" in str(w[1].message)
 
     def test_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
