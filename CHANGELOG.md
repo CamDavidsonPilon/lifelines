@@ -5,6 +5,7 @@
  - `utils` functions like `qth_survival_times` and `median_survival_times` now return the transpose of the DataFrame compared to previous version of lifelines. The reason for this is that we often treat survival curves as columns in DataFrames, and functions of the survival curve as index (ex: KaplanMeierFitter.survival_function_ returns a survival curve _at_ time _t_).
  - `KaplanMeierFitter.fit` and `NelsonAalenFitter.fit` accept a `weights` vector that can be used for pre-aggregated datasets, or other statistical models. See this [issue](https://github.com/CamDavidsonPilon/lifelines/issues/396).
  - Convergence errors now return a custom `ConvergenceWarning` instead of a `RuntimeWarning`
+ - New checks for complete separation in the dataset for regressions.
 
 #### 0.13.0
  - removes `is_significant` and `test_result` from `StatisticalResult`. Users can instead choose their significance level by comparing to `p_value`. The string representation of this class has changed aswell.
