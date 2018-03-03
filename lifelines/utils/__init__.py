@@ -242,6 +242,13 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
 
     if weights is None:
         weights = 1
+    else:
+        if (weights.astype(int) != weights).any():
+            warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
+                """, RuntimeWarning)
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])

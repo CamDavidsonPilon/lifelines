@@ -106,6 +106,12 @@ class CoxPHFitter(BaseFitter):
 
         if weights_col:
             weights = df.pop(weights_col).values
+            if (weights.astype(int) != weights).any():
+                warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+                    """, RuntimeWarning)
+
         else:
             weights = np.ones(self._n_examples)
 

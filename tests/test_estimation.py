@@ -481,9 +481,10 @@ class TestKaplanMeierFitter():
         n = 100
         T = np.random.binomial(40, 0.5, n)
         E = np.random.binomial(1, 0.9, n)
-
-        kmf = KaplanMeierFitter().fit(T, E, weights=np.random.random(n))
-        assert True
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            kmf = KaplanMeierFitter().fit(T, E, weights=np.random.random(n))
+            assert True
 
 class TestNelsonAalenFitter():
 
@@ -957,7 +958,7 @@ Concordance = 0.640""".strip().split()
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
-    def test_coef_output_against_R_using_weights(self, rossi):
+    def test_coef_output_against_R_using_non_trivial_weights(self, rossi):
         rossi_ = rossi.copy()
         rossi_['weights'] = 1.
         rossi_ = rossi_.groupby(rossi.columns.tolist())['weights'].sum()\
@@ -967,6 +968,19 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(rossi_, duration_col='week', event_col='arrest', weights_col='weights')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
+
+    def test_adding_non_integer_weights_raises_a_warning(self, rossi):
+        rossi['weights'] = np.random.exponential(1, rossi.shape[0])
+
+        cox = CoxPHFitter()
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cox.fit(rossi, 'week', 'arrest', weights_col='weights')
+
+            assert len(w) == 1
+            assert "naive variance estimates" in str(w[0].message)
+
 
     def test_standard_error_coef_output_against_R(self, rossi):
         """
