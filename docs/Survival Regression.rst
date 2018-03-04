@@ -465,6 +465,26 @@ With a fitted model, an altervative way to view the coefficients and their range
 .. image:: images/coxph_plot.png
 
 
+Plotting the effect of varying a covariate
+#############################################
+
+After fitting, we can plot what the survival curves look like as we vary a single covarite while 
+holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the ``plot_covariate_groups`` method and give it the covariate of interest, and the values to display.
+
+.. code:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi_dataset = load_rossi()
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+
+    cph.plot_covariate_groups('prio', [0, 5, 10, 15])
+
+.. image:: images/coxph_plot_covarite_groups.png
+
+
 Checking the proportional hazards assumption
 #############################################
 
@@ -765,7 +785,7 @@ From the above output, we can see that subject 1 changed state twice over the ob
 
 One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want to the covariate to reflect how much we have administered since the start. In contrast, a covariate the measure the temperature of the patient is a state update. See :ref:`Example cumulative total using ``add_covariate_to_timeline``` to see an example of this.
 
-For an example of pulling datasets like this from a SQL-store, see :ref:`Example SQL queries and transformations to get time varying data`.
+For an example of pulling datasets like this from a SQL-store, and other helper functions, see :ref:`Example SQL queries and transformations to get time varying data`.
 
 
 Fitting the model and a short note on prediction

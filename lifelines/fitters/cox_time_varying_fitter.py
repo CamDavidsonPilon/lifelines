@@ -13,13 +13,14 @@ from lifelines.fitters import BaseFitter
 from lifelines.utils import inv_normal_cdf, \
     significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
-    check_for_overlapping_intervals, check_complete_separation
+    check_for_overlapping_intervals, check_complete_separation_low_variance,\
+    ConvergenceWarning
 
 
 class CoxTimeVaryingFitter(BaseFitter):
 
     """
-    This class implements fitting Cox's proportional hazard model:
+    This class implements fitting Cox's time-varying proportional hazard model:
 
     h(t|x(t)) = h_0(t)*exp(x(t)'*beta)
 
@@ -64,7 +65,7 @@ class CoxTimeVaryingFitter(BaseFitter):
     def _check_values(df, E):
         # check_for_overlapping_intervals(df) # this is currenty too slow for production.
         check_low_var(df)
-        check_complete_separation(df, E)
+        check_complete_separation_low_variance(df, E)
         pass_for_numeric_dtypes_or_raise(df)
 
     def _compute_standard_errors(self):
@@ -91,13 +92,13 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     @property
     def summary(self):
-        """Summary statistics describing the fit.
+        """
+        Summary statistics describing the fit.
         Set alpha property in the object before calling.
 
-        Returns
-        -------
-        df : pd.DataFrame
-            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
+        Returns:
+            df:.DataFrame, Contains columns coef, exp(coef), se(coef), z, p, lower, upper
+        """
 
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.loc['coef'].values
@@ -116,8 +117,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         Note that data is assumed to be sorted on T!
 
         Parameters:
-            df: (n,d+2) Pandas DataFrame of observations with specific Interval multiindex.
-            initial_beta: (1,d) numpy array of initial starting point for
+            df: (n, d+2) Pandas DataFrame of observations with specific Interval multiindex.
+            initial_beta: (1, d) numpy array of initial starting point for
                           NR algorithm. Default 0.
             step_size: float > 0 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
@@ -135,10 +136,11 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         i = 0
         converging = True
+        ll, previous_ll = 0, 0
 
         if step_size is None:
             # empirically determined
-            step_size = 0.95 if n < 1000 else 0.5
+            step_size = min(0.98, 3.0 / np.log10(n))
 
         while converging:
             i += 1
@@ -161,14 +163,19 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             # convergence criteria
             if norm(delta) < precision:
-                converging = False
+                converging, completed = False, True
             elif i >= 50:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
-                warnings.warn("Newton-Rhapson failed to converge sufficiently in 50 steps.", RuntimeWarning)
-                converging = False
+                converging, completed = False, True
             elif step_size <= 0.0001:
-                converging = False
+                converging, completed = False, False
+            elif abs(ll - previous_ll) < precision:
+                converging, completed = False, True
+            elif abs(ll) < 0.0001 and norm(delta) > 1.0:
+                warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
+                converging, completed = False, False
 
             # Only allow small steps
             if norm(delta) > 10:
@@ -183,17 +190,17 @@ class CoxTimeVaryingFitter(BaseFitter):
         self._score_ = gradient
         self._log_likelihood = ll
         self.event_observed = stop_times_events['event']
-        if show_progress:
+
+        if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
+        if not completed:
+            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
+
         return beta
 
     def _get_gradients(self, df, stops_events, beta):
         """
-        return the gradient, hessian, and log-like
-        """
-        """
-        Calculates the first and second order vector differentials,
-        with respect to beta.
+        Calculates the first and second order vector differentials, with respect to beta.
 
         Returns:
             hessian: (d, d) numpy array,
@@ -220,7 +227,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             phi_i = exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
-            phi_x_x_i = dot(df_at_t.T, phi_i * df_at_t)
+            phi_x_x_i = dot(df_at_t.T, phi_x_i) # dot(df_at_t.T, phi_i * df_at_t)
 
             # Calculate sums of Risk set
             risk_phi += phi_i.sum()
@@ -232,6 +239,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             death_counts = deaths.sum()  # should always be atleast 1.
 
             xi_deaths = df_at_t.loc[deaths]
+
             x_death_sum += xi_deaths.sum(0).values.reshape((1, d))
 
             if death_counts > 1:
@@ -264,11 +272,11 @@ class CoxTimeVaryingFitter(BaseFitter):
 
                 hessian -= (a1 - a2)
 
-                log_lik -= np.log(denom).ravel()[0]
+                log_lik -= np.log(denom)
 
             # Values outside tie sum
             gradient += x_death_sum - partial_gradient
-            log_lik += dot(x_death_sum, beta).ravel()[0]
+            log_lik += dot(x_death_sum, beta)[0][0]
         return hessian, gradient, log_lik
 
     def print_summary(self):

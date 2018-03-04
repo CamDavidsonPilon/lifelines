@@ -140,8 +140,8 @@ def test_qth_survival_times_multi_dim_input():
     sf = np.linspace(1, 0, 50)
     sf_multi_df = pd.DataFrame({'sf': sf, 'sf**2': sf ** 2})
     medians = utils.qth_survival_times(0.5, sf_multi_df)
-    assert medians.loc['sf'][0.5] == 25
-    assert medians.loc['sf**2'][0.5] == 15
+    assert medians['sf'].loc[0.5] == 25
+    assert medians['sf**2'].loc[0.5] == 15
 
 
 def test_qth_survival_time_returns_inf():
@@ -153,10 +153,19 @@ def test_qth_survival_times_with_multivariate_q():
     sf = np.linspace(1, 0, 50)
     sf_multi_df = pd.DataFrame({'sf': sf, 'sf**2': sf ** 2})
 
-    assert_frame_equal(utils.qth_survival_times([0.2, 0.5], sf_multi_df), pd.DataFrame([[40, 25], [28, 15]], columns=[0.2, 0.5], index=['sf', 'sf**2']))
-    assert_frame_equal(utils.qth_survival_times([0.2, 0.5], sf_multi_df['sf']), pd.DataFrame([[40, 25]], columns=[0.2, 0.5], index=['sf']))
-    assert_frame_equal(utils.qth_survival_times(0.5, sf_multi_df), pd.DataFrame([[25], [15]], columns=[0.5], index=['sf', 'sf**2']))
+    assert_frame_equal(utils.qth_survival_times([0.2, 0.5], sf_multi_df), pd.DataFrame([[40, 28], [25, 15]], index=[0.2, 0.5], columns=['sf', 'sf**2']))
+    assert_frame_equal(utils.qth_survival_times([0.2, 0.5], sf_multi_df['sf']), pd.DataFrame([40, 25], index=[0.2, 0.5], columns=['sf']))
+    assert_frame_equal(utils.qth_survival_times(0.5, sf_multi_df), pd.DataFrame([[25, 15]], index=[0.5], columns=['sf', 'sf**2']))
     assert utils.qth_survival_times(0.5, sf_multi_df['sf']) == 25
+
+
+def test_qth_survival_times_with_duplicate_q_returns_valid_index_and_shape():
+    sf = pd.DataFrame(np.linspace(1, 0, 50))
+
+    q = pd.Series([0.5, 0.5, 0.2, 0.0, 0.0])
+    actual = utils.qth_survival_times(q, sf)
+    assert actual.shape[0] == len(q)
+    npt.assert_almost_equal(actual.index.values, q.values)
 
 
 def test_qth_survival_time_with_cdf_instead_of_survival_function():
@@ -465,7 +474,7 @@ def test_concordance_index_fast_is_same_as_slow():
     assert slow_cindex(T, P, E) == fast_cindex(T, P, E)
 
 
-class TestTimeLine(object):
+class TestLongDataFrameUtils(object):
 
     @pytest.fixture
     def seed_df(self):
@@ -648,3 +657,20 @@ class TestTimeLine(object):
             {'id': 1, 'start': 3, 'stop': 5.0, 'cumsum_var4': 3, 'E': True},
         ])
         assert_frame_equal(expected, df, check_like=True)
+
+
+    def test_covariates_from_event_matrix(self):
+        df = pd.DataFrame([
+                [1,   1,    None, 2   ],
+                [2,   None, 5,    None],
+                [3,   3,    3,    7   ]
+             ], columns=['id', 'promotion', 'movement', 'raise'])
+
+        ldf = pd.DataFrame([[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]], columns=['id', 'start', 'stop', 'e'])
+
+        cv = utils.covariates_from_event_matrix(df, 'id')
+        ldf = utils.add_covariate_to_timeline(ldf, cv, 'id', 'duration', 'e', cumulative_sum=True)
+        assert ldf.loc[ldf['id'] == 1]['cumsum_movement'].tolist() == [0, 0, 0]
+        assert ldf.loc[ldf['id'] == 1]['cumsum_promotion'].tolist() == [0, 1, 1]
+        assert ldf.loc[ldf['id'] == 1]['cumsum_raise'].tolist() == [0, 0, 1]
+        assert ldf.loc[ldf['id'] == 1]['start'].tolist() == [0, 1., 2.]

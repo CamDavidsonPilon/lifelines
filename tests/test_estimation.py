@@ -19,7 +19,7 @@ from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg.linalg import LinAlgError
 
-from lifelines.utils import k_fold_cross_validation, StatError
+from lifelines.utils import k_fold_cross_validation, StatError, concordance_index, ConvergenceWarning
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter, CoxTimeVaryingFitter
@@ -27,7 +27,6 @@ from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant
     load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
     load_stanford_heart_transplants
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
-from lifelines.utils import concordance_index
 
 
 @pytest.fixture
@@ -117,9 +116,17 @@ class TestBaseFitter():
 
 class TestUnivariateFitters():
 
-    def test_univarite_fitters_with_survival_function_have_conditional_time_to(self, positive_sample_lifetimes, univariate_fitters):
+    def test_univarite_fitters_with_survival_function_have_conditional_time_to_(self, positive_sample_lifetimes, univariate_fitters):
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0])
+            if hasattr(f, 'survival_function_'):
+                assert all(f.conditional_time_to_event_.index == f.survival_function_.index)
+
+    def test_conditional_time_to_allows_custom_timelines(self, univariate_fitters):
+        t = np.random.binomial(50, 0.4, 100)
+        e = np.random.binomial(1, 0.8, 100)
+        for fitter in univariate_fitters:
+            f = fitter().fit(t, e, timeline=np.linspace(0, 40, 41))
             if hasattr(f, 'survival_function_'):
                 assert all(f.conditional_time_to_event_.index == f.survival_function_.index)
 
@@ -250,6 +257,19 @@ class TestUnivariateFitters():
         for fitter in univariate_fitters:
             with pytest.raises(ValueError):
                 fitter(alpha=95)
+
+    def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, univariate_fitters):
+        T = np.array([1.0, 2.0, 4.0, None, 8.0])
+        for fitter in univariate_fitters:
+            with pytest.raises(TypeError):
+                fitter().fit(T)
+
+    def test_error_is_thrown_if_there_is_nans_in_the_event_col(self, univariate_fitters):
+        T = np.arange(5)
+        E = [1, 0, None, 1, 1]
+        for fitter in univariate_fitters:
+            with pytest.raises(TypeError):
+                fitter().fit(T, E)
 
 
 class TestWeibullFitter():
@@ -444,6 +464,27 @@ class TestKaplanMeierFitter():
         kmf.fit(T, E)
         assert kmf.survival_function_['KM_estimate'].iloc[-1] > 0
 
+    def test_adding_weights_to_KaplanMeierFitter(self):
+        n = 100
+        df = pd.DataFrame()
+        df['T'] = np.random.binomial(40, 0.5, n)
+        df['E'] = np.random.binomial(1, 0.9, n)
+
+        kmf_no_weights = KaplanMeierFitter().fit(df['T'], df['E'])
+
+        df_grouped = df.groupby(['T', 'E']).size().reset_index()
+        kmf_w_weights = KaplanMeierFitter().fit(df_grouped['T'], df_grouped['E'], weights=df_grouped[0])
+
+        assert_frame_equal(kmf_w_weights.survival_function_, kmf_no_weights.survival_function_)
+
+    def test_weights_can_be_floats(self):
+        n = 100
+        T = np.random.binomial(40, 0.5, n)
+        E = np.random.binomial(1, 0.9, n)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            kmf = KaplanMeierFitter().fit(T, E, weights=np.random.random(n))
+            assert True
 
 class TestNelsonAalenFitter():
 
@@ -532,15 +573,33 @@ class TestNelsonAalenFitter():
         assert abs(naf.confidence_interval_['NA_estimate_upper_0.95'].iloc[-1] - 11.315662) < 1e-6
         assert abs(naf.confidence_interval_['NA_estimate_lower_0.95'].iloc[-1] - 6.4537448) < 1e-6
 
+    def test_adding_weights_to_NelsonAalenFitter(self):
+        n = 100
+        df = pd.DataFrame()
+        df['T'] = np.random.binomial(40, 0.5, n)
+        df['E'] = np.random.binomial(1, 0.9, n)
+
+        naf_no_weights = NelsonAalenFitter().fit(df['T'], df['E'])
+
+        df_grouped = df.groupby(['T', 'E']).size().reset_index()
+        naf_w_weights = NelsonAalenFitter().fit(df_grouped['T'], df_grouped['E'], weights=df_grouped[0])
+
+        assert_frame_equal(naf_w_weights.cumulative_hazard_, naf_no_weights.cumulative_hazard_)
+
 
 class TestBreslowFlemingHarringtonFitter():
 
-    def test_BHF_fit(self):
+    def test_BHF_fit_when_KMF_throws_an_error(self):
         bfh = BreslowFlemingHarringtonFitter()
+        kmf = KaplanMeierFitter()
 
         observations = np.array([1,  1,  2, 22, 30, 28, 32, 11, 14, 36, 31, 33, 33, 37, 35, 25, 31,
                                  22, 26, 24, 35, 34, 30, 35, 40, 39,  2])
         births = observations - 1
+
+        with pytest.raises(StatError):
+            kmf.fit(observations, entry=births)
+
         bfh.fit(observations, entry=births)
 
 
@@ -637,6 +696,18 @@ class TestRegressionFitters():
             assert not hasattr(fitter, 'score_')
             fitter.fit(rossi, duration_col='week', event_col='arrest')
             assert hasattr(fitter, 'score_')
+
+    def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, regression_models, rossi):
+        rossi.loc[3, 'week'] = None
+        for fitter in regression_models:
+            with pytest.raises(TypeError):
+                fitter().fit('week', 'arrest')
+
+    def test_error_is_thrown_if_there_is_nans_in_the_event_col(self, regression_models, rossi):
+        rossi.loc[3, 'arrest'] = None
+        for fitter in regression_models:
+            with pytest.raises(TypeError):
+                fitter().fit('week', 'arrest')
 
 
 class TestCoxPHFitter():
@@ -887,7 +958,7 @@ Concordance = 0.640""".strip().split()
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
-    def test_coef_output_against_R_using_weights(self, rossi):
+    def test_coef_output_against_R_using_non_trivial_weights(self, rossi):
         rossi_ = rossi.copy()
         rossi_['weights'] = 1.
         rossi_ = rossi_.groupby(rossi.columns.tolist())['weights'].sum()\
@@ -897,6 +968,19 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(rossi_, duration_col='week', event_col='arrest', weights_col='weights')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
+
+    def test_adding_non_integer_weights_raises_a_warning(self, rossi):
+        rossi['weights'] = np.random.exponential(1, rossi.shape[0])
+
+        cox = CoxPHFitter()
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cox.fit(rossi, 'week', 'arrest', weights_col='weights')
+
+            assert len(w) == 1
+            assert "naive variance estimates" in str(w[0].message)
+
 
     def test_standard_error_coef_output_against_R(self, rossi):
         """
@@ -1156,8 +1240,9 @@ Concordance = 0.640""".strip().split()
                 cox.fit(rossi, 'week', 'arrest')
             except (LinAlgError, ValueError):
                 pass
+
+            w = list(filter(lambda w_: issubclass(w_.category, ConvergenceWarning), w))
             assert len(w) == 2
-            assert issubclass(w[-1].category, RuntimeWarning)
             assert "variance" in str(w[0].message)
 
     def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, rossi):
@@ -1174,8 +1259,32 @@ Concordance = 0.640""".strip().split()
             except LinAlgError:
                 pass
             assert len(w) == 1
-            assert issubclass(w[-1].category, RuntimeWarning)
+            assert issubclass(w[-1].category, ConvergenceWarning)
             assert "complete separation" in str(w[-1].message)
+
+    def test_warning_is_raised_if_complete_seperation_is_present(self):
+        # check for a warning if we have complete seperation
+        cp = CoxPHFitter()
+
+        df = pd.DataFrame.from_records([
+            (-5, 1),
+            (-4, 2),
+            (-3, 3),
+            (-2, 4),
+            (-1, 5),
+            (1, 6),
+            (2, 7),
+            (3, 8),
+            (4, 9),
+        ], columns=['x', 'T'])
+        df['E'] = np.random.binomial(1, 0.9, df.shape[0])
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cp.fit(df, 'T', 'E')
+            assert len(w) == 3
+            assert issubclass(w[0].category, ConvergenceWarning)
+            assert "complete separation" in str(w[0].message)
 
     @pytest.mark.xfail
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
@@ -1376,7 +1485,7 @@ class TestCoxTimeVaryingFitter():
             except (LinAlgError, ValueError):
                 pass
             assert len(w) == 2
-            assert issubclass(w[-1].category, RuntimeWarning)
+            assert issubclass(w[-1].category, ConvergenceWarning)
             assert "variance" in str(w[0].message)
 
     def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, ctv, dfcv):
@@ -1392,8 +1501,8 @@ class TestCoxTimeVaryingFitter():
             except (LinAlgError, ValueError):
                 pass
             assert len(w) == 2
-            assert issubclass(w[-1].category, RuntimeWarning)
-            assert "complete separation" in str(w[-1].message)
+            assert issubclass(w[0].category, ConvergenceWarning)
+            assert "complete separation" in str(w[1].message)
 
     def test_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
@@ -1405,3 +1514,4 @@ class TestCoxTimeVaryingFitter():
         npt.assert_almost_equal(ctv.summary['coef'].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3)
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
+

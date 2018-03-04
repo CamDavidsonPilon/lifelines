@@ -5,7 +5,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import _preprocess_inputs, _additive_estimate, epanechnikov_kernel,\
-    inv_normal_cdf
+    inv_normal_cdf, check_nans
 
 
 class NelsonAalenFitter(UnivariateFitter):
@@ -37,7 +37,7 @@ class NelsonAalenFitter(UnivariateFitter):
             self._additive_f = self._additive_f_discrete
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
-            label='NA_estimate', alpha=None, ci_labels=None):
+            label='NA_estimate', alpha=None, ci_labels=None, weights=None):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -52,13 +52,20 @@ class NelsonAalenFitter(UnivariateFitter):
              alpha for this call to fit only.
           ci_labels: add custom column names to the generated confidence intervals
                 as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+          weights: n array, or pd.Series, of length n, if providing a weighted dataset. For example, instead
+              of providing every subject as a single element of `durations` and `event_observed`, one could
+              weigh subject differently.
 
         Returns:
           self, with new properties like 'cumulative_hazard_'.
 
         """
 
-        v = _preprocess_inputs(durations, event_observed, timeline, entry)
+        check_nans(durations)
+        if event_observed is not None:
+          check_nans(event_observed)
+
+        v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,

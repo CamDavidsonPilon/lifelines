@@ -10,7 +10,31 @@ import pandas as pd
 from pandas import to_datetime
 
 
+# ipython autocomplete will pick these up, which are probably what users only need.
+__all__ = [
+    'qth_survival_times',
+    'qth_survival_time',
+    'median_survival_times',
+    'survival_table_from_events',
+    'datetimes_to_durations',
+    'concordance_index',
+    'k_fold_cross_validation',
+    'to_long_format',
+    'add_covariate_to_timeline',
+    'covariates_from_event_matrix'
+]
+
+
 class StatError(Exception):
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
+class ConvergenceWarning(RuntimeWarning):
 
     def __init__(self, msg):
         self.msg = msg
@@ -33,12 +57,23 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
     """
     q = pd.Series(q)
-    assert (q <= 1).all() and (0 <= q).all(), 'q must be between 0 and 1'
+
+    if not((q <= 1).all() and (0 <= q).all()):
+        raise ValueError('q must be between 0 and 1')
+
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         return survival_functions.apply(lambda s: qth_survival_time(q[0], s, cdf=cdf)).iloc[0]
     else:
-        return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q})
+        #  Typically, one would expect that the output should equal the "height" of q.
+        #  An issue can arise if the Series q contains duplicate values. We handle this un-eligantly.
+        if q.duplicated().any():
+            return pd.DataFrame.from_items([
+                        (_q, survival_functions.apply(lambda s: qth_survival_time(_q, s))) for i, _q in enumerate(q)
+                    ], orient='index', columns=survival_functions.columns)
+        else:
+            return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+
 
 
 def qth_survival_time(q, survival_function, cdf=False):
@@ -73,7 +108,7 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
           when the subject was first observed. A subject's death event is then at [birth times + duration observed].
           Normally set to all zeros, but can be positive or negative.
 
-    Output:
+    Returns:
         - np.array of unique groups
         - dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
         - dataframe of observed count data at event_times for each group, column names are 'observed:<group name>'
@@ -205,43 +240,56 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
         if np.any(birth_times > death_times):
             raise ValueError('birth time must be less than time of death.')
 
-    # deal with deaths and censorships
+    if weights is None:
+        weights = 1
+    else:
+        if (weights.astype(int) != weights).any():
+            warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
+                """, RuntimeWarning)
 
+    # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
-    df[removed] = 1 if weights is None else weights
-    df[observed] = np.asarray(event_observed)
+    df[removed] = weights
+    df[observed] = weights * np.asarray(event_observed)
     death_table = df.groupby("event_at").sum()
     death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
 
     # deal with late births
     births = pd.DataFrame(birth_times, columns=['event_at'])
-    births[entrance] = 1
+    births[entrance] = weights
     births_table = births.groupby('event_at').sum()
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
 
     # group by intervals
     if collapse:
-        event_table = event_table.reset_index()
-
-        # use Freedman-Diaconis rule to determine bin size if user doesn't define intervals
-        if intervals is None:
-            event_max = np.max(event_table['event_at'])
-
-            # need interquartile range for bin width
-            q75, q25 = np.percentile(event_table['event_at'], [75, 25])
-            event_iqr = q75 - q25
-
-            bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1 / 3))
-
-            intervals = np.arange(0, event_max + bin_width, bin_width)
-
-        event_table = event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed': ['sum'],
-                                                                                           'observed': ['sum'],
-                                                                                           'censored': ['sum'],
-                                                                                           'at_risk': ['max']})
+        event_table = _group_event_table_by_intervals(event_table, intervals)
 
     return event_table.astype(int)
+
+
+def _group_event_table_by_intervals(event_table, intervals):
+    event_table = event_table.reset_index()
+
+    # use Freedman-Diaconis rule to determine bin size if user doesn't define intervals
+    if intervals is None:
+        event_max = event_table['event_at'].max()
+
+        # need interquartile range for bin width
+        q75, q25 = np.percentile(event_table['event_at'], [75, 25])
+        event_iqr = q75 - q25
+
+        bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1 / 3))
+
+        intervals = np.arange(0, event_max + bin_width, bin_width)
+
+    return event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed': ['sum'],
+                                                                                'observed': ['sum'],
+                                                                                'censored': ['sum'],
+                                                                                'at_risk': ['max']})
 
 
 def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
@@ -633,7 +681,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     return estimate_, var_
 
 
-def _preprocess_inputs(durations, event_observed, timeline, entry):
+def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     """
     Cleans and confirms input to what lifelines expects downstream
     """
@@ -650,7 +698,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry):
     if entry is not None:
         entry = np.asarray(entry).reshape((n,))
 
-    event_table = survival_table_from_events(durations, event_observed, entry)
+    event_table = survival_table_from_events(durations, event_observed, entry, weights=weights)
     if timeline is None:
         timeline = event_table.index.values
     else:
@@ -975,19 +1023,37 @@ def check_low_var(df, prescript="", postscript=""):
         warning_text = "%sColumn(s) %s have very low variance. \
 This may harm convergence. Try dropping this redundant column before fitting \
 if convergence fails.%s" % (prescript, cols, postscript)
-        warnings.warn(warning_text, RuntimeWarning)
+        warnings.warn(warning_text, ConvergenceWarning)
 
 
-def check_complete_separation(df, events):
+def check_complete_separation_low_variance(df, events):
     events = events.astype(bool)
     rhs = df.columns[_low_var(df.loc[events])]
     lhs = df.columns[_low_var(df.loc[~events])]
     inter = lhs.intersection(rhs).tolist()
     if inter:
         warning_text = "Column(s) %s have very low variance when conditioned on \
-death event or not. This may harm convergence. This is a form of 'complete separation'. \
+death event or not. This may harm convergence. This could be a form of 'complete separation'. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
-        warnings.warn(warning_text, RuntimeWarning)
+        warnings.warn(warning_text, ConvergenceWarning)
+
+def check_complete_separation_close_to_perfect_correlation(df, durations):
+    THRESHOLD = 0.99
+    for col, series in df.iteritems():
+        if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
+            warning_text = "Column %s has high correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (col)
+            warnings.warn(warning_text, ConvergenceWarning)
+
+
+def check_complete_separation(df, events, durations):
+    check_complete_separation_low_variance(df, events)
+    check_complete_separation_close_to_perfect_correlation(df, durations)
+
+
+def check_nans(array):
+    if pd.isnull(array).any():
+        raise TypeError("NaNs were detected in the duration_col and/or the event_col")
 
 
 def to_long_format(df, duration_col):
@@ -1004,6 +1070,11 @@ def to_long_format(df, duration_col):
 
 def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col, add_enum=False, overwrite=True, cumulative_sum=False, cumulative_sum_prefix="cumsum_"):
     """
+    This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
+    to be used iteratively as one adds more and more covariates to track over time. If beginning to use this function, it is recommend
+    to view the docs at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-for-time-varying-regression.
+
+
     Parameters:
         long_form_df: a DataFrame that has the intial or intermediate "long" form of time-varying observations. Must contain
             columns id_col, 'start', 'stop', and event_col. See function `to_long_format` to transform data into long form.
@@ -1108,3 +1179,38 @@ known observation. This could case null values in the resulting dataframe."
     long_form_df = long_form_df.groupby(id_col, group_keys=False)\
                                .apply(expand, cvs=cvs)
     return long_form_df.reset_index(drop=True)
+
+
+def covariates_from_event_matrix(df, id_col):
+    """
+    This is a helper function to handle binary event datastreams in a specific format and convert
+    it to a format that add_covariate_to_timeline will accept. For example, suppose you have a
+    dataset that looks like:
+
+       id  promotion  movement  raise
+    0   1        1.0       NaN    2.0
+    1   2        NaN       5.0    NaN
+    2   3        3.0       5.0    7.0
+
+
+    where the values (aside from the id column) represent when an event occured for a specific user, relative
+    to the subject's birth/entry. This is a common way format to pull data from a SQL table. We call this a duration matrix, and we
+    want to convert this dataframe to a format that can be included in a long form dataframe
+    (see add_covariate_to_timeline for more details on this).
+
+    The duration matrix should have 1 row per subject (but not necessarily all subjects).
+
+    Example:
+
+        cv = covariates_from_event_matrix(duration_df, 'id')
+        long_form_df = add_covariate_to_timeline(long_form_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
+
+    Parameters:
+        id_col: the column in long_form_df and cv representing a unique identifier for subjects.
+
+    """
+    df = df.set_index(id_col)
+    df = df.stack().reset_index()
+    df.columns = [id_col, 'event', 'duration']
+    df['_counter'] = 1
+    return df.pivot_table(index=[id_col, 'duration'], columns='event', fill_value=0)['_counter'].reset_index()

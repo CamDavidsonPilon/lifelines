@@ -389,7 +389,7 @@ class AalenAdditiveFitter(BaseFitter):
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
         index = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X)[index])
+        return qth_survival_times(p, self.predict_survival_function(X)[index]).T
 
     def predict_median(self, X):
         """

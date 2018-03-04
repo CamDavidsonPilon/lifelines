@@ -15,7 +15,7 @@ from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
-    check_complete_separation, StatError
+    check_complete_separation, check_nans, StatError, ConvergenceWarning
 
 
 class CoxPHFitter(BaseFitter):
@@ -106,10 +106,16 @@ class CoxPHFitter(BaseFitter):
 
         if weights_col:
             weights = df.pop(weights_col).values
+            if (weights.astype(int) != weights).any():
+                warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+                    """, RuntimeWarning)
+
         else:
             weights = np.ones(self._n_examples)
 
-        self._check_values(df, E)
+        self._check_values(df, T, E)
         df = df.astype(float)
 
         # save fitting data for later
@@ -144,7 +150,7 @@ class CoxPHFitter(BaseFitter):
         return self
 
     def _newton_rhaphson(self, X, T, E, weights=None, initial_beta=None, step_size=None,
-                         precision=10e-6, show_progress=True):
+                         precision=10e-6, show_progress=True, max_steps=50):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -160,10 +166,14 @@ class CoxPHFitter(BaseFitter):
             step_size: float > 0.001 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
+            show_progress: since the fitter is iterative, show convergence
+                     diagnostics.
+            max_steps: the maximum number of interations of the Newton-Rhaphson algorithm.
 
         Returns:
             beta: (1,d) numpy array.
         """
+        self.path = []
         assert precision <= 1., "precision must be less than or equal to 1."
         n, d = X.shape
 
@@ -175,8 +185,8 @@ class CoxPHFitter(BaseFitter):
             beta = np.zeros((d, 1))
 
         if step_size is None:
-            # empirically determined
-            step_size = 0.95 if n < 800 else 0.5
+            # "empirically" determined
+            step_size = min(0.98, 3.0 / np.log10(n))
 
         # Method of choice is just efron right now
         if self.tie_method == 'Efron':
@@ -186,9 +196,11 @@ class CoxPHFitter(BaseFitter):
 
         i = 0
         converging = True
+        warn_ll = True
         ll, previous_ll = 0, 0
 
         while converging:
+            self.path.append(beta.copy())
             i += 1
             if self.strata is None:
                 h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights)
@@ -210,26 +222,30 @@ class CoxPHFitter(BaseFitter):
 
             delta = solve(-h, step_size * g.T)
             if np.any(np.isnan(delta)):
-                raise ValueError("delta contains nan value(s). Convergence halted.")
+                raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+""")
 
             # Save these as pending result
             hessian, gradient = h, g
 
             if show_progress:
                 print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
-
             # convergence criteria
             if norm(delta) < precision:
-                converging = False
+                converging, completed = False, True
             elif abs(ll - previous_ll) < precision:
-                converging = False
-            elif i >= 50:
+                converging, completed = False, True
+            elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
-                warnings.warn("Newton-Rhapson failed to converge sufficiently in 50 steps.", RuntimeWarning)
-                converging = False
-            elif step_size <= 0.0001:
-                converging = False
+                converging, completed = False, False
+            elif step_size <= 0.00001:
+                converging, completed = False, False
+            elif abs(ll) < 0.0001 and norm(delta) > 1.0:
+                warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
+                converging, completed = False, False
 
             # Only allow small steps
             if norm(delta) > 10.0:
@@ -244,8 +260,12 @@ class CoxPHFitter(BaseFitter):
         self._hessian_ = hessian
         self._score_ = gradient
         self._log_likelihood = ll
-        if show_progress:
+
+        if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
+        if not completed:
+            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
+
         return beta
 
     def _get_efron_values(self, X, beta, T, E, weights):
@@ -291,7 +311,7 @@ class CoxPHFitter(BaseFitter):
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
             phi_x_i = phi_i * xi
-            phi_x_x_i = dot(xi.T, phi_i * xi)
+            phi_x_x_i = dot(xi.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi += w * phi_i
@@ -333,11 +353,11 @@ class CoxPHFitter(BaseFitter):
 
                 hessian -= (a1 - a2)
 
-                log_lik -= np.log(denom).ravel()[0]
+                log_lik -= np.log(denom)[0][0]
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
-            log_lik += dot(x_tie_sum, beta).ravel()[0]
+            log_lik += dot(x_tie_sum, beta)[0][0]
 
             # reset tie values
             tie_count = 0
@@ -345,17 +365,18 @@ class CoxPHFitter(BaseFitter):
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
-
         return hessian, gradient, log_lik
 
     def _compute_baseline_cumulative_hazard(self):
         return self.baseline_hazard_.cumsum()
 
     @staticmethod
-    def _check_values(df, E):
-        check_low_var(df)
-        check_complete_separation(df, E)
+    def _check_values(df, T, E):
         pass_for_numeric_dtypes_or_raise(df)
+        check_nans(T)
+        check_nans(E)
+        check_low_var(df)
+        check_complete_separation(df, E, T)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
@@ -528,7 +549,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
         subjects = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X)[subjects])
+        return qth_survival_times(p, self.predict_survival_function(X)[subjects]).T
 
     def predict_median(self, X):
         """
@@ -587,7 +608,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def plot(self, standardized=False, **kwargs):
         """
-        standardized: standardize each estimated coefficient and confidence interval endpoints by the standard error of the estimate.
+        Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
+
+        Parameters:
+            standardized: standardize each estimated coefficient and confidence interval
+                          endpoints by the standard error of the estimate.
+
+        Returns:
+            ax: the matplotlib axis that be edited.
 
         """
         from matplotlib import pyplot as plt
@@ -615,4 +643,34 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         tick_labels = [c + significance_code(p).strip() for (c, p) in summary['p'][order].iteritems()]
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
+        return ax
+
+    def plot_covariate_groups(self, covariate, groups, **kwargs):
+        """
+        Produces a visual representation comparing the baseline survival curve of the model versus
+        what happens when a covariate is varied over values in a group. This is useful to compare
+        subjects' survival as we vary a single covariate, all else being held equal. The baseline survival
+        curve is equal to the predicted survival curve at all average values in the original dataset.
+
+        Parameters:
+            covariate: a string of the covariate in the original dataset that we wish to vary.
+            groups: an iterable of the values we wish the covariate to take on.
+
+        Returns:
+            ax: the matplotlib axis that be edited.
+        """
+        from matplotlib import pyplot as plt
+
+        if covariate not in self.summary.index:
+            raise KeyError('covariate `%s` is not present in the original dataset' % covariate)
+
+        ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
+        x_bar = self._norm_mean.to_frame().T
+        X = pd.concat([x_bar] * len(groups))
+        X.index = ['%s=%s' % (covariate, g) for g in groups]
+        X[covariate] = groups
+
+
+        self.predict_survival_function(X).plot(ax=ax)
+        self.baseline_survival_.plot(ax=ax, ls='--')
         return ax

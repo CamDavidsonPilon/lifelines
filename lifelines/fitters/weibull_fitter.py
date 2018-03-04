@@ -5,7 +5,7 @@ import pandas as pd
 
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import inv_normal_cdf
+from lifelines.utils import inv_normal_cdf, check_nans
 
 
 def _negative_log_likelihood(lambda_rho, T, E):
@@ -81,6 +81,11 @@ class WeibullFitter(UnivariateFitter):
           self, with new properties like `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
 
         """
+
+        check_nans(durations)
+        if event_observed is not None:
+          check_nans(event_observed)
+
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
