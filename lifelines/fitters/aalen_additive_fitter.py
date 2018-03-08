@@ -183,11 +183,12 @@ class AalenAdditiveFitter(BaseFitter):
             relevant_individuals = (ids == id)
             assert relevant_individuals.sum() == 1.
 
-            # perform linear regression step.
-            try:
-                v, V = lr(df.values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
-            except LinAlgError:
-                print("Linear regression error. Try increasing the penalizer term.")
+        # perform linear regression step.
+        # BUGFIX: This shouldn't be indented
+        try:
+            v, V = lr(df.values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
+        except LinAlgError:
+            print("Linear regression error. Try increasing the penalizer term.")
 
             hazards_.loc[time, id] = v.T
             variance_.loc[time, id] = V[:, relevant_individuals][:, 0] ** 2
@@ -280,6 +281,7 @@ class AalenAdditiveFitter(BaseFitter):
                 v, V = lr(wp[time].values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
+
 
             hazards_.loc[id, time] = v.T
             variance_.loc[id, time] = V[:, relevant_individuals][:, 0] ** 2
@@ -403,7 +405,7 @@ class AalenAdditiveFitter(BaseFitter):
 
     def predict_expectation(self, X):
         """
-        Compute the expected lifetime, E[T], using covarites X.
+        Compute the expected lifetime, E[T], using covariates X.
 
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
@@ -414,6 +416,7 @@ class AalenAdditiveFitter(BaseFitter):
         index = _get_index(X)
         t = self.cumulative_hazards_.index
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
+
 
     def plot(self, loc=None, iloc=None, columns=[], legend=True, **kwargs):
         """"
