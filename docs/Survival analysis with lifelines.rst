@@ -259,7 +259,7 @@ see that very few leaders make it past 20 years in office. Of course,
 like all good stats, we need to report how uncertain we are about these
 point estimates, i.e., we need confidence intervals. They are computed in
 the call to ``fit``, and located under the ``confidence_interval_``
-property. (The mathematics are found in `these notes <http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdf>`_.)
+property. (The method uses exponential Greenwood confidence interval. The mathematics are found in `these notes <https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf>`_.)
 
 .. math::  S(t) = Pr( T > t) 
 
