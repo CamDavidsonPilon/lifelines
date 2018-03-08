@@ -90,7 +90,9 @@ class KaplanMeierFitter(UnivariateFitter):
         return self
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
-        # See http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes2.pdf
+        # This method calculates confidence intervals using the exponential Greenwood formula.
+        # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
+        
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
         v = np.log(self.__estimate.values)
