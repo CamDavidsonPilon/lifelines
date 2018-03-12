@@ -84,6 +84,8 @@ class CoxPHFitter(BaseFitter):
             self, with additional properties: hazards_
 
         """
+        #import pdb
+        #pdb.set_trace()
         df = df.copy()
 
         # Sort on time
@@ -105,15 +107,15 @@ class CoxPHFitter(BaseFitter):
             del df[event_col]
 
         if weights_col:
-            weights = df.pop(weights_col).values
+            weights = df.pop(weights_col)
             if (weights.astype(int) != weights).any():
-                warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+                warnings.warn("""It looks like your weights are not integers, possibly propensity scores then?
 It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
                     """, RuntimeWarning)
 
         else:
-            weights = np.ones(self._n_examples)
+            weights = pd.DataFrame(np.ones((self._n_examples,1)), index=df.index)
 
         self._check_values(df, T, E)
         df = df.astype(float)
@@ -209,8 +211,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for strata in np.unique(X.index):
-                    stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
-                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, weights)
+                    stratified_X, stratified_T, stratified_E, stratified_W = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]], weights.loc[[strata]]
+                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, stratified_W.values)
                     g += _g
                     h += _h
                     ll += _ll
@@ -295,73 +297,83 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_lik = 0
 
         # Init risk and tie sums to zero
-        x_tie_sum = np.zeros((1, d))
+        x_death_sum = np.zeros((1, d))
         risk_phi, tie_phi = 0, 0
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
-        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
+        risk_phi_x_x, tie_phi_x_x, phi_x_x_i = np.zeros((d, d)), np.zeros((d, d)), np.empty((d, d))
 
         # Init number of ties
         tie_count = 0
         # Iterate backwards to utilize recursive relationship
-        for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
-            # Doing it like this to preserve shape
-            xi = X[i:i + 1]
-            w = weights[i]
+        #import pdb
+        #pdb.set_trace()
+        #for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
+        unique_times = np.unique(T)
+        for ti in unique_times[::-1]:
+            ix = (T == ti)
+            xi = X[ix, :]
+            ei = E[ix]
+            w = weights[ix]
+
 
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
             phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_x_i)
+            #import pdb
+            #pdb.set_trace()
 
             # Calculate sums of Risk set
-            risk_phi += w * phi_i
-            risk_phi_x += w * phi_x_i
-            risk_phi_x_x += w * phi_x_x_i
-            # Calculate sums of Ties, if this is an event
-            if ei:
-                x_tie_sum += w * xi
-                tie_phi += w * phi_i
-                tie_phi_x += w * phi_x_i
-                tie_phi_x_x += w * phi_x_x_i
+            risk_phi += phi_i.sum()
+            risk_phi_x += phi_x_i.sum(0).reshape((1, d))
+            risk_phi_x_x += phi_x_x_i
 
-                # Keep track of count
-                tie_count += int(w)
+            # Calculate sums of Ties
+            death_counts = ei.sum()
 
-            if i > 0 and T[i - 1] == ti:
-                # There are more ties/members of the risk set
-                continue
-            elif tie_count == 0:
-                # Only censored with current time, move on
-                continue
+            if death_counts > 0:
+                x_death_sum += xi[ei].sum(0).reshape((1, d))
+                tie_phi += phi_i[ei].sum()
+                tie_phi_x += phi_x_i[ei].sum(0).reshape((1, d))
+                tie_phi_x_x += dot(xi[ei].T, phi_x_i[ei])
+
 
             # There was atleast one event and no more ties remain. Time to sum.
             partial_gradient = np.zeros((1, d))
 
-            for l in range(tie_count):
-                c = l / tie_count
+            for l in range(death_counts):
 
-                denom = (risk_phi - c * tie_phi)
-                z = (risk_phi_x - c * tie_phi_x)
+                if death_counts > 1:
+                    c = l / death_counts
+                    denom = (risk_phi - c * tie_phi)
+                    z = (risk_phi_x - c * tie_phi_x)
+                    # Hessian
+                    a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
+                else:
+                    denom = risk_phi
+                    z = risk_phi_x
+                    # Hessian
+                    a1 = risk_phi_x_x / denom
+
 
                 # Gradient
                 partial_gradient += z / denom
                 # Hessian
-                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
                 # In case z and denom both are really small numbers,
                 # make sure to do division before multiplications
                 a2 = dot(z.T / denom, z / denom)
 
                 hessian -= (a1 - a2)
 
-                log_lik -= np.log(denom)[0][0]
+                log_lik -= np.log(denom)
 
             # Values outside tie sum
-            gradient += x_tie_sum - partial_gradient
-            log_lik += dot(x_tie_sum, beta)[0][0]
+            gradient += x_death_sum - partial_gradient
+            log_lik += dot(x_death_sum, beta)[0][0]
 
             # reset tie values
             tie_count = 0
-            x_tie_sum = np.zeros((1, d))
+            x_death_sum = np.zeros((1, d))
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
@@ -372,6 +384,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     @staticmethod
     def _check_values(df, T, E):
+        #import pdb
+        #pdb.set_trace()
         pass_for_numeric_dtypes_or_raise(df)
         check_nans(T)
         check_nans(E)
@@ -463,13 +477,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
+        This is equivalent to R's linear.predictors.
+        Returns the log of the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to \beta (X - \bar{X})
 
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
-
-        Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \beta X
         """
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.columns
@@ -486,7 +500,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             same order as the training data.
 
         Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
-        of R's predict.coxph. Equal to \beta X - \beta \bar{X}
+        of R's predict.coxph. Equal to \beta X - \beta \bar{X_{train}}
         """
 
         return self.predict_log_partial_hazard(X) - self._train_log_partial_hazard.squeeze()
