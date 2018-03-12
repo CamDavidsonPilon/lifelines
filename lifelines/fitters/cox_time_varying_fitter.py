@@ -213,7 +213,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         gradient = np.zeros((1, d))
         log_lik = 0
 
-        unique_death_times = np.sort(stops_events['stop'].loc[stops_events['event']].unique())
+        unique_death_times = np.unique(stops_events['stop'].loc[stops_events['event']])
 
         for t in unique_death_times:
             x_death_sum = np.zeros((1, d))

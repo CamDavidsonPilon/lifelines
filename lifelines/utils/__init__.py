@@ -1041,6 +1041,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         warnings.warn(warning_text, ConvergenceWarning)
 
 def check_complete_separation_close_to_perfect_correlation(df, durations):
+    # slow for many columns
     THRESHOLD = 0.99
     for col, series in df.iteritems():
         if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
