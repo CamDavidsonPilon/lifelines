@@ -1218,3 +1218,47 @@ def covariates_from_event_matrix(df, id_col):
     df.columns = [id_col, 'event', 'duration']
     df['_counter'] = 1
     return df.pivot_table(index=[id_col, 'duration'], columns='event', fill_value=0)['_counter'].reset_index()
+
+
+
+class StepSizer():
+
+    def __init__(self, initial_step_size):
+        initial_step_size = coalesce(initial_step_size, 0.95)
+        self.initial_step_size = initial_step_size
+        self.step_size = initial_step_size
+        self.temper_back_up = False
+        self.norm_of_deltas = []
+
+    def update(self, norm_of_delta):
+        SCALE = 1.2
+        LOOKBACK = 3
+
+        self.norm_of_deltas.append(norm_of_delta)
+
+        # Only allow small steps
+        if norm_of_delta >= 15.0:
+            self.step_size *= 0.25
+            self.temper_back_up = True
+        elif 15.0 > norm_of_delta > 5.0:
+            self.step_size *= 0.75
+            self.temper_back_up = True
+
+        # speed up convergence by increasing step size again
+        if self.temper_back_up:
+            self.step_size = min(self.step_size * SCALE, self.initial_step_size)
+
+        # recent non-monotonically decreasing is a concern
+        if len(self.norm_of_deltas) >= LOOKBACK and \
+            np.any(np.diff(self.norm_of_deltas[-LOOKBACK:]) > 0):
+            self.step_size *= 0.98
+
+        # recent monotonically decreasing is good though
+        if len(self.norm_of_deltas) >= LOOKBACK and \
+            np.all(np.diff(self.norm_of_deltas[-LOOKBACK:]) < 0):
+            self.step_size = min(self.step_size * SCALE, 0.95)
+
+        return self
+
+    def next(self):
+        return self.step_size

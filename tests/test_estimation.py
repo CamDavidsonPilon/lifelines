@@ -813,7 +813,7 @@ Concordance = 0.640""".strip().split()
 
     def test_efron_newtons_method(self, data_nus):
         newton = CoxPHFitter()._newton_rhaphson
-        X, T, E, W = data_nus[['x']], data_nus['t'], data_nus['E'], np.ones_like(data_nus['t'])
+        X, T, E, W = data_nus[['x']], data_nus['t'], data_nus['E'], pd.Series(np.ones_like(data_nus['t']))
         assert np.abs(newton(X, T, E, W)[0][0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus):
