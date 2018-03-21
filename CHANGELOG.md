@@ -1,5 +1,10 @@
 ### Changelogs
 
+#### 0.15.0
+ - even smarter `step_size` calculations for iterative optimizations. 
+ - fixed bug with using weights and strata in `CoxPHFitter`
+
+
 #### 0.14.0
  - adding `plot_covariate_groups` to `CoxPHFitter` to visualize what happens to survival as we vary a covariate, all else being equal.
  - `utils` functions like `qth_survival_times` and `median_survival_times` now return the transpose of the DataFrame compared to previous version of lifelines. The reason for this is that we often treat survival curves as columns in DataFrames, and functions of the survival curve as index (ex: KaplanMeierFitter.survival_function_ returns a survival curve _at_ time _t_).
