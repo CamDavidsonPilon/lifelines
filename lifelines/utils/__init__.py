@@ -1220,8 +1220,18 @@ def covariates_from_event_matrix(df, id_col):
     return df.pivot_table(index=[id_col, 'duration'], columns='event', fill_value=0)['_counter'].reset_index()
 
 
-
 class StepSizer():
+    """
+    This class abstracts complicated step size logic out of the fitters. The API is as follows:
+
+    > step_sizer = StepSizer(initial_step_size)
+    > step_size = step_sizer.next()
+    > step_sizer.update(some_convergence_norm)
+    > step_size = step_sizer.next()
+
+
+    ATM it contains lots of "magic constants"
+    """
 
     def __init__(self, initial_step_size):
         initial_step_size = coalesce(initial_step_size, 0.95)
@@ -1250,15 +1260,19 @@ class StepSizer():
 
         # recent non-monotonically decreasing is a concern
         if len(self.norm_of_deltas) >= LOOKBACK and \
-            np.any(np.diff(self.norm_of_deltas[-LOOKBACK:]) > 0):
+            not self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
             self.step_size *= 0.98
 
         # recent monotonically decreasing is good though
         if len(self.norm_of_deltas) >= LOOKBACK and \
-            np.all(np.diff(self.norm_of_deltas[-LOOKBACK:]) < 0):
+            self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
             self.step_size = min(self.step_size * SCALE, 0.95)
 
         return self
+
+    @staticmethod
+    def _is_monotonically_decreasing(array):
+        return np.all(np.diff(array) < 0)
 
     def next(self):
         return self.step_size
