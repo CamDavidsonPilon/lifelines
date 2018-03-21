@@ -2,6 +2,7 @@
 from __future__ import print_function
 from __future__ import division
 
+import time
 import warnings
 import numpy as np
 import pandas as pd
@@ -15,7 +16,10 @@ from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
-    check_complete_separation, check_nans, StatError, ConvergenceWarning
+    check_complete_separation, check_nans, StatError, ConvergenceWarning,\
+    StepSizer
+
+
 
 
 class CoxPHFitter(BaseFitter):
@@ -186,9 +190,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         else:
             beta = np.zeros((d, 1))
 
-        if step_size is None:
-            # "empirically" determined
-            step_size = min(0.98, 3.0 / np.log10(n))
+        step_sizer = StepSizer(step_size)
+        step_size = step_sizer.next()
 
         # Method of choice is just efron right now
         if self.tie_method == 'Efron':
@@ -200,12 +203,13 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         converging = True
         warn_ll = True
         ll, previous_ll = 0, 0
+        start = time.time()
 
         while converging:
             self.path.append(beta.copy())
             i += 1
             if self.strata is None:
-                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights)
+                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights.values)
             else:
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
@@ -232,7 +236,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             hessian, gradient = h, g
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
             # convergence criteria
             if norm(delta) < precision:
                 converging, completed = False, True
@@ -249,12 +253,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
                 converging, completed = False, False
 
-            # Only allow small steps
-            if norm(delta) > 10.0:
-                step_size *= 0.5
-
-            # temper the step size down.
-            step_size *= 0.995
+            step_size = step_sizer.update(norm(delta)).next()
 
             beta += delta
             previous_ll = ll
@@ -274,17 +273,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Calculates the first and second order vector differentials,
         with respect to beta.
-
         Note that X, T, E are assumed to be sorted on T!
-
         Parameters:
             X: (n,d) numpy array of observations.
             beta: (1, d) numpy array of coefficients.
             T: (n) numpy array representing observed durations.
             E: (n) numpy array representing death events.
             weights: (n) an array representing weights per observation.
-
-
         Returns:
             hessian: (d, d) numpy array,
             gradient: (1, d) numpy array
@@ -297,87 +292,78 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_lik = 0
 
         # Init risk and tie sums to zero
-        x_death_sum = np.zeros((1, d))
+        x_tie_sum = np.zeros((1, d))
         risk_phi, tie_phi = 0, 0
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
-        risk_phi_x_x, tie_phi_x_x, phi_x_x_i = np.zeros((d, d)), np.zeros((d, d)), np.empty((d, d))
+        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         # Init number of ties
         tie_count = 0
         # Iterate backwards to utilize recursive relationship
-        #import pdb
-        #pdb.set_trace()
-        #for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
-        unique_times = np.unique(T)
-        for ti in unique_times[::-1]:
-            ix = (T == ti)
-            xi = X[ix, :]
-            ei = E[ix]
-            w = weights[ix]
-
+        for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
+            # Doing it like this to preserve shape
+            xi = X[i:i + 1]
+            w = weights[i]
 
             # Calculate phi values
             phi_i = exp(dot(xi, beta))
             phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_x_i)
-            #import pdb
-            #pdb.set_trace()
 
             # Calculate sums of Risk set
-            risk_phi += phi_i.sum()
-            risk_phi_x += phi_x_i.sum(0).reshape((1, d))
-            risk_phi_x_x += phi_x_x_i
+            risk_phi += w * phi_i
+            risk_phi_x += w * phi_x_i
+            risk_phi_x_x += w * phi_x_x_i
+            # Calculate sums of Ties, if this is an event
+            if ei:
+                x_tie_sum += w * xi
+                tie_phi += w * phi_i
+                tie_phi_x += w * phi_x_i
+                tie_phi_x_x += w * phi_x_x_i
 
-            # Calculate sums of Ties
-            death_counts = ei.sum()
+                # Keep track of count
+                tie_count += int(w)
 
-            if death_counts > 0:
-                x_death_sum += xi[ei].sum(0).reshape((1, d))
-                tie_phi += phi_i[ei].sum()
-                tie_phi_x += phi_x_i[ei].sum(0).reshape((1, d))
-                tie_phi_x_x += dot(xi[ei].T, phi_x_i[ei])
-
+            if i > 0 and T[i - 1] == ti:
+                # There are more ties/members of the risk set
+                continue
+            elif tie_count == 0:
+                # Only censored with current time, move on
+                continue
 
             # There was atleast one event and no more ties remain. Time to sum.
             partial_gradient = np.zeros((1, d))
 
-            for l in range(death_counts):
+            for l in range(tie_count):
+                c = l / tie_count
 
-                if death_counts > 1:
-                    c = l / death_counts
-                    denom = (risk_phi - c * tie_phi)
-                    z = (risk_phi_x - c * tie_phi_x)
-                    # Hessian
-                    a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
-                else:
-                    denom = risk_phi
-                    z = risk_phi_x
-                    # Hessian
-                    a1 = risk_phi_x_x / denom
-
+                denom = (risk_phi - c * tie_phi)
+                z = (risk_phi_x - c * tie_phi_x)
 
                 # Gradient
                 partial_gradient += z / denom
                 # Hessian
+                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
                 # In case z and denom both are really small numbers,
                 # make sure to do division before multiplications
                 a2 = dot(z.T / denom, z / denom)
 
                 hessian -= (a1 - a2)
 
-                log_lik -= np.log(denom)
+                log_lik -= np.log(denom)[0][0]
 
             # Values outside tie sum
-            gradient += x_death_sum - partial_gradient
-            log_lik += dot(x_death_sum, beta)[0][0]
+            gradient += x_tie_sum - partial_gradient
+            log_lik += dot(x_tie_sum, beta)[0][0]
 
             # reset tie values
             tie_count = 0
-            x_death_sum = np.zeros((1, d))
+            x_tie_sum = np.zeros((1, d))
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
         return hessian, gradient, log_lik
+
 
     def _compute_baseline_cumulative_hazard(self):
         return self.baseline_hazard_.cumsum()
