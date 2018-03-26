@@ -1243,6 +1243,10 @@ class StepSizer():
 
         self.norm_of_deltas.append(norm_of_delta)
 
+        # speed up convergence by increasing step size again
+        if self.temper_back_up:
+            self.step_size = min(self.step_size * SCALE, self.initial_step_size)
+
         # Only allow small steps
         if norm_of_delta >= 15.0:
             self.step_size *= 0.25
@@ -1251,9 +1255,6 @@ class StepSizer():
             self.step_size *= 0.75
             self.temper_back_up = True
 
-        # speed up convergence by increasing step size again
-        if self.temper_back_up:
-            self.step_size = min(self.step_size * SCALE, self.initial_step_size)
 
         # recent non-monotonically decreasing is a concern
         if len(self.norm_of_deltas) >= LOOKBACK and \
