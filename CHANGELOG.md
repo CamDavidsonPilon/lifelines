@@ -1,8 +1,10 @@
 ### Changelogs
 
 #### 0.15.0
- - even smarter `step_size` calculations for iterative optimizations. 
  - fixed bug with using weights and strata in `CoxPHFitter`
+ - Performance optimizations in `CoxPHFitter` for up to 40% faster completion of `fit`.
+    - even smarter `step_size` calculations for iterative optimizations. 
+    - simple code optimizations & cleanup in specific hot spots.
 
 
 #### 0.14.0
