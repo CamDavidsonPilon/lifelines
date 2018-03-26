@@ -375,8 +375,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     @staticmethod
     def _check_values(df, T, E):
-        #import pdb
-        #pdb.set_trace()
         pass_for_numeric_dtypes_or_raise(df)
         check_nans(T)
         check_nans(E)
