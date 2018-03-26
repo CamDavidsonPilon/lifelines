@@ -299,27 +299,32 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # Init number of ties
         tie_count = 0
+
         # Iterate backwards to utilize recursive relationship
-        for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
+        for i in range(n - 1, -1, -1):
             # Doing it like this to preserve shape
+            ti = T[i]
+            ei = E[i]
             xi = X[i:i + 1]
             w = weights[i]
 
             # Calculate phi values
-            phi_i = exp(dot(xi, beta))
+            phi_i = w * exp(dot(xi, beta))
             phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_x_i)
 
+
             # Calculate sums of Risk set
-            risk_phi += w * phi_i
-            risk_phi_x += w * phi_x_i
-            risk_phi_x_x += w * phi_x_x_i
+            risk_phi += phi_i
+            risk_phi_x += phi_x_i
+            risk_phi_x_x += phi_x_x_i
+
             # Calculate sums of Ties, if this is an event
             if ei:
                 x_tie_sum += w * xi
-                tie_phi += w * phi_i
-                tie_phi_x += w * phi_x_i
-                tie_phi_x_x += w * phi_x_x_i
+                tie_phi += phi_i
+                tie_phi_x += phi_x_i
+                tie_phi_x_x += phi_x_x_i
 
                 # Keep track of count
                 tie_count += int(w)
