@@ -50,7 +50,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.nn_cumulative_hazard = nn_cumulative_hazard
 
     def fit(self, df, duration_col, event_col=None,
-            timeline=None, id_col=None, show_progress=True):
+            timeline=None, id_col=None, show_progress=False):
         """
         Perform inference on the coefficients of the Aalen additive model.
 
@@ -141,7 +141,7 @@ class AalenAdditiveFitter(BaseFitter):
         T = pd.Series(df[duration_col].values, index=ids)
 
         df = df.set_index(id_col)
-        pass_for_numeric_dtypes_or_raise(df)
+        self._check_values(df)
 
         ix = T.argsort()
         T, C = T.iloc[ix], C.iloc[ix]
@@ -167,21 +167,18 @@ class AalenAdditiveFitter(BaseFitter):
         t = T.iloc[0]
         i = 0
 
-        for id, time in T.iteritems():  # should be sorted.
-
+        for id_, time in T.iteritems():  # should be sorted.
             if t != time:
-                assert t < time
                 # remove the individuals from the previous loop.
                 df.iloc[to_remove] = 0.
                 to_remove = []
                 t = time
 
-            to_remove.append(id)
-            if C[id] == 0:
+            to_remove.append(id_)
+            if C[id_] == 0:
                 continue
 
-            relevant_individuals = (ids == id)
-            assert relevant_individuals.sum() == 1.
+            relevant_individuals = (ids == id_)
 
             # perform linear regression step.
             try:
@@ -189,8 +186,8 @@ class AalenAdditiveFitter(BaseFitter):
             except LinAlgError:
                 print("Linear regression error. Try increasing the penalizer term.")
 
-            hazards_.loc[time, id] = v.T
-            variance_.loc[time, id] = V[:, relevant_individuals][:, 0] ** 2
+            hazards_.loc[time, id_] = v.T
+            variance_.loc[time, id_] = V[:, relevant_individuals][:, 0] ** 2
             previous_hazard = v.T
 
             # update progress bar
@@ -218,6 +215,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
+
         self.score_ = concordance_index(self.durations,
                                         self.predict_median(dataframe).values.ravel(),
                                         self.event_observed)
@@ -235,7 +233,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         # each individual should have an ID of time of leaving study
         df = df.set_index([duration_col, id_col])
-        pass_for_numeric_dtypes_or_raise(df)
+        self._check_values(df)
 
         # if no event_col is specified, assume all non-censorships
         if event_col is None:
@@ -313,6 +311,10 @@ class AalenAdditiveFitter(BaseFitter):
         self._compute_confidence_intervals()
 
         return
+
+    def _check_values(self, df):
+        pass_for_numeric_dtypes_or_raise(df)
+
 
     def smoothed_hazards_(self, bandwidth=1):
         """

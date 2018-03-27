@@ -4,7 +4,7 @@ import warnings
 from datetime import datetime
 
 import numpy as np
-from numpy.linalg import solve
+from scipy.linalg import solve
 from scipy import stats
 import pandas as pd
 from pandas import to_datetime
@@ -633,7 +633,7 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
         V = (X*X^T + (c1+c2)I)^{-1} X^T
 
     """
-    n, d = X.shape
+    _, d = X.shape
     X = X.astype(float)
     penalizer_matrix = (c1 + c2) * np.eye(d)
 
@@ -644,7 +644,8 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     b = (np.dot(X.T, Y) + c2 * offset)
 
     # rather than explicitly computing the inverse, just solve the system of equations
-    return (solve(A, b), solve(A, X.T))
+    return (solve(A, b, assume_a='pos', overwrite_b=True, check_finite=False),
+            solve(A, X.T, assume_a='pos', overwrite_b=True, check_finite=False))
 
 
 def _smart_search(minimizing_function, n, *args):
@@ -708,7 +709,8 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
 
 
 def _get_index(X):
-    if isinstance(X, pd.DataFrame):
+    # we need a unique index because these are about to become column names.
+    if isinstance(X, pd.DataFrame) and X.index.is_unique:
         index = list(X.index)
     else:
         # If it's not a dataframe, order is up to user
