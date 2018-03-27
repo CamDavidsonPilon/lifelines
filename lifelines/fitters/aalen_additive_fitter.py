@@ -149,6 +149,8 @@ class AalenAdditiveFitter(BaseFitter):
         del df[duration_col]
         n, d = df.shape
         columns = df.columns
+        df = df.astype(float)
+
 
         # initialize dataframe to store estimates
         non_censorsed_times = list(T[C].iteritems())

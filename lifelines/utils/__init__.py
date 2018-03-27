@@ -634,14 +634,17 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
 
     """
     _, d = X.shape
-    X = X.astype(float)
-    penalizer_matrix = (c1 + c2) * np.eye(d)
 
-    if offset is None:
-        offset = np.zeros((d,))
+    if c1 > 0 or c2 > 0:
+        penalizer_matrix = (c1 + c2) * np.eye(d)
+        A = np.dot(X.T, X) + penalizer_matrix
+    else:
+        A = np.dot(X.T, X)
 
-    A = (np.dot(X.T, X) + penalizer_matrix)
-    b = (np.dot(X.T, Y) + c2 * offset)
+    if offset is None or c2 == 0:
+        b = np.dot(X.T, Y)
+    else:
+        b = np.dot(X.T, Y) + c2 * offset
 
     # rather than explicitly computing the inverse, just solve the system of equations
     return (solve(A, b, assume_a='pos', overwrite_b=True, check_finite=False),
