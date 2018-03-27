@@ -9,7 +9,7 @@ from scipy.integrate import trapz
 from lifelines.fitters import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
     ridge_regression as lr, qth_survival_times, pass_for_numeric_dtypes_or_raise,\
-    concordance_index
+    concordance_index, check_nans
 
 from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import fill_between_steps
@@ -141,7 +141,7 @@ class AalenAdditiveFitter(BaseFitter):
         T = pd.Series(df[duration_col].values, index=ids)
 
         df = df.set_index(id_col)
-        self._check_values(df)
+        self._check_values(df, T, C)
 
         ix = T.argsort()
         T, C = T.iloc[ix], C.iloc[ix]
@@ -219,7 +219,7 @@ class AalenAdditiveFitter(BaseFitter):
         self._compute_confidence_intervals()
 
         self.score_ = concordance_index(self.durations,
-                                        self.predict_median(dataframe).values.ravel(),
+                                        self.predict_cumulative_hazard(dataframe).values[-1,:].ravel(),
                                         self.event_observed)
         return
 
@@ -235,7 +235,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         # each individual should have an ID of time of leaving study
         df = df.set_index([duration_col, id_col])
-        self._check_values(df)
+        pass_for_numeric_dtypes_or_raise(df)
 
         # if no event_col is specified, assume all non-censorships
         if event_col is None:
@@ -314,8 +314,10 @@ class AalenAdditiveFitter(BaseFitter):
 
         return
 
-    def _check_values(self, df):
+    def _check_values(self, df, T, E):
         pass_for_numeric_dtypes_or_raise(df)
+        check_nans(T)
+        check_nans(E)
 
 
     def smoothed_hazards_(self, bandwidth=1):
