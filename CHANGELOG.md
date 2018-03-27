@@ -5,6 +5,7 @@
  - Performance optimizations in `CoxPHFitter` for up to 40% faster completion of `fit`.
     - even smarter `step_size` calculations for iterative optimizations. 
     - simple code optimizations & cleanup in specific hot spots.
+ - Performance optimizations in `AalenAdditiveFitter` for up to 50% faster completion of `fit` for large dataframes, and up to 10% faster for small dataframes. 
 
 
 #### 0.14.0
