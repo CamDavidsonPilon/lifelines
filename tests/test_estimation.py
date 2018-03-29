@@ -489,7 +489,7 @@ class TestKaplanMeierFitter():
         T = np.array([1,2,3,4,5])
         W = np.array([2.1,0.9,0.9,0.9,0.9])
         correct = np.array([1.0,0.632,0.474,0.316,0.158,0.0]).reshape((6,1))
-        kmf = ll.KaplanMeierFitter().fit(T,weights=W)
+        kmf = KaplanMeierFitter().fit(T,weights=W)
         npt.assert_almost_equal(correct,kmf.survival_function_,decimal=3)
 
 
