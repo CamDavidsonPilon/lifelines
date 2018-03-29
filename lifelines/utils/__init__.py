@@ -268,7 +268,10 @@ or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability o
     if collapse:
         event_table = _group_event_table_by_intervals(event_table, intervals)
 
-    return event_table.astype(int)
+    if (np.asarray(weights).astype(int) != weights).any():
+        return event_table.astype(float)
+    else:
+        return event_table.astype(int)
 
 
 def _group_event_table_by_intervals(event_table, intervals):
