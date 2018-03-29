@@ -485,7 +485,7 @@ class TestKaplanMeierFitter():
             warnings.simplefilter("always")
             kmf = KaplanMeierFitter().fit(T, E, weights=np.random.random(n))
             assert True
-    def test_float_weights():
+    def test_float_weights(self):
         T = np.array([1,2,3,4,5])
         W = np.array([2.1,0.9,0.9,0.9,0.9])
         correct = np.array([1.0,0.632,0.474,0.316,0.158,0.0]).reshape((6,1))
