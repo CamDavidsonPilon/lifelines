@@ -1,7 +1,8 @@
 ### Changelogs
 
-#### 0.15.0
+#### 0.14.1
  - fixed bug with using weights and strata in `CoxPHFitter`
+ - fixed bug in using non-integer weights in `KaplanMeierFitter`
  - Performance optimizations in `CoxPHFitter` for up to 40% faster completion of `fit`.
     - even smarter `step_size` calculations for iterative optimizations. 
     - simple code optimizations & cleanup in specific hot spots.
