@@ -219,7 +219,7 @@ class AalenAdditiveFitter(BaseFitter):
         self._compute_confidence_intervals()
 
         self.score_ = concordance_index(self.durations,
-                                        self.predict_cumulative_hazard(dataframe).values[-1,:].ravel(),
+                                        self.predict_median(dataframe).values.ravel(),
                                         self.event_observed)
         return
 

@@ -88,8 +88,7 @@ class CoxPHFitter(BaseFitter):
             self, with additional properties: hazards_
 
         """
-        #import pdb
-        #pdb.set_trace()
+
         df = df.copy()
 
         # Sort on time
@@ -579,7 +578,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
     def _compute_baseline_hazard(self, data, durations, event_observed, name):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         ind_hazards = self.predict_partial_hazard(data)
-        ind_hazards['event_at'] = durations
+        ind_hazards['event_at'] = durations.values
         ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
         ind_hazards_summed_over_durations.name = 'hazards'
 
