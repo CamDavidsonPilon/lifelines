@@ -4,7 +4,7 @@ import warnings
 from datetime import datetime
 
 import numpy as np
-from numpy.linalg import solve
+from scipy.linalg import solve
 from scipy import stats
 import pandas as pd
 from pandas import to_datetime
@@ -636,18 +636,22 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
         V = (X*X^T + (c1+c2)I)^{-1} X^T
 
     """
-    n, d = X.shape
-    X = X.astype(float)
-    penalizer_matrix = (c1 + c2) * np.eye(d)
+    _, d = X.shape
 
-    if offset is None:
-        offset = np.zeros((d,))
+    if c1 > 0 or c2 > 0:
+        penalizer_matrix = (c1 + c2) * np.eye(d)
+        A = np.dot(X.T, X) + penalizer_matrix
+    else:
+        A = np.dot(X.T, X)
 
-    A = (np.dot(X.T, X) + penalizer_matrix)
-    b = (np.dot(X.T, Y) + c2 * offset)
+    if offset is None or c2 == 0:
+        b = np.dot(X.T, Y)
+    else:
+        b = np.dot(X.T, Y) + c2 * offset
 
     # rather than explicitly computing the inverse, just solve the system of equations
-    return (solve(A, b), solve(A, X.T))
+    return (solve(A, b, assume_a='pos', overwrite_b=True, check_finite=False),
+            solve(A, X.T, assume_a='pos', overwrite_b=True, check_finite=False))
 
 
 def _smart_search(minimizing_function, n, *args):
@@ -711,7 +715,8 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
 
 
 def _get_index(X):
-    if isinstance(X, pd.DataFrame):
+    # we need a unique index because these are about to become column names.
+    if isinstance(X, pd.DataFrame) and X.index.is_unique:
         index = list(X.index)
     else:
         # If it's not a dataframe, order is up to user
@@ -1041,6 +1046,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         warnings.warn(warning_text, ConvergenceWarning)
 
 def check_complete_separation_close_to_perfect_correlation(df, durations):
+    # slow for many columns
     THRESHOLD = 0.99
     for col, series in df.iteritems():
         if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
@@ -1217,3 +1223,62 @@ def covariates_from_event_matrix(df, id_col):
     df.columns = [id_col, 'event', 'duration']
     df['_counter'] = 1
     return df.pivot_table(index=[id_col, 'duration'], columns='event', fill_value=0)['_counter'].reset_index()
+
+
+class StepSizer():
+    """
+    This class abstracts complicated step size logic out of the fitters. The API is as follows:
+
+    > step_sizer = StepSizer(initial_step_size)
+    > step_size = step_sizer.next()
+    > step_sizer.update(some_convergence_norm)
+    > step_size = step_sizer.next()
+
+
+    ATM it contains lots of "magic constants"
+    """
+
+    def __init__(self, initial_step_size):
+        initial_step_size = coalesce(initial_step_size, 0.95)
+        self.initial_step_size = initial_step_size
+        self.step_size = initial_step_size
+        self.temper_back_up = False
+        self.norm_of_deltas = []
+
+    def update(self, norm_of_delta):
+        SCALE = 1.2
+        LOOKBACK = 3
+
+        self.norm_of_deltas.append(norm_of_delta)
+
+        # speed up convergence by increasing step size again
+        if self.temper_back_up:
+            self.step_size = min(self.step_size * SCALE, self.initial_step_size)
+
+        # Only allow small steps
+        if norm_of_delta >= 15.0:
+            self.step_size *= 0.25
+            self.temper_back_up = True
+        elif 15.0 > norm_of_delta > 5.0:
+            self.step_size *= 0.75
+            self.temper_back_up = True
+
+
+        # recent non-monotonically decreasing is a concern
+        if len(self.norm_of_deltas) >= LOOKBACK and \
+            not self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
+            self.step_size *= 0.98
+
+        # recent monotonically decreasing is good though
+        if len(self.norm_of_deltas) >= LOOKBACK and \
+            self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
+            self.step_size = min(self.step_size * SCALE, 0.95)
+
+        return self
+
+    @staticmethod
+    def _is_monotonically_decreasing(array):
+        return np.all(np.diff(array) < 0)
+
+    def next(self):
+        return self.step_size

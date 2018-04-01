@@ -5,7 +5,6 @@ python:
    - "3.4"
    - "3.5"
    - "3.6"
-   - "3.6-dev" # 3.6 development branch
 before_install:
   - sudo apt-get update
 install:

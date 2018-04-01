@@ -2,6 +2,7 @@
 from __future__ import print_function
 from __future__ import division
 
+import time
 import warnings
 import numpy as np
 import pandas as pd
@@ -15,7 +16,10 @@ from lifelines.fitters import BaseFitter
 from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
-    check_complete_separation, check_nans, StatError, ConvergenceWarning
+    check_complete_separation, check_nans, StatError, ConvergenceWarning,\
+    StepSizer
+
+
 
 
 class CoxPHFitter(BaseFitter):
@@ -84,6 +88,7 @@ class CoxPHFitter(BaseFitter):
             self, with additional properties: hazards_
 
         """
+
         df = df.copy()
 
         # Sort on time
@@ -105,15 +110,15 @@ class CoxPHFitter(BaseFitter):
             del df[event_col]
 
         if weights_col:
-            weights = df.pop(weights_col).values
+            weights = df.pop(weights_col)
             if (weights.astype(int) != weights).any():
-                warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+                warnings.warn("""It looks like your weights are not integers, possibly propensity scores then?
 It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
                     """, RuntimeWarning)
 
         else:
-            weights = np.ones(self._n_examples)
+            weights = pd.DataFrame(np.ones((self._n_examples,1)), index=df.index)
 
         self._check_values(df, T, E)
         df = df.astype(float)
@@ -184,9 +189,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         else:
             beta = np.zeros((d, 1))
 
-        if step_size is None:
-            # "empirically" determined
-            step_size = min(0.98, 3.0 / np.log10(n))
+        step_sizer = StepSizer(step_size)
+        step_size = step_sizer.next()
 
         # Method of choice is just efron right now
         if self.tie_method == 'Efron':
@@ -198,19 +202,20 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         converging = True
         warn_ll = True
         ll, previous_ll = 0, 0
+        start = time.time()
 
         while converging:
             self.path.append(beta.copy())
             i += 1
             if self.strata is None:
-                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights)
+                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights.values)
             else:
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for strata in np.unique(X.index):
-                    stratified_X, stratified_T, stratified_E = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]]
-                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, weights)
+                    stratified_X, stratified_T, stratified_E, stratified_W = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]], weights.loc[[strata]]
+                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, stratified_W.values)
                     g += _g
                     h += _h
                     ll += _ll
@@ -230,7 +235,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             hessian, gradient = h, g
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f" % (i, norm(delta), step_size, ll))
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
             # convergence criteria
             if norm(delta) < precision:
                 converging, completed = False, True
@@ -247,12 +252,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
                 converging, completed = False, False
 
-            # Only allow small steps
-            if norm(delta) > 10.0:
-                step_size *= 0.5
-
-            # temper the step size down.
-            step_size *= 0.995
+            step_size = step_sizer.update(norm(delta)).next()
 
             beta += delta
             previous_ll = ll
@@ -272,17 +272,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Calculates the first and second order vector differentials,
         with respect to beta.
-
         Note that X, T, E are assumed to be sorted on T!
-
         Parameters:
             X: (n,d) numpy array of observations.
             beta: (1, d) numpy array of coefficients.
             T: (n) numpy array representing observed durations.
             E: (n) numpy array representing death events.
             weights: (n) an array representing weights per observation.
-
-
         Returns:
             hessian: (d, d) numpy array,
             gradient: (1, d) numpy array
@@ -302,27 +298,32 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # Init number of ties
         tie_count = 0
+
         # Iterate backwards to utilize recursive relationship
-        for i, (ti, ei) in reversed(list(enumerate(zip(T, E)))):
+        for i in range(n - 1, -1, -1):
             # Doing it like this to preserve shape
+            ti = T[i]
+            ei = E[i]
             xi = X[i:i + 1]
             w = weights[i]
 
             # Calculate phi values
-            phi_i = exp(dot(xi, beta))
+            phi_i = w * exp(dot(xi, beta))
             phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_x_i)
 
+
             # Calculate sums of Risk set
-            risk_phi += w * phi_i
-            risk_phi_x += w * phi_x_i
-            risk_phi_x_x += w * phi_x_x_i
+            risk_phi += phi_i
+            risk_phi_x += phi_x_i
+            risk_phi_x_x += phi_x_x_i
+
             # Calculate sums of Ties, if this is an event
             if ei:
                 x_tie_sum += w * xi
-                tie_phi += w * phi_i
-                tie_phi_x += w * phi_x_i
-                tie_phi_x_x += w * phi_x_x_i
+                tie_phi += phi_i
+                tie_phi_x += phi_x_i
+                tie_phi_x_x += phi_x_x_i
 
                 # Keep track of count
                 tie_count += int(w)
@@ -366,6 +367,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
         return hessian, gradient, log_lik
+
 
     def _compute_baseline_cumulative_hazard(self):
         return self.baseline_hazard_.cumsum()
@@ -463,13 +465,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
+        This is equivalent to R's linear.predictors.
+        Returns the log of the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to \beta (X - \bar{X})
 
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
-
-        Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \beta X
         """
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.columns
@@ -486,7 +488,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             same order as the training data.
 
         Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
-        of R's predict.coxph. Equal to \beta X - \beta \bar{X}
+        of R's predict.coxph. Equal to \beta X - \beta \bar{X_{train}}
         """
 
         return self.predict_log_partial_hazard(X) - self._train_log_partial_hazard.squeeze()
@@ -576,7 +578,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
     def _compute_baseline_hazard(self, data, durations, event_observed, name):
         # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         ind_hazards = self.predict_partial_hazard(data)
-        ind_hazards['event_at'] = durations
+        ind_hazards['event_at'] = durations.values
         ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
         ind_hazards_summed_over_durations.name = 'hazards'
 

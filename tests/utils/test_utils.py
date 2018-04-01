@@ -674,3 +674,35 @@ class TestLongDataFrameUtils(object):
         assert ldf.loc[ldf['id'] == 1]['cumsum_promotion'].tolist() == [0, 1, 1]
         assert ldf.loc[ldf['id'] == 1]['cumsum_raise'].tolist() == [0, 0, 1]
         assert ldf.loc[ldf['id'] == 1]['start'].tolist() == [0, 1., 2.]
+
+
+def test_StepSizer_step_will_decrease_if_unstable():
+    start = 0.95
+    ss = utils.StepSizer(start)
+    assert ss.next() == start
+    ss.update(1.0)
+    ss.update(2.0)
+    ss.update(1.0)
+    ss.update(2.0)
+
+    assert ss.next() < start
+
+
+def test_StepSizer_step_will_increase_if_stable():
+    start = 0.5
+    ss = utils.StepSizer(start)
+    assert ss.next() == start
+    ss.update(1.0)
+    ss.update(0.5)
+    ss.update(0.4)
+    ss.update(0.1)
+
+    assert ss.next() > start
+
+
+def test_StepSizer_step_will_decrease_if_explodes():
+    start = 0.5
+    ss = utils.StepSizer(start)
+    assert ss.next() == start
+    ss.update(20.0)
+    assert ss.next() < start

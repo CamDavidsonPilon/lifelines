@@ -14,7 +14,7 @@ from lifelines.utils import inv_normal_cdf, \
     significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
-    ConvergenceWarning
+    ConvergenceWarning, StepSizer
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -138,9 +138,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         converging = True
         ll, previous_ll = 0, 0
 
-        if step_size is None:
-            # empirically determined
-            step_size = min(0.98, 3.0 / np.log10(n))
+        step_sizer = StepSizer(step_size)
+        step_size = step_sizer.next()
 
         while converging:
             i += 1
@@ -177,12 +176,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
                 converging, completed = False, False
 
-            # Only allow small steps
-            if norm(delta) > 10:
-                step_size *= 0.5
-
-            # temper the step size down.
-            step_size *= 0.995
+            step_size = step_sizer.update(norm(delta)).next()
 
             beta += delta
 
@@ -213,7 +207,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         gradient = np.zeros((1, d))
         log_lik = 0
 
-        unique_death_times = np.sort(stops_events['stop'].loc[stops_events['event']].unique())
+        unique_death_times = np.unique(stops_events['stop'].loc[stops_events['event']])
 
         for t in unique_death_times:
             x_death_sum = np.zeros((1, d))

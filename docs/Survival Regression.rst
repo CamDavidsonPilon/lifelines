@@ -29,6 +29,192 @@ On the other hand, Aalen's additive model assumes the following form:
 .. math:: \lambda(t | x) = b_0(t) + b_1(t)x_1 + ... + b_d(t)x_d
 
 
+Cox's Proportional Hazard model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Lifelines has an implementation of the Cox propotional hazards regression model (implemented in 
+R under ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
+
+.. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i\right)}
+
+Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the second term is only a scalar factor that only increases or decreases the baseline hazard. Thus a change in a covariate will only increase or decrease this baseline hazard. 
+
+
+Lifelines implementation
+###########################################
+
+
+The implementation of the Cox model in lifelines, called ``CoxPHFitter`` has a similar API to ``AalensAdditiveFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats. 
+
+This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_, avaible as ``load_rossi`` in lifelines. 
+
+.. code:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi_dataset = load_rossi()
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+
+    cph.print_summary()  # access the results using cph.summary
+
+    """
+    n=432, number of events=114
+
+            coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+    fin  -0.3790     0.6845    0.1914 -1.9806 0.0476     -0.7542     -0.0039   *
+    age  -0.0572     0.9444    0.0220 -2.6042 0.0092     -0.1003     -0.0142  **
+    race  0.3141     1.3691    0.3080  1.0198 0.3078     -0.2897      0.9180
+    wexp -0.1511     0.8597    0.2121 -0.7124 0.4762     -0.5670      0.2647
+    mar  -0.4328     0.6487    0.3818 -1.1335 0.2570     -1.1813      0.3157
+    paro -0.0850     0.9185    0.1957 -0.4341 0.6642     -0.4687      0.2988
+    prio  0.0911     1.0954    0.0286  3.1824 0.0015      0.0350      0.1472  **
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    Concordance = 0.640
+    """
+
+To access the coefficients and the baseline hazard directly, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. 
+
+
+Convergence 
+###########################################
+
+Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
+
+After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively. The ``_hessian_`` can be used the find the covariance matrix of the coefficients. 
+
+
+Goodness of fit and prediction
+###########################################
+
+After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? a small spread between these two curves means that the impact of the exponential in the Cox model does very little, whereas a large spread means *most* of the changes in individual hazard can be attributed to the exponential term). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
+
+.. image:: images/goodfit.png
+
+.. image:: images/badfit.png
+
+
+After fitting, you can use use the suite of prediction methods (similar to Aalen's additive model): ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
+
+.. code:: python
+    
+    X = rossi_dataset.drop(["week", "arrest"], axis=1)
+    cph.predict_partial_hazard(X)
+    cph.predict_survival_function(X)
+
+
+Plotting the coefficients
+###########################################
+
+With a fitted model, an altervative way to view the coefficients and their ranges is to use the ``plot`` method.
+
+.. code:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi_dataset = load_rossi()
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+
+    cph.plot()
+
+.. image:: images/coxph_plot.png
+
+
+Plotting the effect of varying a covariate
+#############################################
+
+After fitting, we can plot what the survival curves look like as we vary a single covarite while 
+holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the ``plot_covariate_groups`` method and give it the covariate of interest, and the values to display.
+
+.. code:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi_dataset = load_rossi()
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+
+    cph.plot_covariate_groups('prio', [0, 5, 10, 15])
+
+.. image:: images/coxph_plot_covarite_groups.png
+
+
+Checking the proportional hazards assumption
+#############################################
+
+A quick and visual way to check the proportional hazards assumption of a variable is to plot the survival curves segmented by the values of the variable. If the survival curves are the same "shape" and differ only by a constant factor, then the assumption holds. A more clear way to see this is to plot what's called the logs curve: the loglogs (-log(survival curve)) vs log(time). If the curves are parallel (and hence do not cross each other), then it's likely the variable satisfies the assumption. If the curves do cross, likely you'll have to "stratify" the variable (see next section). In lifelines, the ``KaplanMeierFitter`` object has a ``.plot_loglogs`` function for this purpose. 
+
+The following is the loglogs curves of two variables in our regime dataset. The first is the democracy type, which does have (close to) parallel lines, hence satisfies our assumption:
+
+.. code:: python
+
+    from lifelines.datasets import load_dd
+    from lifelines import KaplanMeierFitter
+
+    data = load_dd()
+
+    democracy_0 = data.loc[data['democracy'] == 'Non-democracy']
+    democracy_1 = data.loc[data['democracy'] == 'Democracy']
+
+    kmf0 = KaplanMeierFitter()
+    kmf0.fit(democracy_0['duration'], event_observed=democracy_0['observed'])
+
+    kmf1 = KaplanMeierFitter()
+    kmf1.fit(democracy_1['duration'], event_observed=democracy_1['observed'])
+
+    fig, axes = plt.subplots()
+    kmf0.plot_loglogs(ax=axes)
+    kmf1.plot_loglogs(ax=axes)
+
+    axes.legend(['Non-democracy', 'Democracy'])
+
+    plt.show()
+
+.. image:: images/lls_democracy.png
+
+
+The second variable is the regime type, and this variable does not follow the proportional hazards assumption.
+
+.. image:: images/lls_regime_type.png
+
+
+Stratification
+################
+
+Sometimes a covariate may not obey the proportional hazard assumption. In this case, we can allow a factor without estimating its effect to be adjusted. To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
+
+.. code:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi_dataset = load_rossi()
+
+    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
+
+    cph.print_summary()  # access the results using cph.summary
+
+    """
+    n=432, number of events=114
+
+            coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+    fin  -0.3775     0.6856    0.1913 -1.9731 0.0485     -0.7525     -0.0024   *
+    age  -0.0573     0.9443    0.0220 -2.6081 0.0091     -0.1004     -0.0142  **
+    wexp -0.1435     0.8664    0.2127 -0.6746 0.4999     -0.5603      0.2734
+    mar  -0.4419     0.6428    0.3820 -1.1570 0.2473     -1.1907      0.3068
+    paro -0.0839     0.9196    0.1958 -0.4283 0.6684     -0.4677      0.3000
+    prio  0.0919     1.0962    0.0287  3.1985 0.0014      0.0356      0.1482  **
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    Concordance = 0.638
+    """
 
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,6 +235,9 @@ above). This is important to keep in mind when analyzing the output.
 .. code:: python
 
     from lifelines import AalenAdditiveFitter
+    from lifelines.datasets import load_dd
+
+    data = load_dd()
     data.head()
 
 
@@ -155,35 +344,29 @@ covariance matrix from my original dataframe.
 .. code:: python
 
     import patsy
-    # the '-1' term refers to not adding an intercept column (a column of all 1s).
-    X = patsy.dmatrix('un_continent_name + regime + start_year - 1', data, return_type='dataframe') 
+    X = patsy.dmatrix('un_continent_name + regime + start_year', data, return_type='dataframe')
+    X = X.rename(columns={'Intercept': 'baseline'}) 
 
 .. code:: python
 
-    X.columns
+    X.columns.tolist()
 
 
 
 .. parsed-literal::
 
-    ['un_continent_name[Africa]',
-     'un_continent_name[Americas]',
-     'un_continent_name[Asia]',
-     'un_continent_name[Europe]',
-     'un_continent_name[Oceania]',
-     'regime[T.Military Dict]',
-     'regime[T.Mixed Dem]',
-     'regime[T.Monarchy]',
-     'regime[T.Parliamentary Dem]',
-     'regime[T.Presidential Dem]',
-     'start_year']
+  ['baseline',
+   'un_continent_name[T.Americas]',
+   'un_continent_name[T.Asia]',
+   'un_continent_name[T.Europe]',
+   'un_continent_name[T.Oceania]',
+   'regime[T.Military Dict]',
+   'regime[T.Mixed Dem]',
+   'regime[T.Monarchy]',
+   'regime[T.Parliamentary Dem]',
+   'regime[T.Presidential Dem]',
+   'start_year']
 
-
-Below we create our fitter class. Since we did not supply an intercept
-column in our matrix we have included the keyword ``fit_intercept=True``
-(``True`` by default) which will append the column of ones to our
-matrix. (Sidenote: the intercept term, :math:`b_0(t)` in survival
-regression is often known as the *baseline* hazard.)
 
 We have also included the ``coef_penalizer`` option. During the estimation, a
 linear regression is computed at each step. Often the regression can be
@@ -193,7 +376,7 @@ or small sample sizes) -- adding a penalizer term controls the stability. I reco
 
 .. code:: python
 
-    aaf = AalenAdditiveFitter(coef_penalizer=1.0, fit_intercept=True)
+    aaf = AalenAdditiveFitter(coef_penalizer=1.0)
 
 An instance of ``AalenAdditiveFitter``
 includes a ``fit`` method that performs the inference on the coefficients. This method accepts a pandas DataFrame: each row is an individual and columns are the covariates and 
@@ -202,8 +385,6 @@ two individual columns: a *duration* column and a boolean *event occurred* colum
 
 .. code:: python
     
-    data = lifelines.datasets.load_dd()
-
     X['T'] = data['duration']
     X['E'] = data['observed'] 
 
@@ -213,13 +394,11 @@ two individual columns: a *duration* column and a boolean *event occurred* colum
     aaf.fit(X, 'T', event_col='E')
 
 
-
 After fitting, the instance exposes a ``cumulative_hazards_`` DataFrame
 containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
 
 .. code:: python
 
-    figsize(12.5,8)
     aaf.cumulative_hazards_.head()
 
 
@@ -325,7 +504,7 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
 
 .. code:: python
 
-  aaf.plot(columns=['regime[T.Presidential Dem]', 'baseline', 'un_continent_name[Europe]'], iloc=slice(1,15))
+  aaf.plot(columns=['regime[T.Presidential Dem]', 'baseline', 'un_continent_name[T.Europe]'], iloc=slice(1,15))
 
 
 .. image:: images/survival_regression_aaf.png
@@ -335,14 +514,15 @@ Regression is most interesting if we use it on data we have not yet
 seen, i.e., prediction! We can use what we have learned to predict
 individual hazard rates, survival functions, and median survival time.
 The dataset we are using is available up until 2008, so let's use this data to
-predict the (already partly seen) possible duration of Canadian
+predict the duration of former Canadian
 Prime Minister Stephen Harper.
 
 .. code:: python
 
-    ix = (data['ctryname'] == 'Canada') * (data['start_year'] == 2006)
+    ix = (data['ctryname'] == 'Canada') & (data['start_year'] == 2006)
     harper = X.loc[ix]
-    print("Harper's unique data point", harper)
+    print("Harper's unique data point:")
+    print(harper)
 
 .. parsed-literal::
 
@@ -360,10 +540,9 @@ Prime Minister Stephen Harper.
 .. code:: python
 
     ax = plt.subplot(2,1,1)
-
     aaf.predict_cumulative_hazard(harper).plot(ax=ax)
-    ax = plt.subplot(2,1,2)
 
+    ax = plt.subplot(2,1,2)
     aaf.predict_survival_function(harper).plot(ax=ax);
 
 
@@ -371,185 +550,6 @@ Prime Minister Stephen Harper.
 
 .. warning:: Because of the nature of the model, estimated survival functions of individuals can increase. This is an expected artifact of Aalen's additive model.
 
-
-Cox's Proportional Hazard model
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Lifelines has an implementation of the Cox propotional hazards regression model (implemented in 
-R under ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
-
-.. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i\right)}
-
-Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the second term is only a scalar factor that only increases or decreases the baseline hazard. Thus a change in a covariate will only increase or decrease this baseline hazard. 
-
-Lifelines implementation
-###########################################
-
-
-The implementation of the Cox model in lifelines, called ``CoxPHFitter`` has a similar API to ``AalensAdditiveFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats. 
-
-This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_, avaible as ``load_rossi`` in lifelines. 
-
-.. code:: python
-
-    from lifelines.datasets import load_rossi
-    from lifelines import CoxPHFitter
-
-    rossi_dataset = load_rossi()
-    cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
-
-    cph.print_summary()  # access the results using cph.summary
-
-    """
-    n=432, number of events=114
-
-            coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-    fin  -0.3790     0.6845    0.1914 -1.9806 0.0476     -0.7542     -0.0039   *
-    age  -0.0572     0.9444    0.0220 -2.6042 0.0092     -0.1003     -0.0142  **
-    race  0.3141     1.3691    0.3080  1.0198 0.3078     -0.2897      0.9180
-    wexp -0.1511     0.8597    0.2121 -0.7124 0.4762     -0.5670      0.2647
-    mar  -0.4328     0.6487    0.3818 -1.1335 0.2570     -1.1813      0.3157
-    paro -0.0850     0.9185    0.1957 -0.4341 0.6642     -0.4687      0.2988
-    prio  0.0911     1.0954    0.0286  3.1824 0.0015      0.0350      0.1472  **
-    ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    Concordance = 0.640
-    """
-
-To access the coefficients and the baseline hazard directly, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. 
-
-
-Convergence 
-###########################################
-
-Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
-
-After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively. The ``_hessian_`` can be used the find the covariance matrix of the coefficients. 
-
-
-Goodness of fit and prediction
-###########################################
-
-After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? a small spread between these two curves means that the impact of the exponential in the Cox model does very little, whereas a large spread means *most* of the changes in individual hazard can be attributed to the exponential term). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
-
-.. image:: images/goodfit.png
-
-.. image:: images/badfit.png
-
-
-After fitting, you can use use the suite of prediction methods (similar to Aalen's additve model above): ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
-
-.. code:: python
-    
-    cph.predict_partial_hazard(rossi_dataset.drop(["week", "arrest"], axis=1))
-
-
-Plotting the coefficients
-###########################################
-
-With a fitted model, an altervative way to view the coefficients and their ranges is to use the ``plot`` method.
-
-.. code:: python
-
-    from lifelines.datasets import load_rossi
-    from lifelines import CoxPHFitter
-
-    rossi_dataset = load_rossi()
-    cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
-
-    cph.plot()
-
-.. image:: images/coxph_plot.png
-
-
-Plotting the effect of varying a covariate
-#############################################
-
-After fitting, we can plot what the survival curves look like as we vary a single covarite while 
-holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the ``plot_covariate_groups`` method and give it the covariate of interest, and the values to display.
-
-.. code:: python
-
-    from lifelines.datasets import load_rossi
-    from lifelines import CoxPHFitter
-
-    rossi_dataset = load_rossi()
-    cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
-
-    cph.plot_covariate_groups('prio', [0, 5, 10, 15])
-
-.. image:: images/coxph_plot_covarite_groups.png
-
-
-Checking the proportional hazards assumption
-#############################################
-
-A quick and visual way to check the proportional hazards assumption of a variable is to plot the survival curves segmented by the values of the variable. If the survival curves are the same "shape" and differ only by a constant factor, then the assumption holds. A more clear way to see this is to plot what's called the logs curve: the loglogs (-log(survival curve)) vs log(time). If the curves are parallel (and hence do not cross each other), then it's likely the variable satisfies the assumption. If the curves do cross, likely you'll have to "stratify" the variable (see next section). In lifelines, the ``KaplanMeierFitter`` object has a ``.plot_loglogs`` function for this purpose. 
-
-The following is the loglogs curves of two variables in our regime dataset. The first is the democracy type, which does have (close to) parallel lines, hence satisfies our assumption:
-
-.. code:: python
-
-    from lifelines.datasets import load_dd
-    from lifelines import KaplanMeierFitter
-
-    data = load_dd()
-
-    democracy_0 = data.loc[data['democracy'] == 'Non-democracy']
-    democracy_1 = data.loc[data['democracy'] == 'Democracy']
-
-    kmf0 = KaplanMeierFitter()
-    kmf0.fit(democracy_0['duration'], event_observed=democracy_0['observed'])
-
-    kmf1 = KaplanMeierFitter()
-    kmf1.fit(democracy_1['duration'], event_observed=democracy_1['observed'])
-
-    fig, axes = plt.subplots()
-    kmf0.plot_loglogs(ax=axes)
-    kmf1.plot_loglogs(ax=axes)
-
-    axes.legend(['Non-democracy', 'Democracy'])
-
-    plt.show()
-
-.. image:: images/lls_democracy.png
-
-
-The second variable is the regime type, and this variable does not follow the proportional hazards assumption.
-
-.. image:: images/lls_regime_type.png
-
-
-Stratification
-################
-
-Sometimes a covariate may not obey the proportional hazard assumption. In this case, we can allow a factor without estimating its effect to be adjusted. To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
-
-.. code:: python
-
-    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
-
-    cph.print_summary()  # access the results using cph.summary
-
-    """
-    n=432, number of events=114
-
-            coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-    fin  -0.3775     0.6856    0.1913 -1.9731 0.0485     -0.7525     -0.0024   *
-    age  -0.0573     0.9443    0.0220 -2.6081 0.0091     -0.1004     -0.0142  **
-    wexp -0.1435     0.8664    0.2127 -0.6746 0.4999     -0.5603      0.2734
-    mar  -0.4419     0.6428    0.3820 -1.1570 0.2473     -1.1907      0.3068
-    paro -0.0839     0.9196    0.1958 -0.4283 0.6684     -0.4677      0.3000
-    prio  0.0919     1.0962    0.0287  3.1985 0.0014      0.0356      0.1482  **
-    ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    Concordance = 0.638
-    """
 
 
 Cox's Time Varying Proportional Hazard model
