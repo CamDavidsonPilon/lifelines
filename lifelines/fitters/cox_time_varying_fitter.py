@@ -325,7 +325,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # Print information about data first
         print('periods={}, uniques={}, number of events={}'.format(self._n_examples, self._n_unique,
-                                                 np.where(self.event_observed)[0].shape[0]),
+                                                                   self.event_observed.sum()),
               end='\n\n')
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
@@ -370,7 +370,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         classname = self.__class__.__name__
         try:
             s = """<lifelines.%s: fitted with %d periods, %d uniques, %d events>""" % (
-                classname, self._n_examples, self._n_unique, self.event_observed.shape[0] - np.where(self.event_observed)[0].shape[0])
+                classname, self._n_examples, self._n_unique, self.event_observed.sum())
         except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s
