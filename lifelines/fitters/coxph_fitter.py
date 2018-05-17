@@ -336,7 +336,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
-            partial_gradient = np.zeros((1, d))
+            partial_gradient = np.zeros((tie_count, d))
 
             for l in range(tie_count):
                 c = l / tie_count
