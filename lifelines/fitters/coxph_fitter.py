@@ -83,6 +83,7 @@ class CoxPHFitter(BaseFitter):
              catagorical covariate does not obey the proportional hazard assumption. This
              is used similar to the `strata` expression in R.
              See http://courses.washington.edu/b515/l17.pdf.
+          step_size: set an initial step size for the fitting algorithm.
 
         Returns:
             self, with additional properties: hazards_

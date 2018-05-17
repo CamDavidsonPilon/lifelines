@@ -36,6 +36,29 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.penalizer = penalizer
 
     def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=False, step_size=None):
+        """
+        Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
+        are handled using Efron's tie-method.
+
+        Parameters:
+          df: a Pandas dataframe with necessary columns `duration_col` and
+             `event_col`, plus other covariates. `duration_col` refers to
+             the lifetimes of the subjects. `event_col` refers to whether
+             the 'death' events was observed: 1 if observed, 0 else (censored).
+          id_col:  A subject could have multiple rows in the dataframe. This column contains
+             the unique identifer per subject.
+          event_col: the column in dataframe that contains the subjects' death
+             observation. If left as None, assume all individuals are non-censored.
+          start_col: the column that contains the start of a subject's time period.
+          end_col: the column that contains the end of a subject's time period.
+          show_progress: since the fitter is iterative, show convergence
+             diagnostics.
+          step_size: set an initial step size for the fitting algorithm.
+
+        Returns:
+            self, with additional properties: hazards_
+
+        """
 
         df = df.copy()
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
@@ -50,6 +73,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         stop_times_events = df[["event", "stop", "start"]]
         df = df.drop(["event", "stop", "start"], axis=1)
+        df = df.astype(float)
 
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
@@ -162,7 +186,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             hessian, gradient = h, g
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.6f, step_size = %.6f, ll = %.6f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
+                print("Iteration %d: norm_delta = %.6f, step_size = %.3f, ll = %.6f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
 
             # convergence criteria
             if norm(delta) < precision:
