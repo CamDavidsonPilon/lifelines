@@ -113,7 +113,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
-    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=None, precision=10e-5):
+    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=None, precision=10e-6):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -162,7 +162,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             hessian, gradient = h, g
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
+                print("Iteration %d: norm_delta = %.6f, step_size = %.6f, ll = %.6f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
 
             # convergence criteria
             if norm(delta) < precision:
