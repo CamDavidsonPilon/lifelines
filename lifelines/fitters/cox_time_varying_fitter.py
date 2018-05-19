@@ -2,6 +2,8 @@
 from __future__ import print_function
 from __future__ import division
 import warnings
+import time
+
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -34,6 +36,29 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.penalizer = penalizer
 
     def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=False, step_size=None):
+        """
+        Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
+        are handled using Efron's tie-method.
+
+        Parameters:
+          df: a Pandas dataframe with necessary columns `duration_col` and
+             `event_col`, plus other covariates. `duration_col` refers to
+             the lifetimes of the subjects. `event_col` refers to whether
+             the 'death' events was observed: 1 if observed, 0 else (censored).
+          id_col:  A subject could have multiple rows in the dataframe. This column contains
+             the unique identifer per subject.
+          event_col: the column in dataframe that contains the subjects' death
+             observation. If left as None, assume all individuals are non-censored.
+          start_col: the column that contains the start of a subject's time period.
+          end_col: the column that contains the end of a subject's time period.
+          show_progress: since the fitter is iterative, show convergence
+             diagnostics.
+          step_size: set an initial step size for the fitting algorithm.
+
+        Returns:
+            self, with additional properties: hazards_
+
+        """
 
         df = df.copy()
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
@@ -48,6 +73,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         stop_times_events = df[["event", "stop", "start"]]
         df = df.drop(["event", "stop", "start"], axis=1)
+        df = df.astype(float)
 
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
@@ -58,6 +84,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._n_examples = df.shape[0]
+        self._n_unique = df.index.unique().shape[0]
 
         return self
 
@@ -137,6 +164,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         i = 0
         converging = True
         ll, previous_ll = 0, 0
+        start = time.time()
 
         step_sizer = StepSizer(step_size)
         step_size = step_sizer.next()
@@ -158,7 +186,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             hessian, gradient = h, g
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.6f, step_size = %.3f, ll = %.6f" % (i, norm(delta), step_size, ll))
+                print("Iteration %d: norm_delta = %.6f, step_size = %.3f, ll = %.6f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
 
             # convergence criteria
             if norm(delta) < precision:
@@ -204,16 +232,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         _, d = df.shape
         hessian = np.zeros((d, d))
-        gradient = np.zeros((1, d))
+        gradient = np.zeros(d)
         log_lik = 0
 
         unique_death_times = np.unique(stops_events['stop'].loc[stops_events['event']])
 
         for t in unique_death_times:
-            x_death_sum = np.zeros((1, d))
-            tie_phi, risk_phi = 0, 0
-            risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
-            risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
             ix = (stops_events['start'] < t) & (t <= stops_events['stop'])
             df_at_t = df.loc[ix]
@@ -224,9 +248,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             phi_x_x_i = dot(df_at_t.T, phi_x_i) # dot(df_at_t.T, phi_i * df_at_t)
 
             # Calculate sums of Risk set
-            risk_phi += phi_i.sum()
-            risk_phi_x += phi_x_i.sum(0).values.reshape((1, d))
-            risk_phi_x_x += phi_x_x_i
+            risk_phi = phi_i.sum()
+            risk_phi_x = phi_x_i.sum(0).values
+            risk_phi_x_x = phi_x_x_i
 
             # Calculate the sums of Tie set
             deaths = stops_events_at_t['event'] & (stops_events_at_t['stop'] == t)
@@ -234,15 +258,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             xi_deaths = df_at_t.loc[deaths]
 
-            x_death_sum += xi_deaths.sum(0).values.reshape((1, d))
+            x_death_sum = xi_deaths.sum(0).values
 
             if death_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
-                tie_phi += phi_i[deaths.values].sum()
-                tie_phi_x += phi_x_i.loc[deaths].sum(0).values.reshape((1, d))
-                tie_phi_x_x += dot(xi_deaths.T, phi_i[deaths.values] * xi_deaths)
+                tie_phi = phi_i[deaths.values].sum()
+                tie_phi_x = phi_x_i.loc[deaths].sum(0).values
+                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths.values] * xi_deaths)
 
-            partial_gradient = np.zeros((1, d))
+            partial_gradient = np.zeros(d)
 
             for l in range(death_counts):
 
@@ -262,7 +286,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 partial_gradient += z / denom
                 # In case z and denom both are really small numbers,
                 # make sure to do division before multiplications
-                a2 = dot(z.T / denom, z / denom)
+                a2 = np.outer(z / denom, z / denom)
 
                 hessian -= (a1 - a2)
 
@@ -270,8 +294,49 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # Values outside tie sum
             gradient += x_death_sum - partial_gradient
-            log_lik += dot(x_death_sum, beta)[0][0]
-        return hessian, gradient, log_lik
+            log_lik += dot(x_death_sum, beta)[0]
+
+        return hessian, gradient.reshape(1, d), log_lik
+
+    def predict_log_partial_hazard(self, X):
+        """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+
+        This is equivalent to R's linear.predictors.
+        Returns the log of the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to \beta (X - \bar{X})
+
+        If X is a dataframe, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+        """
+        if isinstance(X, pd.DataFrame):
+            order = self.hazards_.columns
+            X = X[order]
+
+        index = _get_index(X)
+        X = normalize(X, self._norm_mean.values, 1)
+        return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
+
+
+    def predict_partial_hazard(self, X):
+        """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+
+
+        If X is a dataframe, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+
+        Returns the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to \exp{\beta X}
+        """
+        return exp(self.predict_log_partial_hazard(X))
+
 
     def print_summary(self):
         """
@@ -283,8 +348,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df[''] = [significance_code(p) for p in df['p']]
 
         # Print information about data first
-        print('n={}, number of events={}'.format(self._n_examples,
-                                                 np.where(self.event_observed)[0].shape[0]),
+        print('periods={}, uniques={}, number of events={}'.format(self._n_examples, self._n_unique,
+                                                                   self.event_observed.sum()),
               end='\n\n')
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
@@ -324,3 +389,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax
+
+    def __repr__(self):
+        classname = self.__class__.__name__
+        try:
+            s = """<lifelines.%s: fitted with %d periods, %d uniques, %d events>""" % (
+                classname, self._n_examples, self._n_unique, self.event_observed.sum())
+        except AttributeError:
+            s = """<lifelines.%s>""" % classname
+        return s

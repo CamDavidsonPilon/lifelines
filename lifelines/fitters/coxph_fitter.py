@@ -83,6 +83,7 @@ class CoxPHFitter(BaseFitter):
              catagorical covariate does not obey the proportional hazard assumption. This
              is used similar to the `strata` expression in R.
              See http://courses.washington.edu/b515/l17.pdf.
+          step_size: set an initial step size for the fitting algorithm.
 
         Returns:
             self, with additional properties: hazards_
@@ -433,7 +434,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # Print information about data first
         print('n={}, number of events={}'.format(self._n_examples,
-                                                 np.where(self.event_observed)[0].shape[0]),
+                                                 self.event_observed.sum()),
               end='\n\n')
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
