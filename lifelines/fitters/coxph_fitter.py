@@ -337,7 +337,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
+            import pdb
+            pdb.set_trace()
             partial_gradient = np.zeros((1, d))
+
+            cs = np.arange(tie_count, dtype=float) / tie_count
+
+            denom = (risk_phi - cs * tie_phi) # (tie_count,)
+            z = (risk_phi_x - np.outer(cs, tie_phi_x)) # (tie_count, d)
+            partial_gradient += (z / denom.T).sum(0) # (1, d)
+
+            a1 = (risk_phi_x_x - cs[:, None, None] * tie_phi_x_x) / denom.T[:, None, None]
+            a2 =
 
             for l in range(tie_count):
                 c = l / tie_count
@@ -348,6 +359,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # Gradient
                 partial_gradient += z / denom
                 # Hessian
+
                 a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
                 # In case z and denom both are really small numbers,
                 # make sure to do division before multiplications

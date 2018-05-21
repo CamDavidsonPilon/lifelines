@@ -628,7 +628,7 @@ class TestRegressionFitters():
             with pytest.raises(TypeError):
                 fitter.fit(rossi)
 
-    def test_fit_methods_can_accept_optional_event_col_param(self, regression_models, rossi):
+    def test_fit_method2s_can_accept_optional_event_col_param(self, regression_models, rossi):
         for model in regression_models:
             model.fit(rossi, 'week', event_col='arrest')
             assert_series_equal(model.event_observed.sort_index(), rossi['arrest'].astype(bool), check_names=False)
@@ -1466,7 +1466,7 @@ class TestCoxTimeVaryingFitter():
 
     def test_inference_against_known_R_output(self, ctv, dfcv):
         # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
-        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event", show_progress=True)
         npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757, 0.705963], decimal=4)
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [1.229, 1.206], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.14, 0.56], decimal=2)
