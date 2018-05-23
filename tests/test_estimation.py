@@ -239,6 +239,20 @@ class TestUnivariateFitters():
 
             npt.assert_array_almost_equal(f1.subtract(f1).sum().values, 0.0)
 
+    def test_subtract_function_with_labelled_data(self, positive_sample_lifetimes, univariate_fitters):
+        T2 = np.arange(1, 50)
+        for fitter in univariate_fitters:
+            f1 = fitter()
+            f2 = fitter()
+
+            f1.fit(positive_sample_lifetimes[0], label='A')
+            f2.fit(T2, label='B')
+
+            result = f1.subtract(f2)
+            assert result.columns == ['diff']
+            assert result.shape[1] == 1
+
+
     def test_divide_function(self, positive_sample_lifetimes, univariate_fitters):
         T2 = np.arange(1, 50)
         for fitter in univariate_fitters:
@@ -248,10 +262,24 @@ class TestUnivariateFitters():
             f1.fit(positive_sample_lifetimes[0])
             f2.fit(T2)
 
-            result = f1.subtract(f2)
+            result = f1.divide(f2)
             assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
 
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
+
+    def test_divide_function_with_labelled_data(self, positive_sample_lifetimes, univariate_fitters):
+        T2 = np.arange(1, 50)
+        for fitter in univariate_fitters:
+            f1 = fitter()
+            f2 = fitter()
+
+            f1.fit(positive_sample_lifetimes[0], label='A')
+            f2.fit(T2, label='B')
+
+            result = f1.divide(f2)
+            assert result.columns == ['ratio']
+            assert result.shape[1] == 1
+
 
     def test_valueerror_is_thrown_if_alpha_out_of_bounds(self, univariate_fitters):
         for fitter in univariate_fitters:
