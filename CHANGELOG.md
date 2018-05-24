@@ -1,7 +1,9 @@
 ### Changelogs
 
-#### 0.14.3 (development)
+#### 0.14.3 
  - fixes a bug when subtracting or dividing two `UnivariateFitters` with labels. 
+ - fixes an import error with using `CoxTimeVaryingFitter` predict methods.
+ - adds a `column` argument to `CoxTimeVaryingFitter` and `CoxPHFitter` `plot` method to plot only a subset of columns.
 
 #### 0.14.2
  - some quality of life improvements for working with `CoxTimeVaryingFitter` including new `predict_` methods.
