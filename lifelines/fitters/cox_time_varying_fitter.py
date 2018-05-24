@@ -16,7 +16,7 @@ from lifelines.utils import inv_normal_cdf, \
     significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
-    ConvergenceWarning, StepSizer
+    ConvergenceWarning, StepSizer, _get_index
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -358,9 +358,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
               end='\n\n')
         return
 
-    def plot(self, standardized=False, **kwargs):
+    def plot(self, standardized=False, columns=None, **kwargs):
         """
-        standardized: standardize each estimated coefficient and confidence interval endpoints by the standard error of the estimate.
+        Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
+
+        Parameters:
+            standardized: standardize each estimated coefficient and confidence interval
+                          endpoints by the standard error of the estimate.
+            columns : list-like, default None
+        Returns:
+            ax: the matplotlib axis that be edited.
 
         """
         from matplotlib import pyplot as plt
@@ -368,10 +375,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
         yaxis_locations = range(len(self.hazards_.columns))
 
-        summary = self.summary
-        lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
-        upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
-        hazards = self.hazards_.values[0].copy()
+        if columns is not None:
+            yaxis_locations = range(len(columns))
+            summary = self.summary.loc[columns]
+            lower_bound = self.confidence_intervals_[columns].loc['lower-bound'].copy()
+            upper_bound = self.confidence_intervals_[columns].loc['upper-bound'].copy()
+            hazards = self.hazards_[columns].values[0].copy()
+        else:
+            yaxis_locations = range(len(self.hazards_.columns))
+            summary = self.summary
+            lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
+            upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
+            hazards = self.hazards_.values[0].copy()
 
         if standardized:
             se = summary['se(coef)']
