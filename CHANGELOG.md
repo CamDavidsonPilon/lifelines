@@ -1,5 +1,11 @@
 ### Changelogs
 
+#### 0.14.3 (development)
+ - fixes a bug when subtracting or dividing two `UnivariateFitters` with labels. 
+
+#### 0.14.2
+ - some quality of life improvements for working with `CoxTimeVaryingFitter` including new `predict_` methods.
+
 #### 0.14.1
  - fixed bug with using weights and strata in `CoxPHFitter`
  - fixed bug in using non-integer weights in `KaplanMeierFitter`
