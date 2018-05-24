@@ -803,7 +803,11 @@ Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitt
     ctv.plot()
 
 
-Unlike the other regression models, prediction in a time-varying setting is not possible normally. To predict, we would need to know the covariates values beyond the current time, but if we knew that, we would also know if the subject was still alive or not. For this reason, there are no prediction methods attached to ``CoxTimeVaryingFitter``. 
+Unlike the other regression models, prediction in a time-varying setting is not possible normally. To predict, we would need to know the covariates values beyond the current time, but if we knew that, we would also know if the subject was still alive or not. However, it is still possible to compute the hazard values of subjects at known observations. Thus ``CoxTimeVaryingFitter`` only has two prediction methods: 
+``predict_log_partial_hazard`` and ``predict_partial_hazard``. Since there is no concept of a baseline 
+hazard in the time-varying Cox model, we can't compute survival probabilities. 
+
+
 
 
 Model Selection in Survival Regression

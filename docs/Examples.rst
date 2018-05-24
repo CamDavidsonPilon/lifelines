@@ -52,7 +52,6 @@ compares whether the "death" generation process of the two populations are equal
 
    print(results.p_value)        # 0.46759 
    print(results.test_statistic) # 0.528
-   print(results.is_significant) # False
 
 
 If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares

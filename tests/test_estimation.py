@@ -1560,3 +1560,40 @@ class TestCoxTimeVaryingFitter():
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
 
+
+    def test_error_is_raised_if_using_non_numeric_data(self, ctv):
+        df = pd.DataFrame.from_dict({
+            'id': [1, 2, 3,],
+            'start': [0., 0., 0.],
+            'end': [1., 2., 3.],
+            'e': [1, 1, 1],
+            'bool_': [True, True, False],
+            'int_': [1, -1, 0],
+            'uint8_': pd.Series([1, -1, 0], dtype="uint8"),
+            'string_': ['test', 'a', '2.5'],
+            'float_': [1.2, -0.5, 0.0],
+            'categorya_': pd.Series([1, 2, 3], dtype='category'),
+            'categoryb_': pd.Series(['a', 'b', 'a'], dtype='category'),
+
+        })
+
+        for subset in [
+            ['start', 'end', 'e', 'id', 'categorya_'],
+            ['start', 'end', 'e', 'id', 'categoryb_'],
+            ['start', 'end', 'e', 'id', 'string_'],
+        ]:
+            with pytest.raises(TypeError):
+                ctv.fit(df[subset], id_col='id', event_col='e', stop_col='end')
+
+        for subset in [
+            ['start', 'end', 'e', 'id', 'bool_'],
+            ['start', 'end', 'e', 'id', 'int_'],
+            ['start', 'end', 'e', 'id', 'float_'],
+            ['start', 'end', 'e', 'id', 'uint8_'],
+        ]:
+            ctv.fit(df[subset],  id_col='id', event_col='e', stop_col='end')
+
+    def test_ctv_prediction_methods(self, ctv, heart):
+        ctv.fit(heart, id_col='id', event_col='event')
+        assert ctv.predict_log_partial_hazard(heart).shape[0] == heart.shape[0]
+        assert ctv.predict_partial_hazard(heart).shape[0] == heart.shape[0]
