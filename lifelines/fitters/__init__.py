@@ -46,9 +46,12 @@ class UnivariateFitter(BaseFitter):
             other_estimate = getattr(other, estimate)
             new_index = np.concatenate((other_estimate.index, self_estimate.index))
             new_index = np.unique(new_index)
-            return self_estimate.reindex(new_index, method='ffill') - \
-                other_estimate.reindex(new_index, method='ffill')
-
+            return pd.DataFrame(
+                    self_estimate.reindex(new_index, method='ffill').values - \
+                    other_estimate.reindex(new_index, method='ffill').values,
+                    index=new_index,
+                    columns=['diff']
+                )
         subtract.__doc__ = doc_string
         return subtract
 
@@ -67,9 +70,12 @@ class UnivariateFitter(BaseFitter):
             other_estimate = getattr(other, estimate)
             new_index = np.concatenate((other_estimate.index, self_estimate.index))
             new_index = np.unique(new_index)
-            return self_estimate.reindex(new_index, method='ffill') / \
-                other_estimate.reindex(new_index, method='ffill')
-
+            return pd.DataFrame(
+                    self_estimate.reindex(new_index, method='ffill').values / \
+                    other_estimate.reindex(new_index, method='ffill').values,
+                    index=new_index,
+                    columns=['ratio']
+                )
         divide.__doc__ = doc_string
         return divide
 

@@ -16,7 +16,7 @@ from lifelines.utils import inv_normal_cdf, \
     significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
-    ConvergenceWarning, StepSizer
+    ConvergenceWarning, StepSizer, _get_index
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -184,12 +184,13 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             # Save these as pending result
             hessian, gradient = h, g
+            norm_delta = norm(delta)
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.6f, step_size = %.3f, ll = %.6f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
+                print("Iteration %d: norm_delta = %.6f, step_size = %.3f, ll = %.6f, seconds_since_start = %.1f" % (i, norm_delta, step_size, ll, time.time() - start))
 
             # convergence criteria
-            if norm(delta) < precision:
+            if norm_delta < precision:
                 converging, completed = False, True
             elif i >= 50:
                 # 50 iterations steps with N-R is a lot.
@@ -199,12 +200,12 @@ class CoxTimeVaryingFitter(BaseFitter):
                 converging, completed = False, False
             elif abs(ll - previous_ll) < precision:
                 converging, completed = False, True
-            elif abs(ll) < 0.0001 and norm(delta) > 1.0:
+            elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
                 converging, completed = False, False
 
-            step_size = step_sizer.update(norm(delta)).next()
+            step_size = step_sizer.update(norm_delta).next()
 
             beta += delta
 
@@ -358,9 +359,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
               end='\n\n')
         return
 
-    def plot(self, standardized=False, **kwargs):
+    def plot(self, standardized=False, columns=None, **kwargs):
         """
-        standardized: standardize each estimated coefficient and confidence interval endpoints by the standard error of the estimate.
+        Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
+
+        Parameters:
+            standardized: standardize each estimated coefficient and confidence interval
+                          endpoints by the standard error of the estimate.
+            columns : list-like, default None
+        Returns:
+            ax: the matplotlib axis that be edited.
 
         """
         from matplotlib import pyplot as plt
@@ -368,10 +376,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
         yaxis_locations = range(len(self.hazards_.columns))
 
-        summary = self.summary
-        lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
-        upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
-        hazards = self.hazards_.values[0].copy()
+        if columns is not None:
+            yaxis_locations = range(len(columns))
+            summary = self.summary.loc[columns]
+            lower_bound = self.confidence_intervals_[columns].loc['lower-bound'].copy()
+            upper_bound = self.confidence_intervals_[columns].loc['upper-bound'].copy()
+            hazards = self.hazards_[columns].values[0].copy()
+        else:
+            yaxis_locations = range(len(self.hazards_.columns))
+            summary = self.summary
+            lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
+            upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
+            hazards = self.hazards_.values[0].copy()
 
         if standardized:
             se = summary['se(coef)']

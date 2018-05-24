@@ -609,14 +609,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             survival_df.columns = ['baseline survival']
         return survival_df
 
-    def plot(self, standardized=False, **kwargs):
+    def plot(self, standardized=False, columns=None, **kwargs):
         """
         Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
 
         Parameters:
             standardized: standardize each estimated coefficient and confidence interval
                           endpoints by the standard error of the estimate.
-
+            columns : list-like, default None
         Returns:
             ax: the matplotlib axis that be edited.
 
@@ -624,12 +624,19 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         from matplotlib import pyplot as plt
 
         ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
-        yaxis_locations = range(len(self.hazards_.columns))
 
-        summary = self.summary
-        lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
-        upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
-        hazards = self.hazards_.values[0].copy()
+        if columns is not None:
+            yaxis_locations = range(len(columns))
+            summary = self.summary.loc[columns]
+            lower_bound = self.confidence_intervals_[columns].loc['lower-bound'].copy()
+            upper_bound = self.confidence_intervals_[columns].loc['upper-bound'].copy()
+            hazards = self.hazards_[columns].values[0].copy()
+        else:
+            yaxis_locations = range(len(self.hazards_.columns))
+            summary = self.summary
+            lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
+            upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
+            hazards = self.hazards_.values[0].copy()
 
         if standardized:
             se = summary['se(coef)']
