@@ -1560,17 +1560,6 @@ class TestCoxTimeVaryingFitter():
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
 
-
-    def test_baseline_hazard_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
-        """
-        library(survival)
-        data(heart)
-        coxph(Surv(start, stop, event) ~ age + transplant + surgery + year, data= heart)
-        """
-        ctv.fit(heart, id_col='id', event_col='event')
-        import pdb
-        pdb.set_trace()
-
     def test_error_is_raised_if_using_non_numeric_data(self, ctv):
         df = pd.DataFrame.from_dict({
             'id': [1, 2, 3,],
@@ -1608,8 +1597,7 @@ class TestCoxTimeVaryingFitter():
         assert ctv.predict_log_partial_hazard(heart).shape[0] == heart.shape[0]
         assert ctv.predict_partial_hazard(heart).shape[0] == heart.shape[0]
 
-
-    def test_ctv_baseline_cumulative_hazard(self, ctv, heart):
+    def test_ctv_baseline_cumulative_hazard_against_R(self, ctv, heart):
         """
         library(survival)
         data(heart)
@@ -1624,4 +1612,4 @@ class TestCoxTimeVaryingFitter():
                     1.073414895, 1.109428518, 1.155787187, 1.209776781, 1.26991066, 1.3421101, 1.431890995, 1.526763781, 1.627902989, 1.763620039]
         ctv.fit(heart, id_col='id', event_col='event')
         npt.assert_array_almost_equal(ctv.baseline_cumulative_hazard_.values[0:3, 0], expected[0:3], decimal=3)
-        npt.assert_array_almost_equal(ctv.baseline_cumulative_hazard_.values[:, 0], expected, decimal=2)
+        npt.assert_array_almost_equal(ctv.baseline_cumulative_hazard_.values[:, 0], expected, decimal=2) # errors accumulate fast =(
