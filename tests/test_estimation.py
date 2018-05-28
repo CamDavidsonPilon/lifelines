@@ -1549,7 +1549,7 @@ class TestCoxTimeVaryingFitter():
             assert issubclass(w[0].category, ConvergenceWarning)
             assert "complete separation" in str(w[1].message)
 
-    def test_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
+    def test_summary_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
         library(survival)
         data(heart)
@@ -1559,7 +1559,6 @@ class TestCoxTimeVaryingFitter():
         npt.assert_almost_equal(ctv.summary['coef'].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3)
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
-
 
     def test_error_is_raised_if_using_non_numeric_data(self, ctv):
         df = pd.DataFrame.from_dict({
@@ -1597,3 +1596,32 @@ class TestCoxTimeVaryingFitter():
         ctv.fit(heart, id_col='id', event_col='event')
         assert ctv.predict_log_partial_hazard(heart).shape[0] == heart.shape[0]
         assert ctv.predict_partial_hazard(heart).shape[0] == heart.shape[0]
+
+        test_patient = heart.iloc[[0,2]]
+        assert ctv.predict_cumulative_hazard(test_patient).shape == (62, 2)
+        assert ctv.predict_survival_function(test_patient).shape == (62, 2)
+        assert ctv.predict_cumulative_hazard(test_patient, times=[0, 20, 50]).shape[0] == 3
+        assert ctv.predict_survival_function(test_patient, times=[0, 20, 50]).shape[0] == 3
+
+    def test_ctv_baseline_cumulative_hazard_against_R(self, ctv, heart):
+        """
+        library(survival)
+        data(heart)
+        r = coxph(Surv(start, stop, event) ~ age + transplant + surgery + year, data=heart)
+
+        sest = survfit(r, se.fit = F)
+        sest$cumhaz
+        """
+        expected = [0.008576073, 0.034766771, 0.061749725, 0.080302426, 0.09929016, 0.109040953, 0.118986351, 0.129150022, 0.160562122, 0.171388794, 0.182287871, 0.204408269, 0.215630422, 0.227109569, 0.238852428, 0.250765502, 0.26291466, 0.275185886, 0.287814114, 0.313833224,
+                    0.327131062, 0.340816277, 0.354672739, 0.368767829, 0.383148661, 0.397832317, 0.412847777, 0.428152773, 0.459970612, 0.476275941, 0.50977267, 0.52716976, 0.545297536, 0.563803467, 0.582672943, 0.602305488, 0.622619844, 0.643438746, 0.664737826, 0.686688715,
+                    0.7093598, 0.732698614, 0.756553038, 0.781435099, 0.806850698, 0.832604447, 0.859118436, 0.886325942, 0.914877455, 0.975077858, 1.006355139, 1.039447234,
+                    1.073414895, 1.109428518, 1.155787187, 1.209776781, 1.26991066, 1.3421101, 1.431890995, 1.526763781, 1.627902989, 1.763620039]
+        ctv.fit(heart, id_col='id', event_col='event')
+        npt.assert_array_almost_equal(ctv.baseline_cumulative_hazard_.values[0:3, 0], expected[0:3], decimal=3)
+        npt.assert_array_almost_equal(ctv.baseline_cumulative_hazard_.values[:, 0], expected, decimal=2) # errors accumulate fast =(
+
+    def test_repr_with_fitter(self, ctv, heart):
+        ctv.fit(heart, id_col='id', event_col='event')
+        uniques = heart['id'].unique().shape[0]
+        assert ctv.__repr__() == '<lifelines.CoxTimeVaryingFitter: fitted with %d periods, %d uniques, %d events>' % (heart.shape[0], uniques, heart['event'].sum())
+

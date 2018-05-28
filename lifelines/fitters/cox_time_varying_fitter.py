@@ -83,6 +83,9 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
+        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events)
+        self.baseline_survival_ = self._compute_baseline_survival()
+
         self._n_examples = df.shape[0]
         self._n_unique = df.index.unique().shape[0]
 
@@ -124,9 +127,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         Set alpha property in the object before calling.
 
         Returns:
-            df:.DataFrame, Contains columns coef, exp(coef), se(coef), z, p, lower, upper
+            df: DataFrame, contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
-
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.loc['coef'].values
         df['exp(coef)'] = exp(self.hazards_.loc['coef'].values)
@@ -145,9 +147,9 @@ class CoxTimeVaryingFitter(BaseFitter):
         Note that data is assumed to be sorted on T!
 
         Parameters:
-            df: (n, d+2) Pandas DataFrame of observations with specific Interval multiindex.
-            initial_beta: (1, d) numpy array of initial starting point for
-                          NR algorithm. Default 0.
+            df: (n, d) Pandas DataFrame of observations
+            stop_times_events: (n, d) Pandas DataFrame of meta information about the subjects history
+            show_progress: True to show verbous output of convergence
             step_size: float > 0 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
@@ -247,7 +249,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             phi_i = exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
-            phi_x_x_i = dot(df_at_t.T, phi_x_i)  # dot(df_at_t.T, phi_i * df_at_t)
+            phi_x_x_i = dot(df_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = phi_i.sum()
@@ -338,10 +340,46 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         return exp(self.predict_log_partial_hazard(X))
 
+
+    def predict_survival_function(self, X, times=None):
+        """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        times: an iterable of increasing times to predict the survival function at. Default
+            is the set of all durations (observed and unobserved)
+
+        Returns the estimated survival functions for the individuals
+        """
+        return exp(-self.predict_cumulative_hazard(X, times=times))
+
+
+    def predict_cumulative_hazard(self, X, times=None):
+        """
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        times: an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved). Uses a linear interpolation if
+            points in time are not in the index.
+
+        Returns the cumulative hazard of individuals.
+        """
+        c_0 = self.baseline_cumulative_hazard_
+        col = _get_index(X)
+        v = self.predict_partial_hazard(X)
+        cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
+
+        if times is not None:
+            # non-linear interpolations can push the survival curves above 1 and below 0.
+            return cumulative_hazard_.reindex(cumulative_hazard_.index.union(times)).interpolate("index").loc[times]
+        else:
+            return cumulative_hazard_
+
+
     def print_summary(self):
         """
-        Print summary statistics describing the fit.
-
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
         """
         df = self.summary
         # Significance codes last
@@ -404,6 +442,32 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax
+
+
+    def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events):
+        events = stop_times_events.copy()
+        events['hazard'] = self.predict_partial_hazard(tv_data).values
+
+        unique_death_times = np.unique(events['stop'].loc[events['event']])
+        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times),
+                                        index=unique_death_times,
+                                        columns=['baseline hazard'])
+
+        for t in unique_death_times:
+            ix = (events['start'] < t) & (t <= events['stop'])
+            events_at_t = events.loc[ix]
+
+            deaths = events_at_t['event'] & (events_at_t['stop'] == t)
+            death_counts = deaths.sum()  # should always be atleast 1.
+            baseline_hazard_.loc[t] = death_counts / events_at_t['hazard'].sum()
+
+        return baseline_hazard_.cumsum()
+
+    def _compute_baseline_survival(self):
+        survival_df = exp(-self.baseline_cumulative_hazard_)
+        survival_df.columns = ['baseline survival']
+        return survival_df
+
 
     def __repr__(self):
         classname = self.__class__.__name__
