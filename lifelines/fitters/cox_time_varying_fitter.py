@@ -129,7 +129,6 @@ class CoxTimeVaryingFitter(BaseFitter):
         Returns:
             df: DataFrame, contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
-
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.loc['coef'].values
         df['exp(coef)'] = exp(self.hazards_.loc['coef'].values)
@@ -148,9 +147,9 @@ class CoxTimeVaryingFitter(BaseFitter):
         Note that data is assumed to be sorted on T!
 
         Parameters:
-            df: (n, d+2) Pandas DataFrame of observations with specific Interval multiindex.
-            initial_beta: (1, d) numpy array of initial starting point for
-                          NR algorithm. Default 0.
+            df: (n, d) Pandas DataFrame of observations
+            stop_times_events: (n, d) Pandas DataFrame of meta information about the subjects history
+            show_progress: True to show verbous output of convergence
             step_size: float > 0 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
@@ -250,7 +249,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             phi_i = exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
-            phi_x_x_i = dot(df_at_t.T, phi_x_i)  # dot(df_at_t.T, phi_i * df_at_t)
+            phi_x_x_i = dot(df_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = phi_i.sum()
