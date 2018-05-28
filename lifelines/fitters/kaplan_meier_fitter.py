@@ -49,7 +49,7 @@ class KaplanMeierFitter(UnivariateFitter):
 
         check_nans(durations)
         if event_observed is not None:
-          check_nans(event_observed)
+            check_nans(event_observed)
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
@@ -92,7 +92,7 @@ class KaplanMeierFitter(UnivariateFitter):
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.
         # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
-        
+
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
         v = np.log(self.__estimate.values)

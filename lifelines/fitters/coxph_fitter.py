@@ -20,8 +20,6 @@ from lifelines.utils import survival_table_from_events, inv_normal_cdf, normaliz
     StepSizer
 
 
-
-
 class CoxPHFitter(BaseFitter):
 
     """
@@ -119,7 +117,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                     """, RuntimeWarning)
 
         else:
-            weights = pd.DataFrame(np.ones((self._n_examples,1)), index=df.index)
+            weights = pd.DataFrame(np.ones((self._n_examples, 1)), index=df.index)
 
         self._check_values(df, T, E)
         df = df.astype(float)
@@ -201,7 +199,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         i = 0
         converging = True
-        warn_ll = True
         ll, previous_ll = 0, 0
         start = time.time()
 
@@ -313,7 +310,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_x_i)
 
-
             # Calculate sums of Risk set
             risk_phi += phi_i
             risk_phi_x += phi_x_i
@@ -368,7 +364,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
         return hessian, gradient, log_lik
-
 
     def _compute_baseline_cumulative_hazard(self):
         return self.baseline_hazard_.cumsum()
@@ -679,7 +674,6 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         X = pd.concat([x_bar] * len(groups))
         X.index = ['%s=%s' % (covariate, g) for g in groups]
         X[covariate] = groups
-
 
         self.predict_survival_function(X).plot(ax=ax)
         self.baseline_survival_.plot(ax=ax, ls='--')

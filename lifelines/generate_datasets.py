@@ -79,6 +79,7 @@ def constant_(t, alpha=1, beta=1):
     """beta"""
     return beta
 
+
 FUNCS = [exp_comp_, log_, inverseSq_, constant_, periodic_]
 
 

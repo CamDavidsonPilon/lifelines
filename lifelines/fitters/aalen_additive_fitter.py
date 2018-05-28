@@ -151,7 +151,6 @@ class AalenAdditiveFitter(BaseFitter):
         columns = df.columns
         df = df.astype(float)
 
-
         # initialize dataframe to store estimates
         non_censorsed_times = list(T[C].iteritems())
         n_deaths = len(non_censorsed_times)
@@ -307,7 +306,6 @@ class AalenAdditiveFitter(BaseFitter):
         else:
             self.timeline = self.hazards_.index.values.astype(float)
 
-
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
@@ -318,7 +316,6 @@ class AalenAdditiveFitter(BaseFitter):
         pass_for_numeric_dtypes_or_raise(df)
         check_nans(T)
         check_nans(E)
-
 
     def smoothed_hazards_(self, bandwidth=1):
         """
@@ -447,7 +444,9 @@ class AalenAdditiveFitter(BaseFitter):
             user_submitted_ix = slice(0, None)
         else:
             user_submitted_ix = loc if loc is not None else iloc
-        get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
+
+        def get_loc(df):
+            return getattr(df, get_method)[user_submitted_ix]
 
         if len(columns) == 0:
             columns = self.cumulative_hazards_.columns

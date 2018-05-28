@@ -29,6 +29,7 @@ def _d_rho_d_rho(lambda_rho, T, E):
     lambda_, rho = lambda_rho
     return (1. / rho ** 2 * E + (np.log(lambda_ * T) ** 2 * (lambda_ * T) ** rho)).sum()
 
+
 def _d_lambda_d_lambda_(lambda_rho, T, E):
     lambda_, rho = lambda_rho
     return (rho / lambda_ ** 2) * (E + (rho - 1) * (lambda_ * T) ** rho).sum()
@@ -84,7 +85,7 @@ class WeibullFitter(UnivariateFitter):
 
         check_nans(durations)
         if event_observed is not None:
-          check_nans(event_observed)
+            check_nans(event_observed)
 
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.

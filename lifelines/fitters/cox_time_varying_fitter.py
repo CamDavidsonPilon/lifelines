@@ -137,7 +137,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
-    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=None, precision=10e-6):
+    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=None, precision=10e-6,
+                         max_steps=50):
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -192,7 +193,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            elif i >= 50:
+            elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
                 converging, completed = False, True
@@ -246,7 +247,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             phi_i = exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
-            phi_x_x_i = dot(df_at_t.T, phi_x_i) # dot(df_at_t.T, phi_i * df_at_t)
+            phi_x_x_i = dot(df_at_t.T, phi_x_i)  # dot(df_at_t.T, phi_i * df_at_t)
 
             # Calculate sums of Risk set
             risk_phi = phi_i.sum()
@@ -321,7 +322,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
-
     def predict_partial_hazard(self, X):
         """
         X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
@@ -337,7 +337,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         baseline hazard is not included. Equal to \exp{\beta X}
         """
         return exp(self.predict_log_partial_hazard(X))
-
 
     def print_summary(self):
         """

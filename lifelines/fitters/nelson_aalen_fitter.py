@@ -63,7 +63,7 @@ class NelsonAalenFitter(UnivariateFitter):
 
         check_nans(durations)
         if event_observed is not None:
-          check_nans(event_observed)
+            check_nans(event_observed)
 
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v

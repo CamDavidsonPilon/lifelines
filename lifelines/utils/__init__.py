@@ -69,11 +69,10 @@ def qth_survival_times(q, survival_functions, cdf=False):
         #  An issue can arise if the Series q contains duplicate values. We handle this un-eligantly.
         if q.duplicated().any():
             return pd.DataFrame.from_items([
-                        (_q, survival_functions.apply(lambda s: qth_survival_time(_q, s))) for i, _q in enumerate(q)
-                    ], orient='index', columns=survival_functions.columns)
+                (_q, survival_functions.apply(lambda s: qth_survival_time(_q, s))) for i, _q in enumerate(q)
+            ], orient='index', columns=survival_functions.columns)
         else:
             return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
-
 
 
 def qth_survival_time(q, survival_function, cdf=False):
@@ -929,12 +928,12 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
         has_more_censored = censored_ix < len(censored_truth)
         has_more_died = died_ix < len(died_truth)
         # Should we look at some censored indices next, or died indices?
-        if has_more_censored and (not has_more_died
-                                  or died_truth[died_ix] > censored_truth[censored_ix]):
+        if has_more_censored and (not has_more_died or
+                                  died_truth[died_ix] > censored_truth[censored_ix]):
             pairs, correct, tied, next_ix = handle_pairs(censored_truth, censored_pred, censored_ix)
             censored_ix = next_ix
-        elif has_more_died and (not has_more_censored
-                                or died_truth[died_ix] <= censored_truth[censored_ix]):
+        elif has_more_died and (not has_more_censored or
+                                died_truth[died_ix] <= censored_truth[censored_ix]):
             pairs, correct, tied, next_ix = handle_pairs(died_truth, died_pred, died_ix)
             for pred in died_pred[died_ix:next_ix]:
                 times_to_compare.insert(pred)
@@ -1044,6 +1043,7 @@ def check_complete_separation_low_variance(df, events):
 death event or not. This may harm convergence. This could be a form of 'complete separation'. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
         warnings.warn(warning_text, ConvergenceWarning)
+
 
 def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
@@ -1263,15 +1263,14 @@ class StepSizer():
             self.step_size *= 0.75
             self.temper_back_up = True
 
-
         # recent non-monotonically decreasing is a concern
         if len(self.norm_of_deltas) >= LOOKBACK and \
-            not self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
+                not self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
             self.step_size *= 0.98
 
         # recent monotonically decreasing is good though
         if len(self.norm_of_deltas) >= LOOKBACK and \
-            self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
+                self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
             self.step_size = min(self.step_size * SCALE, 0.95)
 
         return self

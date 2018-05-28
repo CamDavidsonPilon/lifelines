@@ -168,7 +168,6 @@ def add_at_risk_counts(*fitters, **kwargs):
     return ax
 
 
-
 def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
                    order=False, block=True):
     """
@@ -242,7 +241,7 @@ def plot_loglogs(cls):
 
     def _plot_loglogs(loc=None, iloc=None, show_censors=False, censor_styles=None, **kwargs):
 
-        loglog = lambda s: np.log(-np.log(s))
+        def loglog(s): return np.log(-np.log(s))
 
         if (loc is not None) and (iloc is not None):
             raise ValueError('Cannot set both loc and iloc in call to .plot().')
@@ -376,7 +375,6 @@ def plot_estimate(cls, estimate):
                 fill_between_steps(x, lower, y2=upper, ax=ax,
                                    alpha=ci_alpha, color=colour,
                                    linewidth=1.0)
-
 
         if at_risk_counts:
             add_at_risk_counts(cls, ax=ax)

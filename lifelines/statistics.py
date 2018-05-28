@@ -29,7 +29,8 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con,
     Returns:
         n_exp, n_con: the samples sizes need for the experiment and control group, respectively, to achieve desired power
     """
-    z = lambda p: stats.norm.ppf(p)
+    def z(p):
+        return stats.norm.ppf(p)
 
     m = 1.0 / ratio_of_participants \
         * ((ratio_of_participants * postulated_hazard_ratio + 1.0) / (postulated_hazard_ratio - 1.0)) ** 2 \
@@ -60,7 +61,8 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     Returns:
         power: power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
     """
-    z = lambda p: stats.norm.ppf(p)
+    def z(p):
+        return stats.norm.ppf(p)
 
     m = n_exp * p_exp + n_con * p_con
     k = float(n_exp) / float(n_con)
