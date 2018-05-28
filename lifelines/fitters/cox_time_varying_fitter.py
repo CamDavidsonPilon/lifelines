@@ -83,6 +83,9 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
+        self.baseline_cumulative_hazard_ = self.compute_cumulative_baseline_hazard(df, stop_times_events)
+        self.baseline_survival_ = self._compute_baseline_survival()
+
         self._n_examples = df.shape[0]
         self._n_unique = df.index.unique().shape[0]
 
@@ -413,3 +416,29 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s
+
+
+    def compute_cumulative_baseline_hazard(self, tv_data, stop_times_events):
+        # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
+        events = stop_times_events.copy()
+        events['hazard'] = self.predict_partial_hazard(tv_data).values
+
+        unique_death_times = np.unique(events['stop'].loc[events['event']])
+        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times),
+                                        index=unique_death_times,
+                                        columns=['baseline hazard'])
+
+        for t in unique_death_times:
+            ix = (events['start'] < t) & (t <= events['stop'])
+            events_at_t = events.loc[ix]
+
+            deaths = events_at_t['event'] & (events_at_t['stop'] == t)
+            death_counts = deaths.sum()  # should always be atleast 1.
+            baseline_hazard_.loc[t] = death_counts / events_at_t['hazard'].sum()
+
+        return baseline_hazard_.cumsum()
+
+    def _compute_baseline_survival(self):
+        survival_df = exp(-self.baseline_cumulative_hazard_)
+        survival_df.columns = ['baseline survival']
+        return survival_df
