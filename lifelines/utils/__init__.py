@@ -1009,6 +1009,19 @@ def pass_for_numeric_dtypes_or_raise(df):
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
 
+def check_for_immediate_deaths(df, stop_times_events):
+    # Only used in CTV. This checks for deaths immediately, that is (0,0) lives.
+    if ((stop_times_events['start'] == stop_times_events['stop']) & (stop_times_events['stop'] == 0) & stop_times_events['event']).any():
+        raise ValueError("""The dataset provided has subjects that die on the day of entry. (0, 0)
+is not allowed in CoxTimeVaryingFitter. If suffices to add a small non-zero value to their end - example Pandas code:
+
+> df.loc[ (df[start_col] == df[stop_col]) & (df[start_col] == 0) & df[event_col], stop_col] = 0.5
+
+Alternatively, add 1 to every subjects final end period.
+
+""")
+
+
 def check_for_overlapping_intervals(df):
     # only useful for time varying coefs, after we've done
     # some index creation
@@ -1281,3 +1294,4 @@ class StepSizer():
 
     def next(self):
         return self.step_size
+

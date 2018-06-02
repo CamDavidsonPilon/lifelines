@@ -583,6 +583,18 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name]).fillna(0)
         return baseline_hazard
 
+    def _compute_baseline_hazard_faster(self, data, durations, event_observed, name):
+        # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
+
+        baseline_hazard = pd.DataFrame(np.zeros_like(durations), columns=[name]).fillna(0)
+        for i in range(n - 1, -1, -1):
+            # Doing it like this to preserve shape
+            ti = T[i]
+            ei = E[i]
+            xi = X[i:i + 1]
+
+        return baseline_hazard
+
     def _compute_baseline_hazards(self, df, T, E):
         if self.strata:
             index = self.durations.unique()

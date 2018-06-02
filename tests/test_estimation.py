@@ -1510,6 +1510,21 @@ class TestCoxTimeVaryingFitter():
             with pytest.raises(ValueError):
                 ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
+
+    def test_fitter_will_error_if_degenerate_time(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 0,  'var': -1.2, 'bool': True, 'event': 1}, # note the degenerate times
+            {'id': 2, 'start': 0, 'stop': 5,  'var': 1.3,  'bool': False, 'event': 1},
+            {'id': 3, 'start': 0, 'stop': 5,  'var': -1.3, 'bool': False, 'event': 1},
+        ])
+        with pytest.raises(ValueError):
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+        df.loc[ (df['start'] == df['stop']) & (df['start'] == 0) & df['event'], 'stop'] = 0.5
+        ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        assert True
+
+
     def test_fitter_accept_boolean_columns(self, ctv):
         df = pd.DataFrame.from_records([
             {'id': 1, 'start': 0, 'stop': 5,  'var': -1.2, 'bool': True, 'event': 1},
@@ -1518,7 +1533,7 @@ class TestCoxTimeVaryingFitter():
         ])
 
         ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
-
+        assert True
 
     def test_warning_is_raised_if_df_has_a_near_constant_column(self, ctv, dfcv):
         dfcv['constant'] = 1.0

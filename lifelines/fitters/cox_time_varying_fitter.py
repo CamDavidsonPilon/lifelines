@@ -16,7 +16,7 @@ from lifelines.utils import inv_normal_cdf, \
     significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
-    ConvergenceWarning, StepSizer, _get_index
+    ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -50,7 +50,7 @@ class CoxTimeVaryingFitter(BaseFitter):
           event_col: the column in dataframe that contains the subjects' death
              observation. If left as None, assume all individuals are non-censored.
           start_col: the column that contains the start of a subject's time period.
-          end_col: the column that contains the end of a subject's time period.
+          stop_col: the column that contains the end of a subject's time period.
           show_progress: since the fitter is iterative, show convergence
              diagnostics.
           step_size: set an initial step size for the fitting algorithm.
@@ -61,18 +61,17 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
 
         df = df.copy()
+
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
             raise KeyError("A column specified in the call to `fit` does not exist in the dataframe provided.")
 
         df = df.rename(columns={id_col: 'id', event_col: 'event', start_col: 'start', stop_col: 'stop'})
-        df['event'] = df['event'].astype(bool)
-
-        df = df.set_index(['id'])
-
-        self._check_values(df.drop(["event", "stop", "start"], axis=1), df['event'])
-
-        stop_times_events = df[["event", "stop", "start"]]
+        df = df.set_index('id')
+        stop_times_events = df[["event", "stop", "start"]].copy()
         df = df.drop(["event", "stop", "start"], axis=1)
+        stop_times_events['event'] = stop_times_events['event'].astype(bool)
+
+        self._check_values(df, stop_times_events)
         df = df.astype(float)
 
         self._norm_mean = df.mean(0)
@@ -92,11 +91,12 @@ class CoxTimeVaryingFitter(BaseFitter):
         return self
 
     @staticmethod
-    def _check_values(df, E):
+    def _check_values(df, stop_times_events):
         # check_for_overlapping_intervals(df) # this is currenty too slow for production.
         check_low_var(df)
-        check_complete_separation_low_variance(df, E)
+        check_complete_separation_low_variance(df, stop_times_events['event'])
         pass_for_numeric_dtypes_or_raise(df)
+        check_for_immediate_deaths(df, stop_times_events)
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std
@@ -354,19 +354,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return exp(-self.predict_cumulative_hazard(X, times=times))
 
 
-    def predict_cumulative_hazard(self, X, times=None):
+    def predict_cumulative_hazard(self, X, id_col, times=None):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
+        X: a (n,d) DataFrame containing the same schema as what was trained on. This means the same
+            columns, including an id_col, start_col, stop_col.
+
         times: an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
 
         Returns the cumulative hazard of individuals.
         """
-        c_0 = self.baseline_cumulative_hazard_
-        col = _get_index(X)
+        c_0 = self.baseline_cumulative_hazard_.diff()
         v = self.predict_partial_hazard(X)
         cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
 
