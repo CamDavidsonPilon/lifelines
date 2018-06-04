@@ -84,6 +84,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events)
         self.baseline_survival_ = self._compute_baseline_survival()
+        self.event_observed = stop_times_events['event']
+
 
         self._n_examples = df.shape[0]
         self._n_unique = df.index.unique().shape[0]
@@ -183,8 +185,9 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             delta = solve(-h, step_size * g.T)
             if np.any(np.isnan(delta)):
-                raise ValueError("delta contains nan value(s). Convergence halted.")
-
+                raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+""")
             # Save these as pending result
             hessian, gradient = h, g
             norm_delta = norm(delta)
@@ -195,14 +198,14 @@ class CoxTimeVaryingFitter(BaseFitter):
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
+            elif abs(ll - previous_ll) < precision:
+                converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
-                converging, completed = False, True
+                converging, completed = False, False
             elif step_size <= 0.0001:
                 converging, completed = False, False
-            elif abs(ll - previous_ll) < precision:
-                converging, completed = False, True
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
@@ -215,7 +218,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         self._hessian_ = hessian
         self._score_ = gradient
         self._log_likelihood = ll
-        self.event_observed = stop_times_events['event']
 
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))

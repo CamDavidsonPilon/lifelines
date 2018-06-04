@@ -231,11 +231,12 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 
             # Save these as pending result
             hessian, gradient = h, g
+            norm_delta = norm(delta)
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, seconds_since_start = %.1f" % (i, norm_delta, step_size, ll, time.time() - start))
             # convergence criteria
-            if norm(delta) < precision:
+            if norm_delta < precision:
                 converging, completed = False, True
             elif abs(ll - previous_ll) < precision:
                 converging, completed = False, True
@@ -245,12 +246,12 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 converging, completed = False, False
             elif step_size <= 0.00001:
                 converging, completed = False, False
-            elif abs(ll) < 0.0001 and norm(delta) > 1.0:
+            elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
                 converging, completed = False, False
 
-            step_size = step_sizer.update(norm(delta)).next()
+            step_size = step_sizer.update(norm_delta).next()
 
             beta += delta
             previous_ll = ll

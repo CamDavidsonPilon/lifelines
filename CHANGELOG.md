@@ -1,7 +1,7 @@
 ### Changelogs
 
 #### 0.14.4
- - Adds `baseline_cumulative_hazard_` and `baseline_survival_` to `CoxTimeVaryingFitter`. Because of this, new prediction methods are available.
+ - Adds `baseline_cumulative_hazard_` and `baseline_survival_` to `CoxTimeVaryingFitter`. Because of this, new prediction methods are available. TODO
 
 #### 0.14.3 
  - fixes a bug when subtracting or dividing two `UnivariateFitters` with labels. 
