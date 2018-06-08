@@ -1026,7 +1026,7 @@ def _low_var(df):
 def check_low_var(df, prescript="", postscript=""):
     low_var = _low_var(df)
     if low_var.any():
-        cols = str(list(df.columns[low_var]))
+        cols = str(list(df.select_dtypes(include=np.number).columns[low_var]))
         warning_text = "%sColumn(s) %s have very low variance. \
 This may harm convergence. Try dropping this redundant column before fitting \
 if convergence fails.%s" % (prescript, cols, postscript)
