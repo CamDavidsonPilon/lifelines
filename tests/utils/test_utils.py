@@ -510,6 +510,15 @@ class TestLongDataFrameUtils(object):
 
         assert_frame_equal(df21, df12, check_like=True)
 
+    def test_order_of_adding_covariates_doesnt_matter_in_cumulative_sum(self, seed_df, cv1, cv2):
+        df12 = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E', cumulative_sum=True)\
+                      .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E', cumulative_sum=True)
+
+        df21 = seed_df.pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E', cumulative_sum=True)\
+                      .pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E', cumulative_sum=True)
+
+        assert_frame_equal(df21, df12, check_like=True)
+
     def test_adding_cvs_with_the_same_column_name_will_insert_appropriately(self, seed_df):
         seed_df = seed_df[seed_df['id'] == 1]
 
