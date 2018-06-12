@@ -1172,7 +1172,7 @@ known observation. This could case null values in the resulting dataframe."
             expanded_df['enum'] = np.arange(1, n + 1)
 
         if cumulative_sum:
-            expanded_df[cv.columns] = expanded_df[cv.columns].fillna(0)
+            expanded_df[cv.columns] = expanded_df[cv.columns].ffill().fillna(0)
 
         return expanded_df.ffill()
 
