@@ -666,7 +666,55 @@ Typically, data will be in a format that looks like it comes out of a relational
       <p>2 rows × 4 columns</p>
     </div>
 
-You'll also have secondary dataset that reference taking future measurements. Example:
+We will perform a light transform to this dataset to modify it into the "long" format.   
+
+.. code:: python
+
+      from lifelines.utils import to_long_format
+
+      base_df = to_long_format(base_df, duration_col="duration")
+
+The new dataset looks like:
+
+
+.. raw:: html
+
+    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
+      <table border="1" class="dataframe">
+        <thead>
+          <tr style="text-align: right;">
+            <th style="padding:8px;">id</th>
+            <th style="padding:8px;">start</th>
+            <th style="padding:8px;">stop</th>
+            <th style="padding:8px;">var1</th>
+            <th style="padding:8px;">event</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">10</td>
+            <td style="padding: 8px;">0.1</td>
+            <td style="padding: 8px;">True</td>
+          </tr>          
+          <tr>
+            <td style="padding: 8px;">2</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">12</td>
+            <td style="padding: 8px;">0.5</td>
+            <td style="padding: 8px;">False</td>
+          </tr>          
+        </tbody>
+      </table>
+      <p>2 rows × 5 columns</p>
+    </div>
+
+
+
+You'll also have secondary dataset that references future measurements. This could come in two "types". The first is when you have a variable that changes over time (ex: administering varying medication over time, or taking a tempature over time). The second types is an event-based dataset: an event happens at some time in the future (ex: an organ transplant occurs, or an intervention). We will address this type later. The first type of dataset may look something like: 
+
+Example:
 
 .. raw:: html
 
@@ -705,14 +753,13 @@ You'll also have secondary dataset that reference taking future measurements. Ex
       <p>4 rows × 3 columns</p>
     </div>
 
-where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at the end of time 4 and at the end of time 8. We can use ``to_long_format`` to transform the base dataset into a long format and ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
+where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at the end of time 4 and at the end of time 8. We can use ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
+
 
 .. code:: python
     
-      from lifelines.utils import to_long_format
       from lifelines.utils import add_covariate_to_timeline
 
-      base_df = to_long_format(base_df, duration_col="T")
       df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="event")
 
 
@@ -770,22 +817,56 @@ where ``time`` is the duration from the entry event. Here we see subject 1 had a
 
 From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost them after time 2.
 
- You may have multiple covariates you wish to add, so the above could be streamlined like so:
+You may have multiple covariates you wish to add, so the above could be streamlined like so:
 
 .. code:: python
     
-      from lifelines.utils import to_long_format
       from lifelines.utils import add_covariate_to_timeline
 
-      base_df = to_long_format(base_df, duration_col="T")
       df = base_df.pipe(add_covariate_to_timeline, cv1, duration_col="time", id_col="id", event_col="event")\
                   .pipe(add_covariate_to_timeline, cv2, duration_col="time", id_col="id", event_col="event")\
                   .pipe(add_covariate_to_timeline, cv3, duration_col="time", id_col="id", event_col="event")
 
 
-One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want to the covariate to reflect how much we have administered since the start. In contrast, a covariate the measure the temperature of the patient is a state update. See :ref:`Example cumulative total using ``add_covariate_to_timeline``` to see an example of this.
+If you dataset is of the second type, that is, event-based, your dataset may look something like the following, where values in the matrix denote times since the subject's birth, and ``None`` or  ``NaN`` represent the event not happening (subjects can be excluded if the event never occurred as well) :
+
+.. code-block:: python
+    
+    print(event_df)
+
+
+        id    E1  
+    0   1     1.0 
+    1   2     NaN 
+    2   3     3.0 
+    ...
+
+Initially, this can't be added to our baseline dataframe. However, using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added. 
+
+
+.. code-block:: python
+
+    from lifelines.utils import covariates_from_event_matrix
+
+    cv = covariates_from_event_matrix(event_df, id_col="id")
+    print(cv)
+
+
+    event  id  duration  E1
+    0       1       1.0   1
+    1       3       3.0   1
+    ...
+
+
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", cumulative_sum=True)
 
 For an example of pulling datasets like this from a SQL-store, and other helper functions, see :ref:`Example SQL queries and transformations to get time varying data`.
+
+Cumulative sums
+----------------
+
+
+One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want the covariate to reflect how much we have administered since the start. In contrast, a covariate to measure the temperature of the patient is a state update, and should not be summed. See :ref:`Example cumulative total using and time-varying covariates` to see an example of this.
 
 
 Fitting the model and a short note on prediction

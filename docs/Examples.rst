@@ -457,9 +457,7 @@ Initially, this can't be added to our baseline dataframe. Using ``utils.covariat
     df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", cumulative_sum=True)
 
 
-
-
-Example cumulative total using ``add_covariate_to_timeline``
+Example cumulative total using and time-varying covariates
 ############################################################
 
 Often we have either __transactional covariate datasets__ or __state covariate datasets__. In a transactional dataset, it may make sense to sum up the covariates to represent administration of a treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
