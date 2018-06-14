@@ -1009,7 +1009,7 @@ def pass_for_numeric_dtypes_or_raise(df):
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
 
-def check_for_immediate_deaths(df, stop_times_events):
+def check_for_immediate_deaths(stop_times_events):
     # Only used in CTV. This checks for deaths immediately, that is (0,0) lives.
     if ((stop_times_events['start'] == stop_times_events['stop']) & (stop_times_events['stop'] == 0) & stop_times_events['event']).any():
         raise ValueError("""The dataset provided has subjects that die on the day of entry. (0, 0)
@@ -1017,9 +1017,21 @@ is not allowed in CoxTimeVaryingFitter. If suffices to add a small non-zero valu
 
 > df.loc[ (df[start_col] == df[stop_col]) & (df[start_col] == 0) & df[event_col], stop_col] = 0.5
 
-Alternatively, add 1 to every subjects final end period.
-
+Alternatively, add 1 to every subjects' final end period.
 """)
+
+
+def check_for_instantaneous_events(stop_times_events):
+    if ((stop_times_events['start'] == stop_times_events['stop']) & (stop_times_events['stop'] == 0)).any():
+        warning_text = """There exist rows in your dataframe with start and stop both at time 0:
+
+        > df.loc[(df[start_col] == df[stop_col]) & (df[start_col] == 0)]
+
+        These can be safely dropped, which will improve performance.
+
+        > df = df.loc[~((df[start_col] == df[stop_col]) & (df[start_col] == 0))]
+"""
+        warnings.warn(warning_text, RuntimeWarning)
 
 
 def check_for_overlapping_intervals(df):
@@ -1195,7 +1207,7 @@ known observation. This could case null values in the resulting dataframe."
         raise IndexError("The columns `stop` and `start` must be in long_form_df - perhaps you need to use `lifelines.utils.to_long_format` first?")
 
     if delay < 0:
-        raise ValueError("delay parameter must be 0 or more")
+        raise ValueError("delay parameter must be equal to or greater than 0")
 
     cv[duration_col] += delay
     cv = cv.dropna()

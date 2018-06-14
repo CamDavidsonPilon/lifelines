@@ -565,8 +565,8 @@ We can incorporate changes over time into our survival analysis by using a modif
 
 Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this. 
 
-Dataset for time-varying regression
-####################################
+Dataset creation for time-varying regression
+---------------------------------------------
 
 Lifelines requires that the dataset be in what is called the *long* format. This looks like one row per state change, including an ID, the left (exclusive) time point, and right (inclusive) time point. For example, the following dataset tracks three unique subjects. 
 
@@ -858,15 +858,29 @@ Initially, this can't be added to our baseline dataframe. However, using ``utils
     ...
 
 
-    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", cumulative_sum=True)
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
 
 For an example of pulling datasets like this from a SQL-store, and other helper functions, see :ref:`Example SQL queries and transformations to get time varying data`.
 
 Cumulative sums
 ----------------
 
+One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want the covariate to reflect how much we have administered since the start. Event columns do make sense to cumulative sum as well. In contrast, a covariate to measure the temperature of the patient is a state update, and should not be summed.  See :ref:`Example cumulative total using and time-varying covariates` to see an example of this.
 
-One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want the covariate to reflect how much we have administered since the start. In contrast, a covariate to measure the temperature of the patient is a state update, and should not be summed. See :ref:`Example cumulative total using and time-varying covariates` to see an example of this.
+Delaying time-varying covariates
+---------------------------------------------
+
+``add_covariate_to_timeline`` also has an option for delaying, or shifting, a covariate to it is changes later than originally. One may ask, why should I delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknownst to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
+
+To handle this, you can delay the observations by time periods:
+
+.. code-block:: python
+
+    from lifelines.utils import covariates_from_event_matrix
+
+
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", delay=14)
+
 
 
 Fitting the model and a short note on prediction

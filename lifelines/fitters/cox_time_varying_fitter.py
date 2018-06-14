@@ -16,7 +16,8 @@ from lifelines.utils import inv_normal_cdf, \
     significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
-    ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths
+    ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths,\
+    check_for_instantaneous_events
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -98,7 +99,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_low_var(df)
         check_complete_separation_low_variance(df, stop_times_events['event'])
         pass_for_numeric_dtypes_or_raise(df)
-        check_for_immediate_deaths(df, stop_times_events)
+        check_for_immediate_deaths(stop_times_events)
+        check_for_instantaneous_events(stop_times_events)
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std

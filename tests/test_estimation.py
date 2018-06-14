@@ -1343,6 +1343,20 @@ Concordance = 0.640""".strip().split()
         cp.fit(rossi, 'week', 'arrest')
 
 
+    def test_all_okay_with_non_trivial_index_in_dataframe(self, rossi):
+        n = rossi.shape[0]
+
+        cp1 = CoxPHFitter()
+        cp1.fit(rossi, 'week', event_col='arrest')
+
+
+        cp2 = CoxPHFitter()
+        rossi_new_index = rossi.set_index(np.random.randint(n, size=n))
+        cp2.fit(rossi_new_index, 'week', event_col='arrest')
+
+        assert_frame_equal(cp2.summary, cp1.summary)
+
+
 class TestAalenAdditiveFitter():
 
     def test_nn_cumulative_hazard_will_set_cum_hazards_to_0(self, rossi):
@@ -1511,6 +1525,42 @@ class TestCoxTimeVaryingFitter():
                 ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
 
+    def test_fitter_will_raise_an_error_if_immediate_death_present(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 0, 'var': 1., 'event': 1},
+        ])
+
+        with pytest.raises(ValueError):
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+    def test_fitter_will_raise_a_warning_if_instaneous_observation_present(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 0, 'var': 1., 'event': 0},
+            {'id': 1, 'start': 0, 'stop': 10, 'var': 1., 'event': 1},
+            {'id': 2, 'start': 0, 'stop': 10, 'var': 2., 'event': 1},
+        ])
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except (LinAlgError, ValueError):
+                pass
+            assert len(w) == 1
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "safely dropped" in str(w[0].message)
+
+        df = df.loc[~((df['start'] == df['stop']) & (df['start'] == 0))]
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except (LinAlgError, ValueError):
+                pass
+            assert len(w) == 0
+
+
     def test_fitter_will_error_if_degenerate_time(self, ctv):
         df = pd.DataFrame.from_records([
             {'id': 1, 'start': 0, 'stop': 0,  'var': -1.2, 'bool': True, 'event': 1}, # note the degenerate times
@@ -1639,4 +1689,20 @@ class TestCoxTimeVaryingFitter():
         ctv.fit(heart, id_col='id', event_col='event')
         uniques = heart['id'].unique().shape[0]
         assert ctv.__repr__() == '<lifelines.CoxTimeVaryingFitter: fitted with %d periods, %d uniques, %d events>' % (heart.shape[0], uniques, heart['event'].sum())
+
+
+    def test_all_okay_with_non_trivial_index_in_dataframe(self, ctv, heart):
+        n = heart.shape[0]
+
+        ctv1 = CoxTimeVaryingFitter()
+        ctv1.fit(heart, id_col='id', event_col='event')
+
+
+        ctv2 = CoxTimeVaryingFitter()
+        heart_new_index = heart.set_index(np.random.randint(n, size=n))
+        ctv2.fit(heart_new_index, id_col='id', event_col='event')
+
+        assert_frame_equal(ctv2.summary, ctv1.summary)
+
+
 
