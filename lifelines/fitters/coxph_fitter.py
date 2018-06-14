@@ -573,7 +573,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
     def _compute_baseline_hazard(self, data, durations, event_observed, name):
-        # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
+        # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
         ind_hazards = self.predict_partial_hazard(data)
         ind_hazards['event_at'] = durations.values
         ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()

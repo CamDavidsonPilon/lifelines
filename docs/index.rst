@@ -49,6 +49,13 @@ Source code and Issue Tracker
 Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_
 Please report bugs, issues and feature extensions there. We also have `Gitter channel <https://gitter.im/python-lifelines/Lobby>`_ open to discuss lifelines: 
 
+Citing lifelines
+------------------------------
+
+The following link will bring you to a page where you can find the latest citation for lifelines:
+
+`Citation for lifelines <http://doi.org/10.5281/zenodo.1252342>`_
+
 
 Indices and tables
 ==================
