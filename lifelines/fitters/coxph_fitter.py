@@ -18,6 +18,7 @@ from lifelines.utils import survival_table_from_events, inv_normal_cdf, normaliz
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
     check_complete_separation, check_nans, StatError, ConvergenceWarning,\
     StepSizer
+from lifelines.statistics import chisq_test
 
 
 class CoxPHFitter(BaseFitter):
@@ -231,11 +232,12 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 
             # Save these as pending result
             hessian, gradient = h, g
+            norm_delta = norm(delta)
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, seconds_since_start = %.1f" % (i, norm(delta), step_size, ll, time.time() - start))
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, seconds_since_start = %.1f" % (i, norm_delta, step_size, ll, time.time() - start))
             # convergence criteria
-            if norm(delta) < precision:
+            if norm_delta < precision:
                 converging, completed = False, True
             elif abs(ll - previous_ll) < precision:
                 converging, completed = False, True
@@ -245,12 +247,12 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 converging, completed = False, False
             elif step_size <= 0.00001:
                 converging, completed = False, False
-            elif abs(ll) < 0.0001 and norm(delta) > 1.0:
+            elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
                 converging, completed = False, False
 
-            step_size = step_sizer.update(norm(delta)).next()
+            step_size = step_sizer.update(norm_delta).next()
 
             beta += delta
             previous_ll = ll
@@ -351,7 +353,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 hessian -= (a1 - a2)
 
-                log_lik -= np.log(denom)[0][0]
+                log_lik -= np.log(denom[0][0])
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
@@ -437,7 +439,31 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
         print("Concordance = {:.3f}".format(self.score_))
+        print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
         return
+
+    def _compute_likelihood_ratio_test(self):
+        """
+        This function computes the likelihood ratio test for the Cox model. We
+        compare the existing model (with all the covariates) to the trivial model
+        of no covariates.
+
+        Conviently, we can actually use the class itself to do most of the work.
+
+        """
+        trivial_dataset = pd.DataFrame({'E': self.event_observed, 'T': self.durations})
+
+        cp_null = CoxPHFitter()
+        cp_null.fit(trivial_dataset, 'T', 'E', show_progress=False)
+
+        ll_null = cp_null._log_likelihood
+        ll_alt = self._log_likelihood
+
+        test_stat = 2*ll_alt - 2*ll_null
+        degrees_freedom = self.hazards_.shape[1]
+        _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
+        return test_stat, degrees_freedom, p_value
+
 
     def predict_partial_hazard(self, X):
         """
@@ -572,7 +598,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
     def _compute_baseline_hazard(self, data, durations, event_observed, name):
-        # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
+        # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
         ind_hazards = self.predict_partial_hazard(data)
         ind_hazards['event_at'] = durations.values
         ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
@@ -582,6 +608,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         event_table = event_table.join(ind_hazards_summed_over_durations)
         baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name]).fillna(0)
         return baseline_hazard
+
 
     def _compute_baseline_hazards(self, df, T, E):
         if self.strata:

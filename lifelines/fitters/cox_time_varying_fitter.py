@@ -11,12 +11,14 @@ from scipy import stats
 from numpy import dot, exp
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import BaseFitter
-
+from lifelines.fitters.coxph_fitter import CoxPHFitter
+from lifelines.statistics import chisq_test
 from lifelines.utils import inv_normal_cdf, \
     significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
-    ConvergenceWarning, StepSizer, _get_index
+    ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths,\
+    check_for_instantaneous_events
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -50,7 +52,7 @@ class CoxTimeVaryingFitter(BaseFitter):
           event_col: the column in dataframe that contains the subjects' death
              observation. If left as None, assume all individuals are non-censored.
           start_col: the column that contains the start of a subject's time period.
-          end_col: the column that contains the end of a subject's time period.
+          stop_col: the column that contains the end of a subject's time period.
           show_progress: since the fitter is iterative, show convergence
              diagnostics.
           step_size: set an initial step size for the fitting algorithm.
@@ -61,18 +63,17 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
 
         df = df.copy()
+
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
             raise KeyError("A column specified in the call to `fit` does not exist in the dataframe provided.")
 
         df = df.rename(columns={id_col: 'id', event_col: 'event', start_col: 'start', stop_col: 'stop'})
-        df['event'] = df['event'].astype(bool)
-
-        df = df.set_index(['id'])
-
-        self._check_values(df.drop(["event", "stop", "start"], axis=1), df['event'])
-
-        stop_times_events = df[["event", "stop", "start"]]
+        df = df.set_index('id')
+        stop_times_events = df[["event", "stop", "start"]].copy()
         df = df.drop(["event", "stop", "start"], axis=1)
+        stop_times_events['event'] = stop_times_events['event'].astype(bool)
+
+        self._check_values(df, stop_times_events)
         df = df.astype(float)
 
         self._norm_mean = df.mean(0)
@@ -83,17 +84,24 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
+        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events)
+        self.baseline_survival_ = self._compute_baseline_survival()
+        self.event_observed = stop_times_events['event']
+        self.start_stop_and_events = stop_times_events
+
         self._n_examples = df.shape[0]
         self._n_unique = df.index.unique().shape[0]
 
         return self
 
     @staticmethod
-    def _check_values(df, E):
+    def _check_values(df, stop_times_events):
         # check_for_overlapping_intervals(df) # this is currenty too slow for production.
         check_low_var(df)
-        check_complete_separation_low_variance(df, E)
+        check_complete_separation_low_variance(df, stop_times_events['event'])
         pass_for_numeric_dtypes_or_raise(df)
+        check_for_immediate_deaths(stop_times_events)
+        check_for_instantaneous_events(stop_times_events)
 
     def _compute_standard_errors(self):
         se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std
@@ -124,9 +132,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         Set alpha property in the object before calling.
 
         Returns:
-            df:.DataFrame, Contains columns coef, exp(coef), se(coef), z, p, lower, upper
+            df: DataFrame, contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
-
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.loc['coef'].values
         df['exp(coef)'] = exp(self.hazards_.loc['coef'].values)
@@ -145,9 +152,9 @@ class CoxTimeVaryingFitter(BaseFitter):
         Note that data is assumed to be sorted on T!
 
         Parameters:
-            df: (n, d+2) Pandas DataFrame of observations with specific Interval multiindex.
-            initial_beta: (1, d) numpy array of initial starting point for
-                          NR algorithm. Default 0.
+            df: (n, d) Pandas DataFrame of observations
+            stop_times_events: (n, d) Pandas DataFrame of meta information about the subjects history
+            show_progress: True to show verbous output of convergence
             step_size: float > 0 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
@@ -181,8 +188,9 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             delta = solve(-h, step_size * g.T)
             if np.any(np.isnan(delta)):
-                raise ValueError("delta contains nan value(s). Convergence halted.")
-
+                raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+""")
             # Save these as pending result
             hessian, gradient = h, g
             norm_delta = norm(delta)
@@ -193,14 +201,14 @@ class CoxTimeVaryingFitter(BaseFitter):
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
+            elif abs(ll - previous_ll) < precision:
+                converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
-                converging, completed = False, True
+                converging, completed = False, False
             elif step_size <= 0.0001:
                 converging, completed = False, False
-            elif abs(ll - previous_ll) < precision:
-                converging, completed = False, True
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
@@ -213,7 +221,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         self._hessian_ = hessian
         self._score_ = gradient
         self._log_likelihood = ll
-        self.event_observed = stop_times_events['event']
 
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
@@ -247,7 +254,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             phi_i = exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
-            phi_x_x_i = dot(df_at_t.T, phi_x_i)  # dot(df_at_t.T, phi_i * df_at_t)
+            phi_x_x_i = dot(df_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = phi_i.sum()
@@ -338,10 +345,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         return exp(self.predict_log_partial_hazard(X))
 
+
     def print_summary(self):
         """
-        Print summary statistics describing the fit.
-
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
         """
         df = self.summary
         # Significance codes last
@@ -356,7 +363,31 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
+        print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
         return
+
+    def _compute_likelihood_ratio_test(self):
+        """
+        This function computes the likelihood ratio test for the Cox model. We
+        compare the existing model (with all the covariates) to the trivial model
+        of no covariates.
+
+        Conviently, we can actually use the class itself to do most of the work.
+
+        """
+        trivial_dataset = self.start_stop_and_events.groupby(level=0).last()[['event', 'stop']]
+
+        cp_null = CoxPHFitter()
+        cp_null.fit(trivial_dataset, 'stop', 'event', show_progress=False)
+
+        ll_null = cp_null._log_likelihood
+        ll_alt = self._log_likelihood
+
+        test_stat = 2*ll_alt - 2*ll_null
+        degrees_freedom = self.hazards_.shape[1]
+        _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
+        return test_stat, degrees_freedom, p_value
+
 
     def plot(self, standardized=False, columns=None, **kwargs):
         """
@@ -404,6 +435,32 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax
+
+
+    def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events):
+        events = stop_times_events.copy()
+        events['hazard'] = self.predict_partial_hazard(tv_data).values
+
+        unique_death_times = np.unique(events['stop'].loc[events['event']])
+        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times),
+                                        index=unique_death_times,
+                                        columns=['baseline hazard'])
+
+        for t in unique_death_times:
+            ix = (events['start'] < t) & (t <= events['stop'])
+            events_at_t = events.loc[ix]
+
+            deaths = events_at_t['event'] & (events_at_t['stop'] == t)
+            death_counts = deaths.sum()  # should always be atleast 1.
+            baseline_hazard_.loc[t] = death_counts / events_at_t['hazard'].sum()
+
+        return baseline_hazard_.cumsum()
+
+    def _compute_baseline_survival(self):
+        survival_df = exp(-self.baseline_cumulative_hazard_)
+        survival_df.columns = ['baseline survival']
+        return survival_df
+
 
     def __repr__(self):
         classname = self.__class__.__name__

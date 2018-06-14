@@ -513,13 +513,6 @@ class TestKaplanMeierFitter():
             warnings.simplefilter("always")
             kmf = KaplanMeierFitter().fit(T, E, weights=np.random.random(n))
             assert True
-    def test_float_weights(self):
-        T = np.array([1,2,3,4,5])
-        W = np.array([2.1,0.9,0.9,0.9,0.9])
-        correct = np.array([1.0,0.632,0.474,0.316,0.158,0.0]).reshape((6,1))
-        kmf = KaplanMeierFitter().fit(T,weights=W)
-        npt.assert_almost_equal(correct,kmf.survival_function_,decimal=3)
-
 
 class TestNelsonAalenFitter():
 
@@ -785,8 +778,10 @@ prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-0
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Concordance = 0.640""".strip().split()
-            for i in [0, 1, 2, -2, -1]:
+Concordance = 0.640
+Likelihood ratio test = 33.266 on 7 df, p=0.00002
+""".strip().split()
+            for i in [0, 1, 2, 3, -2, -1, -3, -4, -5]:
                 assert output[i] == expected[i]
         finally:
             sys.stdout = saved_stdout
@@ -1048,6 +1043,22 @@ Concordance = 0.640""".strip().split()
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.summary['z'].values, expected, decimal=3)
+
+    def test_log_likelihood_test_against_R(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = 33.27
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        assert (cf._compute_likelihood_ratio_test()[0] - expected) < 0.01
 
     def test_output_with_strata_against_R(self, rossi):
         """
@@ -1343,6 +1354,20 @@ Concordance = 0.640""".strip().split()
         cp.fit(rossi, 'week', 'arrest')
 
 
+    def test_all_okay_with_non_trivial_index_in_dataframe(self, rossi):
+        n = rossi.shape[0]
+
+        cp1 = CoxPHFitter()
+        cp1.fit(rossi, 'week', event_col='arrest')
+
+
+        cp2 = CoxPHFitter()
+        rossi_new_index = rossi.set_index(np.random.randint(n, size=n))
+        cp2.fit(rossi_new_index, 'week', event_col='arrest')
+
+        assert_frame_equal(cp2.summary, cp1.summary)
+
+
 class TestAalenAdditiveFitter():
 
     def test_nn_cumulative_hazard_will_set_cum_hazards_to_0(self, rossi):
@@ -1510,6 +1535,58 @@ class TestCoxTimeVaryingFitter():
             with pytest.raises(ValueError):
                 ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
+
+    def test_fitter_will_raise_an_error_if_immediate_death_present(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 0, 'var': 1., 'event': 1},
+        ])
+
+        with pytest.raises(ValueError):
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+    def test_fitter_will_raise_a_warning_if_instaneous_observation_present(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 0, 'var': 1., 'event': 0},
+            {'id': 1, 'start': 0, 'stop': 10, 'var': 1., 'event': 1},
+            {'id': 2, 'start': 0, 'stop': 10, 'var': 2., 'event': 1},
+        ])
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except (LinAlgError, ValueError):
+                pass
+            assert len(w) == 1
+            assert issubclass(w[-1].category, RuntimeWarning)
+            assert "safely dropped" in str(w[0].message)
+
+        df = df.loc[~((df['start'] == df['stop']) & (df['start'] == 0))]
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            except (LinAlgError, ValueError):
+                pass
+            assert len(w) == 0
+
+
+    def test_fitter_will_error_if_degenerate_time(self, ctv):
+        df = pd.DataFrame.from_records([
+            {'id': 1, 'start': 0, 'stop': 0, 'event': 1}, # note the degenerate times
+            {'id': 2, 'start': 0, 'stop': 5, 'event': 1},
+            {'id': 3, 'start': 0, 'stop': 5, 'event': 1},
+            {'id': 4, 'start': 0, 'stop': 4, 'event': 1},
+        ])
+        with pytest.raises(ValueError):
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+        df.loc[ (df['start'] == df['stop']) & (df['start'] == 0) & df['event'], 'stop'] = 0.5
+        ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        assert True
+
+
     def test_fitter_accept_boolean_columns(self, ctv):
         df = pd.DataFrame.from_records([
             {'id': 1, 'start': 0, 'stop': 5,  'var': -1.2, 'bool': True, 'event': 1},
@@ -1518,7 +1595,7 @@ class TestCoxTimeVaryingFitter():
         ])
 
         ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
-
+        assert True
 
     def test_warning_is_raised_if_df_has_a_near_constant_column(self, ctv, dfcv):
         dfcv['constant'] = 1.0
@@ -1549,7 +1626,7 @@ class TestCoxTimeVaryingFitter():
             assert issubclass(w[0].category, ConvergenceWarning)
             assert "complete separation" in str(w[1].message)
 
-    def test_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
+    def test_summary_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
         library(survival)
         data(heart)
@@ -1559,7 +1636,6 @@ class TestCoxTimeVaryingFitter():
         npt.assert_almost_equal(ctv.summary['coef'].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3)
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
-
 
     def test_error_is_raised_if_using_non_numeric_data(self, ctv):
         df = pd.DataFrame.from_dict({
@@ -1597,3 +1673,82 @@ class TestCoxTimeVaryingFitter():
         ctv.fit(heart, id_col='id', event_col='event')
         assert ctv.predict_log_partial_hazard(heart).shape[0] == heart.shape[0]
         assert ctv.predict_partial_hazard(heart).shape[0] == heart.shape[0]
+
+    def test_ctv_baseline_cumulative_hazard_against_R(self, ctv, heart):
+        """
+        library(survival)
+        data(heart)
+        r = coxph(Surv(start, stop, event) ~ age + transplant + surgery + year, data=heart)
+
+        sest = survfit(r, se.fit = F)
+        sest$cumhaz
+        """
+        expected = [0.008576073, 0.034766771, 0.061749725, 0.080302426, 0.09929016, 0.109040953, 0.118986351, 0.129150022, 0.160562122, 0.171388794, 0.182287871, 0.204408269, 0.215630422, 0.227109569, 0.238852428, 0.250765502, 0.26291466, 0.275185886, 0.287814114, 0.313833224,
+                    0.327131062, 0.340816277, 0.354672739, 0.368767829, 0.383148661, 0.397832317, 0.412847777, 0.428152773, 0.459970612, 0.476275941, 0.50977267, 0.52716976, 0.545297536, 0.563803467, 0.582672943, 0.602305488, 0.622619844, 0.643438746, 0.664737826, 0.686688715,
+                    0.7093598, 0.732698614, 0.756553038, 0.781435099, 0.806850698, 0.832604447, 0.859118436, 0.886325942, 0.914877455, 0.975077858, 1.006355139, 1.039447234,
+                    1.073414895, 1.109428518, 1.155787187, 1.209776781, 1.26991066, 1.3421101, 1.431890995, 1.526763781, 1.627902989, 1.763620039]
+        ctv.fit(heart, id_col='id', event_col='event')
+        npt.assert_array_almost_equal(ctv.baseline_cumulative_hazard_.values[0:3, 0], expected[0:3], decimal=3)
+        npt.assert_array_almost_equal(ctv.baseline_cumulative_hazard_.values[:, 0], expected, decimal=2) # errors accumulate fast =(
+
+    def test_repr_with_fitter(self, ctv, heart):
+        ctv.fit(heart, id_col='id', event_col='event')
+        uniques = heart['id'].unique().shape[0]
+        assert ctv.__repr__() == '<lifelines.CoxTimeVaryingFitter: fitted with %d periods, %d uniques, %d events>' % (heart.shape[0], uniques, heart['event'].sum())
+
+
+    def test_all_okay_with_non_trivial_index_in_dataframe(self, ctv, heart):
+        n = heart.shape[0]
+
+        ctv1 = CoxTimeVaryingFitter()
+        ctv1.fit(heart, id_col='id', event_col='event')
+
+
+        ctv2 = CoxTimeVaryingFitter()
+        heart_new_index = heart.set_index(np.random.randint(n, size=n))
+        ctv2.fit(heart_new_index, id_col='id', event_col='event')
+
+        assert_frame_equal(ctv2.summary, ctv1.summary)
+
+
+    def test_penalizer(self, heart):
+        ctv = CoxTimeVaryingFitter(penalizer=1.0)
+        ctv.fit(heart, id_col='id', event_col='event')
+        assert True
+
+
+    def test_likelihood_ratio_test_against_R(self, ctv, heart):
+        ctv.fit(heart, id_col='id', event_col='event')
+        test_stat, deg_of_freedom, p_value = ctv._compute_likelihood_ratio_test()
+        assert abs(test_stat - 15.1) < 0.1
+        assert abs(p_value - 0.00448) < 0.001
+        assert deg_of_freedom == 4
+
+
+    def test_print_summary(self, ctv, heart):
+
+        import sys
+        saved_stdout = sys.stdout
+        try:
+            out = StringIO()
+            sys.stdout = out
+
+            ctv.fit(heart, id_col='id', event_col='event')
+            ctv.print_summary()
+            output = out.getvalue().strip().split()
+            expected = """periods=172, uniques=103, number of events=75
+
+              coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540  *
+year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082  *
+surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825  .
+transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Likelihood ratio test = 15.111 on 4 df, p=0.00448
+""".strip().split()
+            for i in [0, 1, 2, 3, -2, -1, -3, -4, -5]:
+                assert output[i] == expected[i]
+        finally:
+            sys.stdout = saved_stdout
