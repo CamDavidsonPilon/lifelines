@@ -343,41 +343,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return exp(self.predict_log_partial_hazard(X))
 
 
-    def predict_survival_function(self, X, times=None):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        times: an iterable of increasing times to predict the survival function at. Default
-            is the set of all durations (observed and unobserved)
-
-        Returns the estimated survival functions for the individuals
-        """
-        return exp(-self.predict_cumulative_hazard(X, times=times))
-
-
-    def predict_cumulative_hazard(self, X, id_col, times=None):
-        """
-        X: a (n,d) DataFrame containing the same schema as what was trained on. This means the same
-            columns, including an id_col, start_col, stop_col.
-
-        times: an iterable of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations (observed and unobserved). Uses a linear interpolation if
-            points in time are not in the index.
-
-        Returns the cumulative hazard of individuals.
-        """
-        c_0 = self.baseline_cumulative_hazard_.diff()
-        v = self.predict_partial_hazard(X)
-        cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
-
-        if times is not None:
-            # non-linear interpolations can push the survival curves above 1 and below 0.
-            return cumulative_hazard_.reindex(cumulative_hazard_.index.union(times)).interpolate("index").loc[times]
-        else:
-            return cumulative_hazard_
-
-
     def print_summary(self):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.

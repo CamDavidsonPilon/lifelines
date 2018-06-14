@@ -1090,7 +1090,9 @@ def to_long_format(df, duration_col):
              .drop(duration_col, axis=1)
 
 
-def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col, add_enum=False, overwrite=True, cumulative_sum=False, cumulative_sum_prefix="cumsum_"):
+def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col,
+                              add_enum=False, overwrite=True, cumulative_sum=False,
+                              cumulative_sum_prefix="cumsum_", delay=0):
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
     to be used iteratively as one adds more and more covariates to track over time. If beginning to use this function, it is recommend
@@ -1192,6 +1194,10 @@ known observation. This could case null values in the resulting dataframe."
     if 'stop' not in long_form_df.columns or 'start' not in long_form_df.columns:
         raise IndexError("The columns `stop` and `start` must be in long_form_df - perhaps you need to use `lifelines.utils.to_long_format` first?")
 
+    if delay < 0:
+        raise ValueError("delay parameter must be 0 or more")
+
+    cv[duration_col] += delay
     cv = cv.dropna()
     cv = cv.sort_values([id_col, duration_col])
     cvs = cv.pipe(remove_redundant_rows)\

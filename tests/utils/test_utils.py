@@ -659,6 +659,26 @@ class TestLongDataFrameUtils(object):
         assert_frame_equal(expected, df, check_like=True)
 
 
+    def test_delay(self, cv2):
+        seed_df = pd.DataFrame.from_records([{'id': 1, 'start': 0, 'stop': 50, 'E': 1}])
+
+        cv3 = pd.DataFrame.from_records([
+            {'id': 1, 't': 0,  'varA': 2},
+            {'id': 1, 't': 10, 'varA': 4},
+            {'id': 1, 't': 20, 'varA': 6},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv3, 'id', 't', 'E', delay=2).fillna(0)
+
+        expected = pd.DataFrame.from_records([
+            {'start': 0,   'stop': 2.0,  'varA': 0.0,'id': 1, 'E': False},
+            {'start': 2,   'stop': 12.0, 'varA': 2.0, 'id': 1, 'E': False},
+            {'start': 12,  'stop': 22.0, 'varA': 4.0, 'id': 1, 'E': False},
+            {'start': 22,  'stop': 50.0, 'varA': 6.0, 'id': 1, 'E': True}]
+        )
+        assert_frame_equal(expected, df, check_like=True)
+
+
     def test_covariates_from_event_matrix(self):
         df = pd.DataFrame([
                 [1,   1,    None, 2   ],
