@@ -1,7 +1,10 @@
 ### Changelogs
 
 #### 0.14.4
- - Adds `baseline_cumulative_hazard_` and `baseline_survival_` to `CoxTimeVaryingFitter`. Because of this, new prediction methods are available. TODO
+ - Adds `baseline_cumulative_hazard_` and `baseline_survival_` to `CoxTimeVaryingFitter`. Because of this, new prediction methods are available. - fixed a bug in `add_covariate_to_timeline` when using `cumulative_sum` with multiple columns.
+ - Added `Likelihood ratio test` to `CoxPHFitter.print_summary`
+ - New checks in `CoxTimeVaryingFitter` that check for immediate deaths and redundant rows. 
+ - New `delay` parameter in `add_covariate_to_timeline`
 
 #### 0.14.3 
  - fixes a bug when subtracting or dividing two `UnivariateFitters` with labels. 

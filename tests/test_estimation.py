@@ -1049,6 +1049,22 @@ Concordance = 0.640""".strip().split()
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.summary['z'].values, expected, decimal=3)
 
+    def test_log_likelihood_test_against_R(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+            data=rossi)
+        summary(mod.allison)
+        """
+        expected = 33.27
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        assert (cf._compute_likelihood_ratio_test()[0] - expected) < 0.01
+
     def test_output_with_strata_against_R(self, rossi):
         """
         rossi <- read.csv('.../lifelines/datasets/rossi.csv')
