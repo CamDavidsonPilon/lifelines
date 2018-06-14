@@ -785,8 +785,10 @@ prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-0
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Concordance = 0.640""".strip().split()
-            for i in [0, 1, 2, -2, -1]:
+Concordance = 0.640
+Likelihood ratio test = 33.266 on 7 df, p=0.00002
+""".strip().split()
+            for i in [0, 1, 2, 3, -2, -1, -3, -4, -5]:
                 assert output[i] == expected[i]
         finally:
             sys.stdout = saved_stdout
@@ -1579,9 +1581,10 @@ class TestCoxTimeVaryingFitter():
 
     def test_fitter_will_error_if_degenerate_time(self, ctv):
         df = pd.DataFrame.from_records([
-            {'id': 1, 'start': 0, 'stop': 0,  'var': -1.2, 'bool': True, 'event': 1}, # note the degenerate times
-            {'id': 2, 'start': 0, 'stop': 5,  'var': 1.3,  'bool': False, 'event': 1},
-            {'id': 3, 'start': 0, 'stop': 5,  'var': -1.3, 'bool': False, 'event': 1},
+            {'id': 1, 'start': 0, 'stop': 0, 'event': 1}, # note the degenerate times
+            {'id': 2, 'start': 0, 'stop': 5, 'event': 1},
+            {'id': 3, 'start': 0, 'stop': 5, 'event': 1},
+            {'id': 4, 'start': 0, 'stop': 4, 'event': 1},
         ])
         with pytest.raises(ValueError):
             ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
@@ -1678,12 +1681,6 @@ class TestCoxTimeVaryingFitter():
         assert ctv.predict_log_partial_hazard(heart).shape[0] == heart.shape[0]
         assert ctv.predict_partial_hazard(heart).shape[0] == heart.shape[0]
 
-        test_patient = heart.iloc[[0,2]]
-        assert ctv.predict_cumulative_hazard(test_patient).shape == (62, 2)
-        assert ctv.predict_survival_function(test_patient).shape == (62, 2)
-        assert ctv.predict_cumulative_hazard(test_patient, times=[0, 20, 50]).shape[0] == 3
-        assert ctv.predict_survival_function(test_patient, times=[0, 20, 50]).shape[0] == 3
-
     def test_ctv_baseline_cumulative_hazard_against_R(self, ctv, heart):
         """
         library(survival)
@@ -1721,4 +1718,34 @@ class TestCoxTimeVaryingFitter():
         assert_frame_equal(ctv2.summary, ctv1.summary)
 
 
+    def test_penalizer(self, heart):
+        ctv = CoxTimeVaryingFitter(penalizer=1.0)
+        ctv.fit(heart, id_col='id', event_col='event')
+        assert True
 
+
+    def test_print_summary(self, ctv, heart):
+
+        import sys
+        saved_stdout = sys.stdout
+        try:
+            out = StringIO()
+            sys.stdout = out
+
+            ctv.fit(heart, id_col='id', event_col='event')
+            ctv.print_summary()
+            output = out.getvalue().strip().split()
+            expected = """periods=172, uniques=103, number of events=75
+
+              coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540  *
+year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082  *
+surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825  .
+transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+""".strip().split()
+            for i in [0, 1, 2, 3, -2, -1, -3, -4, -5]:
+                assert output[i] == expected[i]
+        finally:
+            sys.stdout = saved_stdout

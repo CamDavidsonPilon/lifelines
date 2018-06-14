@@ -689,20 +689,35 @@ class TestLongDataFrameUtils(object):
 
 
     def test_covariates_from_event_matrix(self):
-        df = pd.DataFrame([
+
+        base_df = pd.DataFrame([
+                [1, 0, 5, 1],
+                [2, 0, 4, 1],
+                [3, 0, 8, 1],
+                [4, 0, 4, 1]
+        ], columns=['id', 'start', 'stop', 'e'])
+
+
+        event_df = pd.DataFrame([
                 [1,   1,    None, 2   ],
                 [2,   None, 5,    None],
                 [3,   3,    3,    7   ]
              ], columns=['id', 'promotion', 'movement', 'raise'])
 
-        ldf = pd.DataFrame([[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]], columns=['id', 'start', 'stop', 'e'])
+        cv = utils.covariates_from_event_matrix(event_df, 'id')
+        ldf = utils.add_covariate_to_timeline(base_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
+        expected = pd.DataFrame.from_records([
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 0.0, 'cumsum_raise': 0.0, 'e': 0.0, 'id': 1.0, 'start': 0.0, 'stop': 1.0},
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 1.0, 'cumsum_raise': 0.0, 'e': 0.0, 'id': 1.0, 'start': 1.0, 'stop': 2.0},
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 1.0, 'cumsum_raise': 1.0, 'e': 1.0, 'id': 1.0, 'start': 2.0, 'stop': 5.0},
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 0.0, 'cumsum_raise': 0.0, 'e': 1.0, 'id': 2.0, 'start': 0.0, 'stop': 4.0},
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 0.0, 'cumsum_raise': 0.0, 'e': 0.0, 'id': 3.0, 'start': 0.0, 'stop': 3.0},
+            {'cumsum_movement': 1.0, 'cumsum_promotion': 1.0, 'cumsum_raise': 0.0, 'e': 0.0, 'id': 3.0, 'start': 3.0, 'stop': 7.0},
+            {'cumsum_movement': 1.0, 'cumsum_promotion': 1.0, 'cumsum_raise': 1.0, 'e': 1.0, 'id': 3.0, 'start': 7.0, 'stop': 8.0},
+            {'cumsum_movement': None, 'cumsum_promotion': None, 'cumsum_raise': None, 'e': 1.0, 'id': 4.0, 'start': 0.0, 'stop': 4.0}
+        ])
 
-        cv = utils.covariates_from_event_matrix(df, 'id')
-        ldf = utils.add_covariate_to_timeline(ldf, cv, 'id', 'duration', 'e', cumulative_sum=True)
-        assert ldf.loc[ldf['id'] == 1]['cumsum_movement'].tolist() == [0, 0, 0]
-        assert ldf.loc[ldf['id'] == 1]['cumsum_promotion'].tolist() == [0, 1, 1]
-        assert ldf.loc[ldf['id'] == 1]['cumsum_raise'].tolist() == [0, 0, 1]
-        assert ldf.loc[ldf['id'] == 1]['start'].tolist() == [0, 1., 2.]
+        assert_frame_equal(expected, ldf, check_dtype=False, check_like=True)
 
 
 def test_StepSizer_step_will_decrease_if_unstable():
