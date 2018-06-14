@@ -343,7 +343,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 denom = (risk_phi - c * tie_phi)
                 z = (risk_phi_x - c * tie_phi_x)
 
-                # Gradientrisk_phi
+                # Gradient
                 partial_gradient += z / denom
                 # Hessian
                 a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom

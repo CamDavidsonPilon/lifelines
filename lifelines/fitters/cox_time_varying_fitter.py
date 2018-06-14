@@ -11,7 +11,8 @@ from scipy import stats
 from numpy import dot, exp
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import BaseFitter
-
+from lifelines.fitters.coxph_fitter import CoxPHFitter
+from lifelines.statistics import chisq_test
 from lifelines.utils import inv_normal_cdf, \
     significance_code, normalize,\
     pass_for_numeric_dtypes_or_raise, check_low_var,\
@@ -86,7 +87,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events)
         self.baseline_survival_ = self._compute_baseline_survival()
         self.event_observed = stop_times_events['event']
-
+        self.start_stop_and_events = stop_times_events
 
         self._n_examples = df.shape[0]
         self._n_unique = df.index.unique().shape[0]
@@ -362,7 +363,31 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print('---')
         print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
               end='\n\n')
+        print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
         return
+
+    def _compute_likelihood_ratio_test(self):
+        """
+        This function computes the likelihood ratio test for the Cox model. We
+        compare the existing model (with all the covariates) to the trivial model
+        of no covariates.
+
+        Conviently, we can actually use the class itself to do most of the work.
+
+        """
+        trivial_dataset = self.start_stop_and_events.groupby(level=0).last()[['event', 'stop']]
+
+        cp_null = CoxPHFitter()
+        cp_null.fit(trivial_dataset, 'stop', 'event', show_progress=False)
+
+        ll_null = cp_null._log_likelihood
+        ll_alt = self._log_likelihood
+
+        test_stat = 2*ll_alt - 2*ll_null
+        degrees_freedom = self.hazards_.shape[1]
+        _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
+        return test_stat, degrees_freedom, p_value
+
 
     def plot(self, standardized=False, columns=None, **kwargs):
         """
