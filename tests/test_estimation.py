@@ -515,15 +515,14 @@ class TestKaplanMeierFitter():
             assert True
 
     def test_weights_with_unaligned_index(self):
-        pd.DataFrame(index=[5,6,7,8])
         df = pd.DataFrame(index=[5,6,7,8])
         df['t'] = [0.6,0.4,0.8,0.9]
         df['y'] = [0,1,1,0]
         df['w'] = [1.5,2,0.8,0.9]
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            k.fit(durations=df['t'],event_observed=df['y'],weights=df['w'])
-            a = list(k.survival_function_.KM_estimate)
+            kmf = KaplanMeierFitter().fit(durations=df['t'],event_observed=df['y'],weights=df['w'])
+            a = list(kmf.survival_function_.KM_estimate)
             assert a == [1.0,0.6153846153846154,0.6153846153846154,0.32579185520362,0.32579185520362]
 
 
