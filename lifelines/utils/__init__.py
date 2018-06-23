@@ -251,14 +251,14 @@ or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability o
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
-    df[removed] = weights
-    df[observed] = weights * np.asarray(event_observed)
+    df[removed] = np.asarray(weights)
+    df[observed] = np.asarray(weights) * np.asarray(event_observed)
     death_table = df.groupby("event_at").sum()
     death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
 
     # deal with late births
     births = pd.DataFrame(birth_times, columns=['event_at'])
-    births[entrance] = weights
+    births[entrance] = np.asarray(weights)
     births_table = births.groupby('event_at').sum()
     event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
