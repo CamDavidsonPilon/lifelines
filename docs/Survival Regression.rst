@@ -35,9 +35,9 @@ Cox's Proportional Hazard model
 Lifelines has an implementation of the Cox propotional hazards regression model (implemented in 
 R under ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
-.. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i\right)}
+.. math::  \lambda(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i x_i \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the second term is only a scalar factor that only increases or decreases the baseline hazard. Thus a change in a covariate will only increase or decrease this baseline hazard. 
+Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease this baseline hazard. 
 
 
 Lifelines implementation
@@ -55,7 +55,7 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
 
     cph.print_summary()  # access the results using cph.summary
 
@@ -74,6 +74,7 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Concordance = 0.640
+    Likelihood ratio test = 33.266 on 7 df, p=0.00002
     """
 
 To access the coefficients and the baseline hazard directly, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. 
@@ -118,7 +119,7 @@ With a fitted model, an altervative way to view the coefficients and their range
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
 
     cph.plot()
 
@@ -138,7 +139,7 @@ holding everything else equal. This is useful to understand the impact of a cova
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
 
     cph.plot_covariate_groups('prio', [0, 5, 10, 15])
 
@@ -196,7 +197,7 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
 
     rossi_dataset = load_rossi()
 
-    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
+    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'], show_progress=True)
 
     cph.print_summary()  # access the results using cph.summary
 
@@ -214,6 +215,7 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Concordance = 0.638
+    Likelihood ratio test = 109.634 on 6 df, p=0.00000
     """
 
 Aalen's Additive model
@@ -561,12 +563,12 @@ Often an individual will have a covariate change over time. An example of this i
 
 We can incorporate changes over time into our survival analysis by using a modification of the Cox model above. The general mathematical description is:
 
-.. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i(t)\right)}
+.. math::  \lambda(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i x_i(t) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
 Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this. 
 
 Dataset creation for time-varying regression
----------------------------------------------
+#############################################
 
 Lifelines requires that the dataset be in what is called the *long* format. This looks like one row per state change, including an ID, the left (exclusive) time point, and right (inclusive) time point. For example, the following dataset tracks three unique subjects. 
 
@@ -630,11 +632,9 @@ Lifelines requires that the dataset be in what is called the *long* format. This
       <p>5 rows × 6 columns</p>
     </div>
 
-In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. For example, subject ID 2 had variable ``z=0`` up to and including the end of time period 5 (we can think that measurements happen at end of the time period.), after which it was set to 1.
+In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. For example, subject ID 2 had variable ``z=0`` up to and including the end of time period 5 (we can think that measurements happen at end of the time period), after which it was set to 1. Since ``event`` is 1 in that row, we conclude that the subject died at time 8,
 
-So if this is the desired dataset, it can be built up first from smaller datasets. To do this we can use some helper functions provided in lifelines. 
-
-Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations, and a censorsed flag, and possibly static covariates. Ex: 
+This desired dataset can be built up from smaller datasets. To do this we can use some helper functions provided in lifelines. Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations alive, and a censorsed flag, and possibly static covariates. Ex: 
 
 .. raw:: html
 
@@ -712,7 +712,7 @@ The new dataset looks like:
 
 
 
-You'll also have secondary dataset that references future measurements. This could come in two "types". The first is when you have a variable that changes over time (ex: administering varying medication over time, or taking a tempature over time). The second types is an event-based dataset: an event happens at some time in the future (ex: an organ transplant occurs, or an intervention). We will address this type later. The first type of dataset may look something like: 
+You'll also have secondary dataset that references future measurements. This could come in two "types". The first is when you have a variable that changes over time (ex: administering varying medication over time, or taking a tempature over time). The second types is an event-based dataset: an event happens at some time in the future (ex: an organ transplant occurs, or an intervention). We will address this second type later. The first type of dataset may look something like: 
 
 Example:
 
@@ -815,7 +815,7 @@ where ``time`` is the duration from the entry event. Here we see subject 1 had a
       <p>4 rows × 6 columns</p>
     </div>
 
-From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost them after time 2.
+From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost track of them after time 2.
 
 You may have multiple covariates you wish to add, so the above could be streamlined like so:
 
@@ -828,7 +828,7 @@ You may have multiple covariates you wish to add, so the above could be streamli
                   .pipe(add_covariate_to_timeline, cv3, duration_col="time", id_col="id", event_col="event")
 
 
-If you dataset is of the second type, that is, event-based, your dataset may look something like the following, where values in the matrix denote times since the subject's birth, and ``None`` or  ``NaN`` represent the event not happening (subjects can be excluded if the event never occurred as well) :
+If your dataset is of the second type, that is, event-based, your dataset may look something like the following, where values in the matrix denote times since the subject's birth, and ``None`` or  ``NaN`` represent the event not happening (subjects can be excluded if the event never occurred as well) :
 
 .. code-block:: python
     
@@ -863,14 +863,14 @@ Initially, this can't be added to our baseline dataframe. However, using ``utils
 For an example of pulling datasets like this from a SQL-store, and other helper functions, see :ref:`Example SQL queries and transformations to get time varying data`.
 
 Cumulative sums
-----------------
+#############################################
 
 One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want the covariate to reflect how much we have administered since the start. Event columns do make sense to cumulative sum as well. In contrast, a covariate to measure the temperature of the patient is a state update, and should not be summed.  See :ref:`Example cumulative total using and time-varying covariates` to see an example of this.
 
 Delaying time-varying covariates
----------------------------------------------
+#############################################
 
-``add_covariate_to_timeline`` also has an option for delaying, or shifting, a covariate to it is changes later than originally. One may ask, why should I delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknownst to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
+``add_covariate_to_timeline`` also has an option for delaying, or shifting, a covariate so it changes later than originally observed. One may ask, why should one delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknownst to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
 
 To handle this, you can delay the observations by time periods:
 
@@ -883,20 +883,23 @@ To handle this, you can delay the observations by time periods:
 
 
 
-Fitting the model and a short note on prediction
+Fitting the model
 ################################################
 
-Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. 
+Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. The method is similar to ``CoxPHFitter``, expect we need to tell the ``fit`` about the additional time columns.
 
 .. code:: python
 
     from lifelines import CoxTimeVaryingFitter
 
     ctv = CoxTimeVaryingFitter()
-    ctv.fit(df, id_col="id", event_col="event", start_col="start", stop_col="stop")
+    ctv.fit(df, id_col="id", event_col="event", start_col="start", stop_col="stop", show_progress=True)
     ctv.print_summary()
     ctv.plot()
 
+
+Short note on prediction
+################################################
 
 Unlike the other regression models, prediction in a time-varying setting is not trivial. To predict, we would need to know the covariates values beyond the observed times, but if we knew that, we would also know if the subject was still alive or not! However, it is still possible to compute the hazard values of subjects at known observations, the baseline cumulative hazard rate, and baseline survival function. So while ``CoxTimeVaryingFitter`` exposes prediction methods, there are logicial limitations to what these predictions mean. 
 

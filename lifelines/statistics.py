@@ -173,7 +173,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     H_A: there exist atleast one group that differs from the other.
 
     Parameters:
-      event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
+      event_durations: a (n,) numpy array of the (partial) lifetimes of all individuals
       groups: a (n,) numpy array of unique group labels for each individual.
       event_observed: a (n,) numpy array of event observations: 1 if observed death, 0 if censored. Defaults
           to all observed.
@@ -183,6 +183,15 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
 
     Returns
       results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
+
+    Example:
+
+    >> G = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+    >> T = [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7]
+    >> E = [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
+    >> result = multivariate_logrank_test(T, G, E, t_0=-1)
+
+
 
     """
     if not (0 < alpha <= 1.):
