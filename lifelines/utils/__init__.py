@@ -420,7 +420,7 @@ def l2_log_loss(event_times, predicted_event_times, event_observed=None):
     return np.power(np.log(event_times[ix]) - np.log(predicted_event_times[ix]), 2).mean()
 
 
-def concordance_index(event_times, predicted_event_times, event_observed=None):
+def concordance_index(event_times, predicted_scores, event_observed=None):
     """
     Calculates the concordance index (C-index) between two series
     of event times. The first is the real survival times from
@@ -441,7 +441,8 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
 
     Parameters:
       event_times: a (n,) array of observed survival times.
-      predicted_event_times: a (n,) array of predicted survival times.
+      predicted_scores: a (n,) array of predicted scores - these could be survival times, or hazards, etc.
+                        See https://stats.stackexchange.com/questions/352183/use-median-survival-time-to-calculate-cph-c-statistic/352435#352435
       event_observed: a (n,) array of censorship flags, 1 if observed,
                       0 if not. Default None assumes all observed.
 
@@ -449,7 +450,7 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
       c-index: a value between 0 and 1.
     """
     event_times = np.array(event_times, dtype=float)
-    predicted_event_times = np.array(predicted_event_times, dtype=float)
+    predicted_scores = np.array(predicted_scores, dtype=float)
 
     # Allow for (n, 1) or (1, n) arrays
     if event_times.ndim == 2 and (event_times.shape[0] == 1 or
@@ -457,13 +458,13 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
         # Flatten array
         event_times = event_times.ravel()
     # Allow for (n, 1) or (1, n) arrays
-    if (predicted_event_times.ndim == 2 and
-        (predicted_event_times.shape[0] == 1 or
-         predicted_event_times.shape[1] == 1)):
+    if (predicted_scores.ndim == 2 and
+        (predicted_scores.shape[0] == 1 or
+         predicted_scores.shape[1] == 1)):
         # Flatten array
-        predicted_event_times = predicted_event_times.ravel()
+        predicted_scores = predicted_scores.ravel()
 
-    if event_times.shape != predicted_event_times.shape:
+    if event_times.shape != predicted_scores.shape:
         raise ValueError("Event times and predictions must have the same shape")
     if event_times.ndim != 1:
         raise ValueError("Event times can only be 1-dimensional: (n,)")
@@ -476,7 +477,7 @@ def concordance_index(event_times, predicted_event_times, event_observed=None):
         event_observed = np.array(event_observed, dtype=float).ravel()
 
     return _concordance_index(event_times,
-                              predicted_event_times,
+                              predicted_scores,
                               event_observed)
 
 
