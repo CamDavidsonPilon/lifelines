@@ -363,3 +363,22 @@ def load_dfcv():
     """
     from lifelines.datasets.dfcv_dataset import dfcv
     return dfcv
+
+
+def load_lymphoma(**kwargs):
+    """
+    From https://www.statsdirect.com/help/content/survival_analysis/logrank.htm
+
+
+    Size: (80, 3)
+
+    Example:
+
+       Stage_group  Time  Censor
+    0            1     6       1
+    1            1    19       1
+    2            1    32       1
+    3            1    42       1
+    4            1    42       1
+    """
+    return load_dataset('lymphoma.csv', **kwargs)
