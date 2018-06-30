@@ -1,5 +1,9 @@
 ### Changelogs
 
+#### 0.14.5
+ - fix for n > 2 groups in `multivariate_logrank_test`
+ - fix weights in KaplanMeierFitter when using a pandas Series. 
+
 #### 0.14.4
  - Adds `baseline_cumulative_hazard_` and `baseline_survival_` to `CoxTimeVaryingFitter`. Because of this, new prediction methods are available. 
  - fixed a bug in `add_covariate_to_timeline` when using `cumulative_sum` with multiple columns.
