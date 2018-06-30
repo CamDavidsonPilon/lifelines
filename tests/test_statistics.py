@@ -5,7 +5,7 @@ import numpy.testing as npt
 import pytest
 
 from lifelines import statistics as stats
-from lifelines.datasets import load_waltons, load_g3
+from lifelines.datasets import load_waltons, load_g3, load_lymphoma
 
 
 def test_sample_size_necessary_under_cph():
@@ -65,6 +65,14 @@ def test_rank_test_output_against_R_no_censorship():
     r_stat = 0.254237
     assert abs(result.p_value - r_p_value) < 10e-6
     assert abs(result.test_statistic - r_stat) < 10e-6
+
+
+def test_n_more_than_2_multivariate_logrank():
+    # from https://www.statsdirect.com/help/content/survival_analysis/logrank.htm
+    df_ = load_lymphoma()
+    results = stats.multivariate_logrank_test(df_['Time'], df_['Stage_group'], df_['Censor'])
+    assert abs(results.test_statistic - 6.70971) < 1e-4
+    assert abs(results.p_value - 0.0096) < 1e-4
 
 
 def test_rank_test_output_against_R_with_censorship():

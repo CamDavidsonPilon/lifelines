@@ -223,16 +223,17 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     assert abs(Z_j.sum()) < 10e-8, "Sum is not zero."  # this should move to a test eventually.
 
     # compute covariance matrix
-    factor = (((n_i - d_i) / (n_i - 1)).replace(np.inf, 1)) * d_i
+    factor = (((n_i - d_i) / (n_i - 1)).replace(np.inf, 1)) * d_i / n_i ** 2
     n_ij['_'] = n_i.values
-    V_ = n_ij.mul(np.sqrt(factor) / n_i, axis='index').fillna(1)
-    V = -np.dot(V_.T, V_)
+    V_ = n_ij.mul(np.sqrt(factor), axis='index').fillna(1)
+
+    V = -np.dot(V_.T, V_) + 1
     ix = np.arange(n_groups)
-    V[ix, ix] = -V[-1, ix] + V[ix, ix]
+    V[ix, ix] = V[ix, ix] - V[-1, ix]
     V = V[:-1, :-1]
 
     # take the first n-1 groups
-    U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1]).dot(Z_j.iloc[:-1]))  # Z.T*inv(V)*Z
+    U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1])).dot(Z_j.iloc[:-1])  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
     test_result, p_value = chisq_test(U, n_groups - 1, alpha)
