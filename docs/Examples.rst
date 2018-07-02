@@ -59,6 +59,28 @@ each pair in the same manner as above), or ``multivariate_logrank_test`` (which 
 hypothesis that all the populations have the same "death" generation process).
 
 
+.. code-block:: python
+    
+    from lifelines.statistics import multivariate_logrank_test
+
+    df = pd.DataFrame({
+        'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2], # could be strings too
+        'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+    })
+
+    results = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
+    results.print_summary()
+
+    """
+    t_0=-1, alpha=0.95, null_distribution=chi squared, df=2
+
+    test_statistic      p
+            1.0800 0.5827
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    """
+
 
 Model selection using lifelines
 #####################################################

@@ -186,10 +186,22 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
 
     Example:
 
-    >> G = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
-    >> T = [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7]
-    >> E = [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
-    >> result = multivariate_logrank_test(T, G, E, t_0=-1)
+        >> df = pd.DataFrame({
+            'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+            'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+        })
+        >> result = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
+        >> result.test_statistic
+        >> result.p_value
+
+
+        >> # numpy example
+        >> G = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+        >> T = [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7]
+        >> E = [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
+        >> result = multivariate_logrank_test(T, G, E)
+        >> result.test_statistic
 
 
 
@@ -223,11 +235,10 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     assert abs(Z_j.sum()) < 10e-8, "Sum is not zero."  # this should move to a test eventually.
 
     # compute covariance matrix
-    factor = (((n_i - d_i) / (n_i - 1)).replace(np.inf, 1)) * d_i / n_i ** 2
+    factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i ** 2
     n_ij['_'] = n_i.values
-    V_ = n_ij.mul(np.sqrt(factor), axis='index').fillna(1)
-
-    V = -np.dot(V_.T, V_) + 1
+    V_ = n_ij.mul(np.sqrt(factor), axis='index').fillna(0)
+    V = -np.dot(V_.T, V_)
     ix = np.arange(n_groups)
     V[ix, ix] = V[ix, ix] - V[-1, ix]
     V = V[:-1, :-1]
