@@ -1,5 +1,9 @@
 ### Changelogs
 
+#### 0.14.6
+ - fix for n > 2 groups in `multivariate_logrank_test` (again).
+ - fix bug for when `event_observed` column was not boolean. 
+
 #### 0.14.5
  - fix for n > 2 groups in `multivariate_logrank_test`
  - fix weights in KaplanMeierFitter when using a pandas Series. 

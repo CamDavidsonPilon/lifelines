@@ -5,7 +5,7 @@ import numpy.testing as npt
 import pytest
 
 from lifelines import statistics as stats
-from lifelines.datasets import load_waltons, load_g3, load_lymphoma
+from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd
 
 
 def test_sample_size_necessary_under_cph():
@@ -67,12 +67,24 @@ def test_rank_test_output_against_R_no_censorship():
     assert abs(result.test_statistic - r_stat) < 10e-6
 
 
-def test_n_more_than_2_multivariate_logrank():
+def test_load_lymphoma_logrank():
     # from https://www.statsdirect.com/help/content/survival_analysis/logrank.htm
     df_ = load_lymphoma()
     results = stats.multivariate_logrank_test(df_['Time'], df_['Stage_group'], df_['Censor'])
     assert abs(results.test_statistic - 6.70971) < 1e-4
     assert abs(results.p_value - 0.0096) < 1e-4
+
+
+def test_multivariate_logrank_on_dd_dataset():
+    """
+    library('survival')
+    dd = read.csv('~/code/lifelines/lifelines/datasets/dd.csv')
+    results = survdiff(Surv(duration, observed)~regime, data=dd, rho=0)
+    results[5]
+    """
+    dd = load_dd()
+    results = stats.multivariate_logrank_test(dd['duration'], dd['regime'],dd['observed'])
+    assert abs(results.test_statistic - 322.5991) < 0.0001
 
 
 def test_rank_test_output_against_R_with_censorship():
@@ -123,7 +135,7 @@ def test_unequal_intensity_with_negative_data():
     assert result.p_value < 0.05
 
 
-def test_waltons_dataset():
+def test_log_rank_test_on_waltons_dataset():
     df = load_waltons()
     ix = df['group'] == 'miR-137'
     waltonT1 = df.loc[ix]['T']
@@ -168,7 +180,7 @@ def test_log_rank_returns_None_if_equal_arrays():
     result = stats.logrank_test(T, T, alpha=0.95)
     assert result.p_value > 0.05
 
-    C = np.random.binomial(2, 0.8, size=200)
+    C = np.random.binomial(1, 0.8, size=200)
     result = stats.logrank_test(T, T, C, C, alpha=0.95)
     assert result.p_value > 0.05
 
@@ -177,8 +189,8 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
     N = 200
     T1 = np.random.exponential(5, size=N)
     T2 = np.random.exponential(5, size=N)
-    C1 = np.random.binomial(2, 0.9, size=N)
-    C2 = np.random.binomial(2, 0.9, size=N)
+    C1 = np.random.binomial(1, 0.9, size=N)
+    C2 = np.random.binomial(1, 0.9, size=N)
     result = stats.logrank_test(T1, T2, C1, C2, alpha=0.95)
 
     T = np.r_[T1, T2]

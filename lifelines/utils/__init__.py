@@ -252,7 +252,7 @@ or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability o
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
     df[removed] = np.asarray(weights)
-    df[observed] = np.asarray(weights) * np.asarray(event_observed)
+    df[observed] = np.asarray(weights) * (np.asarray(event_observed).astype(bool))
     death_table = df.groupby("event_at").sum()
     death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
 

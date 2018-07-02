@@ -224,6 +224,15 @@ def test_survival_table_to_events():
     npt.assert_array_equal(T, T_)
     npt.assert_array_equal(C, C_)
 
+def test_survival_table_from_events_with_non_trivial_censorship_column():
+    T = np.random.exponential(5, size=50)
+    malformed_C = np.random.binomial(2, p=0.8) # set to 2 on purpose!
+    proper_C = malformed_C > 0 # (proper "boolean" array)
+    table1 = utils.survival_table_from_events(T, malformed_C, np.zeros_like(T))
+    table2 = utils.survival_table_from_events(T, proper_C, np.zeros_like(T))
+
+    assert_frame_equal(table1, table2)
+
 
 def test_group_survival_table_from_events_on_waltons_data():
     df = load_waltons()
