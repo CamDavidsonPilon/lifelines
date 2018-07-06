@@ -270,7 +270,8 @@ def load_rossi(**kwargs):
 
 def load_regression_dataset(**kwargs):
     """
-    Artificial regression dataset
+    Artificial regression dataset. Useful since there are no ties in this dataset.
+    Slightly edit in v0.15.0 to achieve this, however.
 
     Size: (200,5)
     Example:

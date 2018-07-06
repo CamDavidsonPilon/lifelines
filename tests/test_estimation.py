@@ -991,9 +991,9 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         library(survival)
         rossi <- read.csv('.../lifelines/datasets/rossi.csv')
-        mod.allison <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
+        r <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
             data=rossi)
-        cat(round(mod.allison$coefficients, 4), sep=", ")
+        cat(round(r$coefficients, 4), sep=", ")
         """
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         cf = CoxPHFitter()
@@ -1379,6 +1379,30 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         assert_frame_equal(cp2.summary, cp1.summary)
 
+    def test_robust_errors_against_R_no_ties(self, regression_dataset):
+        df = regression_dataset.copy()
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E', robust=True)
+        expected = pd.Series({'var1': 0.0879, 'var2': 0.0847, 'var3': 0.0655})
+        assert_series_equal(cph.standard_errors_.loc['se'], expected, check_less_precise=2, check_names=False)
+
+
+    def test_robust_errors_with_strata_doesnt_break(self, rossi):
+        """
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
+                    paro, mar, wexp) + prio, data = rossi, robust=TRUE)
+        """
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'], robust=True)
+
+
+    def test_robust_errors_against_R_with_ties(self,):
+        pass
+
+
+
+
 
 class TestAalenAdditiveFitter():
 
@@ -1512,6 +1536,7 @@ class TestAalenAdditiveFitter():
         y_df = aaf.predict_cumulative_hazard(x)
         y_np = aaf.predict_cumulative_hazard(x.values)
         assert_frame_equal(y_df, y_np)
+
 
 
 class TestCoxTimeVaryingFitter():

@@ -8,7 +8,8 @@ import numpy as np
 import pandas as pd
 
 from numpy import dot, exp
-from numpy.linalg import solve, norm, inv
+from numpy.linalg import norm, inv
+from scipy.linalg import solve as spsolve
 from scipy.integrate import trapz
 import scipy.stats as stats
 
@@ -57,7 +58,8 @@ class CoxPHFitter(BaseFitter):
 
     def fit(self, df, duration_col, event_col=None,
             show_progress=False, initial_beta=None,
-            strata=None, step_size=None, weights_col=None):
+            strata=None, step_size=None, weights_col=None,
+            robust=False):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -83,9 +85,12 @@ class CoxPHFitter(BaseFitter):
              is used similar to the `strata` expression in R.
              See http://courses.washington.edu/b515/l17.pdf.
           step_size: set an initial step size for the fitting algorithm.
+          robust: Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+            ties, so if there are high number of ties, results may significantly differ. See
+            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
 
         Returns:
-            self, with additional properties: hazards_
+            self, with additional properties: hazards_, confidence_intervals_, baseline_survival_, etc.
 
         """
 
@@ -94,6 +99,7 @@ class CoxPHFitter(BaseFitter):
         # Sort on time
         df = df.sort_values(by=duration_col)
 
+        self.robust = robust
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
         if self.strata is not None:
@@ -143,7 +149,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                                          step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
+
+        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), T, E)
         self.confidence_intervals_ = self._compute_confidence_intervals()
+
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
@@ -151,6 +160,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         self.score_ = concordance_index(self.durations,
                                         -self.predict_partial_hazard(df).values.ravel(),
                                         self.event_observed)
+
         self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
         return self
 
@@ -224,7 +234,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 g -= self.penalizer * beta.T
                 h.flat[::d + 1] -= self.penalizer
 
-            delta = solve(-h, step_size * g.T)
+            delta = spsolve(-h, step_size * g.T, sym_pos=True)
             if np.any(np.isnan(delta)):
                 raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
@@ -380,21 +390,72 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
-        se = self._compute_standard_errors()
+        se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(np.r_[hazards - alpha2 * se,
                                   hazards + alpha2 * se],
                             index=['lower-bound', 'upper-bound'],
                             columns=self.hazards_.columns)
 
-    def _compute_standard_errors(self):
-        se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std
+    def _compute_sandwich_estimator(self, X, T, E):
+
+        n, d = X.shape
+
+        # Init risk and tie sums to zero
+        risk_phi = 0
+        risk_phi_x = np.zeros((1, d))
+
+        # need to store these histories, as we access them often
+        risk_phi_history = np.zeros((n,))
+        risk_phi_x_history = np.zeros((n, d))
+
+        score_covariance = np.zeros((d, d))
+
+        # we already unnormalized the betas in `fit`, so we need normalize them again since X is
+        # normalized.
+        beta = self.hazards_.values[0] * self._norm_std
+
+        # Iterate backwards to utilize recursive relationship
+        for i in range(n - 1, -1, -1):
+            # Doing it like this to preserve shape
+            ei = E[i]
+            xi = X[i:i + 1]
+
+            phi_i = exp(dot(xi, beta))
+            phi_x_i = phi_i * xi
+
+            risk_phi += phi_i
+            risk_phi_x += phi_x_i
+
+            risk_phi_history[i] = risk_phi
+            risk_phi_x_history[i] = risk_phi_x
+
+        # Iterate forwards
+        for i in range(0, n):
+            # Doing it like this to preserve shape
+            xi = X[i:i + 1]
+            phi_i = exp(dot(xi, beta))
+
+            correction_term = sum(E[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
+
+            score = E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i]) - correction_term
+            score_covariance += (score.T).dot(score)
+
+        # TODO: need a faster way to invert these matrices
+        sandwich_estimator = inv(self._hessian_).dot(score_covariance).dot(inv(self._hessian_))
+        return sandwich_estimator
+
+    def _compute_standard_errors(self, df, T, E):
+        if self.robust:
+            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values).diagonal()) / self._norm_std
+        else:
+            se = np.sqrt(-inv(self._hessian_).diagonal()) / self._norm_std
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
         return (self.hazards_.loc['coef'] /
-                self._compute_standard_errors().loc['se'])
+                self.standard_errors_.loc['se'])
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -413,7 +474,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.loc['coef'].values
         df['exp(coef)'] = exp(self.hazards_.loc['coef'].values)
-        df['se(coef)'] = self._compute_standard_errors().loc['se'].values
+        df['se(coef)'] = self.standard_errors_.loc['se'].values
         df['z'] = self._compute_z_values()
         df['p'] = self._compute_p_values()
         df['lower %.2f' % self.alpha] = self.confidence_intervals_.loc['lower-bound'].values
