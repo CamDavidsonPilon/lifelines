@@ -1,5 +1,9 @@
 ### Changelogs
 
+#### 0.15.0
+ - adding `robust` params to Cox models' `fit`. This enables atleast i) using non-integer weights in the model (these could be sampling weights like IPTW), and ii) misspecified models (ex: non-propotional hazards). Under the hood it's a sandwich estimator. This does not handle ties, so if there are high number of ties, results may significantly differ from other software.
+ - `standard_errors_` is now a property on fitted Cox models.
+
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).
  - fix bug for when `event_observed` column was not boolean. 

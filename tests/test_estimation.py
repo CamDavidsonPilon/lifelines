@@ -1000,7 +1000,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(rossi, duration_col='week', event_col='arrest')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
-    def test_coef_output_against_R_using_non_trivial_weights(self, rossi):
+    def test_coef_output_against_R_using_non_trivial_but_integer_weights(self, rossi):
         rossi_ = rossi.copy()
         rossi_['weights'] = 1.
         rossi_ = rossi_.groupby(rossi.columns.tolist())['weights'].sum()\
@@ -1011,7 +1011,36 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(rossi_, duration_col='week', event_col='arrest', weights_col='weights')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
-    def test_adding_non_integer_weights_raises_a_warning(self, rossi):
+    def test_robust_errors_with_weights_is_the_same_as_R(self, regression_dataset):
+        """
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
+                    paro, mar, wexp) + prio, data = rossi, robust=TRUE)
+        """
+        df = regression_dataset
+        df['var3'] = np.round(df['var3'] + 1)
+        cph = CoxPHFitter()
+        cph.fit(df.head(5), 'T', 'E', robust=True, weights_col='var3', show_progress=True)
+        expected = pd.Series({'var1': -2.23662, 'var2': -5.75105})
+        assert_series_equal(cph.hazards_.T['coef'], expected, check_less_precise=2, check_names=False)
+
+
+    def test_summary_output_using_non_trivial_but_integer_weights(self, rossi):
+        rossi_weights = rossi.copy()
+        rossi_weights['weights'] = 1.
+        rossi_weights = rossi_weights.groupby(rossi.columns.tolist())['weights'].sum()\
+                                     .reset_index()
+
+        cf1 = CoxPHFitter()
+        cf1.fit(rossi_weights, duration_col='week', event_col='arrest', weights_col='weights')
+
+        cf2 = CoxPHFitter()
+        cf2.fit(rossi, duration_col='week', event_col='arrest')
+
+        assert_frame_equal(cf1.summary, cf2.summary, check_like=True)
+
+
+    def test_adding_non_integer_weights_without_robust_flag_raises_a_warning(self, rossi):
         rossi['weights'] = np.random.exponential(1, rossi.shape[0])
 
         cox = CoxPHFitter()
@@ -1023,6 +1052,16 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             assert len(w) == 1
             assert "naive variance estimates" in str(w[0].message)
 
+
+    def test_adding_non_integer_weights_is_fine_if_robust_is_on(self, rossi):
+        rossi['weights'] = np.random.exponential(1, rossi.shape[0])
+
+        cox = CoxPHFitter()
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cox.fit(rossi, 'week', 'arrest', weights_col='weights', robust=True)
+            assert len(w) == 0
 
     def test_standard_error_coef_output_against_R(self, rossi):
         """
@@ -1115,7 +1154,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(df, duration_col='time', event_col='death')
 
         # standard errors
-        actual_se = cf._compute_standard_errors().values
+        actual_se = cf._compute_standard_errors(None, None, None).values
         expected_se = np.array([[0.0143,  0.4623,  0.3561,  0.4222]])
         npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 
@@ -1380,7 +1419,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         assert_frame_equal(cp2.summary, cp1.summary)
 
     def test_robust_errors_against_R_no_ties(self, regression_dataset):
-        df = regression_dataset.copy()
+        df = regression_dataset
         cph = CoxPHFitter()
         cph.fit(df, 'T', 'E', robust=True)
         expected = pd.Series({'var1': 0.0879, 'var2': 0.0847, 'var3': 0.0655})

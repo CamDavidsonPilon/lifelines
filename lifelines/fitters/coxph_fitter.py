@@ -76,6 +76,9 @@ class CoxPHFitter(BaseFitter):
           weights_col: an optional column in the dataframe that denotes the weight per subject.
              This column is expelled and not used as a covariate, but as a weight in the
              final regression. Default weight is 1.
+             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+             identical observations.
+             This can be used for sampling weights. In that case, use `robust=True` to get more accurate standard errors.
           show_progress: since the fitter is iterative, show convergence
              diagnostics.
           initial_beta: initialize the starting point of the iterative
@@ -117,14 +120,15 @@ class CoxPHFitter(BaseFitter):
 
         if weights_col:
             weights = df.pop(weights_col)
-            if (weights.astype(int) != weights).any():
-                warnings.warn("""It looks like your weights are not integers, possibly propensity scores then?
-It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+            if (weights.astype(int) != weights).any() and not self.robust:
+                warnings.warn("""It appears your weights are not integers, possibly propensity or sampling scores then?
+It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
-                    """, RuntimeWarning)
-
+""", RuntimeWarning)
         else:
-            weights = pd.DataFrame(np.ones((self._n_examples, 1)), index=df.index)
+            weights = pd.Series(np.ones((self._n_examples,)), index=df.index)
+
+        self._replication_weights = (weights.astype(int) == weights).all()
 
         self._check_values(df, T, E)
         df = df.astype(float)
@@ -280,15 +284,22 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _get_efron_values(self, X, beta, T, E, weights):
         """
-        Calculates the first and second order vector differentials,
-        with respect to beta.
+        Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
+
+        A good explaination for Efron. Consider three of five subjects who fail at the time.
+        As it is not known a priori that who is the first to fail, so one-third of
+        (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+        of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+
         Parameters:
             X: (n,d) numpy array of observations.
             beta: (1, d) numpy array of coefficients.
             T: (n) numpy array representing observed durations.
             E: (n) numpy array representing death events.
             weights: (n) an array representing weights per observation.
+
         Returns:
             hessian: (d, d) numpy array,
             gradient: (1, d) numpy array
@@ -335,7 +346,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 tie_phi_x_x += phi_x_x_i
 
                 # Keep track of count
-                tie_count += int(w)
+                tie_count += 1
 
             if i > 0 and T[i - 1] == ti:
                 # There are more ties/members of the risk set
@@ -348,22 +359,27 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             partial_gradient = np.zeros((1, d))
 
             for l in range(tie_count):
-                c = l / tie_count
-
-                denom = (risk_phi - c * tie_phi)
-                z = (risk_phi_x - c * tie_phi_x)
+                """
+                A good explaination for Efron. Consider three of five subjects who fail at the time.
+                As it is not known a priori that who is the first to fail, so one-third of
+                (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+                """
+                numer = (risk_phi_x - l * tie_phi_x / tie_count)
+                denom = (risk_phi - l * tie_phi / tie_count)
 
                 # Gradient
-                partial_gradient += z / denom
+                partial_gradient += w * numer / denom
                 # Hessian
-                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
-                # In case z and denom both are really small numbers,
+                a1 = (risk_phi_x_x - l * tie_phi_x_x / tie_count) / denom
+                # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                a2 = dot(z.T / denom, z / denom)
+                a2 = dot(numer.T / denom, numer / denom)
 
-                hessian -= (a1 - a2)
+                hessian -= w * (a1 - a2)
 
-                log_lik -= np.log(denom[0][0])
+                log_lik -= w * np.log(denom[0][0])
+
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
@@ -418,7 +434,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
             # Doing it like this to preserve shape
-            ei = E[i]
             xi = X[i:i + 1]
 
             phi_i = exp(dot(xi, beta))
