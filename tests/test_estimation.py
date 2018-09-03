@@ -1011,6 +1011,39 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(rossi_, duration_col='week', event_col='arrest', weights_col='weights')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
+    def test_robust_errors_with_trival_weights_is_the_different_than_R(self, regression_dataset):
+        """
+        df <- data.frame(
+            "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+            "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
+            "T" = c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666)
+        )
+        df['E'] = 1
+        df['var3'] = 0.75
+        r = coxph(formula=Surv(T, E) ~ var1 + var2, data=df, weights=var3, robust=TRUE)
+        r$var
+        r$naive.var
+        """
+
+        w = 0.75
+        df = pd.DataFrame({
+            "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
+            "T": [7.335846, 5.269797, 11.684092, 12.678458, 6.601666],
+        })
+        df['E'] = 1
+        df['var3'] = w
+
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E', robust=True, weights_col='var3', show_progress=True)
+        expected = pd.Series({'var1': 7.680, 'var2': -0.915})
+        assert_series_equal(cph.hazards_.T['coef'], expected, check_less_precise=2, check_names=False)
+
+        expected_cov = np.array([[33.079106, -5.964652], [-5.964652, 2.040642]])
+        npt.assert_array_almost_equal(
+            w * cph.variance_matrix_, expected_cov,
+        decimal=2)
+
     def test_robust_errors_with_less_trival_weights_is_the_same_as_R(self, regression_dataset):
         """
         df <- data.frame(
@@ -1021,7 +1054,9 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         df['E'] = 1
         df['var3'] = 0.75
         df[1, 'var3'] = 1.75
-        coxph(formula=Surv(T, E) ~ var1 + var2, data=df, weights=var3, robust=TRUE)
+        r = coxph(formula=Surv(T, E) ~ var1 + var2, data=df, weights=var3, robust=TRUE)
+        r$var
+        r$naive.var
         """
 
         df = pd.DataFrame({
@@ -1032,48 +1067,20 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         })
         df['E'] = 1
 
-        print(df)
         cph = CoxPHFitter()
         cph.fit(df, 'T', 'E', robust=True, weights_col='var3', show_progress=True)
-        cph.print_summary()
         expected = pd.Series({'var1': 7.995, 'var2': -1.154})
         assert_series_equal(cph.hazards_.T['coef'], expected, check_less_precise=2, check_names=False)
 
+
+        variance_matrix = -np.linalg.inv(cph._hessian_) / np.outer(cph._norm_std, cph._norm_std)
+        expected_cov = np.array([[44.758444, -8.781867], [-8.781867, 2.606589]])
+        npt.assert_array_almost_equal(
+            variance_matrix, expected_cov,
+        decimal=2)
+
         expected = pd.Series({'var1': 2.931, 'var2': 1.117})
         assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)
-
-
-    def test_robust_errors_with_trival_weights_is_the_same_as_R(self, regression_dataset):
-        """
-        df <- data.frame(
-            "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
-            "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
-            "T" = c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666)
-        )
-        df['E'] = 1
-        df['var3'] = 0.75
-        coxph(formula=Surv(T, E) ~ var1 + var2, data=df, weights=var3, robust=TRUE)
-        """
-
-        df = pd.DataFrame({
-            "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
-            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
-            "T": [7.335846, 5.269797, 11.684092, 12.678458, 6.601666],
-            'var3': [0.75, 0.75, 0.75, 0.75, 0.75]
-        })
-        df['E'] = 1
-
-        print(df)
-        cph = CoxPHFitter()
-        cph.fit(df, 'T', 'E', robust=True, weights_col='var3', show_progress=True)
-        cph.print_summary()
-        expected = pd.Series({'var1': 7.680, 'var2': -0.915})
-        assert_series_equal(cph.hazards_.T['coef'], expected, check_less_precise=2, check_names=False)
-
-        expected = pd.Series({'var1': 2.097, 'var2': 0.827})
-        assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)
-
-
 
 
     def test_robust_errors_is_the_same_as_R(self, regression_dataset):
@@ -1308,7 +1315,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(df, duration_col='time', event_col='death')
 
         # standard errors
-        actual_se = cf._compute_standard_errors(None, None, None).values
+        actual_se = cf._compute_standard_errors(None, None, None, None).values
         expected_se = np.array([[0.0143,  0.4623,  0.3561,  0.4222]])
         npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 
@@ -1586,13 +1593,9 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
                     paro, mar, wexp) + prio, data = rossi, robust=TRUE)
         """
+        assert False
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'], robust=True)
-
-
-    def test_robust_errors_against_R_with_ties(self,):
-        pass
-
 
 
 

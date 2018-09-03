@@ -127,6 +127,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 """, RuntimeWarning)
             if (weights <= 0).any():
                 raise ValueError("values in weights_col must be positive.")
+
         else:
             weights = pd.Series(np.ones((self._n_examples,)), index=df.index)
 
@@ -156,7 +157,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
-
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
@@ -466,16 +466,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             score_covariance += (score.T).dot(score)
 
         # TODO: need a faster way to invert these matrices
-        import pdb
-        pdb.set_trace()
         sandwich_estimator = inv(self._hessian_).dot(score_covariance).dot(inv(self._hessian_))
         return sandwich_estimator
 
     def _compute_standard_errors(self, df, T, E, weights):
+
         if self.robust:
             se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights).diagonal()) / self._norm_std
+            #self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         else:
-            se = np.sqrt(-inv(self._hessian_).diagonal()) / self._norm_std
+            self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
+            se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
