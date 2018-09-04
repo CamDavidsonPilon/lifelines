@@ -896,7 +896,7 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
     times_to_compare = _BTree(np.unique(died_pred))
     num_pairs = 0
     num_correct = 0
-    num_tied = 0
+    num_tied = np.int64(0)
 
     def handle_pairs(truth, pred, first_ix):
         """
@@ -1074,9 +1074,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
     THRESHOLD = 0.99
+    n, _ = df.shape
+    if n > 1000:
+        # let's sample to speed this n**2 algo up.
+        df = df.sample(n=1000, random_state=15).copy()
+        durations = durations.sample(n=1000, random_state=15).copy()
+
     for col, series in df.iteritems():
         if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
-            warning_text = "Column %s has high correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
+            warning_text = "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (col)
             warnings.warn(warning_text, ConvergenceWarning)
 

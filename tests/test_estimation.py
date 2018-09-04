@@ -997,7 +997,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         """
         expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         cf = CoxPHFitter()
-        cf.fit(rossi, duration_col='week', event_col='arrest')
+        cf.fit(rossi, duration_col='week', event_col='arrest', show_progress=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_coef_output_against_R_using_non_trivial_but_integer_weights(self, rossi):

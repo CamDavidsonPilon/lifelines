@@ -4,6 +4,7 @@
  - adding `robust` params to Cox models' `fit`. This enables atleast i) using non-integer weights in the model (these could be sampling weights like IPTW), and ii) misspecified models (ex: non-propotional hazards). Under the hood it's a sandwich estimator. This does not handle ties, so if there are high number of ties, results may significantly differ from other software.
  - `standard_errors_` is now a property on fitted Cox models.
  - `variance_matrix_` is now a property on fitted `CoxPHFitter` which describes the variance matrix of the coefficients.
+ - new criteria for convergence of `CoxPHFitter` and `CoxTimeVaryingFitter` called the Newton-decrement. Tests show it is as accurate (w.r.t to previous coefficients) and typically shaves off a single step, resulting in generally faster convergence. See https://www.cs.cmu.edu/~pradeepr/convexopt/Lecture_Slides/Newton_methods.pdf. Details about the Newton-decrement are added to the `show_progress` statements.
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).
