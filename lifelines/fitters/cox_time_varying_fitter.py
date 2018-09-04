@@ -186,7 +186,10 @@ class CoxTimeVaryingFitter(BaseFitter):
                 g -= self.penalizer * beta.T
                 h.flat[::d + 1] -= self.penalizer
 
-            delta = solve(-h, step_size * g.T)
+            # reusing a piece to make g * inv(h) * g.T faster later
+            inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+            delta = step_size * inv_h_dot_g_T
+
             if np.any(np.isnan(delta)):
                 raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
@@ -194,14 +197,17 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # Save these as pending result
             hessian, gradient = h, g
             norm_delta = norm(delta)
+            newton_decrement = g.dot(inv_h_dot_g_T)/2
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.6f, step_size = %.3f, ll = %.6f, seconds_since_start = %.1f" % (i, norm_delta, step_size, ll, time.time() - start))
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f" % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start))
 
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
             elif abs(ll - previous_ll) < precision:
+                converging, completed = False, True
+            if newton_decrement < precision:
                 converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.

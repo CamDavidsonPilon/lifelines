@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.15.0
+ - New criteria for convergence of `CoxPHFitter` and `CoxTimeVaryingFitter` called the Newton-decrement. Tests show it is as accurate (w.r.t to previous coefficients) and typically shaves off a single step, resulting in generally faster convergence.
+
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).
  - fix bug for when `event_observed` column was not boolean. 
