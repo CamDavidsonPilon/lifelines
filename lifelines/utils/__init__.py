@@ -896,7 +896,7 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
     times_to_compare = _BTree(np.unique(died_pred))
     num_pairs = 0
     num_correct = 0
-    num_tied = 0
+    num_tied = np.int64(0)
 
     def handle_pairs(truth, pred, first_ix):
         """
