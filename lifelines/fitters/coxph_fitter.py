@@ -76,6 +76,9 @@ class CoxPHFitter(BaseFitter):
           weights_col: an optional column in the dataframe that denotes the weight per subject.
              This column is expelled and not used as a covariate, but as a weight in the
              final regression. Default weight is 1.
+             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+             identical observations.
+             This can be used for sampling weights. In that case, use `robust=True` to get more accurate standard errors.
           show_progress: since the fitter is iterative, show convergence
              diagnostics.
           initial_beta: initialize the starting point of the iterative
@@ -117,14 +120,16 @@ class CoxPHFitter(BaseFitter):
 
         if weights_col:
             weights = df.pop(weights_col)
-            if (weights.astype(int) != weights).any():
-                warnings.warn("""It looks like your weights are not integers, possibly propensity scores then?
-It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+            if (weights.astype(int) != weights).any() and not self.robust:
+                warnings.warn("""It appears your weights are not integers, possibly propensity or sampling scores then?
+It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
-                    """, RuntimeWarning)
+""", RuntimeWarning)
+            if (weights <= 0).any():
+                raise ValueError("values in weights_col must be positive.")
 
         else:
-            weights = pd.DataFrame(np.ones((self._n_examples, 1)), index=df.index)
+            weights = pd.Series(np.ones((self._n_examples,)), index=df.index)
 
         self._check_values(df, T, E)
         df = df.astype(float)
@@ -150,9 +155,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
 
-        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), T, E)
+        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
-
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
@@ -289,15 +293,22 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _get_efron_values(self, X, beta, T, E, weights):
         """
-        Calculates the first and second order vector differentials,
-        with respect to beta.
+        Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
+
+        A good explaination for Efron. Consider three of five subjects who fail at the time.
+        As it is not known a priori that who is the first to fail, so one-third of
+        (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+        of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+
         Parameters:
             X: (n,d) numpy array of observations.
             beta: (1, d) numpy array of coefficients.
             T: (n) numpy array representing observed durations.
             E: (n) numpy array representing death events.
             weights: (n) an array representing weights per observation.
+
         Returns:
             hessian: (d, d) numpy array,
             gradient: (1, d) numpy array
@@ -315,7 +326,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-        # Init number of ties
+        # Init number of ties and weights
+        weight_count = 0.0
         tie_count = 0
 
         # Iterate backwards to utilize recursive relationship
@@ -344,7 +356,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 tie_phi_x_x += phi_x_x_i
 
                 # Keep track of count
-                tie_count += int(w)
+                tie_count += 1
+                weight_count += w
 
             if i > 0 and T[i - 1] == ti:
                 # There are more ties/members of the risk set
@@ -355,24 +368,31 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # There was atleast one event and no more ties remain. Time to sum.
             partial_gradient = np.zeros((1, d))
+            weighted_average = weight_count / tie_count
 
             for l in range(tie_count):
-                c = l / tie_count
-
-                denom = (risk_phi - c * tie_phi)
-                z = (risk_phi_x - c * tie_phi_x)
+                """
+                A good explaination for Efron. Consider three of five subjects who fail at the time.
+                As it is not known a priori that who is the first to fail, so one-third of
+                (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+                """
+                numer = (risk_phi_x - l * tie_phi_x / tie_count)
+                denom = (risk_phi - l * tie_phi / tie_count)
 
                 # Gradient
-                partial_gradient += z / denom
+                partial_gradient += weighted_average * numer / denom
                 # Hessian
-                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
-                # In case z and denom both are really small numbers,
+                a1 = (risk_phi_x_x - l * tie_phi_x_x / tie_count) / denom
+
+                # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                a2 = dot(z.T / denom, z / denom)
+                a2 = dot(numer.T / denom, numer / denom)
 
-                hessian -= (a1 - a2)
+                hessian -= weighted_average * (a1 - a2)
 
-                log_lik -= np.log(denom[0][0])
+                log_lik -= weighted_average * np.log(denom[0][0])
+
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
@@ -380,6 +400,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # reset tie values
             tie_count = 0
+            weight_count = 0.0
             x_tie_sum = np.zeros((1, d))
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
@@ -406,7 +427,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                             index=['lower-bound', 'upper-bound'],
                             columns=self.hazards_.columns)
 
-    def _compute_sandwich_estimator(self, X, T, E):
+    def _compute_sandwich_estimator(self, X, T, E, weights):
 
         n, d = X.shape
 
@@ -423,42 +444,48 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # we already unnormalized the betas in `fit`, so we need normalize them again since X is
         # normalized.
         beta = self.hazards_.values[0] * self._norm_std
+        weight_count = 0.0
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
             # Doing it like this to preserve shape
-            ei = E[i]
             xi = X[i:i + 1]
+            w = weights[i]
 
-            phi_i = exp(dot(xi, beta))
+            phi_i = w * exp(dot(xi, beta))
             phi_x_i = phi_i * xi
 
             risk_phi += phi_i
             risk_phi_x += phi_x_i
 
-            risk_phi_history[i] = risk_phi
-            risk_phi_x_history[i] = risk_phi_x
+            risk_phi_history[i] = risk_phi # denom
+            risk_phi_x_history[i] = risk_phi_x # a[i]
 
         # Iterate forwards
         for i in range(0, n):
             # Doing it like this to preserve shape
+            # doesn't handle ties.
             xi = X[i:i + 1]
-            phi_i = exp(dot(xi, beta))
+            w = weights[i]
+            phi_i = w * exp(dot(xi, beta))
 
-            correction_term = sum(E[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
+            score = -sum(E[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
 
-            score = E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i]) - correction_term
+            score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
             score_covariance += (score.T).dot(score)
 
         # TODO: need a faster way to invert these matrices
         sandwich_estimator = inv(self._hessian_).dot(score_covariance).dot(inv(self._hessian_))
         return sandwich_estimator
 
-    def _compute_standard_errors(self, df, T, E):
+    def _compute_standard_errors(self, df, T, E, weights):
+
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values).diagonal()) / self._norm_std
+            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights).diagonal()) / self._norm_std
+            #self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         else:
-            se = np.sqrt(-inv(self._hessian_).diagonal()) / self._norm_std
+            self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
+            se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 

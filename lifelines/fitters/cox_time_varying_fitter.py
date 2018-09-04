@@ -37,7 +37,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.alpha = alpha
         self.penalizer = penalizer
 
-    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=False, step_size=None):
+    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=False, step_size=None, robust=False):
         """
         Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -56,6 +56,10 @@ class CoxTimeVaryingFitter(BaseFitter):
           show_progress: since the fitter is iterative, show convergence
              diagnostics.
           step_size: set an initial step size for the fitting algorithm.
+          robust: Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+            ties, so if there are high number of ties, results may significantly differ. See
+            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+
 
         Returns:
             self, with additional properties: hazards_
@@ -83,6 +87,7 @@ class CoxTimeVaryingFitter(BaseFitter):
                                          step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
+        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), stop_times_events)
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events)
         self.baseline_survival_ = self._compute_baseline_survival()
@@ -103,14 +108,65 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-    def _compute_standard_errors(self):
-        se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std
+    def _compute_sandwich_estimator(self, df, stop_times_events):
+
+        n, d = df.shape
+
+        # Init risk and tie sums to zero
+        risk_phi = 0
+        risk_phi_x = np.zeros((1, d))
+
+        # need to store these histories, as we access them often
+        risk_phi_history = pd.DataFrame(np.zeros((n,)), index=df.index)
+        risk_phi_x_history = pd.DataFrame(np.zeros((n, d)), index=df.index)
+
+        score_covariance = np.zeros((d, d))
+
+        # we already unnormalized the betas in `fit`, so we need normalize them again since X is
+        # normalized.
+        beta = self.hazards_.values[0] * self._norm_std
+
+        # Iterate backwards to utilize recursive relationship
+        for i in range(n - 1, -1, -1):
+            # Doing it like this to preserve shape
+            ei = E[i]
+            xi = X[i:i + 1]
+
+            phi_i = exp(dot(xi, beta))
+            phi_x_i = phi_i * xi
+
+            risk_phi += phi_i
+            risk_phi_x += phi_x_i
+
+            risk_phi_history[i] = risk_phi
+            risk_phi_x_history[i] = risk_phi_x
+
+        # Iterate forwards
+        for i in range(0, n):
+            # Doing it like this to preserve shape
+            xi = X[i:i + 1]
+            phi_i = exp(dot(xi, beta))
+
+            correction_term = sum(E[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
+
+            score = E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i]) - correction_term
+            score_covariance += (score.T).dot(score)
+
+        # TODO: need a faster way to invert these matrices
+        sandwich_estimator = inv(self._hessian_).dot(score_covariance).dot(inv(self._hessian_))
+        return sandwich_estimator
+
+    def _compute_standard_errors(self, df, stop_times_events):
+        if self.robust:
+            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events).diagonal()) / self._norm_std
+        else:
+            se = np.sqrt(-inv(self._hessian_).diagonal()) / self._norm_std
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
         return (self.hazards_.loc['coef'] /
-                self._compute_standard_errors().loc['se'])
+                self.standard_errors_.loc['se'])
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -118,7 +174,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
-        se = self._compute_standard_errors()
+        se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(np.r_[hazards - alpha2 * se,
                                   hazards + alpha2 * se],
@@ -137,7 +193,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.loc['coef'].values
         df['exp(coef)'] = exp(self.hazards_.loc['coef'].values)
-        df['se(coef)'] = self._compute_standard_errors().loc['se'].values
+        df['se(coef)'] = self.standard_errors_.loc['se'].values
         df['z'] = self._compute_z_values()
         df['p'] = self._compute_p_values()
         df['lower %.2f' % self.alpha] = self.confidence_intervals_.loc['lower-bound'].values
