@@ -1039,10 +1039,15 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         expected = pd.Series({'var1': 7.680, 'var2': -0.915})
         assert_series_equal(cph.hazards_.T['coef'], expected, check_less_precise=2, check_names=False)
 
+        variance_matrix = -np.linalg.inv(cph._hessian_) / np.outer(cph._norm_std, cph._norm_std)
         expected_cov = np.array([[33.079106, -5.964652], [-5.964652, 2.040642]])
         npt.assert_array_almost_equal(
-            w * cph.variance_matrix_, expected_cov,
-        decimal=2)
+            w * variance_matrix_, expected_cov,
+        decimal=1)
+
+        expected = pd.Series({'var1': 2.931, 'var2': 1.117})
+        assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)
+
 
     def test_robust_errors_with_less_trival_weights_is_the_same_as_R(self, regression_dataset):
         """
@@ -1077,7 +1082,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         expected_cov = np.array([[44.758444, -8.781867], [-8.781867, 2.606589]])
         npt.assert_array_almost_equal(
             variance_matrix, expected_cov,
-        decimal=2)
+        decimal=1) # not as precise because matrix inversion will accumulate estimation errors.
 
         expected = pd.Series({'var1': 2.931, 'var2': 1.117})
         assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)

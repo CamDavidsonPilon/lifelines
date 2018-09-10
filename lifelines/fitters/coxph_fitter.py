@@ -260,9 +260,10 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            if newton_decrement < precision:
+            elif previous_ll != 0 and abs(ll - previous_ll) / (-previous_ll) < 1e-09:
+                # this is what R uses by default
                 converging, completed = False, True
-            elif abs(ll - previous_ll) < precision:
+            elif newton_decrement < precision:
                 converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
@@ -428,6 +429,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                             columns=self.hazards_.columns)
 
     def _compute_sandwich_estimator(self, X, T, E, weights):
+        # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
+        # lin1989
 
         n, d = X.shape
 
@@ -472,7 +475,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             score = -sum(E[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
 
             score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
-            score_covariance += (score.T).dot(score)
+            score_covariance += w * (score.T).dot(score)
 
         # TODO: need a faster way to invert these matrices
         sandwich_estimator = inv(self._hessian_).dot(score_covariance).dot(inv(self._hessian_))

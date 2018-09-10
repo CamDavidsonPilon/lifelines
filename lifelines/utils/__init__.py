@@ -68,9 +68,9 @@ def qth_survival_times(q, survival_functions, cdf=False):
         #  Typically, one would expect that the output should equal the "height" of q.
         #  An issue can arise if the Series q contains duplicate values. We handle this un-eligantly.
         if q.duplicated().any():
-            return pd.DataFrame.from_items([
+            return pd.DataFrame.from_dict(dict([
                 (_q, survival_functions.apply(lambda s: qth_survival_time(_q, s))) for i, _q in enumerate(q)
-            ], orient='index', columns=survival_functions.columns)
+            ]), orient='index', columns=survival_functions.columns)
         else:
             return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
 

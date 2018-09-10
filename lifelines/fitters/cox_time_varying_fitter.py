@@ -10,6 +10,7 @@ from scipy import stats
 
 from numpy import dot, exp
 from numpy.linalg import solve, norm, inv
+from scipy.linalg import solve as spsolve
 from lifelines.fitters import BaseFitter
 from lifelines.fitters.coxph_fitter import CoxPHFitter
 from lifelines.statistics import chisq_test
@@ -157,7 +158,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         return sandwich_estimator
 
     def _compute_standard_errors(self, df, stop_times_events):
-        if self.robust:
+        if self.robust: # TODO
             se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events).diagonal()) / self._norm_std
         else:
             se = np.sqrt(-inv(self._hessian_).diagonal()) / self._norm_std
@@ -261,9 +262,10 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            elif abs(ll - previous_ll) < precision:
+            elif abs(ll - previous_ll) / (-previous_ll) < 1e-09:
+                # this is what R uses by default
                 converging, completed = False, True
-            if newton_decrement < precision:
+            elif newton_decrement < 10e-8:
                 converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
