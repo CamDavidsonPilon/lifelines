@@ -234,6 +234,7 @@ Aalen's additive model typically does not estimate the individual
 :math:`b_i(t)` but instead estimates :math:`\int_0^t b_i(s) \; ds`
 (similar to the estimate of the hazard rate using ``NelsonAalenFitter``
 above). This is important to keep in mind when analyzing the output.
+
 .. code:: python
 
     from lifelines import AalenAdditiveFitter
