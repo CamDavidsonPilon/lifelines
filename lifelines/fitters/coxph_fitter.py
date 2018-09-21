@@ -431,34 +431,37 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def _compute_sandwich_estimator(self, X, T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
+        # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
 
         n, d = X.shape
 
         # Init risk and tie sums to zero
         risk_phi = 0
         risk_phi_x = np.zeros((1, d))
+        running_weight_sum = 0
 
         # need to store these histories, as we access them often
         risk_phi_history = np.zeros((n,))
         risk_phi_x_history = np.zeros((n, d))
 
-        score_covariance = np.zeros((d, d))
 
         # we already unnormalized the betas in `fit`, so we need normalize them again since X is
         # normalized.
         beta = self.hazards_.values[0] * self._norm_std
-        weight_count = 0.0
+
+        score_residuals = np.zeros((n, d))
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
             # Doing it like this to preserve shape
             xi = X[i:i + 1]
+
             w = weights[i]
 
             phi_i = w * exp(dot(xi, beta))
             phi_x_i = phi_i * xi
 
-            risk_phi += phi_i
+            risk_phi   += phi_i
             risk_phi_x += phi_x_i
 
             risk_phi_history[i] = risk_phi # denom
@@ -466,28 +469,29 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # Iterate forwards
         for i in range(0, n):
-            # Doing it like this to preserve shape
             # doesn't handle ties.
             xi = X[i:i + 1]
-            w = weights[i]
-            phi_i = w * exp(dot(xi, beta))
+            phi_i = exp(dot(xi, beta))
 
-            score = -sum(E[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
-
+            score = -sum(
+                E[j] * (phi_i * weights[j]) / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1)
+            )
             score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
-            score_covariance += w * (score.T).dot(score)
+            score *= weights[i]
+            score_residuals[i, :] = score
 
-        # TODO: need a faster way to invert these matrices
-        sandwich_estimator = inv(self._hessian_).dot(score_covariance).dot(inv(self._hessian_))
+
+        naive_var = inv(self._hessian_) / self._norm_std.values
+        delta_betas = score_residuals.dot(naive_var)
+        sandwich_estimator = delta_betas.T.dot(delta_betas)
         return sandwich_estimator
 
     def _compute_standard_errors(self, df, T, E, weights):
 
+        self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights).diagonal()) / self._norm_std
-            #self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
+            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights.values).diagonal()) # / self._norm_std
         else:
-            self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
