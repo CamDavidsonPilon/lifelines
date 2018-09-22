@@ -155,6 +155,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
 
+        self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
@@ -432,63 +433,46 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
+        # doesn't handle ties.
 
         n, d = X.shape
-
-        # Init risk and tie sums to zero
-        risk_phi = 0
-        risk_phi_x = np.zeros((1, d))
-        running_weight_sum = 0
-
-        # need to store these histories, as we access them often
-        risk_phi_history = np.zeros((n,))
-        risk_phi_x_history = np.zeros((n, d))
-
 
         # we already unnormalized the betas in `fit`, so we need normalize them again since X is
         # normalized.
         beta = self.hazards_.values[0] * self._norm_std
 
+        E = E.astype(int)
         score_residuals = np.zeros((n, d))
 
-        # Iterate backwards to utilize recursive relationship
-        for i in range(n - 1, -1, -1):
-            # Doing it like this to preserve shape
-            xi = X[i:i + 1]
+        phi_s = exp(dot(X, beta))
 
-            w = weights[i]
-
-            phi_i = w * exp(dot(xi, beta))
-            phi_x_i = phi_i * xi
-
-            risk_phi   += phi_i
-            risk_phi_x += phi_x_i
-
-            risk_phi_history[i] = risk_phi # denom
-            risk_phi_x_history[i] = risk_phi_x # a[i]
+        # need to store these histories, as we access them often
+        # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
+        risk_phi_x_history = (X * (weights * phi_s)[:, None])[::-1].cumsum(0)[::-1]
+        risk_phi_history =        (weights * phi_s)          [::-1].cumsum() [::-1][:, None]
 
         # Iterate forwards
         for i in range(0, n):
-            # doesn't handle ties.
-            xi = X[i:i + 1]
-            phi_i = exp(dot(xi, beta))
 
-            score = -sum(
-                E[j] * (phi_i * weights[j]) / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1)
-            )
-            score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
-            score *= weights[i]
+            xi = X[i:i + 1]
+            phi_i = phi_s[i]
+
+            score = - phi_i * (
+                (E[:i+1] * weights[:i+1] / risk_phi_history[:i+1].T).T  # this is constant-ish, and could be cached
+              * (xi - risk_phi_x_history[:i+1] / risk_phi_history[:i+1])
+            ).sum(0)
+
+            if E[i]:
+                score = score + (xi - risk_phi_x_history[i] / risk_phi_history[i])
+
             score_residuals[i, :] = score
 
-
-        naive_var = inv(self._hessian_) / self._norm_std.values
-        delta_betas = score_residuals.dot(naive_var)
-        sandwich_estimator = delta_betas.T.dot(delta_betas)
+        naive_var = inv(self._hessian_)
+        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
+        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
         return sandwich_estimator
 
     def _compute_standard_errors(self, df, T, E, weights):
-
-        self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         if self.robust:
             se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights.values).diagonal()) # / self._norm_std
         else:

@@ -1011,7 +1011,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(rossi_, duration_col='week', event_col='arrest', weights_col='weights')
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
-    def test_robust_errors_with_trival_weights_is_the_same_than_R(self, regression_dataset):
+    def test_robust_errors_with_trivial_weights_is_the_same_than_R(self, regression_dataset):
         """
         df <- data.frame(
             "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
@@ -1116,6 +1116,36 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         expected = pd.Series({'var1': 9.97730, 'var2': 2.45648})
         assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)
 
+
+    def test_robust_errors_with_non_trivial_weights_with_censorship_is_the_same_as_R(self, regression_dataset):
+        """
+        df <- data.frame(
+            "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+            "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
+            "var3" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
+            "T" =    c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666),
+            "E" =    c(1, 1, 0, 1, 1)
+        )
+        r = coxph(formula=Surv(T, E) ~ var1 + var2, data=df, weights=var3, robust=TRUE)
+        r$var
+        r$naive.var
+        """
+
+        df = pd.DataFrame({
+            "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
+            'var3': [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
+            "T":    [7.335846, 5.269797, 11.684092, 12.678458, 6.601666],
+            "E":    [1, 1, 0, 1, 1],
+        })
+
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E', robust=True, weights_col='var3', show_progress=True)
+        expected = pd.Series({'var1': -8.360533, 'var2': 1.781126})
+        assert_series_equal(cph.hazards_.T['coef'], expected, check_less_precise=3, check_names=False)
+
+        expected = pd.Series({'var1': 12.303338, 'var2': 2.395670})
+        assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=3, check_names=False)
 
 
     def test_robust_errors_is_the_same_as_R(self, regression_dataset):
