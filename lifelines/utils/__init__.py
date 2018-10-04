@@ -894,8 +894,8 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
     censored_ix = 0
     died_ix = 0
     times_to_compare = _BTree(np.unique(died_pred))
-    num_pairs = 0
-    num_correct = 0
+    num_pairs = np.int64(0)
+    num_correct = np.int64(0)
     num_tied = np.int64(0)
 
     def handle_pairs(truth, pred, first_ix):
@@ -912,8 +912,8 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
         while next_ix < len(truth) and truth[next_ix] == truth[first_ix]:
             next_ix += 1
         pairs = len(times_to_compare) * (next_ix - first_ix)
-        correct = 0
-        tied = 0
+        correct = np.int64(0)
+        tied = np.int64(0)
         for i in range(first_ix, next_ix):
             rank, count = times_to_compare.rank(pred[i])
             correct += rank
