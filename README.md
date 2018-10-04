@@ -19,12 +19,7 @@ lesser-known technique, for example:
 
 *lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please leave an Issue and let us know your thoughts on the library.
 
-### Installation:
-#### Dependencies:
-
-The usual Python data stack: NumPy, SciPy, Pandas (a modern version please). Matplotlib is optional (as of 0.6.0+). 
-
-#### Installing
+## Installation:
 
 You can install *lifelines* using
 
@@ -48,14 +43,30 @@ You can optionally run the test suite after install with
     py.test
 
 
-### lifelines Documentation and an intro to survival analysis
+## lifelines Documentation and an intro to survival analysis
 
-If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples and syntax,
+If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples, API, and syntax,
 please check out the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
 
+Example:
+```python
+from lifelines import KaplanMeierFitter
 
-### Contacting
-There is a [Gitter](https://gitter.im/python-lifelines/) channel available. The main author, Cam Davidson-Pilon, is also available for contact on email and twitter.
+durations = [11, 74, 71, 76, 28, 92, 89, 48, 90, 39, 63, 36, 54, 64, 34, 73, 94, 37, 56, 76]
+event_observed = [ True,  True, False,  True,  True,  True,  True, False, False,True, True,
+  True,  True,  True,  True,  True, False,  True, False,  True]
+
+kmf = KaplanMeierFitter()
+kmf.fit(durations, event_observed)
+kmf.plot()
+```
+
+<img src="https://imgur.com/d4Gi5J0.png" width="600">
+
+### Contacting & troubleshooting
+ - There is a [Gitter](https://gitter.im/python-lifelines/) channel available.
+ - Some users have posted common questions at [stats.stackexchange.com](https://stats.stackexchange.com/search?tab=votes&q=%22lifelines%22%20is%3aquestion)
+ - creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines). 
 
 
 ### Citing lifelines
@@ -63,6 +74,3 @@ There is a [Gitter](https://gitter.im/python-lifelines/) channel available. The 
 You can use this badge below to generate a DOI and reference text for the latest related version of lifelines:
 
  [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
-
- 
-![](http://i.imgur.com/QXW71zA.png)
