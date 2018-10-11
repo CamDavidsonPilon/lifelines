@@ -240,11 +240,21 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 h.flat[::d + 1] -= self.penalizer
 
             # reusing a piece to make g * inv(h) * g.T faster later
-            inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+            try:
+                inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+            except ValueError as e:
+                if 'infs or NaNs' in e.message:
+                    raise ConvergenceError("""hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+""")
+                else:
+                    # something else?
+                    raise e
+
             delta = step_size * inv_h_dot_g_T
 
             if np.any(np.isnan(delta)):
-                raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+                raise ConvergenceError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """)
 

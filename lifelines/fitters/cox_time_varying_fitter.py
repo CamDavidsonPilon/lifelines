@@ -19,7 +19,7 @@ from lifelines.utils import inv_normal_cdf, \
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
     ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths,\
-    check_for_instantaneous_events
+    check_for_instantaneous_events, ConvergenceError
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -243,12 +243,22 @@ class CoxTimeVaryingFitter(BaseFitter):
                 g -= self.penalizer * beta.T
                 h.flat[::d + 1] -= self.penalizer
 
-            # reusing a piece to make g * inv(h) * g.T faster later
-            inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+            try:
+                # reusing a piece to make g * inv(h) * g.T faster later
+                inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+            except ValueError as e:
+                if 'infs or NaNs' in e.message:
+                    raise ConvergenceError("""hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+""")
+                else:
+                    # something else?
+                    raise e
+
             delta = step_size * inv_h_dot_g_T
 
             if np.any(np.isnan(delta)):
-                raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+                raise ConvergenceError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """)
             # Save these as pending result

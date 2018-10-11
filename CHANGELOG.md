@@ -5,6 +5,8 @@
  - `standard_errors_` is now a property on fitted Cox models.
  - `variance_matrix_` is now a property on fitted `CoxPHFitter` which describes the variance matrix of the coefficients.
  - new criteria for convergence of `CoxPHFitter` and `CoxTimeVaryingFitter` called the Newton-decrement. Tests show it is as accurate (w.r.t to previous coefficients) and typically shaves off a single step, resulting in generally faster convergence. See https://www.cs.cmu.edu/~pradeepr/convexopt/Lecture_Slides/Newton_methods.pdf. Details about the Newton-decrement are added to the `show_progress` statements.
+ - Minimum suppport for scipy is 1.0
+ - Convergence errors in models that use Newton-Rhapson methods now throw a `ConvergenceError`, instead of a `ValueError` (the former is a subclass of the latter, however).
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).

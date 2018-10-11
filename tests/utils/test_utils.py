@@ -165,6 +165,9 @@ def test_qth_survival_times_with_duplicate_q_returns_valid_index_and_shape():
     q = pd.Series([0.5, 0.5, 0.2, 0.0, 0.0])
     actual = utils.qth_survival_times(q, sf)
     assert actual.shape[0] == len(q)
+    assert actual.index[0] == actual.index[1]
+    assert_series_equal(actual.iloc[0], actual.iloc[1])
+
     npt.assert_almost_equal(actual.index.values, q.values)
 
 

@@ -34,6 +34,16 @@ class StatError(Exception):
         return repr(self.msg)
 
 
+class ConvergenceError(ValueError):
+    # inherits from ValueError for backwards compatilibity reasons
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
 class ConvergenceWarning(RuntimeWarning):
 
     def __init__(self, msg):
@@ -65,14 +75,14 @@ def qth_survival_times(q, survival_functions, cdf=False):
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         return survival_functions.apply(lambda s: qth_survival_time(q[0], s, cdf=cdf)).iloc[0]
     else:
+        survival_times = pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+
         #  Typically, one would expect that the output should equal the "height" of q.
         #  An issue can arise if the Series q contains duplicate values. We handle this un-eligantly.
         if q.duplicated().any():
-            return pd.DataFrame.from_dict(dict([
-                (_q, survival_functions.apply(lambda s: qth_survival_time(_q, s))) for i, _q in enumerate(q)
-            ]), orient='index', columns=survival_functions.columns)
-        else:
-            return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+            survival_times = survival_times.loc[q]
+
+        return survival_times
 
 
 def qth_survival_time(q, survival_function, cdf=False):
