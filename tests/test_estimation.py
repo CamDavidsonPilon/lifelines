@@ -1896,7 +1896,7 @@ class TestCoxTimeVaryingFitter():
 
 
     def test_ctv_fitter_will_hande_integer_weight_col_on_tv_dataset(self, ctv, dfcv):
-
+        # not sure yet why this is failing.
         # duplicate a few subjects
         dfcv_unfolded = dfcv.copy()
         for _id in [10, 9, 8, 7]:
@@ -1904,7 +1904,7 @@ class TestCoxTimeVaryingFitter():
             to_append['id'] = (10 + _id)
             dfcv_unfolded = dfcv_unfolded.append(to_append)
         dfcv_unfolded = dfcv_unfolded.reset_index(drop=True)
-        print(dfcv_unfolded[(dfcv_unfolded['start'] < 5) & (5 <= dfcv_unfolded['stop'])])
+        print(dfcv_unfolded[(dfcv_unfolded['start'] < 7) & (7 <= dfcv_unfolded['stop'])])
 
         ctv = CoxTimeVaryingFitter()
         ctv.fit(dfcv_unfolded, id_col="id", start_col="start", stop_col="stop", event_col="event", show_progress=True)
@@ -1914,7 +1914,7 @@ class TestCoxTimeVaryingFitter():
         dfcv_folded = dfcv.copy()
         dfcv_folded['weights'] = 1.0
         dfcv_folded.loc[dfcv_folded['id'].isin([10,9,8,7]), 'weights'] = 2.0
-        print(dfcv_folded[(dfcv_folded['start'] < 5) & (5 <= dfcv_folded['stop'])])
+        print(dfcv_folded[(dfcv_folded['start'] < 7) & (7 <= dfcv_folded['stop'])])
 
         ctv = CoxTimeVaryingFitter()
         ctv.fit(dfcv_folded, id_col="id", start_col="start", stop_col="stop", event_col="event", weights_col='weights', show_progress=True)
