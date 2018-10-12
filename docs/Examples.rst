@@ -282,6 +282,18 @@ Hide confidence intervals
    :height: 300
 
 
+Invert axis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.fit(T, label="kmf.plot(invert_y_axis=True)")
+    kmf.plot(invert_y_axis=True)
+
+.. image:: /images/invert_y_axis.png 
+   :height: 300
+
+
 Set the index/timeline of a estimate
 ##############################################
 

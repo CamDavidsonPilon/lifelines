@@ -308,16 +308,16 @@ def plot_estimate(cls, estimate):
           iloc: specify a location-based subsection of the curves to plot, ex:
                    .plot(iloc=slice(0,10))
                 will plot the first 10 time points.
+          invert_y_axis: boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs.
           bandwidth: specify the bandwidth of the kernel smoother for the
                      smoothed-hazard rate. Only used when called 'plot_hazard'.
-
         Returns:
           ax: a pyplot axis object
         """ % estimate
 
     def plot(loc=None, iloc=None, show_censors=False,
              censor_styles=None, ci_legend=False, ci_force_lines=False,
-             ci_alpha=0.25, ci_show=True, at_risk_counts=False,
+             ci_alpha=0.25, ci_show=True, at_risk_counts=False, invert_y_axis=False,
              bandwidth=None, **kwargs):
 
         if censor_styles is None:
@@ -378,6 +378,18 @@ def plot_estimate(cls, estimate):
 
         if at_risk_counts:
             add_at_risk_counts(cls, ax=ax)
+
+        if invert_y_axis:
+            # need to check if it's already inverted
+            original_y_ticks =  ax.get_yticks()
+            if not getattr(ax, '__lifelines_inverted', False):
+                # not inverted yet
+
+                ax.invert_yaxis()
+                # don't ask.
+                y_ticks = np.round(1.000000000001 - original_y_ticks, decimals=8)
+                ax.set_yticklabels(y_ticks)
+                ax.__lifelines_inverted = True
 
         return ax
 
