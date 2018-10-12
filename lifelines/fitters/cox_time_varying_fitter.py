@@ -38,7 +38,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.alpha = alpha
         self.penalizer = penalizer
 
-    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', show_progress=False, step_size=None, robust=False):
+    def fit(self, df, id_col, event_col, start_col='start', stop_col='stop', weights_col=None, show_progress=False, step_size=None, robust=False):
         """
         Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -54,6 +54,7 @@ class CoxTimeVaryingFitter(BaseFitter):
              observation. If left as None, assume all individuals are non-censored.
           start_col: the column that contains the start of a subject's time period.
           stop_col: the column that contains the end of a subject's time period.
+          weights_col: the column that contains (possibly time-varying) weight of each subject-period row.
           show_progress: since the fitter is iterative, show convergence
              diagnostics.
           step_size: set an initial step size for the fitting algorithm.
@@ -67,16 +68,24 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         """
 
+        self.robust = robust
+
         df = df.copy()
 
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
             raise KeyError("A column specified in the call to `fit` does not exist in the dataframe provided.")
 
-        df = df.rename(columns={id_col: 'id', event_col: 'event', start_col: 'start', stop_col: 'stop'})
+        if weights_col is None:
+            assert '__weights' not in df.columns, '__weights is an internal lifelines column, please rename your column first.'
+            df['__weights'] = 1.0
+
+        df = df.rename(columns={id_col: 'id', event_col: 'event', start_col: 'start', stop_col: 'stop', weights_col: '__weights'})
         df = df.set_index('id')
         stop_times_events = df[["event", "stop", "start"]].copy()
-        df = df.drop(["event", "stop", "start"], axis=1)
+        weights = df[['__weights']].copy().astype(float)
+        df = df.drop(["event", "stop", "start", "__weights"], axis=1)
         stop_times_events['event'] = stop_times_events['event'].astype(bool)
+
 
         self._check_values(df, stop_times_events)
         df = df.astype(float)
@@ -84,11 +93,11 @@ class CoxTimeVaryingFitter(BaseFitter):
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
 
-        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), stop_times_events, show_progress=show_progress,
+        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights, show_progress=show_progress,
                                          step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
-        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), stop_times_events)
+        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events)
         self.baseline_survival_ = self._compute_baseline_survival()
@@ -97,7 +106,6 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         self._n_examples = df.shape[0]
         self._n_unique = df.index.unique().shape[0]
-
         return self
 
     @staticmethod
@@ -121,8 +129,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         risk_phi_history = pd.DataFrame(np.zeros((n,)), index=df.index)
         risk_phi_x_history = pd.DataFrame(np.zeros((n, d)), index=df.index)
 
-        score_covariance = np.zeros((d, d))
-
+        E = E.astype(int)
+        score_residuals = np.zeros((n, d))
         # we already unnormalized the betas in `fit`, so we need normalize them again since X is
         # normalized.
         beta = self.hazards_.values[0] * self._norm_std
@@ -148,22 +156,25 @@ class CoxTimeVaryingFitter(BaseFitter):
             xi = X[i:i + 1]
             phi_i = exp(dot(xi, beta))
 
-            correction_term = sum(E[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
+            score = -sum(E[j] * weights[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
+            score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
+            score *= weights[i]
+            score_residuals[i, :] = score
 
-            score = E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i]) - correction_term
-            score_covariance += (score.T).dot(score)
-
-        # TODO: need a faster way to invert these matrices
-        sandwich_estimator = inv(self._hessian_).dot(score_covariance).dot(inv(self._hessian_))
+        naive_var = inv(self._hessian_)
+        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
+        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
         return sandwich_estimator
 
-    def _compute_standard_errors(self, df, stop_times_events):
-        if self.robust: # TODO
-            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events).diagonal()) / self._norm_std
+
+    def _compute_standard_errors(self, df, stop_times_events, weights):
+        if self.robust:
+            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights.values).diagonal()) # / self._norm_std
         else:
             se = np.sqrt(-inv(self._hessian_).diagonal()) / self._norm_std
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
+
 
     def _compute_z_values(self):
         return (self.hazards_.loc['coef'] /
@@ -201,7 +212,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
-    def _newton_rhaphson(self, df, stop_times_events, show_progress=False, step_size=None, precision=10e-6,
+    def _newton_rhaphson(self, df, stop_times_events, weights, show_progress=False, step_size=None, precision=10e-6,
                          max_steps=50):
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -236,7 +247,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         while converging:
             i += 1
-            h, g, ll = self._get_gradients(df, stop_times_events, beta)
+            h, g, ll = self._get_gradients(df, stop_times_events, weights, beta)
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -272,7 +283,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            elif abs(ll - previous_ll) / (-previous_ll) < 1e-09:
+            elif previous_ll > 0 and abs(ll - previous_ll) / (-previous_ll) < 1e-09:
                 # this is what R uses by default
                 converging, completed = False, True
             elif newton_decrement < 10e-8:
@@ -303,7 +314,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    def _get_gradients(self, df, stops_events, beta):
+    def _get_gradients(self, df, stops_events, weights, beta):
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
@@ -324,9 +335,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             ix = (stops_events['start'] < t) & (t <= stops_events['stop'])
             df_at_t = df.loc[ix]
+            weights_at_t = weights.loc[ix]
             stops_events_at_t = stops_events.loc[ix]
 
-            phi_i = exp(dot(df_at_t, beta))
+            phi_i = weights_at_t.values * exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
             phi_x_x_i = dot(df_at_t.T, phi_x_i)
 
@@ -337,43 +349,47 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # Calculate the sums of Tie set
             deaths = stops_events_at_t['event'] & (stops_events_at_t['stop'] == t)
-            death_counts = deaths.sum()  # should always be atleast 1.
+
+            ties_counts = deaths.sum()  # should always at least 1
 
             xi_deaths = df_at_t.loc[deaths]
+            weights_deaths = weights_at_t.loc[deaths].values
 
-            x_death_sum = xi_deaths.sum(0).values
+            x_death_sum = (weights_deaths * xi_deaths).sum(0).values
 
-            if death_counts > 1:
+            if ties_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
                 tie_phi = phi_i[deaths.values].sum()
                 tie_phi_x = phi_x_i.loc[deaths].sum(0).values
                 tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths.values] * xi_deaths)
 
             partial_gradient = np.zeros(d)
+            weight_count = weights_deaths.sum()
+            weighted_average = weight_count / ties_counts
 
-            for l in range(death_counts):
 
-                if death_counts > 1:
-                    c = l / death_counts
-                    denom = (risk_phi - c * tie_phi)
-                    z = (risk_phi_x - c * tie_phi_x)
+            for l in range(ties_counts):
+
+                if ties_counts > 1:
+                    denom = (risk_phi - l * tie_phi / ties_counts)
+                    numer = (risk_phi_x - l * tie_phi_x / ties_counts)
                     # Hessian
-                    a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
+                    a1 = (risk_phi_x_x - l * tie_phi_x_x / ties_counts) / denom
                 else:
                     denom = risk_phi
-                    z = risk_phi_x
+                    numer = risk_phi_x
                     # Hessian
                     a1 = risk_phi_x_x / denom
 
                 # Gradient
-                partial_gradient += z / denom
-                # In case z and denom both are really small numbers,
+                partial_gradient += weighted_average * numer / denom
+                # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                a2 = np.outer(z / denom, z / denom)
+                a2 = np.outer(numer / denom, numer / denom)
 
-                hessian -= (a1 - a2)
+                hessian -= weighted_average * (a1 - a2)
+                log_lik -= weighted_average * np.log(denom)
 
-                log_lik -= np.log(denom)
 
             # Values outside tie sum
             gradient += x_death_sum - partial_gradient

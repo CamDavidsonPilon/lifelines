@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ from scipy.integrate import trapz
 from lifelines.fitters import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
     ridge_regression as lr, qth_survival_times, pass_for_numeric_dtypes_or_raise,\
-    concordance_index, check_nans
+    concordance_index, check_nans, ConvergenceWarning
 
 from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import fill_between_steps
@@ -185,7 +186,7 @@ class AalenAdditiveFitter(BaseFitter):
             try:
                 v, V = lr(df.values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
             except LinAlgError:
-                print("Linear regression error. Try increasing the penalizer term.")
+                warnings.warn("Linear regression error. Try increasing the penalizer term.", ConvergenceWarning)
 
             hazards_.loc[time, id_] = v.T
             variance_.loc[time, id_] = V[:, relevant_individuals][:, 0] ** 2
@@ -278,7 +279,7 @@ class AalenAdditiveFitter(BaseFitter):
             try:
                 v, V = lr(wp[time].values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
             except LinAlgError:
-                print("Linear regression error. Try increasing the penalizer term.")
+                warnings.warn("Linear regression error. Try increasing the penalizer term.", ConvergenceWarning)
 
             hazards_.loc[id, time] = v.T
             variance_.loc[id, time] = V[:, relevant_individuals][:, 0] ** 2

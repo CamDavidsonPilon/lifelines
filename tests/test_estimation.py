@@ -19,7 +19,7 @@ from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg.linalg import LinAlgError
 
-from lifelines.utils import k_fold_cross_validation, StatError, concordance_index, ConvergenceWarning
+from lifelines.utils import k_fold_cross_validation, StatError, concordance_index, ConvergenceWarning, to_long_format
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
     WeibullFitter, BaseFitter, CoxTimeVaryingFitter
@@ -1883,6 +1883,71 @@ class TestCoxTimeVaryingFitter():
         df.loc[ (df['start'] == df['stop']) & (df['start'] == 0) & df['event'], 'stop'] = 0.5
         ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
         assert True
+
+    def test_ctv_fitter_will_hande_trivial_weight_col(self, ctv, dfcv):
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        coefs_no_weights = ctv.summary['coef'].values
+
+        dfcv['weight'] = 1.0
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event", weights_col='weight')
+        coefs_trivial_weights = ctv.summary['coef'].values
+
+        npt.assert_almost_equal(coefs_no_weights, coefs_trivial_weights, decimal=3)
+
+
+    def test_ctv_fitter_will_hande_integer_weight_col_on_tv_dataset(self, ctv, dfcv):
+
+        # duplicate a few subjects
+        dfcv_unfolded = dfcv.copy()
+        for _id in [10, 9, 8, 7]:
+            to_append = dfcv[dfcv['id'].isin([_id])].copy()
+            to_append['id'] = (10 + _id)
+            dfcv_unfolded = dfcv_unfolded.append(to_append)
+        dfcv_unfolded = dfcv_unfolded.reset_index(drop=True)
+        print(dfcv_unfolded[(dfcv_unfolded['start'] < 5) & (5 <= dfcv_unfolded['stop'])])
+
+        ctv = CoxTimeVaryingFitter()
+        ctv.fit(dfcv_unfolded, id_col="id", start_col="start", stop_col="stop", event_col="event", show_progress=True)
+        coefs_unfolded_weights = ctv.hazards_
+
+
+        dfcv_folded = dfcv.copy()
+        dfcv_folded['weights'] = 1.0
+        dfcv_folded.loc[dfcv_folded['id'].isin([10,9,8,7]), 'weights'] = 2.0
+        print(dfcv_folded[(dfcv_folded['start'] < 5) & (5 <= dfcv_folded['stop'])])
+
+        ctv = CoxTimeVaryingFitter()
+        ctv.fit(dfcv_folded, id_col="id", start_col="start", stop_col="stop", event_col="event", weights_col='weights', show_progress=True)
+        coefs_folded_weights = ctv.hazards_
+
+        print(coefs_unfolded_weights)
+        print(coefs_folded_weights)
+        assert_frame_equal(coefs_unfolded_weights, coefs_folded_weights)
+
+
+    def test_ctv_fitter_will_give_the_same_results_as_static_cox_model(self, ctv, rossi):
+
+        rossi = rossi.reset_index()
+        rossi = to_long_format(rossi, 'week')
+
+        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
+        ctv.fit(rossi, start_col='start', stop_col='stop', event_col='arrest', id_col='index')
+        npt.assert_array_almost_equal(ctv.hazards_.values, expected, decimal=4)
+
+
+    def test_ctv_fitter_will_handle_integer_weight_as_static_model(self, ctv, rossi):
+        rossi_ = rossi.copy()
+        rossi_['weights'] = 1.
+        rossi_ = rossi_.groupby(rossi.columns.tolist())['weights'].sum()\
+                       .reset_index()
+
+        # create the id column this way.
+        rossi_ = rossi_.reset_index()
+        rossi_ = to_long_format(rossi_, 'week')
+
+        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
+        ctv.fit(rossi_, start_col='start', stop_col='stop', event_col='arrest', id_col='index', weights_col='weights')
+        npt.assert_array_almost_equal(ctv.hazards_.values, expected, decimal=4)
 
 
     def test_fitter_accept_boolean_columns(self, ctv):
