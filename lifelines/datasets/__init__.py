@@ -363,7 +363,7 @@ def load_dfcv():
     3       0    1.0  0   6.0   4   True
     """
     from lifelines.datasets.dfcv_dataset import dfcv
-    return dfcv
+    return dfcv.copy()
 
 
 def load_lymphoma(**kwargs):

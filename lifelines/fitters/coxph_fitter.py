@@ -18,7 +18,7 @@ from lifelines.utils import survival_table_from_events, inv_normal_cdf, normaliz
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
     check_complete_separation, check_nans, StatError, ConvergenceWarning,\
-    StepSizer
+    StepSizer, ConvergenceError
 from lifelines.statistics import chisq_test
 
 
@@ -243,7 +243,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             try:
                 inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
             except ValueError as e:
-                if 'infs or NaNs' in e.message:
+                if 'infs or NaNs' in str(e):
                     raise ConvergenceError("""hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """)
@@ -313,6 +313,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
         of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
+        From https://cran.r-project.org/web/packages/survival/survival.pdf:
+
+        "Setting all weights to 2 for instance will give the same coefficient estimate but halve the variance. When
+        the Efron approximation for ties (default) is employed replication of the data will not give exactly the same coefficients as the
+        weights option, and in this case the weighted fit is arguably the correct one."
 
         Parameters:
             X: (n,d) numpy array of observations.

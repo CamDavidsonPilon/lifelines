@@ -258,7 +258,7 @@ class CoxTimeVaryingFitter(BaseFitter):
                 # reusing a piece to make g * inv(h) * g.T faster later
                 inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
             except ValueError as e:
-                if 'infs or NaNs' in e.message:
+                if 'infs or NaNs' in str(e):
                     raise ConvergenceError("""hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """)
@@ -366,7 +366,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             partial_gradient = np.zeros(d)
             weight_count = weights_deaths.sum()
             weighted_average = weight_count / ties_counts
-
 
             for l in range(ties_counts):
 

@@ -1252,6 +1252,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
 
     def test_summary_output_using_non_trivial_but_integer_weights(self, rossi):
+
         rossi_weights = rossi.copy()
         rossi_weights['weights'] = 1.
         rossi_weights = rossi_weights.groupby(rossi.columns.tolist())['weights'].sum()\
@@ -1263,7 +1264,22 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf2 = CoxPHFitter()
         cf2.fit(rossi, duration_col='week', event_col='arrest')
 
+        # strictly speaking, the variances, etc. don't need to be the same, only the coefs.
         assert_frame_equal(cf1.summary, cf2.summary, check_like=True)
+
+    def test_doubling_the_weights_halves_the_variance(self, rossi):
+
+        w = 2.0
+        rossi_weights = rossi.copy()
+        rossi_weights['weights'] = 2
+
+        cf1 = CoxPHFitter()
+        cf1.fit(rossi_weights, duration_col='week', event_col='arrest', weights_col='weights')
+
+        cf2 = CoxPHFitter()
+        cf2.fit(rossi, duration_col='week', event_col='arrest')
+
+        assert_frame_equal(cf2.standard_errors_ ** 2, w * cf1.standard_errors_ ** 2, check_like=True)
 
 
     def test_adding_non_integer_weights_without_robust_flag_raises_a_warning(self, rossi):
@@ -1884,7 +1900,7 @@ class TestCoxTimeVaryingFitter():
         ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
         assert True
 
-    def test_ctv_fitter_will_hande_trivial_weight_col(self, ctv, dfcv):
+    def test_ctv_fitter_will_handle_trivial_weight_col(self, ctv, dfcv):
         ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
         coefs_no_weights = ctv.summary['coef'].values
 
@@ -1895,59 +1911,56 @@ class TestCoxTimeVaryingFitter():
         npt.assert_almost_equal(coefs_no_weights, coefs_trivial_weights, decimal=3)
 
 
-    def test_ctv_fitter_will_hande_integer_weight_col_on_tv_dataset(self, ctv, dfcv):
-        # not sure yet why this is failing.
-        # duplicate a few subjects
-        dfcv_unfolded = dfcv.copy()
-        for _id in [10, 9, 8, 7]:
-            to_append = dfcv[dfcv['id'].isin([_id])].copy()
-            to_append['id'] = (10 + _id)
-            dfcv_unfolded = dfcv_unfolded.append(to_append)
-        dfcv_unfolded = dfcv_unfolded.reset_index(drop=True)
-        print(dfcv_unfolded[(dfcv_unfolded['start'] < 7) & (7 <= dfcv_unfolded['stop'])])
+    def test_doubling_the_weights_halves_the_variance(self, ctv, dfcv):
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        coefs_no_weights = ctv.summary['coef'].values
+        variance_no_weights = ctv.summary['se(coef)'].values**2
 
-        ctv = CoxTimeVaryingFitter()
-        ctv.fit(dfcv_unfolded, id_col="id", start_col="start", stop_col="stop", event_col="event", show_progress=True)
-        coefs_unfolded_weights = ctv.hazards_
+        dfcv['weight'] = 2.0
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event", weights_col='weight')
+        coefs_double_weights = ctv.summary['coef'].values
+        variance_double_weights = ctv.summary['se(coef)'].values**2
 
-
-        dfcv_folded = dfcv.copy()
-        dfcv_folded['weights'] = 1.0
-        dfcv_folded.loc[dfcv_folded['id'].isin([10,9,8,7]), 'weights'] = 2.0
-        print(dfcv_folded[(dfcv_folded['start'] < 7) & (7 <= dfcv_folded['stop'])])
-
-        ctv = CoxTimeVaryingFitter()
-        ctv.fit(dfcv_folded, id_col="id", start_col="start", stop_col="stop", event_col="event", weights_col='weights', show_progress=True)
-        coefs_folded_weights = ctv.hazards_
-
-        print(coefs_unfolded_weights)
-        print(coefs_folded_weights)
-        assert_frame_equal(coefs_unfolded_weights, coefs_folded_weights)
+        npt.assert_almost_equal(coefs_no_weights, coefs_double_weights, decimal=3)
+        npt.assert_almost_equal(variance_no_weights, 2 * variance_double_weights, decimal=3)
 
 
     def test_ctv_fitter_will_give_the_same_results_as_static_cox_model(self, ctv, rossi):
 
-        rossi = rossi.reset_index()
-        rossi = to_long_format(rossi, 'week')
+        cph = CoxPHFitter()
+        cph.fit(rossi, 'week', 'arrest')
+        expected = cph.hazards_.values
 
-        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
-        ctv.fit(rossi, start_col='start', stop_col='stop', event_col='arrest', id_col='index')
+        rossi_ctv = rossi.reset_index()
+        rossi_ctv = to_long_format(rossi_ctv, 'week')
+
+
+        ctv.fit(rossi_ctv, start_col='start', stop_col='stop', event_col='arrest', id_col='index')
         npt.assert_array_almost_equal(ctv.hazards_.values, expected, decimal=4)
 
 
     def test_ctv_fitter_will_handle_integer_weight_as_static_model(self, ctv, rossi):
+        # deleting some columns to create more duplicates
+        del rossi['age']
+        del rossi['paro']
+        del rossi['mar']
+        del rossi['prio']
+
         rossi_ = rossi.copy()
         rossi_['weights'] = 1.
         rossi_ = rossi_.groupby(rossi.columns.tolist())['weights'].sum()\
                        .reset_index()
 
+        cph = CoxPHFitter()
+        cph.fit(rossi, 'week', 'arrest')
+        expected = cph.hazards_.values
+
         # create the id column this way.
         rossi_ = rossi_.reset_index()
         rossi_ = to_long_format(rossi_, 'week')
 
-        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849,  0.0915]])
         ctv.fit(rossi_, start_col='start', stop_col='stop', event_col='arrest', id_col='index', weights_col='weights')
-        npt.assert_array_almost_equal(ctv.hazards_.values, expected, decimal=4)
+        npt.assert_array_almost_equal(ctv.hazards_.values, expected, decimal=3)
 
 
     def test_fitter_accept_boolean_columns(self, ctv):
@@ -1985,9 +1998,9 @@ class TestCoxTimeVaryingFitter():
                 ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
             except (LinAlgError, ValueError):
                 pass
-            assert len(w) == 2
+            assert len(w) == 1
             assert issubclass(w[0].category, ConvergenceWarning)
-            assert "complete separation" in str(w[1].message)
+            assert "complete separation" in str(w[0].message)
 
     def test_summary_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
