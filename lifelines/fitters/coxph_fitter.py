@@ -432,6 +432,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         pass_for_numeric_dtypes_or_raise(df)
         check_nans(T)
         check_nans(E)
+        check_nans(df)
         check_low_var(df)
         check_complete_separation(df, E, T)
 

@@ -19,7 +19,7 @@ from lifelines.utils import inv_normal_cdf, \
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
     ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths,\
-    check_for_instantaneous_events, ConvergenceError
+    check_for_instantaneous_events, ConvergenceError, check_nans
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -78,6 +78,10 @@ class CoxTimeVaryingFitter(BaseFitter):
         if weights_col is None:
             assert '__weights' not in df.columns, '__weights is an internal lifelines column, please rename your column first.'
             df['__weights'] = 1.0
+        else:
+            if (df[weights_col] <= 0).any():
+                raise ValueError("values in weights_col must be positive.")
+
 
         df = df.rename(columns={id_col: 'id', event_col: 'event', start_col: 'start', stop_col: 'stop', weights_col: '__weights'})
         df = df.set_index('id')
@@ -111,6 +115,7 @@ class CoxTimeVaryingFitter(BaseFitter):
     @staticmethod
     def _check_values(df, stop_times_events):
         # check_for_overlapping_intervals(df) # this is currenty too slow for production.
+        check_nans(df)
         check_low_var(df)
         check_complete_separation_low_variance(df, stop_times_events['event'])
         pass_for_numeric_dtypes_or_raise(df)

@@ -286,13 +286,13 @@ class TestUnivariateFitters():
             with pytest.raises(ValueError):
                 fitter(alpha=95)
 
-    def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, univariate_fitters):
+    def test_typeerror_is_thrown_if_there_is_nans_in_the_duration_col(self, univariate_fitters):
         T = np.array([1.0, 2.0, 4.0, None, 8.0])
         for fitter in univariate_fitters:
             with pytest.raises(TypeError):
                 fitter().fit(T)
 
-    def test_error_is_thrown_if_there_is_nans_in_the_event_col(self, univariate_fitters):
+    def test_typeerror_is_thrown_if_there_is_nans_in_the_event_col(self, univariate_fitters):
         T = np.arange(5)
         E = [1, 0, None, 1, 1]
         for fitter in univariate_fitters:
@@ -1679,6 +1679,13 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'], robust=True)
 
 
+    def test_what_happens_to_nans(self, rossi):
+        rossi['var4'] = np.nan
+        cf = CoxPHFitter()
+        with pytest.raises(TypeError):
+            cf.fit(rossi, duration_col='week' event_col="arrest")
+
+
 
 
 class TestAalenAdditiveFitter():
@@ -1832,11 +1839,54 @@ class TestCoxTimeVaryingFitter():
         return load_stanford_heart_transplants()
 
     def test_inference_against_known_R_output(self, ctv, dfcv):
-        # from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
+        """
+        from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
+
+        > coxph(formula = Surv(time = start, time2 = stop, event) ~ group + z, data = dfcv)
+
+        """
         ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
         npt.assert_almost_equal(ctv.summary['coef'].values, [1.826757, 0.705963], decimal=4)
         npt.assert_almost_equal(ctv.summary['se(coef)'].values, [1.229, 1.206], decimal=3)
         npt.assert_almost_equal(ctv.summary['p'].values, [0.14, 0.56], decimal=2)
+
+    def test_what_happens_to_nans(self, ctv, dfcv):
+        """
+        from http://www.math.ucsd.edu/~rxu/math284/slect7.pdf
+
+        > coxph(formula = Surv(time = start, time2 = stop, event) ~ group + z, data = dfcv)
+
+        """
+        dfcv['var4'] = np.nan
+        with pytest.raises(TypeError):
+            ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+
+    def test_inference_against_known_R_output_with_weights(self, ctv, dfcv):
+        """
+        > dfcv['weights'] = [0.46009262, 0.04643257, 0.38150793, 0.11903676, 0.51965860, 0.96173133, 0.32435527, 0.16708398, 0.85464418, 0.15146481, 0.24713429, 0.55198318, 0.16948366, 0.19246483]
+        > coxph(formula = Surv(time = start, time2 = stop, event) ~ group + z, data = dfcv)
+
+        """
+        dfcv['weights'] = [
+            0.4600926178338619,
+            0.046432574620396294,
+            0.38150793079960477,
+            0.11903675541025949,
+            0.5196585971574837,
+            0.9617313298681641,
+            0.3243552664091651,
+            0.16708398114269085,
+            0.8546441798716636,
+            0.15146480991643507,
+            0.24713429350878657,
+            0.5519831777187729,
+            0.16948366380884838,
+            0.19246482703103884
+        ]
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event", weights_col='weights')
+        npt.assert_almost_equal(ctv.summary['coef'].values, [0.313, 0.423], decimal=3)
+        npt.assert_almost_equal(ctv.summary['se(coef)'].values, [1.542, 1.997], decimal=3)
 
     @pytest.mark.xfail()
     def test_fitter_will_raise_an_error_if_overlapping_intervals(self, ctv):

@@ -1103,9 +1103,9 @@ def check_complete_separation(df, events, durations):
     check_complete_separation_close_to_perfect_correlation(df, durations)
 
 
-def check_nans(array):
-    if pd.isnull(array).any():
-        raise TypeError("NaNs were detected in the duration_col and/or the event_col")
+def check_nans(df_or_array):
+    if pd.isnull(df_or_array).values.any():
+        raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
 
 
 def to_long_format(df, duration_col):
