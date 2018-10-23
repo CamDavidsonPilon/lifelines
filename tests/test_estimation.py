@@ -1008,6 +1008,23 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(rossi, duration_col='week', event_col='arrest', show_progress=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
+    def test_coef_output_against_R_with_strata_super_accurate(self, rossi):
+        """
+        from http://cran.r-project.org/doc/contrib/Fox-Companion/appendix-cox-regression.pdf
+        Link is now broken, but this is the code:
+
+        library(survival)
+        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
+        r <- coxph(Surv(week, arrest) ~ fin + age + strata(race) + wexp + mar + paro + prio,
+            data=rossi)
+        cat(round(r$coefficients, 4), sep=", ")
+        """
+        expected = np.array([[-0.3788, -0.0576, -0.1427, -0.4388, -0.0858, 0.0922]])
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race'], show_progress=True)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
+
+
     def test_coef_output_against_R_using_non_trivial_but_integer_weights(self, rossi):
         rossi_ = rossi.copy()
         rossi_['weights'] = 1.
