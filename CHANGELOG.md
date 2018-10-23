@@ -10,6 +10,8 @@
  - `AalenAdditiveModel` raises `ConvergenceWarning` instead of printing a warning.
  - `KaplanMeierFitter` now has a cumulative plot option. Example `kmf.plot(invert_y_axis=True)`
  - a `weights_col` option has been added to `CoxTimeVaryingFitter` that allows for time-varying weights. 
+ - `WeibullFitter` has a new `show_progress` param.
+ - `CoxPHFitter` and `CoxTimeVaryFitter` method `print_summary` is updated with new fields. 
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).

@@ -775,18 +775,26 @@ class TestCoxPHFitter():
 
             cp = CoxPHFitter()
             cp.fit(rossi, duration_col='week', event_col='arrest')
+            cp._time_fit_was_called = '2018-10-23 02:40:45 UTC'
             cp.print_summary()
             output = out.getvalue().strip().split()
-            expected = """n=432, number of events=114
+            expected = """
+      duration col = week
+         event col = arrest
+number of subjects = 432
+  number of events = 114
+    log-likelihood = -658.748
+  time fit was run = 2018-10-23 02:40:45 UTC
 
-           coef  exp(coef)  se(coef)          z         p  lower 0.95  upper 0.95
-fin  -1.897e-01  8.272e-01 9.579e-02 -1.981e+00 4.763e-02  -3.775e-01  -1.938e-03   *
-age  -3.500e-01  7.047e-01 1.344e-01 -2.604e+00 9.210e-03  -6.134e-01  -8.651e-02  **
-race  1.032e-01  1.109e+00 1.012e-01  1.020e+00 3.078e-01  -9.516e-02   3.015e-01
-wexp -7.486e-02  9.279e-01 1.051e-01 -7.124e-01 4.762e-01  -2.809e-01   1.311e-01
-mar  -1.421e-01  8.675e-01 1.254e-01 -1.134e+00 2.570e-01  -3.880e-01   1.037e-01
-paro -4.134e-02  9.595e-01 9.522e-02 -4.341e-01 6.642e-01  -2.280e-01   1.453e-01
-prio  2.639e-01  1.302e+00 8.291e-02  3.182e+00 1.460e-03   1.013e-01   4.264e-01  **
+---
+        coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043   *
+age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143  **
+race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
+wexp -0.1498     0.8609    0.2122 -0.7058 0.4803     -0.5657      0.2662
+mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
+paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
+prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -1683,9 +1691,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         rossi['var4'] = np.nan
         cf = CoxPHFitter()
         with pytest.raises(TypeError):
-            cf.fit(rossi, duration_col='week' event_col="arrest")
-
-
+            cf.fit(rossi, duration_col='week', event_col="arrest")
 
 
 class TestAalenAdditiveFitter():
@@ -2160,10 +2166,18 @@ class TestCoxTimeVaryingFitter():
             sys.stdout = out
 
             ctv.fit(heart, id_col='id', event_col='event')
+            ctv._time_fit_was_called = '2018-10-23 02:41:45 UTC'
             ctv.print_summary()
             output = out.getvalue().strip().split()
-            expected = """periods=172, uniques=103, number of events=75
+            expected = """
+         event col = event
+number of subjects = 103
+ number of periods = 172
+  number of events = 75
+    log-likelihood = -290.566
+  time fit was run = 2018-10-23 02:41:45 UTC
 
+---
               coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
 age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540  *
 year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082  *

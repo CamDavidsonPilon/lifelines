@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
+import time
 import numpy as np
 import pandas as pd
 
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import inv_normal_cdf, check_nans
+from lifelines.utils import inv_normal_cdf, check_nans, ConvergenceError
 
 
 def _negative_log_likelihood(lambda_rho, T, E):
@@ -62,7 +63,7 @@ class WeibullFitter(UnivariateFitter):
     """
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
-            label='Weibull_estimate', alpha=None, ci_labels=None):
+            label='Weibull_estimate', alpha=None, ci_labels=None, show_progress=False):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -77,7 +78,7 @@ class WeibullFitter(UnivariateFitter):
              alpha for this call to fit only.
           ci_labels: add custom column names to the generated confidence intervals
                 as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-
+          show_progress: since this is an iterative fitting algorithm, switching this to True will display some iteration details.
         Returns:
           self, with new properties like `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
 
@@ -98,7 +99,7 @@ class WeibullFitter(UnivariateFitter):
         alpha = alpha if alpha is not None else self.alpha
 
         # estimation
-        self.lambda_, self.rho_ = self._newton_rhaphson(self.durations, self.event_observed)
+        self.lambda_, self.rho_ = self._newton_rhaphson(self.durations, self.event_observed, show_progress=show_progress)
         self.survival_function_ = pd.DataFrame(self.survival_function_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.cumulative_hazard_ = pd.DataFrame(self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
@@ -125,7 +126,7 @@ class WeibullFitter(UnivariateFitter):
     def cumulative_hazard_at_times(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-    def _newton_rhaphson(self, T, E, precision=1e-5):
+    def _newton_rhaphson(self, T, E, precision=1e-5, show_progress=False):
         from lifelines.utils import _smart_search
 
         def jacobian_function(parameters, T, E):
@@ -140,26 +141,30 @@ class WeibullFitter(UnivariateFitter):
         # initialize the parameters. This shows dramatic improvements.
         parameters = _smart_search(_negative_log_likelihood, 2, T, E)
 
-        iter = 1
+        i = 1
         step_size = 0.9
         converging = True
+        start = time.time()
 
-        while converging and iter < 50:
+        while converging and i < 50:
             # Do not override hessian and gradient in case of garbage
             j, g = jacobian_function(parameters, T, E), gradient_function(parameters, T, E)
 
             delta = solve(j, - step_size * g.T)
             if np.any(np.isnan(delta)):
-                raise ValueError("delta contains nan value(s). Convergence halted.")
+                raise ConvergenceError("delta contains nan value(s). Convergence halted.")
 
             parameters += delta
 
             # Save these as pending result
             jacobian = j
 
+            if show_progress:
+                print("Iteration %d: norm_delta = %.5f, seconds_since_start = %.1f" % (i, norm(delta), time.time() - start))
+
             if norm(delta) < precision:
                 converging = False
-            iter += 1
+            i += 1
 
         self._jacobian = jacobian
         return parameters

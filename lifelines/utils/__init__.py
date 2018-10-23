@@ -1086,10 +1086,11 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
     THRESHOLD = 0.99
     n, _ = df.shape
+
     if n > 1000:
         # let's sample to speed this n**2 algo up.
-        df = df.sample(n=1000, random_state=15).copy()
-        durations = durations.sample(n=1000, random_state=15).copy()
+        df = df.sample(n=800, random_state=15).copy()
+        durations = durations.sample(n=800, random_state=15).copy()
 
     for col, series in df.iteritems():
         if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
@@ -1331,3 +1332,5 @@ class StepSizer():
     def next(self):
         return self.step_size
 
+
+string_justify = lambda width: lambda s: s.rjust(width, ' ')

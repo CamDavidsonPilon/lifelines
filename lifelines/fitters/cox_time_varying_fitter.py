@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from __future__ import division
+
+from datetime import datetime
 import warnings
 import time
 
@@ -19,7 +21,7 @@ from lifelines.utils import inv_normal_cdf, \
     pass_for_numeric_dtypes_or_raise, check_low_var,\
     check_for_overlapping_intervals, check_complete_separation_low_variance,\
     ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths,\
-    check_for_instantaneous_events, ConvergenceError, check_nans
+    check_for_instantaneous_events, ConvergenceError, check_nans, string_justify
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -69,6 +71,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
 
         self.robust = robust
+        self.event_col = event_col
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
         df = df.copy()
 
@@ -101,6 +105,7 @@ class CoxTimeVaryingFitter(BaseFitter):
                                          step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
+        self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events)
@@ -122,7 +127,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-    def _compute_sandwich_estimator(self, df, stop_times_events):
+    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
 
         n, d = df.shape
 
@@ -174,9 +179,9 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     def _compute_standard_errors(self, df, stop_times_events, weights):
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights.values).diagonal()) # / self._norm_std
+            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal()) # / self._norm_std
         else:
-            se = np.sqrt(-inv(self._hessian_).diagonal()) / self._norm_std
+            se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
@@ -444,14 +449,23 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
         """
+
+        # Print information about data first
+        justify = string_justify(18)
+        print()
+        print("{} = {}".format(justify('event col'), self.event_col))
+        print('{} = {}'.format(justify('number of subjects'), self._n_unique))
+        print('{} = {}'.format(justify('number of periods'), self._n_examples))
+        print('{} = {}'.format(justify('number of events'), self.event_observed.sum()))
+        print('{} = {:.3f}'.format(justify('log-likelihood'), self._log_likelihood))
+        print('{} = {} UTC'.format(justify('time fit was run'), self._time_fit_was_called), end='\n\n')
+
+
+        print('---')
+
         df = self.summary
         # Significance codes last
         df[''] = [significance_code(p) for p in df['p']]
-
-        # Print information about data first
-        print('periods={}, uniques={}, number of events={}'.format(self._n_examples, self._n_unique,
-                                                                   self.event_observed.sum()),
-              end='\n\n')
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
         print('---')

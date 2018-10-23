@@ -60,16 +60,22 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
     cph.print_summary()  # access the results using cph.summary
 
     """
-    n=432, number of events=114
+          duration col = week
+             event col = arrest
+    number of subjects = 432
+      number of events = 114
+        log-likelihood = -658.748
+      time fit was run = 2018-10-22 20:47:44 UTC
 
+    ---
             coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-    fin  -0.3790     0.6845    0.1914 -1.9806 0.0476     -0.7542     -0.0039   *
-    age  -0.0572     0.9444    0.0220 -2.6042 0.0092     -0.1003     -0.0142  **
-    race  0.3141     1.3691    0.3080  1.0198 0.3078     -0.2897      0.9180
-    wexp -0.1511     0.8597    0.2121 -0.7124 0.4762     -0.5670      0.2647
-    mar  -0.4328     0.6487    0.3818 -1.1335 0.2570     -1.1813      0.3157
-    paro -0.0850     0.9185    0.1957 -0.4341 0.6642     -0.4687      0.2988
-    prio  0.0911     1.0954    0.0286  3.1824 0.0015      0.0350      0.1472  **
+    fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043   *
+    age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143  **
+    race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
+    wexp -0.1498     0.8609    0.2122 -0.7058 0.4803     -0.5657      0.2662
+    mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
+    paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
+    prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -83,9 +89,9 @@ To access the coefficients and the baseline hazard directly, you can use ``cph.h
 Convergence 
 ###########################################
 
-Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
+Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
 
-After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively. The ``_hessian_`` can be used the find the covariance matrix of the coefficients. 
+After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively. 
 
 
 Goodness of fit and prediction
@@ -196,21 +202,28 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
     from lifelines import CoxPHFitter
 
     rossi_dataset = load_rossi()
-
+    cph = CoxPHFitter()
     cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'], show_progress=True)
 
     cph.print_summary()  # access the results using cph.summary
 
     """
-    n=432, number of events=114
+          duration col = week
+             event col = arrest
+                strata = ['race']
+    number of subjects = 432
+      number of events = 114
+        log-likelihood = -620.564
+      time fit was run = 2018-10-23 02:45:52 UTC
 
+    ---
             coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-    fin  -0.3775     0.6856    0.1913 -1.9731 0.0485     -0.7525     -0.0024   *
-    age  -0.0573     0.9443    0.0220 -2.6081 0.0091     -0.1004     -0.0142  **
-    wexp -0.1435     0.8664    0.2127 -0.6746 0.4999     -0.5603      0.2734
-    mar  -0.4419     0.6428    0.3820 -1.1570 0.2473     -1.1907      0.3068
-    paro -0.0839     0.9196    0.1958 -0.4283 0.6684     -0.4677      0.3000
-    prio  0.0919     1.0962    0.0287  3.1985 0.0014      0.0356      0.1482  **
+    fin  -0.3788     0.6847    0.1913 -1.9799 0.0477     -0.7537     -0.0038   *
+    age  -0.0576     0.9440    0.0220 -2.6198 0.0088     -0.1008     -0.0145  **
+    wexp -0.1428     0.8670    0.2128 -0.6708 0.5023     -0.5598      0.2743
+    mar  -0.4388     0.6448    0.3821 -1.1484 0.2508     -1.1878      0.3101
+    paro -0.0858     0.9178    0.1958 -0.4380 0.6614     -0.4695      0.2980
+    prio  0.0922     1.0966    0.0287  3.2102 0.0013      0.0359      0.1485  **
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -887,6 +900,9 @@ Fitting the model
 ################################################
 
 Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. The method is similar to ``CoxPHFitter``, expect we need to tell the ``fit`` about the additional time columns.
+
+Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
+
 
 .. code:: python
 

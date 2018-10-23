@@ -3,6 +3,7 @@ from __future__ import print_function
 from __future__ import division
 
 import time
+from datetime import datetime
 import warnings
 import numpy as np
 import pandas as pd
@@ -18,7 +19,7 @@ from lifelines.utils import survival_table_from_events, inv_normal_cdf, normaliz
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
     check_complete_separation, check_nans, StatError, ConvergenceWarning,\
-    StepSizer, ConvergenceError
+    StepSizer, ConvergenceError, string_justify
 from lifelines.statistics import chisq_test
 
 
@@ -102,6 +103,9 @@ class CoxPHFitter(BaseFitter):
         # Sort on time
         df = df.sort_values(by=duration_col)
 
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        self.duration_col = duration_col
+        self.event_col = event_col
         self.robust = robust
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
@@ -529,14 +533,26 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Print summary statistics describing the fit.
 
         """
+
+        # Print information about data first
+        justify = string_justify(18)
+        print()
+        print("{} = {}".format(justify('duration col'), self.duration_col))
+        print("{} = {}".format(justify('event col'), self.event_col))
+
+        if self.strata:
+            print('{} = {}'.format(justify('strata'), self.strata))
+
+        print('{} = {}'.format(justify('number of subjects'), self._n_examples))
+        print('{} = {}'.format(justify('number of events'), self.event_observed.sum()))
+        print('{} = {:.3f}'.format(justify('log-likelihood'), self._log_likelihood))
+        print('{} = {} UTC'.format(justify("time fit was run"), self._time_fit_was_called), end='\n\n')
+        print('---')
+
+
         df = self.summary
         # Significance codes last
         df[''] = [significance_code(p) for p in df['p']]
-
-        # Print information about data first
-        print('n={}, number of events={}'.format(self._n_examples,
-                                                 self.event_observed.sum()),
-              end='\n\n')
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
         print('---')
