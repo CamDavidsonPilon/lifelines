@@ -167,7 +167,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
         self.score_ = concordance_index(self.durations,
-                                        -self.predict_partial_hazard(df).values.ravel(),
+                                        -self.predict_partial_hazard(df).values,
                                         self.event_observed)
 
         self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)

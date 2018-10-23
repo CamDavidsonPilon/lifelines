@@ -933,7 +933,30 @@ of AUC, another common loss function, and is interpreted similarly:
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-The measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships) and the predicted times.
+A fitted model's concordance-index is present in the `print_summary()`, but also available under the `score_` property. Generally, the measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships) and the predicted times.
+
+.. code:: python
+
+    from lifelines import CoxPHFitter
+    from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    cph = CoxPHFitter()
+    cph.fit(rossi, duration_col="week", event_col="arrest")
+
+    # method one
+    cph.print_summary()
+
+    # method two
+    print(cph.score_)
+
+    # method three
+    from lifelines.utils import concordance_index
+    print(concordance_index(rossi['week'], -cph.predict_partial_hazard(rossi).values, rossi['arrest']))
+
+
+However, there are other, arguably better, methods to measure the fit of a model. Included in `print_summary` is the log-likelihood, which can be used in an `AIC calculation <https://en.wikipedia.org/wiki/Akaike_information_criterion>`, and the `log-likelihood ratio statistic <https://en.wikipedia.org/wiki/Likelihood-ratio_test>`. Generally, I personally loved this article by Frank Harrell, `"Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements" <http://www.fharrell.com/post/addvalue/>`. 
 
 
 Cross Validation
