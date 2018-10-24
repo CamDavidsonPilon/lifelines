@@ -16,6 +16,7 @@
  - `variance_matrix_` is now a property on fitted `WeibullFitter` which describes the variance matrix of the parameters.
  - The default `WeibullFitter().timeline` has changed from integers between the min and max duration to _n_ floats between the max and min durations, where _n_ is the number of observations. 
  - Performance improvements for `CoxPHFitter` (~15% faster)
+ - Performance improvements for `CoxTimeVaryingFitter` (~15% faster)
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).

@@ -382,10 +382,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             for l in range(ties_counts):
 
                 if ties_counts > 1:
-                    denom = (risk_phi - l * tie_phi / ties_counts)
-                    numer = (risk_phi_x - l * tie_phi_x / ties_counts)
+                    """
+                    A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+                    As it is not known a priori that who is the first to fail, so one-third of
+                    (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                    of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+                    """
+                    increasing_proportion = l / ties_counts
+                    denom = (risk_phi - increasing_proportion * tie_phi)
+                    numer = (risk_phi_x - increasing_proportion * tie_phi_x)
                     # Hessian
-                    a1 = (risk_phi_x_x - l * tie_phi_x_x / ties_counts) / denom
+                    a1 = (risk_phi_x_x - increasing_proportion * tie_phi_x_x) / denom
                 else:
                     denom = risk_phi
                     numer = risk_phi_x
@@ -557,10 +565,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                                         columns=['baseline hazard'])
 
         for t in unique_death_times:
-            ix = (events['start'] < t) & (t <= events['stop'])
+            ix = (events['start'].values < t) & (t <= events['stop'].values)
             events_at_t = events.loc[ix]
 
-            deaths = events_at_t['event'] & (events_at_t['stop'] == t)
+            deaths = events_at_t['event'].values & (events_at_t['stop'] == t).values
             death_counts = deaths.sum()  # should always be atleast 1.
             baseline_hazard_.loc[t] = death_counts / events_at_t['hazard'].sum()
 
