@@ -1015,7 +1015,7 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
     return csum / paircount
 
 def pass_for_numeric_dtypes_or_raise(df):
-    nonnumeric_cols = [col for col in df.columns if not np.issubdtype(df[col].dtype, np.number)]
+    nonnumeric_cols = [col for col in df.columns if not (np.issubdtype(df[col].dtype, np.number) or np.issubdtype(df[col].dtype, np.bool_))]
     if len(nonnumeric_cols) > 0:
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
