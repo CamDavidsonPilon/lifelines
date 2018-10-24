@@ -324,7 +324,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    @profile
     def _get_gradients(self, df, stops_events, weights, beta):
         """
         Calculates the first and second order vector differentials, with respect to beta.
