@@ -3,12 +3,14 @@ from __future__ import print_function
 from __future__ import division
 
 import time
+from datetime import datetime
 import warnings
 import numpy as np
 import pandas as pd
 
 from numpy import dot, exp
-from numpy.linalg import solve, norm, inv
+from numpy.linalg import norm, inv
+from scipy.linalg import solve as spsolve
 from scipy.integrate import trapz
 import scipy.stats as stats
 
@@ -17,7 +19,7 @@ from lifelines.utils import survival_table_from_events, inv_normal_cdf, normaliz
     significance_code, concordance_index, _get_index, qth_survival_times,\
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
     check_complete_separation, check_nans, StatError, ConvergenceWarning,\
-    StepSizer
+    StepSizer, ConvergenceError, string_justify
 from lifelines.statistics import chisq_test
 
 
@@ -55,9 +57,11 @@ class CoxPHFitter(BaseFitter):
         self.penalizer = penalizer
         self.strata = strata
 
+
     def fit(self, df, duration_col, event_col=None,
             show_progress=False, initial_beta=None,
-            strata=None, step_size=None, weights_col=None):
+            strata=None, step_size=None, weights_col=None,
+            robust=False):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -74,6 +78,9 @@ class CoxPHFitter(BaseFitter):
           weights_col: an optional column in the dataframe that denotes the weight per subject.
              This column is expelled and not used as a covariate, but as a weight in the
              final regression. Default weight is 1.
+             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+             identical observations.
+             This can be used for sampling weights. In that case, use `robust=True` to get more accurate standard errors.
           show_progress: since the fitter is iterative, show convergence
              diagnostics.
           initial_beta: initialize the starting point of the iterative
@@ -83,9 +90,12 @@ class CoxPHFitter(BaseFitter):
              is used similar to the `strata` expression in R.
              See http://courses.washington.edu/b515/l17.pdf.
           step_size: set an initial step size for the fitting algorithm.
+          robust: Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+            ties, so if there are high number of ties, results may significantly differ. See
+            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
 
         Returns:
-            self, with additional properties: hazards_
+            self, with additional properties: hazards_, confidence_intervals_, baseline_survival_, etc.
 
         """
 
@@ -94,6 +104,10 @@ class CoxPHFitter(BaseFitter):
         # Sort on time
         df = df.sort_values(by=duration_col)
 
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + ' UTC'
+        self.duration_col = duration_col
+        self.event_col = event_col
+        self.robust = robust
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
         if self.strata is not None:
@@ -111,14 +125,16 @@ class CoxPHFitter(BaseFitter):
 
         if weights_col:
             weights = df.pop(weights_col)
-            if (weights.astype(int) != weights).any():
-                warnings.warn("""It looks like your weights are not integers, possibly propensity scores then?
-It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+            if (weights.astype(int) != weights).any() and not self.robust:
+                warnings.warn("""It appears your weights are not integers, possibly propensity or sampling scores then?
+It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
-                    """, RuntimeWarning)
+""", RuntimeWarning)
+            if (weights <= 0).any():
+                raise ValueError("values in weights_col must be positive.")
 
         else:
-            weights = pd.DataFrame(np.ones((self._n_examples, 1)), index=df.index)
+            weights = pd.Series(np.ones((self._n_examples,)), index=df.index)
 
         self._check_values(df, T, E)
         df = df.astype(float)
@@ -143,14 +159,18 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                                          step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
+
+        self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
+        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
         self.score_ = concordance_index(self.durations,
-                                        -self.predict_partial_hazard(df).values.ravel(),
+                                        -self.predict_partial_hazard(df).values,
                                         self.event_observed)
+
         self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
         return self
 
@@ -224,9 +244,22 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 g -= self.penalizer * beta.T
                 h.flat[::d + 1] -= self.penalizer
 
-            delta = solve(-h, step_size * g.T)
+            # reusing a piece to make g * inv(h) * g.T faster later
+            try:
+                inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+            except ValueError as e:
+                if 'infs or NaNs' in str(e):
+                    raise ConvergenceError("""hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+""")
+                else:
+                    # something else?
+                    raise e
+
+            delta = step_size * inv_h_dot_g_T
+
             if np.any(np.isnan(delta)):
-                raise ValueError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+                raise ConvergenceError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """)
 
@@ -234,12 +267,19 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             hessian, gradient = h, g
             norm_delta = norm(delta)
 
+            # reusing an above piece to make g * inv(h) * g.T faster.
+            newton_decrement = g.dot(inv_h_dot_g_T)/2
+
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, seconds_since_start = %.1f" % (i, norm_delta, step_size, ll, time.time() - start))
+                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f" % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start))
+
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            elif abs(ll - previous_ll) < precision:
+            elif previous_ll != 0 and abs(ll - previous_ll) / (-previous_ll) < 1e-09:
+                # this is what R uses by default
+                converging, completed = False, True
+            elif newton_decrement < precision:
                 converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
@@ -270,15 +310,27 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _get_efron_values(self, X, beta, T, E, weights):
         """
-        Calculates the first and second order vector differentials,
-        with respect to beta.
+        Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
+
+        A good explaination for Efron. Consider three of five subjects who fail at the time.
+        As it is not known a priori that who is the first to fail, so one-third of
+        (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+        of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+        From https://cran.r-project.org/web/packages/survival/survival.pdf:
+
+        "Setting all weights to 2 for instance will give the same coefficient estimate but halve the variance. When
+        the Efron approximation for ties (default) is employed replication of the data will not give exactly the same coefficients as the
+        weights option, and in this case the weighted fit is arguably the correct one."
+
         Parameters:
             X: (n,d) numpy array of observations.
             beta: (1, d) numpy array of coefficients.
             T: (n) numpy array representing observed durations.
             E: (n) numpy array representing death events.
             weights: (n) an array representing weights per observation.
+
         Returns:
             hessian: (d, d) numpy array,
             gradient: (1, d) numpy array
@@ -296,8 +348,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-        # Init number of ties
+        # Init number of ties and weights
+        weight_count = 0.0
         tie_count = 0
+        scores = weights[:,None] * exp(dot(X, beta))
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
@@ -305,10 +359,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             ti = T[i]
             ei = E[i]
             xi = X[i:i + 1]
+            score = scores[i:i+1]
             w = weights[i]
 
             # Calculate phi values
-            phi_i = w * exp(dot(xi, beta))
+            phi_i = score
             phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_x_i)
 
@@ -325,7 +380,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 tie_phi_x_x += phi_x_x_i
 
                 # Keep track of count
-                tie_count += int(w)
+                tie_count += 1
+                weight_count += w
 
             if i > 0 and T[i - 1] == ti:
                 # There are more ties/members of the risk set
@@ -336,24 +392,31 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # There was atleast one event and no more ties remain. Time to sum.
             partial_gradient = np.zeros((1, d))
+            weighted_average = weight_count / tie_count
 
             for l in range(tie_count):
-                c = l / tie_count
-
-                denom = (risk_phi - c * tie_phi)
-                z = (risk_phi_x - c * tie_phi_x)
+                """
+                A good explaination for Efron. Consider three of five subjects who fail at the time.
+                As it is not known a priori that who is the first to fail, so one-third of
+                (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+                """
+                numer = (risk_phi_x - l * tie_phi_x / tie_count)
+                denom = (risk_phi - l * tie_phi / tie_count)
 
                 # Gradient
-                partial_gradient += z / denom
+                partial_gradient += weighted_average * numer / denom
                 # Hessian
-                a1 = (risk_phi_x_x - c * tie_phi_x_x) / denom
-                # In case z and denom both are really small numbers,
+                a1 = (risk_phi_x_x - l * tie_phi_x_x / tie_count) / denom
+
+                # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                a2 = dot(z.T / denom, z / denom)
+                a2 = dot(numer.T / denom, numer / denom)
 
-                hessian -= (a1 - a2)
+                hessian -= weighted_average * (a1 - a2)
 
-                log_lik -= np.log(denom[0][0])
+                log_lik -= weighted_average * np.log(denom[0][0])
+
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
@@ -361,6 +424,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # reset tie values
             tie_count = 0
+            weight_count = 0.0
             x_tie_sum = np.zeros((1, d))
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
@@ -375,26 +439,73 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         pass_for_numeric_dtypes_or_raise(df)
         check_nans(T)
         check_nans(E)
+        check_nans(df)
         check_low_var(df)
         check_complete_separation(df, E, T)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
-        se = self._compute_standard_errors()
+        se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(np.r_[hazards - alpha2 * se,
                                   hazards + alpha2 * se],
                             index=['lower-bound', 'upper-bound'],
                             columns=self.hazards_.columns)
 
-    def _compute_standard_errors(self):
-        se = np.sqrt(inv(-self._hessian_).diagonal()) / self._norm_std
+    def _compute_sandwich_estimator(self, X, T, E, weights):
+        # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
+        # lin1989
+        # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
+        # doesn't handle ties.
+
+        n, d = X.shape
+
+        # we already unnormalized the betas in `fit`, so we need normalize them again since X is
+        # normalized.
+        beta = self.hazards_.values[0] * self._norm_std
+
+        E = E.astype(int)
+        score_residuals = np.zeros((n, d))
+
+        phi_s = exp(dot(X, beta))
+
+        # need to store these histories, as we access them often
+        # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
+        risk_phi_x_history = (X * (weights * phi_s)[:, None])[::-1].cumsum(0)[::-1]
+        risk_phi_history =        (weights * phi_s)          [::-1].cumsum() [::-1][:, None]
+
+        # Iterate forwards
+        for i in range(0, n):
+
+            xi = X[i:i + 1]
+            phi_i = phi_s[i]
+
+            score = - phi_i * (
+                (E[:i+1] * weights[:i+1] / risk_phi_history[:i+1].T).T  # this is constant-ish, and could be cached
+              * (xi - risk_phi_x_history[:i+1] / risk_phi_history[:i+1])
+            ).sum(0)
+
+            if E[i]:
+                score = score + (xi - risk_phi_x_history[i] / risk_phi_history[i])
+
+            score_residuals[i, :] = score
+
+        naive_var = inv(self._hessian_)
+        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
+        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
+        return sandwich_estimator
+
+    def _compute_standard_errors(self, df, T, E, weights):
+        if self.robust:
+            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights.values).diagonal()) # / self._norm_std
+        else:
+            se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :],
                             index=['se'], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
         return (self.hazards_.loc['coef'] /
-                self._compute_standard_errors().loc['se'])
+                self.standard_errors_.loc['se'])
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -413,7 +524,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df = pd.DataFrame(index=self.hazards_.columns)
         df['coef'] = self.hazards_.loc['coef'].values
         df['exp(coef)'] = exp(self.hazards_.loc['coef'].values)
-        df['se(coef)'] = self._compute_standard_errors().loc['se'].values
+        df['se(coef)'] = self.standard_errors_.loc['se'].values
         df['z'] = self._compute_z_values()
         df['p'] = self._compute_p_values()
         df['lower %.2f' % self.alpha] = self.confidence_intervals_.loc['lower-bound'].values
@@ -425,14 +536,26 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Print summary statistics describing the fit.
 
         """
+
+        # Print information about data first
+        justify = string_justify(18)
+        print(self)
+        print("{} = {}".format(justify('duration col'), self.duration_col))
+        print("{} = {}".format(justify('event col'), self.event_col))
+
+        if self.strata:
+            print('{} = {}'.format(justify('strata'), self.strata))
+
+        print('{} = {}'.format(justify('number of subjects'), self._n_examples))
+        print('{} = {}'.format(justify('number of events'), self.event_observed.sum()))
+        print('{} = {:.3f}'.format(justify('log-likelihood'), self._log_likelihood))
+        print('{} = {}'.format(justify("time fit was run"), self._time_fit_was_called), end='\n\n')
+        print('---')
+
+
         df = self.summary
         # Significance codes last
         df[''] = [significance_code(p) for p in df['p']]
-
-        # Print information about data first
-        print('n={}, number of events={}'.format(self._n_examples,
-                                                 self.event_observed.sum()),
-              end='\n\n')
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
         print('---')

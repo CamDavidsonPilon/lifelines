@@ -1,5 +1,23 @@
 ### Changelogs
 
+#### 0.15.0
+ - adding `robust` params to Cox models' `fit`. This enables atleast i) using non-integer weights in the model (these could be sampling weights like IPTW), and ii) mis-specified models (ex: non-proportional hazards). Under the hood it's a sandwich estimator. This does not handle ties, so if there are high number of ties, results may significantly differ from other software.
+ - `standard_errors_` is now a property on fitted Cox models.
+ - `variance_matrix_` is now a property on fitted `CoxPHFitter` which describes the variance matrix of the coefficients.
+ - new criteria for convergence of `CoxPHFitter` and `CoxTimeVaryingFitter` called the Newton-decrement. Tests show it is as accurate (w.r.t to previous coefficients) and typically shaves off a single step, resulting in generally faster convergence. See https://www.cs.cmu.edu/~pradeepr/convexopt/Lecture_Slides/Newton_methods.pdf. Details about the Newton-decrement are added to the `show_progress` statements.
+ - Minimum suppport for scipy is 1.0
+ - Convergence errors in models that use Newton-Rhapson methods now throw a `ConvergenceError`, instead of a `ValueError` (the former is a subclass of the latter, however).
+ - `AalenAdditiveModel` raises `ConvergenceWarning` instead of printing a warning.
+ - `KaplanMeierFitter` now has a cumulative plot option. Example `kmf.plot(invert_y_axis=True)`
+ - a `weights_col` option has been added to `CoxTimeVaryingFitter` that allows for time-varying weights. 
+ - `WeibullFitter` has a new `show_progress` param.
+ - `CoxPHFitter`, `ExponentialFitter`, `WeibullFitter` and `CoxTimeVaryFitter` method `print_summary` is updated with new fields. 
+ - `WeibullFitter` has renamed the incorrect `_jacobian` to `_hessian_`. 
+ - `variance_matrix_` is now a property on fitted `WeibullFitter` which describes the variance matrix of the parameters.
+ - The default `WeibullFitter().timeline` has changed from integers between the min and max duration to _n_ floats between the max and min durations, where _n_ is the number of observations. 
+ - Performance improvements for `CoxPHFitter` (~15% faster)
+ - Performance improvements for `CoxTimeVaryingFitter` (~15% faster)
+
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).
  - fix bug for when `event_observed` column was not boolean. 

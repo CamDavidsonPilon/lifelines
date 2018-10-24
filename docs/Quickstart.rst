@@ -159,16 +159,23 @@ The input of the ``fit`` method's API in a regression is different. All the data
     cph.print_summary()
 
     """
-    n=200, number of events=189
+          duration col = T
+             event col = E
+    number of subjects = 200
+      number of events = 189
+        log-likelihood = -807.620
+      time fit was run = 2018-10-23 02:44:18 UTC
 
+    ---
            coef  exp(coef)  se(coef)      z      p  lower 0.95  upper 0.95
-    var1 0.2213     1.2477    0.0743 2.9796 0.0029      0.0757      0.3669  **
-    var2 0.0509     1.0522    0.0829 0.6139 0.5393     -0.1116      0.2134
-    var3 0.2186     1.2443    0.0758 2.8836 0.0039      0.0700      0.3672  **
+    var1 0.2222     1.2488    0.0743 2.9920 0.0028      0.0767      0.3678  **
+    var2 0.0510     1.0523    0.0829 0.6148 0.5387     -0.1115      0.2134
+    var3 0.2183     1.2440    0.0758 2.8805 0.0040      0.0698      0.3669  **
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Concordance = 0.580
+    Likelihood ratio test = 15.540 on 3 df, p=0.00141
     """
 
     cph.plot()

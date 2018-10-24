@@ -36,6 +36,16 @@ class StatError(Exception):
         return repr(self.msg)
 
 
+class ConvergenceError(ValueError):
+    # inherits from ValueError for backwards compatilibity reasons
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
 class ConvergenceWarning(RuntimeWarning):
 
     def __init__(self, msg):
@@ -61,21 +71,22 @@ def qth_survival_times(q, survival_functions, cdf=False):
     """
     q = pd.Series(q)
 
-    if not((q <= 1).all() and (0 <= q).all()):
+    if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError('q must be between 0 and 1')
 
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         return survival_functions.apply(lambda s: qth_survival_time(q[0], s, cdf=cdf)).iloc[0]
     else:
+        survival_times = pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+
         #  Typically, one would expect that the output should equal the "height" of q.
-        #  An issue can arise if the Series q contains duplicate values. We handle this un-eligantly.
+        #  An issue can arise if the Series q contains duplicate values. We solve
+        #  this by duplicating the entire row.
         if q.duplicated().any():
-            return pd.DataFrame.from_items([
-                (_q, survival_functions.apply(lambda s: qth_survival_time(_q, s))) for i, _q in enumerate(q)
-            ], orient='index', columns=survival_functions.columns)
-        else:
-            return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+            survival_times = survival_times.loc[q]
+
+        return survival_times
 
 
 def qth_survival_time(q, survival_function, cdf=False):
@@ -897,9 +908,9 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
     censored_ix = 0
     died_ix = 0
     times_to_compare = _BTree(np.unique(died_pred))
-    num_pairs = 0
-    num_correct = 0
-    num_tied = 0
+    num_pairs = np.int64(0)
+    num_correct = np.int64(0)
+    num_tied = np.int64(0)
 
     def handle_pairs(truth, pred, first_ix):
         """
@@ -915,8 +926,8 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
         while next_ix < len(truth) and truth[next_ix] == truth[first_ix]:
             next_ix += 1
         pairs = len(times_to_compare) * (next_ix - first_ix)
-        correct = 0
-        tied = 0
+        correct = np.int64(0)
+        tied = np.int64(0)
         for i in range(first_ix, next_ix):
             rank, count = times_to_compare.rank(pred[i])
             correct += rank
@@ -1006,9 +1017,8 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
         raise ZeroDivisionError("No admissable pairs in the dataset.")
     return csum / paircount
 
-
 def pass_for_numeric_dtypes_or_raise(df):
-    nonnumeric_cols = df.select_dtypes(exclude=[np.number, bool]).columns.tolist()
+    nonnumeric_cols = [col for col in df.columns if not (np.issubdtype(df[col].dtype, np.number) or np.issubdtype(df[col].dtype, np.bool_))]
     if len(nonnumeric_cols) > 0:
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
@@ -1073,26 +1083,35 @@ death event or not. This may harm convergence. This could be a form of 'complete
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
         warnings.warn(warning_text, ConvergenceWarning)
 
-
 def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
     THRESHOLD = 0.99
+    n, _ = df.shape
+
+    if n > 500:
+        # let's sample to speed this n**2 algo up.
+        df = df.sample(n=500, random_state=0).copy()
+        durations = durations.sample(n=500, random_state=0).copy()
+
     for col, series in df.iteritems():
         if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
-            warning_text = "Column %s has high correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
+            warning_text = "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (col)
             warnings.warn(warning_text, ConvergenceWarning)
-
 
 def check_complete_separation(df, events, durations):
     check_complete_separation_low_variance(df, events)
     check_complete_separation_close_to_perfect_correlation(df, durations)
 
 
-def check_nans(array):
-    if pd.isnull(array).any():
-        raise TypeError("NaNs were detected in the duration_col and/or the event_col")
-
+def check_nans(df_or_array):
+    nulls = pd.isnull(df_or_array)
+    if hasattr(nulls, 'values'):
+        if nulls.values.any():
+            raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
+    else:
+        if nulls.any():
+            raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
 
 def to_long_format(df, duration_col):
     """
@@ -1321,3 +1340,5 @@ def _to_array(x):
     if not isinstance(x, collections.Iterable):
         return np.array([x])
     return np.asarray(x)
+
+string_justify = lambda width: lambda s: s.rjust(width, ' ')

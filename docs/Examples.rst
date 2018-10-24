@@ -282,6 +282,18 @@ Hide confidence intervals
    :height: 300
 
 
+Invert axis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.fit(T, label="kmf.plot(invert_y_axis=True)")
+    kmf.plot(invert_y_axis=True)
+
+.. image:: /images/invert_y_axis.png 
+   :height: 300
+
+
 Set the index/timeline of a estimate
 ##############################################
 
@@ -572,6 +584,8 @@ Suppose you wish to measure the hazard ratio between two populations under the C
 Problems with convergence in the Cox Proportional Hazard Model
 ################################################################
 Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there is sometimes a problem with convergence. Here are some common symptoms and possible resolutions:
+
+ 0. First diagnostic: look for ``ConvergenceWarning`` in the output. Most often problems in convergence are the result of problems in the dataset. Lifelines has diagnostic checks it runs against the dataset before fitting and warnings are outputted to the user. 
 
  1. ``delta contains nan value(s). Convergence halted.``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5). 
 
