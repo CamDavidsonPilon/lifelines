@@ -67,18 +67,20 @@ class ExponentialFitter(UnivariateFitter):
         self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_ * self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
         self.median_ = 1. / self.lambda_ * (np.log(2))
-
-        # estimation functions
-        self.predict = self._predict(lambda t: np.exp(-self.lambda_ * t), self._label)
-        self.subtract = self._subtract("survival_function_")
-        self.divide = self._divide("survival_function_")
+       
+        # estimation methods
+        self._estimate_name = "survival_function_"
+        self._predict_label = label
+        self._update_docstrings()
 
         # plotting
-        self.plot = self._plot_estimate("survival_function_")
         self.plot_survival_function_ = self.plot
 
         return self
-
+    
+    def _estimation_method(self,t):
+        return np.exp(-self.lambda_ * t)
+    
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
