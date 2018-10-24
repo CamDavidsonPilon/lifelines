@@ -1014,9 +1014,8 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
         raise ZeroDivisionError("No admissable pairs in the dataset.")
     return csum / paircount
 
-
 def pass_for_numeric_dtypes_or_raise(df):
-    nonnumeric_cols = df.select_dtypes(exclude=[np.number, bool]).columns.tolist()
+    nonnumeric_cols = [col for col in df.columns if not np.issubdtype(df[col].dtype, np.number)]
     if len(nonnumeric_cols) > 0:
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
@@ -1081,23 +1080,21 @@ death event or not. This may harm convergence. This could be a form of 'complete
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
         warnings.warn(warning_text, ConvergenceWarning)
 
-
 def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
     THRESHOLD = 0.99
     n, _ = df.shape
 
-    if n > 1000:
+    if n > 500:
         # let's sample to speed this n**2 algo up.
-        df = df.sample(n=800, random_state=15).copy()
-        durations = durations.sample(n=800, random_state=15).copy()
+        df = df.sample(n=500, random_state=0).copy()
+        durations = durations.sample(n=500, random_state=0).copy()
 
     for col, series in df.iteritems():
         if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
             warning_text = "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (col)
             warnings.warn(warning_text, ConvergenceWarning)
-
 
 def check_complete_separation(df, events, durations):
     check_complete_separation_low_variance(df, events)

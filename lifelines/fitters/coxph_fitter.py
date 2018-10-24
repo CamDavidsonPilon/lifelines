@@ -57,6 +57,7 @@ class CoxPHFitter(BaseFitter):
         self.penalizer = penalizer
         self.strata = strata
 
+
     def fit(self, df, duration_col, event_col=None,
             show_progress=False, initial_beta=None,
             strata=None, step_size=None, weights_col=None,
@@ -350,6 +351,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
+        scores = weights[:,None] * exp(dot(X, beta))
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
@@ -357,10 +359,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             ti = T[i]
             ei = E[i]
             xi = X[i:i + 1]
+            score = scores[i:i+1]
             w = weights[i]
 
             # Calculate phi values
-            phi_i = w * exp(dot(xi, beta))
+            phi_i = score
             phi_x_i = phi_i * xi
             phi_x_x_i = dot(xi.T, phi_x_i)
 
