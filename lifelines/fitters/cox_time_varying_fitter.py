@@ -324,6 +324,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
+    @profile
     def _get_gradients(self, df, stops_events, weights, beta):
         """
         Calculates the first and second order vector differentials, with respect to beta.
@@ -343,7 +344,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         for t in unique_death_times:
 
-            ix = (stops_events['start'] < t) & (t <= stops_events['stop'])
+            # I feel like this can be made into some tree-like structure
+            ix = (stops_events['start'].values < t) & (t <= stops_events['stop'].values)
+
             df_at_t = df.loc[ix]
             weights_at_t = weights.loc[ix]
             stops_events_at_t = stops_events.loc[ix]
@@ -358,7 +361,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x_x = phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = stops_events_at_t['event'] & (stops_events_at_t['stop'] == t)
+            deaths = stops_events_at_t['event'].values & (stops_events_at_t['stop'].values == t)
 
             ties_counts = deaths.sum()  # should always at least 1
 
@@ -369,9 +372,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             if ties_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
-                tie_phi = phi_i[deaths.values].sum()
+                tie_phi = phi_i[deaths].sum()
                 tie_phi_x = phi_x_i.loc[deaths].sum(0).values
-                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths.values] * xi_deaths)
+                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
             partial_gradient = np.zeros(d)
             weight_count = weights_deaths.sum()
