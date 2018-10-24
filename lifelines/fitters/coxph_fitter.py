@@ -103,7 +103,7 @@ class CoxPHFitter(BaseFitter):
         # Sort on time
         df = df.sort_values(by=duration_col)
 
-        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + ' UTC'
         self.duration_col = duration_col
         self.event_col = event_col
         self.robust = robust
@@ -536,7 +536,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # Print information about data first
         justify = string_justify(18)
-        print()
+        print(self)
         print("{} = {}".format(justify('duration col'), self.duration_col))
         print("{} = {}".format(justify('event col'), self.event_col))
 
@@ -546,7 +546,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print('{} = {}'.format(justify('number of subjects'), self._n_examples))
         print('{} = {}'.format(justify('number of events'), self.event_observed.sum()))
         print('{} = {:.3f}'.format(justify('log-likelihood'), self._log_likelihood))
-        print('{} = {} UTC'.format(justify("time fit was run"), self._time_fit_was_called), end='\n\n')
+        print('{} = {}'.format(justify("time fit was run"), self._time_fit_was_called), end='\n\n')
         print('---')
 
 

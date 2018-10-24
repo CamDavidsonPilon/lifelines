@@ -11,7 +11,10 @@
  - `KaplanMeierFitter` now has a cumulative plot option. Example `kmf.plot(invert_y_axis=True)`
  - a `weights_col` option has been added to `CoxTimeVaryingFitter` that allows for time-varying weights. 
  - `WeibullFitter` has a new `show_progress` param.
- - `CoxPHFitter` and `CoxTimeVaryFitter` method `print_summary` is updated with new fields. 
+ - `CoxPHFitter`, `ExponentialFitter`, `WeibullFitter` and `CoxTimeVaryFitter` method `print_summary` is updated with new fields. 
+ - `WeibullFitter` has renamed the incorrect `_jacobian` to `_hessian_`. 
+ - `variance_matrix_` is now a property on fitted `WeibullFitter` which describes the variance matrix of the parameters.
+ - The default `WeibullFitter().timeline` has changed from integers between the min and max duration to _n_ floats between the max and min durations, where _n_ is the number of observations. 
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).

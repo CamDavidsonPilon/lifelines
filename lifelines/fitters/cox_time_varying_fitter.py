@@ -452,7 +452,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # Print information about data first
         justify = string_justify(18)
-        print()
+        print(self)
         print("{} = {}".format(justify('event col'), self.event_col))
         print('{} = {}'.format(justify('number of subjects'), self._n_unique))
         print('{} = {}'.format(justify('number of periods'), self._n_examples))
@@ -573,7 +573,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def __repr__(self):
         classname = self.__class__.__name__
         try:
-            s = """<lifelines.%s: fitted with %d periods, %d uniques, %d events>""" % (
+            s = """<lifelines.%s: fitted with %d periods, %d subjects, %d events>""" % (
                 classname, self._n_examples, self._n_unique, self.event_observed.sum())
         except AttributeError:
             s = """<lifelines.%s>""" % classname

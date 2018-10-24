@@ -302,12 +302,12 @@ class TestUnivariateFitters():
 
 class TestWeibullFitter():
 
-    def test_weibull_fit_returns_integer_timelines(self):
+    def test_weibull_fit_returns_float_timelines(self):
         wf = WeibullFitter()
         T = np.linspace(0.1, 10)
         wf.fit(T)
-        npt.assert_array_equal(wf.timeline, np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
-        npt.assert_array_equal(wf.survival_function_.index.values, np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+        npt.assert_array_equal(wf.timeline, T)
+        npt.assert_array_equal(wf.survival_function_.index.values, T)
 
     def test_weibull_model_does_not_except_negative_or_zero_values(self):
         wf = WeibullFitter()
@@ -778,7 +778,7 @@ class TestCoxPHFitter():
             cp._time_fit_was_called = '2018-10-23 02:40:45 UTC'
             cp.print_summary()
             output = out.getvalue().strip().split()
-            expected = """
+            expected = (repr(cp) + "\n" + """
       duration col = week
          event col = arrest
 number of subjects = 432
@@ -800,7 +800,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Concordance = 0.640
 Likelihood ratio test = 33.266 on 7 df, p=0.00002
-""".strip().split()
+""").strip().split()
             for i in [0, 1, 2, 3, -2, -1, -3, -4, -5]:
                 assert output[i] == expected[i]
         finally:
@@ -2143,7 +2143,7 @@ class TestCoxTimeVaryingFitter():
     def test_repr_with_fitter(self, ctv, heart):
         ctv.fit(heart, id_col='id', event_col='event')
         uniques = heart['id'].unique().shape[0]
-        assert ctv.__repr__() == '<lifelines.CoxTimeVaryingFitter: fitted with %d periods, %d uniques, %d events>' % (heart.shape[0], uniques, heart['event'].sum())
+        assert ctv.__repr__() == '<lifelines.CoxTimeVaryingFitter: fitted with %d periods, %d subjects, %d events>' % (heart.shape[0], uniques, heart['event'].sum())
 
 
     def test_all_okay_with_non_trivial_index_in_dataframe(self, ctv, heart):
@@ -2186,7 +2186,7 @@ class TestCoxTimeVaryingFitter():
             ctv._time_fit_was_called = '2018-10-23 02:41:45 UTC'
             ctv.print_summary()
             output = out.getvalue().strip().split()
-            expected = """
+            expected = (repr(ctv) + "\n" + """
          event col = event
 number of subjects = 103
  number of periods = 172
@@ -2204,7 +2204,7 @@ transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Likelihood ratio test = 15.111 on 4 df, p=0.00448
-""".strip().split()
+""").strip().split()
             for i in [0, 1, 2, 3, -2, -1, -3, -4, -5]:
                 assert output[i] == expected[i]
         finally:
