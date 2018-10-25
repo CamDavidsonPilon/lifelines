@@ -116,17 +116,19 @@ class WeibullFitter(UnivariateFitter):
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
         self.median_ = 1. / self.lambda_ * (np.log(2)) ** (1. / self.rho_)
 
-        # estimation functions - Cumulative hazard takes priority.
-        self.predict = self._predict(lambda t: np.exp(-(self.lambda_ * t) ** self.rho_), self._label)
-        self.subtract = self._subtract("cumulative_hazard_")
-        self.divide = self._divide("cumulative_hazard_")
-
+        # estimation methods
+        self._estimate_name = "cumulative_hazard_"
+        self._predict_label = label
+        self._update_docstrings()
+        
         # plotting - Cumulative hazard takes priority.
-        self.plot = self._plot_estimate("cumulative_hazard_")
         self.plot_cumulative_hazard = self.plot
 
         return self
 
+    def _estimation_method(self,t):
+        return np.exp(-(self.lambda_ * t) ** self.rho_)
+    
     def hazard_at_times(self, times):
         return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
 

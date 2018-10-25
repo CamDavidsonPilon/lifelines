@@ -59,11 +59,13 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         self.median_ = median_survival_times(self.survival_function_)
 
         # estimation methods
-        self.predict = self._predict("survival_function_", label)
-        self.subtract = self._subtract("survival_function_")
-        self.divide = self._divide("survival_function_")
+        self._estimation_method = "survival_function_"
+        self._estimate_name = "survival_function_"
+        self._predict_label = label
+        self._update_docstrings()
 
         # plotting functions
-        self.plot = self._plot_estimate("survival_function_")
         self.plot_survival_function = self.plot
         return self
+
+    

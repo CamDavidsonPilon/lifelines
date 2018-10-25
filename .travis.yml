@@ -5,12 +5,12 @@ python:
    - "3.4"
    - "3.5"
    - "3.6"
-   - "3.7"
+   - "3.7-dev"
 before_install:
   - sudo apt-get update
 install:
   - "pip install -r dev-requirements.txt"
-  - "pip install python-coveralls pytest-cov seaborn"
+  - "pip install python-coveralls 'coverage>=4.4' pytest-cov seaborn"
 # command to run tests
 script:
   - py.test -s --cov=lifelines -vv --block=False --cov-report term-missing

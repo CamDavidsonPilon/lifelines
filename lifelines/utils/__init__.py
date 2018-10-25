@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import warnings
+import collections
 from datetime import datetime
+
 
 import numpy as np
 from scipy.linalg import solve
@@ -51,6 +53,7 @@ class ConvergenceWarning(RuntimeWarning):
 
     def __str__(self):
         return repr(self.msg)
+
 
 
 def qth_survival_times(q, survival_functions, cdf=False):
@@ -1333,5 +1336,9 @@ class StepSizer():
     def next(self):
         return self.step_size
 
+def _to_array(x):
+    if not isinstance(x, collections.Iterable):
+        return np.array([x])
+    return np.asarray(x)
 
 string_justify = lambda width: lambda s: s.rjust(width, ' ')

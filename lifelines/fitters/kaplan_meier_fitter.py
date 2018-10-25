@@ -79,16 +79,18 @@ class KaplanMeierFitter(UnivariateFitter):
         self.median_ = median_survival_times(self.__estimate, left_censorship=left_censorship)
 
         # estimation methods
-        self.predict = self._predict(estimate_name, label)
-        self.subtract = self._subtract(estimate_name)
-        self.divide = self._divide(estimate_name)
-
+        self._estimation_method = estimate_name
+        self._estimate_name = estimate_name
+        self._predict_label = label
+        self._update_docstrings()
+        
         # plotting functions
-        self.plot = self._plot_estimate(estimate_name)
         setattr(self, "plot_" + estimate_name, self.plot)
-        self.plot_loglogs = plot_loglogs(self)
         return self
 
+    def plot_loglogs(self, *args, **kwargs):
+        return plot_loglogs(self, *args, **kwargs)
+    
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.
         # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from lifelines.plotting import plot_estimate
-from lifelines.utils import qth_survival_times
+from lifelines.utils import qth_survival_times, _to_array
 
 
 class BaseFitter(object):
@@ -28,86 +28,92 @@ class BaseFitter(object):
 
 class UnivariateFitter(BaseFitter):
 
-    def _plot_estimate(self, *args):
-        return plot_estimate(self, *args)
+    def _update_docstrings(self):
+        # Update their docstrings
+        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name,self.__class__.__name__)
+        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name,self.__class__.__name__)
+        self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
+        self.__class__.plot.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__)
 
-    def _subtract(self, estimate):
-        class_name = self.__class__.__name__
-        doc_string = """
-            Subtract the %s of two %s objects.
+    def plot(self, *args, **kwargs):
+        try:
+            estimate = self._estimate_name
+        except AttributeError:
+            raise RuntimeError("Must call `fit` first!")
+            
+        return plot_estimate(self, *args, **kwargs)
 
-            Parameters:
-              other: an %s fitted instance.
-
-            """ % (estimate, class_name, class_name)
-
-        def subtract(other):
-            self_estimate = getattr(self, estimate)
-            other_estimate = getattr(other, estimate)
-            new_index = np.concatenate((other_estimate.index, self_estimate.index))
-            new_index = np.unique(new_index)
-            return pd.DataFrame(
-                self_estimate.reindex(new_index, method='ffill').values -
-                other_estimate.reindex(new_index, method='ffill').values,
-                index=new_index,
-                columns=['diff']
-            )
-        subtract.__doc__ = doc_string
-        return subtract
-
-    def _divide(self, estimate):
-        class_name = self.__class__.__name__
-        doc_string = """
-            Divide the %s of two %s objects.
+    def subtract(self,other):
+        """
+        Subtract the {0} of two {1} objects.
 
             Parameters:
-              other: an %s fitted instance.
+              other: an {1} fitted instance.
+        """
 
-            """ % (estimate, class_name, class_name)
+        try:
+            estimate = self._estimate_name
+        except AttributeError:
+            raise RuntimeError("Must call `fit` first!")
+        
+        self_estimate = getattr(self, self._estimate_name)
+        other_estimate = getattr(other, other._estimate_name)
+        new_index = np.concatenate((other_estimate.index, self_estimate.index))
+        new_index = np.unique(new_index)
+        return pd.DataFrame(
+            self_estimate.reindex(new_index, method='ffill').values -
+            other_estimate.reindex(new_index, method='ffill').values,
+            index=new_index,
+            columns=['diff']
+        )
 
-        def divide(other):
-            self_estimate = getattr(self, estimate)
-            other_estimate = getattr(other, estimate)
-            new_index = np.concatenate((other_estimate.index, self_estimate.index))
-            new_index = np.unique(new_index)
-            return pd.DataFrame(
-                self_estimate.reindex(new_index, method='ffill').values /
-                other_estimate.reindex(new_index, method='ffill').values,
-                index=new_index,
-                columns=['ratio']
-            )
-        divide.__doc__ = doc_string
-        return divide
+    def divide(self, other):
+        """
+        Divide the {0} of two {1} objects.
 
-    def _predict(self, estimate_name_or_function, label):
-        class_name = self.__class__.__name__
-        doc_string = """
-          Predict the %s at certain point in time. Uses a linear interpolation if
-             points in time are not in the index.
+        Parameters:
+          other: an {1} fitted instance.
 
-          Parameters:
-            time: a scalar or an array of times to predict the value of %s at.
+        """
+        try:
+            estimate = self._estimate_name
+        except AttributeError:
+            raise RuntimeError("Must call `fit` first!")
+    
+        self_estimate = getattr(self, self._estimate_name)
+        other_estimate = getattr(other, other._estimate_name)
+        new_index = np.concatenate((other_estimate.index, self_estimate.index))
+        new_index = np.unique(new_index)
+        return pd.DataFrame(
+            self_estimate.reindex(new_index, method='ffill').values /
+            other_estimate.reindex(new_index, method='ffill').values,
+            index=new_index,
+            columns=['ratio']
+        )
 
-          Returns:
-            predictions: a scalar if time is a scalar, a numpy array if time in an array.
-          """ % (class_name, class_name)
+    def predict(self, times):
+        """
+        Predict the {0} at certain point in time. Uses a linear interpolation if
+        points in time are not in the index.
 
-        def predict(times):
-            def _to_array(x):
-                if not isinstance(x, collections.Iterable):
-                    return np.array([x])
-                return np.asarray(x)
+        Parameters:
+          time: a scalar or an array of times to predict the value of {0} at.
 
-            if callable(estimate_name_or_function):
-                return pd.DataFrame(estimate_name_or_function(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
-            else:
-                estimate = getattr(self, estimate_name_or_function)
-                # non-linear interpolations can push the survival curves above 1 and below 0.
-                return estimate.reindex(estimate.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
+        Returns:
+          predictions: a scalar if time is a scalar, a numpy array if time in an array.
+        """ 
+        try:
+            estimate = self._estimate_name
+        except AttributeError:
+            raise RuntimeError("Must call `fit` first!")
 
-        predict.__doc__ = doc_string
-        return predict
-
+        if callable(self._estimation_method):
+            return pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
+        else:
+            estimate = getattr(self, self._estimation_method)
+            # non-linear interpolations can push the survival curves above 1 and below 0.
+            return estimate.reindex(estimate.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
+        
     @property
     def conditional_time_to_event_(self):
         return self._conditional_time_to_event_()

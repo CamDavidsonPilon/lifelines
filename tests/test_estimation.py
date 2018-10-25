@@ -4,6 +4,7 @@ from __future__ import division
 from collections import Counter, Iterable
 import os
 import warnings
+import pickle
 from itertools import combinations
 
 try:
@@ -298,6 +299,17 @@ class TestUnivariateFitters():
         for fitter in univariate_fitters:
             with pytest.raises(TypeError):
                 fitter().fit(T, E)
+
+    def test_pickle_serialization(self, positive_sample_lifetimes, univariate_fitters):
+         T = positive_sample_lifetimes[0]
+         for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(T)
+
+            unpickled = pickle.loads(pickle.dumps(fitter)) 
+            dif = (fitter.durations - unpickled.durations).sum()
+            assert(dif==0)
+
 
 
 class TestWeibullFitter():

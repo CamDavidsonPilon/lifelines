@@ -36,6 +36,7 @@ class NelsonAalenFitter(UnivariateFitter):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
+            
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
             label='NA_estimate', alpha=None, ci_labels=None, weights=None):
         """
@@ -77,18 +78,21 @@ class NelsonAalenFitter(UnivariateFitter):
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
         self._cumulative_sq = cumulative_sq_
 
-        # estimation functions
-        self.predict = self._predict("cumulative_hazard_", self._label)
-        self.subtract = self._subtract("cumulative_hazard_")
-        self.divide = self._divide("cumulative_hazard_")
-
+        # estimation methods
+        self._estimation_method = "cumulative_hazard_"
+        self._estimate_name = "cumulative_hazard_"
+        self._predict_label = label
+        self._update_docstrings()
+        
         # plotting
-        self.plot = self._plot_estimate("cumulative_hazard_")
         self.plot_cumulative_hazard = self.plot
-        self.plot_hazard = self._plot_estimate('hazard_')
 
         return self
 
+    def plot_hazard(self,*args,**kwargs):
+        kwargs['estimate'] = 'hazard_'
+        return self.plot(*args,**kwargs)
+    
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         alpha2 = inv_normal_cdf(1 - (1 - alpha) / 2)
         df = pd.DataFrame(index=self.timeline)
