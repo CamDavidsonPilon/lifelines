@@ -89,8 +89,7 @@ class KaplanMeierFitter(UnivariateFitter):
         return self
 
     def plot_loglogs(self, *args, **kwargs):
-
-        return plot_loglogs(self,*args,**kwargs)
+        return plot_loglogs(self, *args, **kwargs)
     
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.
