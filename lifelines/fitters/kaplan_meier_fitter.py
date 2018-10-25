@@ -88,7 +88,8 @@ class KaplanMeierFitter(UnivariateFitter):
         setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
-    def plot_loglogs(self,*args,**kwargs):
+    def plot_loglogs(self, *args, **kwargs):
+
         return plot_loglogs(self,*args,**kwargs)
     
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
