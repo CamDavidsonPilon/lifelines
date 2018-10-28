@@ -164,7 +164,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E)
+        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E, weights)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
         self.score_ = concordance_index(self.durations,
@@ -720,33 +720,34 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         v = self.predict_survival_function(X)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
-    def _compute_baseline_hazard(self, data, durations, event_observed, name):
+    def _compute_baseline_hazard(self, data, durations, event_observed, weights, name):
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
-        ind_hazards = self.predict_partial_hazard(data)
+        ind_hazards = self.predict_partial_hazard(data).mul(weights, axis='index')
         ind_hazards['event_at'] = durations.values
         ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
         ind_hazards_summed_over_durations.name = 'hazards'
 
-        event_table = survival_table_from_events(durations, event_observed)
+        event_table = survival_table_from_events(durations, event_observed, weights=weights)
         event_table = event_table.join(ind_hazards_summed_over_durations)
         baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name]).fillna(0)
+
         return baseline_hazard
 
 
-    def _compute_baseline_hazards(self, df, T, E):
+    def _compute_baseline_hazards(self, df, T, E, weights):
         if self.strata:
             index = self.durations.unique()
             baseline_hazards_ = pd.DataFrame(index=index)
             for stratum in df.index.unique():
                 baseline_hazards_ = baseline_hazards_.merge(
-                    self._compute_baseline_hazard(data=df.loc[[stratum]], durations=T.loc[[stratum]], event_observed=E.loc[[stratum]], name=stratum),
+                    self._compute_baseline_hazard(data=df.loc[[stratum]], durations=T.loc[[stratum]], event_observed=E.loc[[stratum]], weights=weights.loc[[stratum]], name=stratum),
                     left_index=True,
                     right_index=True,
                     how='left')
             return baseline_hazards_.fillna(0)
 
         else:
-            return self._compute_baseline_hazard(data=df, durations=T, event_observed=E, name='baseline hazard')
+            return self._compute_baseline_hazard(data=df, durations=T, event_observed=E, weights=weights, name='baseline hazard')
 
     def _compute_baseline_survival(self):
         survival_df = exp(-self.baseline_cumulative_hazard_)

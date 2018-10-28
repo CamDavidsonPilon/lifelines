@@ -306,7 +306,7 @@ class TestUnivariateFitters():
             fitter = f()
             fitter.fit(T)
 
-            unpickled = pickle.loads(pickle.dumps(fitter)) 
+            unpickled = pickle.loads(pickle.dumps(fitter))
             dif = (fitter.durations - unpickled.durations).sum()
             assert(dif==0)
 
@@ -1506,7 +1506,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         npt.assert_almost_equal(cp.summary['coef'].values, [-0.335, -0.059, 0.100], decimal=3)
         assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
 
-    def test_hazard_works_as_intended_with_strata_against_R_output(self, rossi):
+    def test_baseline_hazard_works_with_strata_against_R_output(self, rossi):
         """
         > library(survival)
         > rossi = read.csv('.../lifelines/datasets/rossi.csv')
@@ -1518,6 +1518,26 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cp.fit(rossi, 'week', 'arrest', strata=['race', 'paro', 'mar', 'wexp'])
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 0)].loc[[14, 35, 37, 43, 52]].values, [0.076600555, 0.169748261, 0.272088807, 0.396562717, 0.396562717], decimal=4)
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values, [0.095499001, 0.204196905, 0.338393113, 0.338393113], decimal=4)
+
+
+    def test_baseline_hazard_works_with_weights_against_R_output(self, rossi):
+        """
+        library(survival)
+
+        fit<-coxph(Surv(week, arrest)~fin, data=rossi, weight=age)
+        H0 <- basehaz(fit, centered=TRUE)
+        """
+
+        rossi = rossi[['week', 'arrest', 'fin', 'age']]
+        cp = CoxPHFitter()
+        cp.fit(rossi, 'week', 'arrest', weights_col='age')
+
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_['baseline hazard'].loc[0.0], 0.0, decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_['baseline hazard'].loc[1.0], 0.00183466, decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_['baseline hazard'].loc[2.0], 0.005880265, decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_['baseline hazard'].loc[10.0], 0.035425868, decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_['baseline hazard'].loc[52.0], 0.274341397, decimal=3)
+
 
     def test_strata_from_init_is_used_in_fit_later(self, rossi):
         strata = ['race', 'paro', 'mar']

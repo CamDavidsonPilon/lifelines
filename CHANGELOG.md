@@ -17,6 +17,8 @@
  - The default `WeibullFitter().timeline` has changed from integers between the min and max duration to _n_ floats between the max and min durations, where _n_ is the number of observations. 
  - Performance improvements for `CoxPHFitter` (~15% faster)
  - Performance improvements for `CoxTimeVaryingFitter` (~15% faster)
+ - Univariate models are now serialisable with `pickle`. Thanks @dwilson1988 for the contribution. 
+ - `baseline_cumulative_hazard_` (and derivatives of that) on `CoxPHFitter` now correctly incorporate the `weights_col`. 
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).

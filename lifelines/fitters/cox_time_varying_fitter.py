@@ -108,7 +108,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events)
+        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events, weights)
         self.baseline_survival_ = self._compute_baseline_survival()
         self.event_observed = stop_times_events['event']
         self.start_stop_and_events = stop_times_events
@@ -555,7 +555,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return ax
 
 
-    def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events):
+    def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events, weights):
         events = stop_times_events.copy()
         events['hazard'] = self.predict_partial_hazard(tv_data).values
 
@@ -567,9 +567,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         for t in unique_death_times:
             ix = (events['start'].values < t) & (t <= events['stop'].values)
             events_at_t = events.loc[ix]
-
+            weights_at_t = weights.loc[ix].values
             deaths = events_at_t['event'].values & (events_at_t['stop'] == t).values
-            death_counts = deaths.sum()  # should always be atleast 1.
+            death_counts = (weights_at_t * deaths).sum()  # should always be atleast 1.
             baseline_hazard_.loc[t] = death_counts / events_at_t['hazard'].sum()
 
         return baseline_hazard_.cumsum()
