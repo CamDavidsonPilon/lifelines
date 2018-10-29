@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import division
+
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -36,7 +39,7 @@ class NelsonAalenFitter(UnivariateFitter):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
-            
+
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
             label='NA_estimate', alpha=None, ci_labels=None, weights=None):
         """
@@ -66,6 +69,14 @@ class NelsonAalenFitter(UnivariateFitter):
         if event_observed is not None:
             check_nans(event_observed)
 
+        if weights is not None:
+          if (weights.astype(int) != weights).any():
+              warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+  It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+  estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+  or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
+                  """, RuntimeWarning)
+
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
@@ -83,7 +94,7 @@ class NelsonAalenFitter(UnivariateFitter):
         self._estimate_name = "cumulative_hazard_"
         self._predict_label = label
         self._update_docstrings()
-        
+
         # plotting
         self.plot_cumulative_hazard = self.plot
 
@@ -92,7 +103,7 @@ class NelsonAalenFitter(UnivariateFitter):
     def plot_hazard(self,*args,**kwargs):
         kwargs['estimate'] = 'hazard_'
         return self.plot(*args,**kwargs)
-    
+
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         alpha2 = inv_normal_cdf(1 - (1 - alpha) / 2)
         df = pd.DataFrame(index=self.timeline)

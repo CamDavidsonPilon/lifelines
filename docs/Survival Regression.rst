@@ -117,7 +117,7 @@ After fitting, you can use use the suite of prediction methods (similar to Aalen
 Plotting the coefficients
 ###########################################
 
-With a fitted model, an altervative way to view the coefficients and their ranges is to use the ``plot`` method.
+With a fitted model, an alternative way to view the coefficients and their ranges is to use the ``plot`` method.
 
 .. code:: python
 

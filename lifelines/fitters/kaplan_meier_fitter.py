@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from __future__ import division
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -51,6 +52,14 @@ class KaplanMeierFitter(UnivariateFitter):
         if event_observed is not None:
             check_nans(event_observed)
 
+        if weights is not None:
+          if (weights.astype(int) != weights).any():
+              warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+  It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+  estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+  or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
+                  """, RuntimeWarning)
+
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
@@ -83,14 +92,14 @@ class KaplanMeierFitter(UnivariateFitter):
         self._estimate_name = estimate_name
         self._predict_label = label
         self._update_docstrings()
-        
+
         # plotting functions
         setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
     def plot_loglogs(self, *args, **kwargs):
         return plot_loglogs(self, *args, **kwargs)
-    
+
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.
         # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
