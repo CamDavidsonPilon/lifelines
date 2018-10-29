@@ -111,6 +111,7 @@ After fitting, you can use use the suite of prediction methods (similar to Aalen
     X = rossi_dataset.drop(["week", "arrest"], axis=1)
     cph.predict_partial_hazard(X)
     cph.predict_survival_function(X)
+    cph.predict_survival_function(X, times=[5., 25., 50.])
 
 
 Plotting the coefficients
@@ -191,10 +192,15 @@ The second variable is the regime type, and this variable does not follow the pr
 .. image:: images/lls_regime_type.png
 
 
+Non-proportional hazards is a case of *model misspecification*. Two suggestions are to look for ways to *stratify* a column (see below), or to go ahead with the current model but use ``robust`` errors (in this case, the sandwhich error). In the latter case, you can specify this with with ``CoxPHFitter.fit(..., robust=True)``. 
+
+
 Stratification
 ################
 
-Sometimes a covariate may not obey the proportional hazard assumption. In this case, we can allow a factor without estimating its effect to be adjusted. To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
+Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* datasets, defined by the covariate(s). Each dataset has its own baseline hazard (the non-parametric part ofthe model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``. 
+
+To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
 
 .. code:: python
 
@@ -230,6 +236,17 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
     Concordance = 0.638
     Likelihood ratio test = 109.634 on 6 df, p=0.00000
     """
+
+    cph.baseline_cumulative_hazard_.shape
+    # (49, 2)
+
+Weights & Robust Errors
+########################
+
+Observations can come with weights, as well. These weights may be integer values representing some commonly occuring observation, or they may be float values representing some sampling weights or inverse probability weights. In the ``CoxPHFitter.fit`` method, an option is present for specifying which column in the dataframe should be used as weights. See example below. 
+
+Generally, unless your weights are integers should 
+
 
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

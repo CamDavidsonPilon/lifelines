@@ -457,7 +457,7 @@ Another very popular model for survival data is the Weibull model. In contrast t
 
  ..math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
 
- Apriori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In lifelines, this is implemented in the ``WeibullFitter``:
+* A priori*, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In lifelines, this is implemented in the ``WeibullFitter``:
 
 .. code:: python
 
@@ -470,6 +470,28 @@ Another very popular model for survival data is the Weibull model. In contrast t
     wf.fit(T, E)
     print(wf.lambda_, wf.rho_)
     wf.print_summary()
+
+Other parametric models: Exponential and LogNormal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are three parametric models of the same data. 
+
+.. code:: python
+
+    from lifelines import WeibullFitter
+    from lifelines import ExponentialFitter
+    from lifelines import LogNormalFitter
+  
+    T = data['duration']
+    E = data['observed']
+
+    wf = WeibullFitter().fit(T, E, label='WeibullFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
+
+    ax = wf.plot()
+    ax = exf.plot(ax=ax)
+    ax = lnf.plot(ax=ax)
 
 
 Estimating hazard rates using Nelson-Aalen

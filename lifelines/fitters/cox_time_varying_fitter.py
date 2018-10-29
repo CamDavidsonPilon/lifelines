@@ -569,7 +569,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             events_at_t = events.loc[ix]
             weights_at_t = weights.loc[ix].values
             deaths = events_at_t['event'].values & (events_at_t['stop'] == t).values
-            death_counts = (weights_at_t * deaths).sum()  # should always be atleast 1.
+
+            death_counts = (weights_at_t.squeeze() * deaths).sum()  # should always be atleast 1.
             baseline_hazard_.loc[t] = death_counts / events_at_t['hazard'].sum()
 
         return baseline_hazard_.cumsum()

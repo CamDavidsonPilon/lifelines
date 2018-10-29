@@ -120,7 +120,7 @@ class WeibullFitter(UnivariateFitter):
         self._estimate_name = "cumulative_hazard_"
         self._predict_label = label
         self._update_docstrings()
-        
+
         # plotting - Cumulative hazard takes priority.
         self.plot_cumulative_hazard = self.plot
 
@@ -128,7 +128,7 @@ class WeibullFitter(UnivariateFitter):
 
     def _estimation_method(self,t):
         return np.exp(-(self.lambda_ * t) ** self.rho_)
-    
+
     def hazard_at_times(self, times):
         return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
 

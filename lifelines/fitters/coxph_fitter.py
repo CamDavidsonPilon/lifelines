@@ -692,7 +692,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        By default, returns the median lifetimes for the individuals.
+        Returns the median lifetimes for the individuals, by default. If the survival curve of an
+        individual does not cross 0.5, then the result is infinity.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
         subjects = _get_index(X)
@@ -704,7 +705,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        Returns the median lifetimes for the individuals
+        Returns the median lifetimes for the individuals. If the survival curve of an
+        individual does not cross 0.5, then the result is infinity.
         """
         return self.predict_percentile(X, 0.5)
 
@@ -714,7 +716,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        Compute the expected lifetime, E[T], using covarites X.
+        Compute the expected lifetime, E[T], using covarites X. This algorithm to compute the expection is
+        to use the fact that E[T] = int_0^inf P(T > t) dt = int_0^inf S(t) dt
+
+        To compute the integal, we use the trapizoidal rule to approximate the integral. However, if the
+        survival function, S(t), doesn't converge to 0, the the expectation is really infinity.
         """
         subjects = _get_index(X)
         v = self.predict_survival_function(X)[subjects]
@@ -722,7 +728,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def _compute_baseline_hazard(self, data, durations, event_observed, weights, name):
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
-        ind_hazards = self.predict_partial_hazard(data).mul(weights, axis='index')
+        ind_hazards = self.predict_partial_hazard(data) * weights[:, None]
         ind_hazards['event_at'] = durations.values
         ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
         ind_hazards_summed_over_durations.name = 'hazards'
