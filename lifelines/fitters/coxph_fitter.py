@@ -600,7 +600,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         same as the training dataset.
 
         Returns the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \exp{\beta X}
+        baseline hazard is not included. Equal to \exp{\beta (X - mean{X_train})}
         """
         return exp(self.predict_log_partial_hazard(X))
 
@@ -612,7 +612,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \beta (X - \bar{X})
+        baseline hazard is not included. Equal to \beta (X - mean{X_train})
 
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
@@ -633,7 +633,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             same order as the training data.
 
         Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
-        of R's predict.coxph. Equal to \beta X - \beta \bar{X_{train}}
+        of R's predict.coxph. Equal to \beta X - \beta mean{X_train}}
         """
 
         return self.predict_log_partial_hazard(X) - self._train_log_partial_hazard.squeeze()
