@@ -621,7 +621,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.columns
             X = X[order]
+            pass_for_numeric_dtypes_or_raise(X)
 
+        X = X.astype(float)
         index = _get_index(X)
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)

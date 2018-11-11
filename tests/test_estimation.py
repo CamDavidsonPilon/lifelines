@@ -713,7 +713,7 @@ class TestRegressionFitters():
             except AttributeError:
                 pass
 
-    def test_error_is_raised_if_using_non_numeric_data(self, regression_models):
+    def test_error_is_raised_if_using_non_numeric_data_in_fit(self, regression_models):
         df = pd.DataFrame.from_dict({
             't': [1., 2., 3.],
             'bool_': [True, True, False],
@@ -764,10 +764,34 @@ class TestRegressionFitters():
 
 class TestCoxPHFitter():
 
+    def test_error_is_raised_if_using_non_numeric_data_in_prediction(self):
+        df = pd.DataFrame.from_dict({
+            't': [1., 2., 3., 4.],
+            'int_': [1, -1, 0, 0],
+            'float_': [1.2, -0.5, 0.0, 0.1],
+        })
+
+        cp = CoxPHFitter()
+        cp.fit(df, duration_col='t')
+
+        df_predict_on = pd.DataFrame.from_dict({
+            'int_': ['1', '-1', '0'],
+            'float_': [1.2, -0.5, 0.0],
+        })
+
+        with pytest.raises(TypeError):
+            cp.predict_partial_hazard(df_predict_on)
+
+    def test_strata_will_work_with_matched_pairs(self, rossi):
+        rossi['matched_pairs'] = np.floor(rossi.index / 2.).astype(int)
+        cp = CoxPHFitter()
+        cp.fit(rossi, duration_col='week', event_col='arrest', strata=['matched_pairs'], show_progress=True)
+        assert cp.baseline_cumulative_hazard_.shape[1] == 216
+
     def test_summary(self, rossi):
         cp = CoxPHFitter()
         cp.fit(rossi, duration_col='week', event_col='arrest')
-        summDf = cp.summary
+        summary = cp.summary
         expectedColumns = ['coef',
                            'exp(coef)',
                            'se(coef)',
@@ -775,7 +799,7 @@ class TestCoxPHFitter():
                            'p',
                            'lower 0.95',
                            'upper 0.95']
-        assert all([col in summDf.columns for col in expectedColumns])
+        assert all([col in summary.columns for col in expectedColumns])
 
     def test_print_summary(self, rossi):
 

@@ -846,7 +846,7 @@ where ``time`` is the duration from the entry event. Here we see subject 1 had a
       <p>4 rows × 6 columns</p>
     </div>
 
-From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost track of them after time 2.
+From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost track of them after time 12.
 
 You may have multiple covariates you wish to add, so the above could be streamlined like so:
 

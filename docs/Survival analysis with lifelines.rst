@@ -319,7 +319,7 @@ probabilities of survival at those points:
 
 .. code:: python
 
-    ax = subplot(111)
+    ax = plt.subplot(111)
     
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
