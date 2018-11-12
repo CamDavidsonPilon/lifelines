@@ -401,6 +401,8 @@ class TestKaplanMeierFitter():
         T, _ = sample_lifetimes
         kmf = KaplanMeierFitter()
         kmf.fit(T)
+        print(kmf.survival_function_)
+        print(kmf.event_table)
         npt.assert_almost_equal(kmf.survival_function_.values, self.kaplan_meier(T))
 
     def test_kaplan_meier_with_censorship(self, sample_lifetimes):
@@ -438,7 +440,7 @@ class TestKaplanMeierFitter():
         kmf.fit(T, C, left_censorship=True)
 
         actual = kmf.cumulative_density_[kmf._label].values
-        npt.assert_almost_equal(actual, np.array([0, 0.437500, 0.5833333, 0.875, 0.875, 1]))
+        npt.assert_allclose(actual, np.array([0, 0.437500, 0.5833333, 0.875, 0.875, 1]))
 
     def test_shifting_durations_doesnt_affect_survival_function_values(self):
         T = np.random.exponential(10, size=100)
@@ -446,13 +448,13 @@ class TestKaplanMeierFitter():
         expected = kmf.fit(T).survival_function_.values
 
         T_shifted = T + 100
-        npt.assert_almost_equal(expected, kmf.fit(T_shifted).survival_function_.values)
+        npt.assert_allclose(expected, kmf.fit(T_shifted).survival_function_.values)
 
         T_shifted = T - 50
-        npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
+        npt.assert_allclose(expected[1:], kmf.fit(T_shifted).survival_function_.values)
 
         T_shifted = T - 200
-        npt.assert_almost_equal(expected[1:], kmf.fit(T_shifted).survival_function_.values)
+        npt.assert_allclose(expected[1:], kmf.fit(T_shifted).survival_function_.values)
 
     def test_kmf_survival_curve_output_against_R(self):
         df = load_g3()
@@ -461,11 +463,11 @@ class TestKaplanMeierFitter():
 
         expected = np.array([[0.909, 0.779]]).T
         kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[25, 53])
-        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=3)
+        npt.assert_allclose(kmf.survival_function_.values, expected, rtol=10e-3)
 
         expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
         kmf.fit(df.loc[~ix]['time'], df.loc[~ix]['event'], timeline=[9, 19, 32, 34])
-        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=3)
+        npt.assert_allclose(kmf.survival_function_.values, expected, rtol=10e-3)
 
     @pytest.mark.xfail()
     def test_kmf_survival_curve_output_against_R_super_accurate(self):
@@ -475,11 +477,11 @@ class TestKaplanMeierFitter():
 
         expected = np.array([[0.909, 0.779]]).T
         kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[25, 53])
-        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=4)
+        npt.assert_allclose(kmf.survival_function_.values, expected, rtol=10e-4)
 
         expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
         kmf.fit(df.loc[~ix]['time'], df.loc[~ix]['event'], timeline=[9, 19, 32, 34])
-        npt.assert_array_almost_equal(kmf.survival_function_.values, expected, decimal=4)
+        npt.assert_allclose(kmf.survival_function_.values, expected, rtol=10e-4)
 
     def test_kmf_confidence_intervals_output_against_R(self):
         # this uses conf.type = 'log-log'
@@ -489,12 +491,12 @@ class TestKaplanMeierFitter():
         kmf.fit(df.loc[ix]['time'], df.loc[ix]['event'], timeline=[9, 19, 32, 34])
 
         expected_lower_bound = np.array([0.2731, 0.1946, 0.1109, 0.0461])
-        npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_lower_0.95'].values,
-                                      expected_lower_bound, decimal=3)
+        npt.assert_allclose(kmf.confidence_interval_['KM_estimate_lower_0.95'].values,
+                                      expected_lower_bound, rtol=10e-4)
 
         expected_upper_bound = np.array([0.975, 0.904, 0.804, 0.676])
-        npt.assert_array_almost_equal(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
-                                      expected_upper_bound, decimal=3)
+        npt.assert_allclose(kmf.confidence_interval_['KM_estimate_upper_0.95'].values,
+                                      expected_upper_bound, rtol=10e-4)
 
     def test_kmf_does_not_drop_to_zero_if_last_point_is_censored(self):
         T = np.arange(0, 50, 0.5)
@@ -537,6 +539,68 @@ class TestKaplanMeierFitter():
             a = list(kmf.survival_function_.KM_estimate)
             assert a == [1.0,0.6153846153846154,0.6153846153846154,0.32579185520362,0.32579185520362]
 
+    def test_late_entry_with_almost_tied_entry_and_death_against_R(self):
+        entry = [1.9, 0, 0, 0, 0]
+        T = [2, 10, 5, 4, 3]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, entry=entry)
+
+        expected = [1.0, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0]
+        npt.assert_allclose(kmf.survival_function_.values.reshape(7,), expected)
+
+    def test_late_entry_with_against_R(self):
+        entry = [1, 2, 4, 0, 0]
+        T = [2, 10, 5, 4, 3]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, entry=entry)
+
+        expected = [1.0, 1.0, 0.667, 0.444, 0.222, 0.111, 0.0]
+        npt.assert_allclose(kmf.survival_function_.values.reshape(7,), expected, rtol=1e-2)
+
+
+    def test_late_entry_with_tied_entry_and_death(self):
+        np.random.seed(101)
+
+        Ct = 10.
+
+        n = 10000
+        df = pd.DataFrame()
+        df['id'] = [i for i in range(n)]
+        df['t'] = np.ceil(np.random.weibull(1,size=n)*5)
+        df['t_cens'] = np.ceil(np.random.weibull(1,size=n)*3)
+        df['t_enter'] = np.floor(np.random.weibull(1.5,size=n)*2)
+        df['ft'] = 10
+        df['t_out'] = np.min(df[['t','t_cens','ft']],axis=1).astype(int)
+        df['d'] = (np.where(df['t']<=Ct,1,0)) * (np.where(df['t']<=df['t_cens'],1,0))
+        df['c'] = (np.where(df['t_cens']<=Ct,1,0)) * (np.where(df['t_cens']<df['t'],1,0))
+        df['y'] = (np.where(df['t']>df['t_enter'],1,0)) * (np.where(df['t_cens']>df['t_enter'],1,0)) * (np.where(Ct > df['t_enter'],1,0))
+        dfo = df.loc[df['y']==1].copy() #"observed data"
+
+        #Fitting KM to full data
+        km1 = KaplanMeierFitter()
+        km1.fit(df['t_out'],event_observed=df['d'])
+        rf = pd.DataFrame(index=km1.survival_function_.index)
+        rf['KM_true'] = km1.survival_function_
+
+        print(dfo[['t_out', 't_enter', 'd']])
+
+
+        #Fitting KM to "observed" data
+        km2 = KaplanMeierFitter()
+        km2.fit(dfo['t_out'],entry=dfo['t_enter'],event_observed=dfo['d'])
+        rf['KM_lifelines_latest'] = km2.survival_function_
+        print(km2.event_table)
+
+        #Version of KM where late entries occur after
+        rf['KM_lateenterafter'] = np.cumprod(1 - (km2.event_table.observed/(km2.event_table.at_risk - km2.event_table.entrance)))
+
+        # drop the first NA from comparison
+        rf = rf.dropna()
+        print(rf)
+
+        npt.assert_allclose(rf['KM_true'].values, rf['KM_lateenterafter'].values, rtol=10e-2)
+        npt.assert_allclose(rf['KM_lifelines_latest'].values, rf['KM_lateenterafter'].values, rtol=10e-2)
+        npt.assert_allclose(rf['KM_lifelines_latest'].values, rf['KM_true'].values, rtol=10e-2)
 
 class TestNelsonAalenFitter():
 

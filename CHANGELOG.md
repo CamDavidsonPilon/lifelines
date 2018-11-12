@@ -19,6 +19,7 @@
  - Performance improvements for `CoxTimeVaryingFitter` (~15% faster)
  - Univariate models are now serialisable with `pickle`. Thanks @dwilson1988 for the contribution. 
  - `baseline_cumulative_hazard_` (and derivatives of that) on `CoxPHFitter` now correctly incorporate the `weights_col`. 
+ - Fixed a bug in `KaplanMeierFitter` when late entry times lined up with death events. Thanks @pzivich
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).

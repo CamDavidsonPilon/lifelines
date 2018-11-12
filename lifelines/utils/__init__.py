@@ -682,9 +682,17 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         var_ = np.cumsum(_additive_var(at_risk, deaths)).sort_index().shift(-1).fillna(0)
     else:
         deaths = events['observed']
-        at_risk = events['at_risk']
-        estimate_ = np.cumsum(_additive_f(at_risk, deaths))
-        var_ = np.cumsum(_additive_var(at_risk, deaths))
+
+        # Why subtract entrants like this? see https://github.com/CamDavidsonPilon/lifelines/issues/497
+        # specifically, we kill people, compute the ratio, and then "add" the entants. This means that
+        # the population should not have the late entrants. The only exception to this rule
+        # is the first period, where entrants happen _prior_ to deaths.
+        entrances = events['entrance'].copy()
+        entrances.iloc[0] = 0
+        population = events['at_risk'] - entrances
+
+        estimate_ = np.cumsum(_additive_f(population, deaths))
+        var_ = np.cumsum(_additive_var(population, deaths))
 
     timeline = sorted(timeline)
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
