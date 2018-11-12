@@ -602,3 +602,36 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
  5. If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).size()``.
 
+Adding weights to observations in a Cox model
+##############################################
+
+There are two common uses for weights in a model. The first is as a data size reduction technique (known as case weights). If the dataset has more than one subjects with identical attributes, including duration and event, then their likelihood contribution is the same as well. Thus, instead of computing the log-likelihood for each individual, we can compute it once and multiple it by the count of users with identical attributes. In practice, this involves first grouping subjects by covariates and counting. For example, using the Rossi dataset, we will use Pandas to group by the attributes (but other data processing tools, like Spark, could do this as well): 
+
+.. code-block:: python
+    
+    from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    rossi_weights = rossi.copy()
+    rossi_weights['weights'] = 1.
+    rossi_weights = rossi_weights.groupby(rossi.columns.tolist())['weights'].sum()\
+                                 .reset_index()
+
+
+The original dataset has 432 rows, while the grouped dataset has 387 rows plus an additional `weights` column. ``CoxPHFitter`` has an additional parameter to specify which column is the weight column.
+
+.. code-block:: python
+
+    from lifelines import CoxPHFitter
+
+    cp = CoxPHFitter()
+    cp.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
+
+
+The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the `CoxTimeVaryingFitter`. 
+
+
+The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artifical under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error. 
+
+.. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequeny of ties. g
