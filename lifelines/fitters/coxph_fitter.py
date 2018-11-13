@@ -452,7 +452,28 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                             index=['lower-bound', 'upper-bound'],
                             columns=self.hazards_.columns)
 
+
     def _compute_sandwich_estimator(self, X, T, E, weights):
+
+        if self.strata is None:
+            score_residuals = self._compute_residuals_within_strata(X.values, T.values, E.values, weights.values)
+
+        else:
+            score_residuals = np.empty((0,1))
+            for strata in np.unique(X.index):
+                stratified_X, stratified_T, stratified_E, stratified_W = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]], weights.loc[[strata]]
+
+                score_residuals = np.append(score_residuals,
+                                            self._compute_residuals_within_strata(stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values),
+                                            axis=0)
+
+
+        naive_var = inv(self._hessian_)
+        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
+        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
+        return sandwich_estimator
+
+    def _compute_residuals_within_strata(self, X, T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -468,6 +489,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         score_residuals = np.zeros((n, d))
 
         phi_s = exp(dot(X, beta))
+
+        # compute these within strata
 
         # need to store these histories, as we access them often
         # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
@@ -490,14 +513,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             score_residuals[i, :] = score
 
-        naive_var = inv(self._hessian_)
-        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
-        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
-        return sandwich_estimator
+        return score_residuals
+
 
     def _compute_standard_errors(self, df, T, E, weights):
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df.values, T.values, E.values, weights.values).diagonal()) # / self._norm_std
+            se = np.sqrt(self._compute_sandwich_estimator(df, T, E, weights).diagonal()) # / self._norm_std
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :],

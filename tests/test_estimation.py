@@ -1813,15 +1813,53 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         assert_series_equal(cph.standard_errors_.loc['se'], expected, check_less_precise=2, check_names=False)
 
 
-    def test_robust_errors_with_strata_doesnt_break(self, rossi):
+    def test_robust_errors_with_strata_against_R(self, rossi):
         """
-        rossi <- read.csv('.../lifelines/datasets/rossi.csv')
-        r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
-                    paro, mar, wexp) + prio, data = rossi, robust=TRUE)
+        df <- data.frame(
+            "var1" = c(1, 1, 2, 2, 2),
+            "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
+            "T" = c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666)
+        )
+        df['E'] = 1
+
+        coxph(formula=Surv(T, E) ~ strata(var1) + var2, data=df, robust=TRUE)
         """
-        assert False
+
+        df = pd.DataFrame({
+            "var1": [1, 1, 2, 2, 2],
+            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
+            "T": [7.335846, 5.269797, 11.684092, 12.678458, 6.601666]
+        })
+        df['E'] = 1
+
         cf = CoxPHFitter()
-        cf.fit(rossi, duration_col='week', event_col='arrest', strata=['race', 'paro', 'mar', 'wexp'], robust=True)
+        cf.fit(df, duration_col='T', event_col='E', strata=['var1'], robust=True)
+        npt.assert_allclose(cf.summary['se(coef)'].values, 2.79, rtol=1e-2)
+
+
+    @pytest.mark.xfail
+    def test_robust_errors_with_strata_against_R_super_accurate(self, rossi):
+        """
+        df <- data.frame(
+            "var1" = c(1, 1, 2, 2, 2),
+            "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
+            "T" = c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666)
+        )
+        df['E'] = 1
+
+        coxph(formula=Surv(T, E) ~ strata(var1) + var2, data=df, robust=TRUE)
+        """
+
+        df = pd.DataFrame({
+            "var1": [1, 1, 2, 2, 2],
+            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
+            "T": [7.335846, 5.269797, 11.684092, 12.678458, 6.601666]
+        })
+        df['E'] = 1
+
+        cf = CoxPHFitter()
+        cf.fit(df, duration_col='T', event_col='E', strata=['var1'], robust=True)
+        npt.assert_allclose(cf.summary['se(coef)'].values, 2.79, rtol=1e-4)
 
 
     def test_what_happens_to_nans(self, rossi):
