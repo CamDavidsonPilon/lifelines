@@ -1834,7 +1834,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         cf = CoxPHFitter()
         cf.fit(df, duration_col='T', event_col='E', strata=['var1'], robust=True)
-        npt.assert_allclose(cf.summary['se(coef)'].values, 2.79, rtol=1e-2)
+        npt.assert_allclose(cf.summary['se(coef)'].values, 2.78649, rtol=1e-2)
 
 
     @pytest.mark.xfail
@@ -1859,7 +1859,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         cf = CoxPHFitter()
         cf.fit(df, duration_col='T', event_col='E', strata=['var1'], robust=True)
-        npt.assert_allclose(cf.summary['se(coef)'].values, 2.79, rtol=1e-4)
+        npt.assert_allclose(cf.summary['se(coef)'].values, 2.78649, rtol=1e-4)
 
 
     def test_what_happens_to_nans(self, rossi):

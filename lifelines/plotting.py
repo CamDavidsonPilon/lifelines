@@ -283,9 +283,9 @@ def plot_estimate(cls,estimate=None,loc=None, iloc=None, show_censors=False,
          censor_styles=None, ci_legend=False, ci_force_lines=False,
          ci_alpha=0.25, ci_show=True, at_risk_counts=False, invert_y_axis=False,
          bandwidth=None, **kwargs):
-    
+
     """"
-    Plots a pretty version of the fitted .
+    Plots a pretty figure of {0}.{1}
 
     Matplotlib plot arguments can be passed in inside the kwargs, plus
 
@@ -326,7 +326,7 @@ def plot_estimate(cls,estimate=None,loc=None, iloc=None, show_censors=False,
     set_kwargs_ax(kwargs)
     set_kwargs_color(kwargs)
     set_kwargs_drawstyle(kwargs)
-    
+
     if estimate is None:
         estimate = cls._estimate_name
 

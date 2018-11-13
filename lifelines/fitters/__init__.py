@@ -1,12 +1,25 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import collections
+from functools import wraps
 
 import numpy as np
 import pandas as pd
 
 from lifelines.plotting import plot_estimate
 from lifelines.utils import qth_survival_times, _to_array
+
+
+def must_call_fit_first(func):
+    @wraps(func)
+    def error_wrapper(*args, **kwargs):
+        self = args[0]
+        try:
+            estimate = self._estimate_name
+        except AttributeError:
+            raise RuntimeError("Must call `fit` first!")
+        return func(*args, **kwargs)
+    return error_wrapper
 
 
 class BaseFitter(object):
@@ -25,37 +38,28 @@ class BaseFitter(object):
             s = """<lifelines.%s>""" % classname
         return s
 
-
 class UnivariateFitter(BaseFitter):
 
+    @must_call_fit_first
     def _update_docstrings(self):
         # Update their docstrings
-        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name,self.__class__.__name__)
-        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name,self.__class__.__name__)
+        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
+        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
         self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-        self.__class__.plot.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__)
+        self.__class__.plot.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
+    @must_call_fit_first
     def plot(self, *args, **kwargs):
-        try:
-            estimate = self._estimate_name
-        except AttributeError:
-            raise RuntimeError("Must call `fit` first!")
-            
         return plot_estimate(self, *args, **kwargs)
 
-    def subtract(self,other):
+    @must_call_fit_first
+    def subtract(self, other):
         """
         Subtract the {0} of two {1} objects.
 
             Parameters:
               other: an {1} fitted instance.
         """
-
-        try:
-            estimate = self._estimate_name
-        except AttributeError:
-            raise RuntimeError("Must call `fit` first!")
-        
         self_estimate = getattr(self, self._estimate_name)
         other_estimate = getattr(other, other._estimate_name)
         new_index = np.concatenate((other_estimate.index, self_estimate.index))
@@ -67,6 +71,7 @@ class UnivariateFitter(BaseFitter):
             columns=['diff']
         )
 
+    @must_call_fit_first
     def divide(self, other):
         """
         Divide the {0} of two {1} objects.
@@ -75,11 +80,6 @@ class UnivariateFitter(BaseFitter):
           other: an {1} fitted instance.
 
         """
-        try:
-            estimate = self._estimate_name
-        except AttributeError:
-            raise RuntimeError("Must call `fit` first!")
-    
         self_estimate = getattr(self, self._estimate_name)
         other_estimate = getattr(other, other._estimate_name)
         new_index = np.concatenate((other_estimate.index, self_estimate.index))
@@ -91,6 +91,7 @@ class UnivariateFitter(BaseFitter):
             columns=['ratio']
         )
 
+    @must_call_fit_first
     def predict(self, times):
         """
         Predict the {0} at certain point in time. Uses a linear interpolation if
@@ -101,23 +102,20 @@ class UnivariateFitter(BaseFitter):
 
         Returns:
           predictions: a scalar if time is a scalar, a numpy array if time in an array.
-        """ 
-        try:
-            estimate = self._estimate_name
-        except AttributeError:
-            raise RuntimeError("Must call `fit` first!")
-
+        """
         if callable(self._estimation_method):
             return pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
         else:
             estimate = getattr(self, self._estimation_method)
             # non-linear interpolations can push the survival curves above 1 and below 0.
             return estimate.reindex(estimate.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
-        
+
     @property
+    @must_call_fit_first
     def conditional_time_to_event_(self):
         return self._conditional_time_to_event_()
 
+    @must_call_fit_first
     def _conditional_time_to_event_(self):
         """
         Return a DataFrame, with index equal to survival_function_, that estimates the median

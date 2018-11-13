@@ -452,7 +452,7 @@ keywords to tinker with.
 Fitting to a Weibull model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another very popular model for survival data is the Weibull model. In contrast the the Kaplan Meier estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Kaplan Meier estimator has no parameters to fit too). Mathematically, the survival function looks like:
+Another very popular model for survival data is the Weibull model. In contrast the the Kaplan Meier estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Kaplan Meier estimator has no parameters to fit to). Mathematically, the survival function looks like:
 
 
  ..math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
@@ -468,8 +468,12 @@ Another very popular model for survival data is the Weibull model. In contrast t
 
     wf = WeibullFitter()
     wf.fit(T, E)
+    
     print(wf.lambda_, wf.rho_)
     wf.print_summary()
+
+    wf.
+
 
 Other parametric models: Exponential and LogNormal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
