@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
+import warnings
 import time
 import numpy as np
 import pandas as pd
@@ -7,7 +8,8 @@ import pandas as pd
 from scipy import stats as stats
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import inv_normal_cdf, check_nans, ConvergenceError, string_justify, significance_code
+from lifelines.utils import inv_normal_cdf, check_nans, ConvergenceError, string_justify, significance_code,\
+                            ConvergenceWarning
 
 
 def _negative_log_likelihood(lambda_rho, T, E):
@@ -152,13 +154,13 @@ class WeibullFitter(UnivariateFitter):
 
         # initialize the parameters. This shows dramatic improvements.
         parameters = _smart_search(_negative_log_likelihood, 2, T, E)
-
         i = 1
         step_size = 0.9
-        converging = True
+        max_steps = 50
+        converging, completed = True, False
         start = time.time()
 
-        while converging and i < 50:
+        while converging and i < max_steps:
             # Do not override hessian and gradient in case of garbage
             h, g = hessian_function(parameters, T, E), gradient_function(parameters, T, E)
 
@@ -176,7 +178,13 @@ class WeibullFitter(UnivariateFitter):
 
             if norm(delta) < precision:
                 converging = False
+                completed = True
             i += 1
+
+        if show_progress and completed:
+            print("Convergence completed after %d iterations." % (i))
+        if not completed:
+            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
         return parameters, hessian
 
