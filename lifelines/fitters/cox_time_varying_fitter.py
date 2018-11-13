@@ -347,33 +347,34 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             # I feel like this can be made into some tree-like structure
             ix = (stops_events['start'].values < t) & (t <= stops_events['stop'].values)
 
-            df_at_t = df.loc[ix]
-            weights_at_t = weights.loc[ix]
-            stops_events_at_t = stops_events.loc[ix]
+            df_at_t = df.values[ix]
+            weights_at_t = weights.values[ix]
+            stops_events_at_t = stops_events['stop'].values[ix]
+            events_at_t = stops_events['event'].values[ix]
 
-            phi_i = weights_at_t.values * exp(dot(df_at_t, beta))
+            phi_i = weights_at_t * exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
             phi_x_x_i = dot(df_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = phi_i.sum()
-            risk_phi_x = phi_x_i.sum(0).values
+            risk_phi_x = phi_x_i.sum(0)
             risk_phi_x_x = phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = stops_events_at_t['event'].values & (stops_events_at_t['stop'].values == t)
+            deaths = events_at_t & (stops_events_at_t == t)
 
             ties_counts = deaths.sum()  # should always at least 1
 
-            xi_deaths = df_at_t.loc[deaths]
-            weights_deaths = weights_at_t.loc[deaths].values
+            xi_deaths = df_at_t[deaths]
+            weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = (weights_deaths * xi_deaths).sum(0).values
+            x_death_sum = (weights_deaths * xi_deaths).sum(0)
 
             if ties_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
                 tie_phi = phi_i[deaths].sum()
-                tie_phi_x = phi_x_i.loc[deaths].sum(0).values
+                tie_phi_x = phi_x_i[deaths].sum(0)
                 tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
             partial_gradient = np.zeros(d)
@@ -559,22 +560,25 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
 
     def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events, weights):
-        events = stop_times_events.copy()
-        events['hazard'] = self.predict_partial_hazard(tv_data).values
+        hazards = self.predict_partial_hazard(tv_data).values
 
-        unique_death_times = np.unique(events['stop'].loc[events['event']])
+        unique_death_times = np.unique(stop_times_events['stop'].loc[stop_times_events['event']])
         baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times),
                                         index=unique_death_times,
                                         columns=['baseline hazard'])
 
         for t in unique_death_times:
-            ix = (events['start'].values < t) & (t <= events['stop'].values)
-            events_at_t = events.loc[ix]
-            weights_at_t = weights.loc[ix].values
-            deaths = events_at_t['event'].values & (events_at_t['stop'] == t).values
+            ix = (stop_times_events['start'].values < t) & (t <= stop_times_events['stop'].values)
+
+            events_at_t = stop_times_events['event'].values[ix]
+            stops_at_t = stop_times_events['stop'].values[ix]
+            weights_at_t = weights.values[ix]
+            hazards_at_t = hazards[ix]
+
+            deaths = events_at_t & (stops_at_t == t)
 
             death_counts = (weights_at_t.squeeze() * deaths).sum()  # should always be atleast 1.
-            baseline_hazard_.loc[t] = death_counts / events_at_t['hazard'].sum()
+            baseline_hazard_.loc[t] = death_counts / hazards_at_t.sum()
 
         return baseline_hazard_.cumsum()
 
