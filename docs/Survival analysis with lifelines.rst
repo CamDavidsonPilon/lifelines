@@ -457,7 +457,12 @@ Another very popular model for survival data is the Weibull model. In contrast t
 
  ..math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
 
-* A priori*, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In lifelines, this is implemented in the ``WeibullFitter``:
+* A priori*, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In fact, we actually model and estimate the hazard rate:
+
+
+ ..math::  S(t) = -(\lambda t)^\rho,   \lambda >0, \rho > 0,
+
+In lifelines, estimation is available using the ``WeibullFitter`` class:
 
 .. code:: python
 
@@ -472,7 +477,8 @@ Another very popular model for survival data is the Weibull model. In contrast t
     print(wf.lambda_, wf.rho_)
     wf.print_summary()
 
-    wf.
+    wf.plot()
+
 
 
 Other parametric models: Exponential and LogNormal

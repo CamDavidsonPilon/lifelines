@@ -15,12 +15,12 @@ from scipy.integrate import trapz
 import scipy.stats as stats
 
 from lifelines.fitters import BaseFitter
-from lifelines.utils import survival_table_from_events, inv_normal_cdf, normalize,\
-    significance_code, concordance_index, _get_index, qth_survival_times,\
-    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,\
-    check_complete_separation, check_nans, StatError, ConvergenceWarning,\
-    StepSizer, ConvergenceError, string_justify
 from lifelines.statistics import chisq_test
+from lifelines.utils import (survival_table_from_events, inv_normal_cdf, normalize,
+    significance_code, concordance_index, _get_index, qth_survival_times,
+    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,
+    check_complete_separation, check_nans, StatError, ConvergenceWarning,
+    StepSizer, ConvergenceError, string_justify)
 
 
 class CoxPHFitter(BaseFitter):
@@ -167,9 +167,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E, weights)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
-        self.score_ = concordance_index(self.durations,
-                                        -self.predict_partial_hazard(df).values,
-                                        self.event_observed)
+        self._predicted_partial_hazards_ = self.predict_partial_hazard(df).values
 
         self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
         return self
@@ -858,3 +856,13 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.predict_survival_function(X).plot(ax=ax)
         self.baseline_survival_.plot(ax=ax, ls='--')
         return ax
+
+    @property
+    def score_(self):
+        if hasattr(self, '_concordance_score_'):
+            return self._concordance_score_
+        else:
+            self._concordance_score_ = concordance_index(self.durations,
+                                     -self._predicted_partial_hazards_,
+                                     self.event_observed)
+            return self._concordance_score_

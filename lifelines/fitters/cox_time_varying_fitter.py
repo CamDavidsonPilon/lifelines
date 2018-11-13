@@ -16,12 +16,13 @@ from scipy.linalg import solve as spsolve
 from lifelines.fitters import BaseFitter
 from lifelines.fitters.coxph_fitter import CoxPHFitter
 from lifelines.statistics import chisq_test
-from lifelines.utils import inv_normal_cdf, \
-    significance_code, normalize,\
-    pass_for_numeric_dtypes_or_raise, check_low_var,\
-    check_for_overlapping_intervals, check_complete_separation_low_variance,\
-    ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths,\
+from lifelines.utils import (inv_normal_cdf,
+    significance_code, normalize,
+    pass_for_numeric_dtypes_or_raise, check_low_var,
+    check_for_overlapping_intervals, check_complete_separation_low_variance,
+    ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths,
     check_for_instantaneous_events, ConvergenceError, check_nans, string_justify
+)
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -179,7 +180,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     def _compute_standard_errors(self, df, stop_times_events, weights):
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal()) # / self._norm_std
+            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :],
@@ -300,7 +301,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
-                # Expected convergence is ~10 steps
+                # Expected convergence is less than 10 steps
                 converging, completed = False, False
             elif step_size <= 0.0001:
                 converging, completed = False, False
