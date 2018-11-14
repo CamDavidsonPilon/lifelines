@@ -8,7 +8,7 @@ import pandas as pd
 from scipy import stats as stats
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import inv_normal_cdf, check_nans, ConvergenceError, string_justify, significance_code,\
+from lifelines.utils import inv_normal_cdf, check_nans_or_infs, ConvergenceError, string_justify, significance_code,\
                             ConvergenceWarning
 
 
@@ -89,9 +89,9 @@ class WeibullFitter(UnivariateFitter):
 
         """
 
-        check_nans(durations)
+        check_nans_or_infs(durations)
         if event_observed is not None:
-            check_nans(event_observed)
+            check_nans_or_infs(event_observed)
 
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.
