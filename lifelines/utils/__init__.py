@@ -1114,7 +1114,11 @@ def check_nans_or_infs(df_or_array):
         if nulls.any():
             raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     # isinf check is done after isnull check since np.isinf doesn't work on None values
-    infs = np.isinf(df_or_array)
+    infs = []
+    if isinstance(df_or_array, pd.Series) or isinstance(df_or_array, pd.DataFrame):
+        infs = (df_or_array == np.Inf)
+    else:
+        infs = np.isinf(df_or_array)
     if hasattr(infs, 'values'):
         if infs.values.any():
             raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
