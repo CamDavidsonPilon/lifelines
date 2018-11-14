@@ -7,7 +7,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import _preprocess_inputs, _additive_estimate, StatError, inv_normal_cdf,\
-    median_survival_times, check_nans
+    median_survival_times, check_nans_or_infs
 from lifelines.plotting import plot_loglogs
 
 
@@ -48,9 +48,9 @@ class KaplanMeierFitter(UnivariateFitter):
 
         """
 
-        check_nans(durations)
+        check_nans_or_infs(durations)
         if event_observed is not None:
-            check_nans(event_observed)
+            check_nans_or_infs(event_observed)
 
         if weights is not None:
           if (weights.astype(int) != weights).any():

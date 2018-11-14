@@ -5,7 +5,7 @@ import pandas as pd
 from scipy import stats
 
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import inv_normal_cdf, check_nans, significance_code, string_justify
+from lifelines.utils import inv_normal_cdf, check_nans_or_infs, significance_code, string_justify
 
 
 class ExponentialFitter(UnivariateFitter):
@@ -56,9 +56,9 @@ class ExponentialFitter(UnivariateFitter):
 
         """
 
-        check_nans(durations)
+        check_nans_or_infs(durations)
         if event_observed is not None:
-            check_nans(event_observed)
+            check_nans_or_infs(event_observed)
 
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
