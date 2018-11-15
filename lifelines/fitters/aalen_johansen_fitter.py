@@ -90,13 +90,17 @@ class AalenJohansenFitter(UnivariateFitter):
         aj = aj.set_index('event_at')
         
         # Setting attributes
+        self._estimation_method = "cumulative_density_"
+        self._estimate_name = "cumulative_density_"
+        self._predict_label = label
+        self._update_docstrings()
+
         alpha = alpha if alpha else self.alpha
         self._label = label
         self.cumulative_density_ = aj[cmprisk_label] #Technically, cumulative incidence, but consistent with KaplanMeierFitter
         self.event_table = aj[['removed','observed',self.label_cmprisk,'censored','entrance','at_risk']] #Event table
         self.variance, self.confidence_interval_ = self._bounds(aj['lagged_overall_survival'],
                                                                 alpha=alpha, ci_labels=ci_labels)
-        self.plot = self._plot_estimate('cumulative_density_')
         return self
     
     def _jitter(self, durations, event, jitter_level, seed=None):
@@ -142,7 +146,7 @@ class AalenJohansenFitter(UnivariateFitter):
         df['Ft'] = self.cumulative_density_
         df['lagS'] = lagged_survival.fillna(1)
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+            ci_labels = ["%s_upper_%.2f" % (self._predict_label, alpha), "%s_lower_%.2f" % (self._predict_label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         # Have to loop through each time independently. Don't think there is a faster way
