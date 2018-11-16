@@ -148,6 +148,16 @@ def test_qth_survival_time_returns_inf():
     sf = pd.Series([1., 0.7, 0.6])
     assert utils.qth_survival_time(0.5, sf) == np.inf
 
+def test_qth_survival_time_with_dataframe():
+    sf_df_no_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0])
+    sf_df_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0], index=[10, 20, 30, 40, 50])
+    sf_df_too_many_columns = pd.DataFrame([[1,2], [3,4]])
+
+    assert utils.qth_survival_time(0.5, sf_df_no_index) == 2
+    assert utils.qth_survival_time(0.5, sf_df_index) == 30
+
+    with pytest.raises(ValueError):
+        utils.qth_survival_time(0.5, sf_df_too_many_columns)
 
 def test_qth_survival_times_with_multivariate_q():
     sf = np.linspace(1, 0, 50)

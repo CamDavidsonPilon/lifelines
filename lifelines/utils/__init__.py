@@ -91,8 +91,14 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
 def qth_survival_time(q, survival_function, cdf=False):
     """
-    Expects a Pandas series, returns the time when the qth probability is reached.
+    Expects a Pandas series or single-column dataframe, returns the time when the qth probability is reached.
     """
+    if isinstance(survival_function, pd.DataFrame):
+        if survival_function.shape[1] > 1:
+            raise ValueError("Expecting a dataframe (or series) with a single column. Provide that or use utils.qth_survival_times.")
+
+        survival_function = survival_function.T.squeeze()
+
     if cdf:
         if survival_function.iloc[0] > q:
             return np.inf

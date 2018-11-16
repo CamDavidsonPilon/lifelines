@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import numpy as np
-from .utils import coalesce
+from lifelines.utils import coalesce
 
 
 def is_latex_enabled():
