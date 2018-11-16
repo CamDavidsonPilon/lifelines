@@ -10,7 +10,7 @@ from scipy.integrate import trapz
 from lifelines.fitters import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
     ridge_regression as lr, qth_survival_times, pass_for_numeric_dtypes_or_raise,\
-    concordance_index, check_nans, ConvergenceWarning
+    concordance_index, check_nans_or_infs, ConvergenceWarning
 
 from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import fill_between_steps
@@ -315,8 +315,8 @@ class AalenAdditiveFitter(BaseFitter):
 
     def _check_values(self, df, T, E):
         pass_for_numeric_dtypes_or_raise(df)
-        check_nans(T)
-        check_nans(E)
+        check_nans_or_infs(T)
+        check_nans_or_infs(E)
 
     def smoothed_hazards_(self, bandwidth=1):
         """

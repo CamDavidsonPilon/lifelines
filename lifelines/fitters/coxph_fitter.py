@@ -19,7 +19,7 @@ from lifelines.statistics import chisq_test
 from lifelines.utils import (survival_table_from_events, inv_normal_cdf, normalize,
     significance_code, concordance_index, _get_index, qth_survival_times,
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,
-    check_complete_separation, check_nans, StatError, ConvergenceWarning,
+    check_complete_separation, check_nans_or_infs, StatError, ConvergenceWarning,
     StepSizer, ConvergenceError, string_justify)
 
 
@@ -435,9 +435,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     @staticmethod
     def _check_values(df, T, E):
         pass_for_numeric_dtypes_or_raise(df)
-        check_nans(T)
-        check_nans(E)
-        check_nans(df)
+        check_nans_or_infs(T)
+        check_nans_or_infs(E)
+        check_nans_or_infs(df)
         check_low_var(df)
         check_complete_separation(df, E, T)
 
