@@ -20,6 +20,7 @@ from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg.linalg import LinAlgError
 
+from lifelines.compat import PY2, PY3
 from lifelines.utils import k_fold_cross_validation, StatError, concordance_index, ConvergenceWarning, to_long_format
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
@@ -300,6 +301,7 @@ class TestUnivariateFitters():
             with pytest.raises(TypeError):
                 fitter().fit(T, E)
 
+    @pytest.mark.skipif(PY2, reason="requires python3 or higher")
     def test_pickle_serialization(self, positive_sample_lifetimes, univariate_fitters):
          T = positive_sample_lifetimes[0]
          for f in univariate_fitters:

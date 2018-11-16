@@ -2,13 +2,14 @@
 from __future__ import print_function
 import collections
 from functools import wraps
+import sys
 
 import numpy as np
 import pandas as pd
 
 from lifelines.plotting import plot_estimate
 from lifelines.utils import qth_survival_times, _to_array
-
+from lifelines.compat import PY2, PY3
 
 def must_call_fit_first(func):
     @wraps(func)
@@ -43,10 +44,16 @@ class UnivariateFitter(BaseFitter):
     @must_call_fit_first
     def _update_docstrings(self):
         # Update their docstrings
-        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
-        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
-        self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-        self.__class__.plot.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
+        if PY2:
+            self.__class__.subtract.__func__.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
+            self.__class__.divide.__func__.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
+            self.__class__.predict.__func__.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
+            self.__class__.plot.__func__.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
+        elif PY3:
+            self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
+            self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
+            self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
+            self.__class__.plot.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
     @must_call_fit_first
     def plot(self, *args, **kwargs):
@@ -66,7 +73,7 @@ class UnivariateFitter(BaseFitter):
         new_index = np.unique(new_index)
         return pd.DataFrame(
             self_estimate.reindex(new_index, method='ffill').values -
-            other_estimate.reindex(new_index, method='ffill').values,
+              other_estimate.reindex(new_index, method='ffill').values,
             index=new_index,
             columns=['diff']
         )

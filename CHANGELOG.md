@@ -17,7 +17,7 @@
  - The default `WeibullFitter().timeline` has changed from integers between the min and max duration to _n_ floats between the max and min durations, where _n_ is the number of observations. 
  - Performance improvements for `CoxPHFitter` (~20% faster)
  - Performance improvements for `CoxTimeVaryingFitter` (~100% faster)
- - Univariate models are now serialisable with `pickle`. Thanks @dwilson1988 for the contribution. 
+ - In Python3, Univariate models are now serialisable with `pickle`. Thanks @dwilson1988 for the contribution. For Python2, `dill` is still the preferred method.
  - `baseline_cumulative_hazard_` (and derivatives of that) on `CoxPHFitter` now correctly incorporate the `weights_col`. 
  - Fixed a bug in `KaplanMeierFitter` when late entry times lined up with death events. Thanks @pzivich
 
