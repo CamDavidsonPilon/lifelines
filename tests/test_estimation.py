@@ -24,7 +24,7 @@ from lifelines.compat import PY2, PY3
 from lifelines.utils import k_fold_cross_validation, StatError, concordance_index, ConvergenceWarning, to_long_format
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-    WeibullFitter, BaseFitter, CoxTimeVaryingFitter
+    WeibullFitter, BaseFitter, CoxTimeVaryingFitter, AalenJohansenFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
     load_stanford_heart_transplants
@@ -2427,3 +2427,85 @@ Likelihood ratio test = 15.111 on 4 df, p=0.00448
                 assert output[i] == expected[i]
         finally:
             sys.stdout = saved_stdout
+
+class TestAalenJohansenFitter:
+
+    @pytest.fixture  # pytest fixtures are functions that are "executed" before every test
+    def duration(self):
+        return [1, 2, 3, 4, 5, 6]
+
+    @pytest.fixture
+    def event_observed(self):
+        return [0, 1, 1, 2, 2, 0]
+
+    @pytest.fixture
+    def fitter(self):
+        return AalenJohansenFitter()
+
+    @pytest.fixture
+    def kmfitter(self):
+        return KaplanMeierFitter()
+
+    def test_jitter(self, fitter):
+        d = pd.Series([1, 1, 1])
+        e = fitter._jitter(durations=d, event=pd.Series([1, 1, 1]), jitter_level=0.01)
+
+        npt.assert_equal(np.any(np.not_equal(d, e)), True)
+
+    def test_tied_input_data(self, fitter):
+        d = [1, 2, 2, 4, 5, 6]
+        fitter.fit(durations=d,
+                   event_observed=[0, 1, 2, 1, 2, 0],
+                   event_of_interest=2)
+        npt.assert_equal(np.any(np.not_equal([0]+d, fitter.event_table.index)), True)
+
+    def test_event_table_is_correct(self, fitter, duration, event_observed):
+        fitter.fit(duration, event_observed, event_of_interest=2)
+
+        expected_event_table = pd.DataFrame.from_records([
+            {'event_at': 0, 'removed': 0, 'observed': 0, 'observed_2': 0, 'censored': 0, 'entrance': 6, 'at_risk': 6},
+            {'event_at': 1, 'removed': 1, 'observed': 0, 'observed_2': 0, 'censored': 1, 'entrance': 0, 'at_risk': 6},
+            {'event_at': 2, 'removed': 1, 'observed': 1, 'observed_2': 0, 'censored': 0, 'entrance': 0, 'at_risk': 5},
+            {'event_at': 3, 'removed': 1, 'observed': 1, 'observed_2': 0, 'censored': 0, 'entrance': 0, 'at_risk': 4},
+            {'event_at': 4, 'removed': 1, 'observed': 1, 'observed_2': 1, 'censored': 0, 'entrance': 0, 'at_risk': 3},
+            {'event_at': 5, 'removed': 1, 'observed': 1, 'observed_2': 1, 'censored': 0, 'entrance': 0, 'at_risk': 2},
+            {'event_at': 6, 'removed': 1, 'observed': 0, 'observed_2': 0, 'censored': 1, 'entrance': 0, 'at_risk': 1}
+        ]).set_index('event_at')[['removed', 'observed', 'observed_2', 'censored', 'entrance', 'at_risk']]
+        # pandas util for checking if two dataframes are equal
+        assert_frame_equal(fitter.event_table, expected_event_table,
+                           check_dtype=False, check_like=True)  # Ignores dtype to avoid int32 vs int64 difference
+
+    def test_aj_less_than_km(self, fitter, kmfitter, duration, event_observed):
+        # In presence of competing risk, CIF_{AJ} >= CIF_{KM}
+        fitter.fit(duration, event_observed, event_of_interest=2)  # Aalen-Johansen
+        kmfitter.fit(duration, event_observed)
+
+        x = np.all(np.where(np.array(1 - kmfitter.survival_function_) >= np.array(fitter.cumulative_density_),
+                            True, False))
+        assert x
+
+    def test_no_competing_risk(self, fitter, kmfitter, duration):
+        # In presence of no competing risk, CIF_{AJ} == CIF_{KM}
+        same_events = [0, 2, 2, 2, 2, 0]
+        fitter.fit(duration, same_events, event_of_interest=2)  # Aalen-Johansen
+        kmfitter.fit(duration, same_events)  # Kaplan-Meier
+        npt.assert_allclose(np.array(1 - kmfitter.survival_function_),
+                            np.array(fitter.cumulative_density_))
+
+    def test_variance_calculation_against_sas(self, fitter, duration, event_observed):
+        variance_from_sas = np.array([0., 0., 0., 0., 0.032, 0.048, 0.048])
+
+        fitter.fit(duration, event_observed, event_of_interest=2)
+        npt.assert_allclose(variance_from_sas, np.array(fitter.variance))
+
+    def test_ci_calculation_against_sas(self, fitter, duration, event_observed):
+        ci_from_sas = np.array([[np.nan, np.nan],
+                                [np.nan, np.nan],
+                                [np.nan, np.nan],
+                                [np.nan, np.nan],
+                                [0.00836904, 0.58185303],
+                                [0.05197575, 0.75281579],
+                                [0.05197575, 0.75281579]])
+
+        fitter.fit(duration, event_observed, event_of_interest=2)
+        npt.assert_allclose(ci_from_sas, np.array(fitter.confidence_interval_))
