@@ -90,97 +90,49 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         df = df.rename(columns={id_col: 'id', event_col: 'event', start_col: 'start', stop_col: 'stop', weights_col: '__weights'})
         df = df.set_index('id')
-        stop_times_events = df[["event", "stop", "start"]].copy()
+        start_stop_events = df[["event", "start", "stop"]].copy()
         weights = df[['__weights']].copy().astype(float)
         df = df.drop(["event", "stop", "start", "__weights"], axis=1)
-        stop_times_events['event'] = stop_times_events['event'].astype(bool)
+        start_stop_events['event'] = start_stop_events['event'].astype(bool)
 
 
-        self._check_values(df, stop_times_events)
+        self._check_values(df, start_stop_events)
         df = df.astype(float)
 
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
 
-        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights, show_progress=show_progress,
+        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), start_stop_events, weights, show_progress=show_progress,
                                          step_size=step_size)
 
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
-        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights)
+        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), start_stop_events, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events, weights)
+        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, start_stop_events, weights)
         self.baseline_survival_ = self._compute_baseline_survival()
-        self.event_observed = stop_times_events['event']
-        self.start_stop_and_events = stop_times_events
+        self.event_observed = start_stop_events['event']
+        self.start_stop_and_events = start_stop_events
 
         self._n_examples = df.shape[0]
         self._n_unique = df.index.unique().shape[0]
         return self
 
     @staticmethod
-    def _check_values(df, stop_times_events):
+    def _check_values(df, start_stop_events):
         # check_for_overlapping_intervals(df) # this is currenty too slow for production.
         check_nans_or_infs(df)
         check_low_var(df)
-        check_complete_separation_low_variance(df, stop_times_events['event'])
+        check_complete_separation_low_variance(df, start_stop_events['event'])
         pass_for_numeric_dtypes_or_raise(df)
-        check_for_immediate_deaths(stop_times_events)
-        check_for_instantaneous_events(stop_times_events)
+        check_for_immediate_deaths(start_stop_events)
+        check_for_instantaneous_events(start_stop_events)
 
-    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
-
-        n, d = df.shape
-
-        # Init risk and tie sums to zero
-        risk_phi = 0
-        risk_phi_x = np.zeros((1, d))
-
-        # need to store these histories, as we access them often
-        risk_phi_history = pd.DataFrame(np.zeros((n,)), index=df.index)
-        risk_phi_x_history = pd.DataFrame(np.zeros((n, d)), index=df.index)
-
-        E = E.astype(int)
-        score_residuals = np.zeros((n, d))
-        # we already unnormalized the betas in `fit`, so we need normalize them again since X is
-        # normalized.
-        beta = self.hazards_.values[0] * self._norm_std
-
-        # Iterate backwards to utilize recursive relationship
-        for i in range(n - 1, -1, -1):
-            # Doing it like this to preserve shape
-            ei = E[i]
-            xi = X[i:i + 1]
-
-            phi_i = exp(dot(xi, beta))
-            phi_x_i = phi_i * xi
-
-            risk_phi += phi_i
-            risk_phi_x += phi_x_i
-
-            risk_phi_history[i] = risk_phi
-            risk_phi_x_history[i] = risk_phi_x
-
-        # Iterate forwards
-        for i in range(0, n):
-            # Doing it like this to preserve shape
-            xi = X[i:i + 1]
-            phi_i = exp(dot(xi, beta))
-
-            score = -sum(E[j] * weights[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
-            score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
-            score *= weights[i]
-            score_residuals[i, :] = score
-
-        naive_var = inv(self._hessian_)
-        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
-        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
-        return sandwich_estimator
-
-
-    def _compute_standard_errors(self, df, stop_times_events, weights):
+    def _compute_standard_errors(self, df, start_stop_events, weights):
+        import pdb
+        pdb.set_trace()
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal())
+            se = np.sqrt(self._compute_sandwich_estimator(df, start_stop_events, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :],
@@ -223,7 +175,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
         return df
 
-    def _newton_rhaphson(self, df, stop_times_events, weights, show_progress=False, step_size=None, precision=10e-6,
+    def _newton_rhaphson(self, df, start_stop_events, weights, show_progress=False, step_size=None, precision=10e-6,
                          max_steps=50):
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -232,7 +184,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         Parameters:
             df: (n, d) Pandas DataFrame of observations
-            stop_times_events: (n, d) Pandas DataFrame of meta information about the subjects history
+            start_stop_events: (n, d) Pandas DataFrame of meta information about the subjects history
             show_progress: True to show verbous output of convergence
             step_size: float > 0 to determine a starting step size in NR algorithm.
             precision: the convergence halts if the norm of delta between
@@ -256,9 +208,12 @@ class CoxTimeVaryingFitter(BaseFitter):
         step_sizer = StepSizer(step_size)
         step_size = step_sizer.next()
 
+        starts, stops, events = start_stop_events['start'].values, start_stop_events['stop'].values, start_stop_events['event'].values
+
+
         while converging:
             i += 1
-            h, g, ll = self._get_gradients(df, stop_times_events, weights, beta)
+            h, g, ll = self._get_gradients(df.values, starts, stops, events, weights.values, beta)
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -325,7 +280,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    def _get_gradients(self, df, stops_events, weights, beta):
+    def _get_gradients(self, df, starts, stops, events, weights, beta):
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
@@ -340,17 +295,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         gradient = np.zeros(d)
         log_lik = 0
 
-        unique_death_times = np.unique(stops_events['stop'].loc[stops_events['event']])
+        unique_death_times = np.unique(stops[events])
 
         for t in unique_death_times:
 
             # I feel like this can be made into some tree-like structure
-            ix = (stops_events['start'].values < t) & (t <= stops_events['stop'].values)
+            ix = (starts < t) & (t <= stops)
 
-            df_at_t = df.values[ix]
-            weights_at_t = weights.values[ix]
-            stops_events_at_t = stops_events['stop'].values[ix]
-            events_at_t = stops_events['event'].values[ix]
+            df_at_t = df[ix]
+            weights_at_t = weights[ix]
+            stops_events_at_t = stops[ix]
+            events_at_t = events[ix]
 
             phi_i = weights_at_t * exp(dot(df_at_t, beta))
             phi_x_i = phi_i * df_at_t
@@ -417,6 +372,97 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             log_lik += dot(x_death_sum, beta)[0]
 
         return hessian, gradient.reshape(1, d), log_lik
+
+
+    def _compute_sandwich_estimator(self, df, start_stop_events, weights):
+
+
+        starts, stops, events = start_stop_events['start'].values, \
+                                start_stop_events['stop'].values, \
+                                start_stop_events['event'].values
+
+        unique_death_times = np.unique(stops[events])
+        t = unique_death_times.shape[0]
+        n, d = df.shape
+
+        # Init risk and tie sums to zero
+        risk_phi = 0
+        risk_phi_x = np.zeros((1, d))
+
+        # need to store these histories, as we access them often
+        risk_phi_history = pd.DataFrame(np.zeros((t,)), index=df.index)
+        risk_phi_x_history = pd.DataFrame(np.zeros((t, d)), index=df.index)
+
+        E = E.astype(int)
+        score_residuals = np.zeros((n, d))
+        # we already unnormalized the betas in `fit`, so we need normalize them again since X is
+        # normalized.
+        beta = self.hazards_.values[0] * self._norm_std
+
+
+        for t in unique_death_times:
+
+            ix = (starts < t) & (t <= stops)
+
+            df_at_t = df[ix]
+            weights_at_t = weights[ix]
+            stops_events_at_t = stops[ix]
+            events_at_t = events[ix]
+
+            phi_i = weights_at_t * exp(dot(df_at_t, beta))
+            phi_x_i = phi_i * df_at_t
+
+            risk_phi += phi_i
+            risk_phi_x += phi_x_i
+
+            risk_phi_history[t] = risk_phi
+            risk_phi_x_history[t] = risk_phi_x
+
+        import ipdb
+        ipdb.set_trace()
+
+        last_start_stop_events = start_stop_events.groupby(level=0).last()
+        last_df = df.groupby(level=0).last()
+
+        # Iterate over individuals
+        for subject in df.index.unique():
+            subject_df = df.loc[subject]
+            subject_T = last_start_stop_events.loc[subject]['stop']
+            subject_E = last_start_stop_events.loc[subject]['event']
+            subject_df_at_T = last_df.loc[subject]
+
+            score = subject_E * (subject_df_at_T - risk_phi_x_history[subject_T] / risk_phi_history[subject_T])
+            # iterate over all subjects again =(
+            # actually only subjects who died _before_ original subject
+            for subject_j in df.index.unique():
+                subject_j_T = last_start_stop_events.loc[subject_j]['stop']
+                subject_j_E = last_start_stop_events.loc[subject_j]['event']
+
+                #score -= subject_j_E * (subject_T >= subject_j_T) * (score of subject i at subject_j_T)
+
+
+
+        for t in unique_death_times:
+            # Doing it like this to preserve shape
+            ix = (starts < t) & (t <= stops)
+
+            df_at_t = df[ix]
+            weights_at_t = weights[ix]
+            stops_events_at_t = stops[ix]
+            events_at_t = events[ix]
+
+            phi_i = weights_at_t * exp(dot(df_at_t, beta))
+
+            score = -sum(E[j] * weights[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j]) for j in range(0, i+1))
+
+            score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
+            score *= weights[i]
+            score_residuals[i, :] = score
+
+        naive_var = inv(self._hessian_)
+        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
+        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
+        return sandwich_estimator
 
     def predict_log_partial_hazard(self, X):
         """
@@ -559,19 +605,19 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return ax
 
 
-    def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events, weights):
+    def _compute_cumulative_baseline_hazard(self, tv_data, start_stop_events, weights):
         hazards = self.predict_partial_hazard(tv_data).values
 
-        unique_death_times = np.unique(stop_times_events['stop'].loc[stop_times_events['event']])
+        unique_death_times = np.unique(start_stop_events['stop'].loc[start_stop_events['event']])
         baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times),
                                         index=unique_death_times,
                                         columns=['baseline hazard'])
 
         for t in unique_death_times:
-            ix = (stop_times_events['start'].values < t) & (t <= stop_times_events['stop'].values)
+            ix = (start_stop_events['start'].values < t) & (t <= start_stop_events['stop'].values)
 
-            events_at_t = stop_times_events['event'].values[ix]
-            stops_at_t = stop_times_events['stop'].values[ix]
+            events_at_t = start_stop_events['event'].values[ix]
+            stops_at_t = start_stop_events['stop'].values[ix]
             weights_at_t = weights.values[ix]
             hazards_at_t = hazards[ix]
 
