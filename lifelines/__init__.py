@@ -7,4 +7,4 @@ from .version import __version__
 
 __all__ = ['KaplanMeierFitter', 'NelsonAalenFitter', 'AalenAdditiveFitter',
            'BreslowFlemingHarringtonFitter', 'CoxPHFitter', 'WeibullFitter',
-           'ExponentialFitter', 'CoxTimeVaryingFitter']
+           'ExponentialFitter', 'CoxTimeVaryingFitter', 'AalenJohansenFitter']
