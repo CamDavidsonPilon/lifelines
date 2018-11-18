@@ -24,7 +24,7 @@ from lifelines.compat import PY2, PY3
 from lifelines.utils import k_fold_cross_validation, StatError, concordance_index, ConvergenceWarning, to_long_format
 from lifelines.estimation import CoxPHFitter, AalenAdditiveFitter, KaplanMeierFitter, \
     NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, \
-    WeibullFitter, BaseFitter, CoxTimeVaryingFitter
+    WeibullFitter, BaseFitter, CoxTimeVaryingFitter, AalenJohansenFitter
 from lifelines.datasets import load_larynx, load_waltons, load_kidney_transplant, load_rossi,\
     load_panel_test, load_g3, load_holly_molly_polly, load_regression_dataset,\
     load_stanford_heart_transplants
