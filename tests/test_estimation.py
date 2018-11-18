@@ -1200,7 +1200,34 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph.fit(df, 'T', 'E', cluster_col='id', show_progress=True)
         expected = pd.Series({'var1': 5.9752, 'var2': 4.0683})
         assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)
-        cph.print_summary()
+
+    @pytest.mark.xfail(reason="can't do this yet")
+    def test_cluster_option_with_strata(self, regression_dataset):
+        """
+        library(survival)
+        df <- data.frame(
+          "var1" = c(1, 1, 2, 2, 2),
+          "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
+          "id" = c(1, 1, 2, 3, 4),
+          "T" = c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666)
+        )
+        df['E'] = 1
+
+        c = coxph(formula=Surv(T, E) ~ strata(var1) + var2 + cluster(id), data=df)
+        """
+
+        df = pd.DataFrame({
+            "var1": [1, 1, 2, 2, 2],
+            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
+            "T":    [7.335846, 5.269797, 11.684092, 12.678458, 6.601666],
+            "id":   [1, 1, 2, 3, 4],
+        })
+        df['E'] = 1
+
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E', cluster_col='id', strata=['var1'], show_progress=True)
+        expected = pd.Series({'var2': 3.34})
+        assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)
 
 
     def test_robust_errors_with_less_trival_weights_is_the_same_as_R(self, regression_dataset):

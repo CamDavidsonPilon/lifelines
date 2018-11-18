@@ -461,6 +461,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         _, d = X.shape
 
+        if self.strata is not None and self.cluster_col is not None:
+            raise NotImplementedError("Providing clusters and strata is not implemented yet")
+
         if self.strata is not None:
             score_residuals = np.empty((0, d))
             for strata in np.unique(X.index):
@@ -475,13 +478,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             score_residuals = self._compute_residuals_within_strata(X.values, T.values, E.values, weights.values) * weights[:, None]
 
         if self.cluster_col:
+
             score_residuals_ = np.empty((0, d))
             for cluster in np.unique(self._clusters):
                 ix = self._clusters == cluster
                 weights_ = weights.values[ix]
 
                 score_residuals_ = np.append(score_residuals_,
-                                            (score_residuals[ix, :] * weights_).sum(0).reshape(1, d),
+                                            (score_residuals[ix, :] * weights_[:, None]).sum(0).reshape(1, d),
                                             axis=0)
             score_residuals = score_residuals_
 
