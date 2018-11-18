@@ -20,6 +20,7 @@
  - In Python3, Univariate models are now serialisable with `pickle`. Thanks @dwilson1988 for the contribution. For Python2, `dill` is still the preferred method.
  - `baseline_cumulative_hazard_` (and derivatives of that) on `CoxPHFitter` now correctly incorporate the `weights_col`. 
  - Fixed a bug in `KaplanMeierFitter` when late entry times lined up with death events. Thanks @pzivich
+ - adding `cluster_col` argument to `CoxPHFitter` so users can specify groups of subjects/rows that may be correlated. 
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).
