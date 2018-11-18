@@ -319,7 +319,7 @@ probabilities of survival at those points:
 
 .. code:: python
 
-    ax = subplot(111)
+    ax = plt.subplot(111)
     
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
@@ -452,12 +452,17 @@ keywords to tinker with.
 Fitting to a Weibull model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another very popular model for survival data is the Weibull model. In contrast the the Kaplan Meier estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Kaplan Meier estimator has no parameters to fit too). Mathematically, the survival function looks like:
+Another very popular model for survival data is the Weibull model. In contrast the the Kaplan Meier estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Kaplan Meier estimator has no parameters to fit to). Mathematically, the survival function looks like:
 
 
  ..math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
 
- Apriori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In lifelines, this is implemented in the ``WeibullFitter``:
+* A priori*, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In fact, we actually model and estimate the hazard rate:
+
+
+ ..math::  S(t) = -(\lambda t)^\rho,   \lambda >0, \rho > 0,
+
+In lifelines, estimation is available using the ``WeibullFitter`` class:
 
 .. code:: python
 
@@ -468,8 +473,35 @@ Another very popular model for survival data is the Weibull model. In contrast t
 
     wf = WeibullFitter()
     wf.fit(T, E)
+    
     print(wf.lambda_, wf.rho_)
     wf.print_summary()
+
+    wf.plot()
+
+
+
+Other parametric models: Exponential and LogNormal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are three parametric models of the same data. 
+
+.. code:: python
+
+    from lifelines import WeibullFitter
+    from lifelines import ExponentialFitter
+    from lifelines import LogNormalFitter
+  
+    T = data['duration']
+    E = data['observed']
+
+    wf = WeibullFitter().fit(T, E, label='WeibullFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
+
+    ax = wf.plot()
+    ax = exf.plot(ax=ax)
+    ax = lnf.plot(ax=ax)
 
 
 Estimating hazard rates using Nelson-Aalen

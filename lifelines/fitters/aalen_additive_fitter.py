@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ from scipy.integrate import trapz
 from lifelines.fitters import BaseFitter
 from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
     ridge_regression as lr, qth_survival_times, pass_for_numeric_dtypes_or_raise,\
-    concordance_index, check_nans
+    concordance_index, check_nans_or_infs, ConvergenceWarning
 
 from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import fill_between_steps
@@ -151,7 +152,6 @@ class AalenAdditiveFitter(BaseFitter):
         columns = df.columns
         df = df.astype(float)
 
-
         # initialize dataframe to store estimates
         non_censorsed_times = list(T[C].iteritems())
         n_deaths = len(non_censorsed_times)
@@ -186,7 +186,7 @@ class AalenAdditiveFitter(BaseFitter):
             try:
                 v, V = lr(df.values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
             except LinAlgError:
-                print("Linear regression error. Try increasing the penalizer term.")
+                warnings.warn("Linear regression error. Try increasing the penalizer term.", ConvergenceWarning)
 
             hazards_.loc[time, id_] = v.T
             variance_.loc[time, id_] = V[:, relevant_individuals][:, 0] ** 2
@@ -279,7 +279,7 @@ class AalenAdditiveFitter(BaseFitter):
             try:
                 v, V = lr(wp[time].values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
             except LinAlgError:
-                print("Linear regression error. Try increasing the penalizer term.")
+                warnings.warn("Linear regression error. Try increasing the penalizer term.", ConvergenceWarning)
 
             hazards_.loc[id, time] = v.T
             variance_.loc[id, time] = V[:, relevant_individuals][:, 0] ** 2
@@ -307,7 +307,6 @@ class AalenAdditiveFitter(BaseFitter):
         else:
             self.timeline = self.hazards_.index.values.astype(float)
 
-
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
@@ -316,9 +315,8 @@ class AalenAdditiveFitter(BaseFitter):
 
     def _check_values(self, df, T, E):
         pass_for_numeric_dtypes_or_raise(df)
-        check_nans(T)
-        check_nans(E)
-
+        check_nans_or_infs(T)
+        check_nans_or_infs(E)
 
     def smoothed_hazards_(self, bandwidth=1):
         """
@@ -447,7 +445,9 @@ class AalenAdditiveFitter(BaseFitter):
             user_submitted_ix = slice(0, None)
         else:
             user_submitted_ix = loc if loc is not None else iloc
-        get_loc = lambda df: getattr(df, get_method)[user_submitted_ix]
+
+        def get_loc(df):
+            return getattr(df, get_method)[user_submitted_ix]
 
         if len(columns) == 0:
             columns = self.cumulative_hazards_.columns

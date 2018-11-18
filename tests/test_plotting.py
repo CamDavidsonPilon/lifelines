@@ -5,11 +5,11 @@ import pytest
 import pandas as pd
 import numpy as np
 from lifelines.estimation import NelsonAalenFitter, KaplanMeierFitter, AalenAdditiveFitter,\
-    CoxPHFitter
+    CoxPHFitter, CoxTimeVaryingFitter
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes
 from lifelines.datasets import load_waltons, load_regression_dataset, load_lcd,\
-    load_panel_test
+    load_panel_test, load_stanford_heart_transplants
 from lifelines.generate_datasets import cumulative_integral
 
 
@@ -55,6 +55,22 @@ class TestPlotting():
         kmf.fit(data1)
         kmf.plot(at_risk_counts=True)
         self.plt.title("test_kmf_with_risk_counts")
+        self.plt.show(block=block)
+
+
+    def test_kmf_with_inverted_axis(self, block, kmf):
+
+        T = np.random.exponential(size=100)
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, label='t2')
+        ax = kmf.plot(invert_y_axis=True, at_risk_counts=True)
+
+        T = np.random.exponential(3, size=100)
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, label='t1')
+        kmf.plot(invert_y_axis=True, ax=ax, ci_force_lines=False)
+
+        self.plt.title("test_kmf_with_inverted_axis")
         self.plt.show(block=block)
 
     def test_naf_plotting_with_custom_colours(self, block):
@@ -233,12 +249,36 @@ class TestPlotting():
         self.plt.title('test_coxph_plotting')
         self.plt.show(block=block)
 
+    def test_coxph_plotting_with_subset_of_columns(self, block):
+        df = load_regression_dataset()
+        cp = CoxPHFitter()
+        cp.fit(df, "T", "E")
+        cp.plot(columns=['var1', 'var2'])
+        self.plt.title('test_coxph_plotting_with_subset_of_columns')
+        self.plt.show(block=block)
+
+    def test_coxph_plotting_with_subset_of_columns_and_standardized(self, block):
+        df = load_regression_dataset()
+        cp = CoxPHFitter()
+        cp.fit(df, "T", "E")
+        cp.plot(True, columns=['var1', 'var2'])
+        self.plt.title('test_coxph_plotting_with_subset_of_columns_and_standardized')
+        self.plt.show(block=block)
+
     def test_coxph_plotting_normalized(self, block):
         df = load_regression_dataset()
         cp = CoxPHFitter()
         cp.fit(df, "T", "E")
         cp.plot(True)
-        self.plt.title('test_coxph_plotting')
+        self.plt.title('test_coxph_plotting_normalized')
+        self.plt.show(block=block)
+
+    def test_coxtv_plotting_with_subset_of_columns_and_standardized(self, block):
+        df = load_stanford_heart_transplants()
+        ctv = CoxTimeVaryingFitter()
+        ctv.fit(df, id_col='id', event_col='event')
+        ctv.plot(True, columns=['age', 'year'])
+        self.plt.title('test_coxtv_plotting_with_subset_of_columns_and_standardized')
         self.plt.show(block=block)
 
     def test_kmf_left_censorship_plots(self, block):

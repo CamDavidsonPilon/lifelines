@@ -35,9 +35,9 @@ Cox's Proportional Hazard model
 Lifelines has an implementation of the Cox propotional hazards regression model (implemented in 
 R under ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
-.. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i\right)}
+.. math::  \lambda(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i x_i \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the second term is only a scalar factor that only increases or decreases the baseline hazard. Thus a change in a covariate will only increase or decrease this baseline hazard. 
+Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease this baseline hazard. 
 
 
 Lifelines implementation
@@ -55,25 +55,32 @@ This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfo
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
 
     cph.print_summary()  # access the results using cph.summary
 
     """
-    n=432, number of events=114
+          duration col = week
+             event col = arrest
+    number of subjects = 432
+      number of events = 114
+        log-likelihood = -658.748
+      time fit was run = 2018-10-22 20:47:44 UTC
 
+    ---
             coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-    fin  -0.3790     0.6845    0.1914 -1.9806 0.0476     -0.7542     -0.0039   *
-    age  -0.0572     0.9444    0.0220 -2.6042 0.0092     -0.1003     -0.0142  **
-    race  0.3141     1.3691    0.3080  1.0198 0.3078     -0.2897      0.9180
-    wexp -0.1511     0.8597    0.2121 -0.7124 0.4762     -0.5670      0.2647
-    mar  -0.4328     0.6487    0.3818 -1.1335 0.2570     -1.1813      0.3157
-    paro -0.0850     0.9185    0.1957 -0.4341 0.6642     -0.4687      0.2988
-    prio  0.0911     1.0954    0.0286  3.1824 0.0015      0.0350      0.1472  **
+    fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043   *
+    age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143  **
+    race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
+    wexp -0.1498     0.8609    0.2122 -0.7058 0.4803     -0.5657      0.2662
+    mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
+    paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
+    prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Concordance = 0.640
+    Likelihood ratio test = 33.266 on 7 df, p=0.00002
     """
 
 To access the coefficients and the baseline hazard directly, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. 
@@ -82,9 +89,9 @@ To access the coefficients and the baseline hazard directly, you can use ``cph.h
 Convergence 
 ###########################################
 
-Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
+Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
 
-After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively. The ``_hessian_`` can be used the find the covariance matrix of the coefficients. 
+After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively. 
 
 
 Goodness of fit and prediction
@@ -104,12 +111,13 @@ After fitting, you can use use the suite of prediction methods (similar to Aalen
     X = rossi_dataset.drop(["week", "arrest"], axis=1)
     cph.predict_partial_hazard(X)
     cph.predict_survival_function(X)
+    cph.predict_survival_function(X, times=[5., 25., 50.])
 
 
 Plotting the coefficients
 ###########################################
 
-With a fitted model, an altervative way to view the coefficients and their ranges is to use the ``plot`` method.
+With a fitted model, an alternative way to view the coefficients and their ranges is to use the ``plot`` method.
 
 .. code:: python
 
@@ -118,7 +126,7 @@ With a fitted model, an altervative way to view the coefficients and their range
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
 
     cph.plot()
 
@@ -138,7 +146,7 @@ holding everything else equal. This is useful to understand the impact of a cova
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
 
     cph.plot_covariate_groups('prio', [0, 5, 10, 15])
 
@@ -184,10 +192,15 @@ The second variable is the regime type, and this variable does not follow the pr
 .. image:: images/lls_regime_type.png
 
 
+Non-proportional hazards is a case of *model misspecification*. Two suggestions are to look for ways to *stratify* a column (see below), or to go ahead with the current model but use ``robust`` errors (in this case, the sandwhich error). In the latter case, you can specify this with with ``CoxPHFitter.fit(..., robust=True)``. 
+
+
 Stratification
 ################
 
-Sometimes a covariate may not obey the proportional hazard assumption. In this case, we can allow a factor without estimating its effect to be adjusted. To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
+Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* datasets, defined by the covariate(s). Each dataset has its own baseline hazard (the non-parametric part ofthe model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``. 
+
+To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
 
 .. code:: python
 
@@ -195,26 +208,45 @@ Sometimes a covariate may not obey the proportional hazard assumption. In this c
     from lifelines import CoxPHFitter
 
     rossi_dataset = load_rossi()
-
-    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'], show_progress=True)
 
     cph.print_summary()  # access the results using cph.summary
 
     """
-    n=432, number of events=114
+          duration col = week
+             event col = arrest
+                strata = ['race']
+    number of subjects = 432
+      number of events = 114
+        log-likelihood = -620.564
+      time fit was run = 2018-10-23 02:45:52 UTC
 
+    ---
             coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-    fin  -0.3775     0.6856    0.1913 -1.9731 0.0485     -0.7525     -0.0024   *
-    age  -0.0573     0.9443    0.0220 -2.6081 0.0091     -0.1004     -0.0142  **
-    wexp -0.1435     0.8664    0.2127 -0.6746 0.4999     -0.5603      0.2734
-    mar  -0.4419     0.6428    0.3820 -1.1570 0.2473     -1.1907      0.3068
-    paro -0.0839     0.9196    0.1958 -0.4283 0.6684     -0.4677      0.3000
-    prio  0.0919     1.0962    0.0287  3.1985 0.0014      0.0356      0.1482  **
+    fin  -0.3788     0.6847    0.1913 -1.9799 0.0477     -0.7537     -0.0038   *
+    age  -0.0576     0.9440    0.0220 -2.6198 0.0088     -0.1008     -0.0145  **
+    wexp -0.1428     0.8670    0.2128 -0.6708 0.5023     -0.5598      0.2743
+    mar  -0.4388     0.6448    0.3821 -1.1484 0.2508     -1.1878      0.3101
+    paro -0.0858     0.9178    0.1958 -0.4380 0.6614     -0.4695      0.2980
+    prio  0.0922     1.0966    0.0287  3.2102 0.0013      0.0359      0.1485  **
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
     Concordance = 0.638
+    Likelihood ratio test = 109.634 on 6 df, p=0.00000
     """
+
+    cph.baseline_cumulative_hazard_.shape
+    # (49, 2)
+
+Weights & Robust Errors
+########################
+
+Observations can come with weights, as well. These weights may be integer values representing some commonly occuring observation, or they may be float values representing some sampling weights or inverse probability weights. In the ``CoxPHFitter.fit`` method, an option is present for specifying which column in the dataframe should be used as weights. See example below. 
+
+Generally, unless your weights are integers should 
+
 
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -232,6 +264,7 @@ Aalen's additive model typically does not estimate the individual
 :math:`b_i(t)` but instead estimates :math:`\int_0^t b_i(s) \; ds`
 (similar to the estimate of the hazard rate using ``NelsonAalenFitter``
 above). This is important to keep in mind when analyzing the output.
+
 .. code:: python
 
     from lifelines import AalenAdditiveFitter
@@ -561,12 +594,12 @@ Often an individual will have a covariate change over time. An example of this i
 
 We can incorporate changes over time into our survival analysis by using a modification of the Cox model above. The general mathematical description is:
 
-.. math::  \lambda(t | X) = b_0(t) \exp{\left(\sum_{i=1}^d b_i x_i(t)\right)}
+.. math::  \lambda(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i x_i(t) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
 Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this. 
 
-Dataset for time-varying regression
-####################################
+Dataset creation for time-varying regression
+#############################################
 
 Lifelines requires that the dataset be in what is called the *long* format. This looks like one row per state change, including an ID, the left (exclusive) time point, and right (inclusive) time point. For example, the following dataset tracks three unique subjects. 
 
@@ -630,11 +663,9 @@ Lifelines requires that the dataset be in what is called the *long* format. This
       <p>5 rows × 6 columns</p>
     </div>
 
-In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. For example, subject ID 2 had variable ``z=0`` up to and including the end of time period 5 (we can think that measurements happen at end of the time period.), after which it was set to 1.
+In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. For example, subject ID 2 had variable ``z=0`` up to and including the end of time period 5 (we can think that measurements happen at end of the time period), after which it was set to 1. Since ``event`` is 1 in that row, we conclude that the subject died at time 8,
 
-So if this is the desired dataset, it can be built up first from smaller datasets. To do this we can use some helper functions provided in lifelines. 
-
-Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations, and a censorsed flag, and possibly static covariates. Ex: 
+This desired dataset can be built up from smaller datasets. To do this we can use some helper functions provided in lifelines. Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations alive, and a censorsed flag, and possibly static covariates. Ex: 
 
 .. raw:: html
 
@@ -666,7 +697,55 @@ Typically, data will be in a format that looks like it comes out of a relational
       <p>2 rows × 4 columns</p>
     </div>
 
-You'll also have secondary dataset that reference taking future measurements. Example:
+We will perform a light transform to this dataset to modify it into the "long" format.   
+
+.. code:: python
+
+      from lifelines.utils import to_long_format
+
+      base_df = to_long_format(base_df, duration_col="duration")
+
+The new dataset looks like:
+
+
+.. raw:: html
+
+    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
+      <table border="1" class="dataframe">
+        <thead>
+          <tr style="text-align: right;">
+            <th style="padding:8px;">id</th>
+            <th style="padding:8px;">start</th>
+            <th style="padding:8px;">stop</th>
+            <th style="padding:8px;">var1</th>
+            <th style="padding:8px;">event</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px;">1</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">10</td>
+            <td style="padding: 8px;">0.1</td>
+            <td style="padding: 8px;">True</td>
+          </tr>          
+          <tr>
+            <td style="padding: 8px;">2</td>
+            <td style="padding: 8px;">0</td>
+            <td style="padding: 8px;">12</td>
+            <td style="padding: 8px;">0.5</td>
+            <td style="padding: 8px;">False</td>
+          </tr>          
+        </tbody>
+      </table>
+      <p>2 rows × 5 columns</p>
+    </div>
+
+
+
+You'll also have secondary dataset that references future measurements. This could come in two "types". The first is when you have a variable that changes over time (ex: administering varying medication over time, or taking a tempature over time). The second types is an event-based dataset: an event happens at some time in the future (ex: an organ transplant occurs, or an intervention). We will address this second type later. The first type of dataset may look something like: 
+
+Example:
 
 .. raw:: html
 
@@ -705,14 +784,13 @@ You'll also have secondary dataset that reference taking future measurements. Ex
       <p>4 rows × 3 columns</p>
     </div>
 
-where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at the end of time 4 and at the end of time 8. We can use ``to_long_format`` to transform the base dataset into a long format and ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
+where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at the end of time 4 and at the end of time 8. We can use ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
+
 
 .. code:: python
     
-      from lifelines.utils import to_long_format
       from lifelines.utils import add_covariate_to_timeline
 
-      base_df = to_long_format(base_df, duration_col="T")
       df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="event")
 
 
@@ -768,42 +846,97 @@ where ``time`` is the duration from the entry event. Here we see subject 1 had a
       <p>4 rows × 6 columns</p>
     </div>
 
-From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost them after time 2.
+From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost track of them after time 12.
 
- You may have multiple covariates you wish to add, so the above could be streamlined like so:
+You may have multiple covariates you wish to add, so the above could be streamlined like so:
 
 .. code:: python
     
-      from lifelines.utils import to_long_format
       from lifelines.utils import add_covariate_to_timeline
 
-      base_df = to_long_format(base_df, duration_col="T")
       df = base_df.pipe(add_covariate_to_timeline, cv1, duration_col="time", id_col="id", event_col="event")\
                   .pipe(add_covariate_to_timeline, cv2, duration_col="time", id_col="id", event_col="event")\
                   .pipe(add_covariate_to_timeline, cv3, duration_col="time", id_col="id", event_col="event")
 
 
-One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want to the covariate to reflect how much we have administered since the start. In contrast, a covariate the measure the temperature of the patient is a state update. See :ref:`Example cumulative total using ``add_covariate_to_timeline``` to see an example of this.
+If your dataset is of the second type, that is, event-based, your dataset may look something like the following, where values in the matrix denote times since the subject's birth, and ``None`` or  ``NaN`` represent the event not happening (subjects can be excluded if the event never occurred as well) :
+
+.. code-block:: python
+    
+    print(event_df)
+
+
+        id    E1  
+    0   1     1.0 
+    1   2     NaN 
+    2   3     3.0 
+    ...
+
+Initially, this can't be added to our baseline dataframe. However, using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added. 
+
+
+.. code-block:: python
+
+    from lifelines.utils import covariates_from_event_matrix
+
+    cv = covariates_from_event_matrix(event_df, id_col="id")
+    print(cv)
+
+
+    event  id  duration  E1
+    0       1       1.0   1
+    1       3       3.0   1
+    ...
+
+
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
 
 For an example of pulling datasets like this from a SQL-store, and other helper functions, see :ref:`Example SQL queries and transformations to get time varying data`.
 
+Cumulative sums
+#############################################
 
-Fitting the model and a short note on prediction
+One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want the covariate to reflect how much we have administered since the start. Event columns do make sense to cumulative sum as well. In contrast, a covariate to measure the temperature of the patient is a state update, and should not be summed.  See :ref:`Example cumulative total using and time-varying covariates` to see an example of this.
+
+Delaying time-varying covariates
+#############################################
+
+``add_covariate_to_timeline`` also has an option for delaying, or shifting, a covariate so it changes later than originally observed. One may ask, why should one delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknownst to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
+
+To handle this, you can delay the observations by time periods:
+
+.. code-block:: python
+
+    from lifelines.utils import covariates_from_event_matrix
+
+
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", delay=14)
+
+
+
+Fitting the model
 ################################################
 
-Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. 
+Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. The method is similar to ``CoxPHFitter``, expect we need to tell the ``fit`` about the additional time columns.
+
+Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
+
 
 .. code:: python
 
     from lifelines import CoxTimeVaryingFitter
 
     ctv = CoxTimeVaryingFitter()
-    ctv.fit(df, id_col="id", event_col="event", start_col="start", stop_col="stop")
+    ctv.fit(df, id_col="id", event_col="event", start_col="start", stop_col="stop", show_progress=True)
     ctv.print_summary()
     ctv.plot()
 
 
-Unlike the other regression models, prediction in a time-varying setting is not possible normally. To predict, we would need to know the covariates values beyond the current time, but if we knew that, we would also know if the subject was still alive or not. For this reason, there are no prediction methods attached to ``CoxTimeVaryingFitter``. 
+Short note on prediction
+################################################
+
+Unlike the other regression models, prediction in a time-varying setting is not trivial. To predict, we would need to know the covariates values beyond the observed times, but if we knew that, we would also know if the subject was still alive or not! However, it is still possible to compute the hazard values of subjects at known observations, the baseline cumulative hazard rate, and baseline survival function. So while ``CoxTimeVaryingFitter`` exposes prediction methods, there are logicial limitations to what these predictions mean. 
+
 
 
 Model Selection in Survival Regression
@@ -818,7 +951,30 @@ of AUC, another common loss function, and is interpreted similarly:
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-The measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships) and the predicted times.
+A fitted model's concordance-index is present in the `print_summary()`, but also available under the `score_` property. Generally, the measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships) and the predicted times.
+
+.. code:: python
+
+    from lifelines import CoxPHFitter
+    from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    cph = CoxPHFitter()
+    cph.fit(rossi, duration_col="week", event_col="arrest")
+
+    # method one
+    cph.print_summary()
+
+    # method two
+    print(cph.score_)
+
+    # method three
+    from lifelines.utils import concordance_index
+    print(concordance_index(rossi['week'], -cph.predict_partial_hazard(rossi).values, rossi['arrest']))
+
+
+However, there are other, arguably better, methods to measure the fit of a model. Included in `print_summary` is the log-likelihood, which can be used in an `AIC calculation <https://en.wikipedia.org/wiki/Akaike_information_criterion>`, and the `log-likelihood ratio statistic <https://en.wikipedia.org/wiki/Likelihood-ratio_test>`. Generally, I personally loved this article by Frank Harrell, `"Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements" <http://www.fharrell.com/post/addvalue/>`. 
 
 
 Cross Validation

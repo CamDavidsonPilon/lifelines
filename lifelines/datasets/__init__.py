@@ -270,7 +270,8 @@ def load_rossi(**kwargs):
 
 def load_regression_dataset(**kwargs):
     """
-    Artificial regression dataset
+    Artificial regression dataset. Useful since there are no ties in this dataset.
+    Slightly edit in v0.15.0 to achieve this, however.
 
     Size: (200,5)
     Example:
@@ -362,4 +363,23 @@ def load_dfcv():
     3       0    1.0  0   6.0   4   True
     """
     from lifelines.datasets.dfcv_dataset import dfcv
-    return dfcv
+    return dfcv.copy()
+
+
+def load_lymphoma(**kwargs):
+    """
+    From https://www.statsdirect.com/help/content/survival_analysis/logrank.htm
+
+
+    Size: (80, 3)
+
+    Example:
+
+       Stage_group  Time  Censor
+    0            1     6       1
+    1            1    19       1
+    2            1    32       1
+    3            1    42       1
+    4            1    42       1
+    """
+    return load_dataset('lymphoma.csv', **kwargs)

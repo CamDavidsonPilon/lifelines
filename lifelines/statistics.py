@@ -29,7 +29,8 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con,
     Returns:
         n_exp, n_con: the samples sizes need for the experiment and control group, respectively, to achieve desired power
     """
-    z = lambda p: stats.norm.ppf(p)
+    def z(p):
+        return stats.norm.ppf(p)
 
     m = 1.0 / ratio_of_participants \
         * ((ratio_of_participants * postulated_hazard_ratio + 1.0) / (postulated_hazard_ratio - 1.0)) ** 2 \
@@ -60,7 +61,8 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     Returns:
         power: power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
     """
-    z = lambda p: stats.norm.ppf(p)
+    def z(p):
+        return stats.norm.ppf(p)
 
     m = n_exp * p_exp + n_con * p_con
     k = float(n_exp) / float(n_con)
@@ -77,11 +79,15 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     H_0: both event series are from the same generating processes
     H_A: the event series are from different generating processes.
 
-    See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
+
+    This implicitly uses the log-rank weights.
+
+    See also `multivariate_logrank_test` for a more general function.
+
 
     Parameters:
-      event_times_foo: a (nx1) array of event durations (birth to death,...) for the population.
-      censorship_bar: a (nx1) array of censorship flags, 1 if observed, 0 if not. Default assumes all observed.
+      event_times_foo: a (n,) list-like of event durations (birth to death,...) for the population.
+      censorship_bar: a (n,) list-like of censorship flags, 1 if observed, 0 if not. Default assumes all observed.
       t_0: the period under observation, -1 for all time.
       alpha: the level of signifiance
       kwargs: add keywords and meta-data to the experiment summary
@@ -89,6 +95,7 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     Returns:
       results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
 
+    See Survival and Event Analysis, page 108.
     """
 
     event_times_A, event_times_B = np.array(event_times_A), np.array(event_times_B)
@@ -171,7 +178,7 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     H_A: there exist atleast one group that differs from the other.
 
     Parameters:
-      event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
+      event_durations: a (n,) numpy array of the (partial) lifetimes of all individuals
       groups: a (n,) numpy array of unique group labels for each individual.
       event_observed: a (n,) numpy array of event observations: 1 if observed death, 0 if censored. Defaults
           to all observed.
@@ -181,6 +188,27 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
 
     Returns
       results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
+
+    Example:
+
+        >> df = pd.DataFrame({
+            'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+            'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+        })
+        >> result = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
+        >> result.test_statistic
+        >> result.p_value
+
+
+        >> # numpy example
+        >> G = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+        >> T = [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7]
+        >> E = [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
+        >> result = multivariate_logrank_test(T, G, E)
+        >> result.test_statistic
+
+
 
     """
     if not (0 < alpha <= 1.):
@@ -212,16 +240,16 @@ def multivariate_logrank_test(event_durations, groups, event_observed=None,
     assert abs(Z_j.sum()) < 10e-8, "Sum is not zero."  # this should move to a test eventually.
 
     # compute covariance matrix
-    factor = (((n_i - d_i) / (n_i - 1)).replace(np.inf, 1)) * d_i
+    factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i ** 2
     n_ij['_'] = n_i.values
-    V_ = n_ij.mul(np.sqrt(factor) / n_i, axis='index').fillna(1)
+    V_ = n_ij.mul(np.sqrt(factor), axis='index').fillna(0)
     V = -np.dot(V_.T, V_)
     ix = np.arange(n_groups)
-    V[ix, ix] = -V[-1, ix] + V[ix, ix]
+    V[ix, ix] = V[ix, ix] - V[-1, ix]
     V = V[:-1, :-1]
 
     # take the first n-1 groups
-    U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1]).dot(Z_j.iloc[:-1]))  # Z.T*inv(V)*Z
+    U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1])).dot(Z_j.iloc[:-1])  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
     test_result, p_value = chisq_test(U, n_groups - 1, alpha)

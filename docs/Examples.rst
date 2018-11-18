@@ -52,13 +52,34 @@ compares whether the "death" generation process of the two populations are equal
 
    print(results.p_value)        # 0.46759 
    print(results.test_statistic) # 0.528
-   print(results.is_significant) # False
 
 
 If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares
 each pair in the same manner as above), or ``multivariate_logrank_test`` (which tests the 
 hypothesis that all the populations have the same "death" generation process).
 
+
+.. code-block:: python
+    
+    from lifelines.statistics import multivariate_logrank_test
+
+    df = pd.DataFrame({
+        'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2], # could be strings too
+        'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+    })
+
+    results = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
+    results.print_summary()
+
+    """
+    t_0=-1, alpha=0.95, null_distribution=chi squared, df=2
+
+    test_statistic      p
+            1.0800 0.5827
+    ---
+    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    """
 
 
 Model selection using lifelines
@@ -261,6 +282,18 @@ Hide confidence intervals
    :height: 300
 
 
+Invert axis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.fit(T, label="kmf.plot(invert_y_axis=True)")
+    kmf.plot(invert_y_axis=True)
+
+.. image:: /images/invert_y_axis.png 
+   :height: 300
+
+
 Set the index/timeline of a estimate
 ##############################################
 
@@ -458,9 +491,7 @@ Initially, this can't be added to our baseline dataframe. Using ``utils.covariat
     df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", cumulative_sum=True)
 
 
-
-
-Example cumulative total using ``add_covariate_to_timeline``
+Example cumulative total using and time-varying covariates
 ############################################################
 
 Often we have either __transactional covariate datasets__ or __state covariate datasets__. In a transactional dataset, it may make sense to sum up the covariates to represent administration of a treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
@@ -554,6 +585,8 @@ Problems with convergence in the Cox Proportional Hazard Model
 ################################################################
 Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there is sometimes a problem with convergence. Here are some common symptoms and possible resolutions:
 
+ 0. First diagnostic: look for ``ConvergenceWarning`` in the output. Most often problems in convergence are the result of problems in the dataset. Lifelines has diagnostic checks it runs against the dataset before fitting and warnings are outputted to the user. 
+
  1. ``delta contains nan value(s). Convergence halted.``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5). 
 
  2. ``LinAlgError: Singular matrix``: This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset.
@@ -569,3 +602,36 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
  5. If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).size()``.
 
+Adding weights to observations in a Cox model
+##############################################
+
+There are two common uses for weights in a model. The first is as a data size reduction technique (known as case weights). If the dataset has more than one subjects with identical attributes, including duration and event, then their likelihood contribution is the same as well. Thus, instead of computing the log-likelihood for each individual, we can compute it once and multiple it by the count of users with identical attributes. In practice, this involves first grouping subjects by covariates and counting. For example, using the Rossi dataset, we will use Pandas to group by the attributes (but other data processing tools, like Spark, could do this as well): 
+
+.. code-block:: python
+    
+    from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    rossi_weights = rossi.copy()
+    rossi_weights['weights'] = 1.
+    rossi_weights = rossi_weights.groupby(rossi.columns.tolist())['weights'].sum()\
+                                 .reset_index()
+
+
+The original dataset has 432 rows, while the grouped dataset has 387 rows plus an additional `weights` column. ``CoxPHFitter`` has an additional parameter to specify which column is the weight column.
+
+.. code-block:: python
+
+    from lifelines import CoxPHFitter
+
+    cp = CoxPHFitter()
+    cp.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
+
+
+The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the `CoxTimeVaryingFitter`. 
+
+
+The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artifical under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error. 
+
+.. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequeny of ties. g

@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
+import warnings
+import time
 import numpy as np
 import pandas as pd
 
+from scipy import stats as stats
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import inv_normal_cdf, check_nans
+from lifelines.utils import inv_normal_cdf, check_nans_or_infs, ConvergenceError, string_justify, significance_code,\
+                            ConvergenceWarning
 
 
 def _negative_log_likelihood(lambda_rho, T, E):
-    if np.any(lambda_rho < 0):
+    if np.any(np.asarray(lambda_rho) < 0):
         return 10e9
     lambda_, rho = lambda_rho
     return - np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
@@ -28,6 +32,7 @@ def _rho_gradient(lambda_rho, T, E):
 def _d_rho_d_rho(lambda_rho, T, E):
     lambda_, rho = lambda_rho
     return (1. / rho ** 2 * E + (np.log(lambda_ * T) ** 2 * (lambda_ * T) ** rho)).sum()
+
 
 def _d_lambda_d_lambda_(lambda_rho, T, E):
     lambda_, rho = lambda_rho
@@ -58,10 +63,12 @@ class WeibullFitter(UnivariateFitter):
     After calling the `.fit` method, you have access to properties like:
     `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
 
+    A summary of the fit is available with the method 'print_summary()'
+
     """
 
     def fit(self, durations, event_observed=None, timeline=None, entry=None,
-            label='Weibull_estimate', alpha=None, ci_labels=None):
+            label='Weibull_estimate', alpha=None, ci_labels=None, show_progress=False):
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -76,15 +83,15 @@ class WeibullFitter(UnivariateFitter):
              alpha for this call to fit only.
           ci_labels: add custom column names to the generated confidence intervals
                 as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-
+          show_progress: since this is an iterative fitting algorithm, switching this to True will display some iteration details.
         Returns:
           self, with new properties like `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
 
         """
 
-        check_nans(durations)
+        check_nans_or_infs(durations)
         if event_observed is not None:
-          check_nans(event_observed)
+            check_nans_or_infs(event_observed)
 
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.
@@ -92,28 +99,37 @@ class WeibullFitter(UnivariateFitter):
             raise ValueError('This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements.')
 
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        self.timeline = np.sort(np.asarray(timeline)) if timeline is not None else np.arange(int(self.durations.min()), int(self.durations.max()) + 1)
+
+        if timeline is not None:
+            self.timeline = np.sort(np.asarray(timeline))
+        else:
+            self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
+
         self._label = label
         alpha = alpha if alpha is not None else self.alpha
 
         # estimation
-        self.lambda_, self.rho_ = self._newton_rhaphson(self.durations, self.event_observed)
+        (self.lambda_, self.rho_), self._hessian_ = self._newton_rhaphson(self.durations, self.event_observed, show_progress=show_progress)
+        self._log_likelihood = -_negative_log_likelihood((self.lambda_, self.rho_), self.durations, self.event_observed)
+        self.variance_matrix_ = -inv(self._hessian_)
         self.survival_function_ = pd.DataFrame(self.survival_function_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.cumulative_hazard_ = pd.DataFrame(self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
         self.median_ = 1. / self.lambda_ * (np.log(2)) ** (1. / self.rho_)
 
-        # estimation functions - Cumulative hazard takes priority.
-        self.predict = self._predict(lambda t: np.exp(-(self.lambda_ * t) ** self.rho_), self._label)
-        self.subtract = self._subtract("cumulative_hazard_")
-        self.divide = self._divide("cumulative_hazard_")
+        # estimation methods
+        self._estimate_name = "cumulative_hazard_"
+        self._predict_label = label
+        self._update_docstrings()
 
         # plotting - Cumulative hazard takes priority.
-        self.plot = self._plot_estimate("cumulative_hazard_")
         self.plot_cumulative_hazard = self.plot
 
         return self
+
+    def _estimation_method(self,t):
+        return np.exp(-(self.lambda_ * t) ** self.rho_)
 
     def hazard_at_times(self, times):
         return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
@@ -124,10 +140,10 @@ class WeibullFitter(UnivariateFitter):
     def cumulative_hazard_at_times(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-    def _newton_rhaphson(self, T, E, precision=1e-5):
+    def _newton_rhaphson(self, T, E, precision=1e-5, show_progress=False):
         from lifelines.utils import _smart_search
 
-        def jacobian_function(parameters, T, E):
+        def hessian_function(parameters, T, E):
             return np.array([
                 [_d_lambda_d_lambda_(parameters, T, E), _d_rho_d_lambda_(parameters, T, E)],
                 [_d_rho_d_lambda_(parameters, T, E), _d_rho_d_rho(parameters, T, E)]
@@ -138,35 +154,44 @@ class WeibullFitter(UnivariateFitter):
 
         # initialize the parameters. This shows dramatic improvements.
         parameters = _smart_search(_negative_log_likelihood, 2, T, E)
-
-        iter = 1
+        i = 1
         step_size = 0.9
-        converging = True
+        max_steps = 50
+        converging, completed = True, False
+        start = time.time()
 
-        while converging and iter < 50:
+        while converging and i < max_steps:
             # Do not override hessian and gradient in case of garbage
-            j, g = jacobian_function(parameters, T, E), gradient_function(parameters, T, E)
+            h, g = hessian_function(parameters, T, E), gradient_function(parameters, T, E)
 
-            delta = solve(j, - step_size * g.T)
+            delta = solve(h, - step_size * g.T)
             if np.any(np.isnan(delta)):
-                raise ValueError("delta contains nan value(s). Convergence halted.")
+                raise ConvergenceError("delta contains nan value(s). Convergence halted.")
 
             parameters += delta
 
             # Save these as pending result
-            jacobian = j
+            hessian = h
+
+            if show_progress:
+                print("Iteration %d: norm_delta = %.5f, seconds_since_start = %.1f" % (i, norm(delta), time.time() - start))
 
             if norm(delta) < precision:
                 converging = False
-            iter += 1
+                completed = True
+            i += 1
 
-        self._jacobian = jacobian
-        return parameters
+        if show_progress and completed:
+            print("Convergence completed after %d iterations." % (i))
+        if not completed:
+            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
+
+        return parameters, hessian
 
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
-        var_lambda_, var_rho_ = inv(self._jacobian).diagonal()
+        var_lambda_, var_rho_ = inv(self._hessian_).diagonal()
 
         def _dH_d_lambda(lambda_, rho, T):
             return rho / lambda_ * (lambda_ * T) ** rho
@@ -188,7 +213,7 @@ class WeibullFitter(UnivariateFitter):
         return df
 
     def _compute_standard_errors(self):
-        var_lambda_, var_rho_ = inv(self._jacobian).diagonal()
+        var_lambda_, var_rho_ = inv(self._hessian_).diagonal()
         return pd.DataFrame([[np.sqrt(var_lambda_), np.sqrt(var_rho_)]],
                             index=['se'], columns=['lambda_', 'rho_'])
 
@@ -200,6 +225,16 @@ class WeibullFitter(UnivariateFitter):
             np.array([self.lambda_, self.rho_]) - alpha2 * se,
         ], columns=['lambda_', 'rho_'], index=['upper-bound', 'lower-bound'])
 
+
+    def _compute_z_values(self):
+        return (np.asarray([self.lambda_, self.rho_]) /
+                self._compute_standard_errors().loc['se'])
+
+
+    def _compute_p_values(self):
+        U = self._compute_z_values() ** 2
+        return stats.chi2.sf(U, 1)
+
     @property
     def summary(self):
         """Summary statistics describing the fit.
@@ -208,13 +243,15 @@ class WeibullFitter(UnivariateFitter):
         Returns
         -------
         df : pd.DataFrame
-            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
+            Contains columns coef, exp(coef), se(coef), z, p, lower, upper
+        """
         lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
         df = pd.DataFrame(index=['lambda_', 'rho_'])
         df['coef'] = [self.lambda_, self.rho_]
         df['se(coef)'] = self._compute_standard_errors().loc['se']
         df['lower %.2f' % self.alpha] = lower_upper_bounds.loc['lower-bound']
         df['upper %.2f' % self.alpha] = lower_upper_bounds.loc['upper-bound']
+        df['p'] = self._compute_p_values()
         return df
 
     def print_summary(self):
@@ -222,11 +259,16 @@ class WeibullFitter(UnivariateFitter):
         Print summary statistics describing the fit.
 
         """
-        df = self.summary
+        justify = string_justify(18)
+        print(self)
+        print('{} = {}'.format(justify('number of subjects'), self.durations.shape[0]))
+        print('{} = {}'.format(justify('number of events'), np.where(self.event_observed)[0].shape[0]))
+        print('{} = {:.3f}'.format(justify('log-likelihood'), self._log_likelihood), end='\n\n')
 
-        # Print information about data first
-        print('n={}, number of events={}'.format(self.durations.shape[0],
-                                                 np.where(self.event_observed)[0].shape[0]),
-              end='\n\n')
+        df = self.summary
+        df[''] = [significance_code(p) for p in df['p']]
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
+        print('---')
+        print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
+              end='\n\n')
         return

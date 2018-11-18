@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import numpy as np
-from .utils import coalesce
+from lifelines.utils import coalesce
 
 
 def is_latex_enabled():
@@ -168,7 +168,6 @@ def add_at_risk_counts(*fitters, **kwargs):
     return ax
 
 
-
 def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None,
                    order=False, block=True):
     """
@@ -235,157 +234,164 @@ def create_dataframe_slicer(iloc, loc):
     return lambda df: getattr(df, get_method)[user_submitted_slice]
 
 
-def plot_loglogs(cls):
-    doc_string = """
+def plot_loglogs(cls,loc=None, iloc=None, show_censors=False, censor_styles=None, **kwargs):
+    """
     Specifies a plot of the log(-log(SV)) versus log(time) where SV is the estimated survival function.
     """
 
-    def _plot_loglogs(loc=None, iloc=None, show_censors=False, censor_styles=None, **kwargs):
+    def loglog(s): return np.log(-np.log(s))
 
-        loglog = lambda s: np.log(-np.log(s))
+    if (loc is not None) and (iloc is not None):
+        raise ValueError('Cannot set both loc and iloc in call to .plot().')
 
-        if (loc is not None) and (iloc is not None):
-            raise ValueError('Cannot set both loc and iloc in call to .plot().')
+    if censor_styles is None:
+        censor_styles = {}
 
-        if censor_styles is None:
-            censor_styles = {}
+    set_kwargs_ax(kwargs)
+    set_kwargs_color(kwargs)
+    set_kwargs_drawstyle(kwargs)
+    kwargs['logx'] = True
 
-        set_kwargs_ax(kwargs)
-        set_kwargs_color(kwargs)
-        set_kwargs_drawstyle(kwargs)
-        kwargs['logx'] = True
+    dataframe_slicer = create_dataframe_slicer(iloc, loc)
 
-        dataframe_slicer = create_dataframe_slicer(iloc, loc)
+    # plot censors
+    ax = kwargs['ax']
+    colour = kwargs['c']
 
-        # plot censors
-        ax = kwargs['ax']
-        colour = kwargs['c']
+    if show_censors and cls.event_table['censored'].sum() > 0:
+        cs = {
+            'marker': '+',
+            'ms': 12,
+            'mew': 1
+        }
+        cs.update(censor_styles)
+        times = dataframe_slicer(cls.event_table.loc[(cls.event_table['censored'] > 0)]).index.values.astype(float)
+        v = cls.predict(times)
+        # don't log times, as Pandas will take care of all log-scaling later.
+        ax.plot(times, loglog(v), linestyle='None',
+                color=colour, **cs)
 
-        if show_censors and cls.event_table['censored'].sum() > 0:
-            cs = {
-                'marker': '+',
-                'ms': 12,
-                'mew': 1
-            }
-            cs.update(censor_styles)
-            times = dataframe_slicer(cls.event_table.loc[(cls.event_table['censored'] > 0)]).index.values.astype(float)
-            v = cls.predict(times)
-            # don't log times, as Pandas will take care of all log-scaling later.
-            ax.plot(times, loglog(v), linestyle='None',
-                    color=colour, **cs)
-
-        # plot estimate
-        dataframe_slicer(loglog(cls.survival_function_)).plot(**kwargs)
-        ax.set_xlabel('log(timeline)')
-        ax.set_ylabel('log(-log(survival_function_))')
-        return ax
-
-    _plot_loglogs.__doc__ = doc_string
-    return _plot_loglogs
+    # plot estimate
+    dataframe_slicer(loglog(cls.survival_function_)).plot(**kwargs)
+    ax.set_xlabel('log(timeline)')
+    ax.set_ylabel('log(-log(survival_function_))')
+    return ax
 
 
-def plot_estimate(cls, estimate):
-    doc_string = """"
-        Plots a pretty version of the fitted %s.
 
-        Matplotlib plot arguments can be passed in inside the kwargs, plus
+def plot_estimate(cls,estimate=None,loc=None, iloc=None, show_censors=False,
+         censor_styles=None, ci_legend=False, ci_force_lines=False,
+         ci_alpha=0.25, ci_show=True, at_risk_counts=False, invert_y_axis=False,
+         bandwidth=None, **kwargs):
 
-        Parameters:
-          show_censors: place markers at censorship events. Default: False
-          censor_styles: If show_censors, this dictionary will be passed into
-                         the plot call.
-          ci_alpha: the transparency level of the confidence interval.
-                    Default: 0.3
-          ci_force_lines: force the confidence intervals to be line plots
-                          (versus default shaded areas). Default: False
-          ci_show: show confidence intervals. Default: True
-          ci_legend: if ci_force_lines is True, this is a boolean flag to add
-                     the lines' labels to the legend. Default: False
-          at_risk_counts: show group sizes at time points. See function
-                          'add_at_risk_counts' for details. Default: False
-          loc: specify a time-based subsection of the curves to plot, ex:
-                   .plot(loc=slice(0.,10.))
-              will plot the time values between t=0. and t=10.
-          iloc: specify a location-based subsection of the curves to plot, ex:
-                   .plot(iloc=slice(0,10))
-                will plot the first 10 time points.
-          bandwidth: specify the bandwidth of the kernel smoother for the
-                     smoothed-hazard rate. Only used when called 'plot_hazard'.
+    """"
+    Plots a pretty figure of {0}.{1}
 
-        Returns:
-          ax: a pyplot axis object
-        """ % estimate
+    Matplotlib plot arguments can be passed in inside the kwargs, plus
 
-    def plot(loc=None, iloc=None, show_censors=False,
-             censor_styles=None, ci_legend=False, ci_force_lines=False,
-             ci_alpha=0.25, ci_show=True, at_risk_counts=False,
-             bandwidth=None, **kwargs):
+    Parameters:
+      show_censors: place markers at censorship events. Default: False
+      censor_styles: If show_censors, this dictionary will be passed into
+                     the plot call.
+      ci_alpha: the transparency level of the confidence interval.
+                Default: 0.3
+      ci_force_lines: force the confidence intervals to be line plots
+                      (versus default shaded areas). Default: False
+      ci_show: show confidence intervals. Default: True
+      ci_legend: if ci_force_lines is True, this is a boolean flag to add
+                 the lines' labels to the legend. Default: False
+      at_risk_counts: show group sizes at time points. See function
+                      'add_at_risk_counts' for details. Default: False
+      loc: specify a time-based subsection of the curves to plot, ex:
+               .plot(loc=slice(0.,10.))
+          will plot the time values between t=0. and t=10.
+      iloc: specify a location-based subsection of the curves to plot, ex:
+               .plot(iloc=slice(0,10))
+            will plot the first 10 time points.
+      invert_y_axis: boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs.
+      bandwidth: specify the bandwidth of the kernel smoother for the
+                 smoothed-hazard rate. Only used when called 'plot_hazard'.
 
-        if censor_styles is None:
-            censor_styles = {}
+    Returns:
+      ax: a pyplot axis object
+    """
 
-        if (loc is not None) and (iloc is not None):
-            raise ValueError('Cannot set both loc and iloc in call to .plot().')
 
-        set_kwargs_ax(kwargs)
-        set_kwargs_color(kwargs)
-        set_kwargs_drawstyle(kwargs)
+    if censor_styles is None:
+        censor_styles = {}
 
-        if estimate == "hazard_":
-            if bandwidth is None:
-                raise ValueError('Must specify a bandwidth parameter in the call to plot_hazard.')
-            estimate_ = cls.smoothed_hazard_(bandwidth)
-            confidence_interval_ = \
-                cls.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:, 0])
+    if (loc is not None) and (iloc is not None):
+        raise ValueError('Cannot set both loc and iloc in call to .plot().')
+
+    set_kwargs_ax(kwargs)
+    set_kwargs_color(kwargs)
+    set_kwargs_drawstyle(kwargs)
+
+    if estimate is None:
+        estimate = cls._estimate_name
+
+    if estimate == "hazard_":
+        if bandwidth is None:
+            raise ValueError('Must specify a bandwidth parameter in the call to plot_hazard.')
+        estimate_ = cls.smoothed_hazard_(bandwidth)
+        confidence_interval_ = \
+            cls.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:, 0])
+    else:
+        estimate_ = getattr(cls, estimate)
+        confidence_interval_ = getattr(cls, 'confidence_interval_')
+
+    dataframe_slicer = create_dataframe_slicer(iloc, loc)
+
+    # plot censors
+    ax = kwargs['ax']
+    colour = kwargs['c']
+
+    if show_censors and cls.event_table['censored'].sum() > 0:
+        cs = {
+            'marker': '+',
+            'ms': 12,
+            'mew': 1
+        }
+        cs.update(censor_styles)
+        times = dataframe_slicer(cls.event_table.loc[(cls.event_table['censored'] > 0)]).index.values.astype(float)
+        v = cls.predict(times)
+        ax.plot(times, v, linestyle='None',
+                color=colour, **cs)
+
+    # plot estimate
+    dataframe_slicer(estimate_).plot(**kwargs)
+
+    # plot confidence intervals
+    if ci_show:
+        if ci_force_lines:
+            dataframe_slicer(confidence_interval_).plot(linestyle="-", linewidth=1,
+                                                        color=[colour], legend=ci_legend,
+                                                        drawstyle=kwargs.get('drawstyle', 'default'),
+                                                        ax=ax, alpha=0.6)
         else:
-            estimate_ = getattr(cls, estimate)
-            confidence_interval_ = getattr(cls, 'confidence_interval_')
+            x = dataframe_slicer(confidence_interval_).index.values.astype(float)
+            lower = dataframe_slicer(confidence_interval_.filter(like='lower')).values[:, 0]
+            upper = dataframe_slicer(confidence_interval_.filter(like='upper')).values[:, 0]
+            fill_between_steps(x, lower, y2=upper, ax=ax,
+                               alpha=ci_alpha, color=colour,
+                               linewidth=1.0)
 
-        dataframe_slicer = create_dataframe_slicer(iloc, loc)
+    if at_risk_counts:
+        add_at_risk_counts(cls, ax=ax)
 
-        # plot censors
-        ax = kwargs['ax']
-        colour = kwargs['c']
+    if invert_y_axis:
+        # need to check if it's already inverted
+        original_y_ticks =  ax.get_yticks()
+        if not getattr(ax, '__lifelines_inverted', False):
+            # not inverted yet
 
-        if show_censors and cls.event_table['censored'].sum() > 0:
-            cs = {
-                'marker': '+',
-                'ms': 12,
-                'mew': 1
-            }
-            cs.update(censor_styles)
-            times = dataframe_slicer(cls.event_table.loc[(cls.event_table['censored'] > 0)]).index.values.astype(float)
-            v = cls.predict(times)
-            ax.plot(times, v, linestyle='None',
-                    color=colour, **cs)
+            ax.invert_yaxis()
+            # don't ask.
+            y_ticks = np.round(1.000000000001 - original_y_ticks, decimals=8)
+            ax.set_yticklabels(y_ticks)
+            ax.__lifelines_inverted = True
 
-        # plot estimate
-        dataframe_slicer(estimate_).plot(**kwargs)
-
-        # plot confidence intervals
-        if ci_show:
-            if ci_force_lines:
-                dataframe_slicer(confidence_interval_).plot(linestyle="-", linewidth=1,
-                                                            color=[colour], legend=ci_legend,
-                                                            drawstyle=kwargs.get('drawstyle', 'default'),
-                                                            ax=ax, alpha=0.6)
-            else:
-                x = dataframe_slicer(confidence_interval_).index.values.astype(float)
-                lower = dataframe_slicer(confidence_interval_.filter(like='lower')).values[:, 0]
-                upper = dataframe_slicer(confidence_interval_.filter(like='upper')).values[:, 0]
-                fill_between_steps(x, lower, y2=upper, ax=ax,
-                                   alpha=ci_alpha, color=colour,
-                                   linewidth=1.0)
-
-
-        if at_risk_counts:
-            add_at_risk_counts(cls, ax=ax)
-
-        return ax
-
-    plot.__doc__ = doc_string
-    return plot
-
+    return ax
 
 def fill_between_steps(x, y1, y2=0, h_align='left', ax=None, **kwargs):
     ''' Fills a hole in matplotlib: Fill_between for step plots.

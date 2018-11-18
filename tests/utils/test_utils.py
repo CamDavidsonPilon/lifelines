@@ -148,6 +148,16 @@ def test_qth_survival_time_returns_inf():
     sf = pd.Series([1., 0.7, 0.6])
     assert utils.qth_survival_time(0.5, sf) == np.inf
 
+def test_qth_survival_time_with_dataframe():
+    sf_df_no_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0])
+    sf_df_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0], index=[10, 20, 30, 40, 50])
+    sf_df_too_many_columns = pd.DataFrame([[1,2], [3,4]])
+
+    assert utils.qth_survival_time(0.5, sf_df_no_index) == 2
+    assert utils.qth_survival_time(0.5, sf_df_index) == 30
+
+    with pytest.raises(ValueError):
+        utils.qth_survival_time(0.5, sf_df_too_many_columns)
 
 def test_qth_survival_times_with_multivariate_q():
     sf = np.linspace(1, 0, 50)
@@ -165,6 +175,9 @@ def test_qth_survival_times_with_duplicate_q_returns_valid_index_and_shape():
     q = pd.Series([0.5, 0.5, 0.2, 0.0, 0.0])
     actual = utils.qth_survival_times(q, sf)
     assert actual.shape[0] == len(q)
+    assert actual.index[0] == actual.index[1]
+    assert_series_equal(actual.iloc[0], actual.iloc[1])
+
     npt.assert_almost_equal(actual.index.values, q.values)
 
 
@@ -223,6 +236,15 @@ def test_survival_table_to_events():
     T_, C_ = utils.survival_events_from_table(d[['censored', 'observed']])
     npt.assert_array_equal(T, T_)
     npt.assert_array_equal(C, C_)
+
+def test_survival_table_from_events_with_non_trivial_censorship_column():
+    T = np.random.exponential(5, size=50)
+    malformed_C = np.random.binomial(2, p=0.8) # set to 2 on purpose!
+    proper_C = malformed_C > 0 # (proper "boolean" array)
+    table1 = utils.survival_table_from_events(T, malformed_C, np.zeros_like(T))
+    table2 = utils.survival_table_from_events(T, proper_C, np.zeros_like(T))
+
+    assert_frame_equal(table1, table2)
 
 
 def test_group_survival_table_from_events_on_waltons_data():
@@ -361,6 +383,13 @@ def test_concordance_index_function_exits():
     predicted_times = np.random.exponential(1, size=N)
     obs = np.ones(N)
     assert fast_cindex(actual_times, predicted_times, obs)
+
+def test_concordance_index_will_not_overflow():
+    a = np.arange(65536)
+    assert utils.concordance_index(a, a) == 1.0
+    b = np.arange(65537)
+    assert utils.concordance_index(b, b) == 1.0
+    assert utils.concordance_index(b, b[::-1]) == 0.0
 
 
 def test_survival_table_from_events_with_non_negative_T_and_no_lagged_births():
@@ -507,6 +536,15 @@ class TestLongDataFrameUtils(object):
 
         df21 = seed_df.pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E')\
                       .pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E')
+
+        assert_frame_equal(df21, df12, check_like=True)
+
+    def test_order_of_adding_covariates_doesnt_matter_in_cumulative_sum(self, seed_df, cv1, cv2):
+        df12 = seed_df.pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E', cumulative_sum=True)\
+                      .pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E', cumulative_sum=True)
+
+        df21 = seed_df.pipe(utils.add_covariate_to_timeline, cv2, 'id', 't', 'E', cumulative_sum=True)\
+                      .pipe(utils.add_covariate_to_timeline, cv1, 'id', 't', 'E', cumulative_sum=True)
 
         assert_frame_equal(df21, df12, check_like=True)
 
@@ -659,21 +697,56 @@ class TestLongDataFrameUtils(object):
         assert_frame_equal(expected, df, check_like=True)
 
 
+    def test_delay(self, cv2):
+        seed_df = pd.DataFrame.from_records([{'id': 1, 'start': 0, 'stop': 50, 'E': 1}])
+
+        cv3 = pd.DataFrame.from_records([
+            {'id': 1, 't': 0,  'varA': 2},
+            {'id': 1, 't': 10, 'varA': 4},
+            {'id': 1, 't': 20, 'varA': 6},
+        ])
+
+        df = seed_df.pipe(utils.add_covariate_to_timeline, cv3, 'id', 't', 'E', delay=2).fillna(0)
+
+        expected = pd.DataFrame.from_records([
+            {'start': 0,   'stop': 2.0,  'varA': 0.0,'id': 1, 'E': False},
+            {'start': 2,   'stop': 12.0, 'varA': 2.0, 'id': 1, 'E': False},
+            {'start': 12,  'stop': 22.0, 'varA': 4.0, 'id': 1, 'E': False},
+            {'start': 22,  'stop': 50.0, 'varA': 6.0, 'id': 1, 'E': True}]
+        )
+        assert_frame_equal(expected, df, check_like=True)
+
+
     def test_covariates_from_event_matrix(self):
-        df = pd.DataFrame([
+
+        base_df = pd.DataFrame([
+                [1, 0, 5, 1],
+                [2, 0, 4, 1],
+                [3, 0, 8, 1],
+                [4, 0, 4, 1]
+        ], columns=['id', 'start', 'stop', 'e'])
+
+
+        event_df = pd.DataFrame([
                 [1,   1,    None, 2   ],
                 [2,   None, 5,    None],
                 [3,   3,    3,    7   ]
              ], columns=['id', 'promotion', 'movement', 'raise'])
 
-        ldf = pd.DataFrame([[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]], columns=['id', 'start', 'stop', 'e'])
+        cv = utils.covariates_from_event_matrix(event_df, 'id')
+        ldf = utils.add_covariate_to_timeline(base_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
+        expected = pd.DataFrame.from_records([
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 0.0, 'cumsum_raise': 0.0, 'e': 0.0, 'id': 1.0, 'start': 0.0, 'stop': 1.0},
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 1.0, 'cumsum_raise': 0.0, 'e': 0.0, 'id': 1.0, 'start': 1.0, 'stop': 2.0},
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 1.0, 'cumsum_raise': 1.0, 'e': 1.0, 'id': 1.0, 'start': 2.0, 'stop': 5.0},
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 0.0, 'cumsum_raise': 0.0, 'e': 1.0, 'id': 2.0, 'start': 0.0, 'stop': 4.0},
+            {'cumsum_movement': 0.0, 'cumsum_promotion': 0.0, 'cumsum_raise': 0.0, 'e': 0.0, 'id': 3.0, 'start': 0.0, 'stop': 3.0},
+            {'cumsum_movement': 1.0, 'cumsum_promotion': 1.0, 'cumsum_raise': 0.0, 'e': 0.0, 'id': 3.0, 'start': 3.0, 'stop': 7.0},
+            {'cumsum_movement': 1.0, 'cumsum_promotion': 1.0, 'cumsum_raise': 1.0, 'e': 1.0, 'id': 3.0, 'start': 7.0, 'stop': 8.0},
+            {'cumsum_movement': None, 'cumsum_promotion': None, 'cumsum_raise': None, 'e': 1.0, 'id': 4.0, 'start': 0.0, 'stop': 4.0}
+        ])
 
-        cv = utils.covariates_from_event_matrix(df, 'id')
-        ldf = utils.add_covariate_to_timeline(ldf, cv, 'id', 'duration', 'e', cumulative_sum=True)
-        assert ldf.loc[ldf['id'] == 1]['cumsum_movement'].tolist() == [0, 0, 0]
-        assert ldf.loc[ldf['id'] == 1]['cumsum_promotion'].tolist() == [0, 1, 1]
-        assert ldf.loc[ldf['id'] == 1]['cumsum_raise'].tolist() == [0, 0, 1]
-        assert ldf.loc[ldf['id'] == 1]['start'].tolist() == [0, 1., 2.]
+        assert_frame_equal(expected, ldf, check_dtype=False, check_like=True)
 
 
 def test_StepSizer_step_will_decrease_if_unstable():

@@ -1,5 +1,51 @@
 ### Changelogs
 
+#### 0.15.0
+ - adding `robust` params to Cox models' `fit`. This enables atleast i) using non-integer weights in the model (these could be sampling weights like IPTW), and ii) mis-specified models (ex: non-proportional hazards). Under the hood it's a sandwich estimator. This does not handle ties, so if there are high number of ties, results may significantly differ from other software.
+ - `standard_errors_` is now a property on fitted `CoxPHFitter` which describes the standard errors of the coefficients.
+ - `variance_matrix_` is now a property on fitted `CoxPHFitter` which describes the variance matrix of the coefficients.
+ - new criteria for convergence of `CoxPHFitter` and `CoxTimeVaryingFitter` called the Newton-decrement. Tests show it is as accurate (w.r.t to previous coefficients) and typically shaves off a single step, resulting in generally faster convergence. See https://www.cs.cmu.edu/~pradeepr/convexopt/Lecture_Slides/Newton_methods.pdf. Details about the Newton-decrement are added to the `show_progress` statements.
+ - Minimum suppport for scipy is 1.0
+ - Convergence errors in models that use Newton-Rhapson methods now throw a `ConvergenceError`, instead of a `ValueError` (the former is a subclass of the latter, however).
+ - `AalenAdditiveModel` raises `ConvergenceWarning` instead of printing a warning.
+ - `KaplanMeierFitter` now has a cumulative plot option. Example `kmf.plot(invert_y_axis=True)`
+ - a `weights_col` option has been added to `CoxTimeVaryingFitter` that allows for time-varying weights. 
+ - `WeibullFitter` has a new `show_progress` param and additional information if the convergence fails. 
+ - `CoxPHFitter`, `ExponentialFitter`, `WeibullFitter` and `CoxTimeVaryFitter` method `print_summary` is updated with new fields. 
+ - `WeibullFitter` has renamed the incorrect `_jacobian` to `_hessian_`. 
+ - `variance_matrix_` is now a property on fitted `WeibullFitter` which describes the variance matrix of the parameters.
+ - The default `WeibullFitter().timeline` has changed from integers between the min and max duration to _n_ floats between the max and min durations, where _n_ is the number of observations. 
+ - Performance improvements for `CoxPHFitter` (~20% faster)
+ - Performance improvements for `CoxTimeVaryingFitter` (~100% faster)
+ - In Python3, Univariate models are now serialisable with `pickle`. Thanks @dwilson1988 for the contribution. For Python2, `dill` is still the preferred method.
+ - `baseline_cumulative_hazard_` (and derivatives of that) on `CoxPHFitter` now correctly incorporate the `weights_col`. 
+ - Fixed a bug in `KaplanMeierFitter` when late entry times lined up with death events. Thanks @pzivich
+ - adding `cluster_col` argument to `CoxPHFitter` so users can specify groups of subjects/rows that may be correlated. 
+
+#### 0.14.6
+ - fix for n > 2 groups in `multivariate_logrank_test` (again).
+ - fix bug for when `event_observed` column was not boolean. 
+
+#### 0.14.5
+ - fix for n > 2 groups in `multivariate_logrank_test`
+ - fix weights in KaplanMeierFitter when using a pandas Series. 
+
+#### 0.14.4
+ - Adds `baseline_cumulative_hazard_` and `baseline_survival_` to `CoxTimeVaryingFitter`. Because of this, new prediction methods are available. 
+ - fixed a bug in `add_covariate_to_timeline` when using `cumulative_sum` with multiple columns.
+ - Added `Likelihood ratio test` to `CoxPHFitter.print_summary` and `CoxTimeVaryingFitter.print_summary`
+ - New checks in `CoxTimeVaryingFitter` that check for immediate deaths and redundant rows. 
+ - New `delay` parameter in `add_covariate_to_timeline`
+ - removed `two_sided_z_test` from `statistics`
+
+#### 0.14.3 
+ - fixes a bug when subtracting or dividing two `UnivariateFitters` with labels. 
+ - fixes an import error with using `CoxTimeVaryingFitter` predict methods.
+ - adds a `column` argument to `CoxTimeVaryingFitter` and `CoxPHFitter` `plot` method to plot only a subset of columns.
+
+#### 0.14.2
+ - some quality of life improvements for working with `CoxTimeVaryingFitter` including new `predict_` methods.
+
 #### 0.14.1
  - fixed bug with using weights and strata in `CoxPHFitter`
  - fixed bug in using non-integer weights in `KaplanMeierFitter`
