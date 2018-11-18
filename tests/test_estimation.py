@@ -2024,6 +2024,7 @@ class TestAalenAdditiveFitter():
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         T = generate_random_lifetimes(hz, timeline)
         X['T'] = T
+        X = X.replace([np.inf, -np.inf], 10.0)
         # fit it to Aalen's model
         aaf = AalenAdditiveFitter()
         aaf.fit(X, 'T')
