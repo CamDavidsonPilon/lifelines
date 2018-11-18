@@ -30,7 +30,7 @@ class AalenJohansenFitter(UnivariateFitter):
             alpha=None, ci_labels=None, weights=None):
         """
         Parameters:
-          duration: an array or pd.Series of length n -- duration of subject was observed for 
+          durations: an array or pd.Series of length n -- duration of subject was observed for 
           event_observed: an array, or pd.Series, of length n. Integer indicator of distinct events. Must be 
              only positive integers, where 0 indicates censoring.
           event_of_interest: integer -- indicator for event of interest. All other integers are considered competing events
@@ -53,31 +53,31 @@ class AalenJohansenFitter(UnivariateFitter):
           self, with new properties like 'cumulative_incidence_'.
         """
         # Checking for tied event times
-        if np.sum(durations.duplicated()) > 0:
+        if np.sum(pd.Series(durations).duplicated()) > 0:
             # Seeing if there is a large amount of ties in the data (>20%)
-            if np.sum(durations.duplicated()) / len(durations) > 0.2:
+            if np.sum(pd.Series(durations).duplicated()) / len(durations) > 0.2:
                 warnings.warn('''It looks like there are many tied events in your data set. The Aalen-Johansen 
                               estimator should only be used when there are no/few tied events''', Warning)
                 # I am unaware of a recommended cut-off, but 20% would be suggestive of issues
             # Raise warning if duplicated times, then randomly jitter times
             warnings.warn('''Tied event times were detected. The Aalen-Johansen estimator cannot handle tied event times. 
                 To resolve ties, data is randomly jittered.''', Warning)  
-            durations = self._jitter(durations=durations, event=event_observed, jitter_level=self._jitter_level, seed=self._seed)
+            durations = self._jitter(durations=pd.Series(durations), event=pd.Series(event_observed), 
+                                     jitter_level=self._jitter_level, seed=self._seed)
         
         # Creating label for event of interest & indicator for that event
         cmprisk_label = 'CIF_' + str(int(event_of_interest))
         self.label_cmprisk = 'observed_' + str(int(event_of_interest))
-        overall_events = np.where(event_observed > 0, 1, 0)
         
         # Fitting Kaplan-Meier for either event of interest OR competing risk
         km = KaplanMeierFitter()
-        km.fit(durations, event_observed=overall_events, timeline=timeline, entry=entry, weights=weights)
+        km.fit(durations, event_observed=event_observed, timeline=timeline, entry=entry, weights=weights)
         aj = km.event_table
         aj['overall_survival'] = km.survival_function_
         aj['lagged_overall_survival'] = aj['overall_survival'].shift()
         
         # Setting up table for calculations and to return to user
-        event_spec = np.where(event_observed == event_of_interest, 1, 0)
+        event_spec = np.where(pd.Series(event_observed) == event_of_interest, 1, 0)
         event_spec_proc = _preprocess_inputs(durations=durations, event_observed=event_spec, timeline=timeline,
                                              entry=entry, weights=weights)
         event_spec_times = event_spec_proc[-1]['observed']
@@ -97,7 +97,8 @@ class AalenJohansenFitter(UnivariateFitter):
 
         alpha = alpha if alpha else self.alpha
         self._label = label
-        self.cumulative_density_ = aj[cmprisk_label]  # Technically, cumulative incidence, but consistent with KaplanMeierFitter
+        self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])  
+        # Technically, cumulative incidence, but consistent with KaplanMeierFitter
         self.event_table = aj[['removed', 'observed', self.label_cmprisk, 'censored', 'entrance', 'at_risk']]  # Event table
         self.variance, self.confidence_interval_ = self._bounds(aj['lagged_overall_survival'],
                                                                 alpha=alpha, ci_labels=ci_labels)
@@ -108,7 +109,7 @@ class AalenJohansenFitter(UnivariateFitter):
         """
         if jitter_level <= 0:
             raise ValueError('The jitter level is less than zero, please select a jitter value greater than 0')
-        if seed != None:
+        if seed is not None:
             np.random.seed(seed)
         
         event_time = durations.loc[event != 0].copy()
@@ -122,7 +123,7 @@ class AalenJohansenFitter(UnivariateFitter):
         
         # Recursive call if event times are still tied after jitter
         if np.sum(event_time.duplicated()) > 0: 
-            return self._jitter(self, durations=durations_jitter, event=event, jitter_level=jitter_level, seed=seed)
+            return self._jitter(durations=durations_jitter, event=event, jitter_level=jitter_level, seed=seed)
         else:
             return durations_jitter
     
