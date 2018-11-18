@@ -61,7 +61,7 @@ class CoxPHFitter(BaseFitter):
     def fit(self, df, duration_col, event_col=None,
             show_progress=False, initial_beta=None,
             strata=None, step_size=None, weights_col=None,
-            robust=False):
+            cluster_col=None, robust=False):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -93,7 +93,8 @@ class CoxPHFitter(BaseFitter):
           robust: Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
             ties, so if there are high number of ties, results may significantly differ. See
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
-
+          cluster_col: specifies what column has ids for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+            be used.
         Returns:
             self, with additional properties: hazards_, confidence_intervals_, baseline_survival_, etc.
 
@@ -108,6 +109,8 @@ class CoxPHFitter(BaseFitter):
         self.duration_col = duration_col
         self.event_col = event_col
         self.robust = robust
+        self.cluster_col = cluster_col
+        self.weights_col = weights_col
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
         if self.strata is not None:
@@ -135,6 +138,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         else:
             weights = pd.Series(np.ones((self._n_examples,)), index=df.index)
+
+        if self.cluster_col:
+            self._clusters = df.pop(self.cluster_col)
 
         self._check_values(df, T, E)
         df = df.astype(float)
@@ -453,21 +459,34 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_sandwich_estimator(self, X, T, E, weights):
 
-        if self.strata is None:
-            score_residuals = self._compute_residuals_within_strata(X.values, T.values, E.values, weights.values)
+        _, d = X.shape
 
-        else:
-            score_residuals = np.empty((0,1))
+        if self.strata is not None:
+            score_residuals = np.empty((0, d))
             for strata in np.unique(X.index):
+                # TODO: use pandas .groupby
                 stratified_X, stratified_T, stratified_E, stratified_W = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]], weights.loc[[strata]]
 
                 score_residuals = np.append(score_residuals,
-                                            self._compute_residuals_within_strata(stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values),
+                                            self._compute_residuals_within_strata(stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values) * stratified_W[:, None],
                                             axis=0)
 
+        else:
+            score_residuals = self._compute_residuals_within_strata(X.values, T.values, E.values, weights.values) * weights[:, None]
+
+        if self.cluster_col:
+            score_residuals_ = np.empty((0, d))
+            for cluster in np.unique(self._clusters):
+                ix = self._clusters == cluster
+                weights_ = weights.values[ix]
+
+                score_residuals_ = np.append(score_residuals_,
+                                            (score_residuals[ix, :] * weights_).sum(0).reshape(1, d),
+                                            axis=0)
+            score_residuals = score_residuals_
 
         naive_var = inv(self._hessian_)
-        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
+        delta_betas = score_residuals.dot(naive_var)
         sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
         return sandwich_estimator
 
@@ -515,7 +534,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
 
     def _compute_standard_errors(self, df, T, E, weights):
-        if self.robust:
+        if self.robust or self.cluster_col:
             se = np.sqrt(self._compute_sandwich_estimator(df, T, E, weights).diagonal()) # / self._norm_std
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
@@ -561,6 +580,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print(self)
         print("{} = {}".format(justify('duration col'), self.duration_col))
         print("{} = {}".format(justify('event col'), self.event_col))
+        if self.weights_col:
+            print("{} = {}".format(justify('weights col'), self.weights_col))
+
+        if self.cluster_col:
+            print("{} = {}".format(justify('cluster col'), self.cluster_col))
+
+        if self.robust or self.cluster_col:
+            print("{} = {}".format(justify('robust variance'), True))
 
         if self.strata:
             print('{} = {}'.format(justify('strata'), self.strata))

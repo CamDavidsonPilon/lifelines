@@ -1174,6 +1174,34 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         expected = pd.Series({'var1': 2.097, 'var2': 0.827})
         assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)
 
+    def test_cluster_option(self, regression_dataset):
+        """
+        library(survival)
+        df <- data.frame(
+          "var1" = c(1, 1, 2, 2, 2),
+          "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
+          "id" = c(1, 1, 2, 3, 4),
+          "T" = c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666)
+        )
+        df['E'] = 1
+
+        c = coxph(formula=Surv(T, E) ~ var1 + var2 + cluster(id), data=df)
+        """
+
+        df = pd.DataFrame({
+            "var1": [1, 1, 2, 2, 2],
+            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
+            "T":    [7.335846, 5.269797, 11.684092, 12.678458, 6.601666],
+            "id":   [1, 1, 2, 3, 4],
+        })
+        df['E'] = 1
+
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E', cluster_col='id', show_progress=True)
+        expected = pd.Series({'var1': 5.9752, 'var2': 4.0683})
+        assert_series_equal(cph.summary['se(coef)'], expected, check_less_precise=2, check_names=False)
+        cph.print_summary()
+
 
     def test_robust_errors_with_less_trival_weights_is_the_same_as_R(self, regression_dataset):
         """
@@ -1818,25 +1846,27 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
     def test_robust_errors_with_strata_against_R(self, rossi):
         """
         df <- data.frame(
-            "var1" = c(1, 1, 2, 2, 2),
-            "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092),
-            "T" = c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666)
+          "var1" = c(1, 1, 2, 2, 2, 1),
+          "var2" = c(0.184677, 0.071893, 1.364646, 0.098375, 1.663092, 0.5),
+          "var3" = c(1, 2, 3, 2, 1, 2),
+          "T" = c( 7.335846, 5.269797, 11.684092, 12.678458, 6.601666, 8.)
         )
         df['E'] = 1
 
-        coxph(formula=Surv(T, E) ~ strata(var1) + var2, data=df, robust=TRUE)
+        coxph(formula=Surv(T, E) ~ strata(var1) + var2 + var3, data=df, robust=TRUE)
         """
 
         df = pd.DataFrame({
-            "var1": [1, 1, 2, 2, 2],
-            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
-            "T": [7.335846, 5.269797, 11.684092, 12.678458, 6.601666]
+            "var1": [1, 1, 2, 2, 2, 1],
+            "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092, 0.5],
+            "var3": [1, 2, 3, 2, 1, 2],
+            "T": [7.335846, 5.269797, 11.684092, 12.678458, 6.601666, 8.0]
         })
         df['E'] = 1
 
         cf = CoxPHFitter()
         cf.fit(df, duration_col='T', event_col='E', strata=['var1'], robust=True)
-        npt.assert_allclose(cf.summary['se(coef)'].values, 2.78649, rtol=1e-2)
+        npt.assert_allclose(cf.summary['se(coef)'].values, np.array([1.076, 0.680]), rtol=1e-2)
 
 
     @pytest.mark.xfail
