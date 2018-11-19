@@ -598,7 +598,7 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
     3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarly using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
     4. Another problem may be a co-linear relationship in your dataset. See point 2. above. 
 
- 4. Adding a very small ``penalizer_coef`` significantly changes the results. This probably means that the step size is too large. Try decreasing it, and returning the ``penalizer_coef`` term to 0. 
+ 4. If adding a very small ``penalizer`` significantly changes the results (``CoxPHFitter(penalizer=0.0001)``), then this probably means that the step size in the iterative algorithm is too large. Try decreasing it (``.fit(..., step_size=0.50)`` or smaller), and returning the ``penalizer`` term to 0. 
 
  5. If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).size()``.
 
@@ -635,3 +635,13 @@ The fitting should be faster, and the results identical to the unweighted datase
 The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artifical under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error. 
 
 .. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequeny of ties. g
+
+
+Correlations between subjects in a Cox model
+###################################################
+
+There are cases when your dataset contains correlated subjects, which breaks the independent-and-identically-distributed assumption. What are some cases when this may happen?
+
+1. If a subject appears more than once in the dataset (common when subjects can have the event more than once)
+2. If using a matching technique, like prospensity-score matching, there is a correlation between pairs. 
+3. 

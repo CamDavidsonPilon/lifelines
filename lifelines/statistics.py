@@ -6,7 +6,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 
-from lifelines.utils import group_survival_table_from_events, significance_code
+from lifelines.utils import group_survival_table_from_events, significance_code, significance_codes_as_text
 
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con,
@@ -291,7 +291,7 @@ class StatisticalResult(object):
         s += df.to_string(float_format=lambda f: '{:4.4f}'.format(f), index=False)
 
         s += '\n---'
-        s += "\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 "
+        s += "\n" + significance_codes_as_text()
         return s
 
     def _pretty_print_meta_data(self, dictionary):

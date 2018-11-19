@@ -617,16 +617,25 @@ def epanechnikov_kernel(t, T, bandwidth=1.):
 
 
 def significance_code(p):
-    if p < 0.001:
+    """
+    v0.15.0:
+        p-values between 0.05 and 0.1 have such little information gain. For that reason, I am deviating
+        from the traditional "astericks" in R and making everthing an order-of-magnitude less.
+    """
+    if p < 0.0001:
         return '***'
-    elif p < 0.01:
+    elif p < 0.001:
         return '**'
-    elif p < 0.05:
+    elif p < 0.01:
         return '*'
-    elif p < 0.1:
+    elif p < 0.05:
         return '.'
     else:
         return ' '
+
+def significance_codes_as_text():
+    p_values = [0, 0.0001, 0.001, 0.01, 0.05]
+    return "Signif. codes: " + " ".join(["%s '%s'" % (p, significance_code(p)) for p in p_values]) + " 1"
 
 
 def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):

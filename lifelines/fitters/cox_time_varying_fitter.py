@@ -17,11 +17,11 @@ from lifelines.fitters import BaseFitter
 from lifelines.fitters.coxph_fitter import CoxPHFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (inv_normal_cdf,
-    significance_code, normalize,
+    significance_code, normalize, significance_codes_as_text,
     pass_for_numeric_dtypes_or_raise, check_low_var,
     check_for_overlapping_intervals, check_complete_separation_low_variance,
     ConvergenceWarning, StepSizer, _get_index, check_for_immediate_deaths,
-    check_for_instantaneous_events, ConvergenceError, check_nans_or_infs, string_justify
+    check_for_instantaneous_events, ConvergenceError, check_nans_or_infs, string_justify,
 )
 
 
@@ -483,8 +483,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
         print('---')
-        print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
-              end='\n\n')
+        print(significance_codes_as_text(), end='\n\n')
         print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
         return
 

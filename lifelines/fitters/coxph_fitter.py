@@ -17,7 +17,7 @@ import scipy.stats as stats
 from lifelines.fitters import BaseFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (survival_table_from_events, inv_normal_cdf, normalize,
-    significance_code, concordance_index, _get_index, qth_survival_times,
+    significance_code, significance_codes_as_text, concordance_index, _get_index, qth_survival_times,
     pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,
     check_complete_separation, check_nans_or_infs, StatError, ConvergenceWarning,
     StepSizer, ConvergenceError, string_justify)
@@ -93,7 +93,7 @@ class CoxPHFitter(BaseFitter):
           robust: Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
             ties, so if there are high number of ties, results may significantly differ. See
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
-          cluster_col: specifies what column has ids for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+          cluster_col: specifies what column has unique identifers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
             be used.
         Returns:
             self, with additional properties: hazards_, confidence_intervals_, baseline_survival_, etc.
@@ -462,6 +462,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         _, d = X.shape
 
         if self.strata is not None and self.cluster_col is not None:
+            # TODO
             raise NotImplementedError("Providing clusters and strata is not implemented yet")
 
         if self.strata is not None:
@@ -498,7 +499,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
-        # doesn't handle ties.
+        # TODO: doesn't handle ties.
 
         n, d = X.shape
 
@@ -609,8 +610,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         # Significance code explanation
         print('---')
-        print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
-              end='\n\n')
+        print(significance_codes_as_text(), end='\n\n')
         print("Concordance = {:.3f}".format(self.score_))
         print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
         return
@@ -875,7 +875,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        if covariate not in self.summary.index:
+        if covariate not in self.hazards_.columns:
             raise KeyError('covariate `%s` is not present in the original dataset' % covariate)
 
         ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)

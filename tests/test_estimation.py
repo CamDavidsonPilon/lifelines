@@ -898,7 +898,7 @@ mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
 paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
 prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
 ---
-Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
 Concordance = 0.640
 Likelihood ratio test = 33.266 on 7 df, p=0.00002
@@ -1462,19 +1462,6 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf2.fit(rossi, duration_col='week', event_col='arrest')
 
         assert_frame_equal(cf2.standard_errors_ ** 2, w * cf1.standard_errors_ ** 2, check_like=True)
-
-
-    def test_adding_non_integer_weights_without_robust_flag_raises_a_warning(self, rossi):
-        rossi['weights'] = np.random.exponential(1, rossi.shape[0])
-
-        cox = CoxPHFitter()
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            cox.fit(rossi, 'week', 'arrest', weights_col='weights')
-
-            assert len(w) == 1
-            assert "naive variance estimates" in str(w[0].message)
 
 
     def test_adding_non_integer_weights_is_fine_if_robust_is_on(self, rossi):
@@ -2419,7 +2406,7 @@ year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082  
 surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825  .
 transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
 ---
-Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.001 '.' 0.05 ' ' 1
 
 Likelihood ratio test = 15.111 on 4 df, p=0.00448
 """).strip().split()

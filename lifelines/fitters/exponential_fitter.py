@@ -5,7 +5,7 @@ import pandas as pd
 from scipy import stats
 
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import inv_normal_cdf, check_nans_or_infs, significance_code, string_justify
+from lifelines.utils import inv_normal_cdf, check_nans_or_infs, significance_code, string_justify, significance_codes_as_text
 
 
 class ExponentialFitter(UnivariateFitter):
@@ -75,7 +75,7 @@ class ExponentialFitter(UnivariateFitter):
         self.survival_function_ = pd.DataFrame(np.exp(-self.lambda_ * self.timeline), columns=[self._label], index=self.timeline)
         self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
         self.median_ = 1. / self.lambda_ * (np.log(2))
-       
+
         # estimation methods
         self._estimate_name = "survival_function_"
         self._predict_label = label
@@ -85,10 +85,10 @@ class ExponentialFitter(UnivariateFitter):
         self.plot_survival_function_ = self.plot
 
         return self
-    
+
     def _estimation_method(self,t):
         return np.exp(-self.lambda_ * t)
-    
+
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1. + alpha) / 2.)
         df = pd.DataFrame(index=self.timeline)
@@ -158,6 +158,5 @@ class ExponentialFitter(UnivariateFitter):
         df[''] = [significance_code(p) for p in df['p']]
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         print('---')
-        print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
-              end='\n\n')
+        print(significance_codes_as_text(), end='\n\n')
         return

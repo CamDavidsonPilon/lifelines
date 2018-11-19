@@ -9,7 +9,7 @@ from scipy import stats as stats
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import inv_normal_cdf, check_nans_or_infs, ConvergenceError, string_justify, significance_code,\
-                            ConvergenceWarning
+                            ConvergenceWarning, significance_codes_as_text
 
 
 def _negative_log_likelihood(lambda_rho, T, E):
@@ -269,6 +269,5 @@ class WeibullFitter(UnivariateFitter):
         df[''] = [significance_code(p) for p in df['p']]
         print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
         print('---')
-        print("Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 ",
-              end='\n\n')
+        print(significance_codes_as_text(), end='\n\n')
         return

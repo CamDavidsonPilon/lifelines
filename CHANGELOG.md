@@ -20,7 +20,8 @@
  - In Python3, Univariate models are now serialisable with `pickle`. Thanks @dwilson1988 for the contribution. For Python2, `dill` is still the preferred method.
  - `baseline_cumulative_hazard_` (and derivatives of that) on `CoxPHFitter` now correctly incorporate the `weights_col`. 
  - Fixed a bug in `KaplanMeierFitter` when late entry times lined up with death events. Thanks @pzivich
- - adding `cluster_col` argument to `CoxPHFitter` so users can specify groups of subjects/rows that may be correlated. 
+ - Adding `cluster_col` argument to `CoxPHFitter` so users can specify groups of subjects/rows that may be correlated. 
+ - Shifting the "signficance codes" for p-values down an order of magnitude. (Example, p-values between 0.1 and 0.05 are not noted at all and p-values between 0.05 and 0.1 are noted with `.`, etc.). This deviates with how they are presented in other software. There is an argument to be made to remove p-values from lifelines altogether (_become the changes you want to see in the world_ lol), but I worry that people could compute the p-values by hand incorrectly, a worse outcome I think. So, this is my stance. P-values between 0.1 and 0.05 offer _very_ little information, so they are removed. There is a growing movement in statistics to shift "signficant" findings to p-values less than 0.01 anyways. 
 
 #### 0.14.6
  - fix for n > 2 groups in `multivariate_logrank_test` (again).
