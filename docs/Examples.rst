@@ -644,4 +644,41 @@ There are cases when your dataset contains correlated subjects, which breaks the
 
 1. If a subject appears more than once in the dataset (common when subjects can have the event more than once)
 2. If using a matching technique, like prospensity-score matching, there is a correlation between pairs. 
-3. 
+
+In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in `CoxPHFitter.fit` that allows you to specify the column in the dataframe that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value. 
+    
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi = load_rossi()
+
+    # this may come from a database, or other libaries that specialize in matching
+    mathed_pairs = [
+        (156, 230),
+        (275, 228),
+        (61, 252),
+        (364, 201),
+        (54, 340),
+        (130, 33),
+        (183, 145),
+        (268, 140),
+        (332, 259),
+        (314, 413),
+        (330, 211),
+        (372, 255),
+        # ...
+    ]
+
+    rossi['id'] = None  # we will populate this column
+
+    for i, pair in enumerate(matched_pairs):
+        subjectA, subjectB = pair
+        rossi.loc[subjectA, 'id'] = i
+        rossi.loc[subjectB, 'id'] = i
+
+    rossi = rossi.dropna(subset=['id'])
+
+    cph = CoxPHFitter()
+    cph.fit(rossi, 'week', 'arrest', cluster_col='id')
+
+Specifying ``cluster_col`` will handle correlations, and invoke the robust sandwich estimator for standard errors (the same as setting `robust=True`).
