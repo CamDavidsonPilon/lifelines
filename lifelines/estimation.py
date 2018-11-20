@@ -8,3 +8,4 @@ from lifelines.fitters.breslow_fleming_harrington_fitter import BreslowFlemingHa
 from lifelines.fitters.coxph_fitter import CoxPHFitter
 from lifelines.fitters.cox_time_varying_fitter import CoxTimeVaryingFitter
 from lifelines.fitters.aalen_additive_fitter import AalenAdditiveFitter
+from lifelines.fitters.aalen_johansen_fitter import AalenJohansenFitter
