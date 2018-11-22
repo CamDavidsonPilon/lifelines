@@ -481,7 +481,7 @@ In lifelines, estimation is available using the ``WeibullFitter`` class:
 
 
 
-Other parametric models: Exponential and LogNormal
+Other parametric models: Exponential
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are three parametric models of the same data. 
@@ -490,18 +490,15 @@ Similarly, there are other parametric models in lifelines. Generally, which para
 
     from lifelines import WeibullFitter
     from lifelines import ExponentialFitter
-    from lifelines import LogNormalFitter
   
     T = data['duration']
     E = data['observed']
 
     wf = WeibullFitter().fit(T, E, label='WeibullFitter')
     exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
-    lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
 
     ax = wf.plot()
     ax = exf.plot(ax=ax)
-    ax = lnf.plot(ax=ax)
 
 
 Estimating hazard rates using Nelson-Aalen

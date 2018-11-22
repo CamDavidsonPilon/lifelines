@@ -13,7 +13,6 @@ from lifelines.datasets import load_waltons, load_regression_dataset, load_lcd,\
 from lifelines.generate_datasets import cumulative_integral
 
 
-@pytest.mark.plottest
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting():
 
