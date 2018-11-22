@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from __future__ import division
+import warnings
 import numpy as np
 import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import _preprocess_inputs, _additive_estimate, StatError, inv_normal_cdf,\
-    median_survival_times, check_nans
+    median_survival_times, check_nans_or_infs
 from lifelines.plotting import plot_loglogs
 
 
@@ -47,9 +48,17 @@ class KaplanMeierFitter(UnivariateFitter):
 
         """
 
-        check_nans(durations)
+        check_nans_or_infs(durations)
         if event_observed is not None:
-            check_nans(event_observed)
+            check_nans_or_infs(event_observed)
+
+        if weights is not None:
+          if (weights.astype(int) != weights).any():
+              warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
+  It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+  estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+  or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
+                  """, RuntimeWarning)
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = 'survival_function_' if not left_censorship else 'cumulative_density_'
@@ -79,15 +88,17 @@ class KaplanMeierFitter(UnivariateFitter):
         self.median_ = median_survival_times(self.__estimate, left_censorship=left_censorship)
 
         # estimation methods
-        self.predict = self._predict(estimate_name, label)
-        self.subtract = self._subtract(estimate_name)
-        self.divide = self._divide(estimate_name)
+        self._estimation_method = estimate_name
+        self._estimate_name = estimate_name
+        self._predict_label = label
+        self._update_docstrings()
 
         # plotting functions
-        self.plot = self._plot_estimate(estimate_name)
         setattr(self, "plot_" + estimate_name, self.plot)
-        self.plot_loglogs = plot_loglogs(self)
         return self
+
+    def plot_loglogs(self, *args, **kwargs):
+        return plot_loglogs(self, *args, **kwargs)
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.

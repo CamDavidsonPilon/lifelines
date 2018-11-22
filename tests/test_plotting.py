@@ -13,7 +13,6 @@ from lifelines.datasets import load_waltons, load_regression_dataset, load_lcd,\
 from lifelines.generate_datasets import cumulative_integral
 
 
-@pytest.mark.plottest
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting():
 
@@ -55,6 +54,22 @@ class TestPlotting():
         kmf.fit(data1)
         kmf.plot(at_risk_counts=True)
         self.plt.title("test_kmf_with_risk_counts")
+        self.plt.show(block=block)
+
+
+    def test_kmf_with_inverted_axis(self, block, kmf):
+
+        T = np.random.exponential(size=100)
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, label='t2')
+        ax = kmf.plot(invert_y_axis=True, at_risk_counts=True)
+
+        T = np.random.exponential(3, size=100)
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, label='t1')
+        kmf.plot(invert_y_axis=True, ax=ax, ci_force_lines=False)
+
+        self.plt.title("test_kmf_with_inverted_axis")
         self.plt.show(block=block)
 
     def test_naf_plotting_with_custom_colours(self, block):

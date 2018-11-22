@@ -148,6 +148,16 @@ def test_qth_survival_time_returns_inf():
     sf = pd.Series([1., 0.7, 0.6])
     assert utils.qth_survival_time(0.5, sf) == np.inf
 
+def test_qth_survival_time_with_dataframe():
+    sf_df_no_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0])
+    sf_df_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0], index=[10, 20, 30, 40, 50])
+    sf_df_too_many_columns = pd.DataFrame([[1,2], [3,4]])
+
+    assert utils.qth_survival_time(0.5, sf_df_no_index) == 2
+    assert utils.qth_survival_time(0.5, sf_df_index) == 30
+
+    with pytest.raises(ValueError):
+        utils.qth_survival_time(0.5, sf_df_too_many_columns)
 
 def test_qth_survival_times_with_multivariate_q():
     sf = np.linspace(1, 0, 50)
@@ -165,6 +175,9 @@ def test_qth_survival_times_with_duplicate_q_returns_valid_index_and_shape():
     q = pd.Series([0.5, 0.5, 0.2, 0.0, 0.0])
     actual = utils.qth_survival_times(q, sf)
     assert actual.shape[0] == len(q)
+    assert actual.index[0] == actual.index[1]
+    assert_series_equal(actual.iloc[0], actual.iloc[1])
+
     npt.assert_almost_equal(actual.index.values, q.values)
 
 
@@ -370,6 +383,13 @@ def test_concordance_index_function_exits():
     predicted_times = np.random.exponential(1, size=N)
     obs = np.ones(N)
     assert fast_cindex(actual_times, predicted_times, obs)
+
+def test_concordance_index_will_not_overflow():
+    a = np.arange(65536)
+    assert utils.concordance_index(a, a) == 1.0
+    b = np.arange(65537)
+    assert utils.concordance_index(b, b) == 1.0
+    assert utils.concordance_index(b, b[::-1]) == 0.0
 
 
 def test_survival_table_from_events_with_non_negative_T_and_no_lagged_births():

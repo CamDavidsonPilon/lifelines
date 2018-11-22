@@ -6,7 +6,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 
-from lifelines.utils import group_survival_table_from_events, significance_code
+from lifelines.utils import group_survival_table_from_events, significance_code, significance_codes_as_text
 
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con,
@@ -79,11 +79,15 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     H_0: both event series are from the same generating processes
     H_A: the event series are from different generating processes.
 
-    See Survival and Event Analysis, page 108. This implicitly uses the log-rank weights.
+
+    This implicitly uses the log-rank weights.
+
+    See also `multivariate_logrank_test` for a more general function.
+
 
     Parameters:
-      event_times_foo: a (nx1) array of event durations (birth to death,...) for the population.
-      censorship_bar: a (nx1) array of censorship flags, 1 if observed, 0 if not. Default assumes all observed.
+      event_times_foo: a (n,) list-like of event durations (birth to death,...) for the population.
+      censorship_bar: a (n,) list-like of censorship flags, 1 if observed, 0 if not. Default assumes all observed.
       t_0: the period under observation, -1 for all time.
       alpha: the level of signifiance
       kwargs: add keywords and meta-data to the experiment summary
@@ -91,6 +95,7 @@ def logrank_test(event_times_A, event_times_B, event_observed_A=None, event_obse
     Returns:
       results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
 
+    See Survival and Event Analysis, page 108.
     """
 
     event_times_A, event_times_B = np.array(event_times_A), np.array(event_times_B)
@@ -286,7 +291,7 @@ class StatisticalResult(object):
         s += df.to_string(float_format=lambda f: '{:4.4f}'.format(f), index=False)
 
         s += '\n---'
-        s += "\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 "
+        s += "\n" + significance_codes_as_text()
         return s
 
     def _pretty_print_meta_data(self, dictionary):

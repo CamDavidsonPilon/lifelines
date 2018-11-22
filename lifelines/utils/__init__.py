@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import warnings
+import collections
 from datetime import datetime
+
 
 import numpy as np
 from scipy.linalg import solve
@@ -34,6 +36,16 @@ class StatError(Exception):
         return repr(self.msg)
 
 
+class ConvergenceError(ValueError):
+    # inherits from ValueError for backwards compatilibity reasons
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
 class ConvergenceWarning(RuntimeWarning):
 
     def __init__(self, msg):
@@ -41,6 +53,7 @@ class ConvergenceWarning(RuntimeWarning):
 
     def __str__(self):
         return repr(self.msg)
+
 
 
 def qth_survival_times(q, survival_functions, cdf=False):
@@ -58,27 +71,34 @@ def qth_survival_times(q, survival_functions, cdf=False):
     """
     q = pd.Series(q)
 
-    if not((q <= 1).all() and (0 <= q).all()):
+    if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError('q must be between 0 and 1')
 
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         return survival_functions.apply(lambda s: qth_survival_time(q[0], s, cdf=cdf)).iloc[0]
     else:
+        survival_times = pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+
         #  Typically, one would expect that the output should equal the "height" of q.
-        #  An issue can arise if the Series q contains duplicate values. We handle this un-eligantly.
+        #  An issue can arise if the Series q contains duplicate values. We solve
+        #  this by duplicating the entire row.
         if q.duplicated().any():
-            return pd.DataFrame.from_items([
-                (_q, survival_functions.apply(lambda s: qth_survival_time(_q, s))) for i, _q in enumerate(q)
-            ], orient='index', columns=survival_functions.columns)
-        else:
-            return pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+            survival_times = survival_times.loc[q]
+
+        return survival_times
 
 
 def qth_survival_time(q, survival_function, cdf=False):
     """
-    Expects a Pandas series, returns the time when the qth probability is reached.
+    Expects a Pandas series or single-column dataframe, returns the time when the qth probability is reached.
     """
+    if isinstance(survival_function, pd.DataFrame):
+        if survival_function.shape[1] > 1:
+            raise ValueError("Expecting a dataframe (or series) with a single column. Provide that or use utils.qth_survival_times.")
+
+        survival_function = survival_function.T.squeeze()
+
     if cdf:
         if survival_function.iloc[0] > q:
             return np.inf
@@ -241,13 +261,6 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
 
     if weights is None:
         weights = 1
-    else:
-        if (weights.astype(int) != weights).any():
-            warnings.warn("""It looks like your weights are not integers, possibly prospenity scores then?
-It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
-estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
-or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
-                """, RuntimeWarning)
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
@@ -604,16 +617,25 @@ def epanechnikov_kernel(t, T, bandwidth=1.):
 
 
 def significance_code(p):
-    if p < 0.001:
+    """
+    v0.15.0:
+        p-values between 0.05 and 0.1 have such little information gain. For that reason, I am deviating
+        from the traditional "astericks" in R and making everthing an order-of-magnitude less.
+    """
+    if p < 0.0001:
         return '***'
-    elif p < 0.01:
+    elif p < 0.001:
         return '**'
-    elif p < 0.05:
+    elif p < 0.01:
         return '*'
-    elif p < 0.1:
+    elif p < 0.05:
         return '.'
     else:
         return ' '
+
+def significance_codes_as_text():
+    p_values = [0, 0.0001, 0.001, 0.01, 0.05]
+    return "Signif. codes: " + " ".join(["%s '%s'" % (p, significance_code(p)) for p in p_values]) + " 1"
 
 
 def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
@@ -675,9 +697,17 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         var_ = np.cumsum(_additive_var(at_risk, deaths)).sort_index().shift(-1).fillna(0)
     else:
         deaths = events['observed']
-        at_risk = events['at_risk']
-        estimate_ = np.cumsum(_additive_f(at_risk, deaths))
-        var_ = np.cumsum(_additive_var(at_risk, deaths))
+
+        # Why subtract entrants like this? see https://github.com/CamDavidsonPilon/lifelines/issues/497
+        # specifically, we kill people, compute the ratio, and then "add" the entants. This means that
+        # the population should not have the late entrants. The only exception to this rule
+        # is the first period, where entrants happen _prior_ to deaths.
+        entrances = events['entrance'].copy()
+        entrances.iloc[0] = 0
+        population = events['at_risk'] - entrances
+
+        estimate_ = np.cumsum(_additive_f(population, deaths))
+        var_ = np.cumsum(_additive_var(population, deaths))
 
     timeline = sorted(timeline)
     estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
@@ -894,9 +924,9 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
     censored_ix = 0
     died_ix = 0
     times_to_compare = _BTree(np.unique(died_pred))
-    num_pairs = 0
-    num_correct = 0
-    num_tied = 0
+    num_pairs = np.int64(0)
+    num_correct = np.int64(0)
+    num_tied = np.int64(0)
 
     def handle_pairs(truth, pred, first_ix):
         """
@@ -912,8 +942,8 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
         while next_ix < len(truth) and truth[next_ix] == truth[first_ix]:
             next_ix += 1
         pairs = len(times_to_compare) * (next_ix - first_ix)
-        correct = 0
-        tied = 0
+        correct = np.int64(0)
+        tied = np.int64(0)
         for i in range(first_ix, next_ix):
             rank, count = times_to_compare.rank(pred[i])
             correct += rank
@@ -1003,9 +1033,8 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
         raise ZeroDivisionError("No admissable pairs in the dataset.")
     return csum / paircount
 
-
 def pass_for_numeric_dtypes_or_raise(df):
-    nonnumeric_cols = df.select_dtypes(exclude=[np.number, bool]).columns.tolist()
+    nonnumeric_cols = [col for col in df.columns if not (np.issubdtype(df[col].dtype, np.number) or np.issubdtype(df[col].dtype, np.bool_))]
     if len(nonnumeric_cols) > 0:
         raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
 
@@ -1070,25 +1099,47 @@ death event or not. This may harm convergence. This could be a form of 'complete
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
         warnings.warn(warning_text, ConvergenceWarning)
 
-
 def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
     THRESHOLD = 0.99
+    n, _ = df.shape
+
+    if n > 500:
+        # let's sample to speed this n**2 algo up.
+        df = df.sample(n=500, random_state=0).copy()
+        durations = durations.sample(n=500, random_state=0).copy()
+
     for col, series in df.iteritems():
         if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
-            warning_text = "Column %s has high correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
+            warning_text = "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (col)
             warnings.warn(warning_text, ConvergenceWarning)
-
 
 def check_complete_separation(df, events, durations):
     check_complete_separation_low_variance(df, events)
     check_complete_separation_close_to_perfect_correlation(df, durations)
 
 
-def check_nans(array):
-    if pd.isnull(array).any():
-        raise TypeError("NaNs were detected in the duration_col and/or the event_col")
+def check_nans_or_infs(df_or_array):
+    nulls = pd.isnull(df_or_array)
+    if hasattr(nulls, 'values'):
+        if nulls.values.any():
+            raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
+    else:
+        if nulls.any():
+            raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
+    # isinf check is done after isnull check since np.isinf doesn't work on None values
+    infs = []
+    if isinstance(df_or_array, pd.Series) or isinstance(df_or_array, pd.DataFrame):
+        infs = (df_or_array == np.Inf)
+    else:
+        infs = np.isinf(df_or_array)
+    if hasattr(infs, 'values'):
+        if infs.values.any():
+            raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
+    else:
+        if infs.any():
+            raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
 
 
 def to_long_format(df, duration_col):
@@ -1314,3 +1365,9 @@ class StepSizer():
     def next(self):
         return self.step_size
 
+def _to_array(x):
+    if not isinstance(x, collections.Iterable):
+        return np.array([x])
+    return np.asarray(x)
+
+string_justify = lambda width: lambda s: s.rjust(width, ' ')
