@@ -926,4 +926,5 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             self._concordance_score_ = concordance_index(self.durations,
                                      -self._predicted_partial_hazards_,
                                      self.event_observed)
+            del self._predicted_partial_hazards_
             return self._concordance_score_
