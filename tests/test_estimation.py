@@ -1007,7 +1007,8 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col='week', event_col='arrest')
         rossi_mean = rossi.mean()
-        cf.predict_survival_function(rossi_mean)
+        result = cf.predict_survival_function(rossi_mean)
+        assert_series_equal(cf.baseline_survival_['baseline survival'], result[0], check_names=False)
 
     @pytest.mark.xfail
     def test_cox_ph_prediction_monotonicity(self, data_pred2):
