@@ -415,7 +415,7 @@ id                   T                      E
 Example SQL queries and transformations to get time varying data
 ####################################################################
 
-For Cox time-varying models, we discussed what the dataset should look like in :ref:`Dataset for time-varying regression`. Typically we have a base dataset, and then we fold in the covariate datasets. Below are some SQL queries and Python transformations from end-to-end.
+For Cox time-varying models, we discussed what the dataset should look like in :ref:`Dataset creation for time-varying regression`. Typically we have a base dataset, and then we fold in the covariate datasets. Below are some SQL queries and Python transformations from end-to-end.
 
 
 Base dataset: ``base_df``
@@ -494,7 +494,7 @@ Initially, this can't be added to our baseline dataframe. Using ``utils.covariat
 Example cumulative total using and time-varying covariates
 ############################################################
 
-Often we have either __transactional covariate datasets__ or __state covariate datasets__. In a transactional dataset, it may make sense to sum up the covariates to represent administration of a treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
+Often we have either transactional covariate datasets or state covariate datasets. In a transactional dataset, it may make sense to sum up the covariates to represent administration of a treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
 
 Suppose we have an initial DataFrame of start-ups like:
 
@@ -646,7 +646,9 @@ There are cases when your dataset contains correlated subjects, which breaks the
 2. If using a matching technique, like prospensity-score matching, there is a correlation between pairs. 
 
 In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in `CoxPHFitter.fit` that allows you to specify the column in the dataframe that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value. 
-    
+
+.. code-block:: python    
+
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
 

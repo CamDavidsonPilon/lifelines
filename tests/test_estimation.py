@@ -1003,6 +1003,12 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         assert ci_org == ci_trn
 
+    def test_cox_ph_prediction_with_series(self, rossi):
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+        rossi_mean = rossi.mean()
+        cf.predict_survival_function(rossi_mean)
+
     @pytest.mark.xfail
     def test_cox_ph_prediction_monotonicity(self, data_pred2):
         # Concordance wise, all prediction methods should be monotonic versions

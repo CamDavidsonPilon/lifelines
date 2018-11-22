@@ -668,13 +668,25 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
+
+        hazard_names = self.hazards_.columns
         if isinstance(X, pd.DataFrame):
-            order = self.hazards_.columns
+            order = hazard_names
             X = X[order]
+            pass_for_numeric_dtypes_or_raise(X)
+        elif isinstance(X, pd.Series) and ((X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))):
+            X = X.to_frame().T
+            order = hazard_names
+            X = X[order]
+            pass_for_numeric_dtypes_or_raise(X)
+        elif isinstance(X, pd.Series):
+            assert len(hazard_names) == 1, 'Series not the correct arugment'
+            X = pd.DataFrame(series).T
             pass_for_numeric_dtypes_or_raise(X)
 
         X = X.astype(float)
         index = _get_index(X)
+
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
@@ -716,8 +728,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 cumulative_hazard_ = cumulative_hazard_.merge(pd.DataFrame(np.dot(c_0, v.T), index=c_0.index, columns=col), how='outer', right_index=True, left_index=True)
         else:
             c_0 = self.baseline_cumulative_hazard_
-            col = _get_index(X)
             v = self.predict_partial_hazard(X)
+            col = _get_index(v)
             cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
 
         if times is not None:
@@ -808,6 +820,24 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             return self._compute_baseline_hazard(data=df, durations=T, event_observed=E, weights=weights, name='baseline hazard')
 
     def _compute_baseline_survival(self):
+        """
+        Importantly, this agrees with what the KaplanMeierFitter produces. Ex:
+        from lifelines.datasets import load_rossi
+        from lifelines import CoxPHFitter, KaplanMeierFitter
+        rossi = load_rossi()
+
+        kmf = KaplanMeierFitter()
+        kmf.fit(rossi['week'], rossi['arrest'])
+
+        rossi2 = rossi[['week', 'arrest']].copy()
+        rossi2['var1'] = np.random.randn(432)
+
+        cph = CoxPHFitter()
+        cph.fit(rossi2, 'week', 'arrest')
+
+        ax = cph.baseline_survival_.plot()
+        kmf.plot(ax=ax)
+        """
         survival_df = exp(-self.baseline_cumulative_hazard_)
         if self.strata is None:
             survival_df.columns = ['baseline survival']
