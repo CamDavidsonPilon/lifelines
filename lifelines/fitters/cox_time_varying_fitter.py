@@ -38,6 +38,11 @@ class CoxTimeVaryingFitter(BaseFitter):
     """
 
     def __init__(self, alpha=0.95, penalizer=0.0):
+        if not (0 < alpha <= 1.):
+            raise ValueError('alpha parameter must be between 0 and 1.')
+        if penalizer < 0:
+            raise ValueError("penalizer parameter must be >= 0.")
+
         self.alpha = alpha
         self.penalizer = penalizer
 
@@ -72,6 +77,9 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
 
         self.robust = robust
+        if self.robust:
+            raise NotImplementedError("Not available yet.")
+
         self.event_col = event_col
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 

@@ -1,5 +1,9 @@
 ### Changelogs
 
+#### 0.15.1
+ - Bug fixes for v0.15.0
+ - Raise NotImplementedError if the `robust` flag is used in `CoxTimeVaryingFitter` - that's not ready yet.
+
 #### 0.15.0
  - adding `robust` params to `CoxPHFitter`'s `fit`. This enables atleast i) using non-integer weights in the model (these could be sampling weights like IPTW), and ii) mis-specified models (ex: non-proportional hazards). Under the hood it's a sandwich estimator. This does not handle ties, so if there are high number of ties, results may significantly differ from other software.
  - `standard_errors_` is now a property on fitted `CoxPHFitter` which describes the standard errors of the coefficients.
