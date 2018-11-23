@@ -634,7 +634,7 @@ The fitting should be faster, and the results identical to the unweighted datase
 
 The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artifical under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error. 
 
-.. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequeny of ties. g
+.. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequeny of ties.
 
 
 Correlations between subjects in a Cox model

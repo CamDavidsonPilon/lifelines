@@ -1010,6 +1010,14 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         result = cf.predict_survival_function(rossi_mean)
         assert_series_equal(cf.baseline_survival_['baseline survival'], result[0], check_names=False)
 
+    def test_cox_ph_prediction_with_series_of_longer_length(self, rossi):
+        rossi = rossi[['week', 'arrest', 'age']]
+        cf = CoxPHFitter()
+        cf.fit(rossi, duration_col='week', event_col='arrest')
+
+        X = pd.Series([1,2,3,4,5])
+        result = cf.predict_survival_function(X)
+
     @pytest.mark.xfail
     def test_cox_ph_prediction_monotonicity(self, data_pred2):
         # Concordance wise, all prediction methods should be monotonic versions
@@ -1741,6 +1749,13 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cp2.fit(df_descaled, event_col='E', duration_col='T')
         assert_frame_equal(cp2.baseline_survival_, cp1.baseline_survival_)
 
+    def test_error_thrown_weights_are_nonpositive(self, regression_dataset):
+        regression_dataset['weights'] = -1
+        cph = CoxPHFitter()
+        with pytest.raises(ValueError):
+            cph.fit(regression_dataset, event_col='E', duration_col='T', weights_col='weights')
+
+
     def test_survival_prediction_is_the_same_indp_of_scale(self, regression_dataset):
         df = regression_dataset.copy()
 
@@ -2385,6 +2400,15 @@ class TestCoxTimeVaryingFitter():
         assert abs(p_value - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
+    def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
+        heart['weights'] = -1
+        with pytest.raises(ValueError):
+            ctv.fit(heart, id_col='id', event_col='event', weights_col='weights')
+
+
+    def test_error_thrown_if_column_doesnt_exist(self, ctv, heart):
+        with pytest.raises(KeyError):
+            ctv.fit(heart, id_col='_id_', event_col='event')
 
     def test_print_summary(self, ctv, heart):
 

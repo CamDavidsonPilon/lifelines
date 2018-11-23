@@ -9,14 +9,8 @@ def filepath(fname):
 exec(compile(open('lifelines/version.py').read(),
                   'lifelines/version.py', 'exec'))
 
-readme_md = filepath('README.md')
-
-try:
-    import pypandoc
-    readme_rst = pypandoc.convert_file(readme_md, 'rst')
-except(ImportError):
-    readme_rst = open(readme_md).read()
-
+with open('README.md') as f:
+    long_description = f.read()
 
 setup(
     name="lifelines",
@@ -32,7 +26,8 @@ setup(
               'lifelines.fitters',
               'lifelines.utils',
               ],
-    long_description=readme_rst,
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: MIT License",
@@ -45,8 +40,9 @@ setup(
         ],
     install_requires=[
         "numpy",
-        "scipy",
+        "scipy>=1.0",
         "pandas>=0.18",
+        "matplotlib>=2.0",
     ],
     package_data={
         "lifelines": [

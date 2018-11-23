@@ -681,7 +681,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             pass_for_numeric_dtypes_or_raise(X)
         elif isinstance(X, pd.Series):
             assert len(hazard_names) == 1, 'Series not the correct arugment'
-            X = pd.DataFrame(series).T
+            X = pd.DataFrame(X)
             pass_for_numeric_dtypes_or_raise(X)
 
         X = X.astype(float)

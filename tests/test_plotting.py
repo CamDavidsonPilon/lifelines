@@ -92,6 +92,7 @@ class TestPlotting():
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         T = generate_random_lifetimes(hz, timeline)
+        T[np.isinf(T)] = 10
         C = np.random.binomial(1, 1., size=n)
         X['T'] = T
         X['E'] = C
@@ -336,6 +337,7 @@ class TestPlotting():
         cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline),
                                           index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
+        T[np.isinf(T)] = 10
         X['T'] = T
         X['E'] = np.random.binomial(1, 0.99, n)
 
