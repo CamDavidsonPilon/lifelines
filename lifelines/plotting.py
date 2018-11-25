@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
+import warnings
 import numpy as np
 from lifelines.utils import coalesce
 
@@ -187,7 +187,7 @@ def plot_lifetimes(duration, event_observed=None, entry=None, sort_by_duration=F
 
     N = duration.shape[0]
     if N > 100:
-        warning.warn("For less visual clutter, you may want to subsample to less than 100 individuals.")
+        warnings.warn("For less visual clutter, you may want to subsample to less than 100 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
