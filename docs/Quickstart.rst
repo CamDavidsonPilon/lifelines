@@ -184,7 +184,7 @@ The input of the ``fit`` method's API in a regression is different. All the data
 
     cph.plot()
 
-.. image:: http://i.imgur.com/ko1tzcCl.png
+.. image:: images/coxph_plot_quickstart.png  
 
 
 If we focus on Aalen's Additive model, 
