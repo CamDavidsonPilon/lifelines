@@ -66,12 +66,13 @@ situation.
     actual_lifetimes = np.array([[exponential(12), exponential(2)][uniform() < 0.5] for i in range(N)])
     observed_lifetimes = np.minimum(actual_lifetimes, current_time)
     observed = actual_lifetimes < current_time
+
+    ax = plot_lifetimes(observed_lifetimes, event_observed=observed)
     
-    plt.xlim(0, 25)
-    plt.vlines(10, 0, 30, lw=2, linestyles='--')
-    plt.xlabel("time")
-    plt.title("Births and deaths of our population, at $t=10$")
-    plot_lifetimes(observed_lifetimes, event_observed=observed)
+    ax.set_xlim(0, 25)
+    ax.vlines(10, 0, 30, lw=2, linestyles='--')
+    ax.set_xlabel("time")
+    ax.set_title("Births and deaths of our population, at $t=10$")
     print("Observed lifetimes at time %d:\n" % (current_time), observed_lifetimes)
 
 
@@ -81,9 +82,9 @@ situation.
 .. parsed-literal::
 
     Observed lifetimes at time 10:
-    [ 10.     1.1    8.    10.     3.43   0.63   6.28   1.03   2.37   6.17  10.
-       0.21   2.71   1.25  10.     3.4    0.62   1.94   0.22   7.43   6.16  10.
-       9.41  10.    10.  ]
+    [  10.   1.1   8.   10.  3.43   0.63   6.28   1.03   2.37   6.17  10.
+       0.21   2.71   1.25  10.   3.4  0.62   1.94   0.22   7.43   6.16  10.
+       9.41  10.  10.]
 
 
 The red lines denote the lifespan of individuals where the death event
@@ -101,9 +102,9 @@ information at :math:`t=10`).
 
 .. code:: python
 
-    plt.xlim(0,25)
-    plt.vlines(10, 0, 30, lw=2, linestyles='--')
-    plot_lifetimes(actual_lifetimes, event_observed=observed)
+    ax = plot_lifetimes(actual_lifetimes, event_observed=observed)
+    ax.vlines(10, 0, 30, lw=2, linestyles='--')
+    ax.set_xlim(0,25)
 
 
 .. image:: images/survival_analysis_intro_censorship_revealed.png
