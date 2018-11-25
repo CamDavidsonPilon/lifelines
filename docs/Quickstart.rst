@@ -23,6 +23,10 @@ Install via ``pip`` (see `its documentation <https://pip.pypa.io/en/stable/insta
 Kaplan-Meier and Nelson-Aalen
 -----------------------------
 
+.. note:: For readers looking for an introduction to survival analysis, it's recommended to start at :ref:`Introduction to Survival Analysis`
+
+
+
 Let's start by importing some data. We need the durations that individuals are observed for, and whether they "died" or not. 
 
 .. code:: python
@@ -45,14 +49,14 @@ Let's start by importing some data. We need the durations that individuals are o
 
 ``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed (alternatively an individual can be censored). 
 
-.. note:: By default, *lifelines* assumes all "deaths" are observed. 
+.. note:: *lifelines* assumes all "deaths" are observed unless otherwise specified. 
 
 
 .. code:: python
 
     from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
-    kmf.fit(T, event_observed=E)  # or, more succiently, kmf.fit(T, E)
+    kmf.fit(T, event_observed=E)  # or, more succinctly, kmf.fit(T, E)
 
 After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Panda's internal plotting library. 
 
@@ -78,7 +82,7 @@ Multiple groups
     ax = kmf.plot()
 
     kmf.fit(T[ix], E[ix], label='miR-137')
-    kmf.plot(ax=ax)
+    ax = kmf.plot(ax=ax)
 
 .. image:: images/quickstart_multi.png   
 
