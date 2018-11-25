@@ -14,21 +14,20 @@ from pandas import to_datetime
 
 # ipython autocomplete will pick these up, which are probably what users only need.
 __all__ = [
-    'qth_survival_times',
-    'qth_survival_time',
-    'median_survival_times',
-    'survival_table_from_events',
-    'datetimes_to_durations',
-    'concordance_index',
-    'k_fold_cross_validation',
-    'to_long_format',
-    'add_covariate_to_timeline',
-    'covariates_from_event_matrix'
+    "qth_survival_times",
+    "qth_survival_time",
+    "median_survival_times",
+    "survival_table_from_events",
+    "datetimes_to_durations",
+    "concordance_index",
+    "k_fold_cross_validation",
+    "to_long_format",
+    "add_covariate_to_timeline",
+    "covariates_from_event_matrix",
 ]
 
 
 class StatError(Exception):
-
     def __init__(self, msg):
         self.msg = msg
 
@@ -47,13 +46,11 @@ class ConvergenceError(ValueError):
 
 
 class ConvergenceWarning(RuntimeWarning):
-
     def __init__(self, msg):
         self.msg = msg
 
     def __str__(self):
         return repr(self.msg)
-
 
 
 def qth_survival_times(q, survival_functions, cdf=False):
@@ -69,10 +66,11 @@ def qth_survival_times(q, survival_functions, cdf=False):
          if d > 1, an DataFrame containing the first times the value was crossed.
 
     """
+    # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
     q = pd.Series(q)
 
     if not ((q <= 1).all() and (0 <= q).all()):
-        raise ValueError('q must be between 0 and 1')
+        raise ValueError("q must be between 0 and 1")
 
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
@@ -95,7 +93,9 @@ def qth_survival_time(q, survival_function, cdf=False):
     """
     if isinstance(survival_function, pd.DataFrame):
         if survival_function.shape[1] > 1:
-            raise ValueError("Expecting a dataframe (or series) with a single column. Provide that or use utils.qth_survival_times.")
+            raise ValueError(
+                "Expecting a dataframe (or series) with a single column. Provide that or use utils.qth_survival_times."
+            )
 
         survival_function = survival_function.T.squeeze()
 
@@ -114,7 +114,9 @@ def median_survival_times(density_or_survival_function, left_censorship=False):
     return qth_survival_times(0.5, density_or_survival_function, cdf=left_censorship)
 
 
-def group_survival_table_from_events(groups, durations, event_observed, birth_times=None, limit=-1):
+def group_survival_table_from_events(
+    groups, durations, event_observed, birth_times=None, limit=-1
+):
     """
     Joins multiple event series together into dataframes. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
@@ -177,7 +179,9 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
 
     assert n == np.max(birth_times.shape), "inputs must be of the same length."
 
-    groups, durations, event_observed, birth_times = [pd.Series(np.asarray(data).reshape(n,)) for data in [groups, durations, event_observed, birth_times]]
+    groups, durations, event_observed, birth_times = [
+        pd.Series(np.asarray(vector).reshape(n)) for vector in [groups, durations, event_observed, birth_times]
+    ]
     unique_groups = groups.unique()
 
     for i, group in enumerate(unique_groups):
@@ -186,25 +190,36 @@ def group_survival_table_from_events(groups, durations, event_observed, birth_ti
         C = event_observed[ix]
         B = birth_times[ix]
         group_name = str(group)
-        columns = [event_name + ":" + group_name for event_name in ['removed', 'observed', 'censored', 'entrance', 'at_risk']]
+        columns = [
+            event_name + ":" + group_name for event_name in ["removed", "observed", "censored", "entrance", "at_risk"]
+        ]
         if i == 0:
-            data = survival_table_from_events(T, C, B, columns=columns)
+            survival_table = survival_table_from_events(T, C, B, columns=columns)
         else:
-            data = data.join(survival_table_from_events(T, C, B, columns=columns), how='outer')
+            survival_table = survival_table.join(survival_table_from_events(T, C, B, columns=columns), how="outer")
 
-    data = data.fillna(0)
+    survival_table = survival_table.fillna(0)
     # hmmm pandas its too bad I can't do data.loc[:limit] and leave out the if.
     if int(limit) != -1:
-        data = data.loc[:limit]
+        survival_table = survival_table.loc[:limit]
 
-    return unique_groups, data.filter(like='removed:'), data.filter(like='observed:'), data.filter(like='censored:')
+    return (
+        unique_groups,
+        survival_table.filter(like="removed:"),
+        survival_table.filter(like="observed:"),
+        survival_table.filter(like="censored:"),
+    )
 
 
-def survival_table_from_events(death_times, event_observed, birth_times=None,
-                               columns=["removed", "observed", "censored", "entrance", "at_risk"],
-                               weights=None,
-                               collapse=False,
-                               intervals=None):
+def survival_table_from_events(
+    death_times,
+    event_observed,
+    birth_times=None,
+    columns=("removed", "observed", "censored", "entrance", "at_risk"),
+    weights=None,
+    collapse=False,
+    intervals=None,
+):
     """
     Parameters:
         death_times: (n,) array of event times
@@ -212,8 +227,8 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
         birth_times: a (n,) array of numbers representing
           when the subject was first observed. A subject's death event is then at [birth times + duration observed].
           If None (default), birth_times are set to be the first observation or 0, which ever is smaller.
-        columns: a 3-length array to call the, in order, removed individuals, observed deaths
-          and censorships.
+        columns: a 5-length array to specify the column names of the, in order, removed individuals, observed deaths,
+          censorships, entrances, and at risk.
         weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
         collapse: Default False. If True, collapses survival table into lifetable to show events in interval bins
         intervals: Default None, otherwise a list/(n,1) array of interval edge measures. If left as None
@@ -257,7 +272,7 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
     else:
         birth_times = np.asarray(birth_times)
         if np.any(birth_times > death_times):
-            raise ValueError('birth time must be less than time of death.')
+            raise ValueError("birth time must be less than time of death.")
 
     if weights is None:
         weights = 1
@@ -270,10 +285,10 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
     death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
 
     # deal with late births
-    births = pd.DataFrame(birth_times, columns=['event_at'])
+    births = pd.DataFrame(birth_times, columns=["event_at"])
     births[entrance] = np.asarray(weights)
-    births_table = births.groupby('event_at').sum()
-    event_table = death_table.join(births_table, how='outer', sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
+    births_table = births.groupby("event_at").sum()
+    event_table = death_table.join(births_table, how="outer", sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
 
     # group by intervals
@@ -282,8 +297,7 @@ def survival_table_from_events(death_times, event_observed, birth_times=None,
 
     if (np.asarray(weights).astype(int) != weights).any():
         return event_table.astype(float)
-    else:
-        return event_table.astype(int)
+    return event_table.astype(int)
 
 
 def _group_event_table_by_intervals(event_table, intervals):
@@ -291,20 +305,19 @@ def _group_event_table_by_intervals(event_table, intervals):
 
     # use Freedman-Diaconis rule to determine bin size if user doesn't define intervals
     if intervals is None:
-        event_max = event_table['event_at'].max()
+        event_max = event_table["event_at"].max()
 
         # need interquartile range for bin width
-        q75, q25 = np.percentile(event_table['event_at'], [75, 25])
+        q75, q25 = np.percentile(event_table["event_at"], [75, 25])
         event_iqr = q75 - q25
 
-        bin_width = 2 * event_iqr * (len(event_table['event_at']) ** (-1 / 3))
+        bin_width = 2 * event_iqr * (len(event_table["event_at"]) ** (-1 / 3))
 
         intervals = np.arange(0, event_max + bin_width, bin_width)
 
-    return event_table.groupby(pd.cut(event_table['event_at'], intervals)).agg({'removed': ['sum'],
-                                                                                'observed': ['sum'],
-                                                                                'censored': ['sum'],
-                                                                                'at_risk': ['max']})
+    return event_table.groupby(pd.cut(event_table["event_at"], intervals)).agg(
+        {"removed": ["sum"], "observed": ["sum"], "censored": ["sum"], "at_risk": ["max"]}
+    )
 
 
 def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
@@ -341,14 +354,16 @@ def survival_events_from_table(event_table, observed_deaths_col="observed", cens
     i = 0
     for event_time, row in event_table.iterrows():
         n = row[columns].sum()
-        T[i:i + n] = event_time
-        C[i:i + n] = np.r_[np.ones(row[columns[0]]), np.zeros(row[columns[1]])]
+        T[i : i + n] = event_time
+        C[i : i + n] = np.r_[np.ones(row[columns[0]]), np.zeros(row[columns[1]])]
         i += n
 
     return T, C
 
 
-def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), freq='D', dayfirst=False, na_values=None):
+def datetimes_to_durations(
+    start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None
+):
     """
     This is a very flexible function for transforming arrays of start_times and end_times
     to the proper format for lifelines: duration and event observation arrays.
@@ -369,14 +384,14 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
 
     """
     fill_date = pd.to_datetime(fill_date)
-    freq_string = 'timedelta64[%s]' % freq
+    freq_string = "timedelta64[%s]" % freq
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
 
     C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
     end_times[~C] = fill_date
     start_times_ = to_datetime(start_times, dayfirst=dayfirst)
-    end_times_ = to_datetime(end_times, dayfirst=dayfirst, errors='coerce')
+    end_times_ = to_datetime(end_times, dayfirst=dayfirst, errors="coerce")
 
     deaths_after_cutoff = end_times_ > fill_date
     C[deaths_after_cutoff] = False
@@ -392,7 +407,7 @@ def l1_log_loss(event_times, predicted_event_times, event_observed=None):
     Calculates the l1 log-loss of predicted event times to true event times for *non-censored*
     individuals only.
 
-    1/N \sum_{i} |log(t_i) - log(q_i)|
+    1/N sum_{i} |log(t_i) - log(q_i)|
 
     Parameters:
       event_times: a (n,) array of observed survival times.
@@ -415,7 +430,7 @@ def l2_log_loss(event_times, predicted_event_times, event_observed=None):
     Calculates the l2 log-loss of predicted event times to true event times for *non-censored*
     individuals only.
 
-    1/N \sum_{i} (log(t_i) - log(q_i))**2
+    1/N sum_{i} (log(t_i) - log(q_i))**2
 
     Parameters:
       event_times: a (n,) array of observed survival times.
@@ -466,14 +481,11 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     predicted_scores = np.array(predicted_scores, dtype=float)
 
     # Allow for (n, 1) or (1, n) arrays
-    if event_times.ndim == 2 and (event_times.shape[0] == 1 or
-                                  event_times.shape[1] == 1):
+    if event_times.ndim == 2 and (event_times.shape[0] == 1 or event_times.shape[1] == 1):
         # Flatten array
         event_times = event_times.ravel()
     # Allow for (n, 1) or (1, n) arrays
-    if (predicted_scores.ndim == 2 and
-        (predicted_scores.shape[0] == 1 or
-         predicted_scores.shape[1] == 1)):
+    if predicted_scores.ndim == 2 and (predicted_scores.shape[0] == 1 or predicted_scores.shape[1] == 1):
         # Flatten array
         predicted_scores = predicted_scores.ravel()
 
@@ -489,9 +501,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
             raise ValueError("Observed events must be 1-dimensional of same length as event times")
         event_observed = np.array(event_observed, dtype=float).ravel()
 
-    return _concordance_index(event_times,
-                              predicted_scores,
-                              event_observed)
+    return _concordance_index(event_times, predicted_scores, event_observed)
 
 
 def coalesce(*args):
@@ -505,10 +515,17 @@ def inv_normal_cdf(p):
     return stats.norm.ppf(p)
 
 
-def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
-                            k=5, evaluation_measure=concordance_index,
-                            predictor="predict_expectation", predictor_kwargs={},
-                            fitter_kwargs={}):
+def k_fold_cross_validation(
+    fitters,
+    df,
+    duration_col,
+    event_col=None,
+    k=5,
+    evaluation_measure=concordance_index,
+    predictor="predict_expectation",
+    predictor_kwargs={},
+    fitter_kwargs={},
+):  # pylint: disable=dangerous-default-value
     """
     Perform cross validation on a dataset. If multiple models are provided,
     all models will train on each of the k subsets.
@@ -549,12 +566,12 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
     # Each fitter has its own scores
     fitterscores = [[] for _ in fitters]
 
-    n, d = df.shape
+    n, _ = df.shape
     df = df.copy()
 
     if event_col is None:
-        event_col = 'E'
-        df[event_col] = 1.
+        event_col = "E"
+        df[event_col] = 1.0
 
     df = df.reindex(np.random.permutation(df.index)).sort_values(event_col)
 
@@ -575,8 +592,7 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
 
         for fitter, scores in zip(fitters, fitterscores):
             # fit the fitter to the training data
-            fitter.fit(training_data, duration_col=duration_col,
-                       event_col=event_col, **fitter_kwargs)
+            fitter.fit(training_data, duration_col=duration_col, event_col=event_col, **fitter_kwargs)
             T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
 
             try:
@@ -587,15 +603,14 @@ def k_fold_cross_validation(fitters, df, duration_col, event_col=None,
     # If a single fitter was given as argument, return a single result
     if len(fitters) == 1:
         return fitterscores[0]
-    else:
-        return fitterscores
+    return fitterscores
 
 
 def normalize(X, mean=None, std=None):
-    '''
+    """
     Normalize X. If mean OR std is None, normalizes
     X to have mean 0 and std 1.
-    '''
+    """
     if mean is None or std is None:
         mean = X.mean(0)
         std = X.std(0)
@@ -603,14 +618,14 @@ def normalize(X, mean=None, std=None):
 
 
 def unnormalize(X, mean, std):
-    '''
+    """
     Reverse a normalization. Requires the original mean and
     standard deviation of the data set.
-    '''
+    """
     return X * std + mean
 
 
-def epanechnikov_kernel(t, T, bandwidth=1.):
+def epanechnikov_kernel(t, T, bandwidth=1.0):
     M = 0.75 * (1 - ((t - T) / bandwidth) ** 2)
     M[abs((t - T)) >= bandwidth] = 0
     return M
@@ -623,15 +638,15 @@ def significance_code(p):
         from the traditional "astericks" in R and making everthing an order-of-magnitude less.
     """
     if p < 0.0001:
-        return '***'
-    elif p < 0.001:
-        return '**'
-    elif p < 0.01:
-        return '*'
-    elif p < 0.05:
-        return '.'
-    else:
-        return ' '
+        return "***"
+    if p < 0.001:
+        return "**"
+    if p < 0.01:
+        return "*"
+    if p < 0.05:
+        return "."
+    return " "
+
 
 def significance_codes_as_text():
     p_values = [0, 0.0001, 0.001, 0.01, 0.05]
@@ -672,12 +687,15 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
         b = np.dot(X.T, Y) + c2 * offset
 
     # rather than explicitly computing the inverse, just solve the system of equations
-    return (solve(A, b, assume_a='pos', overwrite_b=True, check_finite=False),
-            solve(A, X.T, assume_a='pos', overwrite_b=True, check_finite=False))
+    return (
+        solve(A, b, assume_a="pos", overwrite_b=True, check_finite=False),
+        solve(A, X.T, assume_a="pos", overwrite_b=True, check_finite=False),
+    )
 
 
 def _smart_search(minimizing_function, n, *args):
     from scipy.optimize import fmin_powell
+
     x = np.ones(n)
     return fmin_powell(minimizing_function, x, args=args, disp=False)
 
@@ -689,31 +707,31 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     """
     if reverse:
         events = events.sort_index(ascending=False)
-        at_risk = events['entrance'].sum() - events['removed'].cumsum().shift(1).fillna(0)
+        at_risk = events["entrance"].sum() - events["removed"].cumsum().shift(1).fillna(0)
 
-        deaths = events['observed']
+        deaths = events["observed"]
 
         estimate_ = np.cumsum(_additive_f(at_risk, deaths)).sort_index().shift(-1).fillna(0)
         var_ = np.cumsum(_additive_var(at_risk, deaths)).sort_index().shift(-1).fillna(0)
     else:
-        deaths = events['observed']
+        deaths = events["observed"]
 
         # Why subtract entrants like this? see https://github.com/CamDavidsonPilon/lifelines/issues/497
         # specifically, we kill people, compute the ratio, and then "add" the entants. This means that
         # the population should not have the late entrants. The only exception to this rule
         # is the first period, where entrants happen _prior_ to deaths.
-        entrances = events['entrance'].copy()
+        entrances = events["entrance"].copy()
         entrances.iloc[0] = 0
-        population = events['at_risk'] - entrances
+        population = events["at_risk"] - entrances
 
         estimate_ = np.cumsum(_additive_f(population, deaths))
         var_ = np.cumsum(_additive_var(population, deaths))
 
     timeline = sorted(timeline)
-    estimate_ = estimate_.reindex(timeline, method='pad').fillna(0)
-    var_ = var_.reindex(timeline, method='pad')
-    var_.index.name = 'timeline'
-    estimate_.index.name = 'timeline'
+    estimate_ = estimate_.reindex(timeline, method="pad").fillna(0)
+    var_ = var_.reindex(timeline, method="pad")
+    var_.index.name = "timeline"
+    estimate_.index.name = "timeline"
 
     return estimate_, var_
 
@@ -741,7 +759,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     else:
         timeline = np.asarray(timeline)
 
-    return durations, event_observed, timeline.astype(float), entry, event_table
+    return (durations, event_observed, timeline.astype(float), entry, event_table)
 
 
 def _get_index(X):
@@ -797,7 +815,7 @@ class _BTree(object):
         last_full_row = int(np.log2(len(values) + 1) - 1)
         len_ragged_row = len(values) - (2 ** (last_full_row + 1) - 1)
         if len_ragged_row > 0:
-            bottom_row_ix = np.s_[:2 * len_ragged_row:2]
+            bottom_row_ix = np.s_[: 2 * len_ragged_row : 2]
             tree[-len_ragged_row:] = values[bottom_row_ix]
             values = np.delete(values, bottom_row_ix)
 
@@ -809,7 +827,7 @@ class _BTree(object):
         values_space = 2
         values_len = 2 ** last_full_row
         while values_start < len(values):
-            tree[values_len - 1:2 * values_len - 1] = values[values_start::values_space]
+            tree[values_len - 1 : 2 * values_len - 1] = values[values_start::values_space]
             values_start += int(values_space / 2)
             values_space *= 2
             values_len = int(values_len / 2)
@@ -828,8 +846,7 @@ class _BTree(object):
                 i = 2 * i + 2
             else:
                 return
-        raise ValueError("Value %s not contained in tree."
-                         "Also, the counts are now messed up." % value)
+        raise ValueError("Value %s not contained in tree." "Also, the counts are now messed up." % value)
 
     def __len__(self):
         return self._counts[0]
@@ -959,12 +976,10 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
         has_more_censored = censored_ix < len(censored_truth)
         has_more_died = died_ix < len(died_truth)
         # Should we look at some censored indices next, or died indices?
-        if has_more_censored and (not has_more_died or
-                                  died_truth[died_ix] > censored_truth[censored_ix]):
+        if has_more_censored and (not has_more_died or died_truth[died_ix] > censored_truth[censored_ix]):
             pairs, correct, tied, next_ix = handle_pairs(censored_truth, censored_pred, censored_ix)
             censored_ix = next_ix
-        elif has_more_died and (not has_more_censored or
-                                died_truth[died_ix] <= censored_truth[censored_ix]):
+        elif has_more_died and (not has_more_censored or died_truth[died_ix] <= censored_truth[censored_ix]):
             pairs, correct, tied, next_ix = handle_pairs(died_truth, died_pred, died_ix)
             for pred in died_pred[died_ix:next_ix]:
                 times_to_compare.insert(pred)
@@ -989,34 +1004,33 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
 
     Assumes the data has been verified by lifelines.utils.concordance_index first.
     """
+
     def valid_comparison(time_a, time_b, event_a, event_b):
         """True if times can be compared."""
         if time_a == time_b:
             # Ties are only informative if exactly one event happened
             return event_a != event_b
-        elif event_a and event_b:
+        if event_a and event_b:
             return True
-        elif event_a and time_a < time_b:
+        if event_a and time_a < time_b:
             return True
-        elif event_b and time_b < time_a:
+        if event_b and time_b < time_a:
             return True
-        else:
-            return False
+        return False
 
     def concordance_value(time_a, time_b, pred_a, pred_b):
         if pred_a == pred_b:
             # Same as random
             return 0.5
-        elif pred_a < pred_b:
+        if pred_a < pred_b:
             return (time_a < time_b) or (time_a == time_b and event_a and not event_b)
-        else:  # pred_a > pred_b
-            return (time_a > time_b) or (time_a == time_b and not event_a and event_b)
+        # pred_a > pred_b
+        return (time_a > time_b) or (time_a == time_b and not event_a and event_b)
 
     paircount = 0.0
     csum = 0.0
 
-    for a in range(0, len(event_times)):
-        time_a = event_times[a]
+    for a, time_a in enumerate(event_times):
         pred_a = predicted_event_times[a]
         event_a = event_observed[a]
         # Don't want to double count
@@ -1033,26 +1047,40 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
         raise ZeroDivisionError("No admissable pairs in the dataset.")
     return csum / paircount
 
+
 def pass_for_numeric_dtypes_or_raise(df):
-    nonnumeric_cols = [col for col in df.columns if not (np.issubdtype(df[col].dtype, np.number) or np.issubdtype(df[col].dtype, np.bool_))]
-    if len(nonnumeric_cols) > 0:
-        raise TypeError("DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)." % nonnumeric_cols)
+    nonnumeric_cols = [
+        col
+        for col in df.columns
+        if not (np.issubdtype(df[col].dtype, np.number) or np.issubdtype(df[col].dtype, np.bool_))
+    ]
+    if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
+        raise TypeError(
+            "DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)."
+            % nonnumeric_cols
+        )
 
 
 def check_for_immediate_deaths(stop_times_events):
     # Only used in CTV. This checks for deaths immediately, that is (0,0) lives.
-    if ((stop_times_events['start'] == stop_times_events['stop']) & (stop_times_events['stop'] == 0) & stop_times_events['event']).any():
-        raise ValueError("""The dataset provided has subjects that die on the day of entry. (0, 0)
+    if (
+        (stop_times_events["start"] == stop_times_events["stop"])
+        & (stop_times_events["stop"] == 0)
+        & stop_times_events["event"]
+    ).any():
+        raise ValueError(
+            """The dataset provided has subjects that die on the day of entry. (0, 0)
 is not allowed in CoxTimeVaryingFitter. If suffices to add a small non-zero value to their end - example Pandas code:
 
 > df.loc[ (df[start_col] == df[stop_col]) & (df[start_col] == 0) & df[event_col], stop_col] = 0.5
 
 Alternatively, add 1 to every subjects' final end period.
-""")
+"""
+        )
 
 
 def check_for_instantaneous_events(stop_times_events):
-    if ((stop_times_events['start'] == stop_times_events['stop']) & (stop_times_events['stop'] == 0)).any():
+    if ((stop_times_events["start"] == stop_times_events["stop"]) & (stop_times_events["stop"] == 0)).any():
         warning_text = """There exist rows in your dataframe with start and stop both at time 0:
 
         > df.loc[(df[start_col] == df[stop_col]) & (df[start_col] == 0)]
@@ -1069,22 +1097,27 @@ def check_for_overlapping_intervals(df):
     # some index creation
     # so slow.
     if not df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic).all():
-        raise ValueError("The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
+        raise ValueError(
+            "The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
 to help find:\
-df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic)")
+df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic)"
+        )
 
 
 def _low_var(df):
-    return (df.var(0) < 10e-5)
+    return df.var(0) < 10e-5
 
 
 def check_low_var(df, prescript="", postscript=""):
     low_var = _low_var(df)
     if low_var.any():
         cols = str(list(df.columns[low_var]))
-        warning_text = "%sColumn(s) %s have very low variance. \
+        warning_text = (
+            "%sColumn(s) %s have very low variance. \
 This may harm convergence. Try dropping this redundant column before fitting \
-if convergence fails.%s" % (prescript, cols, postscript)
+if convergence fails.%s"
+            % (prescript, cols, postscript)
+        )
         warnings.warn(warning_text, ConvergenceWarning)
 
 
@@ -1094,10 +1127,14 @@ def check_complete_separation_low_variance(df, events):
     lhs = df.columns[_low_var(df.loc[~events])]
     inter = lhs.intersection(rhs).tolist()
     if inter:
-        warning_text = "Column(s) %s have very low variance when conditioned on \
+        warning_text = (
+            "Column(s) %s have very low variance when conditioned on \
 death event or not. This may harm convergence. This could be a form of 'complete separation'. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (inter)
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ "
+            % (inter)
+        )
         warnings.warn(warning_text, ConvergenceWarning)
+
 
 def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
@@ -1111,9 +1148,13 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
 
     for col, series in df.iteritems():
         if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
-            warning_text = "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ " % (col)
+            warning_text = (
+                "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ "
+                % (col)
+            )
             warnings.warn(warning_text, ConvergenceWarning)
+
 
 def check_complete_separation(df, events, durations):
     check_complete_separation_low_variance(df, events)
@@ -1122,7 +1163,7 @@ def check_complete_separation(df, events, durations):
 
 def check_nans_or_infs(df_or_array):
     nulls = pd.isnull(df_or_array)
-    if hasattr(nulls, 'values'):
+    if hasattr(nulls, "values"):
         if nulls.values.any():
             raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     else:
@@ -1130,11 +1171,11 @@ def check_nans_or_infs(df_or_array):
             raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     # isinf check is done after isnull check since np.isinf doesn't work on None values
     infs = []
-    if isinstance(df_or_array, pd.Series) or isinstance(df_or_array, pd.DataFrame):
-        infs = (df_or_array == np.Inf)
+    if isinstance(df_or_array, (pd.Series, pd.DataFrame)):
+        infs = df_or_array == np.Inf
     else:
         infs = np.isinf(df_or_array)
-    if hasattr(infs, 'values'):
+    if hasattr(infs, "values"):
         if infs.values.any():
             raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
     else:
@@ -1150,13 +1191,21 @@ def to_long_format(df, duration_col):
     Returns:
         long_form_df: A DataFrame with columns. This can be fed into `add_covariate_to_timeline`
     """
-    return df.assign(start=0, stop=lambda s: s[duration_col])\
-             .drop(duration_col, axis=1)
+    return df.assign(start=0, stop=lambda s: s[duration_col]).drop(duration_col, axis=1)
 
 
-def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col,
-                              add_enum=False, overwrite=True, cumulative_sum=False,
-                              cumulative_sum_prefix="cumsum_", delay=0):
+def add_covariate_to_timeline(
+    long_form_df,
+    cv,
+    id_col,
+    duration_col,
+    event_col,
+    add_enum=False,
+    overwrite=True,
+    cumulative_sum=False,
+    cumulative_sum_prefix="cumsum_",
+    delay=0,
+):  # pylint: disable=too-many-arguments
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
     to be used iteratively as one adds more and more covariates to track over time. If beginning to use this function, it is recommend
@@ -1204,14 +1253,7 @@ def add_covariate_to_timeline(long_form_df, cv, id_col, duration_col, event_col,
         return cv
 
     def transform_cv_to_long_format(cv):
-        return cv.rename(columns={duration_col: 'start'})
-
-    def construct_new_timeline(original_timeline, additional_timeline, final_stop_time):
-        if additional_timeline.min() < original_timeline.min():
-            warning_text = "There exists at least one row in the covariates dataset that is before the earlist \
-known observation. This could case null values in the resulting dataframe."
-            warnings.warn(warning_text, RuntimeWarning)
-        return np.sort(original_timeline.append(additional_timeline).unique())
+        return cv.rename(columns={duration_col: "start"})
 
     def expand(df, cvs):
         id_ = df.name
@@ -1221,11 +1263,9 @@ known observation. This could case null values in the resulting dataframe."
             return df
 
         final_state = bool(df[event_col].iloc[-1])
-        final_stop_time = df['stop'].iloc[-1]
-        df = df.drop([id_col, event_col, 'stop'], axis=1).set_index("start")
-        cv = cv.drop([id_col], axis=1)\
-               .set_index("start")\
-               .loc[:final_stop_time]
+        final_stop_time = df["stop"].iloc[-1]
+        df = df.drop([id_col, event_col, "stop"], axis=1).set_index("start")
+        cv = cv.drop([id_col], axis=1).set_index("start").loc[:final_stop_time]
 
         if cumulative_sum:
             cv = cv.cumsum()
@@ -1241,22 +1281,24 @@ known observation. This could case null values in the resulting dataframe."
 
         n = expanded_df.shape[0]
         expanded_df = expanded_df.reset_index()
-        expanded_df['stop'] = expanded_df['start'].shift(-1)
+        expanded_df["stop"] = expanded_df["start"].shift(-1)
         expanded_df[id_col] = id_
         expanded_df[event_col] = False
         expanded_df.at[n - 1, event_col] = final_state
-        expanded_df.at[n - 1, 'stop'] = final_stop_time
+        expanded_df.at[n - 1, "stop"] = final_stop_time
 
         if add_enum:
-            expanded_df['enum'] = np.arange(1, n + 1)
+            expanded_df["enum"] = np.arange(1, n + 1)
 
         if cumulative_sum:
             expanded_df[cv.columns] = expanded_df[cv.columns].ffill().fillna(0)
 
         return expanded_df.ffill()
 
-    if 'stop' not in long_form_df.columns or 'start' not in long_form_df.columns:
-        raise IndexError("The columns `stop` and `start` must be in long_form_df - perhaps you need to use `lifelines.utils.to_long_format` first?")
+    if "stop" not in long_form_df.columns or "start" not in long_form_df.columns:
+        raise IndexError(
+            "The columns `stop` and `start` must be in long_form_df - perhaps you need to use `lifelines.utils.to_long_format` first?"
+        )
 
     if delay < 0:
         raise ValueError("delay parameter must be equal to or greater than 0")
@@ -1264,12 +1306,9 @@ known observation. This could case null values in the resulting dataframe."
     cv[duration_col] += delay
     cv = cv.dropna()
     cv = cv.sort_values([id_col, duration_col])
-    cvs = cv.pipe(remove_redundant_rows)\
-            .pipe(transform_cv_to_long_format)\
-            .groupby(id_col)
+    cvs = cv.pipe(remove_redundant_rows).pipe(transform_cv_to_long_format).groupby(id_col)
 
-    long_form_df = long_form_df.groupby(id_col, group_keys=False)\
-                               .apply(expand, cvs=cvs)
+    long_form_df = long_form_df.groupby(id_col, group_keys=False).apply(expand, cvs=cvs)
     return long_form_df.reset_index(drop=True)
 
 
@@ -1303,12 +1342,12 @@ def covariates_from_event_matrix(df, id_col):
     """
     df = df.set_index(id_col)
     df = df.stack().reset_index()
-    df.columns = [id_col, 'event', 'duration']
-    df['_counter'] = 1
-    return df.pivot_table(index=[id_col, 'duration'], columns='event', fill_value=0)['_counter'].reset_index()
+    df.columns = [id_col, "event", "duration"]
+    df["_counter"] = 1
+    return df.pivot_table(index=[id_col, "duration"], columns="event", fill_value=0)["_counter"].reset_index()
 
 
-class StepSizer():
+class StepSizer:
     """
     This class abstracts complicated step size logic out of the fitters. The API is as follows:
 
@@ -1347,13 +1386,13 @@ class StepSizer():
             self.temper_back_up = True
 
         # recent non-monotonically decreasing is a concern
-        if len(self.norm_of_deltas) >= LOOKBACK and \
-                not self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
+        if len(self.norm_of_deltas) >= LOOKBACK and not self._is_monotonically_decreasing(
+            self.norm_of_deltas[-LOOKBACK:]
+        ):
             self.step_size *= 0.98
 
         # recent monotonically decreasing is good though
-        if len(self.norm_of_deltas) >= LOOKBACK and \
-                self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
+        if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
             self.step_size = min(self.step_size * SCALE, 0.95)
 
         return self
@@ -1365,9 +1404,11 @@ class StepSizer():
     def next(self):
         return self.step_size
 
+
 def _to_array(x):
     if not isinstance(x, collections.Iterable):
         return np.array([x])
     return np.asarray(x)
 
-string_justify = lambda width: lambda s: s.rjust(width, ' ')
+
+string_justify = lambda width: lambda s: s.rjust(width, " ")

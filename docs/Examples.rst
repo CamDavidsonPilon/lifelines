@@ -5,24 +5,24 @@
 More Examples and Recipes
 ==================================
 
-This section goes through some examples and recipes to help you use lifelines. 
+This section goes through some examples and recipes to help you use lifelines.
 
 
 Statistically compare two populations
 ##############################################
 
 (though this applies just as well to Nelson-Aalen estimates). Often researchers want to compare
-survival curves between different populations. Here are some techniques to do that: 
+survival curves between different populations. Here are some techniques to do that:
 
 Subtract the difference between survival curves
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you are interested in taking the difference between two survival curves, simply trying to 
-subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately, 
-the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built-in ``subtract`` method: 
+If you are interested in taking the difference between two survival curves, simply trying to
+subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
+the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built-in ``subtract`` method:
 
 .. code-block:: python
-    
+
     kmf1.subtract(kmf2)
 
 will produce the difference at every relevant time point. A similar function exists for division: ``divide``.
@@ -34,7 +34,7 @@ For rigorous testing of differences, lifelines comes with a statistics library. 
 compares whether the "death" generation process of the two populations are equal:
 
 .. code-block:: python
-    
+
     from lifelines.statistics import logrank_test
 
     results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
@@ -44,23 +44,23 @@ compares whether the "death" generation process of the two populations are equal
    df=1, alpha=0.95, t0=-1, test=logrank, null distribution=chi squared
 
    test_statistic        p
-            3.528  0.00034  ** 
+            3.528  0.00034  **
 
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
    """
 
-   print(results.p_value)        # 0.46759 
+   print(results.p_value)        # 0.46759
    print(results.test_statistic) # 0.528
 
 
 If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares
-each pair in the same manner as above), or ``multivariate_logrank_test`` (which tests the 
+each pair in the same manner as above), or ``multivariate_logrank_test`` (which tests the
 hypothesis that all the populations have the same "death" generation process).
 
 
 .. code-block:: python
-    
+
     from lifelines.statistics import multivariate_logrank_test
 
     df = pd.DataFrame({
@@ -90,17 +90,17 @@ If using *lifelines* for prediction work, it's ideal that you perform some type 
 *lifelines* has a built-in k-fold cross-validation function. For example, consider the following example:
 
 .. code-block:: python
-    
+
     from lifelines import AalenAdditiveFitter, CoxPHFitter
     from lifelines.datasets import load_regression_dataset
     from lifelines.utils import k_fold_cross_validation
-    
+
     df = load_regression_dataset()
 
     #create the three models we'd like to compare.
     aaf_1 = AalenAdditiveFitter(coef_penalizer=0.5)
     aaf_2 = AalenAdditiveFitter(coef_penalizer=10)
-    cph = CoxPHFitter() 
+    cph = CoxPHFitter()
 
     print(np.mean(k_fold_cross_validation(cph, df, duration_col='T', event_col='E')))
     print(np.mean(k_fold_cross_validation(aaf_1, df, duration_col='T', event_col='E')))
@@ -114,7 +114,7 @@ Displaying at-risk counts below plots
 The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add At-Risk counts at the bottom of your figures. For example:
 
 .. code-block:: python
-    
+
     from numpy.random import exponential
     T_control = exponential(10, size=250)
     T_experiment = exponential(20, size=200)
@@ -134,7 +134,7 @@ The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add 
 
 will display
 
-.. image:: /images/add_at_risk.png 
+.. image:: /images/add_at_risk.png
    :height: 300
 
 
@@ -149,9 +149,9 @@ Some lifelines classes are designed for lists or arrays that represent one indiv
 **Example:** Suppose you have a csv file with data that looks like this:
 
 =========================   ==================    ============
-time (months, days, ...)      observed deaths       censored                      
+time (months, days, ...)      observed deaths       censored
 =========================   ==================    ============
-0                               7                    0 
+0                               7                    0
 1                               1                    1
 2                               2                    0
 3                               1                    2
@@ -161,14 +161,14 @@ time (months, days, ...)      observed deaths       censored
 
 
 .. code-block:: python
-    
+
     import pandas as pd
     from lifelines.utils import survival_events_from_table
 
     df = pd.read_csv('file.csv', columns = ['observed deaths', 'censored'])
 
     T, E = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
-    
+
     print(T) # array([0,0,0,0,0,0,0,1,...])
     print(E) # array([1,1,1,1,1,1,1,0,...])
 
@@ -180,12 +180,12 @@ Perhaps you are interested in viewing the survival table given some durations an
 
 
 .. code:: python
-    
+
     from lifelines.utils import survival_table_from_events
 
     table = survival_table_from_events(T, E)
     print(table.head())
-    
+
     """
               removed  observed  censored  entrance  at_risk
     event_at
@@ -198,13 +198,13 @@ Perhaps you are interested in viewing the survival table given some durations an
 
 
 
-Plotting multiple figures on a plot 
+Plotting multiple figures on a plot
 ##############################################
 
 When `.plot` is called, an `axis` object is returned which can be passed into future calls of `.plot`:
 
 .. code-block:: python
-    
+
     kmf.fit(data1)
     ax = kmf.plot()
 
@@ -215,10 +215,10 @@ When `.plot` is called, an `axis` object is returned which can be passed into fu
 If you have a pandas `DataFrame` with columns "group", "T", and "E", then something like the following would work:
 
 .. code-block:: python
-    
+
     from lifelines import KaplanMeierFitter
     from matplotlib import pyplot as plt
-    
+
     ax = plt.subplot(111)
 
     kmf = KaplanMeierFitter()
@@ -226,7 +226,7 @@ If you have a pandas `DataFrame` with columns "group", "T", and "E", then someth
         data = grouped_data.get_group(group)
         kmf.fit(data["T"], data["E"], label=group)
         kmf.plot(ax=ax)
-    
+
 
 Plotting options and styles
 ##############################################
@@ -237,12 +237,12 @@ Standard
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
-    
+
     kmf = KaplanMeierFitter()
     kmf.fit(T, E, label="kmf.plot()")
     kmf.plot()
 
-.. image:: /images/normal_plot.png 
+.. image:: /images/normal_plot.png
    :height: 300
 
 
@@ -254,7 +254,7 @@ R-style
     kmf.fit(T,C,label="kmf.plot(flat=True)")
     kmf.plot(flat=True)
 
-.. image:: images/flat_plot.png 
+.. image:: images/flat_plot.png
    :height: 300
 
 
@@ -266,7 +266,7 @@ Show censorships
     kmf.fit(T, C, label="kmf.plot(show_censors=True)")
     kmf.plot(show_censors=True)
 
-.. image:: images/show_censors_plot.png 
+.. image:: images/show_censors_plot.png
    :height: 300
 
 
@@ -278,7 +278,7 @@ Hide confidence intervals
     kmf.fit(T,C,label="kmf.plot(ci_show=False)")
     kmf.plot(ci_show=False)
 
-.. image:: /images/ci_show_plot.png 
+.. image:: /images/ci_show_plot.png
    :height: 300
 
 
@@ -290,7 +290,7 @@ Invert axis
     kmf.fit(T, label="kmf.plot(invert_y_axis=True)")
     kmf.plot(invert_y_axis=True)
 
-.. image:: /images/invert_y_axis.png 
+.. image:: /images/invert_y_axis.png
    :height: 300
 
 
@@ -301,7 +301,7 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
 `KaplanMeierFitter`, you survival function might look something like:
 
 .. code-block:: python
-    
+
     print(kmf.survival_function_)
 
         KM-estimate
@@ -334,7 +334,7 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
 
 What you would like is to have a predictable and full index from 40 to 75. (Notice that
 in the above index, the last two time points are not adjacent --  the cause is observing no lifetimes
-existing for times 72 or 73). This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a `timeline` argument: 
+existing for times 72 or 73). This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a `timeline` argument:
 
 .. code-block:: python
 
@@ -389,24 +389,24 @@ Below is a way to get an example dataset from a relational database (this may va
 
 .. code-block:: mysql
 
-    SELECT 
-      id, 
-      DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE)) AS "T", 
-      (ended_at IS NOT NULL) AS "E" 
+    SELECT
+      id,
+      DATEDIFF('dd', started_at, COALESCE(ended_at, CURRENT_DATE)) AS "T",
+      (ended_at IS NOT NULL) AS "E"
     FROM table
 
 Explanation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each row is an `id`, a duration, and a boolean indicating whether the event occurred or not. Recall that we denote a 
-"True" if the event *did* occur, that is, `ended_at` is filled in (we observed the `ended_at`). Ex: 
+Each row is an `id`, a duration, and a boolean indicating whether the event occurred or not. Recall that we denote a
+"True" if the event *did* occur, that is, `ended_at` is filled in (we observed the `ended_at`). Ex:
 
 ==================   ============   ============
 id                   T                      E
 ==================   ============   ============
 10                   40                 True
 11                   42                 False
-12                   42                 False 
+12                   42                 False
 13                   36                 True
 14                   33                 True
 ==================   ============   ============
@@ -423,10 +423,10 @@ Base dataset: ``base_df``
 
 .. code-block:: mysql
 
-    SELECT 
-      id, 
+    SELECT
+      id,
       group,
-      DATEDIFF('dd', dt.started_at, COALESCE(dt.ended_at, CURRENT_DATE)) AS "T", 
+      DATEDIFF('dd', dt.started_at, COALESCE(dt.ended_at, CURRENT_DATE)) AS "T",
       (ended_at IS NOT NULL) AS "E"
     FROM dimension_table dt
 
@@ -437,9 +437,9 @@ Time-varying variables
 .. code-block:: mysql
 
     -- this could produce more than 1 row per subject
-    SELECT 
-      id, 
-      DATEDIFF('dd', dt.started_at, ft.event_at) AS "time", 
+    SELECT
+      id,
+      DATEDIFF('dd', dt.started_at, ft.event_at) AS "time",
       ft.var1
     FROM fact_table ft
     JOIN dimension_table dt
@@ -462,12 +462,12 @@ Another very common operation is to fold in event data. For example, a dataset t
 
 .. code-block:: mysql
 
-    SELECT 
-      id, 
-      DATEDIFF('dd', dt.started_at, ft.event1_at) AS "E1", 
-      DATEDIFF('dd', dt.started_at, ft.event2_at) AS "E2", 
+    SELECT
+      id,
+      DATEDIFF('dd', dt.started_at, ft.event1_at) AS "E1",
+      DATEDIFF('dd', dt.started_at, ft.event2_at) AS "E2",
       DATEDIFF('dd', dt.started_at, ft.event3_at) AS "E3"
-      ... 
+      ...
     FROM dimension_table dt
 
 
@@ -481,7 +481,7 @@ In Pandas, this may look like:
     2   3     3.0     5.0    7.0
     ...
 
-Initially, this can't be added to our baseline dataframe. Using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added. 
+Initially, this can't be added to our baseline dataframe. Using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added.
 
 .. code-block:: python
 
@@ -526,7 +526,7 @@ We can do the following to get both the cumulative funding recieved and the late
 
     from lifelines.utils import to_long_format
     from lifelines.utils import add_covariate_to_timeline
-    
+
     df = seed_df.pipe(to_long_format, 'T')\
                 .pipe(add_covariate_to_timeline, cv, 'id', 't', 'E', cumulative_sum=True)\
                 .pipe(add_covariate_to_timeline, cv, 'id', 't', 'E', cumulative_sum=False)
@@ -566,7 +566,7 @@ This assumes you have estimates of the probability of event occuring for both th
 Power determination under a CoxPH model
 ##############################################
 
-Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. To determine the statistical power of a hazard ratio hypothesis test, under the CoxPH model, we can use ``lifelines.statistics.power_under_cph``. That is, suppose we want to know the probability that we reject the null hypothesis that the relative hazard ratio is 1, assuming the relative hazard ratio is truely different from 1. This function will give you that probability. 
+Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. To determine the statistical power of a hazard ratio hypothesis test, under the CoxPH model, we can use ``lifelines.statistics.power_under_cph``. That is, suppose we want to know the probability that we reject the null hypothesis that the relative hazard ratio is 1, assuming the relative hazard ratio is truely different from 1. This function will give you that probability.
 
 
 .. code-block:: python
@@ -585,30 +585,30 @@ Problems with convergence in the Cox Proportional Hazard Model
 ################################################################
 Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there is sometimes a problem with convergence. Here are some common symptoms and possible resolutions:
 
- 0. First diagnostic: look for ``ConvergenceWarning`` in the output. Most often problems in convergence are the result of problems in the dataset. Lifelines has diagnostic checks it runs against the dataset before fitting and warnings are outputted to the user. 
+ 0. First diagnostic: look for ``ConvergenceWarning`` in the output. Most often problems in convergence are the result of problems in the dataset. Lifelines has diagnostic checks it runs against the dataset before fitting and warnings are outputted to the user.
 
- 1. ``delta contains nan value(s). Convergence halted.``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5). 
+ 1. ``delta contains nan value(s). Convergence halted.``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
 
  2. ``LinAlgError: Singular matrix``: This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset.
 
  3. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is equally as large. __Or__ there are nan's in the results. This can be seen using the ``summary`` method on a fitted ``CoxPHFitter`` object.
 
-    1. Look for a ``ConvergenceWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models). 
+    1. Look for a ``ConvergenceWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models).
     2. The data is completely separable, which means that there exists a covariate the completely determines whether an event occurred or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Look for a ``ConvergenceWarning`` after the ``fit`` call.
     3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarly using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
-    4. Another problem may be a co-linear relationship in your dataset. See point 2. above. 
+    4. Another problem may be a co-linear relationship in your dataset. See point 2. above.
 
- 4. If adding a very small ``penalizer`` significantly changes the results (``CoxPHFitter(penalizer=0.0001)``), then this probably means that the step size in the iterative algorithm is too large. Try decreasing it (``.fit(..., step_size=0.50)`` or smaller), and returning the ``penalizer`` term to 0. 
+ 4. If adding a very small ``penalizer`` significantly changes the results (``CoxPHFitter(penalizer=0.0001)``), then this probably means that the step size in the iterative algorithm is too large. Try decreasing it (``.fit(..., step_size=0.50)`` or smaller), and returning the ``penalizer`` term to 0.
 
  5. If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).size()``.
 
 Adding weights to observations in a Cox model
 ##############################################
 
-There are two common uses for weights in a model. The first is as a data size reduction technique (known as case weights). If the dataset has more than one subjects with identical attributes, including duration and event, then their likelihood contribution is the same as well. Thus, instead of computing the log-likelihood for each individual, we can compute it once and multiple it by the count of users with identical attributes. In practice, this involves first grouping subjects by covariates and counting. For example, using the Rossi dataset, we will use Pandas to group by the attributes (but other data processing tools, like Spark, could do this as well): 
+There are two common uses for weights in a model. The first is as a data size reduction technique (known as case weights). If the dataset has more than one subjects with identical attributes, including duration and event, then their likelihood contribution is the same as well. Thus, instead of computing the log-likelihood for each individual, we can compute it once and multiple it by the count of users with identical attributes. In practice, this involves first grouping subjects by covariates and counting. For example, using the Rossi dataset, we will use Pandas to group by the attributes (but other data processing tools, like Spark, could do this as well):
 
 .. code-block:: python
-    
+
     from lifelines.datasets import load_rossi
 
     rossi = load_rossi()
@@ -629,10 +629,10 @@ The original dataset has 432 rows, while the grouped dataset has 387 rows plus a
     cp.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
 
 
-The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the `CoxTimeVaryingFitter`. 
+The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the `CoxTimeVaryingFitter`.
 
 
-The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artifical under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error. 
+The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artifical under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error.
 
 .. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequeny of ties.
 
@@ -643,11 +643,11 @@ Correlations between subjects in a Cox model
 There are cases when your dataset contains correlated subjects, which breaks the independent-and-identically-distributed assumption. What are some cases when this may happen?
 
 1. If a subject appears more than once in the dataset (common when subjects can have the event more than once)
-2. If using a matching technique, like prospensity-score matching, there is a correlation between pairs. 
+2. If using a matching technique, like prospensity-score matching, there is a correlation between pairs.
 
-In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in `CoxPHFitter.fit` that allows you to specify the column in the dataframe that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value. 
+In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in `CoxPHFitter.fit` that allows you to specify the column in the dataframe that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
 
-.. code-block:: python    
+.. code-block:: python
 
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter

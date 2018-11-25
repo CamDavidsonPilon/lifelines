@@ -12,15 +12,30 @@ from numpy import dot, exp
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
 from scipy.integrate import trapz
-import scipy.stats as stats
+from scipy import stats
 
 from lifelines.fitters import BaseFitter
 from lifelines.statistics import chisq_test
-from lifelines.utils import (survival_table_from_events, inv_normal_cdf, normalize,
-    significance_code, significance_codes_as_text, concordance_index, _get_index, qth_survival_times,
-    pass_for_numeric_dtypes_or_raise, check_low_var, coalesce,
-    check_complete_separation, check_nans_or_infs, StatError, ConvergenceWarning,
-    StepSizer, ConvergenceError, string_justify)
+from lifelines.utils import (
+    survival_table_from_events,
+    inv_normal_cdf,
+    normalize,
+    significance_code,
+    significance_codes_as_text,
+    concordance_index,
+    _get_index,
+    qth_survival_times,
+    pass_for_numeric_dtypes_or_raise,
+    check_low_var,
+    coalesce,
+    check_complete_separation,
+    check_nans_or_infs,
+    StatError,
+    ConvergenceWarning,
+    StepSizer,
+    ConvergenceError,
+    string_justify,
+)
 
 
 class CoxPHFitter(BaseFitter):
@@ -44,12 +59,12 @@ class CoxPHFitter(BaseFitter):
          See http://courses.washington.edu/b515/l17.pdf.
     """
 
-    def __init__(self, alpha=0.95, tie_method='Efron', penalizer=0.0, strata=None):
-        if not (0 < alpha <= 1.):
-            raise ValueError('alpha parameter must be between 0 and 1.')
+    def __init__(self, alpha=0.95, tie_method="Efron", penalizer=0.0, strata=None):
+        if not (0 < alpha <= 1.0):
+            raise ValueError("alpha parameter must be between 0 and 1.")
         if penalizer < 0:
             raise ValueError("penalizer parameter must be >= 0.")
-        if tie_method != 'Efron':
+        if tie_method != "Efron":
             raise NotImplementedError("Only Efron is available atm.")
 
         self.alpha = alpha
@@ -57,11 +72,19 @@ class CoxPHFitter(BaseFitter):
         self.penalizer = penalizer
         self.strata = strata
 
-
-    def fit(self, df, duration_col, event_col=None,
-            show_progress=False, initial_beta=None,
-            strata=None, step_size=None, weights_col=None,
-            cluster_col=None, robust=False):
+    def fit(
+        self,
+        df,
+        duration_col,
+        event_col=None,
+        show_progress=False,
+        initial_beta=None,
+        strata=None,
+        step_size=None,
+        weights_col=None,
+        cluster_col=None,
+        robust=False,
+    ):
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -105,7 +128,7 @@ class CoxPHFitter(BaseFitter):
         # Sort on time
         df = df.sort_values(by=duration_col)
 
-        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + ' UTC'
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
         self.robust = robust
@@ -118,21 +141,22 @@ class CoxPHFitter(BaseFitter):
             df = df.set_index(self.strata)
 
         # Extract time and event
-        T = df[duration_col]
-        del df[duration_col]
+        T = df.pop(duration_col)
         if event_col is None:
             E = pd.Series(np.ones(df.shape[0]), index=df.index)
         else:
-            E = df[event_col]
-            del df[event_col]
+            E = df.pop(event_col)
 
         if weights_col:
             weights = df.pop(weights_col)
             if (weights.astype(int) != weights).any() and not self.robust:
-                warnings.warn("""It appears your weights are not integers, possibly propensity or sampling scores then?
+                warnings.warn(
+                    """It appears your weights are not integers, possibly propensity or sampling scores then?
 It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
-""", RuntimeWarning)
+""",
+                    RuntimeWarning,
+                )
             if (weights <= 0).any():
                 raise ValueError("values in weights_col must be positive.")
 
@@ -140,7 +164,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             weights = pd.Series(np.ones((self._n_examples,)), index=df.index)
 
         if self.cluster_col:
-            self._clusters = df.pop(self.cluster_col)
+            self._clusters = df.pop(self.cluster_col).values
 
         self._check_values(df, T, E)
         df = df.astype(float)
@@ -158,16 +182,22 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         E = E.astype(bool)
 
-        hazards_ = self._newton_rhaphson(normalize(df, self._norm_mean, self._norm_std), T, E,
-                                         weights=weights,
-                                         initial_beta=initial_beta,
-                                         show_progress=show_progress,
-                                         step_size=step_size)
+        hazards_ = self._newton_rhaphson(
+            normalize(df, self._norm_mean, self._norm_std),
+            T,
+            E,
+            weights=weights,
+            initial_beta=initial_beta,
+            show_progress=show_progress,
+            step_size=step_size,
+        )
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=['coef']) / self._norm_std
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
-        self.standard_errors_ = self._compute_standard_errors(normalize(df, self._norm_mean, self._norm_std), T, E, weights)
+        self.standard_errors_ = self._compute_standard_errors(
+            normalize(df, self._norm_mean, self._norm_std), T, E, weights
+        )
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
         self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E, weights)
@@ -178,8 +208,18 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
         return self
 
-    def _newton_rhaphson(self, X, T, E, weights=None, initial_beta=None, step_size=None,
-                         precision=10e-6, show_progress=True, max_steps=50):
+    def _newton_rhaphson(
+        self,
+        X,
+        T,
+        E,
+        weights=None,
+        initial_beta=None,
+        step_size=None,
+        precision=10e-6,
+        show_progress=True,
+        max_steps=50,
+    ):  # pylint: disable=too-many-statements,too-many-branches
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -203,8 +243,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             beta: (1,d) numpy array.
         """
         self.path = []
-        assert precision <= 1., "precision must be less than or equal to 1."
-        n, d = X.shape
+        assert precision <= 1.0, "precision must be less than or equal to 1."
+        _, d = X.shape
 
         # make sure betas are correct size.
         if initial_beta is not None:
@@ -217,7 +257,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         step_size = step_sizer.next()
 
         # Method of choice is just efron right now
-        if self.tie_method == 'Efron':
+        if self.tie_method == "Efron":
             get_gradients = self._get_efron_values
         else:
             raise NotImplementedError("Only Efron is available.")
@@ -236,9 +276,15 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
-                for strata in np.unique(X.index):
-                    stratified_X, stratified_T, stratified_E, stratified_W = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]], weights.loc[[strata]]
-                    _h, _g, _ll = get_gradients(stratified_X.values, beta, stratified_T.values, stratified_E.values, stratified_W.values)
+                for stratum, stratified_X in X.groupby(self.strata):
+                    stratified_T, stratified_E, stratified_W = (
+                        T.loc[[stratum]],
+                        E.loc[[stratum]],
+                        weights.loc[[stratum]],
+                    )
+                    _h, _g, _ll = get_gradients(
+                        stratified_X.values, beta, stratified_T.values, stratified_E.values, stratified_W.values
+                    )
                     g += _g
                     h += _h
                     ll += _ll
@@ -246,16 +292,18 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
                 g -= self.penalizer * beta.T
-                h.flat[::d + 1] -= self.penalizer
+                h.flat[:: d + 1] -= self.penalizer
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
                 inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
             except ValueError as e:
-                if 'infs or NaNs' in str(e):
-                    raise ConvergenceError("""hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+                if "infs or NaNs" in str(e):
+                    raise ConvergenceError(
+                        """hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-""")
+"""
+                    )
                 else:
                     # something else?
                     raise e
@@ -263,19 +311,24 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             delta = step_size * inv_h_dot_g_T
 
             if np.any(np.isnan(delta)):
-                raise ConvergenceError("""delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+                raise ConvergenceError(
+                    """delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-""")
+"""
+                )
 
             # Save these as pending result
             hessian, gradient = h, g
             norm_delta = norm(delta)
 
             # reusing an above piece to make g * inv(h) * g.T faster.
-            newton_decrement = g.dot(inv_h_dot_g_T)/2
+            newton_decrement = g.dot(inv_h_dot_g_T) / 2
 
             if show_progress:
-                print("Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f" % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start))
+                print(
+                    "Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
+                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start)
+                )
 
             # convergence criteria
             if norm_delta < precision:
@@ -292,8 +345,11 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             elif step_size <= 0.00001:
                 converging, completed = False, False
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
-                warnings.warn("The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ", ConvergenceWarning)
+                warnings.warn(
+                    "The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ",
+                    ConvergenceWarning,
+                )
                 converging, completed = False, False
 
             step_size = step_sizer.update(norm_delta).next()
@@ -307,6 +363,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
+        elif show_progress and not completed:
+            print("Convergence failed. See warning messages.")
         if not completed:
             warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
@@ -355,15 +413,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
-        scores = weights[:,None] * exp(dot(X, beta))
+        scores = weights[:, None] * exp(dot(X, beta))
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
             # Doing it like this to preserve shape
             ti = T[i]
             ei = E[i]
-            xi = X[i:i + 1]
-            score = scores[i:i+1]
+            xi = X[i : i + 1]
+            score = scores[i : i + 1]
             w = weights[i]
 
             # Calculate phi values
@@ -399,14 +457,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             weighted_average = weight_count / tie_count
 
             for l in range(tie_count):
-                """
-                A good explaination for Efron. Consider three of five subjects who fail at the time.
-                As it is not known a priori that who is the first to fail, so one-third of
-                (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
-                """
-                numer = (risk_phi_x - l * tie_phi_x / tie_count)
-                denom = (risk_phi - l * tie_phi / tie_count)
+
+                # A good explaination for Efron. Consider three of five subjects who fail at the time.
+                # As it is not known a priori that who is the first to fail, so one-third of
+                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+                numer = risk_phi_x - l * tie_phi_x / tie_count
+                denom = risk_phi - l * tie_phi / tie_count
 
                 # Gradient
                 partial_gradient += weighted_average * numer / denom
@@ -420,7 +478,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 hessian -= weighted_average * (a1 - a2)
 
                 log_lik -= weighted_average * np.log(denom[0][0])
-
 
             # Values outside tie sum
             gradient += x_tie_sum - partial_gradient
@@ -448,57 +505,66 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         check_complete_separation(df, E, T)
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf((1. + self.alpha) / 2.)
+        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
         se = self.standard_errors_
         hazards = self.hazards_.values
-        return pd.DataFrame(np.r_[hazards - alpha2 * se,
-                                  hazards + alpha2 * se],
-                            index=['lower-bound', 'upper-bound'],
-                            columns=self.hazards_.columns)
+        return pd.DataFrame(
+            np.r_[hazards - alpha2 * se, hazards + alpha2 * se],
+            index=["lower-bound", "upper-bound"],
+            columns=self.hazards_.columns,
+        )
+
+    def _compute_delta_beta(self, X, T, E, weights):
+        """ approximate change in betas as a result of excluding ith row"""
+
+        _, d = X.shape
+
+        if self.strata is not None:
+            score_residuals = np.empty((0, d))
+            
+            for stratum, stratified_X in X.groupby(self.strata):
+                stratified_E, stratified_W = (
+                    E.loc[[stratum]],
+                    weights.loc[[stratum]],
+                )
+
+                score_residuals = np.append(
+                    score_residuals,
+                    self._compute_residuals_within_strata(
+                        stratified_X.values, stratified_E.values, stratified_W.values
+                    )
+                    * stratified_W[:, None],
+                    axis=0,
+                )
+
+        else:
+            score_residuals = (
+                self._compute_residuals_within_strata(X.values, E.values, weights.values) * weights[:, None]
+            )
+
+
+        naive_var = inv(self._hessian_)
+        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
+
+        return delta_betas
+
 
 
     def _compute_sandwich_estimator(self, X, T, E, weights):
 
-        _, d = X.shape
-
-        if self.strata is not None and self.cluster_col is not None:
-            # TODO
-            raise NotImplementedError("Providing clusters and strata is not implemented yet")
-
-        if self.strata is not None:
-            score_residuals = np.empty((0, d))
-            for strata in np.unique(X.index):
-                # TODO: use pandas .groupby
-                stratified_X, stratified_T, stratified_E, stratified_W = X.loc[[strata]], T.loc[[strata]], E.loc[[strata]], weights.loc[[strata]]
-
-                score_residuals = np.append(score_residuals,
-                                            self._compute_residuals_within_strata(stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values) * stratified_W[:, None],
-                                            axis=0)
-
-        else:
-            score_residuals = self._compute_residuals_within_strata(X.values, T.values, E.values, weights.values) * weights[:, None]
+        delta_betas = self._compute_delta_beta(X, T, E, weights)
 
         if self.cluster_col:
-
-            score_residuals_ = np.empty((0, d))
-            for cluster in np.unique(self._clusters):
-                ix = self._clusters == cluster
-                weights_ = weights.values[ix]
-
-                score_residuals_ = np.append(score_residuals_,
-                                            (score_residuals[ix, :] * weights_[:, None]).sum(0).reshape(1, d),
-                                            axis=0)
-            score_residuals = score_residuals_
-
-        naive_var = inv(self._hessian_)
-        delta_betas = score_residuals.dot(naive_var)
-        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
+            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
+        
+        sandwich_estimator = delta_betas.T.dot(delta_betas)
         return sandwich_estimator
 
-    def _compute_residuals_within_strata(self, X, T, E, weights):
+    def _compute_residuals_within_strata(self, X, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
+        # Assumes X already sorted by T
         # TODO: doesn't handle ties.
 
         n, d = X.shape
@@ -517,17 +583,19 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # need to store these histories, as we access them often
         # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
         risk_phi_x_history = (X * (weights * phi_s)[:, None])[::-1].cumsum(0)[::-1]
-        risk_phi_history =        (weights * phi_s)          [::-1].cumsum() [::-1][:, None]
+        risk_phi_history = (weights * phi_s)[::-1].cumsum()[::-1][:, None]
 
         # Iterate forwards
         for i in range(0, n):
 
-            xi = X[i:i + 1]
+            xi = X[i : i + 1]
             phi_i = phi_s[i]
 
-            score = - phi_i * (
-                (E[:i+1] * weights[:i+1] / risk_phi_history[:i+1].T).T  # this is constant-ish, and could be cached
-              * (xi - risk_phi_x_history[:i+1] / risk_phi_history[:i+1])
+            score = -phi_i * (
+                (
+                    E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T
+                ).T  # this is constant-ish, and could be cached
+                * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1])
             ).sum(0)
 
             if E[i]:
@@ -537,18 +605,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return score_residuals
 
-
     def _compute_standard_errors(self, df, T, E, weights):
         if self.robust or self.cluster_col:
-            se = np.sqrt(self._compute_sandwich_estimator(df, T, E, weights).diagonal()) # / self._norm_std
+            se = np.sqrt(self._compute_sandwich_estimator(df, T, E, weights).diagonal())  # / self._norm_std
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(se[None, :],
-                            index=['se'], columns=self.hazards_.columns)
+        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
-        return (self.hazards_.loc['coef'] /
-                self.standard_errors_.loc['se'])
+        return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -565,13 +630,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
 
         df = pd.DataFrame(index=self.hazards_.columns)
-        df['coef'] = self.hazards_.loc['coef'].values
-        df['exp(coef)'] = exp(self.hazards_.loc['coef'].values)
-        df['se(coef)'] = self.standard_errors_.loc['se'].values
-        df['z'] = self._compute_z_values()
-        df['p'] = self._compute_p_values()
-        df['lower %.2f' % self.alpha] = self.confidence_intervals_.loc['lower-bound'].values
-        df['upper %.2f' % self.alpha] = self.confidence_intervals_.loc['upper-bound'].values
+        df["coef"] = self.hazards_.loc["coef"].values
+        df["exp(coef)"] = exp(self.hazards_.loc["coef"].values)
+        df["se(coef)"] = self.standard_errors_.loc["se"].values
+        df["z"] = self._compute_z_values()
+        df["p"] = self._compute_p_values()
+        df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
+        df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
     def print_summary(self):
@@ -579,41 +644,39 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Print summary statistics describing the fit.
 
         """
-
+        # pylint: disable=unnecessary-lambda
         # Print information about data first
         justify = string_justify(18)
         print(self)
-        print("{} = {}".format(justify('duration col'), self.duration_col))
-        print("{} = {}".format(justify('event col'), self.event_col))
+        print("{} = {}".format(justify("duration col"), self.duration_col))
+        print("{} = {}".format(justify("event col"), self.event_col))
         if self.weights_col:
-            print("{} = {}".format(justify('weights col'), self.weights_col))
+            print("{} = {}".format(justify("weights col"), self.weights_col))
 
         if self.cluster_col:
-            print("{} = {}".format(justify('cluster col'), self.cluster_col))
+            print("{} = {}".format(justify("cluster col"), self.cluster_col))
 
         if self.robust or self.cluster_col:
-            print("{} = {}".format(justify('robust variance'), True))
+            print("{} = {}".format(justify("robust variance"), True))
 
         if self.strata:
-            print('{} = {}'.format(justify('strata'), self.strata))
+            print("{} = {}".format(justify("strata"), self.strata))
 
-        print('{} = {}'.format(justify('number of subjects'), self._n_examples))
-        print('{} = {}'.format(justify('number of events'), self.event_observed.sum()))
-        print('{} = {:.3f}'.format(justify('log-likelihood'), self._log_likelihood))
-        print('{} = {}'.format(justify("time fit was run"), self._time_fit_was_called), end='\n\n')
-        print('---')
-
+        print("{} = {}".format(justify("number of subjects"), self._n_examples))
+        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
+        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n")
+        print("---")
 
         df = self.summary
         # Significance codes last
-        df[''] = [significance_code(p) for p in df['p']]
-        print(df.to_string(float_format=lambda f: '{:4.4f}'.format(f)))
+        df[""] = [significance_code(p) for p in df["p"]]
+        print(df.to_string(float_format=lambda f: "{:4.4f}".format(f)))
         # Significance code explanation
-        print('---')
-        print(significance_codes_as_text(), end='\n\n')
+        print("---")
+        print(significance_codes_as_text(), end="\n\n")
         print("Concordance = {:.3f}".format(self.score_))
         print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
-        return
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -624,19 +687,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Conviently, we can actually use the class itself to do most of the work.
 
         """
-        trivial_dataset = pd.DataFrame({'E': self.event_observed, 'T': self.durations})
+        trivial_dataset = pd.DataFrame({"E": self.event_observed, "T": self.durations})
 
         cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, 'T', 'E', show_progress=False)
+        cp_null.fit(trivial_dataset, "T", "E", show_progress=False)
 
         ll_null = cp_null._log_likelihood
         ll_alt = self._log_likelihood
 
-        test_stat = 2*ll_alt - 2*ll_null
+        test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
         _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
         return test_stat, degrees_freedom, p_value
-
 
     def predict_partial_hazard(self, X):
         """
@@ -650,7 +712,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         same as the training dataset.
 
         Returns the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \exp{\beta (X - mean{X_train})}
+        baseline hazard is not included. Equal to exp{\beta (X - mean{X_train})}
         """
         return exp(self.predict_log_partial_hazard(X))
 
@@ -680,7 +742,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             X = X[order]
             pass_for_numeric_dtypes_or_raise(X)
         elif isinstance(X, pd.Series):
-            assert len(hazard_names) == 1, 'Series not the correct arugment'
+            assert len(hazard_names) == 1, "Series not the correct arugment"
             X = pd.DataFrame(X)
             pass_for_numeric_dtypes_or_raise(X)
 
@@ -720,12 +782,20 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 try:
                     c_0 = self.baseline_cumulative_hazard_[[stratum]]
                 except KeyError:
-                    raise StatError("""The stratum %s was not found in the original training data. For example, try
+                    raise StatError(
+                        """The stratum %s was not found in the original training data. For example, try
 the following on the original dataset, df: `df.groupby(%s).size()`. Expected is that %s is not present in the output.
-""" % (stratum, self.strata, stratum))
+"""
+                        % (stratum, self.strata, stratum)
+                    )
                 col = _get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
-                cumulative_hazard_ = cumulative_hazard_.merge(pd.DataFrame(np.dot(c_0, v.T), index=c_0.index, columns=col), how='outer', right_index=True, left_index=True)
+                cumulative_hazard_ = cumulative_hazard_.merge(
+                    pd.DataFrame(np.dot(c_0, v.T), index=c_0.index, columns=col),
+                    how="outer",
+                    right_index=True,
+                    left_index=True,
+                )
         else:
             c_0 = self.baseline_cumulative_hazard_
             v = self.predict_partial_hazard(X)
@@ -735,8 +805,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if times is not None:
             # non-linear interpolations can push the survival curves above 1 and below 0.
             return cumulative_hazard_.reindex(cumulative_hazard_.index.union(times)).interpolate("index").loc[times]
-        else:
-            return cumulative_hazard_
+        return cumulative_hazard_
 
     def predict_survival_function(self, X, times=None):
         """
@@ -790,34 +859,43 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         v = self.predict_survival_function(X)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
-    def _compute_baseline_hazard(self, data, durations, event_observed, weights, name):
+    def _compute_baseline_hazard(self, df, durations, event_observed, weights, name):
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
-        ind_hazards = self.predict_partial_hazard(data) * weights[:, None]
-        ind_hazards['event_at'] = durations.values
-        ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
-        ind_hazards_summed_over_durations.name = 'hazards'
+        ind_hazards = self.predict_partial_hazard(df) * weights[:, None]
+        ind_hazards["event_at"] = durations.values
+        ind_hazards_summed_over_durations = (
+            ind_hazards.groupby("event_at")[0].sum().sort_index(ascending=False).cumsum()
+        )
+        ind_hazards_summed_over_durations.name = "hazards"
 
         event_table = survival_table_from_events(durations, event_observed, weights=weights)
         event_table = event_table.join(ind_hazards_summed_over_durations)
-        baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name]).fillna(0)
+        baseline_hazard = pd.DataFrame(event_table["observed"] / event_table["hazards"], columns=[name]).fillna(0)
 
         return baseline_hazard
-
 
     def _compute_baseline_hazards(self, df, T, E, weights):
         if self.strata:
             index = self.durations.unique()
             baseline_hazards_ = pd.DataFrame(index=index)
-            for stratum in df.index.unique():
+            for stratum, stratified_df in df.groupby(self.strata):
                 baseline_hazards_ = baseline_hazards_.merge(
-                    self._compute_baseline_hazard(data=df.loc[[stratum]], durations=T.loc[[stratum]], event_observed=E.loc[[stratum]], weights=weights.loc[[stratum]], name=stratum),
+                    self._compute_baseline_hazard(
+                        df=stratified_df,
+                        durations=T.loc[[stratum]],
+                        event_observed=E.loc[[stratum]],
+                        weights=weights.loc[[stratum]],
+                        name=stratum,
+                    ),
                     left_index=True,
                     right_index=True,
-                    how='left')
+                    how="left",
+                )
             return baseline_hazards_.fillna(0)
 
-        else:
-            return self._compute_baseline_hazard(data=df, durations=T, event_observed=E, weights=weights, name='baseline hazard')
+        return self._compute_baseline_hazard(
+            df=df, durations=T, event_observed=E, weights=weights, name="baseline hazard"
+        )
 
     def _compute_baseline_survival(self):
         """
@@ -840,7 +918,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         survival_df = exp(-self.baseline_cumulative_hazard_)
         if self.strata is None:
-            survival_df.columns = ['baseline survival']
+            survival_df.columns = ["baseline survival"]
         return survival_df
 
     def plot(self, standardized=False, columns=None, **kwargs):
@@ -857,34 +935,34 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
+        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
 
         if columns is not None:
             yaxis_locations = range(len(columns))
             summary = self.summary.loc[columns]
-            lower_bound = self.confidence_intervals_[columns].loc['lower-bound'].copy()
-            upper_bound = self.confidence_intervals_[columns].loc['upper-bound'].copy()
+            lower_bound = self.confidence_intervals_[columns].loc["lower-bound"].copy()
+            upper_bound = self.confidence_intervals_[columns].loc["upper-bound"].copy()
             hazards = self.hazards_[columns].values[0].copy()
         else:
             yaxis_locations = range(len(self.hazards_.columns))
             summary = self.summary
-            lower_bound = self.confidence_intervals_.loc['lower-bound'].copy()
-            upper_bound = self.confidence_intervals_.loc['upper-bound'].copy()
+            lower_bound = self.confidence_intervals_.loc["lower-bound"].copy()
+            upper_bound = self.confidence_intervals_.loc["upper-bound"].copy()
             hazards = self.hazards_.values[0].copy()
 
         if standardized:
-            se = summary['se(coef)']
+            se = summary["se(coef)"]
             lower_bound /= se
             upper_bound /= se
             hazards /= se
 
         order = np.argsort(hazards)
-        ax.scatter(upper_bound.values[order], yaxis_locations, marker='|', c='k')
-        ax.scatter(lower_bound.values[order], yaxis_locations, marker='|', c='k')
-        ax.scatter(hazards[order], yaxis_locations, marker='o', c='k')
-        ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color='k', lw=1)
+        ax.scatter(upper_bound.values[order], yaxis_locations, marker="|", c="k")
+        ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
+        ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
+        ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color="k", lw=1)
 
-        tick_labels = [c + significance_code(p).strip() for (c, p) in summary['p'][order].iteritems()]
+        tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax
@@ -906,25 +984,25 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         from matplotlib import pyplot as plt
 
         if covariate not in self.hazards_.columns:
-            raise KeyError('covariate `%s` is not present in the original dataset' % covariate)
+            raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
-        ax = kwargs.get('ax', None) or plt.figure().add_subplot(111)
+        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
         x_bar = self._norm_mean.to_frame().T
         X = pd.concat([x_bar] * len(groups))
-        X.index = ['%s=%s' % (covariate, g) for g in groups]
+        X.index = ["%s=%s" % (covariate, g) for g in groups]
         X[covariate] = groups
 
         self.predict_survival_function(X).plot(ax=ax)
-        self.baseline_survival_.plot(ax=ax, ls='--')
+        self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
 
     @property
     def score_(self):
-        if hasattr(self, '_concordance_score_'):
+        # pylint: disable=access-member-before-definition
+        if hasattr(self, "_concordance_score_"):
             return self._concordance_score_
-        else:
-            self._concordance_score_ = concordance_index(self.durations,
-                                     -self._predicted_partial_hazards_,
-                                     self.event_observed)
-            del self._predicted_partial_hazards_
-            return self._concordance_score_
+        self._concordance_score_ = concordance_index(
+            self.durations, -self._predicted_partial_hazards_, self.event_observed
+        )
+        del self._predicted_partial_hazards_
+        return self._concordance_score_

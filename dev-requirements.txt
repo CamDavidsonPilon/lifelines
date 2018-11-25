@@ -1,7 +1,0 @@
--r requirements.txt
-coverage
-pytest
-python-coveralls
-pytest-cov
-seaborn
-pypandoc

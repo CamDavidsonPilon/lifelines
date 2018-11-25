@@ -8,9 +8,17 @@ from numpy.linalg import LinAlgError
 from scipy.integrate import trapz
 
 from lifelines.fitters import BaseFitter
-from lifelines.utils import _get_index, inv_normal_cdf, epanechnikov_kernel, \
-    ridge_regression as lr, qth_survival_times, pass_for_numeric_dtypes_or_raise,\
-    concordance_index, check_nans_or_infs, ConvergenceWarning
+from lifelines.utils import (
+    _get_index,
+    inv_normal_cdf,
+    epanechnikov_kernel,
+    ridge_regression as lr,
+    qth_survival_times,
+    pass_for_numeric_dtypes_or_raise,
+    concordance_index,
+    check_nans_or_infs,
+    ConvergenceWarning,
+)
 
 from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import fill_between_steps
@@ -38,9 +46,11 @@ class AalenAdditiveFitter(BaseFitter):
 
     """
 
-    def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.5, smoothing_penalizer=0., nn_cumulative_hazard=True):
-        if not (0 < alpha <= 1.):
-            raise ValueError('alpha parameter must be between 0 and 1.')
+    def __init__(
+        self, fit_intercept=True, alpha=0.95, coef_penalizer=0.5, smoothing_penalizer=0.0, nn_cumulative_hazard=True
+    ):
+        if not (0 < alpha <= 1.0):
+            raise ValueError("alpha parameter must be between 0 and 1.")
         if coef_penalizer < 0 or smoothing_penalizer < 0:
             raise ValueError("penalizer parameters must be >= 0.")
 
@@ -50,8 +60,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.smoothing_penalizer = smoothing_penalizer
         self.nn_cumulative_hazard = nn_cumulative_hazard
 
-    def fit(self, df, duration_col, event_col=None,
-            timeline=None, id_col=None, show_progress=False):
+    def fit(self, df, duration_col, event_col=None, timeline=None, id_col=None, show_progress=False):
         """
         Perform inference on the coefficients of the Aalen additive model.
 
@@ -98,8 +107,9 @@ class AalenAdditiveFitter(BaseFitter):
             self._fit_varying(df, duration_col, event_col, id_col, timeline, show_progress)
         return self
 
-    def _fit_static(self, dataframe, duration_col, event_col=None,
-                    timeline=None, show_progress=True):
+    def _fit_static(
+        self, dataframe, duration_col, event_col=None, timeline=None, show_progress=True
+    ):  # pylint: disable=too-many-statements
         """
         Perform inference on the coefficients of the Aalen additive model.
 
@@ -122,13 +132,13 @@ class AalenAdditiveFitter(BaseFitter):
         df = dataframe.copy()
 
         # set unique ids for individuals
-        id_col = 'id'
+        id_col = "id"
         ids = np.arange(df.shape[0])
         df[id_col] = ids
 
         # if the regression should fit an intercept
         if self.fit_intercept:
-            df['baseline'] = 1.
+            df["baseline"] = 1.0
 
         # if no event_col is specified, assume all non-censorships
         if event_col:
@@ -156,11 +166,13 @@ class AalenAdditiveFitter(BaseFitter):
         non_censorsed_times = list(T[C].iteritems())
         n_deaths = len(non_censorsed_times)
 
-        hazards_ = pd.DataFrame(np.zeros((n_deaths, d)), columns=columns,
-                                index=from_tuples(non_censorsed_times)).swaplevel(1, 0)
+        hazards_ = pd.DataFrame(
+            np.zeros((n_deaths, d)), columns=columns, index=from_tuples(non_censorsed_times)
+        ).swaplevel(1, 0)
 
-        variance_ = pd.DataFrame(np.zeros((n_deaths, d)), columns=columns,
-                                 index=from_tuples(non_censorsed_times)).swaplevel(1, 0)
+        variance_ = pd.DataFrame(
+            np.zeros((n_deaths, d)), columns=columns, index=from_tuples(non_censorsed_times)
+        ).swaplevel(1, 0)
 
         # initialize loop variables.
         previous_hazard = np.zeros((d,))
@@ -172,7 +184,7 @@ class AalenAdditiveFitter(BaseFitter):
         for id_, time in T.iteritems():  # should be sorted.
             if t != time:
                 # remove the individuals from the previous loop.
-                df.iloc[to_remove] = 0.
+                df.iloc[to_remove] = 0.0
                 to_remove = []
                 t = time
 
@@ -180,11 +192,17 @@ class AalenAdditiveFitter(BaseFitter):
             if C[id_] == 0:
                 continue
 
-            relevant_individuals = (ids == id_)
+            relevant_individuals = ids == id_
 
             # perform linear regression step.
             try:
-                v, V = lr(df.values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
+                v, V = lr(
+                    df.values,
+                    relevant_individuals,
+                    c1=self.coef_penalizer,
+                    c2=self.smoothing_penalizer,
+                    offset=previous_hazard,
+                )
             except LinAlgError:
                 warnings.warn("Linear regression error. Try increasing the penalizer term.", ConvergenceWarning)
 
@@ -207,9 +225,9 @@ class AalenAdditiveFitter(BaseFitter):
         self.variance_ = variance_.groupby(level=0).sum()
 
         if timeline is not None:
-            self.hazards_ = self.hazards_.reindex(timeline, method='ffill')
-            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(timeline, method='ffill')
-            self.variance_ = self.variance_.reindex(timeline, method='ffill')
+            self.hazards_ = self.hazards_.reindex(timeline, method="ffill")
+            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(timeline, method="ffill")
+            self.variance_ = self.variance_.reindex(timeline, method="ffill")
             self.timeline = timeline
         else:
             self.timeline = self.hazards_.index.values.astype(float)
@@ -218,20 +236,20 @@ class AalenAdditiveFitter(BaseFitter):
         self.event_observed = C
         self._compute_confidence_intervals()
 
-        self.score_ = concordance_index(self.durations,
-                                        self.predict_median(dataframe).values.ravel(),
-                                        self.event_observed)
-        return
+        self.score_ = concordance_index(
+            self.durations, self.predict_median(dataframe).values.ravel(), self.event_observed
+        )
 
-    def _fit_varying(self, dataframe, duration_col="T", event_col="E",
-                     id_col=None, timeline=None, show_progress=True):
+    def _fit_varying(
+        self, dataframe, duration_col="T", event_col="E", id_col=None, timeline=None, show_progress=True
+    ):  # pylint: disable=too-many-locals
 
         from_tuples = pd.MultiIndex.from_tuples
         df = dataframe.copy()
 
         # if the regression should fit an intercept
         if self.fit_intercept:
-            df['baseline'] = 1.
+            df["baseline"] = 1.0
 
         # each individual should have an ID of time of leaving study
         df = df.set_index([duration_col, id_col])
@@ -239,7 +257,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         # if no event_col is specified, assume all non-censorships
         if event_col is None:
-            event_col = 'E'
+            event_col = "E"
             df[event_col] = 1
 
         C_panel = df[[event_col]].to_panel().transpose(2, 1, 0)
@@ -257,11 +275,13 @@ class AalenAdditiveFitter(BaseFitter):
         # initialize dataframe to store estimates
         non_censorsed_times = list(T[C].iteritems())
         columns = wp.items
-        hazards_ = pd.DataFrame(np.zeros((len(non_censorsed_times), d)),
-                                columns=columns, index=from_tuples(non_censorsed_times))
+        hazards_ = pd.DataFrame(
+            np.zeros((len(non_censorsed_times), d)), columns=columns, index=from_tuples(non_censorsed_times)
+        )
 
-        variance_ = pd.DataFrame(np.zeros((len(non_censorsed_times), d)),
-                                 columns=columns, index=from_tuples(non_censorsed_times))
+        variance_ = pd.DataFrame(
+            np.zeros((len(non_censorsed_times), d)), columns=columns, index=from_tuples(non_censorsed_times)
+        )
 
         previous_hazard = np.zeros((d,))
         ids = wp.minor_axis.values
@@ -270,19 +290,25 @@ class AalenAdditiveFitter(BaseFitter):
         # this makes indexing times much faster
         wp = wp.swapaxes(0, 1, copy=False).swapaxes(1, 2, copy=False)
 
-        for i, (id, time) in enumerate(non_censorsed_times):
+        for i, (time_id, time) in enumerate(non_censorsed_times):
 
-            relevant_individuals = (ids == id)
-            assert relevant_individuals.sum() == 1.
+            relevant_individuals = ids == time_id
+            assert relevant_individuals.sum() == 1.0
 
             # perform linear regression step.
             try:
-                v, V = lr(wp[time].values, relevant_individuals, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=previous_hazard)
+                v, V = lr(
+                    wp[time].values,
+                    relevant_individuals,
+                    c1=self.coef_penalizer,
+                    c2=self.smoothing_penalizer,
+                    offset=previous_hazard,
+                )
             except LinAlgError:
                 warnings.warn("Linear regression error. Try increasing the penalizer term.", ConvergenceWarning)
 
-            hazards_.loc[id, time] = v.T
-            variance_.loc[id, time] = V[:, relevant_individuals][:, 0] ** 2
+            hazards_.loc[time_id, time] = v.T
+            variance_.loc[time_id, time] = V[:, relevant_individuals][:, 0] ** 2
             previous_hazard = v.T
 
             # update progress bar
@@ -300,9 +326,9 @@ class AalenAdditiveFitter(BaseFitter):
         self.variance_ = variance_.groupby(level=1).sum()[ordered_cols]
 
         if timeline is not None:
-            self.hazards_ = self.hazards_.reindex(timeline, method='ffill')
-            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(timeline, method='ffill')
-            self.variance_ = self.variance_.reindex(timeline, method='ffill')
+            self.hazards_ = self.hazards_.reindex(timeline, method="ffill")
+            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(timeline, method="ffill")
+            self.variance_ = self.variance_.reindex(timeline, method="ffill")
             self.timeline = timeline
         else:
             self.timeline = self.hazards_.index.values.astype(float)
@@ -310,8 +336,6 @@ class AalenAdditiveFitter(BaseFitter):
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
-
-        return
 
     def _check_values(self, df, T, E):
         pass_for_numeric_dtypes_or_raise(df)
@@ -323,26 +347,29 @@ class AalenAdditiveFitter(BaseFitter):
         Using the epanechnikov kernel to smooth the hazard function, with sigma/bandwidth
 
         """
-        return pd.DataFrame(np.dot(epanechnikov_kernel(self.timeline[:, None], self.timeline, bandwidth), self.hazards_.values),
-                            columns=self.hazards_.columns, index=self.timeline)
+        return pd.DataFrame(
+            np.dot(epanechnikov_kernel(self.timeline[:, None], self.timeline, bandwidth), self.hazards_.values),
+            columns=self.hazards_.columns,
+            index=self.timeline,
+        )
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
         n = self.timeline.shape[0]
         d = self.cumulative_hazards_.shape[1]
-        index = [['upper'] * n + ['lower'] * n, np.concatenate([self.timeline, self.timeline])]
+        index = [["upper"] * n + ["lower"] * n, np.concatenate([self.timeline, self.timeline])]
 
-        self.confidence_intervals_ = pd.DataFrame(np.zeros((2 * n, d)),
-                                                  index=index,
-                                                  columns=self.cumulative_hazards_.columns
-                                                  )
+        self.confidence_intervals_ = pd.DataFrame(
+            np.zeros((2 * n, d)), index=index, columns=self.cumulative_hazards_.columns
+        )
 
-        self.confidence_intervals_.loc['upper'] = self.cumulative_hazards_.values + \
-            alpha2 * np.sqrt(self.variance_.cumsum().values)
+        self.confidence_intervals_.loc["upper"] = self.cumulative_hazards_.values + alpha2 * np.sqrt(
+            self.variance_.cumsum().values
+        )
 
-        self.confidence_intervals_.loc['lower'] = self.cumulative_hazards_.values - \
-            alpha2 * np.sqrt(self.variance_.cumsum().values)
-        return
+        self.confidence_intervals_.loc["lower"] = self.cumulative_hazards_.values - alpha2 * np.sqrt(
+            self.variance_.cumsum().values
+        )
 
     def predict_cumulative_hazard(self, X, id_col=None):
         """
@@ -361,15 +388,17 @@ class AalenAdditiveFitter(BaseFitter):
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):
             order = self.cumulative_hazards_.columns
-            order = order.drop('baseline') if self.fit_intercept else order
+            order = order.drop("baseline") if self.fit_intercept else order
             X_ = X[order].values.copy()
         else:
             X_ = X.copy()
         X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
-        individual_cumulative_hazards_ = pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=cols)
+        individual_cumulative_hazards_ = pd.DataFrame(
+            np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=cols
+        )
 
         if self.nn_cumulative_hazard:
-            individual_cumulative_hazards_[individual_cumulative_hazards_ < 0.] = 0.
+            individual_cumulative_hazards_[individual_cumulative_hazards_ < 0.0] = 0.0
 
         return individual_cumulative_hazards_
 
@@ -419,7 +448,9 @@ class AalenAdditiveFitter(BaseFitter):
         t = self.cumulative_hazards_.index
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
-    def plot(self, loc=None, iloc=None, columns=[], legend=True, **kwargs):
+    def plot(
+        self, loc=None, iloc=None, columns=[], legend=True, **kwargs
+    ):  # pylint: disable=too-many-locals,dangerous-default-value
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
@@ -434,11 +465,10 @@ class AalenAdditiveFitter(BaseFitter):
         from matplotlib import pyplot as plt
 
         def shaded_plot(ax, x, y, y_upper, y_lower, **kwargs):
-            base_line, = ax.plot(x, y, drawstyle='steps-post', **kwargs)
-            fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25,
-                               color=base_line.get_color(), linewidth=1.0)
+            base_line, = ax.plot(x, y, drawstyle="steps-post", **kwargs)
+            fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25, color=base_line.get_color(), linewidth=1.0)
 
-        assert (loc is None or iloc is None), 'Cannot set both loc and iloc in call to .plot'
+        assert loc is None or iloc is None, "Cannot set both loc and iloc in call to .plot"
 
         get_method = "loc" if loc is not None else "iloc"
         if iloc == loc is None:
@@ -449,13 +479,13 @@ class AalenAdditiveFitter(BaseFitter):
         def get_loc(df):
             return getattr(df, get_method)[user_submitted_ix]
 
-        if len(columns) == 0:
+        if len(columns) == 0:  # pylint: disable=len-as-condition
             columns = self.cumulative_hazards_.columns
 
-        if 'ax' in kwargs:
+        if "ax" in kwargs:  # pylint: disable=consider-using-get
             # don't use a .get here, as the default parameter will be called. In this case,
             # plt.figure().add_subplot(111), which instantiates a new window
-            ax = kwargs['ax']
+            ax = kwargs["ax"]
         else:
             ax = plt.figure().add_subplot(111)
 
@@ -463,9 +493,9 @@ class AalenAdditiveFitter(BaseFitter):
 
         for column in columns:
             y = get_loc(self.cumulative_hazards_[column]).values
-            y_upper = get_loc(self.confidence_intervals_[column].loc['upper']).values
-            y_lower = get_loc(self.confidence_intervals_[column].loc['lower']).values
-            shaded_plot(ax, x, y, y_upper, y_lower, label=kwargs.get('label', column))
+            y_upper = get_loc(self.confidence_intervals_[column].loc["upper"]).values
+            y_lower = get_loc(self.confidence_intervals_[column].loc["lower"]).values
+            shaded_plot(ax, x, y, y_upper, y_lower, label=kwargs.get("label", column))
 
         if legend:
             ax.legend()

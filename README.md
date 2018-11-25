@@ -5,6 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/CamDavidsonPilon/lifelines/badge.svg?branch=master)](https://coveralls.io/github/CamDavidsonPilon/lifelines?branch=master)
 [![Join the chat at https://gitter.im/python-lifelines/Lobby](https://badges.gitter.im/python-lifelines/Lobby.svg)](https://gitter.im/python-lifelines/Lobby)
 [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 
 [What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
@@ -66,7 +67,7 @@ kmf.plot()
 ### Contacting & troubleshooting
  - There is a [Gitter](https://gitter.im/python-lifelines/) channel available.
  - Some users have posted common questions at [stats.stackexchange.com](https://stats.stackexchange.com/search?tab=votes&q=%22lifelines%22%20is%3aquestion)
- - creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines). 
+ - creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines).
 
 ### Roadmap
 You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965207f564eb2a3e48b5937873c14?v=47edda47ab774ca2ac7532bb0c750559).
