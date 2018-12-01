@@ -13,7 +13,7 @@ matrix:
       sudo: true
 before_install:
   - sudo apt-get update
-install: "make"
+install: "make || true"
 script:
   # command to run tests
   - make test
