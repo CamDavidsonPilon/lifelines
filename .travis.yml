@@ -15,8 +15,7 @@ before_install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then (rm Pipfile.lock); fi
   - if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then (rm Pipfile.lock); fi
   # - sudo apt-get update
-install:
-  - make install
+install: "make"
 script:
   # enforce flake8 standards
   - make lint
