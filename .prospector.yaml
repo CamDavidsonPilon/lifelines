@@ -16,6 +16,8 @@ pyflakes:
   disable:
     - F401
     - F841
+    # let pylint used-before-assignment handle this
+    - F821
 
 pep8:
   options:
