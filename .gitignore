@@ -5,3 +5,5 @@ dist
 *.egg-info
 *.iml
 \.vscode/
+
+\.coverage
