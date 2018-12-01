@@ -12,7 +12,7 @@ matrix:
       dist: xenial
       sudo: true
 before_install:
-  - env
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then (rm Pipfile.lock); fi
   # - sudo apt-get update
 if env(TRAVIS_PYTHON_VERSION) in ("2.7", "3.4"):
   - rm Pipfile.lock
