@@ -39,7 +39,7 @@ class AalenJohansenFitter(UnivariateFitter):
         alpha=None,
         ci_labels=None,
         weights=None,
-    ):
+    ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters:
           durations: an array or pd.Series of length n -- duration of subject was observed for 
@@ -176,8 +176,7 @@ class AalenJohansenFitter(UnivariateFitter):
                 jitter_level=jitter_level,
                 seed=seed,
             )
-        else:
-            return durations_jitter
+        return durations_jitter
 
     def _bounds(self, lagged_survival, alpha, ci_labels):
         """Bounds are based on pg411 of "Modelling Survival Data in Medical Research" David Collett 3rd Edition, which
