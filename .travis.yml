@@ -13,9 +13,8 @@ matrix:
       sudo: true
 before_install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then (rm Pipfile.lock); fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then (rm Pipfile.lock); fi
   # - sudo apt-get update
-if env(TRAVIS_PYTHON_VERSION) in ("2.7", "3.4"):
-  - rm Pipfile.lock
 install: "make"
 script:
   # command to run tests
@@ -23,7 +22,9 @@ script:
   # enforce flake8 standards
   # - make lint
 after_success:
-  coveralls
+  - coveralls
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then (cat Pipfile.lock); fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then (cat Pipfile.lock); fi
 # Don't want notifications
 notifications:
   email: false
