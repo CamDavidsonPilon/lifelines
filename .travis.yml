@@ -12,10 +12,13 @@ matrix:
       dist: xenial
       sudo: true
 before_install:
+  # enforce flake8 standards
+  - make lint
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then (rm Pipfile.lock); fi
   - if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then (rm Pipfile.lock); fi
   # - sudo apt-get update
-install: "make"
+install:
+  - make install
 script:
   # command to run tests
   - make test

@@ -1,4 +1,4 @@
-init:
+install:
 	pip install pipenv
 	pipenv install --dev --skip-lock
 
