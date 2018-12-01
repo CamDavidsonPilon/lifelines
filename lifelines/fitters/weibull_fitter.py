@@ -5,7 +5,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from scipy import stats as stats
+from scipy import stats
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
@@ -96,7 +96,7 @@ class WeibullFitter(UnivariateFitter):
         alpha=None,
         ci_labels=None,
         show_progress=False,
-    ):
+    ):  # pylint: disable=too-many-arguments
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -192,7 +192,9 @@ class WeibullFitter(UnivariateFitter):
     def cumulative_hazard_at_times(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-    def _newton_rhaphson(self, T, E, precision=1e-5, show_progress=False):
+    def _newton_rhaphson(
+        self, T, E, precision=1e-5, show_progress=False
+    ):  # pylint: disable=too-many-locals
         from lifelines.utils import _smart_search
 
         def hessian_function(parameters, T, E):
@@ -356,6 +358,7 @@ class WeibullFitter(UnivariateFitter):
         Print summary statistics describing the fit.
 
         """
+        # pylint: disable=unnecessary-lambda
         justify = string_justify(18)
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
@@ -374,4 +377,3 @@ class WeibullFitter(UnivariateFitter):
         print(df.to_string(float_format=lambda f: "{:4.4f}".format(f)))
         print("---")
         print(significance_codes_as_text(), end="\n\n")
-        return

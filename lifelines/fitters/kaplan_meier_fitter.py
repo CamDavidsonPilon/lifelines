@@ -39,7 +39,7 @@ class KaplanMeierFitter(UnivariateFitter):
         left_censorship=False,
         ci_labels=None,
         weights=None,
-    ):
+    ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
