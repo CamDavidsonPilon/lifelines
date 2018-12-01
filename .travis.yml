@@ -13,14 +13,12 @@ matrix:
       sudo: true
 before_install:
   - sudo apt-get update
-install:
-  - "pip install -r dev-requirements.txt"
-  - "pip install python-coveralls 'coverage>=4.4' pytest-cov seaborn"
-# command to run tests
+install: "make"
 script:
-  - py.test -s --cov=lifelines -vv --block=False --cov-report term-missing
+  # command to run tests
+  - make test
   # enforce flake8 standards
-  - flake8 lifelines --statistics --config=setup.cfg
+  # - make lint
 after_success:
   coveralls
 # Don't want notifications
