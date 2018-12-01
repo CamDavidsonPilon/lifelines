@@ -21,8 +21,6 @@ script:
   - make lint
   # command to run tests
   - make test
-  # enforce coding standards
-  - make lint
 after_success:
   - coveralls
 # Don't want notifications
