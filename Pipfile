@@ -10,6 +10,12 @@ pandas = ">=0.18"
 matplotlib = ">=2.0"
 
 [dev-packages]
+coverage = ">=4.4"
+pytest = "*"
+pytest-cov = "*"
+seaborn = "*"
+flake8 = "*"
+autopep8 = "*"
 
 [requires]
 python_version = "3.6"
