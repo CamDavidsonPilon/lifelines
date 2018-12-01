@@ -10,9 +10,11 @@ pandas = ">=0.18"
 matplotlib = ">=2.0"
 
 [dev-packages]
+lifelines = {editable = true,path = "."}
 coverage = ">=4.4"
 pytest = "*"
 pytest-cov = "*"
+coveralls = "*"
 seaborn = "*"
 flake8 = "*"
 autopep8 = "*"
