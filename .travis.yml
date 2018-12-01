@@ -13,8 +13,9 @@ matrix:
       sudo: true
 before_install:
   - sudo apt-get update
-  if env(python) in ("2.7", "3.4"):
-    - rm Pipfile.lock
+  if: |
+    env(python) in ("2.7", "3.4")
+      - rm Pipfile.lock
 install: "make"
 script:
   # command to run tests
