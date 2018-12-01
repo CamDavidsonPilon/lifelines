@@ -23,8 +23,6 @@ script:
   # - make lint
 after_success:
   - coveralls
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then (cat Pipfile.lock); fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then (cat Pipfile.lock); fi
 # Don't want notifications
 notifications:
   email: false
