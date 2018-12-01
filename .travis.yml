@@ -5,7 +5,12 @@ python:
    - "3.4"
    - "3.5"
    - "3.6"
-   - "3.7-dev"
+# Enable newer 3.7 without globally enabling sudo and dist: xenial for other build jobs
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
 before_install:
   - sudo apt-get update
 install:
