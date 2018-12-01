@@ -17,4 +17,4 @@ pytest-cov = "*"
 coveralls = "*"
 seaborn = "*"
 prospector = "*"
-black = ">=stable"
+black = {version= ">=stable",markers = "python_version >= '3.6'"}
