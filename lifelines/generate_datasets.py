@@ -9,7 +9,7 @@ from scipy.optimize import newton
 from scipy.integrate import cumtrapz
 
 
-def exponential_survival_data(n, cr=0.05, scale=1.):
+def exponential_survival_data(n, cr=0.05, scale=1.0):
 
     t = stats.expon.rvs(scale=scale, size=n)
     if cr == 0.0:
@@ -20,7 +20,7 @@ def exponential_survival_data(n, cr=0.05, scale=1.):
         return v / (np.exp(v) - 1) - cr
 
     # find the threshold:
-    h = newton(pF, 1., maxiter=500)
+    h = newton(pF, 1.0, maxiter=500)
 
     # generate truncated data
     R = (1 - np.exp(-h / scale)) * stats.uniform.rvs(size=n)
@@ -33,6 +33,7 @@ def exponential_survival_data(n, cr=0.05, scale=1.):
 
 # Models with covariates
 
+
 class coeff_func(object):
 
     """This is a decorator class used later to construct nice names"""
@@ -42,8 +43,11 @@ class coeff_func(object):
 
     def __call__(self, *args, **kwargs):
         def __repr__():
-            s = self.f.__doc__.replace("alpha", "%.4f" % kwargs["alpha"]).replace("beta", "%.4f" % kwargs["beta"])
+            s = self.f.__doc__.replace(
+                "alpha", "%.4f" % kwargs["alpha"]
+            ).replace("beta", "%.4f" % kwargs["beta"])
             return s
+
         self.__doc__ = __repr__()
         self.__repr__ = __repr__
         self.__str__ = __repr__
@@ -111,10 +115,14 @@ def generate_covariates(n, d, n_binary=0, p=0.5):
 
     returns (n, d+1)
     """
-    assert (n_binary >= 0 and n_binary <= d), "binary must be between 0 and d"
+    assert n_binary >= 0 and n_binary <= d, "binary must be between 0 and d"
     covariates = np.zeros((n, d + 1))
-    covariates[:, :d - n_binary] = random.exponential(1, size=(n, d - n_binary))
-    covariates[:, d - n_binary:-1] = random.binomial(1, p, size=(n, n_binary))
+    covariates[:, : d - n_binary] = random.exponential(
+        1, size=(n, d - n_binary)
+    )
+    covariates[:, d - n_binary : -1] = random.binomial(
+        1, p, size=(n, n_binary)
+    )
     covariates[:, -1] = np.ones(n)
     return covariates
 
@@ -131,10 +139,18 @@ def constant_coefficients(d, timelines, constant=False, independent=0):
 
     returns a matrix (t,d+1) of coefficients
     """
-    return time_varying_coefficients(d, timelines, constant=True, independent=independent, randgen=random.normal)
+    return time_varying_coefficients(
+        d,
+        timelines,
+        constant=True,
+        independent=independent,
+        randgen=random.normal,
+    )
 
 
-def time_varying_coefficients(d, timelines, constant=False, independent=0, randgen=random.exponential):
+def time_varying_coefficients(
+    d, timelines, constant=False, independent=0, randgen=random.exponential
+):
     """
     Time vary coefficients
 
@@ -167,11 +183,15 @@ def time_varying_coefficients(d, timelines, constant=False, independent=0, randg
         coefficients[:, i] = f(timelines, alpha=randgen(2000.0 / t), beta=beta)
         data_generators.append(f.__doc__)
 
-    df_coefficients = pd.DataFrame(coefficients, columns=data_generators, index=timelines)
+    df_coefficients = pd.DataFrame(
+        coefficients, columns=data_generators, index=timelines
+    )
     return df_coefficients
 
 
-def generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
+def generate_hazard_rates(
+    n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"
+):
     """
       n: the number of instances
       d: the number of covariates
@@ -188,16 +208,29 @@ def generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_bina
     """
     covariates = generate_covariates(n, d, n_binary=n_binary)
     if model == "aalen":
-        coefficients = time_varying_coefficients(d + 1, timelines, independent=independent, constant=constant)
+        coefficients = time_varying_coefficients(
+            d + 1, timelines, independent=independent, constant=constant
+        )
         hazard_rates = np.dot(covariates, coefficients.T)
-        return pd.DataFrame(hazard_rates.T, index=timelines), coefficients, pd.DataFrame(covariates)
+        return (
+            pd.DataFrame(hazard_rates.T, index=timelines),
+            coefficients,
+            pd.DataFrame(covariates),
+        )
     elif model == "cox":
         covariates = covariates[:, :-1]
         coefficients = constant_coefficients(d, timelines, independent)
         baseline = time_varying_coefficients(1, timelines)
-        hazard_rates = np.exp(np.dot(covariates, coefficients.T)) * baseline[baseline.columns[0]].values
+        hazard_rates = (
+            np.exp(np.dot(covariates, coefficients.T))
+            * baseline[baseline.columns[0]].values
+        )
         coefficients["baseline: " + baseline.columns[0]] = baseline.values
-        return pd.DataFrame(hazard_rates.T, index=timelines), coefficients, pd.DataFrame(covariates)
+        return (
+            pd.DataFrame(hazard_rates.T, index=timelines),
+            coefficients,
+            pd.DataFrame(covariates),
+        )
     else:
         raise Exception
 
@@ -244,11 +277,22 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
         return survival_times
 
 
-def generate_observational_matrix(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
-    hz, coeff, covariates = generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_binary=0, model=model)
+def generate_observational_matrix(
+    n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"
+):
+    hz, coeff, covariates = generate_hazard_rates(
+        n, d, timelines, constant=False, independent=0, n_binary=0, model=model
+    )
     R = generate_random_lifetimes(hz, timelines)
     covariates["event_at"] = R.T[0]
-    return covariates.sort_values(by="event_at"), pd.DataFrame(cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines)
+    return (
+        covariates.sort_values(by="event_at"),
+        pd.DataFrame(
+            cumulative_integral(coeff.values, timelines),
+            columns=coeff.columns,
+            index=timelines,
+        ),
+    )
 
 
 def cumulative_integral(fx, x):

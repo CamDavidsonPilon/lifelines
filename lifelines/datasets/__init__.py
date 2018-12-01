@@ -4,7 +4,7 @@ from pkg_resources import resource_filename
 
 
 def load_dataset(filename, **kwargs):
-    '''
+    """
     Load a dataset from lifelines.datasets
 
     Parameters:
@@ -12,10 +12,12 @@ def load_dataset(filename, **kwargs):
     usecols : list of columns in file to use
 
     Returns : Pandas dataframe
-    '''
-    return pd.read_csv(resource_filename('lifelines',
-                                         'datasets/' + filename),
-                       engine='python', **kwargs)
+    """
+    return pd.read_csv(
+        resource_filename("lifelines", "datasets/" + filename),
+        engine="python",
+        **kwargs
+    )
 
 
 def load_recur(**kwargs):
@@ -44,7 +46,7 @@ def load_recur(**kwargs):
         1,43,0,6,9,1,2
 
     """
-    return load_dataset('recur.csv', **kwargs)
+    return load_dataset("recur.csv", **kwargs)
 
 
 def load_holly_molly_polly(**kwargs):
@@ -60,7 +62,7 @@ def load_holly_molly_polly(**kwargs):
     4  P       1        1            0          20   0   20
 
     """
-    return load_dataset('holly_molly_polly.tsv', sep="\s", **kwargs)
+    return load_dataset("holly_molly_polly.tsv", sep="\s", **kwargs)
 
 
 def load_leukemia(**kwargs):
@@ -75,7 +77,7 @@ def load_leukemia(**kwargs):
         3  32       0    1    2.53   0
         4  25       0    1    1.78   0
     """
-    return load_dataset('anderson.csv', sep=" ", **kwargs)
+    return load_dataset("anderson.csv", sep=" ", **kwargs)
 
 
 def load_canadian_senators(**kwargs):
@@ -95,7 +97,7 @@ def load_canadian_senators(**kwargs):
         diff_days                                                           2363
         observed                                                            True
     """
-    return load_dataset('canadian_senators.csv', **kwargs)
+    return load_dataset("canadian_senators.csv", **kwargs)
 
 
 def load_dd(**kwargs):
@@ -119,7 +121,7 @@ def load_dd(**kwargs):
         duration                                                             7
         observed                                                             1
     """
-    return load_dataset('dd.csv', **kwargs)
+    return load_dataset("dd.csv", **kwargs)
 
 
 def load_kidney_transplant(**kwargs):
@@ -134,7 +136,7 @@ def load_kidney_transplant(**kwargs):
         black_female     0
 
     """
-    return load_dataset('kidney_transplant.csv', **kwargs)
+    return load_dataset("kidney_transplant.csv", **kwargs)
 
 
 def load_larynx(**kwargs):
@@ -149,7 +151,7 @@ def load_larynx(**kwargs):
         4    3.2   58      1         0          0         0
 
     """
-    return load_dataset('larynx.csv', **kwargs)
+    return load_dataset("larynx.csv", **kwargs)
 
 
 def load_lung(**kwargs):
@@ -168,7 +170,7 @@ def load_lung(**kwargs):
         wt.loss       NaN
 
     """
-    return load_dataset('lung.csv', **kwargs)
+    return load_dataset("lung.csv", **kwargs)
 
 
 def load_panel_test(**kwargs):
@@ -183,7 +185,7 @@ def load_panel_test(**kwargs):
         4   2  1  0   1.2     1
 
     """
-    return load_dataset('panel_test.csv', **kwargs)
+    return load_dataset("panel_test.csv", **kwargs)
 
 
 def load_psychiatric_patients(**kwargs):
@@ -198,7 +200,7 @@ def load_psychiatric_patients(**kwargs):
         4   21  30  0    1
 
     """
-    return load_dataset('psychiatric_patients.csv', **kwargs)
+    return load_dataset("psychiatric_patients.csv", **kwargs)
 
 
 def load_static_test(**kwargs):
@@ -214,7 +216,7 @@ def load_static_test(**kwargs):
         5   6  0  1    -6    -6
         6   7  2  1    -7    -7
     """
-    return load_dataset('static_test.csv', **kwargs)
+    return load_dataset("static_test.csv", **kwargs)
 
 
 def load_lcd(**kwargs):
@@ -228,7 +230,7 @@ def load_lcd(**kwargs):
         3  0  1  alluvial_fan
         4  1  1  alluvial_fan
     """
-    return load_dataset('CuZn-LeftCensoredDataset.csv', **kwargs)
+    return load_dataset("CuZn-LeftCensoredDataset.csv", **kwargs)
 
 
 def load_waltons(**kwargs):
@@ -244,7 +246,7 @@ def load_waltons(**kwargs):
         3  13  1  miR-137
         4  19  1  miR-137
     """
-    return load_dataset('waltons_dataset.csv', **kwargs)
+    return load_dataset("waltons_dataset.csv", **kwargs)
 
 
 def load_rossi(**kwargs):
@@ -265,7 +267,7 @@ def load_rossi(**kwargs):
         paro       1
         prio       3
     """
-    return load_dataset('rossi.csv', **kwargs)
+    return load_dataset("rossi.csv", **kwargs)
 
 
 def load_regression_dataset(**kwargs):
@@ -282,7 +284,7 @@ def load_regression_dataset(**kwargs):
         3  0.443804  1.364646  0.374221  11.684168  1
         4  1.613324  0.125566  1.921325   7.637764  1
     """
-    return load_dataset('regression.csv', **kwargs)
+    return load_dataset("regression.csv", **kwargs)
 
 
 def load_g3(**kwargs):
@@ -298,7 +300,7 @@ def load_g3(**kwargs):
         event          True
         time             53
     """
-    return load_dataset('g3.csv', **kwargs)
+    return load_dataset("g3.csv", **kwargs)
 
 
 def load_stanford_heart_transplants(**kwargs):
@@ -321,7 +323,7 @@ def load_stanford_heart_transplants(**kwargs):
         4    0.0  36.0      0  -7.737166  0.490075        0           0   4
 
     """
-    return load_dataset('stanford_heart.csv', **kwargs)
+    return load_dataset("stanford_heart.csv", **kwargs)
 
 
 def load_gbsg2(**kwargs):
@@ -345,7 +347,7 @@ def load_gbsg2(**kwargs):
         time            2018
         cens            1
     """
-    return load_dataset('gbsg2.csv', **kwargs)
+    return load_dataset("gbsg2.csv", **kwargs)
 
 
 def load_dfcv():
@@ -363,6 +365,7 @@ def load_dfcv():
     3       0    1.0  0   6.0   4   True
     """
     from lifelines.datasets.dfcv_dataset import dfcv
+
     return dfcv.copy()
 
 
@@ -382,4 +385,4 @@ def load_lymphoma(**kwargs):
     3            1    42       1
     4            1    42       1
     """
-    return load_dataset('lymphoma.csv', **kwargs)
+    return load_dataset("lymphoma.csv", **kwargs)

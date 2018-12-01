@@ -6,10 +6,14 @@ from setuptools import setup
 def filepath(fname):
     return os.path.join(os.path.dirname(__file__), fname)
 
-exec(compile(open('lifelines/version.py').read(),
-                  'lifelines/version.py', 'exec'))
 
-with open('README.md') as f:
+exec(
+    compile(
+        open("lifelines/version.py").read(), "lifelines/version.py", "exec"
+    )
+)
+
+with open("README.md") as f:
     long_description = f.read()
 
 setup(
@@ -21,13 +25,14 @@ setup(
     license="MIT",
     keywords="survival analysis statistics data analysis",
     url="https://github.com/CamDavidsonPilon/lifelines",
-    packages=['lifelines',
-              'lifelines.datasets',
-              'lifelines.fitters',
-              'lifelines.utils',
-              ],
+    packages=[
+        "lifelines",
+        "lifelines.datasets",
+        "lifelines.fitters",
+        "lifelines.utils",
+    ],
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: MIT License",
@@ -37,7 +42,7 @@ setup(
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Topic :: Scientific/Engineering",
-        ],
+    ],
     install_requires=[
         "numpy",
         "scipy>=1.0",

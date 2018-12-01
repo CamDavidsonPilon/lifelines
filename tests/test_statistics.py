@@ -9,15 +9,30 @@ from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd
 
 
 def test_sample_size_necessary_under_cph():
-    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.8, 0.2, 0.139) == (14, 14)
-    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.5, 0.5, 1.2) == (950, 950)
-    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2) == (1231, 821)
-    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2, alpha=0.01) == (1832, 1221)
+    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.8, 0.2, 0.139) == (
+        14,
+        14,
+    )
+    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.5, 0.5, 1.2) == (
+        950,
+        950,
+    )
+    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2) == (
+        1231,
+        821,
+    )
+    assert stats.sample_size_necessary_under_cph(
+        0.8, 1.5, 0.5, 0.5, 1.2, alpha=0.01
+    ) == (1832, 1221)
 
 
 def test_power_under_cph():
-    assert abs(stats.power_under_cph(12, 12, 0.8, 0.2, 0.139) - 0.744937) < 10e-6
-    assert abs(stats.power_under_cph(12, 20, 0.8, 0.2, 1.2) - 0.05178317) < 10e-6
+    assert (
+        abs(stats.power_under_cph(12, 12, 0.8, 0.2, 0.139) - 0.744937) < 10e-6
+    )
+    assert (
+        abs(stats.power_under_cph(12, 20, 0.8, 0.2, 1.2) - 0.05178317) < 10e-6
+    )
 
 
 def test_unequal_intensity_with_random_data():
@@ -29,24 +44,97 @@ def test_unequal_intensity_with_random_data():
 
 def test_logrank_test_output_against_R_1():
     df = load_g3()
-    ix = (df['group'] == 'RIT')
-    d1, e1 = df.loc[ix]['time'], df.loc[ix]['event']
-    d2, e2 = df.loc[~ix]['time'], df.loc[~ix]['event']
+    ix = df["group"] == "RIT"
+    d1, e1 = df.loc[ix]["time"], df.loc[ix]["event"]
+    d2, e2 = df.loc[~ix]["time"], df.loc[~ix]["event"]
 
     expected = 0.0138
-    result = stats.logrank_test(d1, d2, event_observed_A=e1, event_observed_B=e2)
+    result = stats.logrank_test(
+        d1, d2, event_observed_A=e1, event_observed_B=e2
+    )
     assert abs(result.p_value - expected) < 0.0001
 
 
 def test_logrank_test_output_against_R_2():
     # from https://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_2.pdf
-    control_T = [1, 1, 2, 2, 3, 4, 4, 5, 5, 8, 8, 8, 8, 11, 11, 12, 12, 15, 17, 22, 23]
+    control_T = [
+        1,
+        1,
+        2,
+        2,
+        3,
+        4,
+        4,
+        5,
+        5,
+        8,
+        8,
+        8,
+        8,
+        11,
+        11,
+        12,
+        12,
+        15,
+        17,
+        22,
+        23,
+    ]
     control_E = np.ones_like(control_T)
 
-    treatment_T = [6, 6, 6, 7, 10, 13, 16, 22, 23, 6, 9, 10, 11, 17, 19, 20, 25, 32, 32, 34, 25]
-    treatment_E = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    treatment_T = [
+        6,
+        6,
+        6,
+        7,
+        10,
+        13,
+        16,
+        22,
+        23,
+        6,
+        9,
+        10,
+        11,
+        17,
+        19,
+        20,
+        25,
+        32,
+        32,
+        34,
+        25,
+    ]
+    treatment_E = [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]
 
-    result = stats.logrank_test(control_T, treatment_T, event_observed_A=control_E, event_observed_B=treatment_E)
+    result = stats.logrank_test(
+        control_T,
+        treatment_T,
+        event_observed_A=control_E,
+        event_observed_B=treatment_E,
+    )
     expected_p_value = 4.17e-05
 
     assert abs(result.p_value - expected_p_value) < 0.0001
@@ -60,7 +148,9 @@ def test_rank_test_output_against_R_no_censorship():
     > treatment <- c(1,1,1,0,0,0)
     > survdiff(Surv(time, status) ~ treatment)
     """
-    result = stats.multivariate_logrank_test([10, 20, 30, 10, 20, 50], [1, 1, 1, 0, 0, 0])
+    result = stats.multivariate_logrank_test(
+        [10, 20, 30, 10, 20, 50], [1, 1, 1, 0, 0, 0]
+    )
     r_p_value = 0.614107
     r_stat = 0.254237
     assert abs(result.p_value - r_p_value) < 10e-6
@@ -70,7 +160,9 @@ def test_rank_test_output_against_R_no_censorship():
 def test_load_lymphoma_logrank():
     # from https://www.statsdirect.com/help/content/survival_analysis/logrank.htm
     df_ = load_lymphoma()
-    results = stats.multivariate_logrank_test(df_['Time'], df_['Stage_group'], df_['Censor'])
+    results = stats.multivariate_logrank_test(
+        df_["Time"], df_["Stage_group"], df_["Censor"]
+    )
     assert abs(results.test_statistic - 6.70971) < 1e-4
     assert abs(results.p_value - 0.0096) < 1e-4
 
@@ -83,7 +175,9 @@ def test_multivariate_logrank_on_dd_dataset():
     results[5]
     """
     dd = load_dd()
-    results = stats.multivariate_logrank_test(dd['duration'], dd['regime'],dd['observed'])
+    results = stats.multivariate_logrank_test(
+        dd["duration"], dd["regime"], dd["observed"]
+    )
     assert abs(results.test_statistic - 322.5991) < 0.0001
 
 
@@ -94,7 +188,9 @@ def test_rank_test_output_against_R_with_censorship():
     > treatment <- c(1,1,1,0,0,0)
     > survdiff(Surv(time, status) ~ treatment)
     """
-    result = stats.multivariate_logrank_test([10, 20, 30, 10, 20, 50], [1, 1, 1, 0, 0, 0], [1, 0, 1, 1, 0, 1])
+    result = stats.multivariate_logrank_test(
+        [10, 20, 30, 10, 20, 50], [1, 1, 1, 0, 0, 0], [1, 0, 1, 1, 0, 1]
+    )
     r_p_value = 0.535143
     r_stat = 0.384615
     assert abs(result.p_value - r_p_value) < 10e-6
@@ -106,7 +202,9 @@ def test_unequal_intensity_event_observed():
     data2 = np.random.exponential(1, size=(2000, 1))
     eventA = np.random.binomial(1, 0.5, size=(2000, 1))
     eventB = np.random.binomial(1, 0.5, size=(2000, 1))
-    result = stats.logrank_test(data1, data2, event_observed_A=eventA, event_observed_B=eventB)
+    result = stats.logrank_test(
+        data1, data2, event_observed_A=eventA, event_observed_B=eventB
+    )
     assert result.p_value < 0.05
 
 
@@ -137,9 +235,9 @@ def test_unequal_intensity_with_negative_data():
 
 def test_log_rank_test_on_waltons_dataset():
     df = load_waltons()
-    ix = df['group'] == 'miR-137'
-    waltonT1 = df.loc[ix]['T']
-    waltonT2 = df.loc[~ix]['T']
+    ix = df["group"] == "miR-137"
+    waltonT1 = df.loc[ix]["T"]
+    waltonT2 = df.loc[~ix]["T"]
     result = stats.logrank_test(waltonT1, waltonT2)
     assert result.p_value < 0.05
 
@@ -162,7 +260,9 @@ def test_multivariate_unequal_intensities():
 
 def test_pairwise_waltons_dataset_is_significantly_different():
     waltons_dataset = load_waltons()
-    R = stats.pairwise_logrank_test(waltons_dataset['T'], waltons_dataset['group'])
+    R = stats.pairwise_logrank_test(
+        waltons_dataset["T"], waltons_dataset["group"]
+    )
     assert R.values[0, 1].p_value < 0.05
 
 
@@ -172,7 +272,7 @@ def test_pairwise_allows_dataframes():
     df["T"] = np.random.exponential(1, size=N)
     df["C"] = np.random.binomial(1, 0.6, size=N)
     df["group"] = np.random.binomial(2, 0.5, size=N)
-    stats.pairwise_logrank_test(df['T'], df["group"], event_observed=df["C"])
+    stats.pairwise_logrank_test(df["T"], df["group"], event_observed=df["C"])
 
 
 def test_log_rank_returns_None_if_equal_arrays():
@@ -202,10 +302,10 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
 
 def test_StatisticalResult_class():
 
-    sr = stats.StatisticalResult(True, 0.05, 5.0, kw='some_value')
-    assert hasattr(sr, 'kw')
-    assert getattr(sr, 'kw') == 'some_value'
-    assert 'some_value' in sr.__unicode__()
+    sr = stats.StatisticalResult(True, 0.05, 5.0, kw="some_value")
+    assert hasattr(sr, "kw")
+    assert getattr(sr, "kw") == "some_value"
+    assert "some_value" in sr.__unicode__()
 
 
 def test_valueerror_is_raised_if_alpha_out_of_bounds():

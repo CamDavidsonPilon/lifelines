@@ -12,12 +12,11 @@ from __future__ import print_function
 import sys
 import time
 
-__all__ = ['progress_bar']
+__all__ = ["progress_bar"]
 
 
 class ProgressBar(object):
-
-    def __init__(self, iterations, animation_interval=.5):
+    def __init__(self, iterations, animation_interval=0.5):
         self.iterations = iterations
         self.start = time.time()
         self.last = 0
@@ -38,9 +37,8 @@ class ProgressBar(object):
 
 
 class TextProgressBar(ProgressBar):
-
     def __init__(self, iterations, printer):
-        self.fill_char = '-'
+        self.fill_char = "-"
         self.width = 40
         self.printer = printer
 
@@ -52,15 +50,20 @@ class TextProgressBar(ProgressBar):
 
     def progbar(self, i, elapsed):
         bar = self.bar(self.percentage(i))
-        return "[%s] %i of %i complete in %.1f sec" % (bar, i, self.iterations, round(elapsed, 1))
+        return "[%s] %i of %i complete in %.1f sec" % (
+            bar,
+            i,
+            self.iterations,
+            round(elapsed, 1),
+        )
 
     def bar(self, percent):
         all_full = self.width - 2
         num_hashes = int(percent / 100 * all_full)
 
-        bar = self.fill_char * num_hashes + ' ' * (all_full - num_hashes)
+        bar = self.fill_char * num_hashes + " " * (all_full - num_hashes)
 
-        info = '%d%%' % percent
+        info = "%d%%" % percent
         loc = (len(bar) - len(info)) // 2
         return replace_at(bar, info, loc, loc + len(info))
 
@@ -70,14 +73,14 @@ def replace_at(str, new, start, stop):
 
 
 def consoleprint(s):
-    if sys.platform.lower().startswith('win'):
-        print(s, '\r', end='')
+    if sys.platform.lower().startswith("win"):
+        print(s, "\r", end="")
     else:
         print(s)
 
 
 def ipythonprint(s):
-    print('\r', s, end='')
+    print("\r", s, end="")
     sys.stdout.flush()
 
 
