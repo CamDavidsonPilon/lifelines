@@ -51,10 +51,7 @@ from lifelines.datasets import (
     load_regression_dataset,
     load_stanford_heart_transplants,
 )
-from lifelines.generate_datasets import (
-    generate_hazard_rates,
-    generate_random_lifetimes,
-)
+from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
 
 
 @pytest.fixture
@@ -102,10 +99,7 @@ def data_pred2():
     data_pred2["x1"] = np.random.uniform(size=N)
     data_pred2["x2"] = np.random.uniform(size=N)
     data_pred2["t"] = (
-        1
-        + data_pred2["x1"]
-        + data_pred2["x2"]
-        + np.random.normal(0, 0.05, size=N)
+        1 + data_pred2["x1"] + data_pred2["x2"] + np.random.normal(0, 0.05, size=N)
     )
     data_pred2["E"] = True
     return data_pred2
@@ -164,21 +158,17 @@ class TestUnivariateFitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             if hasattr(f, "survival_function_"):
                 assert all(
-                    f.conditional_time_to_event_.index
-                    == f.survival_function_.index
+                    f.conditional_time_to_event_.index == f.survival_function_.index
                 )
 
-    def test_conditional_time_to_allows_custom_timelines(
-        self, univariate_fitters
-    ):
+    def test_conditional_time_to_allows_custom_timelines(self, univariate_fitters):
         t = np.random.binomial(50, 0.4, 100)
         e = np.random.binomial(1, 0.8, 100)
         for fitter in univariate_fitters:
             f = fitter().fit(t, e, timeline=np.linspace(0, 40, 41))
             if hasattr(f, "survival_function_"):
                 assert all(
-                    f.conditional_time_to_event_.index
-                    == f.survival_function_.index
+                    f.conditional_time_to_event_.index == f.survival_function_.index
                 )
 
     def test_univariate_fitters_allows_one_to_change_alpha_at_fit_time(
@@ -213,17 +203,12 @@ class TestUnivariateFitters:
             assert not isinstance(fitter.predict(1), Iterable)
             assert isinstance(fitter.predict([1, 2]), Iterable)
 
-    def test_predict_method_returns_exact_value_if_given_an_observed_time(
-        self
-    ):
+    def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
         time = 1
-        assert (
-            abs(kmf.predict(time) - kmf.survival_function_.iloc[time].values)
-            < 10e-8
-        )
+        assert abs(kmf.predict(time) - kmf.survival_function_.iloc[time].values) < 10e-8
 
     def test_predict_method_returns_an_approximation_if_not_in_the_index(self):
         T = [1, 2, 3]
@@ -253,52 +238,34 @@ class TestUnivariateFitters:
                 ).cumulative_hazard_.values
                 npt.assert_array_equal(with_list, with_array)
 
-    def test_custom_timeline(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_custom_timeline(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
         timeline = [2, 3, 4.0, 1.0, 6, 5.0]
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(T, C, timeline=timeline)
             if hasattr(fitter, "survival_function_"):
-                assert sorted(timeline) == list(
-                    fitter.survival_function_.index.values
-                )
+                assert sorted(timeline) == list(fitter.survival_function_.index.values)
             elif hasattr(fitter, "cumulative_hazard_"):
-                assert sorted(timeline) == list(
-                    fitter.cumulative_hazard_.index.values
-                )
+                assert sorted(timeline) == list(fitter.cumulative_hazard_.index.values)
 
-    def test_label_is_a_property(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_label_is_a_property(self, positive_sample_lifetimes, univariate_fitters):
         label = "Test Label"
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0], label=label)
             assert fitter._label == label
-            assert (
-                fitter.confidence_interval_.columns[0]
-                == "%s_upper_0.95" % label
-            )
-            assert (
-                fitter.confidence_interval_.columns[1]
-                == "%s_lower_0.95" % label
-            )
+            assert fitter.confidence_interval_.columns[0] == "%s_upper_0.95" % label
+            assert fitter.confidence_interval_.columns[1] == "%s_lower_0.95" % label
 
     def test_ci_labels(self, positive_sample_lifetimes, univariate_fitters):
         expected = ["upper", "lower"]
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0], ci_labels=expected)
-            npt.assert_array_equal(
-                fitter.confidence_interval_.columns, expected
-            )
+            npt.assert_array_equal(fitter.confidence_interval_.columns, expected)
 
-    def test_lists_as_input(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
         for f in univariate_fitters:
             fitter = f()
@@ -311,9 +278,7 @@ class TestUnivariateFitters:
                 with_list = fitter.fit(list(T), list(C)).cumulative_hazard_
                 assert_frame_equal(with_list, with_array)
 
-    def test_subtraction_function(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_subtraction_function(self, positive_sample_lifetimes, univariate_fitters):
         T2 = np.arange(1, 50)
         for fitter in univariate_fitters:
             f1 = fitter()
@@ -344,9 +309,7 @@ class TestUnivariateFitters:
             assert result.columns == ["diff"]
             assert result.shape[1] == 1
 
-    def test_divide_function(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_divide_function(self, positive_sample_lifetimes, univariate_fitters):
         T2 = np.arange(1, 50)
         for fitter in univariate_fitters:
             f1 = fitter()
@@ -360,9 +323,7 @@ class TestUnivariateFitters:
                 np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0]
             )
 
-            npt.assert_array_almost_equal(
-                np.log(f1.divide(f1)).sum().values, 0.0
-            )
+            npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
     def test_divide_function_with_labelled_data(
         self, positive_sample_lifetimes, univariate_fitters
@@ -379,9 +340,7 @@ class TestUnivariateFitters:
             assert result.columns == ["ratio"]
             assert result.shape[1] == 1
 
-    def test_valueerror_is_thrown_if_alpha_out_of_bounds(
-        self, univariate_fitters
-    ):
+    def test_valueerror_is_thrown_if_alpha_out_of_bounds(self, univariate_fitters):
         for fitter in univariate_fitters:
             with pytest.raises(ValueError):
                 fitter(alpha=95)
@@ -404,9 +363,7 @@ class TestUnivariateFitters:
                 fitter().fit(T, E)
 
     @pytest.mark.skipif(PY2, reason="requires python3 or higher")
-    def test_pickle_serialization(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_pickle_serialization(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
             fitter = f()
@@ -505,17 +462,13 @@ class TestKaplanMeierFitter:
         kmf.fit(T)
         print(kmf.survival_function_)
         print(kmf.event_table)
-        npt.assert_almost_equal(
-            kmf.survival_function_.values, self.kaplan_meier(T)
-        )
+        npt.assert_almost_equal(kmf.survival_function_.values, self.kaplan_meier(T))
 
     def test_kaplan_meier_with_censorship(self, sample_lifetimes):
         T, C = sample_lifetimes
         kmf = KaplanMeierFitter()
         kmf.fit(T, C)
-        npt.assert_almost_equal(
-            kmf.survival_function_.values, self.kaplan_meier(T, C)
-        )
+        npt.assert_almost_equal(kmf.survival_function_.values, self.kaplan_meier(T, C))
 
     def test_stat_error_is_raised_if_too_few_early_deaths(self):
         observations = np.array(
@@ -558,8 +511,7 @@ class TestKaplanMeierFitter:
         T, _ = sample_lifetimes
         kmf = KaplanMeierFitter()
         assert_frame_equal(
-            kmf.fit(T).survival_function_,
-            kmf.fit(sorted(T)).survival_function_,
+            kmf.fit(T).survival_function_, kmf.fit(sorted(T)).survival_function_
         )
 
     def test_passing_in_left_censorship_creates_a_cumulative_density(
@@ -580,9 +532,7 @@ class TestKaplanMeierFitter:
         kmf.fit(T, C, left_censorship=True)
 
         actual = kmf.cumulative_density_[kmf._label].values
-        npt.assert_allclose(
-            actual, np.array([0, 0.437500, 0.5833333, 0.875, 0.875, 1])
-        )
+        npt.assert_allclose(actual, np.array([0, 0.437500, 0.5833333, 0.875, 0.875, 1]))
 
     def test_shifting_durations_doesnt_affect_survival_function_values(self):
         T = np.random.exponential(10, size=100)
@@ -590,19 +540,13 @@ class TestKaplanMeierFitter:
         expected = kmf.fit(T).survival_function_.values
 
         T_shifted = T + 100
-        npt.assert_allclose(
-            expected, kmf.fit(T_shifted).survival_function_.values
-        )
+        npt.assert_allclose(expected, kmf.fit(T_shifted).survival_function_.values)
 
         T_shifted = T - 50
-        npt.assert_allclose(
-            expected[1:], kmf.fit(T_shifted).survival_function_.values
-        )
+        npt.assert_allclose(expected[1:], kmf.fit(T_shifted).survival_function_.values)
 
         T_shifted = T - 200
-        npt.assert_allclose(
-            expected[1:], kmf.fit(T_shifted).survival_function_.values
-        )
+        npt.assert_allclose(expected[1:], kmf.fit(T_shifted).survival_function_.values)
 
     def test_kmf_survival_curve_output_against_R(self):
         df = load_g3()
@@ -611,17 +555,11 @@ class TestKaplanMeierFitter:
 
         expected = np.array([[0.909, 0.779]]).T
         kmf.fit(df.loc[ix]["time"], df.loc[ix]["event"], timeline=[25, 53])
-        npt.assert_allclose(
-            kmf.survival_function_.values, expected, rtol=10e-3
-        )
+        npt.assert_allclose(kmf.survival_function_.values, expected, rtol=10e-3)
 
         expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
-        kmf.fit(
-            df.loc[~ix]["time"], df.loc[~ix]["event"], timeline=[9, 19, 32, 34]
-        )
-        npt.assert_allclose(
-            kmf.survival_function_.values, expected, rtol=10e-3
-        )
+        kmf.fit(df.loc[~ix]["time"], df.loc[~ix]["event"], timeline=[9, 19, 32, 34])
+        npt.assert_allclose(kmf.survival_function_.values, expected, rtol=10e-3)
 
     @pytest.mark.xfail()
     def test_kmf_survival_curve_output_against_R_super_accurate(self):
@@ -631,26 +569,18 @@ class TestKaplanMeierFitter:
 
         expected = np.array([[0.909, 0.779]]).T
         kmf.fit(df.loc[ix]["time"], df.loc[ix]["event"], timeline=[25, 53])
-        npt.assert_allclose(
-            kmf.survival_function_.values, expected, rtol=10e-4
-        )
+        npt.assert_allclose(kmf.survival_function_.values, expected, rtol=10e-4)
 
         expected = np.array([[0.833, 0.667, 0.5, 0.333]]).T
-        kmf.fit(
-            df.loc[~ix]["time"], df.loc[~ix]["event"], timeline=[9, 19, 32, 34]
-        )
-        npt.assert_allclose(
-            kmf.survival_function_.values, expected, rtol=10e-4
-        )
+        kmf.fit(df.loc[~ix]["time"], df.loc[~ix]["event"], timeline=[9, 19, 32, 34])
+        npt.assert_allclose(kmf.survival_function_.values, expected, rtol=10e-4)
 
     def test_kmf_confidence_intervals_output_against_R(self):
         # this uses conf.type = 'log-log'
         df = load_g3()
         ix = df["group"] != "RIT"
         kmf = KaplanMeierFitter()
-        kmf.fit(
-            df.loc[ix]["time"], df.loc[ix]["event"], timeline=[9, 19, 32, 34]
-        )
+        kmf.fit(df.loc[ix]["time"], df.loc[ix]["event"], timeline=[9, 19, 32, 34])
 
         expected_lower_bound = np.array([0.2731, 0.1946, 0.1109, 0.0461])
         npt.assert_allclose(
@@ -796,9 +726,7 @@ class TestKaplanMeierFitter:
             rf["KM_true"].values, rf["KM_lateenterafter"].values, rtol=10e-2
         )
         npt.assert_allclose(
-            rf["KM_lifelines_latest"].values,
-            rf["KM_lateenterafter"].values,
-            rtol=10e-2,
+            rf["KM_lifelines_latest"].values, rf["KM_lateenterafter"].values, rtol=10e-2
         )
         npt.assert_allclose(
             rf["KM_lifelines_latest"].values, rf["KM_true"].values, rtol=10e-2
@@ -832,17 +760,13 @@ class TestNelsonAalenFitter:
         T, _ = sample_lifetimes
         naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
         naf.fit(T)
-        npt.assert_almost_equal(
-            naf.cumulative_hazard_.values, self.nelson_aalen(T)
-        )
+        npt.assert_almost_equal(naf.cumulative_hazard_.values, self.nelson_aalen(T))
 
     def test_censor_nelson_aalen(self, sample_lifetimes):
         T, C = sample_lifetimes
         naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
         naf.fit(T, C)
-        npt.assert_almost_equal(
-            naf.cumulative_hazard_.values, self.nelson_aalen(T, C)
-        )
+        npt.assert_almost_equal(naf.cumulative_hazard_.values, self.nelson_aalen(T, C))
 
     def test_loc_slicing(self, waltons_dataset):
         naf = NelsonAalenFitter().fit(waltons_dataset["T"])
@@ -891,22 +815,13 @@ class TestNelsonAalenFitter:
         c = np.random.binomial(1, 0.9, size=N)
         naf = NelsonAalenFitter(nelson_aalen_smoothing=True)
         naf.fit(t, c)
+        assert abs(naf.cumulative_hazard_["NA_estimate"].iloc[-1] - 8.545665) < 1e-6
         assert (
-            abs(naf.cumulative_hazard_["NA_estimate"].iloc[-1] - 8.545665)
+            abs(naf.confidence_interval_["NA_estimate_upper_0.95"].iloc[-1] - 11.315662)
             < 1e-6
         )
         assert (
-            abs(
-                naf.confidence_interval_["NA_estimate_upper_0.95"].iloc[-1]
-                - 11.315662
-            )
-            < 1e-6
-        )
-        assert (
-            abs(
-                naf.confidence_interval_["NA_estimate_lower_0.95"].iloc[-1]
-                - 6.4537448
-            )
+            abs(naf.confidence_interval_["NA_estimate_lower_0.95"].iloc[-1] - 6.4537448)
             < 1e-6
         )
 
@@ -1006,18 +921,14 @@ class TestRegressionFitters:
             )
 
             model.fit(rossi, "week")
-            npt.assert_array_equal(
-                model.event_observed.values, np.ones(rossi.shape[0])
-            )
+            npt.assert_array_equal(model.event_observed.values, np.ones(rossi.shape[0]))
 
     def test_predict_methods_in_regression_return_same_types(
         self, regression_models, rossi
     ):
 
         fitted_regression_models = map(
-            lambda model: model.fit(
-                rossi, duration_col="week", event_col="arrest"
-            ),
+            lambda model: model.fit(rossi, duration_col="week", event_col="arrest"),
             regression_models,
         )
 
@@ -1037,9 +948,7 @@ class TestRegressionFitters:
     def test_duration_vector_can_be_normalized(self, regression_models, rossi):
         t = rossi["week"]
         normalized_rossi = rossi.copy()
-        normalized_rossi["week"] = (
-            normalized_rossi["week"] - t.mean()
-        ) / t.std()
+        normalized_rossi["week"] = (normalized_rossi["week"] - t.mean()) / t.std()
 
         for fitter in regression_models:
             # we drop indexs since aaf will have a different "time" index.
@@ -1057,12 +966,8 @@ class TestRegressionFitters:
 
         for fitter in regression_models:
             fitter.fit(rossi, duration_col="week", event_col="arrest")
-            npt.assert_array_equal(
-                fitter.predict_percentile(X).index, expected_index
-            )
-            npt.assert_array_equal(
-                fitter.predict_expectation(X).index, expected_index
-            )
+            npt.assert_array_equal(fitter.predict_percentile(X).index, expected_index)
+            npt.assert_array_equal(fitter.predict_expectation(X).index, expected_index)
             try:
                 npt.assert_array_equal(
                     fitter.predict_partial_hazard(X).index, expected_index
@@ -1070,9 +975,7 @@ class TestRegressionFitters:
             except AttributeError:
                 pass
 
-    def test_error_is_raised_if_using_non_numeric_data_in_fit(
-        self, regression_models
-    ):
+    def test_error_is_raised_if_using_non_numeric_data_in_fit(self, regression_models):
         df = pd.DataFrame.from_dict(
             {
                 "t": [1.0, 2.0, 3.0],
@@ -1087,11 +990,7 @@ class TestRegressionFitters:
         )
 
         for fitter in [CoxPHFitter(), AalenAdditiveFitter()]:
-            for subset in [
-                ["t", "categorya_"],
-                ["t", "categoryb_"],
-                ["t", "string_"],
-            ]:
+            for subset in [["t", "categorya_"], ["t", "categoryb_"], ["t", "string_"]]:
                 with pytest.raises(TypeError):
                     fitter.fit(df[subset], duration_col="t")
 
@@ -1293,8 +1192,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         X = data_pred2[data_pred2.columns.difference(["t", "E"])]
         assert_frame_equal(
-            cf.predict_partial_hazard(np.array(X)),
-            cf.predict_partial_hazard(X),
+            cf.predict_partial_hazard(np.array(X)), cf.predict_partial_hazard(X)
         )
 
     def test_prediction_methods_will_accept_a_times_arg_to_reindex_the_predictions(
@@ -1338,9 +1236,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         rossi_mean = rossi.mean()
         result = cf.predict_survival_function(rossi_mean)
         assert_series_equal(
-            cf.baseline_survival_["baseline survival"],
-            result[0],
-            check_names=False,
+            cf.baseline_survival_["baseline survival"], result[0], check_names=False
         )
 
     def test_cox_ph_prediction_with_series_of_longer_length(self, rossi):
@@ -1371,9 +1267,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         ci_exp = concordance_index(t, cf.predict_expectation(X).ravel(), e)
         assert ci_ph == ci_exp
 
-    def test_crossval_for_cox_ph_with_normalizing_times(
-        self, data_pred2, data_pred1
-    ):
+    def test_crossval_for_cox_ph_with_normalizing_times(self, data_pred2, data_pred1):
         cf = CoxPHFitter()
 
         for data_pred in [data_pred1, data_pred2]:
@@ -1475,9 +1369,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             [[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849, 0.0915]]
         )
         cf = CoxPHFitter()
-        cf.fit(
-            rossi, duration_col="week", event_col="arrest", show_progress=True
-        )
+        cf.fit(rossi, duration_col="week", event_col="arrest", show_progress=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_coef_output_against_R_with_strata_super_accurate(self, rossi):
@@ -1491,9 +1383,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             data=rossi)
         cat(round(r$coefficients, 4), sep=", ")
         """
-        expected = np.array(
-            [[-0.3788, -0.0576, -0.1427, -0.4388, -0.0858, 0.0922]]
-        )
+        expected = np.array([[-0.3788, -0.0576, -0.1427, -0.4388, -0.0858, 0.0922]])
         cf = CoxPHFitter()
         cf.fit(
             rossi,
@@ -1504,27 +1394,16 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         )
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
-    def test_coef_output_against_R_using_non_trivial_but_integer_weights(
-        self, rossi
-    ):
+    def test_coef_output_against_R_using_non_trivial_but_integer_weights(self, rossi):
         rossi_ = rossi.copy()
         rossi_["weights"] = 1.0
-        rossi_ = (
-            rossi_.groupby(rossi.columns.tolist())["weights"]
-            .sum()
-            .reset_index()
-        )
+        rossi_ = rossi_.groupby(rossi.columns.tolist())["weights"].sum().reset_index()
 
         expected = np.array(
             [[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849, 0.0915]]
         )
         cf = CoxPHFitter()
-        cf.fit(
-            rossi_,
-            duration_col="week",
-            event_col="arrest",
-            weights_col="weights",
-        )
+        cf.fit(rossi_, duration_col="week", event_col="arrest", weights_col="weights")
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_robust_errors_with_trivial_weights_is_the_same_than_R(
@@ -1555,30 +1434,18 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         df["var3"] = w
 
         cph = CoxPHFitter()
-        cph.fit(
-            df, "T", "E", robust=True, weights_col="var3", show_progress=True
-        )
+        cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 7.680, "var2": -0.915})
         assert_series_equal(
-            cph.hazards_.T["coef"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False
         )
 
-        expected_cov = np.array(
-            [[33.079106, -5.964652], [-5.964652, 2.040642]]
-        )
-        npt.assert_array_almost_equal(
-            w * cph.variance_matrix_, expected_cov, decimal=1
-        )
+        expected_cov = np.array([[33.079106, -5.964652], [-5.964652, 2.040642]])
+        npt.assert_array_almost_equal(w * cph.variance_matrix_, expected_cov, decimal=1)
 
         expected = pd.Series({"var1": 2.097, "var2": 0.827})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False
         )
 
     def test_cluster_option(self, regression_dataset):
@@ -1609,10 +1476,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph.fit(df, "T", "E", cluster_col="id", show_progress=True)
         expected = pd.Series({"var1": 5.9752, "var2": 4.0683})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False
         )
 
     @pytest.mark.xfail(reason="can't do this yet")
@@ -1641,15 +1505,10 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         df["E"] = 1
 
         cph = CoxPHFitter()
-        cph.fit(
-            df, "T", "E", cluster_col="id", strata=["var1"], show_progress=True
-        )
+        cph.fit(df, "T", "E", cluster_col="id", strata=["var1"], show_progress=True)
         expected = pd.Series({"var2": 3.34})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False
         )
 
     def test_robust_errors_with_less_trival_weights_is_the_same_as_R(
@@ -1681,30 +1540,20 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         df["E"] = 1
 
         cph = CoxPHFitter()
-        cph.fit(
-            df, "T", "E", robust=True, weights_col="var3", show_progress=True
-        )
+        cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 1.431, "var2": -1.277})
         assert_series_equal(
-            cph.hazards_.T["coef"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False
         )
 
-        expected_cov = np.array(
-            [[3.5439245, -0.3549099], [-0.3549099, 0.4499553]]
-        )
+        expected_cov = np.array([[3.5439245, -0.3549099], [-0.3549099, 0.4499553]])
         npt.assert_array_almost_equal(
             cph.variance_matrix_, expected_cov, decimal=1
         )  # not as precise because matrix inversion will accumulate estimation errors.
 
         expected = pd.Series({"var1": 2.094, "var2": 0.452})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False
         )
 
     def test_robust_errors_with_non_trivial_weights_is_the_same_as_R(
@@ -1734,23 +1583,15 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         df["E"] = 1
 
         cph = CoxPHFitter()
-        cph.fit(
-            df, "T", "E", robust=True, weights_col="var3", show_progress=True
-        )
+        cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": -5.16231, "var2": 1.71924})
         assert_series_equal(
-            cph.hazards_.T["coef"],
-            expected,
-            check_less_precise=1,
-            check_names=False,
+            cph.hazards_.T["coef"], expected, check_less_precise=1, check_names=False
         )
 
         expected = pd.Series({"var1": 9.97730, "var2": 2.45648})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False
         )
 
     def test_robust_errors_with_non_trivial_weights_with_censorship_is_the_same_as_R(
@@ -1780,23 +1621,15 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         )
 
         cph = CoxPHFitter()
-        cph.fit(
-            df, "T", "E", robust=True, weights_col="var3", show_progress=True
-        )
+        cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": -8.360533, "var2": 1.781126})
         assert_series_equal(
-            cph.hazards_.T["coef"],
-            expected,
-            check_less_precise=3,
-            check_names=False,
+            cph.hazards_.T["coef"], expected, check_less_precise=3, check_names=False
         )
 
         expected = pd.Series({"var1": 12.303338, "var2": 2.395670})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=3,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=3, check_names=False
         )
 
     def test_robust_errors_is_the_same_as_R(self, regression_dataset):
@@ -1824,18 +1657,12 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph.fit(df, "T", "E", robust=True, show_progress=True)
         expected = pd.Series({"var1": 7.680, "var2": -0.915})
         assert_series_equal(
-            cph.hazards_.T["coef"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False
         )
 
         expected = pd.Series({"var1": 2.097, "var2": 0.827})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False
         )
 
     def test_trival_float_weights_with_no_ties_is_the_same_as_R(
@@ -1905,18 +1732,12 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 7.995, "var2": -1.154})
         assert_series_equal(
-            cph.hazards_.T["coef"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False
         )
 
         expected = pd.Series({"var1": 6.690, "var2": 1.614})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False
         )
 
     def test_non_trival_float_weights_with_no_ties_is_the_same_as_R(
@@ -1933,18 +1754,12 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 0.3268, "var2": 0.0775})
         assert_series_equal(
-            cph.hazards_.T["coef"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False
         )
 
         expected = pd.Series({"var1": 0.0697, "var2": 0.0861})
         assert_series_equal(
-            cph.summary["se(coef)"],
-            expected,
-            check_less_precise=2,
-            check_names=False,
+            cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False
         )
 
     def test_summary_output_using_non_trivial_but_integer_weights(self, rossi):
@@ -1952,9 +1767,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         rossi_weights = rossi.copy()
         rossi_weights["weights"] = 1.0
         rossi_weights = (
-            rossi_weights.groupby(rossi.columns.tolist())["weights"]
-            .sum()
-            .reset_index()
+            rossi_weights.groupby(rossi.columns.tolist())["weights"].sum().reset_index()
         )
 
         cf1 = CoxPHFitter()
@@ -1989,9 +1802,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf2.fit(rossi, duration_col="week", event_col="arrest")
 
         assert_frame_equal(
-            cf2.standard_errors_ ** 2,
-            w * cf1.standard_errors_ ** 2,
-            check_like=True,
+            cf2.standard_errors_ ** 2, w * cf1.standard_errors_ ** 2, check_like=True
         )
 
     def test_adding_non_integer_weights_is_fine_if_robust_is_on(self, rossi):
@@ -2001,9 +1812,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            cox.fit(
-                rossi, "week", "arrest", weights_col="weights", robust=True
-            )
+            cox.fit(rossi, "week", "arrest", weights_col="weights", robust=True)
             assert len(w) == 0
 
     def test_standard_error_coef_output_against_R(self, rossi):
@@ -2037,14 +1846,10 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             data=rossi)
         summary(mod.allison)
         """
-        expected = np.array(
-            [-1.983, -2.611, 1.019, -0.706, -1.136, -0.434, 3.194]
-        )
+        expected = np.array([-1.983, -2.611, 1.019, -0.706, -1.136, -0.434, 3.194])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest")
-        npt.assert_array_almost_equal(
-            cf.summary["z"].values, expected, decimal=3
-        )
+        npt.assert_array_almost_equal(cf.summary["z"].values, expected, decimal=3)
 
     def test_log_likelihood_test_against_R(self, rossi):
         """
@@ -2098,13 +1903,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
     ):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
         df = load_kidney_transplant(
-            usecols=[
-                "time",
-                "death",
-                "black_male",
-                "white_male",
-                "black_female",
-            ]
+            usecols=["time", "death", "black_male", "white_male", "black_female"]
         )
         cf = CoxPHFitter()
         cf.fit(df, duration_col="time", event_col="death")
@@ -2114,9 +1913,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         expected_coefs = np.array([[0.1596, 0.2484, 0.6567]])
         npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=3)
 
-    def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(
-        self
-    ):
+    def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see table 8.1 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
         df = load_larynx()
         cf = CoxPHFitter()
@@ -2223,9 +2020,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             decimal=4,
         )
         npt.assert_almost_equal(
-            cp.baseline_cumulative_hazard_[(0, 0, 0, 1)]
-            .loc[[27, 43, 48, 52]]
-            .values,
+            cp.baseline_cumulative_hazard_[(0, 0, 0, 1)].loc[[27, 43, 48, 52]].values,
             [0.095499001, 0.204196905, 0.338393113, 0.338393113],
             decimal=4,
         )
@@ -2243,9 +2038,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cp.fit(rossi, "week", "arrest", weights_col="age")
 
         npt.assert_almost_equal(
-            cp.baseline_cumulative_hazard_["baseline hazard"].loc[0.0],
-            0.0,
-            decimal=4,
+            cp.baseline_cumulative_hazard_["baseline hazard"].loc[0.0], 0.0, decimal=4
         )
         npt.assert_almost_equal(
             cp.baseline_cumulative_hazard_["baseline hazard"].loc[1.0],
@@ -2283,9 +2076,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             == cp_with_strata_in_fit._log_likelihood
         )
 
-    def test_baseline_survival_is_the_same_indp_of_location(
-        self, regression_dataset
-    ):
+    def test_baseline_survival_is_the_same_indp_of_location(self, regression_dataset):
         df = regression_dataset.copy()
         cp1 = CoxPHFitter()
         cp1.fit(df, event_col="E", duration_col="T")
@@ -2317,9 +2108,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             cp2.baseline_cumulative_hazard_, cp1.baseline_cumulative_hazard_
         )
 
-    def test_survival_prediction_is_the_same_indp_of_location(
-        self, regression_dataset
-    ):
+    def test_survival_prediction_is_the_same_indp_of_location(self, regression_dataset):
         df = regression_dataset.copy()
 
         df_demeaned = regression_dataset.copy()
@@ -2335,17 +2124,13 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cp2.fit(df_demeaned, event_col="E", duration_col="T")
 
         assert_frame_equal(
-            cp1.predict_survival_function(
-                df.iloc[[0]][["var1", "var2", "var3"]]
-            ),
+            cp1.predict_survival_function(df.iloc[[0]][["var1", "var2", "var3"]]),
             cp2.predict_survival_function(
                 df_demeaned.iloc[[0]][["var1", "var2", "var3"]]
             ),
         )
 
-    def test_baseline_survival_is_the_same_indp_of_scale(
-        self, regression_dataset
-    ):
+    def test_baseline_survival_is_the_same_indp_of_scale(self, regression_dataset):
         df = regression_dataset.copy()
         cp1 = CoxPHFitter()
         cp1.fit(df, event_col="E", duration_col="T")
@@ -2370,15 +2155,11 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
                 weights_col="weights",
             )
 
-    def test_survival_prediction_is_the_same_indp_of_scale(
-        self, regression_dataset
-    ):
+    def test_survival_prediction_is_the_same_indp_of_scale(self, regression_dataset):
         df = regression_dataset.copy()
 
         df_scaled = regression_dataset.copy()
-        df_scaled[["var1", "var2", "var3"]] = (
-            df_scaled[["var1", "var2", "var3"]] * 10.0
-        )
+        df_scaled[["var1", "var2", "var3"]] = df_scaled[["var1", "var2", "var3"]] * 10.0
 
         cp1 = CoxPHFitter()
         cp1.fit(df, event_col="E", duration_col="T")
@@ -2387,9 +2168,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cp2.fit(df_scaled, event_col="E", duration_col="T")
 
         assert_frame_equal(
-            cp1.predict_survival_function(
-                df.iloc[[0]][["var1", "var2", "var3"]]
-            ),
+            cp1.predict_survival_function(df.iloc[[0]][["var1", "var2", "var3"]]),
             cp2.predict_survival_function(
                 df_scaled.iloc[[0]][["var1", "var2", "var3"]]
             ),
@@ -2419,11 +2198,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             except (LinAlgError, ValueError):
                 pass
 
-            w = list(
-                filter(
-                    lambda w_: issubclass(w_.category, ConvergenceWarning), w
-                )
-            )
+            w = list(filter(lambda w_: issubclass(w_.category, ConvergenceWarning), w))
             assert len(w) == 2
             assert "variance" in str(w[0].message)
 
@@ -2474,9 +2249,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             assert "complete separation" in str(w[0].message)
 
     @pytest.mark.xfail
-    def test_what_happens_when_column_is_constant_for_all_non_deaths(
-        self, rossi
-    ):
+    def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
         # this is known as complete seperation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
         cp = CoxPHFitter()
         ix = rossi["arrest"] == 1
@@ -2536,14 +2309,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         df = pd.DataFrame(
             {
                 "var1": [1, 1, 2, 2, 2, 1],
-                "var2": [
-                    0.184677,
-                    0.071893,
-                    1.364646,
-                    0.098375,
-                    1.663092,
-                    0.5,
-                ],
+                "var2": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092, 0.5],
                 "var3": [1, 2, 3, 2, 1, 2],
                 "T": [7.335846, 5.269797, 11.684092, 12.678458, 6.601666, 8.0],
             }
@@ -2551,9 +2317,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         df["E"] = 1
 
         cf = CoxPHFitter()
-        cf.fit(
-            df, duration_col="T", event_col="E", strata=["var1"], robust=True
-        )
+        cf.fit(df, duration_col="T", event_col="E", strata=["var1"], robust=True)
         npt.assert_allclose(
             cf.summary["se(coef)"].values, np.array([1.076, 0.680]), rtol=1e-2
         )
@@ -2581,9 +2345,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         df["E"] = 1
 
         cf = CoxPHFitter()
-        cf.fit(
-            df, duration_col="T", event_col="E", strata=["var1"], robust=True
-        )
+        cf.fit(df, duration_col="T", event_col="E", strata=["var1"], robust=True)
         npt.assert_allclose(cf.summary["se(coef)"].values, 2.78649, rtol=1e-4)
 
     def test_what_happens_to_nans(self, rossi):
@@ -2608,9 +2370,7 @@ class TestAalenAdditiveFitter:
     def test_using_a_custom_timeline_in_static_fitting(self, rossi):
         aaf = AalenAdditiveFitter()
         timeline = np.arange(10)
-        aaf.fit(
-            rossi, event_col="arrest", duration_col="week", timeline=timeline
-        )
+        aaf.fit(rossi, event_col="arrest", duration_col="week", timeline=timeline)
         npt.assert_array_equal(aaf.hazards_.index.values, timeline)
         npt.assert_array_equal(aaf.cumulative_hazards_.index.values, timeline)
         npt.assert_array_equal(aaf.variance_.index.values, timeline)
@@ -2620,9 +2380,7 @@ class TestAalenAdditiveFitter:
         panel_dataset = load_panel_test()
         aaf = AalenAdditiveFitter()
         timeline = np.arange(10)
-        aaf.fit(
-            panel_dataset, id_col="id", duration_col="t", timeline=timeline
-        )
+        aaf.fit(panel_dataset, id_col="id", duration_col="t", timeline=timeline)
         npt.assert_array_equal(aaf.hazards_.index.values, timeline)
         npt.assert_array_equal(aaf.cumulative_hazards_.index.values, timeline)
         npt.assert_array_equal(aaf.variance_.index.values, timeline)
@@ -2639,9 +2397,7 @@ class TestAalenAdditiveFitter:
             == aaf_without_penalizer.smoothing_penalizer
             == 0.0
         )
-        aaf_without_penalizer.fit(
-            rossi, event_col="arrest", duration_col="week"
-        )
+        aaf_without_penalizer.fit(rossi, event_col="arrest", duration_col="week")
 
         aaf_with_penalizer = AalenAdditiveFitter(
             coef_penalizer=10.0, smoothing_penalizer=10.0
@@ -2655,9 +2411,7 @@ class TestAalenAdditiveFitter:
         aaf = AalenAdditiveFitter()
         expected = ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
         aaf.fit(rossi, event_col="arrest", duration_col="week")
-        assert (
-            list(aaf.cumulative_hazards_.columns.drop("baseline")) == expected
-        )
+        assert list(aaf.cumulative_hazards_.columns.drop("baseline")) == expected
 
         aaf = AalenAdditiveFitter(fit_intercept=False)
         expected = ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
@@ -2784,11 +2538,7 @@ class TestCoxTimeVaryingFitter:
 
         """
         ctv.fit(
-            dfcv,
-            id_col="id",
-            start_col="start",
-            stop_col="stop",
-            event_col="event",
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
         )
         npt.assert_almost_equal(
             ctv.summary["coef"].values, [1.826757, 0.705963], decimal=4
@@ -2796,9 +2546,7 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(
             ctv.summary["se(coef)"].values, [1.229, 1.206], decimal=3
         )
-        npt.assert_almost_equal(
-            ctv.summary["p"].values, [0.14, 0.56], decimal=2
-        )
+        npt.assert_almost_equal(ctv.summary["p"].values, [0.14, 0.56], decimal=2)
 
     def test_what_happens_to_nans(self, ctv, dfcv):
         """
@@ -2810,11 +2558,7 @@ class TestCoxTimeVaryingFitter:
         dfcv["var4"] = np.nan
         with pytest.raises(TypeError):
             ctv.fit(
-                dfcv,
-                id_col="id",
-                start_col="start",
-                stop_col="stop",
-                event_col="event",
+                dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
             )
 
     def test_inference_against_known_R_output_with_weights(self, ctv, dfcv):
@@ -2847,9 +2591,7 @@ class TestCoxTimeVaryingFitter:
             event_col="event",
             weights_col="weights",
         )
-        npt.assert_almost_equal(
-            ctv.summary["coef"].values, [0.313, 0.423], decimal=3
-        )
+        npt.assert_almost_equal(ctv.summary["coef"].values, [0.313, 0.423], decimal=3)
         npt.assert_almost_equal(
             ctv.summary["se(coef)"].values, [1.542, 1.997], decimal=3
         )
@@ -2880,16 +2622,10 @@ class TestCoxTimeVaryingFitter:
 
         with pytest.raises(ValueError):
             ctv.fit(
-                df,
-                id_col="id",
-                start_col="start",
-                stop_col="stop",
-                event_col="event",
+                df, id_col="id", start_col="start", stop_col="stop", event_col="event"
             )
 
-    def test_fitter_will_raise_a_warning_if_instaneous_observation_present(
-        self, ctv
-    ):
+    def test_fitter_will_raise_a_warning_if_instaneous_observation_present(self, ctv):
         df = pd.DataFrame.from_records(
             [
                 {"id": 1, "start": 0, "stop": 0, "var": 1.0, "event": 0},
@@ -2946,33 +2682,18 @@ class TestCoxTimeVaryingFitter:
         )
         with pytest.raises(ValueError):
             ctv.fit(
-                df,
-                id_col="id",
-                start_col="start",
-                stop_col="stop",
-                event_col="event",
+                df, id_col="id", start_col="start", stop_col="stop", event_col="event"
             )
 
         df.loc[
-            (df["start"] == df["stop"]) & (df["start"] == 0) & df["event"],
-            "stop",
+            (df["start"] == df["stop"]) & (df["start"] == 0) & df["event"], "stop"
         ] = 0.5
-        ctv.fit(
-            df,
-            id_col="id",
-            start_col="start",
-            stop_col="stop",
-            event_col="event",
-        )
+        ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
         assert True
 
     def test_ctv_fitter_will_handle_trivial_weight_col(self, ctv, dfcv):
         ctv.fit(
-            dfcv,
-            id_col="id",
-            start_col="start",
-            stop_col="stop",
-            event_col="event",
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
         )
         coefs_no_weights = ctv.summary["coef"].values
 
@@ -2987,17 +2708,11 @@ class TestCoxTimeVaryingFitter:
         )
         coefs_trivial_weights = ctv.summary["coef"].values
 
-        npt.assert_almost_equal(
-            coefs_no_weights, coefs_trivial_weights, decimal=3
-        )
+        npt.assert_almost_equal(coefs_no_weights, coefs_trivial_weights, decimal=3)
 
     def test_doubling_the_weights_halves_the_variance(self, ctv, dfcv):
         ctv.fit(
-            dfcv,
-            id_col="id",
-            start_col="start",
-            stop_col="stop",
-            event_col="event",
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
         )
         coefs_no_weights = ctv.summary["coef"].values
         variance_no_weights = ctv.summary["se(coef)"].values ** 2
@@ -3014,9 +2729,7 @@ class TestCoxTimeVaryingFitter:
         coefs_double_weights = ctv.summary["coef"].values
         variance_double_weights = ctv.summary["se(coef)"].values ** 2
 
-        npt.assert_almost_equal(
-            coefs_no_weights, coefs_double_weights, decimal=3
-        )
+        npt.assert_almost_equal(coefs_no_weights, coefs_double_weights, decimal=3)
         npt.assert_almost_equal(
             variance_no_weights, 2 * variance_double_weights, decimal=3
         )
@@ -3041,9 +2754,7 @@ class TestCoxTimeVaryingFitter:
         )
         npt.assert_array_almost_equal(ctv.hazards_.values, expected, decimal=4)
 
-    def test_ctv_fitter_will_handle_integer_weight_as_static_model(
-        self, ctv, rossi
-    ):
+    def test_ctv_fitter_will_handle_integer_weight_as_static_model(self, ctv, rossi):
         # deleting some columns to create more duplicates
         del rossi["age"]
         del rossi["paro"]
@@ -3052,11 +2763,7 @@ class TestCoxTimeVaryingFitter:
 
         rossi_ = rossi.copy()
         rossi_["weights"] = 1.0
-        rossi_ = (
-            rossi_.groupby(rossi.columns.tolist())["weights"]
-            .sum()
-            .reset_index()
-        )
+        rossi_ = rossi_.groupby(rossi.columns.tolist())["weights"].sum().reset_index()
 
         cph = CoxPHFitter()
         cph.fit(rossi, "week", "arrest")
@@ -3079,22 +2786,8 @@ class TestCoxTimeVaryingFitter:
     def test_fitter_accept_boolean_columns(self, ctv):
         df = pd.DataFrame.from_records(
             [
-                {
-                    "id": 1,
-                    "start": 0,
-                    "stop": 5,
-                    "var": -1.2,
-                    "bool": True,
-                    "event": 1,
-                },
-                {
-                    "id": 2,
-                    "start": 0,
-                    "stop": 5,
-                    "var": 1.3,
-                    "bool": False,
-                    "event": 1,
-                },
+                {"id": 1, "start": 0, "stop": 5, "var": -1.2, "bool": True, "event": 1},
+                {"id": 2, "start": 0, "stop": 5, "var": 1.3, "bool": False, "event": 1},
                 {
                     "id": 3,
                     "start": 0,
@@ -3106,18 +2799,10 @@ class TestCoxTimeVaryingFitter:
             ]
         )
 
-        ctv.fit(
-            df,
-            id_col="id",
-            start_col="start",
-            stop_col="stop",
-            event_col="event",
-        )
+        ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
         assert True
 
-    def test_warning_is_raised_if_df_has_a_near_constant_column(
-        self, ctv, dfcv
-    ):
+    def test_warning_is_raised_if_df_has_a_near_constant_column(self, ctv, dfcv):
         dfcv["constant"] = 1.0
 
         with warnings.catch_warnings(record=True) as w:
@@ -3170,14 +2855,10 @@ class TestCoxTimeVaryingFitter:
         """
         ctv.fit(heart, id_col="id", event_col="event")
         npt.assert_almost_equal(
-            ctv.summary["coef"].values,
-            [0.0272, -0.1463, -0.6372, -0.0103],
-            decimal=3,
+            ctv.summary["coef"].values, [0.0272, -0.1463, -0.6372, -0.0103], decimal=3
         )
         npt.assert_almost_equal(
-            ctv.summary["se(coef)"].values,
-            [0.0137, 0.0705, 0.3672, 0.3138],
-            decimal=3,
+            ctv.summary["se(coef)"].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3
         )
         npt.assert_almost_equal(
             ctv.summary["p"].values, [0.048, 0.038, 0.083, 0.974], decimal=3
@@ -3296,9 +2977,7 @@ class TestCoxTimeVaryingFitter:
         ]
         ctv.fit(heart, id_col="id", event_col="event")
         npt.assert_array_almost_equal(
-            ctv.baseline_cumulative_hazard_.values[0:3, 0],
-            expected[0:3],
-            decimal=3,
+            ctv.baseline_cumulative_hazard_.values[0:3, 0], expected[0:3], decimal=3
         )
         npt.assert_array_almost_equal(
             ctv.baseline_cumulative_hazard_.values[:, 0], expected, decimal=2
@@ -3332,9 +3011,7 @@ class TestCoxTimeVaryingFitter:
 
     def test_likelihood_ratio_test_against_R(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event")
-        test_stat, deg_of_freedom, p_value = (
-            ctv._compute_likelihood_ratio_test()
-        )
+        test_stat, deg_of_freedom, p_value = ctv._compute_likelihood_ratio_test()
         assert abs(test_stat - 15.1) < 0.1
         assert abs(p_value - 0.00448) < 0.001
         assert deg_of_freedom == 4
@@ -3342,9 +3019,7 @@ class TestCoxTimeVaryingFitter:
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
         heart["weights"] = -1
         with pytest.raises(ValueError):
-            ctv.fit(
-                heart, id_col="id", event_col="event", weights_col="weights"
-            )
+            ctv.fit(heart, id_col="id", event_col="event", weights_col="weights")
 
     def test_error_thrown_if_column_doesnt_exist(self, ctv, heart):
         with pytest.raises(KeyError):
@@ -3415,20 +3090,14 @@ class TestAalenJohansenFitter:
 
     def test_jitter(self, fitter):
         d = pd.Series([1, 1, 1])
-        e = fitter._jitter(
-            durations=d, event=pd.Series([1, 1, 1]), jitter_level=0.01
-        )
+        e = fitter._jitter(durations=d, event=pd.Series([1, 1, 1]), jitter_level=0.01)
 
         npt.assert_equal(np.any(np.not_equal(d, e)), True)
 
     def test_tied_input_data(self, fitter):
         d = [1, 2, 2, 4, 5, 6]
-        fitter.fit(
-            durations=d, event_observed=[0, 1, 2, 1, 2, 0], event_of_interest=2
-        )
-        npt.assert_equal(
-            np.any(np.not_equal([0] + d, fitter.event_table.index)), True
-        )
+        fitter.fit(durations=d, event_observed=[0, 1, 2, 1, 2, 0], event_of_interest=2)
+        npt.assert_equal(np.any(np.not_equal([0] + d, fitter.event_table.index)), True)
 
     def test_event_table_is_correct(self, fitter, duration, event_observed):
         fitter.fit(duration, event_observed, event_of_interest=2)
@@ -3500,28 +3169,16 @@ class TestAalenJohansenFitter:
                 },
             ]
         ).set_index("event_at")[
-            [
-                "removed",
-                "observed",
-                "observed_2",
-                "censored",
-                "entrance",
-                "at_risk",
-            ]
+            ["removed", "observed", "observed_2", "censored", "entrance", "at_risk"]
         ]
         # pandas util for checking if two dataframes are equal
         assert_frame_equal(
-            fitter.event_table,
-            expected_event_table,
-            check_dtype=False,
-            check_like=True,
+            fitter.event_table, expected_event_table, check_dtype=False, check_like=True
         )  # Ignores dtype to avoid int32 vs int64 difference
 
     def test_aj_less_than_km(self, fitter, kmfitter, duration, event_observed):
         # In presence of competing risk, CIF_{AJ} >= CIF_{KM}
-        fitter.fit(
-            duration, event_observed, event_of_interest=2
-        )  # Aalen-Johansen
+        fitter.fit(duration, event_observed, event_of_interest=2)  # Aalen-Johansen
         kmfitter.fit(duration, event_observed)
 
         x = np.all(
@@ -3537,26 +3194,20 @@ class TestAalenJohansenFitter:
     def test_no_competing_risk(self, fitter, kmfitter, duration):
         # In presence of no competing risk, CIF_{AJ} == CIF_{KM}
         same_events = [0, 2, 2, 2, 2, 0]
-        fitter.fit(
-            duration, same_events, event_of_interest=2
-        )  # Aalen-Johansen
+        fitter.fit(duration, same_events, event_of_interest=2)  # Aalen-Johansen
         kmfitter.fit(duration, same_events)  # Kaplan-Meier
         npt.assert_allclose(
             np.array(1 - kmfitter.survival_function_),
             np.array(fitter.cumulative_density_),
         )
 
-    def test_variance_calculation_against_sas(
-        self, fitter, duration, event_observed
-    ):
+    def test_variance_calculation_against_sas(self, fitter, duration, event_observed):
         variance_from_sas = np.array([0.0, 0.0, 0.0, 0.0, 0.032, 0.048, 0.048])
 
         fitter.fit(duration, event_observed, event_of_interest=2)
         npt.assert_allclose(variance_from_sas, np.array(fitter.variance))
 
-    def test_ci_calculation_against_sas(
-        self, fitter, duration, event_observed
-    ):
+    def test_ci_calculation_against_sas(self, fitter, duration, event_observed):
         ci_from_sas = np.array(
             [
                 [np.nan, np.nan],

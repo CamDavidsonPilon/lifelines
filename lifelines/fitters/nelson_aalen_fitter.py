@@ -93,19 +93,13 @@ class NelsonAalenFitter(UnivariateFitter):
                     RuntimeWarning,
                 )
 
-        v = _preprocess_inputs(
-            durations, event_observed, timeline, entry, weights
-        )
+        v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = (
             v
         )
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(
-            self.event_table,
-            self.timeline,
-            self._additive_f,
-            self._variance_f,
-            False,
+            self.event_table, self.timeline, self._additive_f, self._variance_f, False
         )
 
         # esimates
@@ -162,9 +156,7 @@ class NelsonAalenFitter(UnivariateFitter):
         cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1) ** 2)
         return pd.Series(
             cum_[population - 1]
-            - np.where(
-                population - deaths - 1 >= 0, cum_[population - deaths - 1], 0
-            ),
+            - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
             index=population.index,
         )
 
@@ -175,9 +167,7 @@ class NelsonAalenFitter(UnivariateFitter):
         cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1))
         return pd.Series(
             cum_[population - 1]
-            - np.where(
-                population - deaths - 1 >= 0, cum_[population - deaths - 1], 0
-            ),
+            - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
             index=population.index,
         )
 
@@ -195,17 +185,13 @@ class NelsonAalenFitter(UnivariateFitter):
         timeline = self.timeline
         cumulative_hazard_name = self.cumulative_hazard_.columns[0]
         hazard_name = "differenced-" + cumulative_hazard_name
-        hazard_ = self.cumulative_hazard_.diff().fillna(
-            self.cumulative_hazard_.iloc[0]
-        )
+        hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
         return pd.DataFrame(
             1.0
             / bandwidth
             * np.dot(
-                epanechnikov_kernel(
-                    timeline[:, None], timeline[C][None, :], bandwidth
-                ),
+                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth),
                 hazard_.values[C, :],
             ),
             columns=[hazard_name],
@@ -224,26 +210,20 @@ class NelsonAalenFitter(UnivariateFitter):
         timeline = self.timeline
         alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
         self._cumulative_sq.iloc[0] = 0
-        var_hazard_ = self._cumulative_sq.diff().fillna(
-            self._cumulative_sq.iloc[0]
-        )
+        var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
         C = var_hazard_.values != 0.0  # only consider the points with jumps
         std_hazard_ = np.sqrt(
             1.0
             / (bandwidth ** 2)
             * np.dot(
-                epanechnikov_kernel(
-                    timeline[:, None], timeline[C][None, :], bandwidth
-                )
+                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth)
                 ** 2,
                 var_hazard_.values[C],
             )
         )
         values = {
-            self.ci_labels[0]: hazard_
-            * np.exp(alpha2 * std_hazard_ / hazard_),
-            self.ci_labels[1]: hazard_
-            * np.exp(-alpha2 * std_hazard_ / hazard_),
+            self.ci_labels[0]: hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
+            self.ci_labels[1]: hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_),
         }
         return pd.DataFrame(values, index=timeline)
 

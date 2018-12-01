@@ -2,6 +2,8 @@ inherits:
   - strictness_medium
   
 pylint:
+  options:
+    max-args: 7
   disable:
     - line-too-long
     - protected-access

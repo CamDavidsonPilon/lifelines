@@ -81,13 +81,9 @@ class KaplanMeierFitter(UnivariateFitter):
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         estimate_name = (
-            "survival_function_"
-            if not left_censorship
-            else "cumulative_density_"
+            "survival_function_" if not left_censorship else "cumulative_density_"
         )
-        v = _preprocess_inputs(
-            durations, event_observed, timeline, entry, weights
-        )
+        v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = (
             v
         )

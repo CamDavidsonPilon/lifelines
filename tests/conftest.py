@@ -11,18 +11,13 @@ def pytest_runtest_setup(item):
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--block",
-        action="store",
-        default=True,
-        help="Should plotting block or not.",
+        "--block", action="store", default=True, help="Should plotting block or not."
     )
 
 
 @pytest.fixture
 def block(request):
     try:
-        return request.config.getoption(
-            "--block"
-        ) not in "False,false,no,0".split(",")
+        return request.config.getoption("--block") not in "False,false,no,0".split(",")
     except ValueError:
         return True

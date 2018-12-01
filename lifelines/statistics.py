@@ -14,12 +14,7 @@ from lifelines.utils import (
 
 
 def sample_size_necessary_under_cph(
-    power,
-    ratio_of_participants,
-    p_exp,
-    p_con,
-    postulated_hazard_ratio,
-    alpha=0.05,
+    power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05
 ):
     """
     This computes the sample size for needed power to compare two groups under a Cox
@@ -60,9 +55,7 @@ def sample_size_necessary_under_cph(
     return int(np.ceil(n_exp)), int(np.ceil(n_con))
 
 
-def power_under_cph(
-    n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0.05
-):
+def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
     """
     This computes the power of the hypothesis test that the two groups, experiment and control,
     have different hazards (that is, the relative hazard ratio is different from 1.)
@@ -131,10 +124,7 @@ def logrank_test(
     See Survival and Event Analysis, page 108.
     """
 
-    event_times_A, event_times_B = (
-        np.array(event_times_A),
-        np.array(event_times_B),
-    )
+    event_times_A, event_times_B = (np.array(event_times_A), np.array(event_times_B))
     if event_observed_A is None:
         event_observed_A = np.ones(event_times_A.shape[0])
     if event_observed_B is None:
@@ -309,11 +299,7 @@ def multivariate_logrank_test(
     ), "Sum is not zero."  # this should move to a test eventually.
 
     # compute covariance matrix
-    factor = (
-        (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1))
-        * d_i
-        / n_i ** 2
-    )
+    factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i ** 2
     n_ij["_"] = n_i.values
     V_ = n_ij.mul(np.sqrt(factor), axis="index").fillna(0)
     V = -np.dot(V_.T, V_)
@@ -357,9 +343,7 @@ class StatisticalResult(object):
     @property
     def summary(self):
         cols = ["test_statistic", "p"]
-        return pd.DataFrame(
-            [[self.test_statistic, self.p_value]], columns=cols
-        )
+        return pd.DataFrame([[self.test_statistic, self.p_value]], columns=cols)
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
@@ -371,18 +355,14 @@ class StatisticalResult(object):
 
         s = ""
         s += "\n" + meta_data + "\n\n"
-        s += df.to_string(
-            float_format=lambda f: "{:4.4f}".format(f), index=False
-        )
+        s += df.to_string(float_format=lambda f: "{:4.4f}".format(f), index=False)
 
         s += "\n---"
         s += "\n" + significance_codes_as_text()
         return s
 
     def _pretty_print_meta_data(self, dictionary):
-        return ", ".join(
-            [str(k) + "=" + str(v) for k, v in dictionary.items()]
-        )
+        return ", ".join([str(k) + "=" + str(v) for k, v in dictionary.items()])
 
 
 def chisq_test(U, degrees_freedom, alpha):

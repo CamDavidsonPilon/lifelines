@@ -67,10 +67,7 @@ class AalenJohansenFitter(UnivariateFitter):
         # Checking for tied event times
         if np.sum(pd.Series(durations).duplicated()) > 0:
             # Seeing if there is a large amount of ties in the data (>20%)
-            if (
-                np.sum(pd.Series(durations).duplicated()) / len(durations)
-                > 0.2
-            ):
+            if np.sum(pd.Series(durations).duplicated()) / len(durations) > 0.2:
                 warnings.warn(
                     """It looks like there are many tied events in your data set. The Aalen-Johansen 
                               estimator should only be used when there are no/few tied events""",
@@ -108,9 +105,7 @@ class AalenJohansenFitter(UnivariateFitter):
         aj["lagged_overall_survival"] = aj["overall_survival"].shift()
 
         # Setting up table for calculations and to return to user
-        event_spec = np.where(
-            pd.Series(event_observed) == event_of_interest, 1, 0
-        )
+        event_spec = np.where(pd.Series(event_observed) == event_of_interest, 1, 0)
         event_spec_proc = _preprocess_inputs(
             durations=durations,
             event_observed=event_spec,
@@ -124,9 +119,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
         # Estimator of Cumulative Incidence (Density) Function
         aj[cmprisk_label] = (
-            (aj[self.label_cmprisk])
-            / (aj["at_risk"])
-            * aj["lagged_overall_survival"]
+            (aj[self.label_cmprisk]) / (aj["at_risk"]) * aj["lagged_overall_survival"]
         ).cumsum()
         aj.loc[0, cmprisk_label] = 0  # Setting initial CIF to be zero
         aj = aj.set_index("event_at")
@@ -218,8 +211,7 @@ class AalenJohansenFitter(UnivariateFitter):
             sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
             sf["part1"] = ((F_t - sf["Ft"]) ** 2) * (
-                sf["observed"]
-                / (sf["at_risk"] * (sf["at_risk"] - sf["observed"]))
+                sf["observed"] / (sf["at_risk"] * (sf["at_risk"] - sf["observed"]))
             )
             sf["part2"] = (
                 ((sf["lagS"]) ** 2)

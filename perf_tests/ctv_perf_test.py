@@ -8,13 +8,7 @@ if __name__ == "__main__":
     dfcv = pd.concat([dfcv] * 50)
     ctv = CoxTimeVaryingFitter()
     start_time = time.time()
-    ctv.fit(
-        dfcv,
-        id_col="id",
-        event_col="event",
-        start_col="start",
-        stop_col="stop",
-    )
+    ctv.fit(dfcv, id_col="id", event_col="event", start_col="start", stop_col="stop")
     time_took = time.time() - start_time
     print("--- %s seconds ---" % time_took)
     ctv.print_summary()

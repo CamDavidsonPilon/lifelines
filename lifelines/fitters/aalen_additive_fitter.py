@@ -115,9 +115,7 @@ class AalenAdditiveFitter(BaseFitter):
           self, with new methods like plot, smoothed_hazards_ and properties like cumulative_hazards_
         """
         if id_col is None:
-            self._fit_static(
-                df, duration_col, event_col, timeline, show_progress
-            )
+            self._fit_static(df, duration_col, event_col, timeline, show_progress)
         else:
             self._fit_varying(
                 df, duration_col, event_col, id_col, timeline, show_progress
@@ -125,12 +123,7 @@ class AalenAdditiveFitter(BaseFitter):
         return self
 
     def _fit_static(
-        self,
-        dataframe,
-        duration_col,
-        event_col=None,
-        timeline=None,
-        show_progress=True,
+        self, dataframe, duration_col, event_col=None, timeline=None, show_progress=True
     ):
         """
         Perform inference on the coefficients of the Aalen additive model.
@@ -400,9 +393,7 @@ class AalenAdditiveFitter(BaseFitter):
         """
         return pd.DataFrame(
             np.dot(
-                epanechnikov_kernel(
-                    self.timeline[:, None], self.timeline, bandwidth
-                ),
+                epanechnikov_kernel(self.timeline[:, None], self.timeline, bandwidth),
                 self.hazards_.values,
             ),
             columns=self.hazards_.columns,
@@ -419,9 +410,7 @@ class AalenAdditiveFitter(BaseFitter):
         ]
 
         self.confidence_intervals_ = pd.DataFrame(
-            np.zeros((2 * n, d)),
-            index=index,
-            columns=self.cumulative_hazards_.columns,
+            np.zeros((2 * n, d)), index=index, columns=self.cumulative_hazards_.columns
         )
 
         self.confidence_intervals_.loc["upper"] = (
@@ -458,15 +447,11 @@ class AalenAdditiveFitter(BaseFitter):
             X_ = X.copy()
         X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
         individual_cumulative_hazards_ = pd.DataFrame(
-            np.dot(self.cumulative_hazards_, X_.T),
-            index=self.timeline,
-            columns=cols,
+            np.dot(self.cumulative_hazards_, X_.T), index=self.timeline, columns=cols
         )
 
         if self.nn_cumulative_hazard:
-            individual_cumulative_hazards_[
-                individual_cumulative_hazards_ < 0.0
-            ] = 0.0
+            individual_cumulative_hazards_[individual_cumulative_hazards_ < 0.0] = 0.0
 
         return individual_cumulative_hazards_
 
@@ -490,9 +475,7 @@ class AalenAdditiveFitter(BaseFitter):
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
         index = _get_index(X)
-        return qth_survival_times(
-            p, self.predict_survival_function(X)[index]
-        ).T
+        return qth_survival_times(p, self.predict_survival_function(X)[index]).T
 
     def predict_median(self, X):
         """
@@ -517,8 +500,7 @@ class AalenAdditiveFitter(BaseFitter):
         index = _get_index(X)
         t = self.cumulative_hazards_.index
         return pd.DataFrame(
-            trapz(self.predict_survival_function(X)[index].values.T, t),
-            index=index,
+            trapz(self.predict_survival_function(X)[index].values.T, t), index=index
         )
 
     def plot(self, loc=None, iloc=None, columns=[], legend=True, **kwargs):
@@ -574,15 +556,9 @@ class AalenAdditiveFitter(BaseFitter):
 
         for column in columns:
             y = get_loc(self.cumulative_hazards_[column]).values
-            y_upper = get_loc(
-                self.confidence_intervals_[column].loc["upper"]
-            ).values
-            y_lower = get_loc(
-                self.confidence_intervals_[column].loc["lower"]
-            ).values
-            shaded_plot(
-                ax, x, y, y_upper, y_lower, label=kwargs.get("label", column)
-            )
+            y_upper = get_loc(self.confidence_intervals_[column].loc["upper"]).values
+            y_lower = get_loc(self.confidence_intervals_[column].loc["lower"]).values
+            shaded_plot(ax, x, y, y_upper, y_lower, label=kwargs.get("label", column))
 
         if legend:
             ax.legend()

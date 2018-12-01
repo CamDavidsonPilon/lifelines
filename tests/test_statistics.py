@@ -9,30 +9,17 @@ from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd
 
 
 def test_sample_size_necessary_under_cph():
-    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.8, 0.2, 0.139) == (
-        14,
-        14,
-    )
-    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.5, 0.5, 1.2) == (
-        950,
-        950,
-    )
-    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2) == (
-        1231,
-        821,
-    )
+    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.8, 0.2, 0.139) == (14, 14)
+    assert stats.sample_size_necessary_under_cph(0.8, 1, 0.5, 0.5, 1.2) == (950, 950)
+    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2) == (1231, 821)
     assert stats.sample_size_necessary_under_cph(
         0.8, 1.5, 0.5, 0.5, 1.2, alpha=0.01
     ) == (1832, 1221)
 
 
 def test_power_under_cph():
-    assert (
-        abs(stats.power_under_cph(12, 12, 0.8, 0.2, 0.139) - 0.744937) < 10e-6
-    )
-    assert (
-        abs(stats.power_under_cph(12, 20, 0.8, 0.2, 1.2) - 0.05178317) < 10e-6
-    )
+    assert abs(stats.power_under_cph(12, 12, 0.8, 0.2, 0.139) - 0.744937) < 10e-6
+    assert abs(stats.power_under_cph(12, 20, 0.8, 0.2, 1.2) - 0.05178317) < 10e-6
 
 
 def test_unequal_intensity_with_random_data():
@@ -49,37 +36,13 @@ def test_logrank_test_output_against_R_1():
     d2, e2 = df.loc[~ix]["time"], df.loc[~ix]["event"]
 
     expected = 0.0138
-    result = stats.logrank_test(
-        d1, d2, event_observed_A=e1, event_observed_B=e2
-    )
+    result = stats.logrank_test(d1, d2, event_observed_A=e1, event_observed_B=e2)
     assert abs(result.p_value - expected) < 0.0001
 
 
 def test_logrank_test_output_against_R_2():
     # from https://stat.ethz.ch/education/semesters/ss2011/seminar/contents/presentation_2.pdf
-    control_T = [
-        1,
-        1,
-        2,
-        2,
-        3,
-        4,
-        4,
-        5,
-        5,
-        8,
-        8,
-        8,
-        8,
-        11,
-        11,
-        12,
-        12,
-        15,
-        17,
-        22,
-        23,
-    ]
+    control_T = [1, 1, 2, 2, 3, 4, 4, 5, 5, 8, 8, 8, 8, 11, 11, 12, 12, 15, 17, 22, 23]
     control_E = np.ones_like(control_T)
 
     treatment_T = [
@@ -105,35 +68,10 @@ def test_logrank_test_output_against_R_2():
         34,
         25,
     ]
-    treatment_E = [
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-    ]
+    treatment_E = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     result = stats.logrank_test(
-        control_T,
-        treatment_T,
-        event_observed_A=control_E,
-        event_observed_B=treatment_E,
+        control_T, treatment_T, event_observed_A=control_E, event_observed_B=treatment_E
     )
     expected_p_value = 4.17e-05
 
@@ -260,9 +198,7 @@ def test_multivariate_unequal_intensities():
 
 def test_pairwise_waltons_dataset_is_significantly_different():
     waltons_dataset = load_waltons()
-    R = stats.pairwise_logrank_test(
-        waltons_dataset["T"], waltons_dataset["group"]
-    )
+    R = stats.pairwise_logrank_test(waltons_dataset["T"], waltons_dataset["group"])
     assert R.values[0, 1].p_value < 0.05
 
 

@@ -43,9 +43,9 @@ class coeff_func(object):
 
     def __call__(self, *args, **kwargs):
         def __repr__():
-            s = self.f.__doc__.replace(
-                "alpha", "%.4f" % kwargs["alpha"]
-            ).replace("beta", "%.4f" % kwargs["beta"])
+            s = self.f.__doc__.replace("alpha", "%.4f" % kwargs["alpha"]).replace(
+                "beta", "%.4f" % kwargs["beta"]
+            )
             return s
 
         self.__doc__ = __repr__()
@@ -117,12 +117,8 @@ def generate_covariates(n, d, n_binary=0, p=0.5):
     """
     assert n_binary >= 0 and n_binary <= d, "binary must be between 0 and d"
     covariates = np.zeros((n, d + 1))
-    covariates[:, : d - n_binary] = random.exponential(
-        1, size=(n, d - n_binary)
-    )
-    covariates[:, d - n_binary : -1] = random.binomial(
-        1, p, size=(n, n_binary)
-    )
+    covariates[:, : d - n_binary] = random.exponential(1, size=(n, d - n_binary))
+    covariates[:, d - n_binary : -1] = random.binomial(1, p, size=(n, n_binary))
     covariates[:, -1] = np.ones(n)
     return covariates
 
@@ -140,11 +136,7 @@ def constant_coefficients(d, timelines, constant=False, independent=0):
     returns a matrix (t,d+1) of coefficients
     """
     return time_varying_coefficients(
-        d,
-        timelines,
-        constant=True,
-        independent=independent,
-        randgen=random.normal,
+        d, timelines, constant=True, independent=independent, randgen=random.normal
     )
 
 

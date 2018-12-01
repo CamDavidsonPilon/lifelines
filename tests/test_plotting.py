@@ -11,10 +11,7 @@ from lifelines.estimation import (
     CoxPHFitter,
     CoxTimeVaryingFitter,
 )
-from lifelines.generate_datasets import (
-    generate_random_lifetimes,
-    generate_hazard_rates,
-)
+from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes
 from lifelines.datasets import (
     load_waltons,
@@ -165,9 +162,7 @@ class TestPlotting:
         N = 20
         current = 10
         birthtimes = current * np.random.uniform(size=(N,))
-        T, C = generate_random_lifetimes(
-            hz, t, size=N, censor=current - birthtimes
-        )
+        T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
         plot_lifetimes(T, event_observed=C, birthtimes=birthtimes, block=block)
 
     def test_plot_lifetimes_relative(self, block):
@@ -217,9 +212,7 @@ class TestPlotting:
         return
 
     def test_show_censor_with_index_0(self, block, kmf):
-        T = np.random.binomial(
-            20, 0.9, size=100
-        )  # lifelines should auto put a 0 in.
+        T = np.random.binomial(20, 0.9, size=100)  # lifelines should auto put a 0 in.
         C = np.random.binomial(1, 0.8, size=100)
         kmf.fit(T, C).plot(show_censors=True)
         self.plt.title("test_show_censor_with_index_0")
@@ -284,16 +277,12 @@ class TestPlotting:
         self.plt.title("test_coxph_plotting_with_subset_of_columns")
         self.plt.show(block=block)
 
-    def test_coxph_plotting_with_subset_of_columns_and_standardized(
-        self, block
-    ):
+    def test_coxph_plotting_with_subset_of_columns_and_standardized(self, block):
         df = load_regression_dataset()
         cp = CoxPHFitter()
         cp.fit(df, "T", "E")
         cp.plot(True, columns=["var1", "var2"])
-        self.plt.title(
-            "test_coxph_plotting_with_subset_of_columns_and_standardized"
-        )
+        self.plt.title("test_coxph_plotting_with_subset_of_columns_and_standardized")
         self.plt.show(block=block)
 
     def test_coxph_plotting_normalized(self, block):
@@ -304,16 +293,12 @@ class TestPlotting:
         self.plt.title("test_coxph_plotting_normalized")
         self.plt.show(block=block)
 
-    def test_coxtv_plotting_with_subset_of_columns_and_standardized(
-        self, block
-    ):
+    def test_coxtv_plotting_with_subset_of_columns_and_standardized(self, block):
         df = load_stanford_heart_transplants()
         ctv = CoxTimeVaryingFitter()
         ctv.fit(df, id_col="id", event_col="event")
         ctv.plot(True, columns=["age", "year"])
-        self.plt.title(
-            "test_coxtv_plotting_with_subset_of_columns_and_standardized"
-        )
+        self.plt.title("test_coxtv_plotting_with_subset_of_columns_and_standardized")
         self.plt.show(block=block)
 
     def test_kmf_left_censorship_plots(self, block):

@@ -186,9 +186,7 @@ def plot_lifetimes(
 
     N = lifetimes.shape[0]
     if N > 100:
-        print(
-            "warning: you may want to subsample to less than 100 individuals."
-        )
+        print("warning: you may want to subsample to less than 100 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
@@ -206,16 +204,10 @@ def plot_lifetimes(
     for i in range(N):
         c = "#A60628" if event_observed[i] else "#348ABD"
         plt.hlines(
-            N - 1 - i,
-            birthtimes[i],
-            birthtimes[i] + lifetimes[i],
-            color=c,
-            lw=3,
+            N - 1 - i, birthtimes[i], birthtimes[i] + lifetimes[i], color=c, lw=3
         )
         m = "|" if not event_observed[i] else "o"
-        plt.scatter(
-            (birthtimes[i]) + lifetimes[i], N - 1 - i, color=c, s=30, marker=m
-        )
+        plt.scatter((birthtimes[i]) + lifetimes[i], N - 1 - i, color=c, s=30, marker=m)
 
     plt.ylim(-0.5, N)
     plt.show(block=block)
@@ -231,9 +223,7 @@ def set_kwargs_ax(kwargs):
 
 def set_kwargs_color(kwargs):
     kwargs["c"] = coalesce(
-        kwargs.get("c"),
-        kwargs.get("color"),
-        kwargs["ax"]._get_lines.get_next_color(),
+        kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color()
     )
 
 
@@ -244,9 +234,7 @@ def set_kwargs_drawstyle(kwargs):
 def create_dataframe_slicer(iloc, loc):
     user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
     user_submitted_slice = (
-        slice(None)
-        if user_did_not_specify_certain_indexes
-        else coalesce(loc, iloc)
+        slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
     )
 
     get_method = "loc" if loc is not None else "iloc"
@@ -403,23 +391,15 @@ def plot_estimate(
                 alpha=0.6,
             )
         else:
-            x = dataframe_slicer(confidence_interval_).index.values.astype(
-                float
-            )
-            lower = dataframe_slicer(
-                confidence_interval_.filter(like="lower")
-            ).values[:, 0]
-            upper = dataframe_slicer(
-                confidence_interval_.filter(like="upper")
-            ).values[:, 0]
+            x = dataframe_slicer(confidence_interval_).index.values.astype(float)
+            lower = dataframe_slicer(confidence_interval_.filter(like="lower")).values[
+                :, 0
+            ]
+            upper = dataframe_slicer(confidence_interval_.filter(like="upper")).values[
+                :, 0
+            ]
             fill_between_steps(
-                x,
-                lower,
-                y2=upper,
-                ax=ax,
-                alpha=ci_alpha,
-                color=colour,
-                linewidth=1.0,
+                x, lower, y2=upper, ax=ax, alpha=ci_alpha, color=colour, linewidth=1.0
             )
 
     if at_risk_counts:

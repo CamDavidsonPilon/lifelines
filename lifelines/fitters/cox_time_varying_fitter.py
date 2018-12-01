@@ -103,17 +103,12 @@ class CoxTimeVaryingFitter(BaseFitter):
             raise NotImplementedError("Not available yet.")
 
         self.event_col = event_col
-        self._time_fit_was_called = datetime.utcnow().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
         df = df.copy()
 
         if not (
-            id_col in df
-            and event_col in df
-            and start_col in df
-            and stop_col in df
+            id_col in df and event_col in df and start_col in df and stop_col in df
         ):
             raise KeyError(
                 "A column specified in the call to `fit` does not exist in the dataframe provided."
@@ -165,9 +160,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             self._norm_std, self._norm_std
         )
         self.standard_errors_ = self._compute_standard_errors(
-            normalize(df, self._norm_mean, self._norm_std),
-            stop_times_events,
-            weights,
+            normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(
@@ -238,9 +231,7 @@ class CoxTimeVaryingFitter(BaseFitter):
                 * (xi - risk_phi_x_history[j] / risk_phi_history[j])
                 for j in range(0, i + 1)
             )
-            score = score + E[i] * (
-                xi - risk_phi_x_history[i] / risk_phi_history[i]
-            )
+            score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
             score *= weights[i]
             score_residuals[i, :] = score
 
@@ -260,9 +251,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             )
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(
-            se[None, :], index=["se"], columns=self.hazards_.columns
-        )
+        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
@@ -347,9 +336,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         while converging:
             i += 1
-            h, g, ll = self._get_gradients(
-                df, stop_times_events, weights, beta
-            )
+            h, g, ll = self._get_gradients(df, stop_times_events, weights, beta)
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -399,10 +386,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            elif (
-                previous_ll > 0
-                and abs(ll - previous_ll) / (-previous_ll) < 1e-09
-            ):
+            elif previous_ll > 0 and abs(ll - previous_ll) / (-previous_ll) < 1e-09:
                 # this is what R uses by default
                 converging, completed = False, True
             elif newton_decrement < 10e-8:
@@ -455,16 +439,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         gradient = np.zeros(d)
         log_lik = 0
 
-        unique_death_times = np.unique(
-            stops_events["stop"].loc[stops_events["event"]]
-        )
+        unique_death_times = np.unique(stops_events["stop"].loc[stops_events["event"]])
 
         for t in unique_death_times:
 
             # I feel like this can be made into some tree-like structure
-            ix = (stops_events["start"].values < t) & (
-                t <= stops_events["stop"].values
-            )
+            ix = (stops_events["start"].values < t) & (t <= stops_events["stop"].values)
 
             df_at_t = df.values[ix]
             weights_at_t = weights.values[ix]
@@ -514,9 +494,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                     denom = risk_phi - increasing_proportion * tie_phi
                     numer = risk_phi_x - increasing_proportion * tie_phi_x
                     # Hessian
-                    a1 = (
-                        risk_phi_x_x - increasing_proportion * tie_phi_x_x
-                    ) / denom
+                    a1 = (risk_phi_x_x - increasing_proportion * tie_phi_x_x) / denom
                 else:
                     denom = risk_phi
                     numer = risk_phi_x
@@ -589,16 +567,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print("{} = {}".format(justify("event col"), self.event_col))
         print("{} = {}".format(justify("number of subjects"), self._n_unique))
         print("{} = {}".format(justify("number of periods"), self._n_examples))
-        print(
-            "{} = {}".format(
-                justify("number of events"), self.event_observed.sum()
-            )
-        )
-        print(
-            "{} = {:.3f}".format(
-                justify("log-likelihood"), self._log_likelihood
-            )
-        )
+        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
+        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
         print(
             "{} = {} UTC".format(
                 justify("time fit was run"), self._time_fit_was_called
@@ -643,9 +613,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
-        _, p_value = chisq_test(
-            test_stat, degrees_freedom=degrees_freedom, alpha=0.0
-        )
+        _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
         return test_stat, degrees_freedom, p_value
 
     def plot(self, standardized=False, columns=None, **kwargs):
@@ -668,12 +636,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if columns is not None:
             yaxis_locations = range(len(columns))
             summary = self.summary.loc[columns]
-            lower_bound = (
-                self.confidence_intervals_[columns].loc["lower-bound"].copy()
-            )
-            upper_bound = (
-                self.confidence_intervals_[columns].loc["upper-bound"].copy()
-            )
+            lower_bound = self.confidence_intervals_[columns].loc["lower-bound"].copy()
+            upper_bound = self.confidence_intervals_[columns].loc["upper-bound"].copy()
             hazards = self.hazards_[columns].values[0].copy()
         else:
             yaxis_locations = range(len(self.hazards_.columns))
@@ -689,12 +653,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             hazards /= se
 
         order = np.argsort(hazards)
-        ax.scatter(
-            upper_bound.values[order], yaxis_locations, marker="|", c="k"
-        )
-        ax.scatter(
-            lower_bound.values[order], yaxis_locations, marker="|", c="k"
-        )
+        ax.scatter(upper_bound.values[order], yaxis_locations, marker="|", c="k")
+        ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
         ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
         ax.hlines(
             yaxis_locations,
@@ -712,9 +672,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax
 
-    def _compute_cumulative_baseline_hazard(
-        self, tv_data, stop_times_events, weights
-    ):
+    def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events, weights):
         hazards = self.predict_partial_hazard(tv_data).values
 
         unique_death_times = np.unique(
@@ -753,14 +711,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def __repr__(self):
         classname = self.__class__.__name__
         try:
-            s = (
-                """<lifelines.%s: fitted with %d periods, %d subjects, %d events>"""
-                % (
-                    classname,
-                    self._n_examples,
-                    self._n_unique,
-                    self.event_observed.sum(),
-                )
+            s = """<lifelines.%s: fitted with %d periods, %d subjects, %d events>""" % (
+                classname,
+                self._n_examples,
+                self._n_unique,
+                self.event_observed.sum(),
             )
         except AttributeError:
             s = """<lifelines.%s>""" % classname

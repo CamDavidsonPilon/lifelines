@@ -59,9 +59,7 @@ class CoxPHFitter(BaseFitter):
          See http://courses.washington.edu/b515/l17.pdf.
     """
 
-    def __init__(
-        self, alpha=0.95, tie_method="Efron", penalizer=0.0, strata=None
-    ):
+    def __init__(self, alpha=0.95, tie_method="Efron", penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         if penalizer < 0:
@@ -211,16 +209,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self.baseline_hazard_ = self._compute_baseline_hazards(
-            df, T, E, weights
-        )
-        self.baseline_cumulative_hazard_ = (
-            self._compute_baseline_cumulative_hazard()
-        )
+        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E, weights)
+        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
-        self._predicted_partial_hazards_ = self.predict_partial_hazard(
-            df
-        ).values
+        self._predicted_partial_hazards_ = self.predict_partial_hazard(df).values
 
         self._train_log_partial_hazard = self.predict_log_partial_hazard(
             self._norm_mean.to_frame().T
@@ -366,10 +358,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            elif (
-                previous_ll != 0
-                and abs(ll - previous_ll) / (-previous_ll) < 1e-09
-            ):
+            elif previous_ll != 0 and abs(ll - previous_ll) / (-previous_ll) < 1e-09:
                 # this is what R uses by default
                 converging, completed = False, True
             elif newton_decrement < precision:
@@ -602,9 +591,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 score_residuals_ = np.append(
                     score_residuals_,
-                    (score_residuals[ix, :] * weights_[:, None])
-                    .sum(0)
-                    .reshape(1, d),
+                    (score_residuals[ix, :] * weights_[:, None]).sum(0).reshape(1, d),
                     axis=0,
                 )
             score_residuals = score_residuals_
@@ -637,9 +624,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # need to store these histories, as we access them often
         # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
-        risk_phi_x_history = (X * (weights * phi_s)[:, None])[::-1].cumsum(0)[
-            ::-1
-        ]
+        risk_phi_x_history = (X * (weights * phi_s)[:, None])[::-1].cumsum(0)[::-1]
         risk_phi_history = (weights * phi_s)[::-1].cumsum()[::-1][:, None]
 
         # Iterate forwards
@@ -652,16 +637,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 (
                     E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T
                 ).T  # this is constant-ish, and could be cached
-                * (
-                    xi
-                    - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1]
-                )
+                * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1])
             ).sum(0)
 
             if E[i]:
-                score = score + (
-                    xi - risk_phi_x_history[i] / risk_phi_history[i]
-                )
+                score = score + (xi - risk_phi_x_history[i] / risk_phi_history[i])
 
             score_residuals[i, :] = score
 
@@ -674,9 +654,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             )  # / self._norm_std
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(
-            se[None, :], index=["se"], columns=self.hazards_.columns
-        )
+        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
@@ -732,23 +710,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if self.strata:
             print("{} = {}".format(justify("strata"), self.strata))
 
+        print("{} = {}".format(justify("number of subjects"), self._n_examples))
+        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
+        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
         print(
-            "{} = {}".format(justify("number of subjects"), self._n_examples)
-        )
-        print(
-            "{} = {}".format(
-                justify("number of events"), self.event_observed.sum()
-            )
-        )
-        print(
-            "{} = {:.3f}".format(
-                justify("log-likelihood"), self._log_likelihood
-            )
-        )
-        print(
-            "{} = {}".format(
-                justify("time fit was run"), self._time_fit_was_called
-            ),
+            "{} = {}".format(justify("time fit was run"), self._time_fit_was_called),
             end="\n\n",
         )
         print("---")
@@ -777,9 +743,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Conviently, we can actually use the class itself to do most of the work.
 
         """
-        trivial_dataset = pd.DataFrame(
-            {"E": self.event_observed, "T": self.durations}
-        )
+        trivial_dataset = pd.DataFrame({"E": self.event_observed, "T": self.durations})
 
         cp_null = CoxPHFitter()
         cp_null.fit(trivial_dataset, "T", "E", show_progress=False)
@@ -789,9 +753,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
-        _, p_value = chisq_test(
-            test_stat, degrees_freedom=degrees_freedom, alpha=0.0
-        )
+        _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
         return test_stat, degrees_freedom, p_value
 
     def predict_partial_hazard(self, X):
@@ -831,8 +793,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             X = X[order]
             pass_for_numeric_dtypes_or_raise(X)
         elif isinstance(X, pd.Series) and (
-            (X.shape[0] == len(hazard_names) + 2)
-            or (X.shape[0] == len(hazard_names))
+            (X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))
         ):
             X = X.to_frame().T
             order = hazard_names
@@ -891,9 +852,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 col = _get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
                 cumulative_hazard_ = cumulative_hazard_.merge(
-                    pd.DataFrame(
-                        np.dot(c_0, v.T), index=c_0.index, columns=col
-                    ),
+                    pd.DataFrame(np.dot(c_0, v.T), index=c_0.index, columns=col),
                     how="outer",
                     right_index=True,
                     left_index=True,
@@ -909,9 +868,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if times is not None:
             # non-linear interpolations can push the survival curves above 1 and below 0.
             return (
-                cumulative_hazard_.reindex(
-                    cumulative_hazard_.index.union(times)
-                )
+                cumulative_hazard_.reindex(cumulative_hazard_.index.union(times))
                 .interpolate("index")
                 .loc[times]
             )
@@ -941,9 +898,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
         """
         subjects = _get_index(X)
-        return qth_survival_times(
-            p, self.predict_survival_function(X)[subjects]
-        ).T
+        return qth_survival_times(p, self.predict_survival_function(X)[subjects]).T
 
     def predict_median(self, X):
         """
@@ -972,9 +927,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         v = self.predict_survival_function(X)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
-    def _compute_baseline_hazard(
-        self, data, durations, event_observed, weights, name
-    ):
+    def _compute_baseline_hazard(self, data, durations, event_observed, weights, name):
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
         ind_hazards = self.predict_partial_hazard(data) * weights[:, None]
         ind_hazards["event_at"] = durations.values
@@ -1067,12 +1020,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if columns is not None:
             yaxis_locations = range(len(columns))
             summary = self.summary.loc[columns]
-            lower_bound = (
-                self.confidence_intervals_[columns].loc["lower-bound"].copy()
-            )
-            upper_bound = (
-                self.confidence_intervals_[columns].loc["upper-bound"].copy()
-            )
+            lower_bound = self.confidence_intervals_[columns].loc["lower-bound"].copy()
+            upper_bound = self.confidence_intervals_[columns].loc["upper-bound"].copy()
             hazards = self.hazards_[columns].values[0].copy()
         else:
             yaxis_locations = range(len(self.hazards_.columns))
@@ -1088,12 +1037,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             hazards /= se
 
         order = np.argsort(hazards)
-        ax.scatter(
-            upper_bound.values[order], yaxis_locations, marker="|", c="k"
-        )
-        ax.scatter(
-            lower_bound.values[order], yaxis_locations, marker="|", c="k"
-        )
+        ax.scatter(upper_bound.values[order], yaxis_locations, marker="|", c="k")
+        ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
         ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
         ax.hlines(
             yaxis_locations,
@@ -1129,8 +1074,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         if covariate not in self.hazards_.columns:
             raise KeyError(
-                "covariate `%s` is not present in the original dataset"
-                % covariate
+                "covariate `%s` is not present in the original dataset" % covariate
             )
 
         ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
@@ -1149,9 +1093,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             return self._concordance_score_
         else:
             self._concordance_score_ = concordance_index(
-                self.durations,
-                -self._predicted_partial_hazards_,
-                self.event_observed,
+                self.durations, -self._predicted_partial_hazards_, self.event_observed
             )
             del self._predicted_partial_hazards_
             return self._concordance_score_

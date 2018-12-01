@@ -83,9 +83,7 @@ class ExponentialFitter(UnivariateFitter):
         self.timeline = (
             np.sort(np.asarray(timeline))
             if timeline is not None
-            else np.arange(
-                int(self.durations.min()), int(self.durations.max()) + 1
-            )
+            else np.arange(int(self.durations.min()), int(self.durations.max()) + 1)
         )
         self._label = label
 
@@ -140,9 +138,7 @@ class ExponentialFitter(UnivariateFitter):
     def _compute_standard_errors(self):
         n = self.durations.shape[0]
         var_lambda_ = self.lambda_ ** 2 / n
-        return pd.DataFrame(
-            [[np.sqrt(var_lambda_)]], index=["se"], columns=["lambda_"]
-        )
+        return pd.DataFrame([[np.sqrt(var_lambda_)]], index=["se"], columns=["lambda_"])
 
     def _compute_confidence_bounds_of_parameters(self):
         se = self._compute_standard_errors().loc["se"]
@@ -188,21 +184,14 @@ class ExponentialFitter(UnivariateFitter):
         """
         justify = string_justify(18)
         print(self)
+        print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print(
             "{} = {}".format(
-                justify("number of subjects"), self.durations.shape[0]
+                justify("number of events"), np.where(self.event_observed)[0].shape[0]
             )
         )
         print(
-            "{} = {}".format(
-                justify("number of events"),
-                np.where(self.event_observed)[0].shape[0],
-            )
-        )
-        print(
-            "{} = {:.3f}".format(
-                justify("log-likelihood"), self._log_likelihood
-            ),
+            "{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood),
             end="\n\n",
         )
 

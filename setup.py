@@ -7,11 +7,7 @@ def filepath(fname):
     return os.path.join(os.path.dirname(__file__), fname)
 
 
-exec(
-    compile(
-        open("lifelines/version.py").read(), "lifelines/version.py", "exec"
-    )
-)
+exec(compile(open("lifelines/version.py").read(), "lifelines/version.py", "exec"))
 
 with open("README.md") as f:
     long_description = f.read()
@@ -43,12 +39,7 @@ setup(
         "Programming Language :: Python :: 3.5",
         "Topic :: Scientific/Engineering",
     ],
-    install_requires=[
-        "numpy",
-        "scipy>=1.0",
-        "pandas>=0.18",
-        "matplotlib>=2.0",
-    ],
+    install_requires=["numpy", "scipy>=1.0", "pandas>=0.18", "matplotlib>=2.0"],
     package_data={
         "lifelines": [
             "../README.md",

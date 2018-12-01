@@ -59,9 +59,7 @@ def _d_lambda_d_lambda_(lambda_rho, T, E):
 def _d_rho_d_lambda_(lambda_rho, T, E):
     lambda_, rho = lambda_rho
     return (-1.0 / lambda_) * (
-        E
-        - (lambda_ * T) ** rho
-        - rho * (lambda_ * T) ** rho * np.log(lambda_ * T)
+        E - (lambda_ * T) ** rho - rho * (lambda_ * T) ** rho * np.log(lambda_ * T)
     ).sum()
 
 
@@ -140,9 +138,7 @@ class WeibullFitter(UnivariateFitter):
             self.timeline = np.sort(np.asarray(timeline))
         else:
             self.timeline = np.linspace(
-                self.durations.min(),
-                self.durations.max(),
-                self.durations.shape[0],
+                self.durations.min(), self.durations.max(), self.durations.shape[0]
             )
 
         self._label = label
@@ -188,11 +184,7 @@ class WeibullFitter(UnivariateFitter):
         return np.exp(-(self.lambda_ * t) ** self.rho_)
 
     def hazard_at_times(self, times):
-        return (
-            self.lambda_
-            * self.rho_
-            * (self.lambda_ * times) ** (self.rho_ - 1)
-        )
+        return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
 
     def survival_function_at_times(self, times):
         return np.exp(-self.cumulative_hazard_at_times(times))
@@ -219,10 +211,7 @@ class WeibullFitter(UnivariateFitter):
 
         def gradient_function(parameters, T, E):
             return np.array(
-                [
-                    _lambda_gradient(parameters, T, E),
-                    _rho_gradient(parameters, T, E),
-                ]
+                [_lambda_gradient(parameters, T, E), _rho_gradient(parameters, T, E)]
             )
 
         # initialize the parameters. This shows dramatic improvements.
@@ -369,21 +358,14 @@ class WeibullFitter(UnivariateFitter):
         """
         justify = string_justify(18)
         print(self)
+        print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print(
             "{} = {}".format(
-                justify("number of subjects"), self.durations.shape[0]
+                justify("number of events"), np.where(self.event_observed)[0].shape[0]
             )
         )
         print(
-            "{} = {}".format(
-                justify("number of events"),
-                np.where(self.event_observed)[0].shape[0],
-            )
-        )
-        print(
-            "{} = {:.3f}".format(
-                justify("log-likelihood"), self._log_likelihood
-            ),
+            "{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood),
             end="\n\n",
         )
 
