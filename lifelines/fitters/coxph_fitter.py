@@ -12,7 +12,7 @@ from numpy import dot, exp
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
 from scipy.integrate import trapz
-import scipy.stats as stats
+from scipy import stats
 
 from lifelines.fitters import BaseFitter
 from lifelines.statistics import chisq_test
@@ -84,7 +84,7 @@ class CoxPHFitter(BaseFitter):
         weights_col=None,
         cluster_col=None,
         robust=False,
-    ):
+    ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -230,7 +230,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         precision=10e-6,
         show_progress=True,
         max_steps=50,
-    ):
+    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-statements
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -397,7 +397,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    def _get_efron_values(self, X, beta, T, E, weights):
+    def _get_efron_values(
+        self, X, beta, T, E, weights
+    ):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
@@ -484,12 +486,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             weighted_average = weight_count / tie_count
 
             for l in range(tie_count):
-                """
-                A good explaination for Efron. Consider three of five subjects who fail at the time.
-                As it is not known a priori that who is the first to fail, so one-third of
-                (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
-                """
+
+                # A good explaination for Efron. Consider three of five subjects who fail at the time.
+                # As it is not known a priori that who is the first to fail, so one-third of
+                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
                 numer = risk_phi_x - l * tie_phi_x / tie_count
                 denom = risk_phi - l * tie_phi / tie_count
 
@@ -541,7 +543,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             columns=self.hazards_.columns,
         )
 
-    def _compute_sandwich_estimator(self, X, T, E, weights):
+    def _compute_sandwich_estimator(
+        self, X, T, E, weights
+    ):  # pylint: disable=too-many-locals
 
         _, d = X.shape
 
@@ -603,7 +607,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         )
         return sandwich_estimator
 
-    def _compute_residuals_within_strata(self, X, T, E, weights):
+    def _compute_residuals_within_strata(
+        self, X, T, E, weights
+    ):  # pylint: disable=too-many-locals
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -692,7 +698,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Print summary statistics describing the fit.
 
         """
-
+        # pylint: disable=unnecessary-lambda
         # Print information about data first
         justify = string_justify(18)
         print(self)
@@ -732,7 +738,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 *self._compute_likelihood_ratio_test()
             )
         )
-        return
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -872,8 +877,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 .interpolate("index")
                 .loc[times]
             )
-        else:
-            return cumulative_hazard_
+        return cumulative_hazard_
 
     def predict_survival_function(self, X, times=None):
         """
@@ -968,14 +972,13 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 )
             return baseline_hazards_.fillna(0)
 
-        else:
-            return self._compute_baseline_hazard(
-                data=df,
-                durations=T,
-                event_observed=E,
-                weights=weights,
-                name="baseline hazard",
-            )
+        return self._compute_baseline_hazard(
+            data=df,
+            durations=T,
+            event_observed=E,
+            weights=weights,
+            name="baseline hazard",
+        )
 
     def _compute_baseline_survival(self):
         """
@@ -1091,9 +1094,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
     def score_(self):
         if hasattr(self, "_concordance_score_"):
             return self._concordance_score_
-        else:
-            self._concordance_score_ = concordance_index(
-                self.durations, -self._predicted_partial_hazards_, self.event_observed
-            )
-            del self._predicted_partial_hazards_
-            return self._concordance_score_
+        self._concordance_score_ = concordance_index(
+            self.durations, -self._predicted_partial_hazards_, self.event_observed
+        )
+        del self._predicted_partial_hazards_
+        return self._concordance_score_
