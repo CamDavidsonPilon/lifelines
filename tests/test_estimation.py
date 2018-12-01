@@ -56,6 +56,7 @@ from lifelines.generate_datasets import generate_hazard_rates, generate_random_l
 
 PYTHON_VER = (version_info.major, version_info.minor)
 
+
 @pytest.fixture
 def sample_lifetimes():
     N = 30
@@ -1012,7 +1013,9 @@ class TestRegressionFitters:
             assert hasattr(fitter, "score_")
 
     # No idea why this is happening on 2.7
-    @pytest.mark.xfail(PYTHON_VER[0] == 2, reason="AttributeError __call__ method on 2.7")
+    @pytest.mark.xfail(
+        PYTHON_VER[0] == 2, reason="AttributeError __call__ method on 2.7"
+    )
     def test_error_is_thrown_if_there_is_nans_in_the_duration_col(
         self, regression_models, rossi
     ):
@@ -1022,7 +1025,9 @@ class TestRegressionFitters:
                 fitter().fit("week", "arrest")
 
     # No idea why this is happening on 2.7
-    @pytest.mark.xfail(PYTHON_VER[0] == 2, reason="AttributeError __call__ method on 2.7")
+    @pytest.mark.xfail(
+        PYTHON_VER[0] == 2, reason="AttributeError __call__ method on 2.7"
+    )
     def test_error_is_thrown_if_there_is_nans_in_the_event_col(
         self, regression_models, rossi
     ):
