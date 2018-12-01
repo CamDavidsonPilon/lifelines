@@ -12,7 +12,8 @@ matrix:
       dist: xenial
       sudo: true
 before_install:
-  - sudo apt-get update
+  - env
+  # - sudo apt-get update
 if env(python) in ("2.7", "3.4"):
   - rm Pipfile.lock
 install: "make"
