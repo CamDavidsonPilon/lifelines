@@ -198,7 +198,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         risk_phi_history = pd.DataFrame(np.zeros((n,)), index=df.index)
         risk_phi_x_history = pd.DataFrame(np.zeros((n, d)), index=df.index)
 
-        E = E.astype(int)
+        E = E.astype(int)  # pylint: disable=used-before-assignment
         score_residuals = np.zeros((n, d))
         # we already unnormalized the betas in `fit`, so we need normalize them again since X is
         # normalized.
@@ -208,7 +208,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         for i in range(n - 1, -1, -1):
             # Doing it like this to preserve shape
             ei = E[i]
-            xi = X[i : i + 1]
+            xi = X[i : i + 1]  # pylint: disable=undefined-variable
 
             phi_i = exp(dot(xi, beta))
             phi_x_i = phi_i * xi
@@ -222,7 +222,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         # Iterate forwards
         for i in range(0, n):
             # Doing it like this to preserve shape
-            xi = X[i : i + 1]
+            xi = X[i : i + 1]  # pylint: disable=undefined-variable
             phi_i = exp(dot(xi, beta))
 
             score = -sum(
