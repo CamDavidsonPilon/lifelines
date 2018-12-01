@@ -137,21 +137,19 @@ class UnivariateFitter(BaseFitter):
         if callable(self._estimation_method):
             return (
                 pd.DataFrame(
-                    self._estimation_method(_to_array(times)),
-                    index=_to_array(times),
+                    self._estimation_method(_to_array(times)), index=_to_array(times)
                 )
                 .loc[times]
                 .squeeze()
             )
-        else:
-            estimate = getattr(self, self._estimation_method)
-            # non-linear interpolations can push the survival curves above 1 and below 0.
-            return (
-                estimate.reindex(estimate.index.union(_to_array(times)))
-                .interpolate("index")
-                .loc[times]
-                .squeeze()
-            )
+        estimate = getattr(self, self._estimation_method)
+        # non-linear interpolations can push the survival curves above 1 and below 0.
+        return (
+            estimate.reindex(estimate.index.union(_to_array(times)))
+            .interpolate("index")
+            .loc[times]
+            .squeeze()
+        )
 
     @property
     @must_call_fit_first
