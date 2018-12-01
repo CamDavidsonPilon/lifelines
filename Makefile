@@ -6,7 +6,7 @@ test:
 	pipenv run py.test -s --cov=lifelines -vv --block=False --cov-report term-missing
 
 lint:
-	prospector
+	prospector --output-format grouped
 
 format:
 	black .
