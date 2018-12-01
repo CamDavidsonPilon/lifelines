@@ -4,7 +4,7 @@ import numpy as np
 from numpy import random
 import pandas as pd
 
-from scipy import stats as stats
+from scipy import stats
 from scipy.optimize import newton
 from scipy.integrate import cumtrapz
 
@@ -34,7 +34,7 @@ def exponential_survival_data(n, cr=0.05, scale=1.0):
 # Models with covariates
 
 
-class coeff_func(object):
+class coeff_func:
 
     """This is a decorator class used later to construct nice names"""
 
@@ -115,6 +115,7 @@ def generate_covariates(n, d, n_binary=0, p=0.5):
 
     returns (n, d+1)
     """
+    # pylint: disable=chained-comparison
     assert n_binary >= 0 and n_binary <= d, "binary must be between 0 and d"
     covariates = np.zeros((n, d + 1))
     covariates[:, : d - n_binary] = random.exponential(1, size=(n, d - n_binary))
@@ -209,7 +210,7 @@ def generate_hazard_rates(
             coefficients,
             pd.DataFrame(covariates),
         )
-    elif model == "cox":
+    if model == "cox":
         covariates = covariates[:, :-1]
         coefficients = constant_coefficients(d, timelines, independent)
         baseline = time_varying_coefficients(1, timelines)
@@ -223,8 +224,7 @@ def generate_hazard_rates(
             coefficients,
             pd.DataFrame(covariates),
         )
-    else:
-        raise Exception
+    raise Exception
 
 
 def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
