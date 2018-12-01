@@ -6,8 +6,8 @@ name = "pypi"
 [packages]
 numpy = "*"
 scipy = ">=1.0"
-pandas = {version = ">=0.18", markers = "python_version >=3.6"}
-matplotlib = {version = ">=2.0", markers = "python_version >=3.5"}
+pandas = ">=0.18"
+matplotlib = ">=2.0"
 
 [dev-packages]
 lifelines = {editable = true,path = "."}
