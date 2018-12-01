@@ -34,14 +34,11 @@ class BaseFitter(object):
     def __repr__(self):
         classname = self.__class__.__name__
         try:
-            s = (
-                """<lifelines.%s: fitted with %d observations, %d censored>"""
-                % (
-                    classname,
-                    self.event_observed.shape[0],
-                    self.event_observed.shape[0]
-                    - np.where(self.event_observed)[0].shape[0],
-                )
+            s = """<lifelines.%s: fitted with %d observations, %d censored>""" % (
+                classname,
+                self.event_observed.shape[0],
+                self.event_observed.shape[0]
+                - np.where(self.event_observed)[0].shape[0],
             )
         except AttributeError:
             s = """<lifelines.%s>""" % classname
@@ -173,8 +170,7 @@ class UnivariateFitter(BaseFitter):
         return (
             pd.DataFrame(
                 qth_survival_times(
-                    self.survival_function_[self._label] * 0.5,
-                    self.survival_function_,
+                    self.survival_function_[self._label] * 0.5, self.survival_function_
                 )
                 .sort_index(ascending=False)
                 .values,
