@@ -32,7 +32,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         label="BFH_estimate",
         alpha=None,
         ci_labels=None,
-    ):
+    ):  # pylint: disable=too-many-arguments
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
