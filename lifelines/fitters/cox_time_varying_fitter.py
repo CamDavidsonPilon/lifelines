@@ -68,7 +68,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         show_progress=False,
         step_size=None,
         robust=False,
-    ):
+    ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -184,7 +184,9 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
+    def _compute_sandwich_estimator(
+        self, df, stop_times_events, weights
+    ):  # pylint: disable=too-many-locals
 
         n, d = df.shape
 
@@ -302,7 +304,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         step_size=None,
         precision=10e-6,
         max_steps=50,
-    ):
+    ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -424,7 +426,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    def _get_gradients(self, df, stops_events, weights, beta):
+    def _get_gradients(
+        self, df, stops_events, weights, beta
+    ):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
@@ -483,13 +487,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             for l in range(ties_counts):
 
                 if ties_counts > 1:
-                    """
-                    A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
-                    As it is not known a priori that who is the first to fail, so one-third of
-                    (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                    of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
-                    """
+                    # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+                    # As it is not known a priori that who is the first to fail, so one-third of
+                    # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                    # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
                     increasing_proportion = l / ties_counts
                     denom = risk_phi - increasing_proportion * tie_phi
                     numer = risk_phi_x - increasing_proportion * tie_phi_x
@@ -560,7 +563,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
         """
-
+        # pylint: disable=unnecessary-lambda
         # Print information about data first
         justify = string_justify(18)
         print(self)
@@ -590,7 +593,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 *self._compute_likelihood_ratio_test()
             )
         )
-        return
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -672,7 +674,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax
 
-    def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events, weights):
+    def _compute_cumulative_baseline_hazard(
+        self, tv_data, stop_times_events, weights
+    ):  # pylint: disable=too-many-locals
         hazards = self.predict_partial_hazard(tv_data).values
 
         unique_death_times = np.unique(
