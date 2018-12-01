@@ -19,6 +19,8 @@ install:
 # command to run tests
 script:
   - py.test -s --cov=lifelines -vv --block=False --cov-report term-missing
+  # enforce flake8 standards
+  - flake8 lifelines --statistics --config=setup.cfg
 after_success:
   coveralls
 # Don't want notifications
