@@ -49,7 +49,7 @@ class ExponentialFitter(UnivariateFitter):
         label="Exponential_estimate",
         alpha=None,
         ci_labels=None,
-    ):
+    ):  # pylint: disable=too-many-arguments
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -182,6 +182,7 @@ class ExponentialFitter(UnivariateFitter):
         Print summary statistics describing the fit.
 
         """
+        # pylint: disable=unnecessary-lambda
         justify = string_justify(18)
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
@@ -200,4 +201,3 @@ class ExponentialFitter(UnivariateFitter):
         print(df.to_string(float_format=lambda f: "{:4.4f}".format(f)))
         print("---")
         print(significance_codes_as_text(), end="\n\n")
-        return
