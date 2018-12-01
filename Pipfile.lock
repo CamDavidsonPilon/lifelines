@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "b1e63f66dfd20367c63ebf3f06c4d511485088b3a32cb5f48d7a354cf2ee2779"
+            "sha256": "0c414f448bbdd9d139f988c745f48658a1b01b88489bf932bcf6122895328b85"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -514,6 +514,9 @@
             "version": "==0.8.0"
         },
         "prospector": {
+            "extras": [
+                "with_pyorama"
+            ],
             "hashes": [
                 "sha256:877d8d361a5c0e04c8587718c22c5d671afcf814945c96b3e592836d772943fd"
             ],

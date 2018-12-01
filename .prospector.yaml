@@ -1,0 +1,61 @@
+allow-shorthand: false
+
+inherits:
+  - strictness_medium
+  
+pylint:
+  disable:
+    - blacklisted-name
+    - missing-docstring
+    - line-too-long
+    - E1103
+    - duplicate-code
+    - too-many-branches
+    - too-many-arguments
+    - too-many-locals
+    - too-many-statements
+    - R0924
+    - unnecessary-pass
+    - unnecessary-lambda
+    - duplicate-key
+    - eval-used
+    - lost-exception
+    - bad-staticmethod-argument
+    - protected-access
+    - signature-differs
+    - lowercase-l-suffix
+    - deprecated-module
+    - global-variable-not-assigned
+    - unused-import
+    - unused-variable
+    - unused-argument
+    - unused-wildcard-import
+    - redefined-builtin
+    - redefine-in-handler
+    - bare-except
+    - logging-not-lazy
+    - bad-format-string-key
+    - anomalous-unicode-escape-in-string
+    - W5101
+
+pyflakes:
+  disable:
+    - F401
+    - F841
+
+frosted:
+  disable:
+    - E101
+    - E307
+    - W101
+
+pycodestyle:
+  disable:
+    - E501
+    - E241
+
+pyroma:
+  run: false
+
+pep257:
+  run: false

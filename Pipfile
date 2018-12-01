@@ -16,5 +16,5 @@ pytest = "*"
 pytest-cov = "*"
 coveralls = "*"
 seaborn = "*"
-prospector = "*"
-black = {version= ">=stable",markers = "python_version >= '3.6'"}
+prospector = {extras = ["with_pyorama"],version = "*"}
+black = {version = ">=stable",markers = "python_version >= '3.6'"}
