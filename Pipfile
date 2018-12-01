@@ -6,8 +6,8 @@ name = "pypi"
 [packages]
 numpy = "*"
 scipy = ">=1.0"
-pandas = ">=0.18"
-matplotlib = {version = ">=2.0", markers = "python_version >=3.6"}
+pandas = {version = ">=0.18", markers = "python_version >=3.6"}
+matplotlib = {version = ">=2.0", markers = "python_version >=3.5"}
 
 [dev-packages]
 lifelines = {editable = true,path = "."}
@@ -18,6 +18,3 @@ coveralls = "*"
 seaborn = "*"
 flake8 = "*"
 autopep8 = "*"
-
-[requires]
-python_version = "3.6"
