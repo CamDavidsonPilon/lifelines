@@ -124,7 +124,7 @@ class AalenAdditiveFitter(BaseFitter):
 
     def _fit_static(
         self, dataframe, duration_col, event_col=None, timeline=None, show_progress=True
-    ):
+    ):  # pylint: disable=too-many-locals, too-many-statements
         """
         Perform inference on the coefficients of the Aalen additive model.
 
@@ -265,7 +265,6 @@ class AalenAdditiveFitter(BaseFitter):
             self.predict_median(dataframe).values.ravel(),
             self.event_observed,
         )
-        return
 
     def _fit_varying(
         self,
@@ -275,7 +274,7 @@ class AalenAdditiveFitter(BaseFitter):
         id_col=None,
         timeline=None,
         show_progress=True,
-    ):
+    ):  # pylint: disable=too-many-locals
 
         from_tuples = pd.MultiIndex.from_tuples
         df = dataframe.copy()
@@ -327,9 +326,9 @@ class AalenAdditiveFitter(BaseFitter):
         # this makes indexing times much faster
         wp = wp.swapaxes(0, 1, copy=False).swapaxes(1, 2, copy=False)
 
-        for i, (id, time) in enumerate(non_censorsed_times):
+        for i, (time_id, time) in enumerate(non_censorsed_times):
 
-            relevant_individuals = ids == id
+            relevant_individuals = ids == time_id
             assert relevant_individuals.sum() == 1.0
 
             # perform linear regression step.
@@ -347,8 +346,8 @@ class AalenAdditiveFitter(BaseFitter):
                     ConvergenceWarning,
                 )
 
-            hazards_.loc[id, time] = v.T
-            variance_.loc[id, time] = V[:, relevant_individuals][:, 0] ** 2
+            hazards_.loc[time_id, time] = v.T
+            variance_.loc[time_id, time] = V[:, relevant_individuals][:, 0] ** 2
             previous_hazard = v.T
 
             # update progress bar
@@ -378,8 +377,6 @@ class AalenAdditiveFitter(BaseFitter):
         self.durations = T
         self.event_observed = C
         self._compute_confidence_intervals()
-
-        return
 
     def _check_values(self, df, T, E):
         pass_for_numeric_dtypes_or_raise(df)
@@ -422,7 +419,6 @@ class AalenAdditiveFitter(BaseFitter):
             self.cumulative_hazards_.values
             - alpha2 * np.sqrt(self.variance_.cumsum().values)
         )
-        return
 
     def predict_cumulative_hazard(self, X, id_col=None):
         """
@@ -503,7 +499,9 @@ class AalenAdditiveFitter(BaseFitter):
             trapz(self.predict_survival_function(X)[index].values.T, t), index=index
         )
 
-    def plot(self, loc=None, iloc=None, columns=[], legend=True, **kwargs):
+    def plot(
+        self, loc=None, iloc=None, columns=[], legend=True, **kwargs
+    ):  # pylint: disable=too-many-locals,dangerous-default-value
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
@@ -542,10 +540,10 @@ class AalenAdditiveFitter(BaseFitter):
         def get_loc(df):
             return getattr(df, get_method)[user_submitted_ix]
 
-        if len(columns) == 0:
+        if len(columns) == 0:  # pylint: disable=len-as-condition
             columns = self.cumulative_hazards_.columns
 
-        if "ax" in kwargs:
+        if "ax" in kwargs:  # pylint: disable=consider-using-get
             # don't use a .get here, as the default parameter will be called. In this case,
             # plt.figure().add_subplot(111), which instantiates a new window
             ax = kwargs["ax"]
