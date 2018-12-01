@@ -211,7 +211,6 @@ def plot_lifetimes(
 
     plt.ylim(-0.5, N)
     plt.show(block=block)
-    return
 
 
 def set_kwargs_ax(kwargs):
@@ -300,7 +299,7 @@ def plot_estimate(
     invert_y_axis=False,
     bandwidth=None,
     **kwargs
-):
+):  # pylint: disable=too-many-arguments,too-many-locals
 
     """"
     Plots a pretty figure of {0}.{1}

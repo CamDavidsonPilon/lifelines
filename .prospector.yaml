@@ -11,6 +11,8 @@ pylint:
     - unused-variable
     - unused-argument
     - unused-wildcard-import
+    # remove if python2.7 support is dropped
+    - useless-object-inheritance
 
 pyflakes:
   disable:
