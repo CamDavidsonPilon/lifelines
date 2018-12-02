@@ -16,10 +16,10 @@ format:
 	black .
 
 check_format:
-ifeq ($(TRAVIS_PYTHON_VERSION), 2.7)
-		echo "Skip format check for Python2.7"
-else
+ifeq ($(TRAVIS_PYTHON_VERSION), 3.6)
 		black . --check
+else
+		echo "Only check format on Python3.6"
 endif	
 
 update_reqs:
