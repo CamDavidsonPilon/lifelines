@@ -1,4 +1,11 @@
-numpy
-scipy>=1.0
-pandas>=0.18
-matplotlib>=2.0
+-i https://pypi.org/simple
+cycler==0.10.0
+kiwisolver==1.0.1
+matplotlib==3.0.2
+numpy==1.15.4
+pandas==0.23.4
+pyparsing==2.3.0
+python-dateutil==2.7.5
+pytz==2018.7
+scipy==1.1.0
+six==1.11.0

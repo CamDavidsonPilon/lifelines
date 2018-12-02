@@ -18,8 +18,10 @@ before_install:
   # - sudo apt-get update
 install: "make"
 script:
-  # enforce flake8 standards
+  # enforce coding standards
   - make lint
+  # enforce formatting
+  - make check_format
   # command to run tests
   - make test
 after_success:
