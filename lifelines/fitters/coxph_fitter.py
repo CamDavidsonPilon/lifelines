@@ -230,7 +230,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         precision=10e-6,
         show_progress=True,
         max_steps=50,
-    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-statements
+    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
