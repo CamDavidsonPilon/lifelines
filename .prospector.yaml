@@ -7,7 +7,7 @@ pylint:
     # max-args default = 5
     max-args: 7
     # max-locals default = 15
-    max-locals: 15
+    max-locals: 16
     # max-branches default = 15
     max-branches: 15
   disable:
@@ -19,6 +19,7 @@ pylint:
     - unused-wildcard-import
     # remove if python2.7 support is dropped
     - useless-object-inheritance
+    - old-style-class
 
 pyflakes:
   disable:
