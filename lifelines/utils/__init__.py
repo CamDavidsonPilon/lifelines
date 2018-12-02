@@ -66,6 +66,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
          if d > 1, an DataFrame containing the first times the value was crossed.
 
     """
+    # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
     q = pd.Series(q)
 
     if not ((q <= 1).all() and (0 <= q).all()):
@@ -122,7 +123,7 @@ def median_survival_times(density_or_survival_function, left_censorship=False):
 
 def group_survival_table_from_events(
     groups, durations, event_observed, birth_times=None, limit=-1
-):
+):  # pylint: disable=too-many-locals
     """
     Joins multiple event series together into dataframes. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.

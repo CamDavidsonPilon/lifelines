@@ -195,7 +195,7 @@ def plot_lifetimes(
         birthtimes = np.zeros(N)
 
     if order:
-        """order by length of lifetimes; probably not very informative."""
+        # order by length of lifetimes; probably not very informative.
         ix = np.argsort(lifetimes, 0)
         lifetimes = lifetimes[ix, 0]
         event_observed = event_observed[ix, 0]

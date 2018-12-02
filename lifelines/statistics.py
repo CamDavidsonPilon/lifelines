@@ -349,6 +349,7 @@ class StatisticalResult(object):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
 
     def __unicode__(self):
+        # pylint: disable=unnecessary-lambda
         meta_data = self._pretty_print_meta_data(self._kwargs)
         df = self.summary
         df[""] = significance_code(self.p_value)
@@ -369,13 +370,11 @@ def chisq_test(U, degrees_freedom, alpha):
     p_value = stats.chi2.sf(U, degrees_freedom)
     if p_value < 1 - alpha:
         return True, p_value
-    else:
-        return None, p_value
+    return None, p_value
 
 
 def two_sided_z_test(Z, alpha):
     p_value = 1 - np.max(stats.norm.cdf(Z), 1 - stats.norm.cdf(Z))
     if p_value < 1 - alpha / 2.0:
         return True, p_value
-    else:
-        return None, p_value
+    return None, p_value
