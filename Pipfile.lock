@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "0c414f448bbdd9d139f988c745f48658a1b01b88489bf932bcf6122895328b85"
+            "sha256": "ed19d9521239c929942d55583ca809a2584649f52af21f18eb846d197938a72c"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -313,6 +313,14 @@
             ],
             "version": "==0.6.2"
         },
+        "docutils": {
+            "hashes": [
+                "sha256:02aec4bd92ab067f6ff27a38a38a41173bf01bed8f89157768c1573f53e474a6",
+                "sha256:51e64ef2ebfb29cae1faa133b3710143496eca21c530f3f71424d77687764274",
+                "sha256:7a4bd47eaf6596e1295ecb11361139febe29b084a87bf005bf899f9a42edc3c6"
+            ],
+            "version": "==0.14"
+        },
         "dodgy": {
             "hashes": [
                 "sha256:65e13cf878d7aff129f1461c13cb5fd1bb6dfe66bb5327e09379c3877763280c"
@@ -515,7 +523,7 @@
         },
         "prospector": {
             "extras": [
-                "with_pyorama"
+                "with_pyroma"
             ],
             "hashes": [
                 "sha256:877d8d361a5c0e04c8587718c22c5d671afcf814945c96b3e592836d772943fd"
@@ -590,6 +598,13 @@
                 "sha256:f353aab21fd474459d97b709e527b5571314ee5f067441dc9f88e33eecd96592"
             ],
             "version": "==2.3.0"
+        },
+        "pyroma": {
+            "hashes": [
+                "sha256:3ed770a0ed1616ee2ffa576852e34fb1ea5b54c37ff78dd33cff67d0e4bb584b",
+                "sha256:94a11cb077976bff9bd37ac8b487902556f216c4ee90b74a2344367f73b6ee7f"
+            ],
+            "version": "==2.4"
         },
         "pytest": {
             "hashes": [
