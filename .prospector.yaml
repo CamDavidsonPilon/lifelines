@@ -3,6 +3,7 @@ inherits:
   
 pylint:
   options:
+    bad-names: foo,baz,toto,tutu,tata
     max-args: 7
   disable:
     - line-too-long
