@@ -4,7 +4,10 @@ inherits:
 pylint:
   options:
     bad-names: foo,baz,toto,tutu,tata
+    # max-args default = 5
     max-args: 7
+    # max-locals default = 15
+    max-locals: 15
   disable:
     - line-too-long
     - protected-access
@@ -29,8 +32,12 @@ pep8:
     - E501
     - E241
 
+mccabe:
+  options:
+    max-complexity: 10
+
 pyroma:
-  run: false
+  run: true
 
 pep257:
   run: false
