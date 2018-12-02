@@ -68,8 +68,8 @@ class TextProgressBar(ProgressBar):
         return replace_at(bar, info, loc, loc + len(info))
 
 
-def replace_at(str, new, start, stop):
-    return str[:start] + new + str[stop:]
+def replace_at(a_str, new, start, stop):
+    return a_str[:start] + new + a_str[stop:]
 
 
 def consoleprint(s):
@@ -86,7 +86,7 @@ def ipythonprint(s):
 
 def run_from_ipython():
     try:
-        __IPYTHON__
+        __IPYTHON__  # pylint: disable=pointless-statement
         return True
     except NameError:
         return False
@@ -95,5 +95,4 @@ def run_from_ipython():
 def progress_bar(iters):
     if run_from_ipython():
         return TextProgressBar(iters, ipythonprint)
-    else:
-        return TextProgressBar(iters, consoleprint)
+    return TextProgressBar(iters, consoleprint)

@@ -232,7 +232,7 @@ def survival_table_from_events(
     weights=None,
     collapse=False,
     intervals=None,
-):
+):  # pylint: disable=dangerous-default-value,too-many-locals
     """
     Parameters:
         death_times: (n,) array of event times
@@ -314,8 +314,7 @@ def survival_table_from_events(
 
     if (np.asarray(weights).astype(int) != weights).any():
         return event_table.astype(float)
-    else:
-        return event_table.astype(int)
+    return event_table.astype(int)
 
 
 def _group_event_table_by_intervals(event_table, intervals):
@@ -563,7 +562,7 @@ def k_fold_cross_validation(
     predictor="predict_expectation",
     predictor_kwargs={},
     fitter_kwargs={},
-):
+):  # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals
     """
     Perform cross validation on a dataset. If multiple models are provided,
     all models will train on each of the k subsets.
@@ -646,8 +645,7 @@ def k_fold_cross_validation(
     # If a single fitter was given as argument, return a single result
     if len(fitters) == 1:
         return fitterscores[0]
-    else:
-        return fitterscores
+    return fitterscores
 
 
 def normalize(X, mean=None, std=None):
@@ -683,14 +681,13 @@ def significance_code(p):
     """
     if p < 0.0001:
         return "***"
-    elif p < 0.001:
+    if p < 0.001:
         return "**"
-    elif p < 0.01:
+    if p < 0.01:
         return "*"
-    elif p < 0.05:
+    if p < 0.05:
         return "."
-    else:
-        return " "
+    return " "
 
 
 def significance_codes_as_text():
@@ -948,7 +945,9 @@ class _BTree(object):
         return (rank, count)
 
 
-def _concordance_index(event_times, predicted_event_times, event_observed):
+def _concordance_index(
+    event_times, predicted_event_times, event_observed
+):  # pylint: disable=too-many-locals
     """Find the concordance index in n * log(n) time.
 
     Assumes the data has been verified by lifelines.utils.concordance_index first.
@@ -1078,23 +1077,22 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
         if time_a == time_b:
             # Ties are only informative if exactly one event happened
             return event_a != event_b
-        elif event_a and event_b:
+        if event_a and event_b:
             return True
-        elif event_a and time_a < time_b:
+        if event_a and time_a < time_b:
             return True
-        elif event_b and time_b < time_a:
+        if event_b and time_b < time_a:
             return True
-        else:
-            return False
+        return False
 
     def concordance_value(time_a, time_b, pred_a, pred_b):
         if pred_a == pred_b:
             # Same as random
             return 0.5
-        elif pred_a < pred_b:
+        if pred_a < pred_b:
             return (time_a < time_b) or (time_a == time_b and event_a and not event_b)
-        else:  # pred_a > pred_b
-            return (time_a > time_b) or (time_a == time_b and not event_a and event_b)
+        # pred_a > pred_b
+        return (time_a > time_b) or (time_a == time_b and not event_a and event_b)
 
     paircount = 0.0
     csum = 0.0
@@ -1127,7 +1125,7 @@ def pass_for_numeric_dtypes_or_raise(df):
             or np.issubdtype(df[col].dtype, np.bool_)
         )
     ]
-    if len(nonnumeric_cols) > 0:
+    if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(
             "DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)."
             % nonnumeric_cols
@@ -1255,7 +1253,7 @@ def check_nans_or_infs(df_or_array):
             )
     # isinf check is done after isnull check since np.isinf doesn't work on None values
     infs = []
-    if isinstance(df_or_array, pd.Series) or isinstance(df_or_array, pd.DataFrame):
+    if isinstance(df_or_array, (pd.Series, pd.DataFrame)):
         infs = df_or_array == np.Inf
     else:
         infs = np.isinf(df_or_array)
@@ -1293,7 +1291,7 @@ def add_covariate_to_timeline(
     cumulative_sum=False,
     cumulative_sum_prefix="cumsum_",
     delay=0,
-):
+):  # pylint: disable=too-many-arguments
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
     to be used iteratively as one adds more and more covariates to track over time. If beginning to use this function, it is recommend
