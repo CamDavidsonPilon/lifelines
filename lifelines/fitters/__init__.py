@@ -25,7 +25,7 @@ def must_call_fit_first(func):
     return error_wrapper
 
 
-class BaseFitter:
+class BaseFitter(object):
     def __init__(self, alpha=0.95):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
