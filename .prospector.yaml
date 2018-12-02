@@ -8,6 +8,8 @@ pylint:
     max-args: 7
     # max-locals default = 15
     max-locals: 15
+    # max-branches default = 15
+    max-branches: 15
   disable:
     - line-too-long
     - protected-access
@@ -34,7 +36,8 @@ pep8:
 
 mccabe:
   options:
-    max-complexity: 10
+    # max-complexity default = 10
+    max-complexity: 20
 
 pyroma:
   run: true
