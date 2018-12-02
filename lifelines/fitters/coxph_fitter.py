@@ -1092,6 +1092,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     @property
     def score_(self):
+        # pylint: disable=access-member-before-definition
         if hasattr(self, "_concordance_score_"):
             return self._concordance_score_
         self._concordance_score_ = concordance_index(
