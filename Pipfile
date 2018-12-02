@@ -16,5 +16,6 @@ pytest = "*"
 pytest-cov = "*"
 coveralls = "*"
 seaborn = "*"
+pypandoc = "*"
 prospector = {extras = ["with_pyroma"],version = "*"}
 black = {version = ">=stable",markers = "python_version >= '3.6'"}
