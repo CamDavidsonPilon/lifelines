@@ -1,4 +1,5 @@
 language: python
+cache: pip
 dist: trusty
 python:
    - "2.7"
