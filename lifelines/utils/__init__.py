@@ -1097,8 +1097,7 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
     paircount = 0.0
     csum = 0.0
 
-    for a in range(0, len(event_times)):
-        time_a = event_times[a]
+    for a, time_a in enumerate(event_times):
         pred_a = predicted_event_times[a]
         event_a = event_observed[a]
         # Don't want to double count
