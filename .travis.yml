@@ -9,7 +9,7 @@ python:
 # Enable newer 3.7 without globally enabling sudo and dist: xenial for other build jobs
 matrix:
   allow_failures:
-    - python: 3.4
+    - python: "3.4"
   include:
     - python: 3.7
       dist: xenial
