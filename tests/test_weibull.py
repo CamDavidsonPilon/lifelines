@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 from lifelines.fitters import weibull_fitter as wf
 

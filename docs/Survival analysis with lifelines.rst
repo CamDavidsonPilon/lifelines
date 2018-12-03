@@ -14,14 +14,14 @@ Estimating the Survival function using Kaplan-Meier
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 For this example, we will be investigating the lifetimes of political
-leaders around the world. A political leader, in this case, is defined by a single individual's 
-time in office who controls the ruling regime. This political leader could be an elected president, 
-unelected dictator, monarch, etc. The birth event is the start of the individual's tenure, and the death 
-event is the retirement of the individual. Censorship can occur if they are a) still in offices at the time 
+leaders around the world. A political leader, in this case, is defined by a single individual's
+time in office who controls the ruling regime. This political leader could be an elected president,
+unelected dictator, monarch, etc. The birth event is the start of the individual's tenure, and the death
+event is the retirement of the individual. Censorship can occur if they are a) still in offices at the time
 of dataset compilation (2008), or b) die while in power (this includes assassinations).
 
 For example, the Bush regime began in 2000 and officially ended in 2008
-upon his retirement, thus this regime's lifespan was eight years, and there was a 
+upon his retirement, thus this regime's lifespan was eight years, and there was a
 "death" event observed. On the other hand, the JFK regime lasted 2
 years, from 1961 and 1963, and the regime's official death event *was
 not* observed -- JFK died before his official retirement.
@@ -29,7 +29,7 @@ not* observed -- JFK died before his official retirement.
 (This is an example that has gladly redefined the birth and death
 events, and in fact completely flips the idea upside down by using deaths
 as the censorship event. This is also an example where the current time
-is not the only cause of censorship; there are the alternative events (e.g., death in office) that can 
+is not the only cause of censorship; there are the alternative events (e.g., death in office) that can
 be the cause of censorship.
 
 To estimate the survival function, we first will use the `Kaplan-Meier
@@ -43,7 +43,7 @@ where :math:`d_i` are the number of death events at time :math:`t` and
 :math:`t`.
 
 
-Let's bring in our dataset. 
+Let's bring in our dataset.
 
 .. code:: python
 
@@ -198,10 +198,10 @@ the data. (This is similar to, and inspired by,
 `scikit-learn's <http://scikit-learn.org/stable/>`__
 fit/predict API)
 
-.. code:: 
+.. code::
 
-  KaplanMeierFitter.fit(durations, event_observed=None, 
-                        timeline=None, entry=None, label='KM_estimate', 
+  KaplanMeierFitter.fit(durations, event_observed=None,
+                        timeline=None, entry=None, label='KM_estimate',
                         alpha=None, left_censorship=False, ci_labels=None)
 
   Parameters:
@@ -224,13 +224,13 @@ fit/predict API)
     a modified self, with new properties like 'survival_function_'.
 
 
-Below we fit our data with the ``KaplanMeierFitter``: 
+Below we fit our data with the ``KaplanMeierFitter``:
 
 
 .. code:: python
 
-    T = data["duration"] 
-    E = data["observed"] 
+    T = data["duration"]
+    E = data["observed"]
 
     kmf.fit(T, event_observed=E)
 
@@ -252,7 +252,7 @@ The property is a Pandas DataFrame, so we can call ``plot`` on it:
     plt.title('Survival function of political regimes');
 
 .. image:: images/lifelines_intro_kmf_curve.png
-   
+
 How do we interpret this? The y-axis represents the probability a leader is still
 around after :math:`t` years, where :math:`t` years is on the x-axis. We
 see that very few leaders make it past 20 years in office. Of course,
@@ -261,7 +261,7 @@ point estimates, i.e., we need confidence intervals. They are computed in
 the call to ``fit``, and located under the ``confidence_interval_``
 property. (The method uses exponential Greenwood confidence interval. The mathematics are found in `these notes <https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf>`_.)
 
-.. math::  S(t) = Pr( T > t) 
+.. math::  S(t) = Pr( T > t)
 
 Alternatively, we can call ``plot`` on the ``KaplanMeierFitter`` itself
 to plot both the KM estimate and its confidence intervals:
@@ -287,7 +287,7 @@ average 1/2 of the population has expired, is a property:
 
 
 
-Interesting that it is only three years. That means, around the world, elected leaders 
+Interesting that it is only three years. That means, around the world, elected leaders
 have a 50% chance of cessation in three
 years!
 
@@ -298,13 +298,13 @@ an ``axis`` object, that can be used for plotting further estimates:
 .. code:: python
 
     ax = plt.subplot(111)
-    
+
     dem = (data["democracy"] == "Democracy")
     kmf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     kmf.plot(ax=ax, ci_force_lines=True)
     kmf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     kmf.plot(ax=ax, ci_force_lines=True)
-    
+
     plt.ylim(0, 1);
     plt.title("Lifespans of different global regimes");
 
@@ -320,12 +320,12 @@ probabilities of survival at those points:
 .. code:: python
 
     ax = plt.subplot(111)
-    
+
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
     ax = kmf.plot(ax=ax)
     print("Median survival time of democratic:", kmf.median_)
-    
+
     kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
     ax = kmf.plot(ax=ax)
     print("Median survival time of non-democratic:", kmf.median_)
@@ -367,7 +367,7 @@ we rule that the series have different generators.
 .. code:: python
 
     from lifelines.statistics import logrank_test
-    
+
     results = logrank_test(T[dem], T[~dem], E[dem], E[~dem], alpha=.99)
 
     results.print_summary()
@@ -380,7 +380,7 @@ we rule that the series have different generators.
        t 0: -1
        test: logrank
        null distribution: chi squared
-    
+
        __ p-value ___|__ test statistic __|____ test results ____|__ significant __
              0.00000 |            208.306 |      Reject Null     |     True
 
@@ -390,7 +390,7 @@ Lets compare the different *types* of regimes present in the dataset:
 .. code:: python
 
     regime_types = data['regime'].unique()
-    
+
     for i,regime_type in enumerate(regime_types):
         ax = plt.subplot(2, 3, i+1)
         ix = data['regime'] == regime_type
@@ -432,7 +432,7 @@ end times/dates (or ``None`` if not observed):
 .. code:: python
 
     from lifelines.utils import datetimes_to_durations
-    
+
     start_date = ['2013-10-10 0:00:00', '2013-10-09', '2013-10-10']
     end_date = ['2013-10-13', '2013-10-10', None]
     T, E = datetimes_to_durations(start_date, end_date, fill_date='2013-10-15')
@@ -467,13 +467,13 @@ In lifelines, estimation is available using the ``WeibullFitter`` class:
 .. code:: python
 
     from lifelines import WeibullFitter
-  
+
     T = data['duration']
     E = data['observed']
 
     wf = WeibullFitter()
     wf.fit(T, E)
-    
+
     print(wf.lambda_, wf.rho_)
     wf.print_summary()
 
@@ -484,13 +484,13 @@ In lifelines, estimation is available using the ``WeibullFitter`` class:
 Other parametric models: Exponential
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are three parametric models of the same data. 
+Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are three parametric models of the same data.
 
 .. code:: python
 
     from lifelines import WeibullFitter
     from lifelines import ExponentialFitter
-  
+
     T = data['duration']
     E = data['observed']
 
@@ -518,7 +518,7 @@ The estimator for this quantity is called the Nelson Aalen estimator:
 
 
 
-.. math:: \hat{\Lambda}(t) = \sum_{t_i \le t} \frac{d_i}{n_i} 
+.. math:: \hat{\Lambda}(t) = \sum_{t_i \le t} \frac{d_i}{n_i}
 
 where :math:`d_i` is the number of deaths at time :math:`t_i` and
 :math:`n_i` is the number of susceptible individuals.
@@ -552,7 +552,7 @@ a DataFrame:
     2     0.507356
     3     0.671251
     4     0.869867
-    
+
     [5 rows x 1 columns]
 
 
@@ -659,12 +659,12 @@ Left Censored Data
 We've mainly been focusing on *right-censorship*, which describes cases where we do not observe the death event.
 This situation is the most common one. Alternatively, there are situations where we do not observe the *birth* event
 occurring. Consider the case where a doctor sees a delayed onset of symptoms of an underlying disease. The doctor
-is unsure *when* the disease was contracted (birth), but knows it was before the discovery. 
+is unsure *when* the disease was contracted (birth), but knows it was before the discovery.
 
 Another situation where we have left-censored data is when measurements have only an upper bound, that is, the measurements
 instruments could only detect the measurement was *less* than some upper bound.
 
-*lifelines* has support for left-censored datasets in the ``KaplanMeierFitter`` class, by adding the keyword ``left_censorship=True`` (default ``False``) to the call to ``fit``. 
+*lifelines* has support for left-censored datasets in the ``KaplanMeierFitter`` class, by adding the keyword ``left_censorship=True`` (default ``False``) to the call to ``fit``.
 
 .. code:: python
 
@@ -676,13 +676,13 @@ instruments could only detect the measurement was *less* than some upper bound.
     E = lcd_dataset[ix]['E'] #boolean array, True if observed.
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, E, left_censorship=True)  
+    kmf.fit(T, E, left_censorship=True)
 
 Instead of producing a survival function, left-censored data is more interested in the cumulative density function
 of time to birth. This is available as the ``cumulative_density_`` property after fitting the data.
 
 .. code:: python
-    
+
     print(kmf.cumulative_density_)
     kmf.plot() #will plot the CDF
 
@@ -692,11 +692,11 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 Left Truncated Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another form of bias that is introduced into a dataset is called left-truncation. (Also a form of censorship). 
+Another form of bias that is introduced into a dataset is called left-truncation. (Also a form of censorship).
 Left-truncation occurs when individuals may die even before ever entering into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional argument for ``entry``, which is an array of equal size to the duration array.
 It describes the offset from birth to entering the study. This is also useful when subjects enter the study at different
-points in their lifetime. For example, if you are measuring time to death of prisoners in 
-prison, the prisoners will enter the study at different ages. 
+points in their lifetime. For example, if you are measuring time to death of prisoners in
+prison, the prisoners will enter the study at different ages.
 
  .. note:: Nothing changes in the duration array: it still measures time from entry of study to time left study (either by death or censorship)
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pandas as pd
 from lifelines.utils import add_covariate_to_timeline
 from lifelines.utils import to_long_format

@@ -10,7 +10,7 @@ ifeq ($(TRAVIS_PYTHON_VERSION), 2.7)
 		echo "Skip linting for Python2.7"
 else
 		prospector --output-format grouped
-endif	
+endif
 
 format:
 	black .
@@ -20,7 +20,7 @@ ifeq ($(TRAVIS_PYTHON_VERSION), 3.6)
 		black . --check
 else
 		echo "Only check format on Python3.6"
-endif	
+endif
 
 update_reqs:
 	pipenv lock -r > requirements.txt

@@ -1,6 +1,6 @@
 inherits:
   - strictness_medium
-  
+
 pylint:
   options:
     bad-names: foo,baz,toto,tutu,tata

@@ -1,4 +1,4 @@
 # .coveragerc to control coverage.py
 [run]
-omit = 
+omit =
     lifelines/plotting.py

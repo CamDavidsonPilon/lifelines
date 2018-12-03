@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 from __future__ import division
 import numpy as np
@@ -16,10 +17,10 @@ class AalenJohansenFitter(UnivariateFitter):
     had been prevented. If you are interested in learning more, I (Paul Zivich) recommend the following open-access
     paper; Edwards JK, Hester LL, Gokhale M, Lesko CR. Methodologic Issues When Estimating Risks in
     Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
-    
+
     AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None)
-    
-    Aalen-Johansen cannot deal with tied times. We can get around this by randomy jittering the event times 
+
+    Aalen-Johansen cannot deal with tied times. We can get around this by randomy jittering the event times
     slightly. This will be done automatically and generates a warning.
     """
 
@@ -42,8 +43,8 @@ class AalenJohansenFitter(UnivariateFitter):
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters:
-          durations: an array or pd.Series of length n -- duration of subject was observed for 
-          event_observed: an array, or pd.Series, of length n. Integer indicator of distinct events. Must be 
+          durations: an array or pd.Series of length n -- duration of subject was observed for
+          event_observed: an array, or pd.Series, of length n. Integer indicator of distinct events. Must be
              only positive integers, where 0 indicates censoring.
           event_of_interest: integer -- indicator for event of interest. All other integers are considered competing events
              Ex) event_observed contains 0, 1, 2 where 0:censored, 1:lung cancer, and 2:death. If event_of_interest=1, then death (2)
@@ -69,14 +70,14 @@ class AalenJohansenFitter(UnivariateFitter):
             # Seeing if there is a large amount of ties in the data (>20%)
             if np.sum(pd.Series(durations).duplicated()) / len(durations) > 0.2:
                 warnings.warn(
-                    """It looks like there are many tied events in your data set. The Aalen-Johansen 
+                    """It looks like there are many tied events in your data set. The Aalen-Johansen
                               estimator should only be used when there are no/few tied events""",
                     Warning,
                 )
                 # I am unaware of a recommended cut-off, but 20% would be suggestive of issues
             # Raise warning if duplicated times, then randomly jitter times
             warnings.warn(
-                """Tied event times were detected. The Aalen-Johansen estimator cannot handle tied event times. 
+                """Tied event times were detected. The Aalen-Johansen estimator cannot handle tied event times.
                 To resolve ties, data is randomly jittered.""",
                 Warning,
             )
@@ -182,14 +183,14 @@ class AalenJohansenFitter(UnivariateFitter):
         """Bounds are based on pg411 of "Modelling Survival Data in Medical Research" David Collett 3rd Edition, which
         is derived from Greenwood's variance estimator. Confidence intervals are obtained using the delta method
         transformation of SE(log(-log(F_j))). This ensures that the confidence intervals all lie between 0 and 1.
-        
+
         Formula for the variance follows:
         Var(F_j) = sum((F_j(t) - F_j(t_i))**2 * d/(n*(n-d) + S(t_i-1)**2 * ((d*(n-d))/n**3) +
                     -2 * sum((F_j(t) - F_j(t_i)) * S(t_i-1) * (d/n**2)
 
         Delta method transformation:
         SE(log(-log(F_j) = SE(F_j) / (F_j * absolute(log(F_j)))
-        
+
         More information can be found at: https://support.sas.com/documentation/onlinedoc/stat/141/lifetest.pdf
         There is also an alternative method (Aalen) but this is not currently implemented
         """
