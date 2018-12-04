@@ -46,9 +46,7 @@ def _rho_gradient(lambda_rho, T, E):
 
 def _d_rho_d_rho(lambda_rho, T, E):
     lambda_, rho = lambda_rho
-    return (
-        1.0 / rho ** 2 * E + (np.log(lambda_ * T) ** 2 * (lambda_ * T) ** rho)
-    ).sum()
+    return (1.0 / rho ** 2 * E + (np.log(lambda_ * T) ** 2 * (lambda_ * T) ** rho)).sum()
 
 
 def _d_lambda_d_lambda_(lambda_rho, T, E):
@@ -158,9 +156,7 @@ class WeibullFitter(UnivariateFitter):
             index=self.timeline,
         )
         self.hazard_ = pd.DataFrame(
-            self.hazard_at_times(self.timeline),
-            columns=[self._label],
-            index=self.timeline,
+            self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline
         )
         self.cumulative_hazard_ = pd.DataFrame(
             self.cumulative_hazard_at_times(self.timeline),
@@ -200,21 +196,13 @@ class WeibullFitter(UnivariateFitter):
         def hessian_function(parameters, T, E):
             return np.array(
                 [
-                    [
-                        _d_lambda_d_lambda_(parameters, T, E),
-                        _d_rho_d_lambda_(parameters, T, E),
-                    ],
-                    [
-                        _d_rho_d_lambda_(parameters, T, E),
-                        _d_rho_d_rho(parameters, T, E),
-                    ],
+                    [_d_lambda_d_lambda_(parameters, T, E), _d_rho_d_lambda_(parameters, T, E)],
+                    [_d_rho_d_lambda_(parameters, T, E), _d_rho_d_rho(parameters, T, E)],
                 ]
             )
 
         def gradient_function(parameters, T, E):
-            return np.array(
-                [_lambda_gradient(parameters, T, E), _rho_gradient(parameters, T, E)]
-            )
+            return np.array([_lambda_gradient(parameters, T, E), _rho_gradient(parameters, T, E)])
 
         # initialize the parameters. This shows dramatic improvements.
         parameters = _smart_search(_negative_log_likelihood, 2, T, E)
@@ -226,16 +214,11 @@ class WeibullFitter(UnivariateFitter):
 
         while converging and i < max_steps:
             # Do not override hessian and gradient in case of garbage
-            h, g = (
-                hessian_function(parameters, T, E),
-                gradient_function(parameters, T, E),
-            )
+            h, g = (hessian_function(parameters, T, E), gradient_function(parameters, T, E))
 
             delta = solve(h, -step_size * g.T)
             if np.any(np.isnan(delta)):
-                raise ConvergenceError(
-                    "delta contains nan value(s). Convergence halted."
-                )
+                raise ConvergenceError("delta contains nan value(s). Convergence halted.")
 
             parameters += delta
 
@@ -257,8 +240,7 @@ class WeibullFitter(UnivariateFitter):
             print("Convergence completed after %d iterations." % (i))
         if not completed:
             warnings.warn(
-                "Newton-Rhapson failed to converge sufficiently in %d steps."
-                % max_steps,
+                "Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps,
                 ConvergenceWarning,
             )
 
@@ -282,9 +264,7 @@ class WeibullFitter(UnivariateFitter):
             )
 
         std_cumulative_hazard = np.sqrt(
-            sensitivity_analysis(
-                self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline
-            )
+            sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline)
         )
 
         if ci_labels is None:
@@ -295,21 +275,17 @@ class WeibullFitter(UnivariateFitter):
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         df[ci_labels[0]] = (
-            self.cumulative_hazard_at_times(self.timeline)
-            + alpha2 * std_cumulative_hazard
+            self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
         )
         df[ci_labels[1]] = (
-            self.cumulative_hazard_at_times(self.timeline)
-            - alpha2 * std_cumulative_hazard
+            self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
         )
         return df
 
     def _compute_standard_errors(self):
         var_lambda_, var_rho_ = inv(self._hessian_).diagonal()
         return pd.DataFrame(
-            [[np.sqrt(var_lambda_), np.sqrt(var_rho_)]],
-            index=["se"],
-            columns=["lambda_", "rho_"],
+            [[np.sqrt(var_lambda_), np.sqrt(var_rho_)]], index=["se"], columns=["lambda_", "rho_"]
         )
 
     def _compute_confidence_bounds_of_parameters(self):
@@ -325,10 +301,7 @@ class WeibullFitter(UnivariateFitter):
         )
 
     def _compute_z_values(self):
-        return (
-            np.asarray([self.lambda_, self.rho_])
-            / self._compute_standard_errors().loc["se"]
-        )
+        return np.asarray([self.lambda_, self.rho_]) / self._compute_standard_errors().loc["se"]
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -363,14 +336,9 @@ class WeibullFitter(UnivariateFitter):
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print(
-            "{} = {}".format(
-                justify("number of events"), np.where(self.event_observed)[0].shape[0]
-            )
+            "{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0])
         )
-        print(
-            "{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood),
-            end="\n\n",
-        )
+        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood), end="\n\n")
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]

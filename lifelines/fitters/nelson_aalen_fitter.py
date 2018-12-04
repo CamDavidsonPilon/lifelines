@@ -94,9 +94,7 @@ class NelsonAalenFitter(UnivariateFitter):
                 )
 
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = (
-            v
-        )
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline, self._additive_f, self._variance_f, False
@@ -104,9 +102,7 @@ class NelsonAalenFitter(UnivariateFitter):
 
         # esimates
         self._label = label
-        self.cumulative_hazard_ = pd.DataFrame(
-            cumulative_hazard_, columns=[self._label]
-        )
+        self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
         self.confidence_interval_ = self._bounds(
             cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels
         )
@@ -141,14 +137,10 @@ class NelsonAalenFitter(UnivariateFitter):
 
         cum_hazard_ = self.cumulative_hazard_.values
         df[ci_labels[0]] = cum_hazard_ * np.exp(
-            alpha2
-            * np.sqrt(cumulative_sq_)
-            / np.where(cum_hazard_ == 0, 1, cum_hazard_)
+            alpha2 * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
         )
         df[ci_labels[1]] = cum_hazard_ * np.exp(
-            -alpha2
-            * np.sqrt(cumulative_sq_)
-            / np.where(cum_hazard_ == 0, 1, cum_hazard_)
+            -alpha2 * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
         )
         return df
 
@@ -216,8 +208,7 @@ class NelsonAalenFitter(UnivariateFitter):
             1.0
             / (bandwidth ** 2)
             * np.dot(
-                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth)
-                ** 2,
+                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2,
                 var_hazard_.values[C],
             )
         )

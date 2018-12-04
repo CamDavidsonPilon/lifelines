@@ -168,9 +168,7 @@ def add_at_risk_counts(*fitters, **kwargs):
     return ax
 
 
-def plot_lifetimes(
-    lifetimes, event_observed=None, birthtimes=None, order=False, block=True
-):
+def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None, order=False, block=True):
     """
     Parameters:
       lifetimes: an (n,) numpy array of lifetimes.
@@ -203,9 +201,7 @@ def plot_lifetimes(
 
     for i in range(N):
         c = "#A60628" if event_observed[i] else "#348ABD"
-        plt.hlines(
-            N - 1 - i, birthtimes[i], birthtimes[i] + lifetimes[i], color=c, lw=3
-        )
+        plt.hlines(N - 1 - i, birthtimes[i], birthtimes[i] + lifetimes[i], color=c, lw=3)
         m = "|" if not event_observed[i] else "o"
         plt.scatter((birthtimes[i]) + lifetimes[i], N - 1 - i, color=c, s=30, marker=m)
 
@@ -240,9 +236,7 @@ def create_dataframe_slicer(iloc, loc):
     return lambda df: getattr(df, get_method)[user_submitted_slice]
 
 
-def plot_loglogs(
-    cls, loc=None, iloc=None, show_censors=False, censor_styles=None, **kwargs
-):
+def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=None, **kwargs):
     """
     Specifies a plot of the log(-log(SV)) versus log(time) where SV is the estimated survival function.
     """
@@ -348,9 +342,7 @@ def plot_estimate(
 
     if estimate == "hazard_":
         if bandwidth is None:
-            raise ValueError(
-                "Must specify a bandwidth parameter in the call to plot_hazard."
-            )
+            raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard.")
         estimate_ = cls.smoothed_hazard_(bandwidth)
         confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(
             bandwidth, hazard_=estimate_.values[:, 0]
@@ -391,12 +383,8 @@ def plot_estimate(
             )
         else:
             x = dataframe_slicer(confidence_interval_).index.values.astype(float)
-            lower = dataframe_slicer(confidence_interval_.filter(like="lower")).values[
-                :, 0
-            ]
-            upper = dataframe_slicer(confidence_interval_.filter(like="upper")).values[
-                :, 0
-            ]
+            lower = dataframe_slicer(confidence_interval_.filter(like="lower")).values[:, 0]
+            upper = dataframe_slicer(confidence_interval_.filter(like="upper")).values[:, 0]
             fill_between_steps(
                 x, lower, y2=upper, ax=ax, alpha=ci_alpha, color=colour, linewidth=1.0
             )

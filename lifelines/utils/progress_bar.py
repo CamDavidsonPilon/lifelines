@@ -50,12 +50,7 @@ class TextProgressBar(ProgressBar):
 
     def progbar(self, i, elapsed):
         bar = self.bar(self.percentage(i))
-        return "[%s] %i of %i complete in %.1f sec" % (
-            bar,
-            i,
-            self.iterations,
-            round(elapsed, 1),
-        )
+        return "[%s] %i of %i complete in %.1f sec" % (bar, i, self.iterations, round(elapsed, 1))
 
     def bar(self, percent):
         all_full = self.width - 2

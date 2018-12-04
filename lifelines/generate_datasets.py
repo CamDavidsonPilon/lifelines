@@ -176,9 +176,7 @@ def time_varying_coefficients(
         coefficients[:, i] = f(timelines, alpha=randgen(2000.0 / t), beta=beta)
         data_generators.append(f.__doc__)
 
-    df_coefficients = pd.DataFrame(
-        coefficients, columns=data_generators, index=timelines
-    )
+    df_coefficients = pd.DataFrame(coefficients, columns=data_generators, index=timelines)
     return df_coefficients
 
 
@@ -215,8 +213,7 @@ def generate_hazard_rates(
         coefficients = constant_coefficients(d, timelines, independent)
         baseline = time_varying_coefficients(1, timelines)
         hazard_rates = (
-            np.exp(np.dot(covariates, coefficients.T))
-            * baseline[baseline.columns[0]].values
+            np.exp(np.dot(covariates, coefficients.T)) * baseline[baseline.columns[0]].values
         )
         coefficients["baseline: " + baseline.columns[0]] = baseline.values
         return (
@@ -280,9 +277,7 @@ def generate_observational_matrix(
     return (
         covariates.sort_values(by="event_at"),
         pd.DataFrame(
-            cumulative_integral(coeff.values, timelines),
-            columns=coeff.columns,
-            index=timelines,
+            cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines
         ),
     )
 

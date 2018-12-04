@@ -37,8 +37,7 @@ class BaseFitter(object):
             s = """<lifelines.%s: fitted with %d observations, %d censored>""" % (
                 classname,
                 self.event_observed.shape[0],
-                self.event_observed.shape[0]
-                - np.where(self.event_observed)[0].shape[0],
+                self.event_observed.shape[0] - np.where(self.event_observed)[0].shape[0],
             )
         except AttributeError:
             s = """<lifelines.%s>""" % classname
@@ -69,9 +68,7 @@ class UnivariateFitter(BaseFitter):
             self.__class__.divide.__doc__ = self.divide.__doc__.format(
                 self._estimate_name, self.__class__.__name__
             )
-            self.__class__.predict.__doc__ = self.predict.__doc__.format(
-                self.__class__.__name__
-            )
+            self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
             self.__class__.plot.__doc__ = plot_estimate.__doc__.format(
                 self.__class__.__name__, self._estimate_name
             )
@@ -133,9 +130,7 @@ class UnivariateFitter(BaseFitter):
         """
         if callable(self._estimation_method):
             return (
-                pd.DataFrame(
-                    self._estimation_method(_to_array(times)), index=_to_array(times)
-                )
+                pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times))
                 .loc[times]
                 .squeeze()
             )

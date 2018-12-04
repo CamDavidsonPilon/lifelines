@@ -22,12 +22,7 @@ setup(
     license="MIT",
     keywords="survival analysis statistics data analysis",
     url="https://github.com/CamDavidsonPilon/lifelines",
-    packages=[
-        "lifelines",
-        "lifelines.datasets",
-        "lifelines.fitters",
-        "lifelines.utils",
-    ],
+    packages=["lifelines", "lifelines.datasets", "lifelines.fitters", "lifelines.utils"],
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
@@ -42,12 +37,6 @@ setup(
     ],
     install_requires=["numpy", "scipy>=1.0", "pandas>=0.18", "matplotlib>=2.0"],
     package_data={
-        "lifelines": [
-            "../README.md",
-            "../README.txt",
-            "../LICENSE",
-            "../MANIFEST.in",
-            "datasets/*",
-        ]
+        "lifelines": ["../README.md", "../README.txt", "../LICENSE", "../MANIFEST.in", "datasets/*"]
     },
 )

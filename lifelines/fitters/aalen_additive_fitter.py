@@ -66,13 +66,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.nn_cumulative_hazard = nn_cumulative_hazard
 
     def fit(
-        self,
-        df,
-        duration_col,
-        event_col=None,
-        timeline=None,
-        id_col=None,
-        show_progress=False,
+        self, df, duration_col, event_col=None, timeline=None, id_col=None, show_progress=False
     ):
         """
         Perform inference on the coefficients of the Aalen additive model.
@@ -117,9 +111,7 @@ class AalenAdditiveFitter(BaseFitter):
         if id_col is None:
             self._fit_static(df, duration_col, event_col, timeline, show_progress)
         else:
-            self._fit_varying(
-                df, duration_col, event_col, id_col, timeline, show_progress
-            )
+            self._fit_varying(df, duration_col, event_col, id_col, timeline, show_progress)
         return self
 
     def _fit_static(
@@ -182,15 +174,11 @@ class AalenAdditiveFitter(BaseFitter):
         n_deaths = len(non_censorsed_times)
 
         hazards_ = pd.DataFrame(
-            np.zeros((n_deaths, d)),
-            columns=columns,
-            index=from_tuples(non_censorsed_times),
+            np.zeros((n_deaths, d)), columns=columns, index=from_tuples(non_censorsed_times)
         ).swaplevel(1, 0)
 
         variance_ = pd.DataFrame(
-            np.zeros((n_deaths, d)),
-            columns=columns,
-            index=from_tuples(non_censorsed_times),
+            np.zeros((n_deaths, d)), columns=columns, index=from_tuples(non_censorsed_times)
         ).swaplevel(1, 0)
 
         # initialize loop variables.
@@ -248,9 +236,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         if timeline is not None:
             self.hazards_ = self.hazards_.reindex(timeline, method="ffill")
-            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(
-                timeline, method="ffill"
-            )
+            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(timeline, method="ffill")
             self.variance_ = self.variance_.reindex(timeline, method="ffill")
             self.timeline = timeline
         else:
@@ -261,9 +247,7 @@ class AalenAdditiveFitter(BaseFitter):
         self._compute_confidence_intervals()
 
         self.score_ = concordance_index(
-            self.durations,
-            self.predict_median(dataframe).values.ravel(),
-            self.event_observed,
+            self.durations, self.predict_median(dataframe).values.ravel(), self.event_observed
         )
 
     def _fit_varying(
@@ -366,9 +350,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         if timeline is not None:
             self.hazards_ = self.hazards_.reindex(timeline, method="ffill")
-            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(
-                timeline, method="ffill"
-            )
+            self.cumulative_hazards_ = self.cumulative_hazards_.reindex(timeline, method="ffill")
             self.variance_ = self.variance_.reindex(timeline, method="ffill")
             self.timeline = timeline
         else:
@@ -401,24 +383,19 @@ class AalenAdditiveFitter(BaseFitter):
         alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
         n = self.timeline.shape[0]
         d = self.cumulative_hazards_.shape[1]
-        index = [
-            ["upper"] * n + ["lower"] * n,
-            np.concatenate([self.timeline, self.timeline]),
-        ]
+        index = [["upper"] * n + ["lower"] * n, np.concatenate([self.timeline, self.timeline])]
 
         self.confidence_intervals_ = pd.DataFrame(
             np.zeros((2 * n, d)), index=index, columns=self.cumulative_hazards_.columns
         )
 
-        self.confidence_intervals_.loc["upper"] = (
-            self.cumulative_hazards_.values
-            + alpha2 * np.sqrt(self.variance_.cumsum().values)
-        )
+        self.confidence_intervals_.loc[
+            "upper"
+        ] = self.cumulative_hazards_.values + alpha2 * np.sqrt(self.variance_.cumsum().values)
 
-        self.confidence_intervals_.loc["lower"] = (
-            self.cumulative_hazards_.values
-            - alpha2 * np.sqrt(self.variance_.cumsum().values)
-        )
+        self.confidence_intervals_.loc[
+            "lower"
+        ] = self.cumulative_hazards_.values - alpha2 * np.sqrt(self.variance_.cumsum().values)
 
     def predict_cumulative_hazard(self, X, id_col=None):
         """
@@ -527,9 +504,7 @@ class AalenAdditiveFitter(BaseFitter):
                 linewidth=1.0,
             )
 
-        assert (
-            loc is None or iloc is None
-        ), "Cannot set both loc and iloc in call to .plot"
+        assert loc is None or iloc is None, "Cannot set both loc and iloc in call to .plot"
 
         get_method = "loc" if loc is not None else "iloc"
         if iloc == loc is None:

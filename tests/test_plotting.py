@@ -124,9 +124,7 @@ class TestPlotting:
         d = 3
         timeline = np.linspace(0, 150, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
-        T = generate_random_lifetimes(hz, timeline) + 0.1 * np.random.uniform(
-            size=(n, 1)
-        )
+        T = generate_random_lifetimes(hz, timeline) + 0.1 * np.random.uniform(size=(n, 1))
         C = np.random.binomial(1, 0.8, size=n)
         X["T"] = T
         X["E"] = C
@@ -134,11 +132,7 @@ class TestPlotting:
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(coef_penalizer=0.1, fit_intercept=False)
         aaf.fit(X, "T", "E")
-        ax = (
-            aaf.smoothed_hazards_(1)
-            .iloc[0 : aaf.cumulative_hazards_.shape[0] - 500]
-            .plot()
-        )
+        ax = aaf.smoothed_hazards_(1).iloc[0 : aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
         ax.set_title("test_aalen_additive_smoothed_plot")
         self.plt.show(block=block)
@@ -180,9 +174,7 @@ class TestPlotting:
         naf.fit(data1)
         ax = naf.plot()
         naf.plot_cumulative_hazard(ax=ax, ci_force_lines=True)
-        self.plt.title(
-            "I should have plotted the same thing, but different styles + color!"
-        )
+        self.plt.title("I should have plotted the same thing, but different styles + color!")
         self.plt.show(block=block)
         return
 
@@ -224,9 +216,7 @@ class TestPlotting:
         data1 = np.random.exponential(10, size=200)
         kmf.fit(data1, label="test label 1")
         kmf.plot(
-            ci_force_lines=True,
-            show_censors=True,
-            censor_styles={"marker": "+", "mew": 2, "ms": 7},
+            ci_force_lines=True, show_censors=True, censor_styles={"marker": "+", "mew": 2, "ms": 7}
         )
         self.plt.title("test_flat_style_no_censor")
         self.plt.show(block=block)
@@ -307,20 +297,10 @@ class TestPlotting:
         lcd_dataset = load_lcd()
         alluvial_fan = lcd_dataset.loc[lcd_dataset["group"] == "alluvial_fan"]
         basin_trough = lcd_dataset.loc[lcd_dataset["group"] == "basin_trough"]
-        kmf.fit(
-            alluvial_fan["T"],
-            alluvial_fan["C"],
-            left_censorship=True,
-            label="alluvial_fan",
-        )
+        kmf.fit(alluvial_fan["T"], alluvial_fan["C"], left_censorship=True, label="alluvial_fan")
         ax = kmf.plot()
 
-        kmf.fit(
-            basin_trough["T"],
-            basin_trough["C"],
-            left_censorship=True,
-            label="basin_trough",
-        )
+        kmf.fit(basin_trough["T"], basin_trough["C"], left_censorship=True, label="basin_trough")
         ax = kmf.plot(ax=ax)
         self.plt.title("test_kmf_left_censorship_plots")
         self.plt.show(block=block)
@@ -343,9 +323,7 @@ class TestPlotting:
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
         cumulative_hazards = pd.DataFrame(
-            cumulative_integral(coef.values, timeline),
-            index=timeline,
-            columns=coef.columns,
+            cumulative_integral(coef.values, timeline), index=timeline, columns=coef.columns
         )
         T = generate_random_lifetimes(hz, timeline)
         X["T"] = T
@@ -369,9 +347,7 @@ class TestPlotting:
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
         cumulative_hazards = pd.DataFrame(
-            cumulative_integral(coef.values, timeline),
-            index=timeline,
-            columns=coef.columns,
+            cumulative_integral(coef.values, timeline), index=timeline, columns=coef.columns
         )
         T = generate_random_lifetimes(hz, timeline)
         T[np.isinf(T)] = 10

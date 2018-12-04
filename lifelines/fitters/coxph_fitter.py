@@ -128,9 +128,7 @@ class CoxPHFitter(BaseFitter):
         # Sort on time
         df = df.sort_values(by=duration_col)
 
-        self._time_fit_was_called = (
-            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
-        )
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
         self.robust = robust
@@ -197,13 +195,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         )
 
         self.hazards_ = (
-            pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"])
-            / self._norm_std
+            pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
         )
 
-        self.variance_matrix_ = -inv(self._hessian_) / np.outer(
-            self._norm_std, self._norm_std
-        )
+        self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), T, E, weights
         )
@@ -282,9 +277,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             self.path.append(beta.copy())
             i += 1
             if self.strata is None:
-                h, g, ll = get_gradients(
-                    X.values, beta, T.values, E.values, weights.values
-                )
+                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights.values)
             else:
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
@@ -345,14 +338,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             if show_progress:
                 print(
                     "Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
-                    % (
-                        i,
-                        norm_delta,
-                        step_size,
-                        ll,
-                        newton_decrement,
-                        time.time() - start,
-                    )
+                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start)
                 )
 
             # convergence criteria
@@ -390,16 +376,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             print("Convergence completed after %d iterations." % (i))
         if not completed:
             warnings.warn(
-                "Newton-Rhapson failed to converge sufficiently in %d steps."
-                % max_steps,
+                "Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps,
                 ConvergenceWarning,
             )
 
         return beta
 
-    def _get_efron_values(
-        self, X, beta, T, E, weights
-    ):  # pylint: disable=too-many-locals
+    def _get_efron_values(self, X, beta, T, E, weights):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
@@ -543,17 +526,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             columns=self.hazards_.columns,
         )
 
-    def _compute_sandwich_estimator(
-        self, X, T, E, weights
-    ):  # pylint: disable=too-many-locals
+    def _compute_sandwich_estimator(self, X, T, E, weights):  # pylint: disable=too-many-locals
 
         _, d = X.shape
 
         if self.strata is not None and self.cluster_col is not None:
             # TODO
-            raise NotImplementedError(
-                "Providing clusters and strata is not implemented yet"
-            )
+            raise NotImplementedError("Providing clusters and strata is not implemented yet")
 
         if self.strata is not None:
             score_residuals = np.empty((0, d))
@@ -580,9 +559,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         else:
             score_residuals = (
-                self._compute_residuals_within_strata(
-                    X.values, T.values, E.values, weights.values
-                )
+                self._compute_residuals_within_strata(X.values, T.values, E.values, weights.values)
                 * weights[:, None]
             )
 
@@ -607,9 +584,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         )
         return sandwich_estimator
 
-    def _compute_residuals_within_strata(
-        self, X, T, E, weights
-    ):  # pylint: disable=too-many-locals
+    def _compute_residuals_within_strata(self, X, T, E, weights):  # pylint: disable=too-many-locals
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -685,12 +660,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
-        df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc[
-            "lower-bound"
-        ].values
-        df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc[
-            "upper-bound"
-        ].values
+        df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
+        df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
     def print_summary(self):
@@ -719,10 +690,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        print(
-            "{} = {}".format(justify("time fit was run"), self._time_fit_was_called),
-            end="\n\n",
-        )
+        print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n")
         print("---")
 
         df = self.summary
@@ -825,10 +793,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         of R's predict.coxph. Equal to \beta X - \beta mean{X_train}}
         """
 
-        return (
-            self.predict_log_partial_hazard(X)
-            - self._train_log_partial_hazard.squeeze()
-        )
+        return self.predict_log_partial_hazard(X) - self._train_log_partial_hazard.squeeze()
 
     def predict_cumulative_hazard(self, X, times=None):
         """
@@ -866,9 +831,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             c_0 = self.baseline_cumulative_hazard_
             v = self.predict_partial_hazard(X)
             col = _get_index(v)
-            cumulative_hazard_ = pd.DataFrame(
-                np.dot(c_0, v.T), columns=col, index=c_0.index
-            )
+            cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
 
         if times is not None:
             # non-linear interpolations can push the survival curves above 1 and below 0.
@@ -936,16 +899,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         ind_hazards = self.predict_partial_hazard(data) * weights[:, None]
         ind_hazards["event_at"] = durations.values
         ind_hazards_summed_over_durations = (
-            ind_hazards.groupby("event_at")[0]
-            .sum()
-            .sort_index(ascending=False)
-            .cumsum()
+            ind_hazards.groupby("event_at")[0].sum().sort_index(ascending=False).cumsum()
         )
         ind_hazards_summed_over_durations.name = "hazards"
 
-        event_table = survival_table_from_events(
-            durations, event_observed, weights=weights
-        )
+        event_table = survival_table_from_events(durations, event_observed, weights=weights)
         event_table = event_table.join(ind_hazards_summed_over_durations)
         baseline_hazard = pd.DataFrame(
             event_table["observed"] / event_table["hazards"], columns=[name]
@@ -973,11 +931,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             return baseline_hazards_.fillna(0)
 
         return self._compute_baseline_hazard(
-            data=df,
-            durations=T,
-            event_observed=E,
-            weights=weights,
-            name="baseline hazard",
+            data=df, durations=T, event_observed=E, weights=weights, name="baseline hazard"
         )
 
     def _compute_baseline_survival(self):
@@ -1044,16 +998,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
         ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
         ax.hlines(
-            yaxis_locations,
-            lower_bound.values[order],
-            upper_bound.values[order],
-            color="k",
-            lw=1,
+            yaxis_locations, lower_bound.values[order], upper_bound.values[order], color="k", lw=1
         )
 
         tick_labels = [
-            c + significance_code(p).strip()
-            for (c, p) in summary["p"][order].iteritems()
+            c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()
         ]
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
@@ -1076,9 +1025,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         from matplotlib import pyplot as plt
 
         if covariate not in self.hazards_.columns:
-            raise KeyError(
-                "covariate `%s` is not present in the original dataset" % covariate
-            )
+            raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
         ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
         x_bar = self._norm_mean.to_frame().T

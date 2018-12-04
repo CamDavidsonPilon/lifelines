@@ -95,13 +95,9 @@ class ExponentialFitter(UnivariateFitter):
         self._lambda_variance_ = self.lambda_ / T
         self._log_likelihood = np.log(self.lambda_) * D - self.lambda_ * T
         self.survival_function_ = pd.DataFrame(
-            np.exp(-self.lambda_ * self.timeline),
-            columns=[self._label],
-            index=self.timeline,
+            np.exp(-self.lambda_ * self.timeline), columns=[self._label], index=self.timeline
         )
-        self.confidence_interval_ = self._bounds(
-            alpha if alpha else self.alpha, ci_labels
-        )
+        self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
         self.median_ = 1.0 / self.lambda_ * (np.log(2))
 
         # estimation methods
@@ -144,10 +140,7 @@ class ExponentialFitter(UnivariateFitter):
         se = self._compute_standard_errors().loc["se"]
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
         return pd.DataFrame(
-            [
-                np.array([self.lambda_]) + alpha2 * se,
-                np.array([self.lambda_]) - alpha2 * se,
-            ],
+            [np.array([self.lambda_]) + alpha2 * se, np.array([self.lambda_]) - alpha2 * se],
             columns=["lambda_"],
             index=["upper-bound", "lower-bound"],
         )
@@ -187,14 +180,9 @@ class ExponentialFitter(UnivariateFitter):
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print(
-            "{} = {}".format(
-                justify("number of events"), np.where(self.event_observed)[0].shape[0]
-            )
+            "{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0])
         )
-        print(
-            "{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood),
-            end="\n\n",
-        )
+        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood), end="\n\n")
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]

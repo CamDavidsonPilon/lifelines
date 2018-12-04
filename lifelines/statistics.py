@@ -81,9 +81,7 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     m = n_exp * p_exp + n_con * p_con
     k = float(n_exp) / float(n_con)
     return stats.norm.cdf(
-        np.sqrt(k * m)
-        * abs(postulated_hazard_ratio - 1)
-        / (k * postulated_hazard_ratio + 1)
+        np.sqrt(k * m) * abs(postulated_hazard_ratio - 1) / (k * postulated_hazard_ratio + 1)
         - z(1 - alpha / 2.0)
     )
 
@@ -132,8 +130,7 @@ def logrank_test(
 
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[
-        np.zeros(event_times_A.shape[0], dtype=int),
-        np.ones(event_times_B.shape[0], dtype=int),
+        np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)
     ]
     event_observed = np.r_[event_observed_A, event_observed_B]
     return multivariate_logrank_test(
@@ -142,13 +139,7 @@ def logrank_test(
 
 
 def pairwise_logrank_test(
-    event_durations,
-    groups,
-    event_observed=None,
-    alpha=0.95,
-    t_0=-1,
-    bonferroni=True,
-    **kwargs
+    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs
 ):  # pylint: disable=too-many-locals
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
@@ -181,8 +172,7 @@ def pairwise_logrank_test(
         n == np.max(event_durations.shape) == np.max(event_observed.shape)
     ), "inputs must be of the same length."
     groups, event_durations, event_observed = map(
-        lambda x: pd.Series(np.asarray(x).reshape(n)),
-        [groups, event_durations, event_observed],
+        lambda x: pd.Series(np.asarray(x).reshape(n)), [groups, event_durations, event_observed]
     )
 
     unique_groups = np.unique(groups)
@@ -275,8 +265,7 @@ def multivariate_logrank_test(
         n == np.max(event_durations.shape) == np.max(event_observed.shape)
     ), "inputs must be of the same length."
     groups, event_durations, event_observed = map(
-        lambda x: pd.Series(np.asarray(x).reshape(n)),
-        [groups, event_durations, event_observed],
+        lambda x: pd.Series(np.asarray(x).reshape(n)), [groups, event_durations, event_observed]
     )
 
     unique_groups, rm, obs, _ = group_survival_table_from_events(
@@ -294,9 +283,7 @@ def multivariate_logrank_test(
     # vector of observed minus expected
     Z_j = N_j - ev
 
-    assert (
-        abs(Z_j.sum()) < 10e-8
-    ), "Sum is not zero."  # this should move to a test eventually.
+    assert abs(Z_j.sum()) < 10e-8, "Sum is not zero."  # this should move to a test eventually.
 
     # compute covariance matrix
     factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i ** 2
@@ -308,9 +295,7 @@ def multivariate_logrank_test(
     V = V[:-1, :-1]
 
     # take the first n-1 groups
-    U = (
-        Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1])).dot(Z_j.iloc[:-1])
-    )  # Z.T*inv(V)*Z
+    U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1])).dot(Z_j.iloc[:-1])  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
     test_result, p_value = chisq_test(U, n_groups - 1, alpha)

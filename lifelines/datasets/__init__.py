@@ -14,9 +14,7 @@ def load_dataset(filename, **kwargs):
     Returns : Pandas dataframe
     """
     return pd.read_csv(
-        resource_filename("lifelines", "datasets/" + filename),
-        engine="python",
-        **kwargs
+        resource_filename("lifelines", "datasets/" + filename), engine="python", **kwargs
     )
 
 

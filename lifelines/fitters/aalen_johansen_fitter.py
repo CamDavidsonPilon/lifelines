@@ -136,14 +136,7 @@ class AalenJohansenFitter(UnivariateFitter):
         self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])
         # Technically, cumulative incidence, but consistent with KaplanMeierFitter
         self.event_table = aj[
-            [
-                "removed",
-                "observed",
-                self.label_cmprisk,
-                "censored",
-                "entrance",
-                "at_risk",
-            ]
+            ["removed", "observed", self.label_cmprisk, "censored", "entrance", "at_risk"]
         ]  # Event table
         self.variance, self.confidence_interval_ = self._bounds(
             aj["lagged_overall_survival"], alpha=alpha, ci_labels=ci_labels
@@ -172,10 +165,7 @@ class AalenJohansenFitter(UnivariateFitter):
         # Recursive call if event times are still tied after jitter
         if np.sum(event_time.duplicated()) > 0:
             return self._jitter(
-                durations=durations_jitter,
-                event=event,
-                jitter_level=jitter_level,
-                seed=seed,
+                durations=durations_jitter, event=event, jitter_level=jitter_level, seed=seed
             )
         return durations_jitter
 
@@ -220,28 +210,16 @@ class AalenJohansenFitter(UnivariateFitter):
                 / (sf["at_risk"] ** 3)
             )
             sf["part3"] = (
-                (F_t - sf["Ft"])
-                * sf["lagS"]
-                * (sf[self.label_cmprisk] / (sf["at_risk"] ** 2))
+                (F_t - sf["Ft"]) * sf["lagS"] * (sf[self.label_cmprisk] / (sf["at_risk"] ** 2))
             )
-            variance = (
-                (np.sum(sf["part1"]))
-                + (np.sum(sf["part2"]))
-                - 2 * (np.sum(sf["part3"]))
-            )
+            variance = (np.sum(sf["part1"])) + (np.sum(sf["part2"])) - 2 * (np.sum(sf["part3"]))
             all_vars.append(variance)
         df["variance"] = all_vars
 
         # Calculating Confidence Intervals
         df["F_transformed"] = np.log(-np.log(df["Ft"]))
-        df["se_transformed"] = np.sqrt(df["variance"]) / (
-            df["Ft"] * np.absolute(np.log(df["Ft"]))
-        )
+        df["se_transformed"] = np.sqrt(df["variance"]) / (df["Ft"] * np.absolute(np.log(df["Ft"])))
         zalpha = inv_normal_cdf((1.0 + alpha) / 2.0)
-        df[ci_labels[0]] = np.exp(
-            -np.exp(df["F_transformed"] + zalpha * df["se_transformed"])
-        )
-        df[ci_labels[1]] = np.exp(
-            -np.exp(df["F_transformed"] - zalpha * df["se_transformed"])
-        )
+        df[ci_labels[0]] = np.exp(-np.exp(df["F_transformed"] + zalpha * df["se_transformed"]))
+        df[ci_labels[1]] = np.exp(-np.exp(df["F_transformed"] - zalpha * df["se_transformed"]))
         return df["variance"], df[ci_labels]

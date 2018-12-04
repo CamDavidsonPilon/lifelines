@@ -80,22 +80,14 @@ class KaplanMeierFitter(UnivariateFitter):
                 )
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
-        estimate_name = (
-            "survival_function_" if not left_censorship else "cumulative_density_"
-        )
+        estimate_name = "survival_function_" if not left_censorship else "cumulative_density_"
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = (
-            v
-        )
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
         self._label = label
         alpha = alpha if alpha else self.alpha
         log_survival_function, cumulative_sq_ = _additive_estimate(
-            self.event_table,
-            self.timeline,
-            self._additive_f,
-            self._additive_var,
-            left_censorship,
+            self.event_table, self.timeline, self._additive_f, self._additive_var, left_censorship
         )
 
         if entry is not None:
@@ -103,9 +95,7 @@ class KaplanMeierFitter(UnivariateFitter):
             # truncation times, it may happen that is the number of patients at risk and the number of deaths is the same.
             # we adjust for this using the Breslow-Fleming-Harrington estimator
             n = self.event_table.shape[0]
-            net_population = (
-                self.event_table["entrance"] - self.event_table["removed"]
-            ).cumsum()
+            net_population = (self.event_table["entrance"] - self.event_table["removed"]).cumsum()
             if net_population.iloc[: int(n / 2)].min() == 0:
                 ix = net_population.iloc[: int(n / 2)].idxmin()
                 raise StatError(
@@ -115,17 +105,11 @@ class KaplanMeierFitter(UnivariateFitter):
 
         # estimation
         setattr(
-            self,
-            estimate_name,
-            pd.DataFrame(np.exp(log_survival_function), columns=[self._label]),
+            self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[self._label])
         )
         self.__estimate = getattr(self, estimate_name)
-        self.confidence_interval_ = self._bounds(
-            cumulative_sq_[:, None], alpha, ci_labels
-        )
-        self.median_ = median_survival_times(
-            self.__estimate, left_censorship=left_censorship
-        )
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
+        self.median_ = median_survival_times(self.__estimate, left_censorship=left_censorship)
 
         # estimation methods
         self._estimation_method = estimate_name
@@ -155,12 +139,8 @@ class KaplanMeierFitter(UnivariateFitter):
             ]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(
-            -np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v)
-        )
-        df[ci_labels[1]] = np.exp(
-            -np.exp(np.log(-v) - alpha2 * np.sqrt(cumulative_sq_) / v)
-        )
+        df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v))
+        df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) - alpha2 * np.sqrt(cumulative_sq_) / v))
         return df
 
     def _additive_f(self, population, deaths):
@@ -169,6 +149,4 @@ class KaplanMeierFitter(UnivariateFitter):
 
     def _additive_var(self, population, deaths):
         np.seterr(divide="ignore")
-        return (1.0 * deaths / (population * (population - deaths))).replace(
-            [np.inf], 0
-        )
+        return (1.0 * deaths / (population * (population - deaths))).replace([np.inf], 0)

@@ -107,9 +107,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         df = df.copy()
 
-        if not (
-            id_col in df and event_col in df and start_col in df and stop_col in df
-        ):
+        if not (id_col in df and event_col in df and start_col in df and stop_col in df):
             raise KeyError(
                 "A column specified in the call to `fit` does not exist in the dataframe provided."
             )
@@ -153,12 +151,9 @@ class CoxTimeVaryingFitter(BaseFitter):
         )
 
         self.hazards_ = (
-            pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"])
-            / self._norm_std
+            pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
         )
-        self.variance_matrix_ = -inv(self._hessian_) / np.outer(
-            self._norm_std, self._norm_std
-        )
+        self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights
         )
@@ -247,9 +242,7 @@ class CoxTimeVaryingFitter(BaseFitter):
     def _compute_standard_errors(self, df, stop_times_events, weights):
         if self.robust:
             se = np.sqrt(
-                self._compute_sandwich_estimator(
-                    df, stop_times_events, weights
-                ).diagonal()
+                self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal()
             )
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
@@ -287,12 +280,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
-        df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc[
-            "lower-bound"
-        ].values
-        df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc[
-            "upper-bound"
-        ].values
+        df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
+        df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
     def _newton_rhaphson(
@@ -375,14 +364,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             if show_progress:
                 print(
                     "Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
-                    % (
-                        i,
-                        norm_delta,
-                        step_size,
-                        ll,
-                        newton_decrement,
-                        time.time() - start,
-                    )
+                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start)
                 )
 
             # convergence criteria
@@ -419,16 +401,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             print("Convergence completed after %d iterations." % (i))
         if not completed:
             warnings.warn(
-                "Newton-Rhapson failed to converge sufficiently in %d steps."
-                % max_steps,
+                "Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps,
                 ConvergenceWarning,
             )
 
         return beta
 
-    def _get_gradients(
-        self, df, stops_events, weights, beta
-    ):  # pylint: disable=too-many-locals
+    def _get_gradients(self, df, stops_events, weights, beta):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
@@ -573,10 +552,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
         print(
-            "{} = {} UTC".format(
-                justify("time fit was run"), self._time_fit_was_called
-            ),
-            end="\n\n",
+            "{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n"
         )
 
         print("---")
@@ -603,9 +579,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Conviently, we can actually use the class itself to do most of the work.
 
         """
-        trivial_dataset = self.start_stop_and_events.groupby(level=0).last()[
-            ["event", "stop"]
-        ]
+        trivial_dataset = self.start_stop_and_events.groupby(level=0).last()[["event", "stop"]]
 
         cp_null = CoxPHFitter()
         cp_null.fit(trivial_dataset, "stop", "event", show_progress=False)
@@ -659,16 +633,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
         ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
         ax.hlines(
-            yaxis_locations,
-            lower_bound.values[order],
-            upper_bound.values[order],
-            color="k",
-            lw=1,
+            yaxis_locations, lower_bound.values[order], upper_bound.values[order], color="k", lw=1
         )
 
         tick_labels = [
-            c + significance_code(p).strip()
-            for (c, p) in summary["p"][order].iteritems()
+            c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()
         ]
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
@@ -679,19 +648,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     ):  # pylint: disable=too-many-locals
         hazards = self.predict_partial_hazard(tv_data).values
 
-        unique_death_times = np.unique(
-            stop_times_events["stop"].loc[stop_times_events["event"]]
-        )
+        unique_death_times = np.unique(stop_times_events["stop"].loc[stop_times_events["event"]])
         baseline_hazard_ = pd.DataFrame(
-            np.zeros_like(unique_death_times),
-            index=unique_death_times,
-            columns=["baseline hazard"],
+            np.zeros_like(unique_death_times), index=unique_death_times, columns=["baseline hazard"]
         )
 
         for t in unique_death_times:
-            ix = (stop_times_events["start"].values < t) & (
-                t <= stop_times_events["stop"].values
-            )
+            ix = (stop_times_events["start"].values < t) & (t <= stop_times_events["stop"].values)
 
             events_at_t = stop_times_events["event"].values[ix]
             stops_at_t = stop_times_events["stop"].values[ix]
@@ -700,9 +663,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             deaths = events_at_t & (stops_at_t == t)
 
-            death_counts = (
-                weights_at_t.squeeze() * deaths
-            ).sum()  # should always be atleast 1.
+            death_counts = (weights_at_t.squeeze() * deaths).sum()  # should always be atleast 1.
             baseline_hazard_.loc[t] = death_counts / hazards_at_t.sum()
 
         return baseline_hazard_.cumsum()
