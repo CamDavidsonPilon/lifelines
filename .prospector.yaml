@@ -1,5 +1,4 @@
-inherits:
-  - strictness_medium
+strictness: medium
 
 pylint:
   options:
@@ -13,6 +12,7 @@ pylint:
   disable:
     - line-too-long
     - protected-access
+    # remove these ASAP
     - unused-import
     - unused-variable
     - unused-argument

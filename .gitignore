@@ -11,3 +11,7 @@ dist
 # testing artifacts
 \.coverage
 \.pytest_cache/
+
+# pipenv files
+Pipfile
+Pipfile.lock

@@ -15,8 +15,7 @@ matrix:
       dist: xenial
       sudo: true
 before_install:
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then (rm Pipfile.lock); fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then (rm Pipfile.lock); fi
+  - ls
   # - sudo apt-get update
 install: "make"
 script:

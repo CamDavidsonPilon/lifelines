@@ -1,9 +1,12 @@
 init:
-	pip install pipenv
-	pipenv install --dev --skip-lock
+ifeq ($(TRAVIS), true)
+		pip install -r reqs/travis-requirements.txt
+else
+		pip install -r reqs/dev-requirements.txt
+endif
 
 test:
-	pipenv run py.test -rf -s --cov=lifelines -vv --block=False --cov-report term-missing
+	py.test -rf -s --cov=lifelines -vv --block=False --cov-report term-missing
 
 lint:
 ifeq ($(TRAVIS_PYTHON_VERSION), 2.7)
@@ -21,7 +24,3 @@ ifeq ($(TRAVIS_PYTHON_VERSION), 3.6)
 else
 		echo "Only check format on Python3.6"
 endif
-
-update_reqs:
-	pipenv lock -r > requirements.txt
-	pipenv lock -r --dev > dev-requirements.txt

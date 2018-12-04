@@ -1,0 +1,3 @@
+python-coveralls
+seaborn
+-r dev-requirements.txt
