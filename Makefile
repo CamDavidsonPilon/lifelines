@@ -3,6 +3,7 @@ ifeq ($(TRAVIS), true)
 		pip install -r reqs/travis-requirements.txt
 else
 		pip install -r reqs/dev-requirements.txt
+		pre-commit install
 endif
 
 test:
