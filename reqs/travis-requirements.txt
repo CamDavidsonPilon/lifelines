@@ -1,3 +1,4 @@
 python-coveralls
 seaborn
+pytest-travis-fold
 -r dev-requirements.txt

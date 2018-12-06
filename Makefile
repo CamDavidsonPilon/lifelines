@@ -7,7 +7,7 @@ else
 endif
 
 test:
-	py.test -rf -s --cov=lifelines -vv --block=False --cov-report term-missing
+	py.test -rfs --cov=lifelines --block=False --cov-report term-missing
 
 lint:
 ifeq ($(TRAVIS_PYTHON_VERSION), 2.7)

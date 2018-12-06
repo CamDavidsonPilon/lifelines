@@ -4,4 +4,5 @@ coverage>=4.4
 pytest-cov
 pypandoc
 prospector[with_pyroma]
+pre-commit
 black;python_version > '3.5'
