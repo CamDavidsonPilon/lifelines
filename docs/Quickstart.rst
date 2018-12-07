@@ -14,16 +14,16 @@ Installation
 
 Install via ``pip`` (see `its documentation <https://pip.pypa.io/en/stable/installing>`_ if it is not yet installed on your system):
 
-.. code:: 
+.. code::
 
-    pip install lifelines 
+    pip install lifelines
 
 
 
 Kaplan-Meier and Nelson-Aalen
 -----------------------------
 
-Let's start by importing some data. We need the durations that individuals are observed for, and whether they "died" or not. 
+Let's start by importing some data. We need the durations that individuals are observed for, and whether they "died" or not.
 
 .. code:: python
 
@@ -43,9 +43,9 @@ Let's start by importing some data. We need the durations that individuals are o
     T = df['T']
     E = df['E']
 
-``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed (alternatively an individual can be censored). 
+``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed (alternatively an individual can be censored).
 
-.. note:: By default, *lifelines* assumes all "deaths" are observed. 
+.. note:: By default, *lifelines* assumes all "deaths" are observed.
 
 
 .. code:: python
@@ -54,10 +54,10 @@ Let's start by importing some data. We need the durations that individuals are o
     kmf = KaplanMeierFitter()
     kmf.fit(T, event_observed=E)  # or, more succiently, kmf.fit(T, E)
 
-After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Panda's internal plotting library. 
+After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Panda's internal plotting library.
 
 .. code:: python
-    
+
     kmf.survival_function_
     kmf.median_
     kmf.plot()
@@ -70,7 +70,7 @@ Multiple groups
 ^^^^^^^^^^^^^^^
 
 .. code:: python
-    
+
     groups = df['group']
     ix = (groups == 'miR-137')
 
@@ -80,7 +80,7 @@ Multiple groups
     kmf.fit(T[ix], E[ix], label='miR-137')
     kmf.plot(ax=ax)
 
-.. image:: images/quickstart_multi.png   
+.. image:: images/quickstart_multi.png
 
 
 Similar functionality exists for the ``NelsonAalenFitter``:
@@ -91,9 +91,9 @@ Similar functionality exists for the ``NelsonAalenFitter``:
     naf = NelsonAalenFitter()
     naf.fit(T, event_observed=E)
 
-but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` is. 
+but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` is.
 
-.. note:: Similar to `Scikit-Learn <http://scikit-learn.org>`_, all statistically estimated quantities append an underscore to the property name. 
+.. note:: Similar to `Scikit-Learn <http://scikit-learn.org>`_, all statistically estimated quantities append an underscore to the property name.
 
 Getting Data in The Right Format
 --------------------------------
@@ -105,11 +105,11 @@ Often you'll have data that looks like:
 Lifelines has some utility functions to transform this dataset into duration and censorship vectors:
 
 .. code:: python
-    
+
     from lifelines.utils import datetimes_to_durations
 
     # start_times is a vector of datetime objects
-    # end_times is a vector of (possibly missing) datetime objects. 
+    # end_times is a vector of (possibly missing) datetime objects.
     T, E = datetimes_to_durations(start_times, end_times, freq='h')
 
 
@@ -117,7 +117,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
 
 
 .. code:: python
-    
+
     from lifelines.utils import survival_table_from_events
 
     table = survival_table_from_events(T, E)
@@ -140,17 +140,17 @@ Survival Regression
 While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter`` and ``CoxPHFitter``.
 
 .. code:: python
-    
+
     from lifelines.datasets import load_regression_dataset
     regression_dataset = load_regression_dataset()
 
     regression_dataset.head()
 
 
-The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorships and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``. 
+The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorships and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``.
 
 .. code:: python
-    
+
     from lifelines import CoxPHFitter
 
     # Using Cox Proportional Hazards model
@@ -183,7 +183,7 @@ The input of the ``fit`` method's API in a regression is different. All the data
 .. image:: http://i.imgur.com/ko1tzcCl.png
 
 
-If we focus on Aalen's Additive model, 
+If we focus on Aalen's Additive model,
 
 .. code:: python
 
@@ -196,11 +196,11 @@ If we focus on Aalen's Additive model,
 Like ``CoxPHFitter``, after fitting you'll have access to properties like ``cumulative_hazards_`` and methods like ``plot``, ``predict_cumulative_hazards``, and ``predict_survival_function``. The latter two methods require an additional argument of individual covariates:
 
 .. code:: python
-    
-    X = regression_dataset.drop(['E', 'T'], axis=1)
-    aaf.predict_survival_function(X.iloc[10:12]).plot()  # get the unique survival functions of two subjects 
 
-.. image:: images/quickstart_predict_aaf.png  
+    X = regression_dataset.drop(['E', 'T'], axis=1)
+    aaf.predict_survival_function(X.iloc[10:12]).plot()  # get the unique survival functions of two subjects
+
+.. image:: images/quickstart_predict_aaf.png
 
 Like the above estimators, there is also a built-in plotting method:
 
@@ -208,4 +208,4 @@ Like the above estimators, there is also a built-in plotting method:
 
     aaf.plot()
 
-.. image:: images/quickstart_aaf.png  
+.. image:: images/quickstart_aaf.png

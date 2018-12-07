@@ -4,3 +4,14 @@ build
 dist
 *.egg-info
 *.iml
+
+# IDE files
+\.vscode/
+
+# testing artifacts
+\.coverage
+\.pytest_cache/
+
+# pipenv files
+Pipfile
+Pipfile.lock

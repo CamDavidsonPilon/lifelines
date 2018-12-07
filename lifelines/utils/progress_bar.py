@@ -12,12 +12,11 @@ from __future__ import print_function
 import sys
 import time
 
-__all__ = ['progress_bar']
+__all__ = ["progress_bar"]
 
 
 class ProgressBar(object):
-
-    def __init__(self, iterations, animation_interval=.5):
+    def __init__(self, iterations, animation_interval=0.5):
         self.iterations = iterations
         self.start = time.time()
         self.last = 0
@@ -38,9 +37,8 @@ class ProgressBar(object):
 
 
 class TextProgressBar(ProgressBar):
-
     def __init__(self, iterations, printer):
-        self.fill_char = '-'
+        self.fill_char = "-"
         self.width = 40
         self.printer = printer
 
@@ -58,32 +56,32 @@ class TextProgressBar(ProgressBar):
         all_full = self.width - 2
         num_hashes = int(percent / 100 * all_full)
 
-        bar = self.fill_char * num_hashes + ' ' * (all_full - num_hashes)
+        bar = self.fill_char * num_hashes + " " * (all_full - num_hashes)
 
-        info = '%d%%' % percent
+        info = "%d%%" % percent
         loc = (len(bar) - len(info)) // 2
         return replace_at(bar, info, loc, loc + len(info))
 
 
-def replace_at(str, new, start, stop):
-    return str[:start] + new + str[stop:]
+def replace_at(a_str, new, start, stop):
+    return a_str[:start] + new + a_str[stop:]
 
 
 def consoleprint(s):
-    if sys.platform.lower().startswith('win'):
-        print(s, '\r', end='')
+    if sys.platform.lower().startswith("win"):
+        print(s, "\r", end="")
     else:
         print(s)
 
 
 def ipythonprint(s):
-    print('\r', s, end='')
+    print("\r", s, end="")
     sys.stdout.flush()
 
 
 def run_from_ipython():
     try:
-        __IPYTHON__
+        __IPYTHON__  # pylint: disable=pointless-statement
         return True
     except NameError:
         return False
@@ -92,5 +90,4 @@ def run_from_ipython():
 def progress_bar(iters):
     if run_from_ipython():
         return TextProgressBar(iters, ipythonprint)
-    else:
-        return TextProgressBar(iters, consoleprint)
+    return TextProgressBar(iters, consoleprint)

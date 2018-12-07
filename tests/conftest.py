@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 import numpy as np
 import pytest
@@ -10,8 +11,7 @@ def pytest_runtest_setup(item):
 
 
 def pytest_addoption(parser):
-    parser.addoption("--block", action="store", default=True,
-                     help="Should plotting block or not.")
+    parser.addoption("--block", action="store", default=True, help="Should plotting block or not.")
 
 
 @pytest.fixture

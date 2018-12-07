@@ -1,0 +1,47 @@
+strictness: medium
+
+pylint:
+  options:
+    bad-names: foo,baz,toto,tutu,tata
+    # max-args default = 5
+    max-args: 7
+    # max-locals default = 15
+    max-locals: 16
+    # max-branches default = 15
+    max-branches: 15
+  disable:
+    - line-too-long
+    - protected-access
+    # remove these ASAP
+    - unused-import
+    - unused-variable
+    - unused-argument
+    - unused-wildcard-import
+    # remove if python2.7 support is dropped
+    - useless-object-inheritance
+    - old-style-class
+
+pyflakes:
+  disable:
+    - F401
+    - F841
+    # let pylint used-before-assignment handle this
+    - F821
+
+pep8:
+  options:
+    max-line-length: 100
+  disable:
+    - E501
+    - E241
+
+mccabe:
+  options:
+    # max-complexity default = 10
+    max-complexity: 20
+
+pyroma:
+  run: true
+
+pep257:
+  run: false

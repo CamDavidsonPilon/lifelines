@@ -37,7 +37,7 @@ the effectiveness of improving lifetimes after only a few years, or months possi
 
 The individuals in a population who have not been subject to the death
 event are labeled as *right-censored*, i.e.,
-we did not (or can not) view the rest of their life history 
+we did not (or can not) view the rest of their life history
 due to some external circumstances. All the information we have on
 these individuals are their current lifetime durations (which is
 naturally *less* than their actual lifetimes).
@@ -57,16 +57,16 @@ situation.
 
 .. code:: python
 
-    
+
     from lifelines.plotting import plot_lifetimes
     from numpy.random import uniform, exponential
-    
+
     N = 25
     current_time = 10
     actual_lifetimes = np.array([[exponential(12), exponential(2)][uniform() < 0.5] for i in range(N)])
     observed_lifetimes = np.minimum(actual_lifetimes, current_time)
     observed = actual_lifetimes < current_time
-    
+
     plt.xlim(0, 25)
     plt.vlines(10, 0, 30, lw=2, linestyles='--')
     plt.xlabel("time")
@@ -135,10 +135,10 @@ Survival function
 Let :math:`T` be a (possibly infinite, but always non-negative) random
 lifetime taken from the population under study. For example, the
 amount of time a couple is married. Or the time it takes a user to enter
-a webpage (an infinite time if they never do). The survival function - 
+a webpage (an infinite time if they never do). The survival function -
 :math:`S(t)` - of a population is defined as
 
-.. math::  S(t) = Pr( T > t) 
+.. math::  S(t) = Pr( T > t)
 
 In plain English: the survival function defines the probability the death event has not occured yet at time
 :math:`t`, or equivalently, the probability of surviving past time
@@ -156,13 +156,13 @@ Hazard curve
 We are also interested in the probability of the death event occurring at time :math:`t`,
 given that the death event has not occurred until time :math:`t`. Mathematically, that is:
 
-.. math::  \lim_{\delta t \rightarrow 0 } \; Pr( t \le T \le t + \delta t | T > t) 
+.. math::  \lim_{\delta t \rightarrow 0 } \; Pr( t \le T \le t + \delta t | T > t)
 
 This quantity goes to 0 as :math:`\delta t` shrinks, so we divide this
 by the interval :math:`\delta t` (like we might do in calculus). This
 defines the hazard function at time :math:`t`, :math:`\lambda(t)`:
 
-.. math:: \lambda(t) =  \lim_{\delta t \rightarrow 0 } \; \frac{Pr( t \le T \le t + \delta t | T > t)}{\delta t} 
+.. math:: \lambda(t) =  \lim_{\delta t \rightarrow 0 } \; \frac{Pr( t \le T \le t + \delta t | T > t)}{\delta t}
 
 It can be shown with quite elementary probability that this is equal to:
 

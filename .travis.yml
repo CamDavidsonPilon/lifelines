@@ -1,4 +1,5 @@
 language: python
+cache: pip
 dist: trusty
 python:
    - "2.7"
@@ -7,20 +8,25 @@ python:
    - "3.6"
 # Enable newer 3.7 without globally enabling sudo and dist: xenial for other build jobs
 matrix:
+  allow_failures:
+    - python: "3.4"
   include:
     - python: 3.7
       dist: xenial
       sudo: true
 before_install:
-  - sudo apt-get update
-install:
-  - "pip install -r dev-requirements.txt"
-  - "pip install python-coveralls 'coverage>=4.4' pytest-cov seaborn"
-# command to run tests
+  - ls
+  # - sudo apt-get update
+install: "make"
 script:
-  - py.test -s --cov=lifelines -vv --block=False --cov-report term-missing
+  # enforce coding standards
+  - make lint
+  # enforce formatting
+  - make check_format
+  # command to run tests
+  - make test
 after_success:
-  coveralls
+  - coveralls
 # Don't want notifications
 notifications:
   email: false

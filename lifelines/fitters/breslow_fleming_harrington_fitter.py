@@ -23,8 +23,16 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
     """
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None,
-            label='BFH_estimate', alpha=None, ci_labels=None):
+    def fit(
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        entry=None,
+        label="BFH_estimate",
+        alpha=None,
+        ci_labels=None,
+    ):  # pylint: disable=too-many-arguments
         """
         Parameters:
           duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -49,9 +57,21 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         alpha = alpha if alpha is not None else self.alpha
 
         naf = NelsonAalenFitter(alpha)
-        naf.fit(durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels)
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = \
-            naf.durations, naf.event_observed, naf.timeline, naf.entry, naf.event_table
+        naf.fit(
+            durations,
+            event_observed=event_observed,
+            timeline=timeline,
+            label=label,
+            entry=entry,
+            ci_labels=ci_labels,
+        )
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = (
+            naf.durations,
+            naf.event_observed,
+            naf.timeline,
+            naf.entry,
+            naf.event_table,
+        )
 
         # estimation
         self.survival_function_ = np.exp(-naf.cumulative_hazard_)
@@ -67,5 +87,3 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         # plotting functions
         self.plot_survival_function = self.plot
         return self
-
-    
