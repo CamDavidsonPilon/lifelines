@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
+import warnings
 import numpy as np
 from lifelines.utils import coalesce
 
@@ -168,45 +168,49 @@ def add_at_risk_counts(*fitters, **kwargs):
     return ax
 
 
-def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None, order=False, block=True):
+
+def plot_lifetimes(duration, event_observed=None, entry=None, sort_by_duration=False, event_observed_color="#A60628", event_censored_color="#348ABD", **kwargs):
     """
     Parameters:
-      lifetimes: an (n,) numpy array of lifetimes.
+      duration: an array, or pd.Series, of length n -- duration subject was observed for
       event_observed: an (n,) numpy array of booleans: True if event observed, else False.
-      birthtimes: an (n,) numpy array offsetting the births away from t=0.
+      entry: an (n,) numpy array offsetting the births away from t=0.
+      sort_by_duration: sort by the duration vector
 
 
-    Creates a lifetime plot, see
-    examples:
+    Retuns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#censorship
 
     """
     from matplotlib import pyplot as plt
 
-    N = lifetimes.shape[0]
+    set_kwargs_ax(kwargs)
+    ax = kwargs['ax']
+
+    N = duration.shape[0]
     if N > 100:
-        print("warning: you may want to subsample to less than 100 individuals.")
+        warnings.warn("For less visual clutter, you may want to subsample to less than 100 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
 
-    if birthtimes is None:
-        birthtimes = np.zeros(N)
+    if entry is None:
+        entry = np.zeros(N)
 
-    if order:
-        # order by length of lifetimes; probably not very informative.
+    if sort_by_duration:
+        """order by length of lifetimes; probably not very informative."""
         ix = np.argsort(lifetimes, 0)
-        lifetimes = lifetimes[ix, 0]
+        duration = duration[ix, 0]
         event_observed = event_observed[ix, 0]
-        birthtimes = birthtimes[ix]
+        entry = entry[ix]
 
     for i in range(N):
-        c = "#A60628" if event_observed[i] else "#348ABD"
-        plt.hlines(N - 1 - i, birthtimes[i], birthtimes[i] + lifetimes[i], color=c, lw=3)
-        m = "|" if not event_observed[i] else "o"
-        plt.scatter((birthtimes[i]) + lifetimes[i], N - 1 - i, color=c, s=30, marker=m)
+        c = event_observed_color if event_observed[i] else event_censored_color
+        ax.hlines(N - 1 - i, entry[i], entry[i] + duration[i], color=c, lw=3)
+        m = "|" if not event_observed[i] else 'o'
+        ax.scatter((entry[i]) + duration[i], N - 1 - i, color=c, s=30, marker=m)
 
-    plt.ylim(-0.5, N)
-    plt.show(block=block)
+    ax.set_ylim(-0.5, N)
+    return ax
 
 
 def set_kwargs_ax(kwargs):

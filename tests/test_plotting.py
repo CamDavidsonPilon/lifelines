@@ -151,22 +151,27 @@ class TestPlotting:
         return
 
     def test_plot_lifetimes_calendar(self, block):
-        self.plt.figure()
         t = np.linspace(0, 20, 1000)
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
         N = 20
         current = 10
         birthtimes = current * np.random.uniform(size=(N,))
         T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
-        plot_lifetimes(T, event_observed=C, birthtimes=birthtimes, block=block)
+        ax = plot_lifetimes(T, event_observed=C, entry=birthtimes)
+        assert ax is not None
+        self.plt.title("test_plot_lifetimes_calendar")
+        self.plt.show(block=block)
+
 
     def test_plot_lifetimes_relative(self, block):
-        self.plt.figure()
         t = np.linspace(0, 20, 1000)
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
         N = 20
         T, C = generate_random_lifetimes(hz, t, size=N, censor=True)
-        plot_lifetimes(T, event_observed=C, block=block)
+        ax = plot_lifetimes(T, event_observed=C)
+        assert ax is not None
+        self.plt.title("test_plot_lifetimes_relative")
+        self.plt.show(block=block)
 
     def test_naf_plot_cumulative_hazard(self, block):
         data1 = np.random.exponential(5, size=(200, 1))
