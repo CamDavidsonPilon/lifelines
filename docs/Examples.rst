@@ -222,9 +222,9 @@ If you have a pandas `DataFrame` with columns "group", "T", and "E", then someth
     ax = plt.subplot(111)
 
     kmf = KaplanMeierFitter()
-    for group in df['group'].unique():
-        data = grouped_data.get_group(group)
-        kmf.fit(data["T"], data["E"], label=group)
+
+    for name, grouped_df in df.groupby('group'):
+        kmf.fit(grouped_df["T"], grouped_df["E"], label=name)
         kmf.plot(ax=ax)
 
 
