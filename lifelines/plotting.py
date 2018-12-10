@@ -217,9 +217,7 @@ def set_kwargs_ax(kwargs):
 
 
 def set_kwargs_color(kwargs):
-    kwargs["c"] = coalesce(
-        kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color()
-    )
+    kwargs["c"] = coalesce(kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color())
 
 
 def set_kwargs_drawstyle(kwargs):
@@ -228,9 +226,7 @@ def set_kwargs_drawstyle(kwargs):
 
 def create_dataframe_slicer(iloc, loc):
     user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
-    user_submitted_slice = (
-        slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
-    )
+    user_submitted_slice = slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
 
     get_method = "loc" if loc is not None else "iloc"
     return lambda df: getattr(df, get_method)[user_submitted_slice]
@@ -264,9 +260,7 @@ def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(censor_styles)
-        times = dataframe_slicer(
-            cls.event_table.loc[(cls.event_table["censored"] > 0)]
-        ).index.values.astype(float)
+        times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
         # don't log times, as Pandas will take care of all log-scaling later.
         ax.plot(times, loglog(v), linestyle="None", color=colour, **cs)
@@ -293,7 +287,7 @@ def plot_estimate(
     invert_y_axis=False,
     bandwidth=None,
     **kwargs
-):  # pylint: disable=too-many-arguments,too-many-locals
+):
 
     """"
     Plots a pretty figure of {0}.{1}
@@ -344,9 +338,7 @@ def plot_estimate(
         if bandwidth is None:
             raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard.")
         estimate_ = cls.smoothed_hazard_(bandwidth)
-        confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(
-            bandwidth, hazard_=estimate_.values[:, 0]
-        )
+        confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:, 0])
     else:
         estimate_ = getattr(cls, estimate)
         confidence_interval_ = getattr(cls, "confidence_interval_")
@@ -360,9 +352,7 @@ def plot_estimate(
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(censor_styles)
-        times = dataframe_slicer(
-            cls.event_table.loc[(cls.event_table["censored"] > 0)]
-        ).index.values.astype(float)
+        times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
         ax.plot(times, v, linestyle="None", color=colour, **cs)
 
@@ -385,9 +375,7 @@ def plot_estimate(
             x = dataframe_slicer(confidence_interval_).index.values.astype(float)
             lower = dataframe_slicer(confidence_interval_.filter(like="lower")).values[:, 0]
             upper = dataframe_slicer(confidence_interval_.filter(like="upper")).values[:, 0]
-            fill_between_steps(
-                x, lower, y2=upper, ax=ax, alpha=ci_alpha, color=colour, linewidth=1.0
-            )
+            fill_between_steps(x, lower, y2=upper, ax=ax, alpha=ci_alpha, color=colour, linewidth=1.0)
 
     if at_risk_counts:
         add_at_risk_counts(cls, ax=ax)

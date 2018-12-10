@@ -2,21 +2,16 @@ strictness: medium
 
 pylint:
   options:
-    bad-names: foo,baz,toto,tutu,tata
+    bad-names: foo,baz,toto,tutu,tata,data
     # max-args default = 5
-    max-args: 7
+    max-args: 15
     # max-locals default = 15
-    max-locals: 16
+    max-locals: 50
     # max-branches default = 15
     max-branches: 15
   disable:
     - line-too-long
     - protected-access
-    # remove these ASAP
-    - unused-import
-    - unused-variable
-    - unused-argument
-    - unused-wildcard-import
     # remove if python2.7 support is dropped
     - useless-object-inheritance
     - old-style-class
@@ -30,7 +25,7 @@ pyflakes:
 
 pep8:
   options:
-    max-line-length: 100
+    max-line-length: 120
   disable:
     - E501
     - E241

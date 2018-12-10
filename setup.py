@@ -37,7 +37,5 @@ setup(
         "Topic :: Scientific/Engineering",
     ],
     install_requires=["numpy", "scipy>=1.0", "pandas>=0.18", "matplotlib>=2.0"],
-    package_data={
-        "lifelines": ["../README.md", "../README.txt", "../LICENSE", "../MANIFEST.in", "datasets/*"]
-    },
+    package_data={"lifelines": ["../README.md", "../README.txt", "../LICENSE", "../MANIFEST.in", "datasets/*"]},
 )

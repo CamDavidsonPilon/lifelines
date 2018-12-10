@@ -215,9 +215,7 @@ class TestPlotting:
     def test_flat_style_with_customer_censor_styles(self, block, kmf):
         data1 = np.random.exponential(10, size=200)
         kmf.fit(data1, label="test label 1")
-        kmf.plot(
-            ci_force_lines=True, show_censors=True, censor_styles={"marker": "+", "mew": 2, "ms": 7}
-        )
+        kmf.plot(ci_force_lines=True, show_censors=True, censor_styles={"marker": "+", "mew": 2, "ms": 7})
         self.plt.title("test_flat_style_no_censor")
         self.plt.show(block=block)
         return

@@ -45,7 +45,6 @@ class ExponentialFitter(UnivariateFitter):
         durations,
         event_observed=None,
         timeline=None,
-        entry=None,
         label="Exponential_estimate",
         alpha=None,
         ci_labels=None,
@@ -56,9 +55,6 @@ class ExponentialFitter(UnivariateFitter):
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
@@ -76,9 +72,7 @@ class ExponentialFitter(UnivariateFitter):
 
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = (
-            np.asarray(event_observed, dtype=int)
-            if event_observed is not None
-            else np.ones_like(self.durations)
+            np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
         self.timeline = (
             np.sort(np.asarray(timeline))
@@ -118,10 +112,7 @@ class ExponentialFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
 
         if ci_labels is None:
-            ci_labels = [
-                "%s_upper_%.2f" % (self._label, alpha),
-                "%s_lower_%.2f" % (self._label, alpha),
-            ]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         std = np.sqrt(self._lambda_variance_)
@@ -179,9 +170,7 @@ class ExponentialFitter(UnivariateFitter):
         justify = string_justify(18)
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
-        print(
-            "{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0])
-        )
+        print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood), end="\n\n")
 
         df = self.summary

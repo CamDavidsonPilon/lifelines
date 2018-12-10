@@ -13,10 +13,7 @@ def test_sample_size_necessary_under_cph():
     assert stats.sample_size_necessary_under_cph(0.8, 1, 0.8, 0.2, 0.139) == (14, 14)
     assert stats.sample_size_necessary_under_cph(0.8, 1, 0.5, 0.5, 1.2) == (950, 950)
     assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2) == (1231, 821)
-    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2, alpha=0.01) == (
-        1832,
-        1221,
-    )
+    assert stats.sample_size_necessary_under_cph(0.8, 1.5, 0.5, 0.5, 1.2, alpha=0.01) == (1832, 1221)
 
 
 def test_power_under_cph():
@@ -50,9 +47,7 @@ def test_logrank_test_output_against_R_2():
     treatment_T = [6, 6, 6, 7, 10, 13, 16, 22, 23, 6, 9, 10, 11, 17, 19, 20, 25, 32, 32, 34, 25]
     treatment_E = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-    result = stats.logrank_test(
-        control_T, treatment_T, event_observed_A=control_E, event_observed_B=treatment_E
-    )
+    result = stats.logrank_test(control_T, treatment_T, event_observed_A=control_E, event_observed_B=treatment_E)
     expected_p_value = 4.17e-05
 
     assert abs(result.p_value - expected_p_value) < 0.0001
@@ -100,9 +95,7 @@ def test_rank_test_output_against_R_with_censorship():
     > treatment <- c(1,1,1,0,0,0)
     > survdiff(Surv(time, status) ~ treatment)
     """
-    result = stats.multivariate_logrank_test(
-        [10, 20, 30, 10, 20, 50], [1, 1, 1, 0, 0, 0], [1, 0, 1, 1, 0, 1]
-    )
+    result = stats.multivariate_logrank_test([10, 20, 30, 10, 20, 50], [1, 1, 1, 0, 0, 0], [1, 0, 1, 1, 0, 1])
     r_p_value = 0.535143
     r_stat = 0.384615
     assert abs(result.p_value - r_p_value) < 10e-6

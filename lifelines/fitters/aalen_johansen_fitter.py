@@ -40,7 +40,7 @@ class AalenJohansenFitter(UnivariateFitter):
         alpha=None,
         ci_labels=None,
         weights=None,
-    ):  # pylint: disable=too-many-arguments,too-many-locals
+    ):
         """
         Parameters:
           durations: an array or pd.Series of length n -- duration of subject was observed for
@@ -94,13 +94,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
         # Fitting Kaplan-Meier for either event of interest OR competing risk
         km = KaplanMeierFitter()
-        km.fit(
-            durations,
-            event_observed=event_observed,
-            timeline=timeline,
-            entry=entry,
-            weights=weights,
-        )
+        km.fit(durations, event_observed=event_observed, timeline=timeline, entry=entry, weights=weights)
         aj = km.event_table
         aj["overall_survival"] = km.survival_function_
         aj["lagged_overall_survival"] = aj["overall_survival"].shift()
@@ -108,20 +102,14 @@ class AalenJohansenFitter(UnivariateFitter):
         # Setting up table for calculations and to return to user
         event_spec = np.where(pd.Series(event_observed) == event_of_interest, 1, 0)
         event_spec_proc = _preprocess_inputs(
-            durations=durations,
-            event_observed=event_spec,
-            timeline=timeline,
-            entry=entry,
-            weights=weights,
+            durations=durations, event_observed=event_spec, timeline=timeline, entry=entry, weights=weights
         )
         event_spec_times = event_spec_proc[-1]["observed"]
         event_spec_times = event_spec_times.rename(self.label_cmprisk)
         aj = pd.concat([aj, event_spec_times], axis=1).reset_index()
 
         # Estimator of Cumulative Incidence (Density) Function
-        aj[cmprisk_label] = (
-            (aj[self.label_cmprisk]) / (aj["at_risk"]) * aj["lagged_overall_survival"]
-        ).cumsum()
+        aj[cmprisk_label] = ((aj[self.label_cmprisk]) / (aj["at_risk"]) * aj["lagged_overall_survival"]).cumsum()
         aj.loc[0, cmprisk_label] = 0  # Setting initial CIF to be zero
         aj = aj.set_index("event_at")
 
@@ -147,9 +135,7 @@ class AalenJohansenFitter(UnivariateFitter):
         """Determine extent to jitter tied event times. Automatically called by fit if tied event times are detected
         """
         if jitter_level <= 0:
-            raise ValueError(
-                "The jitter level is less than zero, please select a jitter value greater than 0"
-            )
+            raise ValueError("The jitter level is less than zero, please select a jitter value greater than 0")
         if seed is not None:
             np.random.seed(seed)
 
@@ -164,9 +150,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
         # Recursive call if event times are still tied after jitter
         if np.sum(event_time.duplicated()) > 0:
-            return self._jitter(
-                durations=durations_jitter, event=event, jitter_level=jitter_level, seed=seed
-            )
+            return self._jitter(durations=durations_jitter, event=event, jitter_level=jitter_level, seed=seed)
         return durations_jitter
 
     def _bounds(self, lagged_survival, alpha, ci_labels):
@@ -189,15 +173,12 @@ class AalenJohansenFitter(UnivariateFitter):
         df["Ft"] = self.cumulative_density_
         df["lagS"] = lagged_survival.fillna(1)
         if ci_labels is None:
-            ci_labels = [
-                "%s_upper_%.2f" % (self._predict_label, alpha),
-                "%s_lower_%.2f" % (self._predict_label, alpha),
-            ]
+            ci_labels = ["%s_upper_%.2f" % (self._predict_label, alpha), "%s_lower_%.2f" % (self._predict_label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         # Have to loop through each time independently. Don't think there is a faster way
         all_vars = []
-        for i, r in df.iterrows():
+        for _, r in df.iterrows():
             sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
             sf["part1"] = ((F_t - sf["Ft"]) ** 2) * (
@@ -209,9 +190,7 @@ class AalenJohansenFitter(UnivariateFitter):
                 * ((sf["at_risk"] - sf[self.label_cmprisk]))
                 / (sf["at_risk"] ** 3)
             )
-            sf["part3"] = (
-                (F_t - sf["Ft"]) * sf["lagS"] * (sf[self.label_cmprisk] / (sf["at_risk"] ** 2))
-            )
+            sf["part3"] = (F_t - sf["Ft"]) * sf["lagS"] * (sf[self.label_cmprisk] / (sf["at_risk"] ** 2))
             variance = (np.sum(sf["part1"])) + (np.sum(sf["part2"])) - 2 * (np.sum(sf["part3"]))
             all_vars.append(variance)
         df["variance"] = all_vars
