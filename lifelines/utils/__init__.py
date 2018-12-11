@@ -1297,13 +1297,6 @@ def add_covariate_to_timeline(
     def transform_cv_to_long_format(cv):
         return cv.rename(columns={duration_col: "start"})
 
-    def construct_new_timeline(original_timeline, additional_timeline, final_stop_time):
-        if additional_timeline.min() < original_timeline.min():
-            warning_text = "There exists at least one row in the covariates dataset that is before the earlist \
-known observation. This could case null values in the resulting dataframe."
-            warnings.warn(warning_text, RuntimeWarning)
-        return np.sort(original_timeline.append(additional_timeline).unique())
-
     def expand(df, cvs):
         id_ = df.name
         try:

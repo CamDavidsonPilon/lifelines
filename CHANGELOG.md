@@ -1,5 +1,9 @@
 ### Changelogs
 
+#### 0.15.2
+ - API changes to `plotting.plot_lifetimes`
+ - `cluster_col` and `strata` can be used together in `CoxPHFitter`
+
 #### 0.15.1
  - Bug fixes for v0.15.0
  - Raise NotImplementedError if the `robust` flag is used in `CoxTimeVaryingFitter` - that's not ready yet.

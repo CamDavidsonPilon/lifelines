@@ -50,10 +50,16 @@ right-censored individuals. We shall see why this is a mistake next:
 Consider a case where the population is actually made up of two
 subpopulations, :math:`A` and :math:`B`. Population :math:`A` has a very
 small lifespan, say 2 months on average, and population :math:`B`
-enjoys a much larger lifespan, say 12 months on average. We might
+enjoys a much larger lifespan, say 12 months on average. We may
 not know this distinction before hand. At :math:`t=10`, we
-wish to investigate the average lifespan. Below is an example of such a
-situation.
+wish to investigate the average lifespan for everyone. 
+
+In the figure below, the red lines denote the lifespan of individuals where the death event
+has been observed, and the blue lines denote the lifespan of the
+right-censored individuals (deaths have not been observed). If we are
+asked to estimate the average lifetime of our population, and we naively
+decided to *not* included the right-censored individuals, it is clear
+that we would be serverly underestimating the true average lifespan.
 
 .. code:: python
 
@@ -62,17 +68,22 @@ situation.
     from numpy.random import uniform, exponential
 
     N = 25
-    current_time = 10
-    actual_lifetimes = np.array([[exponential(12), exponential(2)][uniform() < 0.5] for i in range(N)])
-    observed_lifetimes = np.minimum(actual_lifetimes, current_time)
-    observed = actual_lifetimes < current_time
 
-    plt.xlim(0, 25)
-    plt.vlines(10, 0, 30, lw=2, linestyles='--')
-    plt.xlabel("time")
-    plt.title("Births and deaths of our population, at $t=10$")
-    plot_lifetimes(observed_lifetimes, event_observed=observed)
-    print("Observed lifetimes at time %d:\n" % (current_time), observed_lifetimes)
+    CURRENT_TIME = 10
+    
+    actual_lifetimes = np.array([
+        exponential(12) if (uniform() < 0.5) else exponential(2) for i in range(N)
+    ])
+    observed_lifetimes = np.minimum(actual_lifetimes, CURRENT_TIME)
+    death_observed = actual_lifetimes < CURRENT_TIME
+
+    ax = plot_lifetimes(observed_lifetimes, event_observed=death_observed)
+    
+    ax.set_xlim(0, 25)
+    ax.vlines(10, 0, 30, lw=2, linestyles='--')
+    ax.set_xlabel("time")
+    ax.set_title("Births and deaths of our population, at $t=10$")
+    print("Observed lifetimes at time %d:\n" % (CURRENT_TIME), observed_lifetimes)
 
 
 .. image:: images/survival_analysis_intro_censorship.png
@@ -81,17 +92,10 @@ situation.
 .. parsed-literal::
 
     Observed lifetimes at time 10:
-    [ 10.     1.1    8.    10.     3.43   0.63   6.28   1.03   2.37   6.17  10.
-       0.21   2.71   1.25  10.     3.4    0.62   1.94   0.22   7.43   6.16  10.
-       9.41  10.    10.  ]
+    [  10.   1.1   8.   10.  3.43   0.63   6.28   1.03   2.37   6.17  10.
+       0.21   2.71   1.25  10.   3.4  0.62   1.94   0.22   7.43   6.16  10.
+       9.41  10.  10.]
 
-
-The red lines denote the lifespan of individuals where the death event
-has been observed, and the blue lines denote the lifespan of the
-right-censored individuals (deaths have not been observed). If we are
-asked to estimate the average lifetime of our population, and we naively
-decided to *not* included the right-censored individuals, it is clear
-that we would be serverly underestimating the true average lifespan.
 
 Furthermore, if we instead simply took the mean of *all* observed
 lifespans, including the current lifespans of right-censored instances,
@@ -101,9 +105,9 @@ information at :math:`t=10`).
 
 .. code:: python
 
-    plt.xlim(0,25)
-    plt.vlines(10, 0, 30, lw=2, linestyles='--')
-    plot_lifetimes(actual_lifetimes, event_observed=observed)
+    ax = plot_lifetimes(actual_lifetimes, event_observed=death_observed)
+    ax.vlines(10, 0, 30, lw=2, linestyles='--')
+    ax.set_xlim(0,25)
 
 
 .. image:: images/survival_analysis_intro_censorship_revealed.png

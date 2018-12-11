@@ -45,7 +45,6 @@ class ExponentialFitter(UnivariateFitter):
         durations,
         event_observed=None,
         timeline=None,
-        entry=None,
         label="Exponential_estimate",
         alpha=None,
         ci_labels=None,
@@ -56,9 +55,6 @@ class ExponentialFitter(UnivariateFitter):
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
