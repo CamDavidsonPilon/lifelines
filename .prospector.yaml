@@ -1,5 +1,6 @@
 strictness: medium
- pylint:
+
+pylint:
   options:
     bad-names: foo,baz,toto,tutu,tata,data
     # max-args default = 5
@@ -14,23 +15,28 @@ strictness: medium
     # remove if python2.7 support is dropped
     - useless-object-inheritance
     - old-style-class
- pyflakes:
+
+pyflakes:
   disable:
     - F401
     - F841
     # let pylint used-before-assignment handle this
     - F821
- pep8:
+
+pep8:
   options:
     max-line-length: 120
   disable:
     - E501
     - E241
- mccabe:
+
+mccabe:
   options:
     # max-complexity default = 10
     max-complexity: 20
- pyroma:
+
+pyroma:
   run: true
- pep257:
+
+pep257:
   run: false

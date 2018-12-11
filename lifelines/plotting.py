@@ -188,8 +188,6 @@ def plot_lifetimes(
     Retuns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#censorship
 
     """
-    from matplotlib import pyplot as plt
-
     set_kwargs_ax(kwargs)
     ax = kwargs["ax"]
 
@@ -204,8 +202,8 @@ def plot_lifetimes(
         entry = np.zeros(N)
 
     if sort_by_duration:
-        """order by length of lifetimes; probably not very informative."""
-        ix = np.argsort(lifetimes, 0)
+        # order by length of lifetimes; probably not very informative.
+        ix = np.argsort(duration, 0)
         duration = duration[ix, 0]
         event_observed = event_observed[ix, 0]
         entry = entry[ix]

@@ -11,7 +11,7 @@ import pandas as pd
 from scipy import stats
 
 from numpy import dot, exp
-from numpy.linalg import solve, norm, inv
+from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
 from lifelines.fitters import BaseFitter
 from lifelines.fitters.coxph_fitter import CoxPHFitter
@@ -23,7 +23,7 @@ from lifelines.utils import (
     significance_codes_as_text,
     pass_for_numeric_dtypes_or_raise,
     check_low_var,
-    check_for_overlapping_intervals,
+    # check_for_overlapping_intervals,
     check_complete_separation_low_variance,
     ConvergenceWarning,
     StepSizer,
@@ -167,56 +167,30 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-    def _compute_sandwich_estimator(self, df, stop_times_events, weights):  # pylint: disable=too-many-locals
+    def _compute_residuals(self, df, stop_times_events, weights):
+        raise NotImplementedError()
 
-        n, d = df.shape
+    def _compute_delta_beta(self, df, stop_times_events, weights):
+        """ approximate change in betas as a result of excluding ith row"""
 
-        # Init risk and tie sums to zero
-        risk_phi = 0
-        risk_phi_x = np.zeros((1, d))
 
-        # need to store these histories, as we access them often
-        risk_phi_history = pd.DataFrame(np.zeros((n,)), index=df.index)
-        risk_phi_x_history = pd.DataFrame(np.zeros((n, d)), index=df.index)
-
-        E = E.astype(int)  # pylint: disable=used-before-assignment
-        score_residuals = np.zeros((n, d))
-        # we already unnormalized the betas in `fit`, so we need normalize them again since X is
-        # normalized.
-        beta = self.hazards_.values[0] * self._norm_std
-
-        # Iterate backwards to utilize recursive relationship
-        for i in range(n - 1, -1, -1):
-            # Doing it like this to preserve shape
-            ei = E[i]
-            xi = X[i : i + 1]  # pylint: disable=undefined-variable
-
-            phi_i = exp(dot(xi, beta))
-            phi_x_i = phi_i * xi
-
-            risk_phi += phi_i
-            risk_phi_x += phi_x_i
-
-            risk_phi_history[i] = risk_phi
-            risk_phi_x_history[i] = risk_phi_x
-
-        # Iterate forwards
-        for i in range(0, n):
-            # Doing it like this to preserve shape
-            xi = X[i : i + 1]  # pylint: disable=undefined-variable
-            phi_i = exp(dot(xi, beta))
-
-            score = -sum(
-                E[j] * weights[j] * phi_i / risk_phi_history[j] * (xi - risk_phi_x_history[j] / risk_phi_history[j])
-                for j in range(0, i + 1)
-            )
-            score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
-            score *= weights[i]
-            score_residuals[i, :] = score
+        score_residuals = (
+            self._compute_residuals(df, stop_times_events, weights) * weights[:, None]
+        )
 
         naive_var = inv(self._hessian_)
-        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
-        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(self._norm_std, self._norm_std)
+        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
+
+        return delta_betas
+
+    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
+
+        delta_betas = self._compute_delta_beta(df, stop_times_events, weights)
+
+        if self.cluster_col:
+            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
+
+        sandwich_estimator = delta_betas.T.dot(delta_betas)
         return sandwich_estimator
 
     def _compute_standard_errors(self, df, stop_times_events, weights):
@@ -283,7 +257,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
         assert precision <= 1.0, "precision must be less than or equal to 1."
 
-        n, d = df.shape
+        _, d = df.shape
 
         # make sure betas are correct size.
         beta = np.zeros((d, 1))

@@ -180,7 +180,7 @@ def group_survival_table_from_events(
     assert n == np.max(birth_times.shape), "inputs must be of the same length."
 
     groups, durations, event_observed, birth_times = [
-        pd.Series(np.asarray(data).reshape(n)) for data in [groups, durations, event_observed, birth_times]
+        pd.Series(np.asarray(vector).reshape(n)) for vector in [groups, durations, event_observed, birth_times]
     ]
     unique_groups = groups.unique()
 
@@ -194,16 +194,16 @@ def group_survival_table_from_events(
             event_name + ":" + group_name for event_name in ["removed", "observed", "censored", "entrance", "at_risk"]
         ]
         if i == 0:
-            data = survival_table_from_events(T, C, B, columns=columns)
+            survival_table = survival_table_from_events(T, C, B, columns=columns)
         else:
-            data = data.join(survival_table_from_events(T, C, B, columns=columns), how="outer")
+            survival_table = survival_table.join(survival_table_from_events(T, C, B, columns=columns), how="outer")
 
-    data = data.fillna(0)
+    survival_table = survival_table.fillna(0)
     # hmmm pandas its too bad I can't do data.loc[:limit] and leave out the if.
     if int(limit) != -1:
-        data = data.loc[:limit]
+        survival_table = survival_table.loc[:limit]
 
-    return (unique_groups, data.filter(like="removed:"), data.filter(like="observed:"), data.filter(like="censored:"))
+    return (unique_groups, survival_table.filter(like="removed:"), survival_table.filter(like="observed:"), survival_table.filter(like="censored:"))
 
 
 def survival_table_from_events(
@@ -561,7 +561,7 @@ def k_fold_cross_validation(
     # Each fitter has its own scores
     fitterscores = [[] for _ in fitters]
 
-    n, d = df.shape
+    n, _ = df.shape
     df = df.copy()
 
     if event_col is None:

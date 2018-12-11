@@ -17,7 +17,7 @@ def must_call_fit_first(func):
     def error_wrapper(*args, **kwargs):
         self = args[0]
         try:
-            estimate = self._estimate_name
+            self._estimate_name
         except AttributeError:
             raise RuntimeError("Must call `fit` first!")
         return func(*args, **kwargs)

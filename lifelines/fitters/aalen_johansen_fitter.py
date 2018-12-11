@@ -178,7 +178,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
         # Have to loop through each time independently. Don't think there is a faster way
         all_vars = []
-        for i, r in df.iterrows():
+        for _, r in df.iterrows():
             sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
             sf["part1"] = ((F_t - sf["Ft"]) ** 2) * (

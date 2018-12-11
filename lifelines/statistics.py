@@ -100,7 +100,7 @@ def logrank_test(
       kwargs: add keywords and meta-data to the experiment summary
 
     Returns:
-      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
+      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic'
 
     See Survival and Event Analysis, page 108.
     """
@@ -204,7 +204,7 @@ def multivariate_logrank_test(
       kwargs: add keywords and meta-data to the experiment summary.
 
     Returns
-      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'test_result'
+      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic'
 
     Example:
 
@@ -271,15 +271,15 @@ def multivariate_logrank_test(
     U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1])).dot(Z_j.iloc[:-1])  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
-    test_result, p_value = chisq_test(U, n_groups - 1, alpha)
+    _, p_value = chisq_test(U, n_groups - 1, alpha)
 
     return StatisticalResult(
-        test_result, p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", df=n_groups - 1, **kwargs
+         p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", df=n_groups - 1, **kwargs
     )
 
 
 class StatisticalResult(object):
-    def __init__(self, test_result, p_value, test_statistic, **kwargs):
+    def __init__(self, p_value, test_statistic, **kwargs):
         self.p_value = p_value
         self.test_statistic = test_statistic
 

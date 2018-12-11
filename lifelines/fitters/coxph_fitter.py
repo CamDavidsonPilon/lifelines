@@ -196,7 +196,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
-            normalize(df, self._norm_mean, self._norm_std), T, E, weights
+            normalize(df, self._norm_mean, self._norm_std), E, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
@@ -514,7 +514,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             columns=self.hazards_.columns,
         )
 
-    def _compute_delta_beta(self, X, T, E, weights):
+    def _compute_delta_beta(self, X, E, weights):
         """ approximate change in betas as a result of excluding ith row"""
 
         _, d = X.shape
@@ -542,9 +542,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return delta_betas
 
-    def _compute_sandwich_estimator(self, X, T, E, weights):
+    def _compute_sandwich_estimator(self, X, E, weights):
 
-        delta_betas = self._compute_delta_beta(X, T, E, weights)
+        delta_betas = self._compute_delta_beta(X, E, weights)
 
         if self.cluster_col:
             delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
@@ -597,9 +597,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return score_residuals
 
-    def _compute_standard_errors(self, df, T, E, weights):
+    def _compute_standard_errors(self, df, E, weights):
         if self.robust or self.cluster_col:
-            se = np.sqrt(self._compute_sandwich_estimator(df, T, E, weights).diagonal())  # / self._norm_std
+            se = np.sqrt(self._compute_sandwich_estimator(df, E, weights).diagonal())  # / self._norm_std
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
