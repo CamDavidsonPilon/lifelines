@@ -104,8 +104,10 @@ def add_at_risk_counts(*fitters, **kwargs):
         # There are equivalent
         add_at_risk_counts(f1, f2)
         add_at_risk_counts(f1, f2, ax=ax, fig=fig)
+        
         # This overrides the labels
         add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
+        
         # This hides the labels
         add_at_risk_counts(f1, f2, labels=None)
     """

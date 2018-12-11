@@ -14,19 +14,55 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     This computes the sample size for needed power to compare two groups under a Cox
     Proportional Hazard model.
 
-    References:
-        https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
+    Parameters
+    ----------
 
-    Parameters:
-        power: power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
-        ratio_of_participants: ratio of participants in experimental group over control group.
-        p_exp: probability of failure in experimental group over period of study.
-        p_con: probability of failure in control group over period of study
-        postulated_hazard_ratio: the postulated hazard ratio
-        alpha: type I error rate
+    power : float
+        power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
+    ratio_of_participants: ratio of participants in experimental group over control group.
+    
+    p_exp : float
+        probability of failure in experimental group over period of study.
+    
+    p_con : float 
+        probability of failure in control group over period of study
+    
+    postulated_hazard_ratio : float 
+        the postulated hazard ratio
+    
+    alpha : float, optional (default=0.05)
+        type I error rate
 
-    Returns:
-        n_exp, n_con: the samples sizes need for the experiment and control group, respectively, to achieve desired power
+
+    Returns
+    -------
+
+    n_exp : integer
+        the samples sizes need for the experiment to achieve desired power
+
+    n_con : integer
+        the samples sizes need for the control group to achieve desired power
+
+
+    Examples
+    --------
+    >>> from lifelines.statistics import sample_size_necessary_under_cph
+    >>> 
+    >>> desired_power = 0.8
+    >>> ratio_of_participants = 1.
+    >>> p_exp = 0.25
+    >>> p_con = 0.35
+    >>> postulated_hazard_ratio = 0.7
+    >>> n_exp, n_con = sample_size_necessary_under_cph(desired_power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio)
+    >>> # (421, 421)
+
+    Notes
+    -----
+    `Reference <https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf>`_.
+
+    See Also
+    --------
+    power_under_cph
     """
 
     def z(p):
@@ -50,20 +86,44 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     This computes the power of the hypothesis test that the two groups, experiment and control,
     have different hazards (that is, the relative hazard ratio is different from 1.)
 
-    References:
-        https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
+    Parameters
+    ----------
 
-    Parameters:
-        n_exp: size of the experiment group.
-        n_con: size of the control group.
-        p_exp: probability of failure in experimental group over period of study.
-        p_con: probability of failure in control group over period of study
-        postulated_hazard_ratio: the postulated hazard ratio
-        alpha: type I error rate
+    n_exp : integer
+        size of the experiment group.
+    
+    n_con : integer
+        size of the control group.
+    
+    p_exp : float
+        probability of failure in experimental group over period of study.
+    
+    p_con : float
+        probability of failure in control group over period of study
+    
+    postulated_hazard_ratio : float 
+    the postulated hazard ratio
+    
+    alpha : float, optional (default=0.05)
+        type I error rate
 
-    Returns:
-        power: power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
+    Returns
+    -------
+
+    power : float
+        power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
+
+
+    Notes
+    -----
+    `Reference <https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf>`_.
+
+
+    See Also
+    --------
+    sample_size_necessary_under_cph
     """
+
 
     def z(p):
         return stats.norm.ppf(p)
@@ -83,28 +143,63 @@ def logrank_test(
     event series, determines whether the data generating processes are statistically different.
     The test-statistic is chi-squared under the null hypothesis.
 
-    H_0: both event series are from the same generating processes
-    H_A: the event series are from different generating processes.
+     - H_0: both event series are from the same generating processes
+     - H_A: the event series are from different generating processes.
 
 
     This implicitly uses the log-rank weights.
 
-    See also `multivariate_logrank_test` for a more general function.
+    Parameters
+    ----------
+
+    event_times_A: iterable
+        a (n,) list-like of event durations (birth to death,...) for the first population.
+
+    event_times_B: iterable
+        a (n,) list-like of event durations (birth to death,...) for the second population.
+
+    censorship_A: iterable, optional
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population. 
+        Default assumes all observed.
+
+    censorship_B: iterable, optional
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population. 
+        Default assumes all observed.
+
+    t_0: float, optional (default=-1)
+        the period under observation, -1 for all time.
+
+    alpha: float, optional (default=0.95)
+        the confidence level
+
+    kwargs: 
+        add keywords and meta-data to the experiment summary
 
 
-    Parameters:
-      event_times_foo: a (n,) list-like of event durations (birth to death,...) for the population.
-      censorship_bar: a (n,) list-like of censorship flags, 1 if observed, 0 if not. Default assumes all observed.
-      t_0: the period under observation, -1 for all time.
-      alpha: the level of signifiance
-      kwargs: add keywords and meta-data to the experiment summary
+    Returns
+    -------
 
-    Returns:
-      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic'
+    results : StatisticalResult
+      a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
 
+    Examples
+    --------
+    >>> from lifelines.statistics import logrank_test
+    >>> results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
+    >>> results.print_summary()
+    >>> print(results.p_value)        # 0.46759
+    >>> print(results.test_statistic) # 0.528
+
+    Notes
+    -----
+    This is a special case of the function ``multivariate_logrank_test``, which is used internally. 
     See Survival and Event Analysis, page 108.
-    """
 
+    See Also
+    --------
+    multivariate_logrank_test
+    pairwise_logrank_test
+    """    
     event_times_A, event_times_B = (np.array(event_times_A), np.array(event_times_B))
     if event_observed_A is None:
         event_observed_A = np.ones(event_times_A.shape[0])
@@ -120,6 +215,7 @@ def logrank_test(
 def pairwise_logrank_test(
     event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs
 ):  # pylint: disable=too-many-locals
+    
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
     We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase
@@ -127,44 +223,73 @@ def pairwise_logrank_test(
     Bonferroni correction (rewight the alpha value higher to accomidate the multiple tests).
 
 
-    Parameters:
-      event_durations: a (n,) numpy array the (partial) lifetimes of all individuals
-      groups: a (n,) numpy array of unique group labels for each individual.
-      event_observed: a (n,) numpy array of event_observed events: 1 if observed death, 0 if censored. Defaults
-          to all observed.
-      alpha: the level of signifiance desired.
-      t_0: the final time to compare the series' up to. Defaults to all.
-      bonferroni: If true, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M
-            See (here)[http://en.wikipedia.org/wiki/Bonferroni_correction].
-      kwargs: add keywords and meta-data to the experiment summary.
+    Parameters
+    ----------
 
-    Returns:
-        R: a (n,n) dataframe of StatisticalResults (None on the diagonal)
+    event_durations: iterable
+        a (n,) list-like representing the (possibly partial) durations of all individuals
 
+    groups: iterable
+        a (n,) list-like of unique group labels for each individual.
+
+    event_observed: iterable, optional
+        a (n,) list-like of event_observed events: 1 if observed death, 0 if censored. Defaults to all observed.
+
+    t_0: float, optional (default=-1)
+        the period under observation, -1 for all time.
+
+    alpha: float, optional (default=0.95)
+        the confidence level
+
+    bonferroni: boolean, optional (default=True)
+        If True, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M.
+
+    kwargs: 
+        add keywords and meta-data to the experiment summary.
+
+
+    Returns
+    -------
+
+    results : DataFrame
+        a (n,n) dataframe of StatisticalResults (None on the diagonal)
+
+
+    See Also
+    --------
+    multivariate_logrank_test
+    logrank_test
     """
 
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
 
-    n = np.max(event_durations.shape)
-    assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
+    n = np.max(np.asarray(event_durations).shape)
+
     groups, event_durations, event_observed = map(
-        lambda x: pd.Series(np.asarray(x).reshape(n)), [groups, event_durations, event_observed]
+        lambda x: np.asarray(x).reshape(n), [groups, event_durations, event_observed]
+    )
+
+    if not (n == event_durations.shape[0] == event_observed.shape[0]):
+        raise ValueError("inputs must be of the same length.")
+    
+    groups, event_durations, event_observed = map(
+        lambda x: pd.Series(x), [groups, event_durations, event_observed]
     )
 
     unique_groups = np.unique(groups)
 
-    n = unique_groups.shape[0]
+    n_unique_groups = unique_groups.shape[0]
 
     if bonferroni:
-        m = 0.5 * n * (n - 1)
+        m = 0.5 * n_unique_groups * (n_unique_groups - 1)
         alpha = 1 - (1 - alpha) / m
 
-    R = np.zeros((n, n), dtype=object)
+    R = np.zeros((n_unique_groups, n_unique_groups), dtype=object)
 
     np.fill_diagonal(R, None)
 
-    for i1, i2 in combinations(np.arange(n), 2):
+    for i1, i2 in combinations(np.arange(n_unique_groups), 2):
         g1, g2 = unique_groups[[i1, i2]]
         ix1, ix2 = (groups == g1), (groups == g2)
         test_name = str(g1) + " vs. " + str(g2)
@@ -187,46 +312,69 @@ def pairwise_logrank_test(
 def multivariate_logrank_test(
     event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
+    
     """
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
-      be equal when n=2):
+    be equal when n=2):
 
-    H_0: all event series are from the same generating processes
-    H_A: there exist atleast one group that differs from the other.
+     - H_0: all event series are from the same generating processes
+     - H_A: there exist atleast one group that differs from the other.
 
-    Parameters:
-      event_durations: a (n,) numpy array of the (partial) lifetimes of all individuals
-      groups: a (n,) numpy array of unique group labels for each individual.
-      event_observed: a (n,) numpy array of event observations: 1 if observed death, 0 if censored. Defaults
-          to all observed.
-      alpha: the level of significance desired.
-      t_0: the final time to compare the series' up to. Defaults to all.
-      kwargs: add keywords and meta-data to the experiment summary.
+
+    Parameters
+    ----------
+
+    event_durations: iterable
+        a (n,) list-like representing the (possibly partial) durations of all individuals
+
+    groups: iterable
+        a (n,) list-like of unique group labels for each individual.
+
+    event_observed: iterable, optional
+        a (n,) list-like of event_observed events: 1 if observed death, 0 if censored. Defaults to all observed.
+
+    t_0: float, optional (default=-1)
+        the period under observation, -1 for all time.
+
+    alpha: float, optional (default=0.95)
+        the confidence level
+
+    kwargs: 
+        add keywords and meta-data to the experiment summary.
+
 
     Returns
-      results: a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic'
+    -------
 
-    Example:
+    results : StatisticalResult
+       a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
 
-        >> df = pd.DataFrame({
-            'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-            'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-            'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
-        })
-        >> result = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
-        >> result.test_statistic
-        >> result.p_value
+    Examples
+    --------
 
-
-        >> # numpy example
-        >> G = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
-        >> T = [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7]
-        >> E = [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
-        >> result = multivariate_logrank_test(T, G, E)
-        >> result.test_statistic
+    >>> df = pd.DataFrame({
+    >>>    'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+    >>>    'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+    >>>    'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+    >>> })
+    >>> result = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
+    >>> result.test_statistic
+    >>> result.p_value
+    >>> result.print_summary()
 
 
+    >>> # numpy example
+    >>> G = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+    >>> T = [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7]
+    >>> E = [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
+    >>> result = multivariate_logrank_test(T, G, E)
+    >>> result.test_statistic
 
+
+    See Also
+    --------
+    pairwise_logrank_test
+    logrank_test
     """
     if not (0 < alpha <= 1.0):
         raise ValueError("alpha parameter must be between 0 and 1.")
@@ -289,10 +437,23 @@ class StatisticalResult(object):
         self._kwargs = kwargs
 
     def print_summary(self):
+        """
+        Prints a prettier version of the ``summary`` DataFrame with more metadata.
+
+        """
         print(self.__unicode__())
 
     @property
     def summary(self):
+        """
+        
+        Returns
+        -------
+
+        summary: DataFrame
+            a DataFrame containing the test statistics and the p-value
+
+        """
         cols = ["test_statistic", "p"]
         return pd.DataFrame([[self.test_statistic, self.p_value]], columns=cols)
 

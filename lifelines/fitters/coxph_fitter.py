@@ -40,23 +40,41 @@ from lifelines.utils import (
 
 class CoxPHFitter(BaseFitter):
 
-    """
+    r"""
     This class implements fitting Cox's proportional hazard model:
 
-    h(t|x) = h_0(t)*exp(x'*beta)
+    .. math::  h(t|x) = h_0(t) \exp(x \beta)
 
-    Parameters:
-      alpha: the level in the confidence intervals.
-      tie_method: specify how the fitter should deal with ties. Currently only
+    Parameters
+    ----------
+
+      alpha: float, optional (default=0.95)
+        the level in the confidence intervals.
+      
+      tie_method: string, optional
+        specify how the fitter should deal with ties. Currently only
         'Efron' is available.
-      penalizer: Attach a L2 penalizer to the size of the coeffcients during regression. This improves
+      
+      penalizer: float, optional (default=0.0)
+        Attach a L2 penalizer to the size of the coeffcients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
-        For example, this shrinks the absolute value of beta_i. Recommended, even if a small value.
-        The penalty is 1/2 * penalizer * ||beta||^2.
-      strata: specify a list of columns to use in stratification. This is useful if a
+        For example, this shrinks the absolute value of :math:`\beta_i`. Recommended, even if a small value.
+        The penalty is :math:`1/2  \text{penalizer}  ||beta||^2`.
+      
+      strata: list, optional
+        specify a list of columns to use in stratification. This is useful if a
          catagorical covariate does not obey the proportional hazard assumption. This
          is used similar to the `strata` expression in R.
          See http://courses.washington.edu/b515/l17.pdf.
+
+    Examples
+    --------
+    >>> from lifelines.datasets import load_rossi
+    >>> from lifelines import CoxPHFitter
+    >>> rossi = load_rossi()
+    >>> cph = CoxPHFitter()
+    >>> cph.fit(rossi, 'week', 'arrest')
+    >>> cph.print_summary()
     """
 
     def __init__(self, alpha=0.95, tie_method="Efron", penalizer=0.0, strata=None):
@@ -89,37 +107,68 @@ class CoxPHFitter(BaseFitter):
         Fit the Cox Propertional Hazard model to a dataset. Tied survival times
         are handled using Efron's tie-method.
 
-        Parameters:
-          df: a Pandas dataframe with necessary columns `duration_col` and
-             `event_col`, plus other covariates. `duration_col` refers to
-             the lifetimes of the subjects. `event_col` refers to whether
-             the 'death' events was observed: 1 if observed, 0 else (censored).
-          duration_col: the column in dataframe that contains the subjects'
-             lifetimes.
-          event_col: the column in dataframe that contains the subjects' death
-             observation. If left as None, assume all individuals are non-censored.
-          weights_col: an optional column in the dataframe that denotes the weight per subject.
-             This column is expelled and not used as a covariate, but as a weight in the
-             final regression. Default weight is 1.
-             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
-             identical observations.
-             This can be used for sampling weights. In that case, use `robust=True` to get more accurate standard errors.
-          show_progress: since the fitter is iterative, show convergence
-             diagnostics.
-          initial_beta: initialize the starting point of the iterative
-             algorithm. Default is the zero vector.
-          strata: specify a list of columns to use in stratification. This is useful if a
-             catagorical covariate does not obey the proportional hazard assumption. This
-             is used similar to the `strata` expression in R.
-             See http://courses.washington.edu/b515/l17.pdf.
-          step_size: set an initial step size for the fitting algorithm.
-          robust: Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas dataframe with necessary columns `duration_col` and
+            `event_col`, plus other covariates and special columns (weights, strata). 
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+        
+        duration_col: string
+            the name of the column in dataframe that contains the subjects'
+            lifetimes.
+        
+        event_col: string, optional
+            the  name of thecolumn in dataframe that contains the subjects' death
+            observation. If left as None, assume all individuals are non-censored.
+        
+        weights_col: string, optional
+            an optional column in the dataframe, df, that denotes the weight per subject.
+            This column is expelled and not used as a covariate, but as a weight in the
+            final regression. Default weight is 1.
+            This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+            identical observations.
+            This can be used for sampling weights. In that case, use `robust=True` to get more accurate standard errors.
+        
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics.
+        
+        initial_beta: numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+        
+        strata: list, optional
+            specify a list of columns to use in stratification. This is useful if a
+            catagorical covariate does not obey the proportional hazard assumption. This
+            is used similar to the `strata` expression in R.
+            See http://courses.washington.edu/b515/l17.pdf.
+        
+        step_size: float, optional
+            set an initial step size for the fitting algorithm.
+        
+        robust: boolean, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
             ties, so if there are high number of ties, results may significantly differ. See
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
-          cluster_col: specifies what column has unique identifers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+        
+        cluster_col: string, optional
+            specifies what column has unique identifers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
             be used.
-        Returns:
-            self, with additional properties: hazards_, confidence_intervals_, baseline_survival_, etc.
+
+        Returns
+        -------
+        self: CoxPHFitter
+            self with additional new properties: print_summary, hazards_, confidence_intervals_, baseline_survival_, etc.
+
+
+        Examples
+        --------
+        >>> cph = CoxPHFitter()
+        >>> cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
+        >>> cph.print_summary()
 
         """
 
@@ -225,22 +274,28 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         Note that data is assumed to be sorted on T!
 
-        Parameters:
-            X: (n,d) Pandas DataFrame of observations.
-            T: (n) Pandas Series representing observed durations.
-            E: (n) Pandas Series representing death events.
-            weights: (n) an iterable representing weights per observation.
-            initial_beta: (1,d) numpy array of initial starting point for
-                          NR algorithm. Default 0.
-            step_size: float > 0.001 to determine a starting step size in NR algorithm.
-            precision: the convergence halts if the norm of delta between
-                     successive positions is less than epsilon.
-            show_progress: since the fitter is iterative, show convergence
-                     diagnostics.
-            max_steps: the maximum number of interations of the Newton-Rhaphson algorithm.
+        Parameters
+        ----------
+        X: (n,d) Pandas DataFrame of observations.
+        T: (n) Pandas Series representing observed durations.
+        E: (n) Pandas Series representing death events.
+        weights: (n) an iterable representing weights per observation.
+        initial_beta: (1,d) numpy array of initial starting point for
+                      NR algorithm. Default 0.
+        step_size: float, optional
+            > 0.001 to determine a starting step size in NR algorithm.
+        precision: float, optional
+            the convergence halts if the norm of delta between
+            successive positions is less than epsilon.
+        show_progress: boolean, optional
+            since the fitter is iterative, show convergence
+                 diagnostics.
+        max_steps: int, optional
+            the maximum number of interations of the Newton-Rhaphson algorithm.
 
-        Returns:
-            beta: (1,d) numpy array.
+        Returns
+        -------
+        beta: (1,d) numpy array.
         """
         self.path = []
         assert precision <= 1.0, "precision must be less than or equal to 1."
@@ -386,14 +441,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         the Efron approximation for ties (default) is employed replication of the data will not give exactly the same coefficients as the
         weights option, and in this case the weighted fit is arguably the correct one."
 
-        Parameters:
+        Parameters
+        ----------
             X: (n,d) numpy array of observations.
             beta: (1, d) numpy array of coefficients.
             T: (n) numpy array representing observed durations.
             E: (n) numpy array representing death events.
             weights: (n) an array representing weights per observation.
 
-        Returns:
+        Returns
+        -------
             hessian: (d, d) numpy array,
             gradient: (1, d) numpy array
             log_likelihood: double
@@ -618,7 +675,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         Returns
         -------
-        df : pd.DataFrame
+        df : DataFrame
             Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
 
         df = pd.DataFrame(index=self.hazards_.columns)
@@ -637,6 +694,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         """
         # pylint: disable=unnecessary-lambda
+        
         # Print information about data first
         justify = string_justify(18)
         print(self)
@@ -693,31 +751,49 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return test_stat, degrees_freedom, p_value
 
     def predict_partial_hazard(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        r"""
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
+        Returns
+        -------
+        partial_hazard: DataFrame
+            Returns the partial hazard for the individuals, partial since the
+            baseline hazard is not included. Equal to :math:`\exp{\beta (X - mean(X_{train}))}`
 
+        Notes
+        -----
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
-
-        Returns the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to exp{\beta (X - mean{X_train})}
         """
         return exp(self.predict_log_partial_hazard(X))
 
     def predict_log_partial_hazard(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        r"""
+        This is equivalent to R's linear.predictors.
+        Returns the log of the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to :math:`\beta (X - mean(X_{train}))`
+
+
+        Parameters
+        ----------
+        X:  numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        This is equivalent to R's linear.predictors.
-        Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \beta (X - mean{X_train})
+        Returns
+        -------
+        log_partial_hazard: DataFrame
 
+
+        Notes
+        -----
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
@@ -745,27 +821,41 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
     def predict_log_hazard_relative_to_mean(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        r"""
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        Returns the log hazard relative to the hazard of the mean covariates. This is the behaviour
-        of R's predict.coxph. Equal to \beta X - \beta mean{X_train}}
+        Returns
+        -------
+        linear_prediction: DataFrame
+            the log hazard relative to the hazard of the mean covariates. This is the behaviour
+            of R's predict.coxph. Equal to :math:`\beta (X - mean(X_{train})) - \beta mean(X_{train})`
         """
 
         return self.predict_log_partial_hazard(X) - self._train_log_partial_hazard.squeeze()
 
     def predict_cumulative_hazard(self, X, times=None):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        Parameters
+        ----------
+        
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        times: an iterable of increasing times to predict the cumulative hazard at. Default
+        times: iterable, optional
+            an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
 
-        Returns the cumulative hazard of individuals.
+        Returns
+        -------
+            cumulative_hazard_ : DataFrame
+                the cumulative hazard of individuals over the timeline
         """
 
         if self.strata:
@@ -801,51 +891,91 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def predict_survival_function(self, X, times=None):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        Predict the survival function for individuals, given their covariates. This assumes that the individual 
+        just entered the study (that is, we do not condition on how long they have already lived for.)
+
+        Parameters
+        ----------
+        
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        times: an iterable of increasing times to predict the survival function at. Default
-            is the set of all durations (observed and unobserved)
+        times: iterable, optional
+            an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved). Uses a linear interpolation if
+            points in time are not in the index.
 
-        Returns the estimated survival functions for the individuals
+
+        Returns
+        -------
+            survival_function : DataFrame
+                the survival probabilities of individuals over the timeline
         """
         return exp(-self.predict_cumulative_hazard(X, times=times))
 
     def predict_percentile(self, X, p=0.5):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
+
+        Parameters
+        ----------
+        X:  numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        p: float, optional (default=0.5)
+            the percentile, must be between 0 and 1.
+
+        Returns
+        -------
+        percentiles: DataFrame
+
         """
         subjects = _get_index(X)
         return qth_survival_times(p, self.predict_survival_function(X)[subjects]).T
 
     def predict_median(self, X):
         """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        Predict the median lifetimes for the individuals. If the survival curve of an
+        individual does not cross 0.5, then the result is infinity.
+        
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        Returns the median lifetimes for the individuals. If the survival curve of an
-        individual does not cross 0.5, then the result is infinity.
+        Returns 
+        -------
+        percentiles: DataFrame
+            the median lifetimes for the individuals. If the survival curve of an
+            individual does not cross 0.5, then the result is infinity.
         """
         return self.predict_percentile(X, 0.5)
 
     def predict_expectation(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        r"""
+        Compute the expected lifetime, :math:`E[T]`, using covarites X. This algorithm to compute the expection is
+        to use the fact that :math:`E[T] = \int_0^inf P(T > t) dt = \int_0^inf S(t) dt`
+
+        To compute the integal, we use the trapizoidal rule to approximate the integral. However, if the
+        survival function, :math:`S(t)`, doesn't converge to 0, the the expectation is really infinity.
+
+        Parameters
+        ----------
+        
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        Compute the expected lifetime, E[T], using covarites X. This algorithm to compute the expection is
-        to use the fact that E[T] = int_0^inf P(T > t) dt = int_0^inf S(t) dt
+        Returns
+            expectations : DataFrame
 
-        To compute the integal, we use the trapizoidal rule to approximate the integral. However, if the
-        survival function, S(t), doesn't converge to 0, the the expectation is really infinity.
         """
         subjects = _get_index(X)
         v = self.predict_survival_function(X)[subjects]
@@ -917,12 +1047,20 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
 
-        Parameters:
-            standardized: standardize each estimated coefficient and confidence interval
-                          endpoints by the standard error of the estimate.
-            columns : list-like, default None
-        Returns:
-            ax: the matplotlib axis that be edited.
+        Parameters
+        ----------
+        standardized: bool, optional
+            standardize each estimated coefficient and confidence interval
+            endpoints by the standard error of the estimate.
+        columns : list, optional
+            specifiy a subset of the columns to plot
+        kwargs:
+            pass in additional plotting commands
+
+        Returns
+        -------
+        ax: matplotlib axis
+            the matplotlib axis that be edited.
 
         """
         from matplotlib import pyplot as plt
@@ -966,12 +1104,19 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         subjects' survival as we vary a single covariate, all else being held equal. The baseline survival
         curve is equal to the predicted survival curve at all average values in the original dataset.
 
-        Parameters:
-            covariate: a string of the covariate in the original dataset that we wish to vary.
-            groups: an iterable of the values we wish the covariate to take on.
+        Parameters
+        ----------
+        covariate: string
+            a string of the covariate in the original dataset that we wish to vary.
+        groups: iterable
+            an iterable of the values we wish the covariate to take on.
+        kwargs:
+            pass in additional plotting commands
 
-        Returns:
-            ax: the matplotlib axis that be edited.
+        Returns
+        -------
+        ax: matplotlib axis
+            the matplotlib axis that be edited.
         """
         from matplotlib import pyplot as plt
 
@@ -990,6 +1135,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     @property
     def score_(self):
+        """
+        The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the AUC
+        to survival data, including censorships. 
+        
+        For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
+        onto the training dataset. It's analgous to the R^2 in linear models. 
+        
+        """
         # pylint: disable=access-member-before-definition
         if hasattr(self, "_concordance_score_"):
             return self._concordance_score_

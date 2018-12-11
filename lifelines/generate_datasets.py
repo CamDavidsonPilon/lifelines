@@ -215,7 +215,8 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
               If (n,) np.array >=0 , censor elementwise.
 
 
-    Returns:
+    Returns
+    -------
       survival_times: (size,n) array of random variables.
       (optional) censorship: if censor is true, returns (size,n) array with bool True
          if the death was observed (not right-censored)
@@ -262,10 +263,10 @@ def cumulative_integral(fx, x):
     """
     Return the cumulative integral of arrays, initial value is 0.
 
-    Parameters:
-
-        fx: (n,d) numpy array, what you want to integral of
-        x: (n,) numpy array, location to integrate over.
+    Parameters
+    ----------
+    fx: (n,d) numpy array, what you want to integral of
+    x: (n,) numpy array, location to integrate over.
     """
     return cumtrapz(fx.T, x, initial=0).T
 
@@ -273,11 +274,15 @@ def cumulative_integral(fx, x):
 def construct_survival_curves(hazard_rates, timelines):
     """
     Given hazard rates, reconstruct the survival curves
-      hazard_rates: (n,t) array
-      timelines: (t,) the observational times
+    
+    Parameters
+    ----------
+    hazard_rates: (n,t) array
+    timelines: (t,) the observational times
 
-    Returns:t
-      survial curves, (n,t) array
+    Returns
+    -------
+    t: survial curves, (n,t) array
     """
     cumulative_hazards = cumulative_integral(hazard_rates.values, timelines)
     return pd.DataFrame(np.exp(-cumulative_hazards), index=timelines)

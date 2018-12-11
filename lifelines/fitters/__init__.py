@@ -74,8 +74,9 @@ class UnivariateFitter(BaseFitter):
         """
         Subtract the {0} of two {1} objects.
 
-            Parameters:
-              other: an {1} fitted instance.
+        Parameters
+        ----------
+        other: an {1} fitted instance.
         """
         self_estimate = getattr(self, self._estimate_name)
         other_estimate = getattr(other, other._estimate_name)
@@ -93,8 +94,9 @@ class UnivariateFitter(BaseFitter):
         """
         Divide the {0} of two {1} objects.
 
-        Parameters:
-          other: an {1} fitted instance.
+        Parameters
+        ----------
+        other: an {1} fitted instance.
 
         """
         self_estimate = getattr(self, self._estimate_name)
@@ -114,11 +116,13 @@ class UnivariateFitter(BaseFitter):
         Predict the {0} at certain point in time. Uses a linear interpolation if
         points in time are not in the index.
 
-        Parameters:
-          time: a scalar or an array of times to predict the value of {0} at.
+        Parameters
+        ----------
+        time: a scalar or an array of times to predict the value of {0} at.
 
-        Returns:
-          predictions: a scalar if time is a scalar, a numpy array if time in an array.
+        Returns
+        -------
+        predictions: a scalar if time is a scalar, a numpy array if time in an array.
         """
         if callable(self._estimation_method):
             return pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
@@ -139,8 +143,10 @@ class UnivariateFitter(BaseFitter):
         individual exists until age 1, their expected life remaining *given they lived to time 1*
         might be 9 years.
 
-        Returns:
-            conditional_time_to_: DataFrame, with index equal to survival_function_
+        Returns
+        -------
+        conditional_time_to_: DataFrame 
+            with index equal to survival_function_
 
         """
         age = self.survival_function_.index.values[:, None]
