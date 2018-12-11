@@ -117,9 +117,7 @@ def logrank_test(
     return multivariate_logrank_test(event_times, groups, event_observed, alpha=alpha, t_0=t_0, **kwargs)
 
 
-def pairwise_logrank_test(
-    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs
-):
+def pairwise_logrank_test(event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs):
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
     We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase
@@ -184,9 +182,7 @@ def pairwise_logrank_test(
     return pd.DataFrame(R, columns=unique_groups, index=unique_groups)
 
 
-def multivariate_logrank_test(
-    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs
-):
+def multivariate_logrank_test(event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs):
     """
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
       be equal when n=2):

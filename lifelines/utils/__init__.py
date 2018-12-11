@@ -114,9 +114,7 @@ def median_survival_times(density_or_survival_function, left_censorship=False):
     return qth_survival_times(0.5, density_or_survival_function, cdf=left_censorship)
 
 
-def group_survival_table_from_events(
-    groups, durations, event_observed, birth_times=None, limit=-1
-):
+def group_survival_table_from_events(groups, durations, event_observed, birth_times=None, limit=-1):
     """
     Joins multiple event series together into dataframes. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.

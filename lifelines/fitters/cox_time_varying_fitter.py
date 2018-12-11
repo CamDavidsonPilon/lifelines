@@ -600,9 +600,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax
 
-    def _compute_cumulative_baseline_hazard(
-        self, tv_data, stop_times_events, weights
-    ):
+    def _compute_cumulative_baseline_hazard(self, tv_data, stop_times_events, weights):
         hazards = self.predict_partial_hazard(tv_data).values
 
         unique_death_times = np.unique(stop_times_events["stop"].loc[stop_times_events["event"]])

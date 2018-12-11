@@ -41,13 +41,7 @@ class ExponentialFitter(UnivariateFitter):
     """
 
     def fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        label="Exponential_estimate",
-        alpha=None,
-        ci_labels=None,
+        self, durations, event_observed=None, timeline=None, label="Exponential_estimate", alpha=None, ci_labels=None
     ):  # pylint: disable=too-many-arguments
         """
         Parameters:

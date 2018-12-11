@@ -23,7 +23,14 @@ import numpy.testing as npt
 from numpy.linalg.linalg import LinAlgError
 
 from lifelines.compat import PY2, PY3
-from lifelines.utils import k_fold_cross_validation, StatError, concordance_index, ConvergenceWarning, to_long_format, normalize
+from lifelines.utils import (
+    k_fold_cross_validation,
+    StatError,
+    concordance_index,
+    ConvergenceWarning,
+    to_long_format,
+    normalize,
+)
 from lifelines.estimation import (
     CoxPHFitter,
     AalenAdditiveFitter,
@@ -1205,7 +1212,6 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         expected = pd.Series({"var1": 2.097, "var2": 0.827})
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
 
-
     def test_delta_betas_are_the_same_as_in_R(self):
         """
         df <- data.frame(
@@ -1224,18 +1230,17 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             }
         )
         df["E"] = True
-        df['weights'] = 1
-        df = df.sort_values(by='T')
-        
+        df["weights"] = 1
+        df = df.sort_values(by="T")
+
         cph = CoxPHFitter()
-        cph.fit(df, "T", "E", show_progress=True, weights_col='weights')
-        
-        X = normalize(df.drop(['T', 'E', 'weights'], axis=1), 0, cph._norm_std)
+        cph.fit(df, "T", "E", show_progress=True, weights_col="weights")
+
+        X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-1.1099688, 0.6620063, 0.4630473, 0.5807250, -0.5958099]]).T
-        actual = cph._compute_delta_beta(X, df['T'], df['E'], df['weights'])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
-
 
     def test_delta_betas_with_strata_are_the_same_as_in_R(self):
         """
@@ -1251,23 +1256,23 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         df = pd.DataFrame(
             {
-                "var1":   [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
-                "T":      [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+                "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+                "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
                 "strata": [1, 1, 1, 2, 2],
             }
         )
         df["E"] = True
-        df['weights'] = 1
-        df = df.sort_values(by='T')
-        
+        df["weights"] = 1
+        df = df.sort_values(by="T")
+
         cph = CoxPHFitter()
-        cph.fit(df, "T", "E", show_progress=True, weights_col='weights', strata=['strata'])
-        
-        df = df.set_index('strata')
-        X = normalize(df.drop(['T', 'E', 'weights'], axis=1), 0, cph._norm_std)
+        cph.fit(df, "T", "E", show_progress=True, weights_col="weights", strata=["strata"])
+
+        df = df.set_index("strata")
+        X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-0.6960789, 1.6729761, 0.3094744, -0.2895864, -0.9967852]]).T
-        actual = cph._compute_delta_beta(X, df['T'], df['E'], df['weights'])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_delta_betas_with_weights_are_the_same_as_in_R(self):
@@ -1284,23 +1289,22 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         df = pd.DataFrame(
             {
-                "var1":   [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
-                "T":      [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-                "weights": [1, 0.5, 2, 1, 1]
+                "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+                "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+                "weights": [1, 0.5, 2, 1, 1],
             }
         )
         df["E"] = True
-        df = df.sort_values(by='T')
-        
+        df = df.sort_values(by="T")
+
         cph = CoxPHFitter()
-        cph.fit(df, "T", "E", show_progress=True, weights_col='weights', robust=True)
-        
-        X = normalize(df.drop(['T', 'E', 'weights'], axis=1), 0, cph._norm_std)
+        cph.fit(df, "T", "E", show_progress=True, weights_col="weights", robust=True)
+
+        X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-1.1156470, 0.7698781, 0.3923246, 0.8040079, -0.8505637]]).T
-        actual = cph._compute_delta_beta(X, df['T'], df['E'], df['weights'])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
-
 
     def test_cluster_option(self):
         """
@@ -1347,10 +1351,10 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         df = pd.DataFrame(
             {
-                "var":   [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
-                "id":     [1, 1, 2, 3, 4],
+                "var": [0.184677, 0.071893, 1.364646, 0.098375, 1.663092],
+                "id": [1, 1, 2, 3, 4],
                 "strata": [1, 1, 2, 2, 2],
-                "T":      [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+                "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
             }
         )
         df["E"] = 1

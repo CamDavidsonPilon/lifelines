@@ -521,18 +521,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         if self.strata is not None:
             score_residuals = np.empty((0, d))
-            
+
             for stratum, stratified_X in X.groupby(self.strata):
-                stratified_E, stratified_W = (
-                    E.loc[[stratum]],
-                    weights.loc[[stratum]],
-                )
+                stratified_E, stratified_W = (E.loc[[stratum]], weights.loc[[stratum]])
 
                 score_residuals = np.append(
                     score_residuals,
-                    self._compute_residuals_within_strata(
-                        stratified_X.values, stratified_E.values, stratified_W.values
-                    )
+                    self._compute_residuals_within_strata(stratified_X.values, stratified_E.values, stratified_W.values)
                     * stratified_W[:, None],
                     axis=0,
                 )
@@ -542,13 +537,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 self._compute_residuals_within_strata(X.values, E.values, weights.values) * weights[:, None]
             )
 
-
         naive_var = inv(self._hessian_)
         delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
 
         return delta_betas
-
-
 
     def _compute_sandwich_estimator(self, X, T, E, weights):
 
@@ -556,7 +548,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         if self.cluster_col:
             delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
-        
+
         sandwich_estimator = delta_betas.T.dot(delta_betas)
         return sandwich_estimator
 

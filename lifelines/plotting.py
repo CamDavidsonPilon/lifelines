@@ -168,8 +168,15 @@ def add_at_risk_counts(*fitters, **kwargs):
     return ax
 
 
-
-def plot_lifetimes(duration, event_observed=None, entry=None, sort_by_duration=False, event_observed_color="#A60628", event_censored_color="#348ABD", **kwargs):
+def plot_lifetimes(
+    duration,
+    event_observed=None,
+    entry=None,
+    sort_by_duration=False,
+    event_observed_color="#A60628",
+    event_censored_color="#348ABD",
+    **kwargs
+):
     """
     Parameters:
       duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -184,7 +191,7 @@ def plot_lifetimes(duration, event_observed=None, entry=None, sort_by_duration=F
     from matplotlib import pyplot as plt
 
     set_kwargs_ax(kwargs)
-    ax = kwargs['ax']
+    ax = kwargs["ax"]
 
     N = duration.shape[0]
     if N > 100:
@@ -206,7 +213,7 @@ def plot_lifetimes(duration, event_observed=None, entry=None, sort_by_duration=F
     for i in range(N):
         c = event_observed_color if event_observed[i] else event_censored_color
         ax.hlines(N - 1 - i, entry[i], entry[i] + duration[i], color=c, lw=3)
-        m = "|" if not event_observed[i] else 'o'
+        m = "|" if not event_observed[i] else "o"
         ax.scatter((entry[i]) + duration[i], N - 1 - i, color=c, s=30, marker=m)
 
     ax.set_ylim(-0.5, N)

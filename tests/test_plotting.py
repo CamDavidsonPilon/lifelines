@@ -162,7 +162,6 @@ class TestPlotting:
         self.plt.title("test_plot_lifetimes_calendar")
         self.plt.show(block=block)
 
-
     def test_plot_lifetimes_relative(self, block):
         t = np.linspace(0, 20, 1000)
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
