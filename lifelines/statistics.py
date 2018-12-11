@@ -6,16 +6,10 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 
-from lifelines.utils import (
-    group_survival_table_from_events,
-    significance_code,
-    significance_codes_as_text,
-)
+from lifelines.utils import group_survival_table_from_events, significance_code, significance_codes_as_text
 
 
-def sample_size_necessary_under_cph(
-    power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05
-):
+def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
     """
     This computes the sample size for needed power to compare two groups under a Cox
     Proportional Hazard model.
@@ -41,11 +35,7 @@ def sample_size_necessary_under_cph(
     m = (
         1.0
         / ratio_of_participants
-        * (
-            (ratio_of_participants * postulated_hazard_ratio + 1.0)
-            / (postulated_hazard_ratio - 1.0)
-        )
-        ** 2
+        * ((ratio_of_participants * postulated_hazard_ratio + 1.0) / (postulated_hazard_ratio - 1.0)) ** 2
         * (z(1.0 - alpha / 2.0) + z(power)) ** 2
     )
 
@@ -81,19 +71,12 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     m = n_exp * p_exp + n_con * p_con
     k = float(n_exp) / float(n_con)
     return stats.norm.cdf(
-        np.sqrt(k * m) * abs(postulated_hazard_ratio - 1) / (k * postulated_hazard_ratio + 1)
-        - z(1 - alpha / 2.0)
+        np.sqrt(k * m) * abs(postulated_hazard_ratio - 1) / (k * postulated_hazard_ratio + 1) - z(1 - alpha / 2.0)
     )
 
 
 def logrank_test(
-    event_times_A,
-    event_times_B,
-    event_observed_A=None,
-    event_observed_B=None,
-    alpha=0.95,
-    t_0=-1,
-    **kwargs
+    event_times_A, event_times_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs
 ):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
@@ -129,13 +112,9 @@ def logrank_test(
         event_observed_B = np.ones(event_times_B.shape[0])
 
     event_times = np.r_[event_times_A, event_times_B]
-    groups = np.r_[
-        np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)
-    ]
+    groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
     event_observed = np.r_[event_observed_A, event_observed_B]
-    return multivariate_logrank_test(
-        event_times, groups, event_observed, alpha=alpha, t_0=t_0, **kwargs
-    )
+    return multivariate_logrank_test(event_times, groups, event_observed, alpha=alpha, t_0=t_0, **kwargs)
 
 
 def pairwise_logrank_test(
@@ -168,9 +147,7 @@ def pairwise_logrank_test(
         event_observed = np.ones((event_durations.shape[0], 1))
 
     n = np.max(event_durations.shape)
-    assert (
-        n == np.max(event_durations.shape) == np.max(event_observed.shape)
-    ), "inputs must be of the same length."
+    assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
     groups, event_durations, event_observed = map(
         lambda x: pd.Series(np.asarray(x).reshape(n)), [groups, event_durations, event_observed]
     )
@@ -261,16 +238,12 @@ def multivariate_logrank_test(
         event_observed = np.asarray(event_observed)
 
     n = np.max(event_durations.shape)
-    assert (
-        n == np.max(event_durations.shape) == np.max(event_observed.shape)
-    ), "inputs must be of the same length."
+    assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
     groups, event_durations, event_observed = map(
         lambda x: pd.Series(np.asarray(x).reshape(n)), [groups, event_durations, event_observed]
     )
 
-    unique_groups, rm, obs, _ = group_survival_table_from_events(
-        groups, event_durations, event_observed, limit=t_0
-    )
+    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, limit=t_0)
     n_groups = unique_groups.shape[0]
 
     # compute the factors needed
@@ -301,14 +274,7 @@ def multivariate_logrank_test(
     test_result, p_value = chisq_test(U, n_groups - 1, alpha)
 
     return StatisticalResult(
-        test_result,
-        p_value,
-        U,
-        t_0=t_0,
-        alpha=alpha,
-        null_distribution="chi squared",
-        df=n_groups - 1,
-        **kwargs
+        test_result, p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", df=n_groups - 1, **kwargs
     )
 
 

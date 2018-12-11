@@ -41,13 +41,7 @@ class ExponentialFitter(UnivariateFitter):
     """
 
     def fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        label="Exponential_estimate",
-        alpha=None,
-        ci_labels=None,
+        self, durations, event_observed=None, timeline=None, label="Exponential_estimate", alpha=None, ci_labels=None
     ):  # pylint: disable=too-many-arguments
         """
         Parameters:
@@ -72,9 +66,7 @@ class ExponentialFitter(UnivariateFitter):
 
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = (
-            np.asarray(event_observed, dtype=int)
-            if event_observed is not None
-            else np.ones_like(self.durations)
+            np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
         self.timeline = (
             np.sort(np.asarray(timeline))
@@ -114,10 +106,7 @@ class ExponentialFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
 
         if ci_labels is None:
-            ci_labels = [
-                "%s_upper_%.2f" % (self._label, alpha),
-                "%s_lower_%.2f" % (self._label, alpha),
-            ]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         std = np.sqrt(self._lambda_variance_)
@@ -175,9 +164,7 @@ class ExponentialFitter(UnivariateFitter):
         justify = string_justify(18)
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
-        print(
-            "{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0])
-        )
+        print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood), end="\n\n")
 
         df = self.summary

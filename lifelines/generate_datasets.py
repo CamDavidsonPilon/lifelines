@@ -43,9 +43,7 @@ class coeff_func:
 
     def __call__(self, *args, **kwargs):
         def __repr__():
-            s = self.f.__doc__.replace("alpha", "%.4f" % kwargs["alpha"]).replace(
-                "beta", "%.4f" % kwargs["beta"]
-            )
+            s = self.f.__doc__.replace("alpha", "%.4f" % kwargs["alpha"]).replace("beta", "%.4f" % kwargs["beta"])
             return s
 
         self.__doc__ = __repr__()
@@ -136,14 +134,10 @@ def constant_coefficients(d, timelines, constant=False, independent=0):
 
     returns a matrix (t,d+1) of coefficients
     """
-    return time_varying_coefficients(
-        d, timelines, constant=True, independent=independent, randgen=random.normal
-    )
+    return time_varying_coefficients(d, timelines, constant=True, independent=independent, randgen=random.normal)
 
 
-def time_varying_coefficients(
-    d, timelines, constant=False, independent=0, randgen=random.exponential
-):
+def time_varying_coefficients(d, timelines, constant=False, independent=0, randgen=random.exponential):
     """
     Time vary coefficients
 
@@ -180,9 +174,7 @@ def time_varying_coefficients(
     return df_coefficients
 
 
-def generate_hazard_rates(
-    n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"
-):
+def generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
     """
       n: the number of instances
       d: the number of covariates
@@ -199,28 +191,16 @@ def generate_hazard_rates(
     """
     covariates = generate_covariates(n, d, n_binary=n_binary)
     if model == "aalen":
-        coefficients = time_varying_coefficients(
-            d + 1, timelines, independent=independent, constant=constant
-        )
+        coefficients = time_varying_coefficients(d + 1, timelines, independent=independent, constant=constant)
         hazard_rates = np.dot(covariates, coefficients.T)
-        return (
-            pd.DataFrame(hazard_rates.T, index=timelines),
-            coefficients,
-            pd.DataFrame(covariates),
-        )
+        return (pd.DataFrame(hazard_rates.T, index=timelines), coefficients, pd.DataFrame(covariates))
     if model == "cox":
         covariates = covariates[:, :-1]
         coefficients = constant_coefficients(d, timelines, independent)
         baseline = time_varying_coefficients(1, timelines)
-        hazard_rates = (
-            np.exp(np.dot(covariates, coefficients.T)) * baseline[baseline.columns[0]].values
-        )
+        hazard_rates = np.exp(np.dot(covariates, coefficients.T)) * baseline[baseline.columns[0]].values
         coefficients["baseline: " + baseline.columns[0]] = baseline.values
-        return (
-            pd.DataFrame(hazard_rates.T, index=timelines),
-            coefficients,
-            pd.DataFrame(covariates),
-        )
+        return (pd.DataFrame(hazard_rates.T, index=timelines), coefficients, pd.DataFrame(covariates))
     raise Exception
 
 
@@ -266,9 +246,7 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
         return survival_times
 
 
-def generate_observational_matrix(
-    n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"
-):
+def generate_observational_matrix(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
     hz, coeff, covariates = generate_hazard_rates(
         n, d, timelines, constant=False, independent=0, n_binary=0, model=model
     )
@@ -276,9 +254,7 @@ def generate_observational_matrix(
     covariates["event_at"] = R.T[0]
     return (
         covariates.sort_values(by="event_at"),
-        pd.DataFrame(
-            cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines
-        ),
+        pd.DataFrame(cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines),
     )
 
 

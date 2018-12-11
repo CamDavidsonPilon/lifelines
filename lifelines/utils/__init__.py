@@ -76,9 +76,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         return survival_functions.apply(lambda s: qth_survival_time(q[0], s, cdf=cdf)).iloc[0]
     else:
-        survival_times = pd.DataFrame(
-            {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}
-        ).T
+        survival_times = pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
 
         #  Typically, one would expect that the output should equal the "height" of q.
         #  An issue can arise if the Series q contains duplicate values. We solve
@@ -172,9 +170,7 @@ def group_survival_table_from_events(
     """
 
     n = np.max(groups.shape)
-    assert (
-        n == np.max(durations.shape) == np.max(event_observed.shape)
-    ), "inputs must be of the same length."
+    assert n == np.max(durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
 
     if birth_times is None:
         # Create some birth times
@@ -184,8 +180,7 @@ def group_survival_table_from_events(
     assert n == np.max(birth_times.shape), "inputs must be of the same length."
 
     groups, durations, event_observed, birth_times = [
-        pd.Series(np.asarray(data).reshape(n))
-        for data in [groups, durations, event_observed, birth_times]
+        pd.Series(np.asarray(data).reshape(n)) for data in [groups, durations, event_observed, birth_times]
     ]
     unique_groups = groups.unique()
 
@@ -196,8 +191,7 @@ def group_survival_table_from_events(
         B = birth_times[ix]
         group_name = str(group)
         columns = [
-            event_name + ":" + group_name
-            for event_name in ["removed", "observed", "censored", "entrance", "at_risk"]
+            event_name + ":" + group_name for event_name in ["removed", "observed", "censored", "entrance", "at_risk"]
         ]
         if i == 0:
             data = survival_table_from_events(T, C, B, columns=columns)
@@ -209,12 +203,7 @@ def group_survival_table_from_events(
     if int(limit) != -1:
         data = data.loc[:limit]
 
-    return (
-        unique_groups,
-        data.filter(like="removed:"),
-        data.filter(like="observed:"),
-        data.filter(like="censored:"),
-    )
+    return (unique_groups, data.filter(like="removed:"), data.filter(like="observed:"), data.filter(like="censored:"))
 
 
 def survival_table_from_events(
@@ -294,12 +283,8 @@ def survival_table_from_events(
     births = pd.DataFrame(birth_times, columns=["event_at"])
     births[entrance] = np.asarray(weights)
     births_table = births.groupby("event_at").sum()
-    event_table = death_table.join(births_table, how="outer", sort=True).fillna(
-        0
-    )  # http://wesmckinney.com/blog/?p=414
-    event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(
-        1
-    ).fillna(0)
+    event_table = death_table.join(births_table, how="outer", sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
+    event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
 
     # group by intervals
     if collapse:
@@ -330,9 +315,7 @@ def _group_event_table_by_intervals(event_table, intervals):
     )
 
 
-def survival_events_from_table(
-    event_table, observed_deaths_col="observed", censored_col="censored"
-):
+def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
     """
     This is the inverse of the function ``survival_table_from_events``.
 
@@ -497,9 +480,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
         # Flatten array
         event_times = event_times.ravel()
     # Allow for (n, 1) or (1, n) arrays
-    if predicted_scores.ndim == 2 and (
-        predicted_scores.shape[0] == 1 or predicted_scores.shape[1] == 1
-    ):
+    if predicted_scores.ndim == 2 and (predicted_scores.shape[0] == 1 or predicted_scores.shape[1] == 1):
         # Flatten array
         predicted_scores = predicted_scores.ravel()
 
@@ -606,9 +587,7 @@ def k_fold_cross_validation(
 
         for fitter, scores in zip(fitters, fitterscores):
             # fit the fitter to the training data
-            fitter.fit(
-                training_data, duration_col=duration_col, event_col=event_col, **fitter_kwargs
-            )
+            fitter.fit(training_data, duration_col=duration_col, event_col=event_col, **fitter_kwargs)
             T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
 
             try:
@@ -666,11 +645,7 @@ def significance_code(p):
 
 def significance_codes_as_text():
     p_values = [0, 0.0001, 0.001, 0.01, 0.05]
-    return (
-        "Signif. codes: "
-        + " ".join(["%s '%s'" % (p, significance_code(p)) for p in p_values])
-        + " 1"
-    )
+    return "Signif. codes: " + " ".join(["%s '%s'" % (p, significance_code(p)) for p in p_values]) + " 1"
 
 
 def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
@@ -866,9 +841,7 @@ class _BTree(object):
                 i = 2 * i + 2
             else:
                 return
-        raise ValueError(
-            "Value %s not contained in tree." "Also, the counts are now messed up." % value
-        )
+        raise ValueError("Value %s not contained in tree." "Also, the counts are now messed up." % value)
 
     def __len__(self):
         return self._counts[0]
@@ -908,9 +881,7 @@ class _BTree(object):
         return (rank, count)
 
 
-def _concordance_index(
-    event_times, predicted_event_times, event_observed
-):  # pylint: disable=too-many-locals
+def _concordance_index(event_times, predicted_event_times, event_observed):  # pylint: disable=too-many-locals
     """Find the concordance index in n * log(n) time.
 
     Assumes the data has been verified by lifelines.utils.concordance_index first.
@@ -1000,14 +971,10 @@ def _concordance_index(
         has_more_censored = censored_ix < len(censored_truth)
         has_more_died = died_ix < len(died_truth)
         # Should we look at some censored indices next, or died indices?
-        if has_more_censored and (
-            not has_more_died or died_truth[died_ix] > censored_truth[censored_ix]
-        ):
+        if has_more_censored and (not has_more_died or died_truth[died_ix] > censored_truth[censored_ix]):
             pairs, correct, tied, next_ix = handle_pairs(censored_truth, censored_pred, censored_ix)
             censored_ix = next_ix
-        elif has_more_died and (
-            not has_more_censored or died_truth[died_ix] <= censored_truth[censored_ix]
-        ):
+        elif has_more_died and (not has_more_censored or died_truth[died_ix] <= censored_truth[censored_ix]):
             pairs, correct, tied, next_ix = handle_pairs(died_truth, died_pred, died_ix)
             for pred in died_pred[died_ix:next_ix]:
                 times_to_compare.insert(pred)
@@ -1108,9 +1075,7 @@ Alternatively, add 1 to every subjects' final end period.
 
 
 def check_for_instantaneous_events(stop_times_events):
-    if (
-        (stop_times_events["start"] == stop_times_events["stop"]) & (stop_times_events["stop"] == 0)
-    ).any():
+    if ((stop_times_events["start"] == stop_times_events["stop"]) & (stop_times_events["stop"] == 0)).any():
         warning_text = """There exist rows in your dataframe with start and stop both at time 0:
 
         > df.loc[(df[start_col] == df[stop_col]) & (df[start_col] == 0)]
@@ -1126,11 +1091,7 @@ def check_for_overlapping_intervals(df):
     # only useful for time varying coefs, after we've done
     # some index creation
     # so slow.
-    if (
-        not df.groupby(level=1)
-        .apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic)
-        .all()
-    ):
+    if not df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic).all():
         raise ValueError(
             "The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
 to help find:\
@@ -1199,14 +1160,10 @@ def check_nans_or_infs(df_or_array):
     nulls = pd.isnull(df_or_array)
     if hasattr(nulls, "values"):
         if nulls.values.any():
-            raise TypeError(
-                "NaNs were detected in the dataset. Try using pd.isnull to find the problematic values."
-            )
+            raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     else:
         if nulls.any():
-            raise TypeError(
-                "NaNs were detected in the dataset. Try using pd.isnull to find the problematic values."
-            )
+            raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     # isinf check is done after isnull check since np.isinf doesn't work on None values
     infs = []
     if isinstance(df_or_array, (pd.Series, pd.DataFrame)):
@@ -1215,14 +1172,10 @@ def check_nans_or_infs(df_or_array):
         infs = np.isinf(df_or_array)
     if hasattr(infs, "values"):
         if infs.values.any():
-            raise TypeError(
-                "Infs were detected in the dataset. Try using np.isinf to find the problematic values."
-            )
+            raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
     else:
         if infs.any():
-            raise TypeError(
-                "Infs were detected in the dataset. Try using np.isinf to find the problematic values."
-            )
+            raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
 
 
 def to_long_format(df, duration_col):
@@ -1386,9 +1339,7 @@ def covariates_from_event_matrix(df, id_col):
     df = df.stack().reset_index()
     df.columns = [id_col, "event", "duration"]
     df["_counter"] = 1
-    return df.pivot_table(index=[id_col, "duration"], columns="event", fill_value=0)[
-        "_counter"
-    ].reset_index()
+    return df.pivot_table(index=[id_col, "duration"], columns="event", fill_value=0)["_counter"].reset_index()
 
 
 class StepSizer:
@@ -1436,9 +1387,7 @@ class StepSizer:
             self.step_size *= 0.98
 
         # recent monotonically decreasing is good though
-        if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(
-            self.norm_of_deltas[-LOOKBACK:]
-        ):
+        if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
             self.step_size = min(self.step_size * SCALE, 0.95)
 
         return self

@@ -58,12 +58,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
         naf = NelsonAalenFitter(alpha)
         naf.fit(
-            durations,
-            event_observed=event_observed,
-            timeline=timeline,
-            label=label,
-            entry=entry,
-            ci_labels=ci_labels,
+            durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels
         )
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = (
             naf.durations,

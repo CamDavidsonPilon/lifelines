@@ -104,9 +104,7 @@ class KaplanMeierFitter(UnivariateFitter):
                 )
 
         # estimation
-        setattr(
-            self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[self._label])
-        )
+        setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[self._label]))
         self.__estimate = getattr(self, estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self.median_ = median_survival_times(self.__estimate, left_censorship=left_censorship)
@@ -133,10 +131,7 @@ class KaplanMeierFitter(UnivariateFitter):
         v = np.log(self.__estimate.values)
 
         if ci_labels is None:
-            ci_labels = [
-                "%s_upper_%.2f" % (self._label, alpha),
-                "%s_lower_%.2f" % (self._label, alpha),
-            ]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v))
