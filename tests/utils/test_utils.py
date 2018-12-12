@@ -21,9 +21,7 @@ def test_ridge_regression_with_penalty_is_less_than_without_penalty():
     X = randn(2, 2)
     Y = randn(2)
     assert norm(utils.ridge_regression(X, Y, c1=2.0)[0]) <= norm(utils.ridge_regression(X, Y)[0])
-    assert norm(utils.ridge_regression(X, Y, c1=1.0, c2=1.0)[0]) <= norm(
-        utils.ridge_regression(X, Y)[0]
-    )
+    assert norm(utils.ridge_regression(X, Y, c1=1.0, c2=1.0)[0]) <= norm(utils.ridge_regression(X, Y)[0])
 
 
 def test_ridge_regression_with_extreme_c1_penalty_equals_close_to_zero_vector():
@@ -177,8 +175,7 @@ def test_qth_survival_times_with_multivariate_q():
         pd.DataFrame([40, 25], index=[0.2, 0.5], columns=["sf"]),
     )
     assert_frame_equal(
-        utils.qth_survival_times(0.5, sf_multi_df),
-        pd.DataFrame([[25, 15]], index=[0.5], columns=["sf", "sf**2"]),
+        utils.qth_survival_times(0.5, sf_multi_df), pd.DataFrame([[25, 15]], index=[0.5], columns=["sf", "sf**2"])
     )
     assert utils.qth_survival_times(0.5, sf_multi_df["sf"]) == 25
 
@@ -265,9 +262,7 @@ def test_survival_table_from_events_with_non_trivial_censorship_column():
 def test_group_survival_table_from_events_on_waltons_data():
     df = load_waltons()
     first_obs = np.zeros(df.shape[0])
-    g, removed, observed, censored = utils.group_survival_table_from_events(
-        df["group"], df["T"], df["E"], first_obs
-    )
+    g, removed, observed, censored = utils.group_survival_table_from_events(df["group"], df["T"], df["E"], first_obs)
     assert len(g) == 2
     assert all(removed.columns == ["removed:miR-137", "removed:control"])
     assert all(removed.index == observed.index)
@@ -324,9 +319,7 @@ def test_survival_table_to_events_casts_to_float():
 
 def test_group_survival_table_from_events_works_with_series():
     df = pd.DataFrame([[1, True, 3], [1, True, 3], [4, False, 2]], columns=["duration", "E", "G"])
-    ug, _, _, _ = utils.group_survival_table_from_events(
-        df.G, df.duration, df.E, np.array([[0, 0, 0]])
-    )
+    ug, _, _, _ = utils.group_survival_table_from_events(df.G, df.duration, df.E, np.array([[0, 0, 0]]))
     npt.assert_array_equal(ug, np.array([3, 2]))
 
 
@@ -342,37 +335,26 @@ def test_survival_table_from_events_will_collapse_if_asked():
 def test_survival_table_from_events_will_collapse_to_desired_bins():
     T, C = np.array([1, 3, 4, 5]), np.array([True, True, True, True])
     table = utils.survival_table_from_events(T, C, collapse=True, intervals=[0, 4, 8])
-    assert table.index.tolist() == [
-        pd.Interval(0, 4, closed="right"),
-        pd.Interval(4, 8, closed="right"),
-    ]
+    assert table.index.tolist() == [pd.Interval(0, 4, closed="right"), pd.Interval(4, 8, closed="right")]
 
 
 def test_cross_validator_returns_k_results():
     cf = CoxPHFitter()
-    results = utils.k_fold_cross_validation(
-        cf, load_regression_dataset(), duration_col="T", event_col="E", k=3
-    )
+    results = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col="T", event_col="E", k=3)
     assert len(results) == 3
 
-    results = utils.k_fold_cross_validation(
-        cf, load_regression_dataset(), duration_col="T", event_col="E", k=5
-    )
+    results = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col="T", event_col="E", k=5)
     assert len(results) == 5
 
 
 def test_cross_validator_returns_fitters_k_results():
     cf = CoxPHFitter()
     fitters = [cf, cf]
-    results = utils.k_fold_cross_validation(
-        fitters, load_regression_dataset(), duration_col="T", event_col="E", k=3
-    )
+    results = utils.k_fold_cross_validation(fitters, load_regression_dataset(), duration_col="T", event_col="E", k=3)
     assert len(results) == 2
     assert len(results[0]) == len(results[1]) == 3
 
-    results = utils.k_fold_cross_validation(
-        fitters, load_regression_dataset(), duration_col="T", event_col="E", k=5
-    )
+    results = utils.k_fold_cross_validation(fitters, load_regression_dataset(), duration_col="T", event_col="E", k=5)
     assert len(results) == 2
     assert len(results[0]) == len(results[1]) == 5
 
@@ -380,12 +362,7 @@ def test_cross_validator_returns_fitters_k_results():
 def test_cross_validator_with_predictor():
     cf = CoxPHFitter()
     results = utils.k_fold_cross_validation(
-        cf,
-        load_regression_dataset(),
-        duration_col="T",
-        event_col="E",
-        k=3,
-        predictor="predict_expectation",
+        cf, load_regression_dataset(), duration_col="T", event_col="E", k=3, predictor="predict_expectation"
     )
     assert len(results) == 3
 
@@ -414,15 +391,9 @@ def test_cross_validator_with_specific_loss_function():
 
     cf = CoxPHFitter()
     results_sq = utils.k_fold_cross_validation(
-        cf,
-        load_regression_dataset(),
-        evaluation_measure=square_loss,
-        duration_col="T",
-        event_col="E",
+        cf, load_regression_dataset(), evaluation_measure=square_loss, duration_col="T", event_col="E"
     )
-    results_con = utils.k_fold_cross_validation(
-        cf, load_regression_dataset(), duration_col="T", event_col="E"
-    )
+    results_con = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col="T", event_col="E")
     assert list(results_sq) != list(results_con)
 
 
@@ -461,11 +432,7 @@ def test_both_concordance_index_function_deal_with_ties_the_same_way():
     actual_times = np.array([1, 1, 2])
     predicted_times = np.array([1, 2, 3])
     obs = np.ones(3)
-    assert (
-        fast_cindex(actual_times, predicted_times, obs)
-        == slow_cindex(actual_times, predicted_times, obs)
-        == 1.0
-    )
+    assert fast_cindex(actual_times, predicted_times, obs) == slow_cindex(actual_times, predicted_times, obs) == 1.0
 
 
 def test_concordance_index_function_exits():
@@ -617,11 +584,7 @@ class TestLongDataFrameUtils(object):
     @pytest.fixture
     def cv2(self):
         return pd.DataFrame.from_records(
-            [
-                {"id": 1, "t": 0, "var3": 0},
-                {"id": 1, "t": 6, "var3": 1},
-                {"id": 2, "t": 0, "var3": 0},
-            ]
+            [{"id": 1, "t": 0, "var3": 0}, {"id": 1, "t": 6, "var3": 1}, {"id": 2, "t": 0, "var3": 0}]
         )
 
     def test_order_of_adding_covariates_doesnt_matter(self, seed_df, cv1, cv2):
@@ -636,22 +599,20 @@ class TestLongDataFrameUtils(object):
         assert_frame_equal(df21, df12, check_like=True)
 
     def test_order_of_adding_covariates_doesnt_matter_in_cumulative_sum(self, seed_df, cv1, cv2):
-        df12 = seed_df.pipe(
-            utils.add_covariate_to_timeline, cv1, "id", "t", "E", cumulative_sum=True
-        ).pipe(utils.add_covariate_to_timeline, cv2, "id", "t", "E", cumulative_sum=True)
-
-        df21 = seed_df.pipe(
+        df12 = seed_df.pipe(utils.add_covariate_to_timeline, cv1, "id", "t", "E", cumulative_sum=True).pipe(
             utils.add_covariate_to_timeline, cv2, "id", "t", "E", cumulative_sum=True
-        ).pipe(utils.add_covariate_to_timeline, cv1, "id", "t", "E", cumulative_sum=True)
+        )
+
+        df21 = seed_df.pipe(utils.add_covariate_to_timeline, cv2, "id", "t", "E", cumulative_sum=True).pipe(
+            utils.add_covariate_to_timeline, cv1, "id", "t", "E", cumulative_sum=True
+        )
 
         assert_frame_equal(df21, df12, check_like=True)
 
     def test_adding_cvs_with_the_same_column_name_will_insert_appropriately(self, seed_df):
         seed_df = seed_df[seed_df["id"] == 1]
 
-        cv = pd.DataFrame.from_records(
-            [{"id": 1, "t": 1, "var1": 1.0}, {"id": 1, "t": 2, "var1": 2.0}]
-        )
+        cv = pd.DataFrame.from_records([{"id": 1, "t": 1, "var1": 1.0}, {"id": 1, "t": 2, "var1": 2.0}])
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, "id", "t", "E")
         expected = pd.DataFrame.from_records(
             [
@@ -667,9 +628,7 @@ class TestLongDataFrameUtils(object):
 
         new_value_at_time_0 = 1.0
         old_value_at_time_0 = seed_df["var1"].iloc[0]
-        cv = pd.DataFrame.from_records(
-            [{"id": 1, "t": 0, "var1": new_value_at_time_0, "var2": 2.0}]
-        )
+        cv = pd.DataFrame.from_records([{"id": 1, "t": 0, "var1": new_value_at_time_0, "var2": 2.0}])
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, "id", "t", "E", overwrite=False)
 
@@ -687,9 +646,7 @@ class TestLongDataFrameUtils(object):
         )
         assert_frame_equal(df, expected, check_like=True)
 
-    def test_adding_cvs_with_the_same_column_name_will_overwrite_update_appropriately(
-        self, seed_df
-    ):
+    def test_adding_cvs_with_the_same_column_name_will_overwrite_update_appropriately(self, seed_df):
         seed_df = seed_df[seed_df["id"] == 1]
 
         new_value_at_time_0 = 1.0
@@ -720,25 +677,10 @@ class TestLongDataFrameUtils(object):
         cv = pd.DataFrame.from_records(
             [
                 {"id": 1, "t": 0, "var3": 0, "var4": 1},
-                {
-                    "id": 1,
-                    "t": 1,
-                    "var3": 0,
-                    "var4": 1,
-                },  # redundant, as nothing changed during the interval
-                {
-                    "id": 1,
-                    "t": 3,
-                    "var3": 0,
-                    "var4": 1,
-                },  # redundant, as nothing changed during the interval
+                {"id": 1, "t": 1, "var3": 0, "var4": 1},  # redundant, as nothing changed during the interval
+                {"id": 1, "t": 3, "var3": 0, "var4": 1},  # redundant, as nothing changed during the interval
                 {"id": 1, "t": 6, "var3": 1, "var4": 1},
-                {
-                    "id": 1,
-                    "t": 9,
-                    "var3": 1,
-                    "var4": 1,
-                },  # redundant, as nothing changed during the interval
+                {"id": 1, "t": 9, "var3": 1, "var4": 1},  # redundant, as nothing changed during the interval
             ]
         )
 
@@ -767,11 +709,7 @@ class TestLongDataFrameUtils(object):
     def test_if_cvs_include_a_start_time_before_it_is_included(self, seed_df):
         min_T = seed_df["start"].min()
         cv = pd.DataFrame.from_records(
-            [
-                {"id": 1, "t": 0, "var3": 0},
-                {"id": 1, "t": min_T - 1, "var3": 1},
-                {"id": 2, "t": 0, "var3": 0},
-            ]
+            [{"id": 1, "t": 0, "var3": 0}, {"id": 1, "t": min_T - 1, "var3": 1}, {"id": 2, "t": 0, "var3": 0}]
         )
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, "id", "t", "E")
@@ -780,11 +718,7 @@ class TestLongDataFrameUtils(object):
     def test_cvs_with_null_values_are_dropped(self, seed_df):
         seed_df = seed_df[seed_df["id"] == 1]
         cv = pd.DataFrame.from_records(
-            [
-                {"id": None, "t": 0, "var3": 0},
-                {"id": 1, "t": None, "var3": 1},
-                {"id": 2, "t": 0, "var3": None},
-            ]
+            [{"id": None, "t": 0, "var3": 0}, {"id": 1, "t": None, "var3": 1}, {"id": 2, "t": 0, "var3": None}]
         )
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, "id", "t", "E")
@@ -792,16 +726,10 @@ class TestLongDataFrameUtils(object):
 
     def test_a_new_row_is_not_created_if_start_times_are_the_same(self, seed_df):
         seed_df = seed_df[seed_df["id"] == 1]
-        cv1 = pd.DataFrame.from_records(
-            [{"id": 1, "t": 0, "var3": 0}, {"id": 1, "t": 5, "var3": 1}]
-        )
+        cv1 = pd.DataFrame.from_records([{"id": 1, "t": 0, "var3": 0}, {"id": 1, "t": 5, "var3": 1}])
 
         cv2 = pd.DataFrame.from_records(
-            [
-                {"id": 1, "t": 0, "var4": 0},
-                {"id": 1, "t": 5, "var4": 1.5},
-                {"id": 1, "t": 6, "var4": 1.7},
-            ]
+            [{"id": 1, "t": 0, "var4": 0}, {"id": 1, "t": 5, "var4": 1.5}, {"id": 1, "t": 6, "var4": 1.7}]
         )
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv1, "id", "t", "E").pipe(
@@ -817,11 +745,7 @@ class TestLongDataFrameUtils(object):
     def test_cumulative_sum(self):
         seed_df = pd.DataFrame.from_records([{"id": 1, "start": 0, "stop": 5, "E": 1}])
         cv = pd.DataFrame.from_records(
-            [
-                {"id": 1, "t": 0, "var4": 1},
-                {"id": 1, "t": 1, "var4": 1},
-                {"id": 1, "t": 3, "var4": 1},
-            ]
+            [{"id": 1, "t": 0, "var4": 1}, {"id": 1, "t": 1, "var4": 1}, {"id": 1, "t": 3, "var4": 1}]
         )
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, "id", "t", "E", cumulative_sum=True)
@@ -838,11 +762,7 @@ class TestLongDataFrameUtils(object):
         seed_df = pd.DataFrame.from_records([{"id": 1, "start": 0, "stop": 50, "E": 1}])
 
         cv3 = pd.DataFrame.from_records(
-            [
-                {"id": 1, "t": 0, "varA": 2},
-                {"id": 1, "t": 10, "varA": 4},
-                {"id": 1, "t": 20, "varA": 6},
-            ]
+            [{"id": 1, "t": 0, "varA": 2}, {"id": 1, "t": 10, "varA": 4}, {"id": 1, "t": 20, "varA": 6}]
         )
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv3, "id", "t", "E", delay=2).fillna(0)
@@ -860,19 +780,15 @@ class TestLongDataFrameUtils(object):
     def test_covariates_from_event_matrix(self):
 
         base_df = pd.DataFrame(
-            [[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]],
-            columns=["id", "start", "stop", "e"],
+            [[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]], columns=["id", "start", "stop", "e"]
         )
 
         event_df = pd.DataFrame(
-            [[1, 1, None, 2], [2, None, 5, None], [3, 3, 3, 7]],
-            columns=["id", "promotion", "movement", "raise"],
+            [[1, 1, None, 2], [2, None, 5, None], [3, 3, 3, 7]], columns=["id", "promotion", "movement", "raise"]
         )
 
         cv = utils.covariates_from_event_matrix(event_df, "id")
-        ldf = utils.add_covariate_to_timeline(
-            base_df, cv, "id", "duration", "e", cumulative_sum=True
-        )
+        ldf = utils.add_covariate_to_timeline(base_df, cv, "id", "duration", "e", cumulative_sum=True)
         expected = pd.DataFrame.from_records(
             [
                 {

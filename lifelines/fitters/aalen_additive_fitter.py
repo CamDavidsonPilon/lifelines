@@ -47,12 +47,7 @@ class AalenAdditiveFitter(BaseFitter):
     """
 
     def __init__(
-        self,
-        fit_intercept=True,
-        alpha=0.95,
-        coef_penalizer=0.5,
-        smoothing_penalizer=0.0,
-        nn_cumulative_hazard=True,
+        self, fit_intercept=True, alpha=0.95, coef_penalizer=0.5, smoothing_penalizer=0.0, nn_cumulative_hazard=True
     ):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
@@ -65,9 +60,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.smoothing_penalizer = smoothing_penalizer
         self.nn_cumulative_hazard = nn_cumulative_hazard
 
-    def fit(
-        self, df, duration_col, event_col=None, timeline=None, id_col=None, show_progress=False
-    ):
+    def fit(self, df, duration_col, event_col=None, timeline=None, id_col=None, show_progress=False):
         """
         Perform inference on the coefficients of the Aalen additive model.
 
@@ -165,7 +158,7 @@ class AalenAdditiveFitter(BaseFitter):
         T, C = T.iloc[ix], C.iloc[ix]
 
         del df[duration_col]
-        n, d = df.shape
+        _, d = df.shape
         columns = df.columns
         df = df.astype(float)
 
@@ -211,10 +204,7 @@ class AalenAdditiveFitter(BaseFitter):
                     offset=previous_hazard,
                 )
             except LinAlgError:
-                warnings.warn(
-                    "Linear regression error. Try increasing the penalizer term.",
-                    ConvergenceWarning,
-                )
+                warnings.warn("Linear regression error. Try increasing the penalizer term.", ConvergenceWarning)
 
             hazards_.loc[time, id_] = v.T
             variance_.loc[time, id_] = V[:, relevant_individuals][:, 0] ** 2
@@ -251,13 +241,7 @@ class AalenAdditiveFitter(BaseFitter):
         )
 
     def _fit_varying(
-        self,
-        dataframe,
-        duration_col="T",
-        event_col="E",
-        id_col=None,
-        timeline=None,
-        show_progress=True,
+        self, dataframe, duration_col="T", event_col="E", id_col=None, timeline=None, show_progress=True
     ):  # pylint: disable=too-many-locals
 
         from_tuples = pd.MultiIndex.from_tuples
@@ -281,7 +265,7 @@ class AalenAdditiveFitter(BaseFitter):
         T = (C_panel.minor_xs(event_col).notnull()).cumsum().idxmax()
 
         del df[event_col]
-        n, d = df.shape
+        _, d = df.shape
 
         # so this is a problem line. bfill performs a recursion which is
         # really not scalable. Plus even for modest datasets, this eats a lot of memory.
@@ -292,15 +276,11 @@ class AalenAdditiveFitter(BaseFitter):
         non_censorsed_times = list(T[C].iteritems())
         columns = wp.items
         hazards_ = pd.DataFrame(
-            np.zeros((len(non_censorsed_times), d)),
-            columns=columns,
-            index=from_tuples(non_censorsed_times),
+            np.zeros((len(non_censorsed_times), d)), columns=columns, index=from_tuples(non_censorsed_times)
         )
 
         variance_ = pd.DataFrame(
-            np.zeros((len(non_censorsed_times), d)),
-            columns=columns,
-            index=from_tuples(non_censorsed_times),
+            np.zeros((len(non_censorsed_times), d)), columns=columns, index=from_tuples(non_censorsed_times)
         )
 
         previous_hazard = np.zeros((d,))
@@ -325,10 +305,7 @@ class AalenAdditiveFitter(BaseFitter):
                     offset=previous_hazard,
                 )
             except LinAlgError:
-                warnings.warn(
-                    "Linear regression error. Try increasing the penalizer term.",
-                    ConvergenceWarning,
-                )
+                warnings.warn("Linear regression error. Try increasing the penalizer term.", ConvergenceWarning)
 
             hazards_.loc[time_id, time] = v.T
             variance_.loc[time_id, time] = V[:, relevant_individuals][:, 0] ** 2
@@ -371,10 +348,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         """
         return pd.DataFrame(
-            np.dot(
-                epanechnikov_kernel(self.timeline[:, None], self.timeline, bandwidth),
-                self.hazards_.values,
-            ),
+            np.dot(epanechnikov_kernel(self.timeline[:, None], self.timeline, bandwidth), self.hazards_.values),
             columns=self.hazards_.columns,
             index=self.timeline,
         )
@@ -389,13 +363,13 @@ class AalenAdditiveFitter(BaseFitter):
             np.zeros((2 * n, d)), index=index, columns=self.cumulative_hazards_.columns
         )
 
-        self.confidence_intervals_.loc[
-            "upper"
-        ] = self.cumulative_hazards_.values + alpha2 * np.sqrt(self.variance_.cumsum().values)
+        self.confidence_intervals_.loc["upper"] = self.cumulative_hazards_.values + alpha2 * np.sqrt(
+            self.variance_.cumsum().values
+        )
 
-        self.confidence_intervals_.loc[
-            "lower"
-        ] = self.cumulative_hazards_.values - alpha2 * np.sqrt(self.variance_.cumsum().values)
+        self.confidence_intervals_.loc["lower"] = self.cumulative_hazards_.values - alpha2 * np.sqrt(
+            self.variance_.cumsum().values
+        )
 
     def predict_cumulative_hazard(self, X, id_col=None):
         """
@@ -409,7 +383,7 @@ class AalenAdditiveFitter(BaseFitter):
             # see https://github.com/CamDavidsonPilon/lifelines/issues/38
             raise NotImplementedError
 
-        n, d = X.shape
+        n, _ = X.shape
 
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):
@@ -472,9 +446,7 @@ class AalenAdditiveFitter(BaseFitter):
         """
         index = _get_index(X)
         t = self.cumulative_hazards_.index
-        return pd.DataFrame(
-            trapz(self.predict_survival_function(X)[index].values.T, t), index=index
-        )
+        return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def plot(
         self, loc=None, iloc=None, columns=[], legend=True, **kwargs
@@ -494,15 +466,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         def shaded_plot(ax, x, y, y_upper, y_lower, **kwargs):
             base_line, = ax.plot(x, y, drawstyle="steps-post", **kwargs)
-            fill_between_steps(
-                x,
-                y_lower,
-                y2=y_upper,
-                ax=ax,
-                alpha=0.25,
-                color=base_line.get_color(),
-                linewidth=1.0,
-            )
+            fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25, color=base_line.get_color(), linewidth=1.0)
 
         assert loc is None or iloc is None, "Cannot set both loc and iloc in call to .plot"
 

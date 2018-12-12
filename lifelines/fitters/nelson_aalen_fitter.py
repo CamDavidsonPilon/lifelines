@@ -103,9 +103,7 @@ class NelsonAalenFitter(UnivariateFitter):
         # esimates
         self._label = label
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
-        self.confidence_interval_ = self._bounds(
-            cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels
-        )
+        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
         self._cumulative_sq = cumulative_sq_
 
         # estimation methods
@@ -128,10 +126,7 @@ class NelsonAalenFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
 
         if ci_labels is None:
-            ci_labels = [
-                "%s_upper_%.2f" % (self._label, alpha),
-                "%s_lower_%.2f" % (self._label, alpha),
-            ]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
         self.ci_labels = ci_labels
 
@@ -147,8 +142,7 @@ class NelsonAalenFitter(UnivariateFitter):
     def _variance_f_smooth(self, population, deaths):
         cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1) ** 2)
         return pd.Series(
-            cum_[population - 1]
-            - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
+            cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
             index=population.index,
         )
 
@@ -158,8 +152,7 @@ class NelsonAalenFitter(UnivariateFitter):
     def _additive_f_smooth(self, population, deaths):
         cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1))
         return pd.Series(
-            cum_[population - 1]
-            - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
+            cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
             index=population.index,
         )
 
@@ -182,10 +175,7 @@ class NelsonAalenFitter(UnivariateFitter):
         return pd.DataFrame(
             1.0
             / bandwidth
-            * np.dot(
-                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth),
-                hazard_.values[C, :],
-            ),
+            * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C, :]),
             columns=[hazard_name],
             index=timeline,
         )
@@ -208,8 +198,7 @@ class NelsonAalenFitter(UnivariateFitter):
             1.0
             / (bandwidth ** 2)
             * np.dot(
-                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2,
-                var_hazard_.values[C],
+                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C]
             )
         )
         values = {

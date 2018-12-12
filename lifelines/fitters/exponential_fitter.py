@@ -15,57 +15,56 @@ from lifelines.utils import (
 
 
 class ExponentialFitter(UnivariateFitter):
-
-    """
+    r"""
     This class implements an Exponential model for univariate data. The model has parameterized
     form:
 
-      S(t) = exp(-(lambda*t)),   lambda >0
+    .. math::  S(t) = exp(-(\lambda*t)),   \lambda >0
 
     which implies the cumulative hazard rate is
 
-      H(t) = lambda*t
+    .. math::  H(t) = \lambda*t
 
     and the hazard rate is:
 
-      h(t) = lambda
+    .. math::  h(t) = \lambda
 
     After calling the `.fit` method, you have access to properties like:
      'survival_function_', 'lambda_'
 
     A summary of the fit is available with the method 'print_summary()'
 
-
+    Notes
+    -----
     Reference: https://www4.stat.ncsu.edu/~dzhang2/st745/chap3.pdf
 
     """
 
     def fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        entry=None,
-        label="Exponential_estimate",
-        alpha=None,
-        ci_labels=None,
+        self, durations, event_observed=None, timeline=None, label="Exponential_estimate", alpha=None, ci_labels=None
     ):  # pylint: disable=too-many-arguments
         """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
-          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+        Parameters
+        ----------
+          duration: iterable
+            an array, or pd.Series, of length n -- duration subject was observed for
+          event_observed: iterable, optional
+            an array, list, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
-          label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
+          timeline: iterable, optional
+            return the best estimate at the values in timelines (postively increasing)
+          label: string, optional
+            a string to name the column of the estimate.
+          alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
-          ci_labels: add custom column names to the generated confidence intervals
+          ci_labels: list, optional
+            add custom column names to the generated confidence intervals
                 as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
 
-        Returns:
+        Returns
+        -------
+        self : ExpontentialFitter
           self, with new properties like 'survival_function_' and 'lambda_'.
 
         """
@@ -76,9 +75,7 @@ class ExponentialFitter(UnivariateFitter):
 
         self.durations = np.asarray(durations, dtype=float)
         self.event_observed = (
-            np.asarray(event_observed, dtype=int)
-            if event_observed is not None
-            else np.ones_like(self.durations)
+            np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
         self.timeline = (
             np.sort(np.asarray(timeline))
@@ -118,10 +115,7 @@ class ExponentialFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
 
         if ci_labels is None:
-            ci_labels = [
-                "%s_upper_%.2f" % (self._label, alpha),
-                "%s_lower_%.2f" % (self._label, alpha),
-            ]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         std = np.sqrt(self._lambda_variance_)
@@ -152,7 +146,7 @@ class ExponentialFitter(UnivariateFitter):
 
         Returns
         -------
-        df : pd.DataFrame
+        df : DataFrame
             Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
         lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
         df = pd.DataFrame(index=["lambda_"])
@@ -179,9 +173,7 @@ class ExponentialFitter(UnivariateFitter):
         justify = string_justify(18)
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
-        print(
-            "{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0])
-        )
+        print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood), end="\n\n")
 
         df = self.summary

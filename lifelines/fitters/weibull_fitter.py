@@ -23,11 +23,7 @@ def _negative_log_likelihood(lambda_rho, T, E):
     if np.any(np.asarray(lambda_rho) < 0):
         return 10e9
     lambda_, rho = lambda_rho
-    return (
-        -np.log(rho * lambda_) * E.sum()
-        - (rho - 1) * (E * np.log(lambda_ * T)).sum()
-        + ((lambda_ * T) ** rho).sum()
-    )
+    return -np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
 
 
 def _lambda_gradient(lambda_rho, T, E):
@@ -37,11 +33,7 @@ def _lambda_gradient(lambda_rho, T, E):
 
 def _rho_gradient(lambda_rho, T, E):
     lambda_, rho = lambda_rho
-    return (
-        -E.sum() / rho
-        - (np.log(lambda_ * T) * E).sum()
-        + (np.log(lambda_ * T) * (lambda_ * T) ** rho).sum()
-    )
+    return -E.sum() / rho - (np.log(lambda_ * T) * E).sum() + (np.log(lambda_ * T) * (lambda_ * T) ** rho).sum()
 
 
 def _d_rho_d_rho(lambda_rho, T, E):
@@ -56,31 +48,40 @@ def _d_lambda_d_lambda_(lambda_rho, T, E):
 
 def _d_rho_d_lambda_(lambda_rho, T, E):
     lambda_, rho = lambda_rho
-    return (-1.0 / lambda_) * (
-        E - (lambda_ * T) ** rho - rho * (lambda_ * T) ** rho * np.log(lambda_ * T)
-    ).sum()
+    return (-1.0 / lambda_) * (E - (lambda_ * T) ** rho - rho * (lambda_ * T) ** rho * np.log(lambda_ * T)).sum()
 
 
 class WeibullFitter(UnivariateFitter):
 
-    """
+    r"""
     This class implements a Weibull model for univariate data. The model has parameterized
     form:
 
-      S(t) = exp(-(lambda*t)^rho),   lambda > 0, rho > 0,
+    .. math::  S(t) = exp(-(\lambda t)^\rho),   \lambda > 0, \rho > 0,
 
     which implies the cumulative hazard rate is
 
-      H(t) = (lambda*t)^rho,
+    .. math:: H(t) = (\lambda t)^\rho,
 
     and the hazard rate is:
 
-      h(t) = rho*lambda(lambda*t)^(rho-1)
+    .. math::  h(t) = \rho \lambda(\lambda t)^(\rho-1)
 
     After calling the `.fit` method, you have access to properties like:
-    `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
+    cumulative_hazard_, survival_function_, lambda_ and rho_.
 
     A summary of the fit is available with the method 'print_summary()'
+    
+    Examples
+    --------
+
+    >>> from lifelines import WeibullFitter 
+    >>> from lifelines.datasets import load_waltons
+    >>> waltons = load_waltons()
+    >>> wbf = WeibullFitter()
+    >>> wbf.fit(waltons['T'], waltons['E'])
+    >>> wbf.plot()
+    >>> print(wbf.lambda_)
 
     """
 
@@ -89,29 +90,36 @@ class WeibullFitter(UnivariateFitter):
         durations,
         event_observed=None,
         timeline=None,
-        entry=None,
         label="Weibull_estimate",
         alpha=None,
         ci_labels=None,
         show_progress=False,
     ):  # pylint: disable=too-many-arguments
         """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if event_observed==None
-          timeline: return the estimate at the values in timeline (postively increasing)
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
-          label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
-             alpha for this call to fit only.
-          ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-          show_progress: since this is an iterative fitting algorithm, switching this to True will display some iteration details.
-        Returns:
-          self, with new properties like `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
+        Parameters
+        ----------
+        duration: an array, or pd.Series
+          length n, duration subject was observed for
+        event_observed: numpy array or pd.Series, optional
+          length n, True if the the death was observed, False if the event
+           was lost (right-censored). Defaults all True if event_observed==None
+        timeline: list, optional
+            return the estimate at the values in timeline (postively increasing)
+        label: string, optional
+            a string to name the column of the estimate.
+        alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: list, optional
+            add custom column names to the generated confidence intervals
+              as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        show_progress: boolean, optional
+            since this is an iterative fitting algorithm, switching this to True will display some iteration details.
+
+        Returns
+        -------
+          self : WeibullFitter
+            self with new properties like cumulative_hazard_, survival_function_, lambda_, and rho_.
 
         """
 
@@ -127,17 +135,13 @@ class WeibullFitter(UnivariateFitter):
             )
 
         self.event_observed = (
-            np.asarray(event_observed, dtype=int)
-            if event_observed is not None
-            else np.ones_like(self.durations)
+            np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
 
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline))
         else:
-            self.timeline = np.linspace(
-                self.durations.min(), self.durations.max(), self.durations.shape[0]
-            )
+            self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
 
         self._label = label
         alpha = alpha if alpha is not None else self.alpha
@@ -146,22 +150,14 @@ class WeibullFitter(UnivariateFitter):
         (self.lambda_, self.rho_), self._hessian_ = self._newton_rhaphson(
             self.durations, self.event_observed, show_progress=show_progress
         )
-        self._log_likelihood = -_negative_log_likelihood(
-            (self.lambda_, self.rho_), self.durations, self.event_observed
-        )
+        self._log_likelihood = -_negative_log_likelihood((self.lambda_, self.rho_), self.durations, self.event_observed)
         self.variance_matrix_ = -inv(self._hessian_)
         self.survival_function_ = pd.DataFrame(
-            self.survival_function_at_times(self.timeline),
-            columns=[self._label],
-            index=self.timeline,
+            self.survival_function_at_times(self.timeline), columns=[self._label], index=self.timeline
         )
-        self.hazard_ = pd.DataFrame(
-            self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline
-        )
+        self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
         self.cumulative_hazard_ = pd.DataFrame(
-            self.cumulative_hazard_at_times(self.timeline),
-            columns=[self._label],
-            index=self.timeline,
+            self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline
         )
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
         self.median_ = 1.0 / self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
@@ -188,9 +184,7 @@ class WeibullFitter(UnivariateFitter):
     def cumulative_hazard_at_times(self, times):
         return (self.lambda_ * times) ** self.rho_
 
-    def _newton_rhaphson(
-        self, T, E, precision=1e-5, show_progress=False
-    ):  # pylint: disable=too-many-locals
+    def _newton_rhaphson(self, T, E, precision=1e-5, show_progress=False):  # pylint: disable=too-many-locals
         from lifelines.utils import _smart_search
 
         def hessian_function(parameters, T, E):
@@ -239,10 +233,7 @@ class WeibullFitter(UnivariateFitter):
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
         if not completed:
-            warnings.warn(
-                "Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps,
-                ConvergenceWarning,
-            )
+            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
         return parameters, hessian
 
@@ -258,44 +249,29 @@ class WeibullFitter(UnivariateFitter):
             return np.log(lambda_ * T) * (lambda_ * T) ** rho
 
         def sensitivity_analysis(lambda_, rho, var_lambda_, var_rho_, T):
-            return (
-                var_lambda_ * _dH_d_lambda(lambda_, rho, T) ** 2
-                + var_rho_ * _dH_d_rho(lambda_, rho, T) ** 2
-            )
+            return var_lambda_ * _dH_d_lambda(lambda_, rho, T) ** 2 + var_rho_ * _dH_d_rho(lambda_, rho, T) ** 2
 
         std_cumulative_hazard = np.sqrt(
             sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline)
         )
 
         if ci_labels is None:
-            ci_labels = [
-                "%s_upper_%.2f" % (self._label, alpha),
-                "%s_lower_%.2f" % (self._label, alpha),
-            ]
+            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = (
-            self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
-        )
-        df[ci_labels[1]] = (
-            self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
-        )
+        df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
+        df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
         return df
 
     def _compute_standard_errors(self):
         var_lambda_, var_rho_ = inv(self._hessian_).diagonal()
-        return pd.DataFrame(
-            [[np.sqrt(var_lambda_), np.sqrt(var_rho_)]], index=["se"], columns=["lambda_", "rho_"]
-        )
+        return pd.DataFrame([[np.sqrt(var_lambda_), np.sqrt(var_rho_)]], index=["se"], columns=["lambda_", "rho_"])
 
     def _compute_confidence_bounds_of_parameters(self):
         se = self._compute_standard_errors().loc["se"]
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
         return pd.DataFrame(
-            [
-                np.array([self.lambda_, self.rho_]) + alpha2 * se,
-                np.array([self.lambda_, self.rho_]) - alpha2 * se,
-            ],
+            [np.array([self.lambda_, self.rho_]) + alpha2 * se, np.array([self.lambda_, self.rho_]) - alpha2 * se],
             columns=["lambda_", "rho_"],
             index=["upper-bound", "lower-bound"],
         )
@@ -335,9 +311,7 @@ class WeibullFitter(UnivariateFitter):
         justify = string_justify(18)
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
-        print(
-            "{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0])
-        )
+        print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood), end="\n\n")
 
         df = self.summary

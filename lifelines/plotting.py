@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
+import warnings
 import numpy as np
 from lifelines.utils import coalesce
 
@@ -104,8 +104,10 @@ def add_at_risk_counts(*fitters, **kwargs):
         # There are equivalent
         add_at_risk_counts(f1, f2)
         add_at_risk_counts(f1, f2, ax=ax, fig=fig)
+        
         # This overrides the labels
         add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
+        
         # This hides the labels
         add_at_risk_counts(f1, f2, labels=None)
     """
@@ -168,45 +170,54 @@ def add_at_risk_counts(*fitters, **kwargs):
     return ax
 
 
-def plot_lifetimes(lifetimes, event_observed=None, birthtimes=None, order=False, block=True):
+def plot_lifetimes(
+    duration,
+    event_observed=None,
+    entry=None,
+    sort_by_duration=False,
+    event_observed_color="#A60628",
+    event_censored_color="#348ABD",
+    **kwargs
+):
     """
     Parameters:
-      lifetimes: an (n,) numpy array of lifetimes.
+      duration: an array, or pd.Series, of length n -- duration subject was observed for
       event_observed: an (n,) numpy array of booleans: True if event observed, else False.
-      birthtimes: an (n,) numpy array offsetting the births away from t=0.
+      entry: an (n,) numpy array offsetting the births away from t=0.
+      sort_by_duration: sort by the duration vector
 
 
-    Creates a lifetime plot, see
-    examples:
+    Retuns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#censorship
 
     """
-    from matplotlib import pyplot as plt
+    set_kwargs_ax(kwargs)
+    ax = kwargs["ax"]
 
-    N = lifetimes.shape[0]
+    N = duration.shape[0]
     if N > 100:
-        print("warning: you may want to subsample to less than 100 individuals.")
+        warnings.warn("For less visual clutter, you may want to subsample to less than 100 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
 
-    if birthtimes is None:
-        birthtimes = np.zeros(N)
+    if entry is None:
+        entry = np.zeros(N)
 
-    if order:
+    if sort_by_duration:
         # order by length of lifetimes; probably not very informative.
-        ix = np.argsort(lifetimes, 0)
-        lifetimes = lifetimes[ix, 0]
+        ix = np.argsort(duration, 0)
+        duration = duration[ix, 0]
         event_observed = event_observed[ix, 0]
-        birthtimes = birthtimes[ix]
+        entry = entry[ix]
 
     for i in range(N):
-        c = "#A60628" if event_observed[i] else "#348ABD"
-        plt.hlines(N - 1 - i, birthtimes[i], birthtimes[i] + lifetimes[i], color=c, lw=3)
+        c = event_observed_color if event_observed[i] else event_censored_color
+        ax.hlines(N - 1 - i, entry[i], entry[i] + duration[i], color=c, lw=3)
         m = "|" if not event_observed[i] else "o"
-        plt.scatter((birthtimes[i]) + lifetimes[i], N - 1 - i, color=c, s=30, marker=m)
+        ax.scatter((entry[i]) + duration[i], N - 1 - i, color=c, s=30, marker=m)
 
-    plt.ylim(-0.5, N)
-    plt.show(block=block)
+    ax.set_ylim(-0.5, N)
+    return ax
 
 
 def set_kwargs_ax(kwargs):
@@ -217,9 +228,7 @@ def set_kwargs_ax(kwargs):
 
 
 def set_kwargs_color(kwargs):
-    kwargs["c"] = coalesce(
-        kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color()
-    )
+    kwargs["c"] = coalesce(kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color())
 
 
 def set_kwargs_drawstyle(kwargs):
@@ -228,9 +237,7 @@ def set_kwargs_drawstyle(kwargs):
 
 def create_dataframe_slicer(iloc, loc):
     user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
-    user_submitted_slice = (
-        slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
-    )
+    user_submitted_slice = slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
 
     get_method = "loc" if loc is not None else "iloc"
     return lambda df: getattr(df, get_method)[user_submitted_slice]
@@ -264,9 +271,7 @@ def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(censor_styles)
-        times = dataframe_slicer(
-            cls.event_table.loc[(cls.event_table["censored"] > 0)]
-        ).index.values.astype(float)
+        times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
         # don't log times, as Pandas will take care of all log-scaling later.
         ax.plot(times, loglog(v), linestyle="None", color=colour, **cs)
@@ -293,7 +298,7 @@ def plot_estimate(
     invert_y_axis=False,
     bandwidth=None,
     **kwargs
-):  # pylint: disable=too-many-arguments,too-many-locals
+):
 
     """"
     Plots a pretty figure of {0}.{1}
@@ -344,9 +349,7 @@ def plot_estimate(
         if bandwidth is None:
             raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard.")
         estimate_ = cls.smoothed_hazard_(bandwidth)
-        confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(
-            bandwidth, hazard_=estimate_.values[:, 0]
-        )
+        confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:, 0])
     else:
         estimate_ = getattr(cls, estimate)
         confidence_interval_ = getattr(cls, "confidence_interval_")
@@ -360,9 +363,7 @@ def plot_estimate(
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(censor_styles)
-        times = dataframe_slicer(
-            cls.event_table.loc[(cls.event_table["censored"] > 0)]
-        ).index.values.astype(float)
+        times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
         ax.plot(times, v, linestyle="None", color=colour, **cs)
 
@@ -385,9 +386,7 @@ def plot_estimate(
             x = dataframe_slicer(confidence_interval_).index.values.astype(float)
             lower = dataframe_slicer(confidence_interval_.filter(like="lower")).values[:, 0]
             upper = dataframe_slicer(confidence_interval_.filter(like="upper")).values[:, 0]
-            fill_between_steps(
-                x, lower, y2=upper, ax=ax, alpha=ci_alpha, color=colour, linewidth=1.0
-            )
+            fill_between_steps(x, lower, y2=upper, ax=ax, alpha=ci_alpha, color=colour, linewidth=1.0)
 
     if at_risk_counts:
         add_at_risk_counts(cls, ax=ax)

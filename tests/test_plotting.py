@@ -151,22 +151,26 @@ class TestPlotting:
         return
 
     def test_plot_lifetimes_calendar(self, block):
-        self.plt.figure()
         t = np.linspace(0, 20, 1000)
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
         N = 20
         current = 10
         birthtimes = current * np.random.uniform(size=(N,))
         T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
-        plot_lifetimes(T, event_observed=C, birthtimes=birthtimes, block=block)
+        ax = plot_lifetimes(T, event_observed=C, entry=birthtimes)
+        assert ax is not None
+        self.plt.title("test_plot_lifetimes_calendar")
+        self.plt.show(block=block)
 
     def test_plot_lifetimes_relative(self, block):
-        self.plt.figure()
         t = np.linspace(0, 20, 1000)
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
         N = 20
         T, C = generate_random_lifetimes(hz, t, size=N, censor=True)
-        plot_lifetimes(T, event_observed=C, block=block)
+        ax = plot_lifetimes(T, event_observed=C)
+        assert ax is not None
+        self.plt.title("test_plot_lifetimes_relative")
+        self.plt.show(block=block)
 
     def test_naf_plot_cumulative_hazard(self, block):
         data1 = np.random.exponential(5, size=(200, 1))
@@ -215,9 +219,7 @@ class TestPlotting:
     def test_flat_style_with_customer_censor_styles(self, block, kmf):
         data1 = np.random.exponential(10, size=200)
         kmf.fit(data1, label="test label 1")
-        kmf.plot(
-            ci_force_lines=True, show_censors=True, censor_styles={"marker": "+", "mew": 2, "ms": 7}
-        )
+        kmf.plot(ci_force_lines=True, show_censors=True, censor_styles={"marker": "+", "mew": 2, "ms": 7})
         self.plt.title("test_flat_style_no_censor")
         self.plt.show(block=block)
         return

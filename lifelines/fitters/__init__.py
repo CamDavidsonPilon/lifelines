@@ -12,12 +12,12 @@ from lifelines.utils import qth_survival_times, _to_array
 from lifelines.compat import PY2, PY3
 
 
-def must_call_fit_first(func):
+def _must_call_fit_first(func):
     @wraps(func)
     def error_wrapper(*args, **kwargs):
         self = args[0]
         try:
-            estimate = self._estimate_name
+            self._estimate_name
         except AttributeError:
             raise RuntimeError("Must call `fit` first!")
         return func(*args, **kwargs)
@@ -45,7 +45,7 @@ class BaseFitter(object):
 
 
 class UnivariateFitter(BaseFitter):
-    @must_call_fit_first
+    @_must_call_fit_first
     def _update_docstrings(self):
         # Update their docstrings
         if PY2:
@@ -55,35 +55,28 @@ class UnivariateFitter(BaseFitter):
             self.__class__.divide.__func__.__doc__ = self.divide.__doc__.format(
                 self._estimate_name, self.__class__.__name__
             )
-            self.__class__.predict.__func__.__doc__ = self.predict.__doc__.format(
-                self.__class__.__name__
-            )
+            self.__class__.predict.__func__.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
             self.__class__.plot.__func__.__doc__ = plot_estimate.__doc__.format(
                 self.__class__.__name__, self._estimate_name
             )
         elif PY3:
-            self.__class__.subtract.__doc__ = self.subtract.__doc__.format(
-                self._estimate_name, self.__class__.__name__
-            )
-            self.__class__.divide.__doc__ = self.divide.__doc__.format(
-                self._estimate_name, self.__class__.__name__
-            )
+            self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
+            self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
             self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-            self.__class__.plot.__doc__ = plot_estimate.__doc__.format(
-                self.__class__.__name__, self._estimate_name
-            )
+            self.__class__.plot.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def plot(self, *args, **kwargs):
         return plot_estimate(self, *args, **kwargs)
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def subtract(self, other):
         """
         Subtract the {0} of two {1} objects.
 
-            Parameters:
-              other: an {1} fitted instance.
+        Parameters
+        ----------
+        other: an {1} fitted instance.
         """
         self_estimate = getattr(self, self._estimate_name)
         other_estimate = getattr(other, other._estimate_name)
@@ -96,13 +89,14 @@ class UnivariateFitter(BaseFitter):
             columns=["diff"],
         )
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def divide(self, other):
         """
         Divide the {0} of two {1} objects.
 
-        Parameters:
-          other: an {1} fitted instance.
+        Parameters
+        ----------
+        other: an {1} fitted instance.
 
         """
         self_estimate = getattr(self, self._estimate_name)
@@ -116,39 +110,32 @@ class UnivariateFitter(BaseFitter):
             columns=["ratio"],
         )
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def predict(self, times):
         """
         Predict the {0} at certain point in time. Uses a linear interpolation if
         points in time are not in the index.
 
-        Parameters:
-          time: a scalar or an array of times to predict the value of {0} at.
+        Parameters
+        ----------
+        time: a scalar or an array of times to predict the value of {0} at.
 
-        Returns:
-          predictions: a scalar if time is a scalar, a numpy array if time in an array.
+        Returns
+        -------
+        predictions: a scalar if time is a scalar, a numpy array if time in an array.
         """
         if callable(self._estimation_method):
-            return (
-                pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times))
-                .loc[times]
-                .squeeze()
-            )
+            return pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
         estimate = getattr(self, self._estimation_method)
         # non-linear interpolations can push the survival curves above 1 and below 0.
-        return (
-            estimate.reindex(estimate.index.union(_to_array(times)))
-            .interpolate("index")
-            .loc[times]
-            .squeeze()
-        )
+        return estimate.reindex(estimate.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
 
     @property
-    @must_call_fit_first
+    @_must_call_fit_first
     def conditional_time_to_event_(self):
         return self._conditional_time_to_event_()
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def _conditional_time_to_event_(self):
         """
         Return a DataFrame, with index equal to survival_function_, that estimates the median
@@ -156,17 +143,17 @@ class UnivariateFitter(BaseFitter):
         individual exists until age 1, their expected life remaining *given they lived to time 1*
         might be 9 years.
 
-        Returns:
-            conditional_time_to_: DataFrame, with index equal to survival_function_
+        Returns
+        -------
+        conditional_time_to_: DataFrame 
+            with index equal to survival_function_
 
         """
         age = self.survival_function_.index.values[:, None]
         columns = ["%s - Conditional time remaining to event" % self._label]
         return (
             pd.DataFrame(
-                qth_survival_times(
-                    self.survival_function_[self._label] * 0.5, self.survival_function_
-                )
+                qth_survival_times(self.survival_function_[self._label] * 0.5, self.survival_function_)
                 .sort_index(ascending=False)
                 .values,
                 index=self.survival_function_.index,

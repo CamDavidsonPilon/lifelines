@@ -17,11 +17,11 @@ else
 endif
 
 format:
-	black . --line-length 100
+	black . --line-length 120
 
 check_format:
 ifeq ($(TRAVIS_PYTHON_VERSION), 3.6)
-		black . --check --line-length 100
+		black . --check --line-length 120
 else
 		echo "Only check format on Python3.6"
 endif

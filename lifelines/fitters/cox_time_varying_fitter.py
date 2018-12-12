@@ -11,7 +11,7 @@ import pandas as pd
 from scipy import stats
 
 from numpy import dot, exp
-from numpy.linalg import solve, norm, inv
+from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
 from lifelines.fitters import BaseFitter
 from lifelines.fitters.coxph_fitter import CoxPHFitter
@@ -23,7 +23,7 @@ from lifelines.utils import (
     significance_codes_as_text,
     pass_for_numeric_dtypes_or_raise,
     check_low_var,
-    check_for_overlapping_intervals,
+    # check_for_overlapping_intervals,
     check_complete_separation_low_variance,
     ConvergenceWarning,
     StepSizer,
@@ -108,9 +108,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df = df.copy()
 
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
-            raise KeyError(
-                "A column specified in the call to `fit` does not exist in the dataframe provided."
-            )
+            raise KeyError("A column specified in the call to `fit` does not exist in the dataframe provided.")
 
         if weights_col is None:
             assert (
@@ -122,13 +120,7 @@ class CoxTimeVaryingFitter(BaseFitter):
                 raise ValueError("values in weights_col must be positive.")
 
         df = df.rename(
-            columns={
-                id_col: "id",
-                event_col: "event",
-                start_col: "start",
-                stop_col: "stop",
-                weights_col: "__weights",
-            }
+            columns={id_col: "id", event_col: "event", start_col: "start", stop_col: "stop", weights_col: "__weights"}
         )
         df = df.set_index("id")
         stop_times_events = df[["event", "stop", "start"]].copy()
@@ -150,17 +142,13 @@ class CoxTimeVaryingFitter(BaseFitter):
             step_size=step_size,
         )
 
-        self.hazards_ = (
-            pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
-        )
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(
-            df, stop_times_events, weights
-        )
+        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events, weights)
         self.baseline_survival_ = self._compute_baseline_survival()
         self.event_observed = stop_times_events["event"]
         self.start_stop_and_events = stop_times_events
@@ -179,71 +167,32 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-    def _compute_sandwich_estimator(
-        self, df, stop_times_events, weights
-    ):  # pylint: disable=too-many-locals
+    def _compute_residuals(self, df, stop_times_events, weights):
+        raise NotImplementedError()
 
-        n, d = df.shape
+    def _compute_delta_beta(self, df, stop_times_events, weights):
+        """ approximate change in betas as a result of excluding ith row"""
 
-        # Init risk and tie sums to zero
-        risk_phi = 0
-        risk_phi_x = np.zeros((1, d))
-
-        # need to store these histories, as we access them often
-        risk_phi_history = pd.DataFrame(np.zeros((n,)), index=df.index)
-        risk_phi_x_history = pd.DataFrame(np.zeros((n, d)), index=df.index)
-
-        E = E.astype(int)  # pylint: disable=used-before-assignment
-        score_residuals = np.zeros((n, d))
-        # we already unnormalized the betas in `fit`, so we need normalize them again since X is
-        # normalized.
-        beta = self.hazards_.values[0] * self._norm_std
-
-        # Iterate backwards to utilize recursive relationship
-        for i in range(n - 1, -1, -1):
-            # Doing it like this to preserve shape
-            ei = E[i]
-            xi = X[i : i + 1]  # pylint: disable=undefined-variable
-
-            phi_i = exp(dot(xi, beta))
-            phi_x_i = phi_i * xi
-
-            risk_phi += phi_i
-            risk_phi_x += phi_x_i
-
-            risk_phi_history[i] = risk_phi
-            risk_phi_x_history[i] = risk_phi_x
-
-        # Iterate forwards
-        for i in range(0, n):
-            # Doing it like this to preserve shape
-            xi = X[i : i + 1]  # pylint: disable=undefined-variable
-            phi_i = exp(dot(xi, beta))
-
-            score = -sum(
-                E[j]
-                * weights[j]
-                * phi_i
-                / risk_phi_history[j]
-                * (xi - risk_phi_x_history[j] / risk_phi_history[j])
-                for j in range(0, i + 1)
-            )
-            score = score + E[i] * (xi - risk_phi_x_history[i] / risk_phi_history[i])
-            score *= weights[i]
-            score_residuals[i, :] = score
+        score_residuals = self._compute_residuals(df, stop_times_events, weights) * weights[:, None]
 
         naive_var = inv(self._hessian_)
-        delta_betas = score_residuals.dot(naive_var) * weights[:, None]
-        sandwich_estimator = delta_betas.T.dot(delta_betas) / np.outer(
-            self._norm_std, self._norm_std
-        )
+        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
+
+        return delta_betas
+
+    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
+
+        delta_betas = self._compute_delta_beta(df, stop_times_events, weights)
+
+        if self.cluster_col:
+            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
+
+        sandwich_estimator = delta_betas.T.dot(delta_betas)
         return sandwich_estimator
 
     def _compute_standard_errors(self, df, stop_times_events, weights):
         if self.robust:
-            se = np.sqrt(
-                self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal()
-            )
+            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
@@ -285,14 +234,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         return df
 
     def _newton_rhaphson(
-        self,
-        df,
-        stop_times_events,
-        weights,
-        show_progress=False,
-        step_size=None,
-        precision=10e-6,
-        max_steps=50,
+        self, df, stop_times_events, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -312,7 +254,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
         assert precision <= 1.0, "precision must be less than or equal to 1."
 
-        n, d = df.shape
+        _, d = df.shape
 
         # make sure betas are correct size.
         beta = np.zeros((d, 1))
@@ -400,10 +342,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
         if not completed:
-            warnings.warn(
-                "Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps,
-                ConvergenceWarning,
-            )
+            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
         return beta
 
@@ -551,9 +490,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print("{} = {}".format(justify("number of periods"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        print(
-            "{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n"
-        )
+        print("{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n")
 
         print("---")
 
@@ -564,11 +501,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
-        print(
-            "Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(
-                *self._compute_likelihood_ratio_test()
-            )
-        )
+        print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -632,13 +565,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ax.scatter(upper_bound.values[order], yaxis_locations, marker="|", c="k")
         ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
         ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
-        ax.hlines(
-            yaxis_locations, lower_bound.values[order], upper_bound.values[order], color="k", lw=1
-        )
+        ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color="k", lw=1)
 
-        tick_labels = [
-            c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()
-        ]
+        tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("standardized coef" if standardized else "coef")
         return ax

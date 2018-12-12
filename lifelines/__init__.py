@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-from .estimation import (
+# pylint: skip-file
+
+from lifelines.estimation import (
     KaplanMeierFitter,
     NelsonAalenFitter,
     AalenAdditiveFitter,
@@ -11,7 +13,7 @@ from .estimation import (
     AalenJohansenFitter,
 )
 
-from .version import __version__
+from lifelines.version import __version__
 
 __all__ = [
     "KaplanMeierFitter",
