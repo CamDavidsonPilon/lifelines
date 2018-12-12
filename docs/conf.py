@@ -28,9 +28,9 @@
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.coverage", 
-    "sphinx.ext.mathjax", 
-    "sphinx.ext.autodoc", 
+    "sphinx.ext.coverage",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
 ]
@@ -57,6 +57,7 @@ copyright = "2014, Cam Davidson-Pilon"
 #
 # The short X.Y version.
 import lifelines
+
 version = lifelines.__version__
 # The full version, including dev info
 release = lifelines.__version__

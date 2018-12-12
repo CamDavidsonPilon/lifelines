@@ -3,6 +3,7 @@
 #### 0.15.2
  - API changes to `plotting.plot_lifetimes`
  - `cluster_col` and `strata` can be used together in `CoxPHFitter`
+ - removed `entry` from `ExponentialFitter` and `WeibullFitter` as it was doing nothing.
 
 #### 0.15.1
  - Bug fixes for v0.15.0

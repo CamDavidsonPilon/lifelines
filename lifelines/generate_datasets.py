@@ -77,7 +77,7 @@ def periodic_(t, alpha=1, beta=1):
 
 
 @coeff_func
-def constant_(t, alpha=1, beta=1):
+def constant_(t, alpha=1, beta=1):  # pylint: disable=unused-argument
     """beta"""
     return beta
 
@@ -122,7 +122,7 @@ def generate_covariates(n, d, n_binary=0, p=0.5):
     return covariates
 
 
-def constant_coefficients(d, timelines, constant=False, independent=0):
+def constant_coefficients(d, timelines, constant=True, independent=0):
     """
     Proportional hazards model.
 
@@ -134,7 +134,7 @@ def constant_coefficients(d, timelines, constant=False, independent=0):
 
     returns a matrix (t,d+1) of coefficients
     """
-    return time_varying_coefficients(d, timelines, constant=True, independent=independent, randgen=random.normal)
+    return time_varying_coefficients(d, timelines, constant, independent=independent, randgen=random.normal)
 
 
 def time_varying_coefficients(d, timelines, constant=False, independent=0, randgen=random.exponential):
@@ -248,9 +248,7 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
 
 
 def generate_observational_matrix(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
-    hz, coeff, covariates = generate_hazard_rates(
-        n, d, timelines, constant=False, independent=0, n_binary=0, model=model
-    )
+    hz, coeff, covariates = generate_hazard_rates(n, d, timelines, constant, independent, n_binary, model=model)
     R = generate_random_lifetimes(hz, timelines)
     covariates["event_at"] = R.T[0]
     return (

@@ -26,7 +26,6 @@ from lifelines.generate_datasets import cumulative_integral
 
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting:
-    
     @pytest.fixture
     def kmf(self):
         return KaplanMeierFitter()

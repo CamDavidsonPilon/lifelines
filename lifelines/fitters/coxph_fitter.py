@@ -694,7 +694,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         """
         # pylint: disable=unnecessary-lambda
-        
+
         # Print information about data first
         justify = string_justify(18)
         print(self)

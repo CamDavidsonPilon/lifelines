@@ -124,7 +124,6 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     sample_size_necessary_under_cph
     """
 
-
     def z(p):
         return stats.norm.ppf(p)
 
@@ -199,7 +198,7 @@ def logrank_test(
     --------
     multivariate_logrank_test
     pairwise_logrank_test
-    """    
+    """
     event_times_A, event_times_B = (np.array(event_times_A), np.array(event_times_B))
     if event_observed_A is None:
         event_observed_A = np.ones(event_times_A.shape[0])
@@ -215,7 +214,7 @@ def logrank_test(
 def pairwise_logrank_test(
     event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs
 ):  # pylint: disable=too-many-locals
-    
+
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
     We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase
@@ -272,10 +271,8 @@ def pairwise_logrank_test(
 
     if not (n == event_durations.shape[0] == event_observed.shape[0]):
         raise ValueError("inputs must be of the same length.")
-    
-    groups, event_durations, event_observed = map(
-        lambda x: pd.Series(x), [groups, event_durations, event_observed]
-    )
+
+    groups, event_durations, event_observed = pd.Series(groups), pd.Series(event_durations), pd.Series(event_observed)
 
     unique_groups = np.unique(groups)
 
@@ -312,7 +309,7 @@ def pairwise_logrank_test(
 def multivariate_logrank_test(
     event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
-    
+
     """
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
     be equal when n=2):
@@ -422,7 +419,7 @@ def multivariate_logrank_test(
     _, p_value = chisq_test(U, n_groups - 1, alpha)
 
     return StatisticalResult(
-         p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", df=n_groups - 1, **kwargs
+        p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", df=n_groups - 1, **kwargs
     )
 
 

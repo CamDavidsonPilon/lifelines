@@ -33,7 +33,7 @@ pep8:
 mccabe:
   options:
     # max-complexity default = 10
-    max-complexity: 20
+    max-complexity: 22
 
 pyroma:
   run: true

@@ -203,7 +203,7 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
 
 def test_StatisticalResult_class():
 
-    sr = stats.StatisticalResult(True, 0.05, 5.0, kw="some_value")
+    sr = stats.StatisticalResult(0.05, 5.0, kw="some_value")
     assert hasattr(sr, "kw")
     assert getattr(sr, "kw") == "some_value"
     assert "some_value" in sr.__unicode__()

@@ -1239,7 +1239,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-1.1099688, 0.6620063, 0.4630473, 0.5807250, -0.5958099]]).T
-        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_delta_betas_with_strata_are_the_same_as_in_R(self):
@@ -1272,7 +1272,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-0.6960789, 1.6729761, 0.3094744, -0.2895864, -0.9967852]]).T
-        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_delta_betas_with_weights_are_the_same_as_in_R(self):
@@ -1303,7 +1303,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-1.1156470, 0.7698781, 0.3923246, 0.8040079, -0.8505637]]).T
-        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_cluster_option(self):
@@ -1700,7 +1700,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(df, duration_col="time", event_col="death")
 
         # standard errors
-        actual_se = cf._compute_standard_errors(None, None, None, None).values
+        actual_se = cf._compute_standard_errors(None, None, None).values
         expected_se = np.array([[0.0143, 0.4623, 0.3561, 0.4222]])
         npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 

@@ -158,7 +158,7 @@ class AalenAdditiveFitter(BaseFitter):
         T, C = T.iloc[ix], C.iloc[ix]
 
         del df[duration_col]
-        n, d = df.shape
+        _, d = df.shape
         columns = df.columns
         df = df.astype(float)
 
@@ -265,7 +265,7 @@ class AalenAdditiveFitter(BaseFitter):
         T = (C_panel.minor_xs(event_col).notnull()).cumsum().idxmax()
 
         del df[event_col]
-        n, d = df.shape
+        _, d = df.shape
 
         # so this is a problem line. bfill performs a recursion which is
         # really not scalable. Plus even for modest datasets, this eats a lot of memory.
@@ -383,7 +383,7 @@ class AalenAdditiveFitter(BaseFitter):
             # see https://github.com/CamDavidsonPilon/lifelines/issues/38
             raise NotImplementedError
 
-        n, d = X.shape
+        n, _ = X.shape
 
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):

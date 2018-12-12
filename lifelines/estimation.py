@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: skip-file
 from lifelines.fitters import BaseFitter
 from lifelines.fitters.weibull_fitter import WeibullFitter
 from lifelines.fitters.exponential_fitter import ExponentialFitter

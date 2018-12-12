@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: skip-file
+
 from lifelines.estimation import (
     KaplanMeierFitter,
     NelsonAalenFitter,

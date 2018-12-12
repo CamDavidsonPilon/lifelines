@@ -242,7 +242,12 @@ def group_survival_table_from_events(
     if int(limit) != -1:
         survival_table = survival_table.loc[:limit]
 
-    return (unique_groups, survival_table.filter(like="removed:"), survival_table.filter(like="observed:"), survival_table.filter(like="censored:"))
+    return (
+        unique_groups,
+        survival_table.filter(like="removed:"),
+        survival_table.filter(like="observed:"),
+        survival_table.filter(like="censored:"),
+    )
 
 
 def survival_table_from_events(
