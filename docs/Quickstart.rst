@@ -12,7 +12,7 @@ Quickstart
 Installation
 ------------
 
-Install via ``pip`` (see `its documentation <https://pip.pypa.io/en/stable/installing>`_ if it is not yet installed on your system):
+Install via ``pip``:
 
 .. code::
 

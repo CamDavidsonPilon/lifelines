@@ -7,11 +7,16 @@ def load_dataset(filename, **kwargs):
     """
     Load a dataset from lifelines.datasets
 
-    Parameters:
-    filename : for example "larynx.csv"
-    usecols : list of columns in file to use
+    Parameters
+    ----------
+    filename : string
+        for example "larynx.csv"
+    usecols : list
+        list of columns in file to use
 
-    Returns : Pandas dataframe
+    Returns
+    -------
+        output: DataFrame
     """
     return pd.read_csv(resource_filename("lifelines", "datasets/" + filename), engine="python", **kwargs)
 

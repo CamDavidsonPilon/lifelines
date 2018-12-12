@@ -22,10 +22,19 @@ class KaplanMeierFitter(UnivariateFitter):
     """
     Class for fitting the Kaplan-Meier estimate for the survival function.
 
-    KaplanMeierFitter(alpha=0.95)
+    Parameters
+    ----------
+    alpha: float, option (default=0.95)
+        The alpha value associated with the confidence intervals.
 
-    alpha: The alpha value associated with the confidence intervals.
-
+    Examples
+    --------
+    >>> from lifelines import KaplanMeierFitter 
+    >>> from lifelines.datasets import load_waltons
+    >>> waltons = load_waltons()
+    >>> kmf = KaplanMeierFitter()
+    >>> kmf.fit(waltons['T'], waltons['E'])
+    >>> kmf.plot()
     """
 
     def fit(
@@ -41,7 +50,8 @@ class KaplanMeierFitter(UnivariateFitter):
         weights=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
-        Parameters:
+        Parameters
+        ----------
           duration: an array, or pd.Series, of length n -- duration subject was observed for
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
@@ -59,8 +69,10 @@ class KaplanMeierFitter(UnivariateFitter):
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
 
-        Returns:
-          self, with new properties like 'survival_function_'.
+        Returns
+        -------
+        self: KaplanMeierFitter
+          self with new properties like 'survival_function_'.
 
         """
 

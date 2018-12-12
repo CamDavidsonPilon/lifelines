@@ -42,7 +42,8 @@ class AalenJohansenFitter(UnivariateFitter):
         weights=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
-        Parameters:
+        Parameters
+        ----------
           durations: an array or pd.Series of length n -- duration of subject was observed for
           event_observed: an array, or pd.Series, of length n. Integer indicator of distinct events. Must be
              only positive integers, where 0 indicates censoring.
@@ -62,7 +63,9 @@ class AalenJohansenFitter(UnivariateFitter):
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
 
-        Returns:
+        Returns
+        -------
+        self : AalenJohansenFitter
           self, with new properties like 'cumulative_incidence_'.
         """
         # Checking for tied event times

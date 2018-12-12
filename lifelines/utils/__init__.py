@@ -55,16 +55,27 @@ class ConvergenceWarning(RuntimeWarning):
 
 def qth_survival_times(q, survival_functions, cdf=False):
     """
-    Parameters:
-      q: a float between 0 and 1.
-      survival_functions: a (n,d) dataframe or numpy array.
-        If dataframe, will return index values (actual times)
-        If numpy array, will return indices.
+    Find the times when one or more survival functions reach the qth percentile. 
 
-    Returns:
-      v: if d==1, returns a float, np.inf if infinity.
+    Parameters
+    ----------
+    q: float 
+      a float between 0 and 1 that represents the time when the survival function hit's the qth percentile.
+    survival_functions: a (n,d) dataframe or numpy array.
+      If dataframe, will return index values (actual times)
+      If numpy array, will return indices.
+    cdf: boolean, optional
+      When doing left-censored data, cdf=True is used. 
+
+    Returns
+    -------
+      v: float, or DataFrame
+         if d==1, returns a float, np.inf if infinity.
          if d > 1, an DataFrame containing the first times the value was crossed.
 
+    See Also
+    --------
+    qth_survival_time, median_survival_times
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
     q = pd.Series(q)
@@ -89,7 +100,23 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
 def qth_survival_time(q, survival_function, cdf=False):
     """
-    Expects a Pandas series or single-column dataframe, returns the time when the qth probability is reached.
+    Returns the time when a single survival function reachess the qth percentile. 
+
+    Parameters
+    ----------
+    q: float 
+      a float between 0 and 1 that represents the time when the survival function hit's the qth percentile.
+    survival_function: Series or single-column DataFrame.
+    cdf: boolean, optional
+      When doing left-censored data, cdf=True is used. 
+
+    Returns
+    -------
+      v: float
+
+    See Also
+    --------
+    qth_survival_times, median_survival_times
     """
     if isinstance(survival_function, pd.DataFrame):
         if survival_function.shape[1] > 1:
@@ -121,51 +148,63 @@ def group_survival_table_from_events(
     Joins multiple event series together into dataframes. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
 
-    Parameters:
-        groups: a (n,) array of individuals' group ids.
-        durations: a (n,)  array of durations of each individual
-        event_observed: a (n,) array of event observations, 1 if observed, 0 else.
-        birth_times: a (n,) array of numbers representing
-          when the subject was first observed. A subject's death event is then at [birth times + duration observed].
-          Normally set to all zeros, but can be positive or negative.
+    Parameters
+    ----------
+    groups: a (n,) array 
+      individuals' group ids.
+    durations: a (n,)  array
+      durations of each individual
+    event_observed: a (n,) array
+      event observations, 1 if observed, 0 else.
+    birth_times: a (n,) array
+      when the subject was first observed. A subject's death event is then at [birth times + duration observed].
+      Normally set to all zeros, but can be positive or negative.
 
-    Returns:
-        - np.array of unique groups
-        - dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
-        - dataframe of observed count data at event_times for each group, column names are 'observed:<group name>'
-        - dataframe of censored count data at event_times for each group, column names are 'censored:<group name>'
+    Returns
+    -------
+    unique_groups: np.array
+      array of all the unique groups present
+    removed: DataFrame
+      dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
+    observed: DataFrame
+      dataframe of observed count data at event_times for each group, column names are 'observed:<group name>'
+    censored: DataFrame
+      dataframe of censored count data at event_times for each group, column names are 'censored:<group name>'
 
-    Example:
-        #input
-        group_survival_table_from_events(waltonG, waltonT, np.ones_like(waltonT)) #data available in test_suite.py
+    Example
+    -------
+    >>> #input
+    >>> group_survival_table_from_events(waltonG, waltonT, np.ones_like(waltonT)) #data available in test_suite.py
+    >>> #output
+    >>> [
+    >>>     array(['control', 'miR-137'], dtype=object),
+    >>>               removed:control  removed:miR-137
+    >>>     event_at
+    >>>     6                       0                1
+    >>>     7                       2                0
+    >>>     9                       0                3
+    >>>     13                      0                3
+    >>>     15                      0                2
+    >>>     ,
+    >>>               observed:control  observed:miR-137
+    >>>     event_at
+    >>>     6                        0                 1
+    >>>     7                        2                 0
+    >>>     9                        0                 3
+    >>>     13                       0                 3
+    >>>     15                       0                 2
+    >>>     ,
+    >>>               censored:control  censored:miR-137
+    >>>     event_at
+    >>>     6                        0                 0
+    >>>     7                        0                 0
+    >>>     9                        0                 0
+    >>>     ,
+    >>> ]
 
-        #output
-        [
-            array(['control', 'miR-137'], dtype=object),
-
-                      removed:control  removed:miR-137
-            event_at
-            6                       0                1
-            7                       2                0
-            9                       0                3
-            13                      0                3
-            15                      0                2
-            ,
-                      observed:control  observed:miR-137
-            event_at
-            6                        0                 1
-            7                        2                 0
-            9                        0                 3
-            13                       0                 3
-            15                       0                 2
-            ,
-                      censored:control  censored:miR-137
-            event_at
-            6                        0                 0
-            7                        0                 0
-            9                        0                 0
-            ,
-        ]
+    See Also
+    --------
+    survival_table_from_events
 
     """
 
@@ -216,19 +255,29 @@ def survival_table_from_events(
     intervals=None,
 ):  # pylint: disable=dangerous-default-value,too-many-locals
     """
-    Parameters:
-        death_times: (n,) array of event times
-        event_observed: (n,) boolean array, 1 if observed event, 0 is censored event.
-        birth_times: a (n,) array of numbers representing
-          when the subject was first observed. A subject's death event is then at [birth times + duration observed].
-          If None (default), birth_times are set to be the first observation or 0, which ever is smaller.
-        columns: a 3-length array to call the, in order, removed individuals, observed deaths
-          and censorships.
-        weights: Default None, otherwise (n,1) array. Optional argument to use weights for individuals.
-        collapse: Default False. If True, collapses survival table into lifetable to show events in interval bins
-        intervals: Default None, otherwise a list/(n,1) array of interval edge measures. If left as None
-          while collapse=True, then Freedman-Diaconis rule for histogram bins will be used to determine intervals.
-    Returns:
+    Parameters
+    ----------
+    death_times: (n,) array 
+      represent the event times
+    event_observed: (n,) array 
+      1 if observed event, 0 is censored event.
+    birth_times: a (n,) array, optional
+      representing when the subject was first observed. A subject's death event is then at [birth times + duration observed].
+      If None (default), birth_times are set to be the first observation or 0, which ever is smaller.
+    columns: interable, optional
+      a 3-length array to call the, in order, removed individuals, observed deaths
+      and censorships.
+    weights: (n,1) array, optional
+      Optional argument to use weights for individuals. Assumes weights of 1 if not provided.
+    collapse: boolean, optional (default=False)
+      If True, collapses survival table into lifetable to show events in interval bins
+    intervals: iterable, optional
+      Default None, otherwise a list/(n,1) array of interval edge measures. If left as None
+      while collapse=True, then Freedman-Diaconis rule for histogram bins will be used to determine intervals.
+    
+    Returns
+    -------
+    output: DataFrame
         Pandas DataFrame with index as the unique times or intervals in event_times. The columns named
         'removed' refers to the number of individuals who were removed from the population
         by the end of the period. The column 'observed' refers to the number of removed
@@ -236,29 +285,32 @@ def survival_table_from_events(
         'censored' is defined as 'removed' - 'observed' (the number of individuals who
          left the population due to event_observed)
 
-    Example:
+    Example
+    -------
 
-        Uncollapsed
-                  removed  observed  censored  entrance   at_risk
-        event_at
-        0               0         0         0        11        11
-        6               1         1         0         0        11
-        7               2         2         0         0        10
-        9               3         3         0         0         8
-        13              3         3         0         0         5
-        15              2         2         0         0         2
+    >>> #Uncollapsed output
+    >>>           removed  observed  censored  entrance   at_risk
+    >>> event_at
+    >>> 0               0         0         0        11        11
+    >>> 6               1         1         0         0        11
+    >>> 7               2         2         0         0        10
+    >>> 9               3         3         0         0         8
+    >>> 13              3         3         0         0         5
+    >>> 15              2         2         0         0         2
+    >>> #Collapsed output
+    >>>          removed observed censored at_risk
+    >>>              sum      sum      sum     max
+    >>> event_at
+    >>> (0, 2]        34       33        1     312
+    >>> (2, 4]        84       42       42     278
+    >>> (4, 6]        64       17       47     194
+    >>> (6, 8]        63       16       47     130
+    >>> (8, 10]       35       12       23      67
+    >>> (10, 12]      24        5       19      32
 
-        Collapsed
-                 removed observed censored at_risk
-                     sum      sum      sum     max
-        event_at
-        (0, 2]        34       33        1     312
-        (2, 4]        84       42       42     278
-        (4, 6]        64       17       47     194
-        (6, 8]        63       16       47     130
-        (8, 10]       35       12       23      67
-        (10, 12]      24        5       19      32
-
+    See Also
+    --------
+    group_survival_table_from_events
     """
     removed, observed, censored, entrance, at_risk = columns
     death_times = np.asarray(death_times)
@@ -320,26 +372,33 @@ def survival_events_from_table(event_table, observed_deaths_col="observed", cens
     This is the inverse of the function ``survival_table_from_events``.
 
     Parameters
-        event_table: a pandas DataFrame with index as the durations (!!) and columns "observed" and "censored", referring to
+    ----------
+    event_table: DataFrame
+        a pandas DataFrame with index as the durations (!!) and columns "observed" and "censored", referring to
            the number of individuals that died and were censored at time t.
 
     Returns
-        T: a np.array of durations of observation -- one element for each individual in the population.
-        C: a np.array of event observations -- one element for each individual in the population. 1 if observed, 0 else.
+    -------
+    T: array
+      durations of observation -- one element for each individual in the population.
+    C: array 
+      event observations -- one element for each individual in the population. 1 if observed, 0 else.
 
-    Ex: The survival table, as a pandas DataFrame:
-
-                      observed  censored
-        index
-        1                1         0
-        2                0         1
-        3                1         0
-        4                1         1
-        5                0         1
-
-    would return
-        T = np.array([ 1.,  2.,  3.,  4.,  4.,  5.]),
-        C = np.array([ 1.,  0.,  1.,  1.,  0.,  0.])
+    Example
+    -------
+    >>> # Ex: The survival table, as a pandas DataFrame:
+    >>>
+    >>>                  observed  censored
+    >>>    index
+    >>>    1                1         0
+    >>>    2                0         1
+    >>>    3                1         0
+    >>>    4                1         1
+    >>>    5                0         1
+    >>>
+    >>> # would return
+    >>> T = np.array([ 1.,  2.,  3.,  4.,  4.,  5.]),
+    >>> C = np.array([ 1.,  0.,  1.,  1.,  0.,  0.])
 
     """
     columns = [observed_deaths_col, censored_col]
@@ -363,19 +422,28 @@ def datetimes_to_durations(
     This is a very flexible function for transforming arrays of start_times and end_times
     to the proper format for lifelines: duration and event observation arrays.
 
-    Parameters:
-        start_times: an array, series or dataframe of start times. These can be strings, or datetimes.
-        end_times: an array, series or dataframe of end times. These can be strings, or datetimes.
-                   These values can be None, or an empty string, which corresponds to censorship.
-        fill_date: the date to use if end_times is a None or empty string. This corresponds to last date
-                  of observation. Anything after this date is also censored. Default: datetime.today()
-        freq: the units of time to use.  See pandas 'freq'. Default 'D' for days.
-        day_first: convert assuming European-style dates, i.e. day/month/year.
-        na_values : list of values to recognize as NA/NaN. Ex: ['', 'NaT']
+    Parameters
+    ----------
+    start_times: an array, Series or DataFrame
+        iterable representing start times. These can be strings, or datetime objects.
+    end_times: an array, Series or Dataframe
+        iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
+    fill_date: datetime, optional (default=datetime.Today())
+        the date to use if end_times is a None or empty string. This corresponds to last date
+        of observation. Anything after this date is also censored. 
+    freq: string, optional (default='D')
+        the units of time to use.  See Pandas 'freq'. Default 'D' for days.
+    day_first: boolean, optional (default=False)
+         convert assuming European-style dates, i.e. day/month/year.
+    na_values : list, optional
+        list of values to recognize as NA/NaN. Ex: ['', 'NaT']
 
-    Returns:
-        T: a array of floats representing the durations with time units given by freq.
-        C: a boolean array of event observations: 1 if death observed, 0 else.
+    Returns
+    -------
+    T: numpy array 
+        array of floats representing the durations with time units given by freq.
+    C: numpy array 
+        boolean array of event observations: 1 if death observed, 0 else.
 
     """
     fill_date = pd.to_datetime(fill_date)
@@ -398,19 +466,21 @@ def datetimes_to_durations(
 
 
 def l1_log_loss(event_times, predicted_event_times, event_observed=None):
-    """
+    r"""
     Calculates the l1 log-loss of predicted event times to true event times for *non-censored*
     individuals only.
 
-    1/N \sum_{i} |log(t_i) - log(q_i)|
+    .. math::  1/N \sum_{i} |log(t_i) - log(q_i)|
 
-    Parameters:
+    Parameters
+    ----------
       event_times: a (n,) array of observed survival times.
       predicted_event_times: a (n,) array of predicted survival times.
       event_observed: a (n,) array of censorship flags, 1 if observed,
                       0 if not. Default None assumes all observed.
 
-    Returns:
+    Returns
+    -------
       l1-log-loss: a scalar
     """
     if event_observed is None:
@@ -421,19 +491,21 @@ def l1_log_loss(event_times, predicted_event_times, event_observed=None):
 
 
 def l2_log_loss(event_times, predicted_event_times, event_observed=None):
-    """
+    r"""
     Calculates the l2 log-loss of predicted event times to true event times for *non-censored*
     individuals only.
 
-    1/N \sum_{i} (log(t_i) - log(q_i))**2
+    .. math::  1/N \sum_{i} (log(t_i) - log(q_i))**2
 
-    Parameters:
+    Parameters
+    ----------
       event_times: a (n,) array of observed survival times.
       predicted_event_times: a (n,) array of predicted survival times.
       event_observed: a (n,) array of censorship flags, 1 if observed,
                       0 if not. Default None assumes all observed.
 
-    Returns:
+    Returns
+    -------
       l2-log-loss: a scalar
     """
     if event_observed is None:
@@ -455,25 +527,28 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     1.0 is perfect concordance and,
     0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-    Score is usually 0.6-0.7 for survival models.
-
-    See:
+    Notes
+    -----
     Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
     developing models, evaluating assumptions and adequacy, and measuring and
     reducing errors. Statistics in Medicine 1996;15(4):361-87.
 
-    Parameters:
-      event_times: a (n,) array of observed survival times.
-      predicted_scores: a (n,) array of predicted scores - these could be survival times, or hazards, etc.
-                        See https://stats.stackexchange.com/questions/352183/use-median-survival-time-to-calculate-cph-c-statistic/352435#352435
-      event_observed: a (n,) array of censorship flags, 1 if observed,
-                      0 if not. Default None assumes all observed.
+    Parameters
+    ----------
+    event_times: iterable
+         a length-n iterable of observed survival times.
+    predicted_scores: iterable
+        a length-n iterable of predicted scores - these could be survival times, or hazards, etc. See https://stats.stackexchange.com/questions/352183/use-median-survival-time-to-calculate-cph-c-statistic/352435#352435
+    event_observed: iterable, optional
+        a length-n iterable censorship flags, 1 if observed, 0 if not. Default None assumes all observed.
 
-    Returns:
-      c-index: a value between 0 and 1.
+    Returns
+    -------
+    c-index: float 
+      a value between 0 and 1.
     """
-    event_times = np.array(event_times, dtype=float)
-    predicted_scores = np.array(predicted_scores, dtype=float)
+    event_times = np.asarray(event_times, dtype=float)
+    predicted_scores = np.asarray(predicted_scores, dtype=float)
 
     # Allow for (n, 1) or (1, n) arrays
     if event_times.ndim == 2 and (event_times.shape[0] == 1 or event_times.shape[1] == 1):
@@ -492,9 +567,9 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     if event_observed is None:
         event_observed = np.ones(event_times.shape[0], dtype=float)
     else:
+        event_observed = np.asarray(event_observed, dtype=float).ravel()
         if event_observed.shape != event_times.shape:
             raise ValueError("Observed events must be 1-dimensional of same length as event times")
-        event_observed = np.array(event_observed, dtype=float).ravel()
 
     return _concordance_index(event_times, predicted_scores, event_observed)
 
@@ -524,7 +599,9 @@ def k_fold_cross_validation(
     """
     Perform cross validation on a dataset. If multiple models are provided,
     all models will train on each of the k subsets.
-
+    
+    Parameters
+    ----------
     fitter(s): one or several objects which possess a method:
                    fit(self, data, duration_col, event_col)
                Note that the last two arguments will be given as keyword arguments,
@@ -550,7 +627,9 @@ def k_fold_cross_validation(
     fitter_kwargs: keyword args to pass into fitter.fit method
     predictor_kwargs: keyword args to pass into predictor-method.
 
-    Returns:
+    Returns
+    -------
+    results: list
         (k,1) list of scores for each fold. The scores can be anything.
     """
     # Make sure fitters is a list
@@ -656,16 +735,18 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
 
     One can find more information here: http://en.wikipedia.org/wiki/Tikhonov_regularization
 
-    Parameters:
-        X: a (n,d) numpy array
-        Y: a (n,) numpy array
-        c1: a scalar
-        c2: a scalar
-        offset: a (d,) numpy array.
+    Parameters
+    ----------
+    X: a (n,d) numpy array
+    Y: a (n,) numpy array
+    c1: a scalar
+    c2: a scalar
+    offset: a (d,) numpy array.
 
-    Returns:
-        beta_hat: the solution to the minimization problem.
-        V = (X*X^T + (c1+c2)I)^{-1} X^T
+    Returns
+    -------
+    beta_hat: numpy array
+      the solution to the minimization problem.V = (X*X^T + (c1+c2)I)^{-1} X^T
 
     """
     _, d = X.shape
@@ -785,8 +866,10 @@ class _BTree(object):
 
     def __init__(self, values):
         """
-        Parameters:
-            values: List of sorted (ascending), unique values that will be inserted.
+        Parameters
+        ----------
+        values: list
+            List of sorted (ascending), unique values that will be inserted.
         """
         self._tree = self._treeify(values)
         self._counts = np.zeros_like(self._tree, dtype=int)
@@ -1180,11 +1263,21 @@ def check_nans_or_infs(df_or_array):
 
 def to_long_format(df, duration_col):
     """
-    Parameters:
-        df: a Dataframe in the standard survival analysis form (one for per observation, with covariates, duration and event flag)
-        duration_col: string representing the column in df that represents the durations of each subject.
-    Returns:
-        long_form_df: A DataFrame with columns. This can be fed into `add_covariate_to_timeline`
+    Parameters
+    ----------
+    df: DataFrame
+        a Dataframe in the standard survival analysis form (one for per observation, with covariates, duration and event flag)
+    duration_col: string
+        string representing the column in df that represents the durations of each subject.
+    
+    Returns
+    -------
+    long_form_df: DataFrame
+        A DataFrame with new columns. This can be fed into `add_covariate_to_timeline`
+
+    See Also
+    --------
+    add_covariate_to_timeline
     """
     return df.assign(start=0, stop=lambda s: s[duration_col]).drop(duration_col, axis=1)
 
@@ -1207,25 +1300,45 @@ def add_covariate_to_timeline(
     to view the docs at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-for-time-varying-regression.
 
 
-    Parameters:
-        long_form_df: a DataFrame that has the intial or intermediate "long" form of time-varying observations. Must contain
-            columns id_col, 'start', 'stop', and event_col. See function `to_long_format` to transform data into long form.
-        cv: a DataFrame that contains (possibly more than) one covariate to track over time. Must contain columns
-            id_col and duration_col. duration_col represents time since the start of the subject's life.
-        id_col: the column in long_form_df and cv representing a unique identifier for subjects.
-        duration_col: the column in cv that represents the time-since-birth the observation occured at.
-        event_col: the column in df that represents if the event-of-interest occured
-        add_enum: a Boolean flag to denote whether to add a column enumerating rows per subject. Useful to specify a specific
-            observation, ex: df[df['enum'] == 1] will grab the first observations per subject.
-        overwrite: if True, covariate values in long_form_df will be overwritten by covariate values in cv if the column exists in both
-            cv and long_form_df and the timestamps are identical. If False, the default behaviour will be to sum
-            the values together.
-        cumulative_sum: sum over time the new covariates. Makes sense if the covariates are new additions, and not state changes (ex:
-            administering more drugs vs taking a temperature.)
+    Parameters
+    ----------
+    long_form_df: DataFrame
+        a DataFrame that has the intial or intermediate "long" form of time-varying observations. Must contain
+        columns id_col, 'start', 'stop', and event_col. See function `to_long_format` to transform data into long form.
+    cv: DataFrame
+        a DataFrame that contains (possibly more than) one covariate to track over time. Must contain columns
+        id_col and duration_col. duration_col represents time since the start of the subject's life.
+    id_col: string
+        the column in long_form_df and cv representing a unique identifier for subjects.
+    duration_col: string
+        the column in cv that represents the time-since-birth the observation occured at.
+    event_col: string
+        the column in df that represents if the event-of-interest occured
+    add_enum: boolean, optional
+         a Boolean flag to denote whether to add a column enumerating rows per subject. Useful to specify a specific
+        observation, ex: df[df['enum'] == 1] will grab the first observations per subject.
+    overwrite: boolean, optional
+        if True, covariate values in long_form_df will be overwritten by covariate values in cv if the column exists in both
+        cv and long_form_df and the timestamps are identical. If False, the default behaviour will be to sum
+        the values together.
+    cumulative_sum: boolean, optional
+        sum over time the new covariates. Makes sense if the covariates are new additions, and not state changes (ex:
+        administering more drugs vs taking a temperature.)
+    cumulative_sum_prefix: string, optional
+        a prefix to add to calculated cumulative sum columns
+    delay: int, optional
+        add a delay to covariates (useful for checking for reverse causality in analysis)
 
-    Returns:
-        long_form_df: A DataFrame with updated rows to reflect the novel times slices (if any) being added from cv, and novel (or updated) columns
-            of new covariates from cv
+    Returns
+    -------
+    long_form_df: DataFrame
+        A DataFrame with updated rows to reflect the novel times slices (if any) being added from cv, and novel (or updated) columns
+        of new covariates from cv
+
+    See Also
+    --------
+    covariates_from_event_matrix
+
 
     """
 
@@ -1313,10 +1426,12 @@ def covariates_from_event_matrix(df, id_col):
     it to a format that add_covariate_to_timeline will accept. For example, suppose you have a
     dataset that looks like:
 
-       id  promotion  movement  raise
-    0   1        1.0       NaN    2.0
-    1   2        NaN       5.0    NaN
-    2   3        3.0       5.0    7.0
+    .. code:: python
+
+           id  promotion  movement  raise
+        0   1        1.0       NaN    2.0
+        1   2        NaN       5.0    NaN
+        2   3        3.0       5.0    7.0
 
 
     where the values (aside from the id column) represent when an event occured for a specific user, relative
@@ -1326,13 +1441,18 @@ def covariates_from_event_matrix(df, id_col):
 
     The duration matrix should have 1 row per subject (but not necessarily all subjects).
 
-    Example:
+    Parameters
+    ----------
+    df: DataFrame
+      the DataFrame we want to transform
+    id_col: string
+      the column in long_form_df and cv representing a unique identifier for subjects.
 
-        cv = covariates_from_event_matrix(duration_df, 'id')
-        long_form_df = add_covariate_to_timeline(long_form_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
+    Example
+    -------
 
-    Parameters:
-        id_col: the column in long_form_df and cv representing a unique identifier for subjects.
+    >>> cv = covariates_from_event_matrix(duration_df, 'id')
+    >>> long_form_df = add_covariate_to_timeline(long_form_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
 
     """
     df = df.set_index(id_col)

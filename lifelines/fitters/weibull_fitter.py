@@ -53,24 +53,35 @@ def _d_rho_d_lambda_(lambda_rho, T, E):
 
 class WeibullFitter(UnivariateFitter):
 
-    """
+    r"""
     This class implements a Weibull model for univariate data. The model has parameterized
     form:
 
-      S(t) = exp(-(lambda*t)^rho),   lambda > 0, rho > 0,
+    .. math::  S(t) = exp(-(\lambda t)^\rho),   \lambda > 0, \rho > 0,
 
     which implies the cumulative hazard rate is
 
-      H(t) = (lambda*t)^rho,
+    .. math:: H(t) = (\lambda t)^\rho,
 
     and the hazard rate is:
 
-      h(t) = rho*lambda(lambda*t)^(rho-1)
+    .. math::  h(t) = \rho \lambda(\lambda t)^(\rho-1)
 
     After calling the `.fit` method, you have access to properties like:
-    `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
+    cumulative_hazard_, survival_function_, lambda_ and rho_.
 
     A summary of the fit is available with the method 'print_summary()'
+    
+    Examples
+    --------
+
+    >>> from lifelines import WeibullFitter 
+    >>> from lifelines.datasets import load_waltons
+    >>> waltons = load_waltons()
+    >>> wbf = WeibullFitter()
+    >>> wbf.fit(waltons['T'], waltons['E'])
+    >>> wbf.plot()
+    >>> print(wbf.lambda_)
 
     """
 
@@ -85,19 +96,30 @@ class WeibullFitter(UnivariateFitter):
         show_progress=False,
     ):  # pylint: disable=too-many-arguments
         """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if event_observed==None
-          timeline: return the estimate at the values in timeline (postively increasing)
-          label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
-             alpha for this call to fit only.
-          ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-          show_progress: since this is an iterative fitting algorithm, switching this to True will display some iteration details.
-        Returns:
-          self, with new properties like `cumulative_hazard_', 'survival_function_', 'lambda_' and 'rho_'.
+        Parameters
+        ----------
+        duration: an array, or pd.Series
+          length n, duration subject was observed for
+        event_observed: numpy array or pd.Series, optional
+          length n, True if the the death was observed, False if the event
+           was lost (right-censored). Defaults all True if event_observed==None
+        timeline: list, optional
+            return the estimate at the values in timeline (postively increasing)
+        label: string, optional
+            a string to name the column of the estimate.
+        alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: list, optional
+            add custom column names to the generated confidence intervals
+              as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        show_progress: boolean, optional
+            since this is an iterative fitting algorithm, switching this to True will display some iteration details.
+
+        Returns
+        -------
+          self : WeibullFitter
+            self with new properties like cumulative_hazard_, survival_function_, lambda_, and rho_.
 
         """
 

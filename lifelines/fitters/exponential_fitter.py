@@ -15,27 +15,27 @@ from lifelines.utils import (
 
 
 class ExponentialFitter(UnivariateFitter):
-
-    """
+    r"""
     This class implements an Exponential model for univariate data. The model has parameterized
     form:
 
-      S(t) = exp(-(lambda*t)),   lambda >0
+    .. math::  S(t) = exp(-(\lambda*t)),   \lambda >0
 
     which implies the cumulative hazard rate is
 
-      H(t) = lambda*t
+    .. math::  H(t) = \lambda*t
 
     and the hazard rate is:
 
-      h(t) = lambda
+    .. math::  h(t) = \lambda
 
     After calling the `.fit` method, you have access to properties like:
      'survival_function_', 'lambda_'
 
     A summary of the fit is available with the method 'print_summary()'
 
-
+    Notes
+    -----
     Reference: https://www4.stat.ncsu.edu/~dzhang2/st745/chap3.pdf
 
     """
@@ -44,18 +44,27 @@ class ExponentialFitter(UnivariateFitter):
         self, durations, event_observed=None, timeline=None, label="Exponential_estimate", alpha=None, ci_labels=None
     ):  # pylint: disable=too-many-arguments
         """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
-          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
+        Parameters
+        ----------
+          duration: iterable
+            an array, or pd.Series, of length n -- duration subject was observed for
+          event_observed: iterable, optional
+            an array, list, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None
-          label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
+          timeline: iterable, optional
+            return the best estimate at the values in timelines (postively increasing)
+          label: string, optional
+            a string to name the column of the estimate.
+          alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
-          ci_labels: add custom column names to the generated confidence intervals
+          ci_labels: list, optional
+            add custom column names to the generated confidence intervals
                 as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
 
-        Returns:
+        Returns
+        -------
+        self : ExpontentialFitter
           self, with new properties like 'survival_function_' and 'lambda_'.
 
         """
@@ -137,7 +146,7 @@ class ExponentialFitter(UnivariateFitter):
 
         Returns
         -------
-        df : pd.DataFrame
+        df : DataFrame
             Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
         lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
         df = pd.DataFrame(index=["lambda_"])

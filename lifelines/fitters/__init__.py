@@ -12,7 +12,7 @@ from lifelines.utils import qth_survival_times, _to_array
 from lifelines.compat import PY2, PY3
 
 
-def must_call_fit_first(func):
+def _must_call_fit_first(func):
     @wraps(func)
     def error_wrapper(*args, **kwargs):
         self = args[0]
@@ -45,7 +45,7 @@ class BaseFitter(object):
 
 
 class UnivariateFitter(BaseFitter):
-    @must_call_fit_first
+    @_must_call_fit_first
     def _update_docstrings(self):
         # Update their docstrings
         if PY2:
@@ -65,11 +65,11 @@ class UnivariateFitter(BaseFitter):
             self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
             self.__class__.plot.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def plot(self, *args, **kwargs):
         return plot_estimate(self, *args, **kwargs)
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def subtract(self, other):
         """
         Subtract the {0} of two {1} objects.
@@ -89,7 +89,7 @@ class UnivariateFitter(BaseFitter):
             columns=["diff"],
         )
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def divide(self, other):
         """
         Divide the {0} of two {1} objects.
@@ -110,7 +110,7 @@ class UnivariateFitter(BaseFitter):
             columns=["ratio"],
         )
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def predict(self, times):
         """
         Predict the {0} at certain point in time. Uses a linear interpolation if
@@ -131,11 +131,11 @@ class UnivariateFitter(BaseFitter):
         return estimate.reindex(estimate.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
 
     @property
-    @must_call_fit_first
+    @_must_call_fit_first
     def conditional_time_to_event_(self):
         return self._conditional_time_to_event_()
 
-    @must_call_fit_first
+    @_must_call_fit_first
     def _conditional_time_to_event_(self):
         """
         Return a DataFrame, with index equal to survival_function_, that estimates the median
