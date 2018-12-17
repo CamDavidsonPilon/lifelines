@@ -31,18 +31,21 @@ from lifelines.utils import (
     to_long_format,
     normalize,
 )
-from lifelines.estimation import (
-    CoxPHFitter,
-    AalenAdditiveFitter,
-    KaplanMeierFitter,
-    NelsonAalenFitter,
-    BreslowFlemingHarringtonFitter,
-    ExponentialFitter,
+
+from lifelines.fitters import BaseFitter
+
+from lifelines import (
     WeibullFitter,
-    BaseFitter,
+    ExponentialFitter,
+    NelsonAalenFitter,
+    KaplanMeierFitter,
+    BreslowFlemingHarringtonFitter,
+    CoxPHFitter,
     CoxTimeVaryingFitter,
-    AalenJohansenFitter,
+    AalenAdditiveFitter,
+    AalenJohansenFitter
 )
+
 from lifelines.datasets import (
     load_larynx,
     load_waltons,

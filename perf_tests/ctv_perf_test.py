@@ -2,7 +2,7 @@
 if __name__ == "__main__":
     import time
     import pandas as pd
-    from lifelines.estimation import CoxTimeVaryingFitter
+    from lifelines import CoxTimeVaryingFitter
     from lifelines.datasets import load_stanford_heart_transplants
 
     dfcv = load_stanford_heart_transplants()
