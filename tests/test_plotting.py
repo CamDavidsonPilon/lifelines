@@ -5,13 +5,12 @@ import os
 import pytest
 import pandas as pd
 import numpy as np
-from lifelines.estimation import (
-    NelsonAalenFitter,
-    KaplanMeierFitter,
-    AalenAdditiveFitter,
-    CoxPHFitter,
-    CoxTimeVaryingFitter,
-)
+
+from lifelines.fitters.nelson_aalen_fitter import NelsonAalenFitter
+from lifelines.fitters.kaplan_meier_fitter import KaplanMeierFitter
+from lifelines.fitters.coxph_fitter import CoxPHFitter
+from lifelines.fitters.cox_time_varying_fitter import CoxTimeVaryingFitter
+from lifelines.fitters.aalen_additive_fitter import AalenAdditiveFitter
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes
 from lifelines.datasets import (

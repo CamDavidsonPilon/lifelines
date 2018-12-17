@@ -6,7 +6,8 @@ import os
 import pytest
 import matplotlib.pyplot as plt
 
-from lifelines.estimation import KaplanMeierFitter, NelsonAalenFitter
+from lifelines.fitters.nelson_aalen_fitter import NelsonAalenFitter
+from lifelines.fitters.kaplan_meier_fitter import KaplanMeierFitter
 from lifelines.generate_datasets import exponential_survival_data
 
 

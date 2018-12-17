@@ -6,7 +6,7 @@ if __name__ == "__main__":
     import pandas as pd
     import time
 
-    from lifelines.estimation import CoxPHFitter
+    from lifelines.fitters.coxph_fitter import CoxPHFitter
     from lifelines.datasets import load_rossi
 
     df = load_rossi()
