@@ -6,7 +6,7 @@ if __name__ == "__main__":
     import pandas as pd
     import time
 
-    from lifelines.fitters.aalen_additive_fitter import AalenAdditiveFitter
+    from lifelines import AalenAdditiveFitter
     from lifelines.datasets import load_rossi
 
     df = load_rossi()

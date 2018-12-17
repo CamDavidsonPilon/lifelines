@@ -14,7 +14,7 @@ from numpy import dot, exp
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
 from lifelines.fitters import BaseFitter
-from lifelines.fitters.coxph_fitter import CoxPHFitter
+from lifelines import CoxPHFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (
     inv_normal_cdf,
