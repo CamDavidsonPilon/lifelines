@@ -19,41 +19,59 @@ methods like linear regression.
 
 There are two popular competing techniques in survival regression: Cox's
 model and Aalen's additive model. Both models attempt to represent the
-hazard rate :math:`\lambda(t | x)` as a function of :math:`t` and some covariates :math:`x`. In Cox's model, the relationship is
-defined:
-
-.. math:: \lambda(t | x) = b_0(t)\exp\left( b_1x_1 + ... + b_dx_d\right)
-
-On the other hand, Aalen's additive model assumes the following form:
-
-.. math:: \lambda(t | x) = b_0(t) + b_1(t)x_1 + ... + b_d(t)x_d
+hazard rate :math:`\lambda(t | x)` as a function of :math:`t` and some covariates :math:`x`. We explore these models next. 
 
 
-Cox's Proportional Hazard model
+Cox's proportional hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Lifelines has an implementation of the Cox propotional hazards regression model (implemented in
-R under ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
+R as ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
-.. math::  \lambda(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
+.. math::  \underbrace{\lambda(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease this baseline hazard.
+Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease the baseline hazard.
 
+The dataset for regression
+###########################
+The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. Optionally, there could be a column denoting the event status of each observation (1 if event occured, 0 is censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial. 
 
-Lifelines implementation
-###########################################
-
-
-The implementation of the Cox model in lifelines, called ``CoxPHFitter`` has a similar API to ``AalensAdditiveFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats.
-
-This example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_, avaible as ``load_rossi`` in lifelines.
+An example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_, available in lifelines as ``datasets.load_rossi``.
 
 .. code:: python
 
     from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    """
+         week  arrest  fin  age  race  wexp  mar  paro  prio
+    0      20       1    0   27     1     0    0     1     3
+    1      17       1    0   18     1     0    0     1     8
+    2      25       1    0   19     0     1    0     1    13
+    3      52       0    1   23     1     1    1     1     1
+    """
+
+The dataframe ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occured, and the other columns represent variables we wish to regress against. 
+
+
+If you need to first "clean" your dataset (encode categorical variables, add interation terms, etc.), that should happen _before_ using lifelines. Libraries like Pandas and Patsy help with that. 
+
+
+Running the regression
+########################
+
+
+The implementation of the Cox model in lifelines, called ``CoxPHFitter`` has a similar API to ``AalensAdditiveFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats.
+
+
+.. code:: python
+
     from lifelines import CoxPHFitter
+    from lifelines.datasets import load_rossi
 
     rossi_dataset = load_rossi()
+    
     cph = CoxPHFitter()
     cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
 
@@ -97,21 +115,25 @@ After fitting, the value of the maximum log-likelihood this available using ``cp
 Goodness of fit and prediction
 ###########################################
 
-After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? a small spread between these two curves means that the impact of the exponential in the Cox model does very little, whereas a large spread means *most* of the changes in individual hazard can be attributed to the exponential term). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
+After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? Interpret the spread as how much "variance" is provided by the baseline hazard versus the partial hazard. The baseline hazard is approximately equal to the Kaplan-Meier curve if none of the variance is explained by the covariates / partial hazard. Deviations from this provide a visual measure of variance explained). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
 
 .. image:: images/goodfit.png
 
 .. image:: images/badfit.png
 
 
-After fitting, you can use use the suite of prediction methods (similar to Aalen's additive model): ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
+After fitting, you can use use the suite of prediction methods: ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
 
 .. code:: python
 
     X = rossi_dataset.drop(["week", "arrest"], axis=1)
+    
     cph.predict_partial_hazard(X)
-    cph.predict_survival_function(X)
+
     cph.predict_survival_function(X, times=[5., 25., 50.])
+
+    cph.predict_median(X)
+
 
 
 Plotting the coefficients

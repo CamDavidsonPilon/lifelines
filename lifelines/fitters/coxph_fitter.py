@@ -104,14 +104,13 @@ class CoxPHFitter(BaseFitter):
         robust=False,
     ):
         """
-        Fit the Cox Propertional Hazard model to a dataset. Tied survival times
-        are handled using Efron's tie-method.
+        Fit the Cox Propertional Hazard model to a dataset.
 
         Parameters
         ----------
         df: DataFrame
             a Pandas dataframe with necessary columns `duration_col` and
-            `event_col`, plus other covariates and special columns (weights, strata). 
+            `event_col` (see below), covariates columns, and special columns (weights, strata). 
             `duration_col` refers to
             the lifetimes of the subjects. `event_col` refers to whether
             the 'death' events was observed: 1 if observed, 0 else (censored).
@@ -122,7 +121,7 @@ class CoxPHFitter(BaseFitter):
         
         event_col: string, optional
             the  name of thecolumn in dataframe that contains the subjects' death
-            observation. If left as None, assume all individuals are non-censored.
+            observation. If left as None, assume all individuals are uncensored.
         
         weights_col: string, optional
             an optional column in the dataframe, df, that denotes the weight per subject.
@@ -134,7 +133,7 @@ class CoxPHFitter(BaseFitter):
         
         show_progress: boolean, optional (default=False)
             since the fitter is iterative, show convergence
-            diagnostics.
+            diagnostics. Useful if convergence is failing. 
         
         initial_beta: numpy array, optional
             initialize the starting point of the iterative
@@ -164,11 +163,43 @@ class CoxPHFitter(BaseFitter):
             self with additional new properties: print_summary, hazards_, confidence_intervals_, baseline_survival_, etc.
 
 
+        Note
+        ----
+        Tied survival times are handled using Efron's tie-method.
+
+
         Examples
         --------
+        >>> from lifelines import CoxPHFitter
+        >>> 
+        >>> df = pd.DataFrame({
+        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>> })
+        >>>
+        >>> cph = CoxPHFitter()
+        >>> cph.fit(df, 'T', 'E')
+        >>> cph.print_summary()
+        >>> cph.predict_median(df)
+
+
+        >>> from lifelines import CoxPHFitter
+        >>> 
+        >>> df = pd.DataFrame({
+        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+        >>>     'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
+        >>>     'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>> })
+        >>>
         >>> cph = CoxPHFitter()
         >>> cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
         >>> cph.print_summary()
+        >>> cph.predict_median(df)
 
         """
 
@@ -272,7 +303,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
-        Note that data is assumed to be sorted on T!
+        Note
+        ----
+        The data is assumed to be sorted on T!
 
         Parameters
         ----------
@@ -854,8 +887,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         Returns
         -------
-            cumulative_hazard_ : DataFrame
-                the cumulative hazard of individuals over the timeline
+        cumulative_hazard_ : DataFrame
+            the cumulative hazard of individuals over the timeline
         """
 
         if self.strata:
@@ -909,8 +942,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         Returns
         -------
-            survival_function : DataFrame
-                the survival probabilities of individuals over the timeline
+        survival_function : DataFrame
+            the survival probabilities of individuals over the timeline
         """
         return exp(-self.predict_cumulative_hazard(X, times=times))
 
@@ -933,6 +966,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         -------
         percentiles: DataFrame
 
+        See Also
+        --------
+        predict_median
+
         """
         subjects = _get_index(X)
         return qth_survival_times(p, self.predict_survival_function(X)[subjects]).T
@@ -954,16 +991,24 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         percentiles: DataFrame
             the median lifetimes for the individuals. If the survival curve of an
             individual does not cross 0.5, then the result is infinity.
+
+
+        See Also
+        --------
+        predict_percentile
+
         """
         return self.predict_percentile(X, 0.5)
 
     def predict_expectation(self, X):
         r"""
         Compute the expected lifetime, :math:`E[T]`, using covarites X. This algorithm to compute the expection is
-        to use the fact that :math:`E[T] = \int_0^inf P(T > t) dt = \int_0^inf S(t) dt`
+        to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integal, we use the trapizoidal rule to approximate the integral.
 
-        To compute the integal, we use the trapizoidal rule to approximate the integral. However, if the
-        survival function, :math:`S(t)`, doesn't converge to 0, the the expectation is really infinity.
+        Caution
+        --------
+        However, if the survival function doesn't converge to 0, the the expectation is really infinity and the returned
+        values are meaningless/too large. In that case, using ``predict_median`` or ``predict_percentile`` would be better.
 
         Parameters
         ----------
@@ -974,7 +1019,19 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             same order as the training data.
 
         Returns
-            expectations : DataFrame
+        -------
+        expectations : DataFrame
+
+        Notes
+        -----
+        If X is a dataframe, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+
+        See Also
+        --------
+        predict_median
+        predict_percentile
 
         """
         subjects = _get_index(X)
