@@ -254,7 +254,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         self.baseline_survival_ = self._compute_baseline_survival()
         self._predicted_partial_hazards_ = self.predict_partial_hazard(df).values
 
-        self._train_log_partial_hazard = self.predict_log_partial_hazard(self._norm_mean.to_frame().T)
         return self
 
     def _newton_rhaphson(
@@ -820,23 +819,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
-    def predict_log_hazard_relative_to_mean(self, X):
-        r"""
-        Parameters
-        ----------
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-        Returns
-        -------
-        linear_prediction: DataFrame
-            the log hazard relative to the hazard of the mean covariates. This is the behaviour
-            of R's predict.coxph. Equal to :math:`\beta (X - mean(X_{train})) - \beta mean(X_{train})`
-        """
-
-        return self.predict_log_partial_hazard(X) - self._train_log_partial_hazard.squeeze()
 
     def predict_cumulative_hazard(self, X, times=None):
         """

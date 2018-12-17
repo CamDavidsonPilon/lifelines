@@ -1907,16 +1907,6 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             cp2.predict_survival_function(df_scaled.iloc[[0]][["var1", "var2", "var3"]]),
         )
 
-    def test_predict_log_hazard_relative_to_mean(self, rossi):
-        cox = CoxPHFitter()
-        cox.fit(rossi, "week", "arrest")
-        log_relative_hazards = cox.predict_log_hazard_relative_to_mean(rossi)
-        means = rossi.mean(0).to_frame().T
-        assert_frame_equal(
-            log_relative_hazards,
-            np.log(cox.predict_partial_hazard(rossi) / cox.predict_partial_hazard(means).squeeze()),
-        )
-
     def test_warning_is_raised_if_df_has_a_near_constant_column(self, rossi):
         cox = CoxPHFitter()
         rossi["constant"] = 1.0
