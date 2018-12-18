@@ -262,12 +262,12 @@ To specify categorical variables to be used in stratification, we define them in
     cph.baseline_cumulative_hazard_.shape
     # (49, 2)
 
-Weights, Clusters & Robust Errors
+Weights & Robust Errors
 ########################
 
 Observations can come with weights, as well. These weights may be integer values representing some commonly occuring observation, or they may be float values representing some sampling weights (ex: inverse probability weights). In the ``CoxPHFitter.fit`` method, an kwarg is present for specifying which column in the dataframe should be used as weights, ex: ``CoxPHFitter(df, 'T', 'E', weights_col='weights')``.
 
-When using sampling weights, it's correct to also change the standard error calculations. That is done turning on the ``robust`` flag in ``fit``. Interally, ``CoxPHFitter`` will use the sandwhich estimator to compute the errors. 
+When using sampling weights, it's correct to also change the standard error calculations. That is done by turning on the ``robust`` flag in ``fit``. Interally, ``CoxPHFitter`` will use the sandwhich estimator to compute the errors. 
 
 
 .. code:: python
@@ -286,11 +286,15 @@ When using sampling weights, it's correct to also change the standard error calc
     cph.fit(df, 'T', 'E', weights_col='weights', robust=True)
     cph.print_summary()
 
+See more examples in _`Adding weights to observations in a Cox model`. 
+
+Clusters & Correlations
+##########################
 
 Another property your dataset may have is groups of related subjects. This could be caused by:
 
  - a single individual having multiple occurrences, and hence showing up in the dataset more than once. 
- - subjects that share some common property, like members of the same family
+ - subjects that share some common property, like members of the same family or being matched on prospensity scores. 
 
 We call these grouped subjects "clusters", and assume they are designated by some column in the dataframe (example below). The point estimates of the model don't change, but the standard errors will increase (in fact, internally this uses the sandwich estimator). An intuitive argument for this is that 100 observations on 100 individuals provide more information than 100 observations on 10 individuals (or clusters). 
 
@@ -311,6 +315,8 @@ We call these grouped subjects "clusters", and assume they are designated by som
     cph.fit(df, 'T', 'E', cluster_col='id')
     cph.print_summary()
 
+
+For more examples, see _`Correlations between subjects in a Cox model`.
 
 
 Aalen's Additive model
