@@ -1,5 +1,10 @@
 ### Changelogs
 
+#### 0.16.0
+ - fixed bug that resulted in incorrect log-likelihood test if using `weights_col` in `CoxPHFitter`
+ - removes `estimation` namespace for fitters. Should be using `from lifelines import xxxFitter` now.
+ - removes `predict_log_hazard_relative_to_mean` from Cox model
+
 #### 0.15.4
  - bug fix for the Cox model likelihood ratio test when using non-trivial weights.
 

@@ -202,12 +202,6 @@ class CoxPHFitter(BaseFitter):
         >>> cph.predict_median(df)
 
         """
-
-        df = df.copy()
-
-        # Sort on time
-        df = df.sort_values(by=duration_col)
-
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
@@ -216,57 +210,30 @@ class CoxPHFitter(BaseFitter):
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
-        if self.strata is not None:
-            original_index = df.index.copy()
-            df = df.set_index(self.strata)
 
-        # Extract time and event
-        T = df.pop(duration_col)
-        if event_col is None:
-            E = pd.Series(np.ones(df.shape[0]), index=df.index)
-        else:
-            E = df.pop(event_col)
 
-        if weights_col:
-            weights = df.pop(weights_col)
-            if (weights.astype(int) != weights).any() and not self.robust:
-                warnings.warn(
-                    """It appears your weights are not integers, possibly propensity or sampling scores then?
-It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
-estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
-""",
-                    RuntimeWarning,
-                )
-            if (weights <= 0).any():
-                raise ValueError("values in weights_col must be positive.")
+        X, T, E, weights = self._preprocess_dataframe(df)
 
-        else:
-            weights = pd.Series(np.ones((self._n_examples,)), index=df.index)
-
-        if self.cluster_col:
-            self._clusters = df.pop(self.cluster_col).values
-
-        self._check_values(df, T, E)
-        df = df.astype(float)
-
-        # save fitting data for later
         self.durations = T.copy()
         self.event_observed = E.copy()
         self.weights = weights.copy()
+<<<<<<< HEAD
         
         if self.strata is not None:
             self.durations.index = original_index
             self.event_observed.index = original_index
             self.weights.index = original_index
         self.event_observed = self.event_observed.astype(bool)
+=======
+>>>>>>> some refactor of residuals
 
-        self._norm_mean = df.mean(0)
-        self._norm_std = df.std(0)
 
-        E = E.astype(bool)
+        self._norm_mean = X.mean(0)
+        self._norm_std = X.std(0)
+
 
         hazards_ = self._newton_rhaphson(
-            normalize(df, self._norm_mean, self._norm_std),
+            normalize(X, self._norm_mean, self._norm_std),
             T,
             E,
             weights=weights,
@@ -275,20 +242,63 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             step_size=step_size,
         )
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
+        self.hazards_ = pd.DataFrame(hazards_.T, columns=X.columns, index=["coef"]) / self._norm_std
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
-            normalize(df, self._norm_mean, self._norm_std), E, weights
+            normalize(X, self._norm_mean, self._norm_std), E, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self.baseline_hazard_ = self._compute_baseline_hazards(df, T, E, weights)
+        self.baseline_hazard_ = self._compute_baseline_hazards(X, T, E, weights)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
-        self._predicted_partial_hazards_ = self.predict_partial_hazard(df).values
+        self._predicted_partial_hazards_ = self.predict_partial_hazard(X).values
 
         return self
+
+
+    def _preprocess_dataframe(self, df):
+
+        df = df.copy()
+
+        # Sort on time
+        df = df.sort_values(by=self.duration_col)
+
+        if self.strata is not None:
+            original_index = df.index.copy()
+            df = df.set_index(self.strata)
+
+        # Extract time and event
+        T = df.pop(self.duration_col)
+        E = df.pop(self.event_col) if (self.event_col is not None) else pd.Series(np.ones(self._n_examples), index=df.index)
+        W = df.pop(self.weights_col) if (self.weights_col is not None) else pd.Series(np.ones((self._n_examples,)), index=df.index)
+
+
+        # check to make sure their weights are okay
+        if self.weights_col:
+            if (W.astype(int) != W).any() and not self.robust:
+                warnings.warn(
+                    """It appears your weights are not integers, possibly propensity or sampling scores then?
+It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
+estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+""",
+                    RuntimeWarning,
+                )
+            if (W <= 0).any():
+                raise ValueError("values in weight column %s must be positive." % self.weights_col)
+
+
+        if self.cluster_col:
+            self._clusters = df.pop(self.cluster_col).values
+
+        self._check_values(df, T, E)
+
+        df = df.astype(float)
+        T = T.astype(float)
+        E = E.astype(bool)
+
+        return df, T, E, W
 
     def _newton_rhaphson(
         self,
@@ -606,8 +616,97 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             columns=self.hazards_.columns,
         )
 
-    def _compute_delta_beta(self, X, E, weights):
-        """ approximate change in betas as a result of excluding ith row"""
+
+    def _compute_schoenfeld(self, X, T, E, weights):
+        # TODO: this needs to be per-strata...
+
+        n, d = X.shape
+
+        # Init risk and tie sums to zero
+        risk_phi, tie_phi = 0, 0
+        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+
+        # Init number of ties and weights
+        weight_count = 0.0
+        tie_count = 0
+        scores = weights[:, None] * exp(dot(X, self.hazards_))
+
+        diff_against = []
+
+        schoenfeld_residuals = pd.DataFrame(columns=X.columns)
+
+        # Iterate backwards to utilize recursive relationship
+        for i in range(n - 1, -1, -1):
+            # Doing it like this to preserve shape
+            ti = T[i]
+            ei = E[i]
+            xi = X[i : i + 1]
+            score = scores[i : i + 1]
+            w = weights[i]
+
+            # Calculate phi values
+            phi_i = score
+            phi_x_i = phi_i * xi
+
+            # Calculate sums of Risk set
+            risk_phi += phi_i
+            risk_phi_x += phi_x_i
+
+            # Calculate sums of Ties, if this is an event
+            if ei:
+                diff_against.append(xi)
+
+                tie_phi += phi_i
+                tie_phi_x += phi_x_i
+
+                # Keep track of count
+                tie_count += 1 # aka death counts
+                weight_count += w
+
+            if i > 0 and T[i - 1] == ti:
+                # There are more ties/members of the risk set
+                continue
+            elif tie_count == 0:
+                # Only censored with current time, move on
+                continue
+
+            # There was atleast one event and no more ties remain. Time to sum.
+            weighted_mean = np.zeros((1, d))
+            weighted_average = weight_count / tie_count
+
+            for l in range(tie_count):
+
+                # A good explaination for Efron. Consider three of five subjects who fail at the time.
+                # As it is not known a priori that who is the first to fail, so one-third of
+                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+                numer = risk_phi_x - l * tie_phi_x / tie_count
+                denom = risk_phi - l * tie_phi / tie_count
+
+                # Gradient
+                weighted_mean += weighted_average * numer / (denom * tie_count)
+
+
+            for xi in diff_against:
+                schoenfeld_residuals = schoenfeld_residuals.append(xi - weighted_mean, sort=False)
+
+            # reset tie values
+            tie_count = 0
+            weight_count = 0.0
+            tie_phi = 0
+            tie_phi_x = np.zeros((1, d))
+            diff_against = []
+
+        return schoenfeld_residuals
+
+
+
+    def _compute_delta_beta(self, X, T, E, weights):
+        """
+        approximate change in betas as a result of excluding ith row.
+        T should be None, as it's not used.
+        """
 
         _, d = X.shape
 
@@ -619,14 +718,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 score_residuals = np.append(
                     score_residuals,
-                    self._compute_residuals_within_strata(stratified_X.values, stratified_E.values, stratified_W.values)
+                    self._compute_score(stratified_X.values, T, stratified_E.values, stratified_W.values)
                     * stratified_W[:, None],
                     axis=0,
                 )
 
         else:
             score_residuals = (
-                self._compute_residuals_within_strata(X.values, E.values, weights.values) * weights[:, None]
+                self._compute_score(X.values, T, E.values, weights.values) * weights[:, None]
             )
 
         naive_var = inv(self._hessian_)
@@ -634,22 +733,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return delta_betas
 
-    def _compute_sandwich_estimator(self, X, E, weights):
-
-        delta_betas = self._compute_delta_beta(X, E, weights)
-
-        if self.cluster_col:
-            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
-
-        sandwich_estimator = delta_betas.T.dot(delta_betas)
-        return sandwich_estimator
-
-    def _compute_residuals_within_strata(self, X, E, weights):
+    def _compute_score(self, X, T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
         # Assumes X already sorted by T
         # TODO: doesn't handle ties.
+
+        assert T is None, "T isn't used here, should be None"
 
         n, d = X.shape
 
@@ -689,12 +780,44 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return score_residuals
 
-    def _compute_standard_errors(self, df, E, weights):
+    def compute_residuals(self, df, type):
+        """
+
+        Parameters
+        ----------
+        df : the same training data given in `fit`
+        type : string
+            {'schoenfeld', 'score', 'delta_beta'}
+
+        TODO: martingale
+        https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
+
+        TODO: can I check the same training data is inputted? checksum?
+
+        """
+        X, T, E, weights = self._preprocess_dataframe(df)
+        X = normalize(X, self._norm_mean, self._norm_std)
+
+        return getattr(self, '_compute_%s' % type)(X, T, E, weights)
+
+
+    def _compute_standard_errors(self, X, E, weights):
         if self.robust or self.cluster_col:
-            se = np.sqrt(self._compute_sandwich_estimator(df, E, weights).diagonal())  # / self._norm_std
+            se = np.sqrt(self._compute_sandwich_estimator(X, E, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
+
+
+    def _compute_sandwich_estimator(self, X, E, weights):
+        T = None
+        delta_betas = self._compute_delta_beta(X, T, E, weights)
+
+        if self.cluster_col:
+            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
+
+        sandwich_estimator = delta_betas.T.dot(delta_betas)
+        return sandwich_estimator
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
