@@ -262,12 +262,55 @@ To specify categorical variables to be used in stratification, we define them in
     cph.baseline_cumulative_hazard_.shape
     # (49, 2)
 
-Weights & Robust Errors
+Weights, Clusters & Robust Errors
 ########################
 
-Observations can come with weights, as well. These weights may be integer values representing some commonly occuring observation, or they may be float values representing some sampling weights or inverse probability weights. In the ``CoxPHFitter.fit`` method, an option is present for specifying which column in the dataframe should be used as weights. See example below.
+Observations can come with weights, as well. These weights may be integer values representing some commonly occuring observation, or they may be float values representing some sampling weights (ex: inverse probability weights). In the ``CoxPHFitter.fit`` method, an kwarg is present for specifying which column in the dataframe should be used as weights, ex: ``CoxPHFitter(df, 'T', 'E', weights_col='weights')``.
 
-Generally, unless your weights are integers should
+When using sampling weights, it's correct to also change the standard error calculations. That is done turning on the ``robust`` flag in ``fit``. Interally, ``CoxPHFitter`` will use the sandwhich estimator to compute the errors. 
+
+
+.. code:: python
+
+    from lifelines import CoxPHFitter
+
+    df = pd.DataFrame({
+        'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
+        'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+    })
+
+    cph = CoxPHFitter()
+    cph.fit(df, 'T', 'E', weights_col='weights', robust=True)
+    cph.print_summary()
+
+
+Another property your dataset may have is groups of related subjects. This could be caused by:
+
+ - a single individual having multiple occurrences, and hence showing up in the dataset more than once. 
+ - subjects that share some common property, like members of the same family
+
+We call these grouped subjects "clusters", and assume they are designated by some column in the dataframe (example below). The point estimates of the model don't change, but the standard errors will increase (in fact, internally this uses the sandwich estimator). An intuitive argument for this is that 100 observations on 100 individuals provide more information than 100 observations on 10 individuals (or clusters). 
+
+
+.. code:: python
+
+    from lifelines import CoxPHFitter
+
+    df = pd.DataFrame({
+        'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'id': [1, 1, 1, 1, 2, 3, 3, 4, 4, 5, 6, 7]
+    })
+
+    cph = CoxPHFitter()
+    cph.fit(df, 'T', 'E', cluster_col='id')
+    cph.print_summary()
+
 
 
 Aalen's Additive model
