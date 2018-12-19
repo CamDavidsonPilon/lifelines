@@ -1523,8 +1523,8 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", show_progress=True, weights_col="w")
-        expected = 0.12
-        assert (cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
+        expected = 0.05
+        assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
 
 
     def test_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
