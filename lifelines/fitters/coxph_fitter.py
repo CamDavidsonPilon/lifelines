@@ -252,9 +252,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         # save fitting data for later
         self.durations = T.copy()
         self.event_observed = E.copy()
+        self.weights = weights.copy()
+        
         if self.strata is not None:
             self.durations.index = original_index
             self.event_observed.index = original_index
+            self.weights.index = original_index
         self.event_observed = self.event_observed.astype(bool)
 
         self._norm_mean = df.mean(0)
@@ -767,13 +770,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
 
-        Conviently, we can actually use the class itself to do most of the work.
+        Conveniently, we can actually use the class itself to do most of the work.
 
         """
-        trivial_dataset = pd.DataFrame({"E": self.event_observed, "T": self.durations})
+        trivial_dataset = pd.DataFrame({"E": self.event_observed, "T": self.durations, "W": self.weights})
 
         cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "T", "E", show_progress=False)
+        cp_null.fit(trivial_dataset, "T", "E", weights_col="W", show_progress=False)
 
         ll_null = cp_null._log_likelihood
         ll_alt = self._log_likelihood

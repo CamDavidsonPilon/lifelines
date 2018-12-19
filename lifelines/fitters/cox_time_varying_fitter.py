@@ -152,6 +152,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.baseline_survival_ = self._compute_baseline_survival()
         self.event_observed = stop_times_events["event"]
         self.start_stop_and_events = stop_times_events
+        self.weights = weights
 
         self._n_examples = df.shape[0]
         self._n_unique = df.index.unique().shape[0]
@@ -509,13 +510,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
 
-        Conviently, we can actually use the class itself to do most of the work.
+        Conveniently, we can actually use the class itself to do most of the work.
 
         """
+
         trivial_dataset = self.start_stop_and_events.groupby(level=0).last()[["event", "stop"]]
+        weights = self.weights.groupby(level=0).last()[["__weights"]]
+        trivial_dataset = trivial_dataset.join(weights)
 
         cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "stop", "event", show_progress=False)
+        cp_null.fit(trivial_dataset, "stop", "event", weights_col='__weights', show_progress=False)
 
         ll_null = cp_null._log_likelihood
         ll_alt = self._log_likelihood

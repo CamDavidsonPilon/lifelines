@@ -1,5 +1,11 @@
 ### Changelogs
 
+#### 0.15.4
+ - bug fix for the Cox model likelihood ratio test when using non-trivial weights.
+
+#### 0.15.3
+ - Only allow matplotlib less than 3.0.
+
 #### 0.15.2
  - API changes to `plotting.plot_lifetimes`
  - `cluster_col` and `strata` can be used together in `CoxPHFitter`
