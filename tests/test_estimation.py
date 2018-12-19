@@ -868,13 +868,105 @@ class TestRegressionFitters:
 
 
 class TestCoxPHFitter:
+
+    def test_schoenfeld_residuals_no_strata_but_with_censorship(self):
+        """
+        library(survival)
+        df <- data.frame(
+          "var" = c(-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105),
+          "T" = c(5, 6, 7, 8, 9),
+          "E" = c(1, 1, 1, 1, 1),
+        )
+
+        c = coxph(formula=Surv(T, E) ~ var , data=df)
+        residuals(c, "schoen")
+        """
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
+                "T": [ 5, 6, 7, 8, 9],
+                "E": [1, 1, 1, 1, 1],
+            }
+        )
+
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E')
+
+        results = cph.compute_residuals(df, 'schoenfeld')
+        expected = pd.DataFrame([-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344,  0.0], columns=['var1'])
+        assert_frame_equal(results, expected, check_less_precise=3)
+
+    def test_schoenfeld_residuals_with_censorship_and_ties(self):
+        """
+        library(survival)
+        df <- data.frame(
+          "var" = c(-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105),
+          "T" = c(6, 6, 7, 8, 9),
+          "E" = c(1, 1, 1, 0, 1),
+        )
+
+        c = coxph(formula=Surv(T, E) ~ var , data=df)
+        residuals(c, "schoen")
+        """
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
+                "T": [ 6, 6, 7, 8, 9],
+                "E": [1, 1, 1, 0, 1],
+            }
+        )
+
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E')
+
+        results = cph.compute_residuals(df, 'schoenfeld')
+        expected = pd.DataFrame([-0.3903793341, -0.5535578141,  0.9439371482, 0.0,  0.0], columns=['var1'])
+        assert_frame_equal(results, expected, check_less_precise=3)
+
+
+    def test_schoenfeld_residuals_with_strata(self):
+        """
+        library(survival)
+        df <- data.frame(
+          "var" = c(-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105),
+          "T" = c( 6, 6, 7, 8, 9),
+          "E" = c(1, 1, 1, 1, 1),
+          "s" = c(1, 2, 2, 1, 1)
+        )
+
+        c = coxph(formula=Surv(T, E) ~ var + stata(s), data=df)
+        residuals(c, "schoen")
+        """
+
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
+                "T": [ 6, 6, 7, 8, 9],
+                "E": [1, 1, 1, 1, 1],
+                "s": [1, 2, 2, 1, 1]
+            }
+        )
+
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E', strata=['s'])
+
+        results = cph.compute_residuals(df, 'schoenfeld')
+        expected = pd.DataFrame([ 5.898252711e-02, -2.074325854e-02,  0.0, -3.823926885e-02, 0.0], columns=['var1'])
+        assert_frame_equal(results, expected, check_less_precise=3)
+
+
+
     def test_error_is_raised_if_using_non_numeric_data_in_prediction(self):
-        df = pd.DataFrame.from_dict({"t": [1.0, 2.0, 3.0, 4.0], "int_": [1, -1, 0, 0], "float_": [1.2, -0.5, 0.0, 0.1]})
+        df = pd.DataFrame({
+            "t": [1.0, 2.0, 3.0, 4.0], 
+            "int_": [1, -1, 0, 0], 
+            "float_": [1.2, -0.5, 0.0, 0.1]
+        })
 
         cp = CoxPHFitter()
         cp.fit(df, duration_col="t")
 
-        df_predict_on = pd.DataFrame.from_dict({"int_": ["1", "-1", "0"], "float_": [1.2, -0.5, 0.0]})
+        df_predict_on = pd.DataFrame({"int_": ["1", "-1", "0"], "float_": [1.2, -0.5, 0.0]})
 
         with pytest.raises(TypeError):
             cp.predict_partial_hazard(df_predict_on)

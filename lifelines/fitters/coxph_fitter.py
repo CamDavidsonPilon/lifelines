@@ -211,7 +211,7 @@ class CoxPHFitter(BaseFitter):
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
 
-        X, T, E, weights, original_index = self._preprocess_dataframe(df)
+        X, T, E, weights, original_index, self._clusters = self._preprocess_dataframe(df)
 
         self.durations = T.copy()
         self.event_observed = E.copy()
@@ -251,16 +251,18 @@ class CoxPHFitter(BaseFitter):
         return self
 
     def _preprocess_dataframe(self, df):
+        # this should be a pure function
+
         df = df.copy()
 
-        # Sort on time
-        df = df.sort_values(by=self.duration_col)
 
+        original_index = df.index.copy()
+        
         if self.strata is not None:
-            original_index = df.index.copy()
+            df = df.sort_values(by=[self.duration_col] + self.strata)
             df = df.set_index(self.strata)
         else:
-            original_index = None
+            df = df.sort_values(by=self.duration_col)
 
         # Extract time and event
         T = df.pop(self.duration_col)
@@ -288,8 +290,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-        if self.cluster_col:
-            self._clusters = df.pop(self.cluster_col).values
+        
+        _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
         self._check_values(df, T, E)
 
@@ -297,7 +299,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T = T.astype(float)
         E = E.astype(bool)
 
-        return X, T, E, W, original_index
+        return X, T, E, W, original_index, _clusters
 
     @staticmethod
     def _check_values(X, T, E):
@@ -619,7 +621,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return _compute_schoenfeld(X, T, E, weights).dot(self.variance_matrix_)
 
     def _compute_schoenfeld(self, X, T, E, weights):
-
+        # Assumes sorted on T and on strata
+        # index will be set later
         _, d = X.shape
 
         if self.strata is not None:
@@ -633,7 +636,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         else:
             schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T, E.values, weights.values)
 
-        return schoenfeld_residuals
+        return pd.DataFrame(schoenfeld_residuals, columns=self.hazards_.columns)
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
         # TODO: the diff_against is gross
@@ -652,7 +655,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         diff_against = []
 
-        schoenfeld_residuals = pd.DataFrame(columns=X.columns)
+        schoenfeld_residuals = np.empty((0, d))
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
@@ -672,8 +675,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x += phi_x_i
 
             # Calculate sums of Ties, if this is an event
+            diff_against.append((xi, ei))
             if ei:
-                diff_against.append(xi.values)
 
                 tie_phi += phi_i
                 tie_phi_x += phi_x_i
@@ -700,9 +703,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 weighted_mean += weighted_average * numer / (denom * tie_count)
 
-            diff_against = np.asarray(diff_against)
-            # for xi in diff_against:
-            schoenfeld_residuals = schoenfeld_residuals.append(xi - weighted_mean, sort=False)
+            for xi, ei in diff_against:
+                schoenfeld_residuals = np.append(schoenfeld_residuals, ei * (xi - weighted_mean), axis=0)
 
             # reset tie values
             tie_count = 0
@@ -711,7 +713,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tie_phi_x = np.zeros((1, d))
             diff_against = []
 
-        return schoenfeld_residuals
+        return schoenfeld_residuals[::-1]
 
     def _compute_delta_beta(self, X, T, E, weights):
         """
@@ -790,7 +792,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ----------
         df : the same training data given in `fit`
         type : string
-            {'schoenfeld', 'score', 'delta_beta'}
+            {'schoenfeld', 'score', 'delta_beta', 'scaled_schoenfeld'}
 
         TODO: martingale
         https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -798,13 +800,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         TODO: can I check the same training data is inputted? checksum?
 
         """
-        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta"}
+        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "scaled_schoenfeld"}
         assert type in ALLOWED_RESIDUALS, "type must be in %s" % ALLOWED_RESIDUALS
 
-        X, T, E, weights = self._preprocess_dataframe(df)
-        X = normalize(X, self._norm_mean, self._norm_std)
+        X, T, E, weights, original_index, _ = self._preprocess_dataframe(df)
 
-        return getattr(self, "_compute_%s" % type)(X, T, E, weights)
+        return getattr(self, "_compute_%s" % type)(X, T, E, weights).set_index(original_index)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
