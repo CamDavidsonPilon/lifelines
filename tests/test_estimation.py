@@ -43,7 +43,7 @@ from lifelines import (
     CoxPHFitter,
     CoxTimeVaryingFitter,
     AalenAdditiveFitter,
-    AalenJohansenFitter
+    AalenJohansenFitter,
 )
 
 from lifelines.datasets import (
@@ -966,7 +966,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
+        l, u, _ = cox._get_efron_values(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(l[0][0] - 77.13) < 0.05
@@ -974,7 +974,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
+        l, u, _ = cox._get_efron_values(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.83) < 0.05
@@ -982,7 +982,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         beta = beta + u / l
         assert np.abs(beta - -0.0325) < 0.01
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
+        l, u, _ = cox._get_efron_values(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.70) < 0.01
@@ -1242,7 +1242,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-1.1099688, 0.6620063, 0.4630473, 0.5807250, -0.5958099]]).T
-        actual = cph._compute_delta_beta(X, None, df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_delta_betas_with_strata_are_the_same_as_in_R(self):
@@ -1275,7 +1275,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-0.6960789, 1.6729761, 0.3094744, -0.2895864, -0.9967852]]).T
-        actual = cph._compute_delta_beta(X, None, df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_delta_betas_with_weights_are_the_same_as_in_R(self):
@@ -1306,7 +1306,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-1.1156470, 0.7698781, 0.3923246, 0.8040079, -0.8505637]]).T
-        actual = cph._compute_delta_beta(X, None, df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_cluster_option(self):
@@ -1506,14 +1506,12 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         without_weights = cph._compute_likelihood_ratio_test()
 
-
-        regression_dataset['weights'] = 0.5
+        regression_dataset["weights"] = 0.5
         cph = CoxPHFitter()
-        cph.fit(regression_dataset, "T", "E", weights_col='weights')
+        cph.fit(regression_dataset, "T", "E", weights_col="weights")
 
         with_weights = cph._compute_likelihood_ratio_test()
         assert with_weights[0] != without_weights[0]
-
 
     def test_log_likelihood_test_against_R_with_weights(self, rossi):
         """
@@ -1539,7 +1537,6 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph.fit(df, "T", "E", show_progress=True, weights_col="w")
         expected = 0.05
         assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
-
 
     def test_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -1700,22 +1697,6 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest")
         assert (cf._compute_likelihood_ratio_test()[0] - expected) < 0.01
-
-    def test_log_likelihood_test_against_R_with_weights(self, rossi):
-        df = pd.DataFrame(
-            {
-                "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
-                "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-                "w": [1, 0.5, 2, 1, 1]
-            }
-        )
-        df["E"] = True
-
-        cph = CoxPHFitter()
-        cph.fit(df, "T", "E", show_progress=True, weights_col="w")
-        expected = 0.12
-        assert (cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
-
 
     def test_output_with_strata_against_R(self, rossi):
         """
