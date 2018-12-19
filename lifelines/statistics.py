@@ -135,7 +135,7 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
 
 
 def logrank_test(
-    event_times_A, event_times_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs
+    durations_A, durations_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs
 ):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
@@ -151,22 +151,22 @@ def logrank_test(
     Parameters
     ----------
 
-    event_times_A: iterable
+    durations_A: iterable
         a (n,) list-like of event durations (birth to death,...) for the first population.
 
-    event_times_B: iterable
+    durations_B: iterable
         a (n,) list-like of event durations (birth to death,...) for the second population.
 
-    censorship_A: iterable, optional
+    event_observed_A: iterable, optional
         a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population. 
         Default assumes all observed.
 
-    censorship_B: iterable, optional
+    event_observed_B: iterable, optional
         a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population. 
         Default assumes all observed.
 
     t_0: float, optional (default=-1)
-        the period under observation, -1 for all time.
+        the final time period under observation, -1 for all time.
 
     alpha: float, optional (default=0.95)
         the confidence level
@@ -199,7 +199,7 @@ def logrank_test(
     multivariate_logrank_test
     pairwise_logrank_test
     """
-    event_times_A, event_times_B = (np.array(event_times_A), np.array(event_times_B))
+    event_times_A, event_times_B = (np.array(durations_A), np.array(durations_B))
     if event_observed_A is None:
         event_observed_A = np.ones(event_times_A.shape[0])
     if event_observed_B is None:

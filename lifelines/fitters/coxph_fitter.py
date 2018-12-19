@@ -246,7 +246,7 @@ class CoxPHFitter(BaseFitter):
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
-            normalize(X, self._norm_mean, self._norm_std), E, weights
+            normalize(X, self._norm_mean, self._norm_std), T, E, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
@@ -259,7 +259,6 @@ class CoxPHFitter(BaseFitter):
 
 
     def _preprocess_dataframe(self, df):
-
         df = df.copy()
 
         # Sort on time
@@ -294,11 +293,11 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         self._check_values(df, T, E)
 
-        df = df.astype(float)
+        X = df.astype(float)
         T = T.astype(float)
         E = E.astype(bool)
 
-        return df, T, E, W
+        return X, T, E, W
 
     def _newton_rhaphson(
         self,
@@ -376,15 +375,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
-                for stratum, stratified_X in X.groupby(self.strata):
-                    stratified_T, stratified_E, stratified_W = (
-                        T.loc[[stratum]],
-                        E.loc[[stratum]],
-                        weights.loc[[stratum]],
-                    )
-                    _h, _g, _ll = get_gradients(
-                        stratified_X.values, beta, stratified_T.values, stratified_E.values, stratified_W.values
-                    )
+                for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights)
+                    _h, _g, _ll = get_gradients(stratified_X, beta, stratified_T, stratified_E, stratified_W)
                     g += _g
                     h += _h
                     ll += _ll
@@ -598,13 +590,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return self.baseline_hazard_.cumsum()
 
     @staticmethod
-    def _check_values(df, T, E):
-        pass_for_numeric_dtypes_or_raise(df)
+    def _check_values(X, T, E):
+        pass_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
-        check_nans_or_infs(df)
-        check_low_var(df)
-        check_complete_separation(df, E, T)
+        check_nans_or_infs(X)
+        check_low_var(X)
+        check_complete_separation(X, E, T)
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
@@ -619,6 +611,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_schoenfeld(self, X, T, E, weights):
         # TODO: this needs to be per-strata...
+        # TODO: the diff_against is gross
+        # This uses Efron ties.
 
         n, d = X.shape
 
@@ -654,7 +648,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # Calculate sums of Ties, if this is an event
             if ei:
-                diff_against.append(xi)
+                diff_against.append(xi.values)
 
                 tie_phi += phi_i
                 tie_phi_x += phi_x_i
@@ -676,20 +670,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             for l in range(tie_count):
 
-                # A good explaination for Efron. Consider three of five subjects who fail at the time.
-                # As it is not known a priori that who is the first to fail, so one-third of
-                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
-
                 numer = risk_phi_x - l * tie_phi_x / tie_count
                 denom = risk_phi - l * tie_phi / tie_count
 
-                # Gradient
                 weighted_mean += weighted_average * numer / (denom * tie_count)
 
-
-            for xi in diff_against:
-                schoenfeld_residuals = schoenfeld_residuals.append(xi - weighted_mean, sort=False)
+            diff_against = np.asarray(diff_against)
+            #for xi in diff_against:
+            schoenfeld_residuals = schoenfeld_residuals.append(xi - weighted_mean, sort=False)
 
             # reset tie values
             tie_count = 0
@@ -702,10 +690,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
 
 
+    def _partition_by_strata(X, T, E, weights, as_dataframes=False):
+        for stratum, stratified_X in X.groupby(self.strata):
+            stratified_E, stratified_T, stratified_W = (E.loc[[stratum]], T.loc[[stratum]], weights.loc[[stratum]])
+            if as_dataframes:
+                yield (stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values), stratum
+            else:
+                yield (stratified_X, stratified_T, stratified_E, stratified_W), stratum
+
+
     def _compute_delta_beta(self, X, T, E, weights):
         """
         approximate change in betas as a result of excluding ith row.
-        T should be None, as it's not used.
         """
 
         _, d = X.shape
@@ -713,12 +709,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if self.strata is not None:
             score_residuals = np.empty((0, d))
 
-            for stratum, stratified_X in X.groupby(self.strata):
-                stratified_E, stratified_W = (E.loc[[stratum]], weights.loc[[stratum]])
-
+            for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights)
                 score_residuals = np.append(
                     score_residuals,
-                    self._compute_score(stratified_X.values, T, stratified_E.values, stratified_W.values)
+                    self._compute_score(stratified_X, stratified_T, stratified_E, stratified_W)
                     * stratified_W[:, None],
                     axis=0,
                 )
@@ -739,8 +733,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
         # Assumes X already sorted by T
         # TODO: doesn't handle ties.
-
-        assert T is None, "T isn't used here, should be None"
 
         n, d = X.shape
 
@@ -801,16 +793,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return getattr(self, '_compute_%s' % type)(X, T, E, weights)
 
 
-    def _compute_standard_errors(self, X, E, weights):
+    def _compute_standard_errors(self, X, T, E, weights):
         if self.robust or self.cluster_col:
-            se = np.sqrt(self._compute_sandwich_estimator(X, E, weights).diagonal())
+            se = np.sqrt(self._compute_sandwich_estimator(X, T, E, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
 
 
     def _compute_sandwich_estimator(self, X, E, weights):
-        T = None
         delta_betas = self._compute_delta_beta(X, T, E, weights)
 
         if self.cluster_col:
@@ -1165,14 +1156,15 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if self.strata:
             index = self.durations.unique()
             baseline_hazards_ = pd.DataFrame(index=index)
-            for stratum, stratified_df in df.groupby(self.strata):
+
+            for (stratified_X, stratified_T, stratified_E, stratified_W), name in self._partition_by_strata(X, T, E, weights, as_dataframes=True)
                 baseline_hazards_ = baseline_hazards_.merge(
                     self._compute_baseline_hazard(
-                        df=stratified_df,
-                        durations=T.loc[[stratum]],
-                        event_observed=E.loc[[stratum]],
-                        weights=weights.loc[[stratum]],
-                        name=stratum,
+                        df=stratified_X,
+                        durations=stratified_T,
+                        event_observed=stratified_E,
+                        weights=stratified_W,
+                        name=name,
                     ),
                     left_index=True,
                     right_index=True,
@@ -1297,6 +1289,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.predict_survival_function(X).plot(ax=ax)
         self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
+
+    def check_assumptions(self, help=True):
+        pass
 
     @property
     def score_(self):
