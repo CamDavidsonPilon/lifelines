@@ -211,26 +211,22 @@ class CoxPHFitter(BaseFitter):
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
 
-
         X, T, E, weights = self._preprocess_dataframe(df)
 
         self.durations = T.copy()
         self.event_observed = E.copy()
         self.weights = weights.copy()
-<<<<<<< HEAD
+
         
         if self.strata is not None:
             self.durations.index = original_index
             self.event_observed.index = original_index
             self.weights.index = original_index
         self.event_observed = self.event_observed.astype(bool)
-=======
->>>>>>> some refactor of residuals
 
 
         self._norm_mean = X.mean(0)
         self._norm_std = X.std(0)
-
 
         hazards_ = self._newton_rhaphson(
             normalize(X, self._norm_mean, self._norm_std),
@@ -257,7 +253,6 @@ class CoxPHFitter(BaseFitter):
 
         return self
 
-
     def _preprocess_dataframe(self, df):
         df = df.copy()
 
@@ -270,9 +265,16 @@ class CoxPHFitter(BaseFitter):
 
         # Extract time and event
         T = df.pop(self.duration_col)
-        E = df.pop(self.event_col) if (self.event_col is not None) else pd.Series(np.ones(self._n_examples), index=df.index)
-        W = df.pop(self.weights_col) if (self.weights_col is not None) else pd.Series(np.ones((self._n_examples,)), index=df.index)
-
+        E = (
+            df.pop(self.event_col)
+            if (self.event_col is not None)
+            else pd.Series(np.ones(self._n_examples), index=df.index)
+        )
+        W = (
+            df.pop(self.weights_col)
+            if (self.weights_col is not None)
+            else pd.Series(np.ones((self._n_examples,)), index=df.index)
+        )
 
         # check to make sure their weights are okay
         if self.weights_col:
@@ -287,7 +289,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-
         if self.cluster_col:
             self._clusters = df.pop(self.cluster_col).values
 
@@ -298,6 +299,15 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         E = E.astype(bool)
 
         return X, T, E, W
+
+    @staticmethod
+    def _check_values(X, T, E):
+        pass_for_numeric_dtypes_or_raise(X)
+        check_nans_or_infs(T)
+        check_nans_or_infs(E)
+        check_nans_or_infs(X)
+        check_low_var(X)
+        check_complete_separation(X, E, T)
 
     def _newton_rhaphson(
         self,
@@ -368,15 +378,16 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         while converging:
             self.path.append(beta.copy())
+
             i += 1
+
             if self.strata is None:
-                h, g, ll = get_gradients(X.values, beta, T.values, E.values, weights.values)
+                h, g, ll = get_gradients(X.values, T.values, E.values, weights.values, beta)
             else:
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
-                for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights)
-                    _h, _g, _ll = get_gradients(stratified_X, beta, stratified_T, stratified_E, stratified_W)
+                for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, get_gradients, beta):
                     g += _g
                     h += _h
                     ll += _ll
@@ -462,7 +473,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    def _get_efron_values(self, X, beta, T, E, weights):
+    def _get_efron_values(self, X, T, E, weights, beta):
         """
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
@@ -480,17 +491,24 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         Parameters
         ----------
-            X: (n,d) numpy array of observations.
-            beta: (1, d) numpy array of coefficients.
-            T: (n) numpy array representing observed durations.
-            E: (n) numpy array representing death events.
-            weights: (n) an array representing weights per observation.
+        X: array
+            (n,d) numpy array of observations.
+        T: array
+            (n) numpy array representing observed durations.
+        E: array
+            (n) numpy array representing death events.
+        weights: array
+            (n) an array representing weights per observation.
+        beta: array
+            (1, d) numpy array of coefficients.
 
         Returns
         -------
-            hessian: (d, d) numpy array,
-            gradient: (1, d) numpy array
-            log_likelihood: double
+        hessian:
+            (d, d) numpy array,
+        gradient:
+            (1, d) numpy array
+        log_likelihood: float
         """
 
         n, d = X.shape
@@ -586,31 +604,39 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tie_phi_x_x = np.zeros((d, d))
         return hessian, gradient, log_lik
 
-    def _compute_baseline_cumulative_hazard(self):
-        return self.baseline_hazard_.cumsum()
+    def _partition_by_strata(self, X, T, E, weights, as_dataframes=False):
+        for stratum, stratified_X in X.groupby(self.strata):
+            stratified_E, stratified_T, stratified_W = (E.loc[[stratum]], T.loc[[stratum]], weights.loc[[stratum]])
+            if not as_dataframes:
+                yield (stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values), stratum
+            else:
+                yield (stratified_X, stratified_T, stratified_E, stratified_W), stratum
 
-    @staticmethod
-    def _check_values(X, T, E):
-        pass_for_numeric_dtypes_or_raise(X)
-        check_nans_or_infs(T)
-        check_nans_or_infs(E)
-        check_nans_or_infs(X)
-        check_low_var(X)
-        check_complete_separation(X, E, T)
+    def _partition_by_strata_and_apply(self, X, T, E, weights, function, *args):
+        for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
+            yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
-    def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
-        se = self.standard_errors_
-        hazards = self.hazards_.values
-        return pd.DataFrame(
-            np.r_[hazards - alpha2 * se, hazards + alpha2 * se],
-            index=["lower-bound", "upper-bound"],
-            columns=self.hazards_.columns,
-        )
+
+    def _compute_scaled_schoenfeld(self, X, T, E, weights):
+        return _compute_schoenfeld(X, T, E, weights).dot(self.variance_matrix_)
 
 
     def _compute_schoenfeld(self, X, T, E, weights):
-        # TODO: this needs to be per-strata...
+
+        _, d = X.shape
+
+        if self.strata is not None:
+            schoenfeld_residuals = np.empty((0, d))
+
+            for schoenfeld_residuals_in_strata in self._partition_by_strata_and_apply(X, T, E, weights, self._compute_schoenfeld_within_strata):
+                schoenfeld_residuals = np.append(schoenfeld_residuals, schoenfeld_residuals_in_strata, axis=0)
+
+        else:
+            schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T, E.values, weights.values)
+
+        return schoenfeld_residuals
+
+    def _compute_schoenfeld_within_strata(self, X, T, E, weights):
         # TODO: the diff_against is gross
         # This uses Efron ties.
 
@@ -654,7 +680,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 tie_phi_x += phi_x_i
 
                 # Keep track of count
-                tie_count += 1 # aka death counts
+                tie_count += 1  # aka death counts
                 weight_count += w
 
             if i > 0 and T[i - 1] == ti:
@@ -676,7 +702,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 weighted_mean += weighted_average * numer / (denom * tie_count)
 
             diff_against = np.asarray(diff_against)
-            #for xi in diff_against:
+            # for xi in diff_against:
             schoenfeld_residuals = schoenfeld_residuals.append(xi - weighted_mean, sort=False)
 
             # reset tie values
@@ -685,7 +711,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
             diff_against = []
-
+            
         return schoenfeld_residuals
 
 
@@ -697,37 +723,34 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 yield (stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values), stratum
             else:
                 yield (stratified_X, stratified_T, stratified_E, stratified_W), stratum
-
+        return schoenfeld_residuals
 
     def _compute_delta_beta(self, X, T, E, weights):
         """
         approximate change in betas as a result of excluding ith row.
         """
 
+        score_residuals = self._compute_score(X, T, E, weights)
+        naive_var = inv(self._hessian_) # TODO: use self.variance_matrix
+        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
+        return delta_betas
+
+    def _compute_score(self, X, T, E, weights):
+
         _, d = X.shape
 
         if self.strata is not None:
             score_residuals = np.empty((0, d))
 
-            for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights)
-                score_residuals = np.append(
-                    score_residuals,
-                    self._compute_score(stratified_X, stratified_T, stratified_E, stratified_W)
-                    * stratified_W[:, None],
-                    axis=0,
-                )
+            for score_residuals_in_strata in self._partition_by_strata_and_apply(X, T, E, weights, self._compute_score_within_strata):
+                score_residuals = np.append(score_residuals, score_residuals_in_strata, axis=0)
 
         else:
-            score_residuals = (
-                self._compute_score(X.values, T, E.values, weights.values) * weights[:, None]
-            )
+            score_residuals = self._compute_score_within_strata(X.values, T, E.values, weights.values)
 
-        naive_var = inv(self._hessian_)
-        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
+        return score_residuals
 
-        return delta_betas
-
-    def _compute_score(self, X, T, E, weights):
+    def _compute_score_within_strata(self, X, T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -744,8 +767,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         score_residuals = np.zeros((n, d))
 
         phi_s = exp(dot(X, beta))
-
-        # compute these within strata
 
         # need to store these histories, as we access them often
         # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
@@ -770,7 +791,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             score_residuals[i, :] = score
 
-        return score_residuals
+        return score_residuals * weights[:, None]
 
     def compute_residuals(self, df, type):
         """
@@ -787,11 +808,23 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         TODO: can I check the same training data is inputted? checksum?
 
         """
+        ALLOWED_RESIDUALS = {'schoenfeld', 'score', 'delta_beta'}
+        assert type in ALLOWED_RESIDUALS, 'type must be in %s' % ALLOWED_RESIDUALS
+
         X, T, E, weights = self._preprocess_dataframe(df)
         X = normalize(X, self._norm_mean, self._norm_std)
 
-        return getattr(self, '_compute_%s' % type)(X, T, E, weights)
+        return getattr(self, "_compute_%s" % type)(X, T, E, weights)
 
+    def _compute_confidence_intervals(self):
+        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        se = self.standard_errors_
+        hazards = self.hazards_.values
+        return pd.DataFrame(
+            np.r_[hazards - alpha2 * se, hazards + alpha2 * se],
+            index=["lower-bound", "upper-bound"],
+            columns=self.hazards_.columns,
+        )
 
     def _compute_standard_errors(self, X, T, E, weights):
         if self.robust or self.cluster_col:
@@ -800,8 +833,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
 
-
-    def _compute_sandwich_estimator(self, X, E, weights):
+    def _compute_sandwich_estimator(self, X, T, E, weights):
         delta_betas = self._compute_delta_beta(X, T, E, weights)
 
         if self.cluster_col:
@@ -968,7 +1000,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
-
 
     def predict_cumulative_hazard(self, X, times=None):
         """
@@ -1137,9 +1168,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         v = self.predict_survival_function(X)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
-    def _compute_baseline_hazard(self, df, durations, event_observed, weights, name):
+    def _compute_baseline_hazard(self, X, durations, event_observed, weights, name):
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
-        ind_hazards = self.predict_partial_hazard(df) * weights[:, None]
+        ind_hazards = self.predict_partial_hazard(X) * weights[:, None]
         ind_hazards["event_at"] = durations.values
         ind_hazards_summed_over_durations = (
             ind_hazards.groupby("event_at")[0].sum().sort_index(ascending=False).cumsum()
@@ -1152,29 +1183,21 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         return baseline_hazard
 
-    def _compute_baseline_hazards(self, df, T, E, weights):
+    def _compute_baseline_hazards(self, X, T, E, weights):
         if self.strata:
             index = self.durations.unique()
             baseline_hazards_ = pd.DataFrame(index=index)
 
-            for (stratified_X, stratified_T, stratified_E, stratified_W), name in self._partition_by_strata(X, T, E, weights, as_dataframes=True)
+            for (X_, T_, E_, W_), name in self._partition_by_strata(X, T, E, weights, as_dataframes=True):
                 baseline_hazards_ = baseline_hazards_.merge(
-                    self._compute_baseline_hazard(
-                        df=stratified_X,
-                        durations=stratified_T,
-                        event_observed=stratified_E,
-                        weights=stratified_W,
-                        name=name,
-                    ),
-                    left_index=True,
-                    right_index=True,
-                    how="left",
+                    self._compute_baseline_hazard(X_, T_, E_, W_, name), left_index=True, right_index=True, how="left"
                 )
             return baseline_hazards_.fillna(0)
 
-        return self._compute_baseline_hazard(
-            df=df, durations=T, event_observed=E, weights=weights, name="baseline hazard"
-        )
+        return self._compute_baseline_hazard(X, T, E, weights, name="baseline hazard")
+
+    def _compute_baseline_cumulative_hazard(self):
+        return self.baseline_hazard_.cumsum()
 
     def _compute_baseline_survival(self):
         """
