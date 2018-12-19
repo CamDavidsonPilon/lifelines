@@ -1512,6 +1512,16 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         assert with_weights[0] != without_weights[0]
 
     def test_log_likelihood_test_against_R_with_weights(self, rossi):
+        """
+        df <- data.frame(
+          "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+          "T" = c(5.269797, 6.601666, 7.335846, 11.684092, 12.678458),
+          "w" = c(1, 0.5, 2, 1, 1)
+        )
+        df['E'] = 1
+        r = coxph(formula=Surv(T, E) ~ var1, data=df, weights=w)
+        summary(r)
+        """
         df = pd.DataFrame(
             {
                 "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
