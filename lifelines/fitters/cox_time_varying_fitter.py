@@ -519,7 +519,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         trivial_dataset = trivial_dataset.join(weights)
 
         cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "stop", "event", weights_col='__weights', show_progress=False)
+        cp_null.fit(trivial_dataset, "stop", "event", weights_col="__weights", show_progress=False)
 
         ll_null = cp_null._log_likelihood
         ll_alt = self._log_likelihood

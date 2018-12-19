@@ -211,19 +211,16 @@ class CoxPHFitter(BaseFitter):
         self._n_examples = df.shape[0]
         self.strata = coalesce(strata, self.strata)
 
-        X, T, E, weights = self._preprocess_dataframe(df)
+        X, T, E, weights, original_index = self._preprocess_dataframe(df)
 
         self.durations = T.copy()
         self.event_observed = E.copy()
         self.weights = weights.copy()
 
-        
         if self.strata is not None:
             self.durations.index = original_index
             self.event_observed.index = original_index
             self.weights.index = original_index
-        self.event_observed = self.event_observed.astype(bool)
-
 
         self._norm_mean = X.mean(0)
         self._norm_std = X.std(0)
@@ -262,6 +259,8 @@ class CoxPHFitter(BaseFitter):
         if self.strata is not None:
             original_index = df.index.copy()
             df = df.set_index(self.strata)
+        else:
+            original_index = None
 
         # Extract time and event
         T = df.pop(self.duration_col)
@@ -298,7 +297,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T = T.astype(float)
         E = E.astype(bool)
 
-        return X, T, E, W
+        return X, T, E, W, original_index
 
     @staticmethod
     def _check_values(X, T, E):
@@ -616,10 +615,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
-
     def _compute_scaled_schoenfeld(self, X, T, E, weights):
         return _compute_schoenfeld(X, T, E, weights).dot(self.variance_matrix_)
-
 
     def _compute_schoenfeld(self, X, T, E, weights):
 
@@ -628,7 +625,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if self.strata is not None:
             schoenfeld_residuals = np.empty((0, d))
 
-            for schoenfeld_residuals_in_strata in self._partition_by_strata_and_apply(X, T, E, weights, self._compute_schoenfeld_within_strata):
+            for schoenfeld_residuals_in_strata in self._partition_by_strata_and_apply(
+                X, T, E, weights, self._compute_schoenfeld_within_strata
+            ):
                 schoenfeld_residuals = np.append(schoenfeld_residuals, schoenfeld_residuals_in_strata, axis=0)
 
         else:
@@ -711,18 +710,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
             diff_against = []
-            
-        return schoenfeld_residuals
 
-
-
-    def _partition_by_strata(X, T, E, weights, as_dataframes=False):
-        for stratum, stratified_X in X.groupby(self.strata):
-            stratified_E, stratified_T, stratified_W = (E.loc[[stratum]], T.loc[[stratum]], weights.loc[[stratum]])
-            if as_dataframes:
-                yield (stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values), stratum
-            else:
-                yield (stratified_X, stratified_T, stratified_E, stratified_W), stratum
         return schoenfeld_residuals
 
     def _compute_delta_beta(self, X, T, E, weights):
@@ -731,7 +719,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
 
         score_residuals = self._compute_score(X, T, E, weights)
-        naive_var = inv(self._hessian_) # TODO: use self.variance_matrix
+        naive_var = inv(self._hessian_)  # TODO: use self.variance_matrix
         delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
         return delta_betas
 
@@ -742,7 +730,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if self.strata is not None:
             score_residuals = np.empty((0, d))
 
-            for score_residuals_in_strata in self._partition_by_strata_and_apply(X, T, E, weights, self._compute_score_within_strata):
+            for score_residuals_in_strata in self._partition_by_strata_and_apply(
+                X, T, E, weights, self._compute_score_within_strata
+            ):
                 score_residuals = np.append(score_residuals, score_residuals_in_strata, axis=0)
 
         else:
@@ -808,8 +798,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         TODO: can I check the same training data is inputted? checksum?
 
         """
-        ALLOWED_RESIDUALS = {'schoenfeld', 'score', 'delta_beta'}
-        assert type in ALLOWED_RESIDUALS, 'type must be in %s' % ALLOWED_RESIDUALS
+        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta"}
+        assert type in ALLOWED_RESIDUALS, "type must be in %s" % ALLOWED_RESIDUALS
 
         X, T, E, weights = self._preprocess_dataframe(df)
         X = normalize(X, self._norm_mean, self._norm_std)

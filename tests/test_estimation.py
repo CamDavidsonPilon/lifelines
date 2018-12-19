@@ -1528,7 +1528,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             {
                 "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
                 "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-                "w": [1, 0.5, 2, 1, 1]
+                "w": [1, 0.5, 2, 1, 1],
             }
         )
         df["E"] = True
@@ -1741,7 +1741,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(df, duration_col="time", event_col="death")
 
         # standard errors
-        actual_se = cf._compute_standard_errors(None, None, None).values
+        actual_se = cf._compute_standard_errors(None, None, None, None).values
         expected_se = np.array([[0.0143, 0.4623, 0.3561, 0.4222]])
         npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 
