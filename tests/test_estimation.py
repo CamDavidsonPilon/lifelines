@@ -1497,6 +1497,46 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         expected = pd.Series({"var1": 2.097, "var2": 0.827})
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
 
+    def test_compute_likelihood_ratio_test_is_different_if_weights_are_provided(self, regression_dataset):
+        cph = CoxPHFitter()
+        cph.fit(regression_dataset, "T", "E")
+
+        without_weights = cph._compute_likelihood_ratio_test()
+
+
+        regression_dataset['weights'] = 0.5
+        cph = CoxPHFitter()
+        cph.fit(regression_dataset, "T", "E", weights_col='weights')
+
+        with_weights = cph._compute_likelihood_ratio_test()
+        assert with_weights[0] != without_weights[0]
+
+    def test_log_likelihood_test_against_R_with_weights(self, rossi):
+        """
+        df <- data.frame(
+          "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+          "T" = c(5.269797, 6.601666, 7.335846, 11.684092, 12.678458),
+          "w" = c(1, 0.5, 2, 1, 1)
+        )
+        df['E'] = 1
+        r = coxph(formula=Surv(T, E) ~ var1, data=df, weights=w)
+        summary(r)
+        """
+        df = pd.DataFrame(
+            {
+                "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+                "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+                "w": [1, 0.5, 2, 1, 1]
+            }
+        )
+        df["E"] = True
+
+        cph = CoxPHFitter()
+        cph.fit(df, "T", "E", show_progress=True, weights_col="w")
+        expected = 0.05
+        assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
+
+
     def test_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
         df <- data.frame(
