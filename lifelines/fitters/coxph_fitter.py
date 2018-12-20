@@ -35,6 +35,7 @@ from lifelines.utils import (
     StepSizer,
     ConvergenceError,
     string_justify,
+    _to_list
 )
 
 
@@ -139,8 +140,8 @@ class CoxPHFitter(BaseFitter):
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
         
-        strata: list, optional
-            specify a list of columns to use in stratification. This is useful if a
+        strata: list or string, optional
+            specify a column or list of columns n to use in stratification. This is useful if a
             catagorical covariate does not obey the proportional hazard assumption. This
             is used similar to the `strata` expression in R.
             See http://courses.washington.edu/b515/l17.pdf.
@@ -209,7 +210,7 @@ class CoxPHFitter(BaseFitter):
         self.cluster_col = cluster_col
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
-        self.strata = coalesce(strata, self.strata)
+        self.strata = _to_list(coalesce(strata, self.strata))
 
         X, T, E, weights, original_index, self._clusters = self._preprocess_dataframe(df)
 
@@ -619,21 +620,25 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
-    def _compute_martingale(self, X, T, E, weights):
-        partial_hazard = self.predict_partial_hazard(X)[0]
-        baseline_at_T = self.baseline_cumulative_hazard_.loc[T, 'baseline hazard']
-        #import pdb
-        #pdb.set_trace()
-        return E - (partial_hazard.values * baseline_at_T.values)
+    def _compute_martingale(self, X, T, E, weights, index=None):
+        partial_hazard = self.predict_partial_hazard(X)[0].values
+        
+        if not self.strata:
+            baseline_at_T = self.baseline_cumulative_hazard_.loc[T, 'baseline hazard'].values
+        else:
+            baseline_at_T = np.empty(0)    
+            for name, T_ in T.groupby(level=0):
+                baseline_at_T = np.append(baseline_at_T, self.baseline_cumulative_hazard_.loc[T_, name])
+        
+        martingale = E - (partial_hazard * baseline_at_T)
+        martingale.index = index
+        return martingale
 
-    def _compute_scaled_schoenfeld(self, X, T, E, weights):
-        raise NotImplementedError()
-        return self._compute_schoenfeld(X, T, E, weights).dot(self.variance_matrix_)
 
-    def _compute_schoenfeld(self, X, T, E, weights):
+    def _compute_schoenfeld(self, X, T, E, weights, index=None):
         # Assumes sorted on T and on strata
         # index will be set later
-        # cluster does nothing to this
+        # cluster does nothing to this, as expected.
 
         _, d = X.shape
 
@@ -648,7 +653,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         else:
             schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T, E.values, weights.values)
 
-        return schoenfeld_residuals
+        # schoenfeld residuals are only defined for subjects with a non-zero event. 
+        return pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.columns, index=index[E])
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
         # TODO: the diff_against is gross
@@ -687,7 +693,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x += phi_x_i
 
             # Calculate sums of Ties, if this is an event
-            diff_against.append((xi, ei, w))
+            diff_against.append((xi, ei))
             if ei:
 
                 tie_phi += phi_i
@@ -715,7 +721,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 weighted_mean += numer / (denom * tie_count)
 
-            for xi, ei, w in diff_against:
+            for xi, ei in diff_against:
                 schoenfeld_residuals = np.append(schoenfeld_residuals, ei * (xi - weighted_mean), axis=0)
 
             # reset tie values
@@ -727,17 +733,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return schoenfeld_residuals[::-1]
 
-    def _compute_delta_beta(self, X, T, E, weights):
+    def _compute_delta_beta(self, X, T, E, weights, **kwargs):
         """
-        approximate change in betas as a result of excluding ith row.
+        approximate change in betas as a result of excluding ith row. Good for finding outliers
         """
-
         score_residuals = self._compute_score(X, T, E, weights)
-        naive_var = inv(self._hessian_)  # TODO: use self.variance_matrix
-        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
+        delta_betas = score_residuals.dot(self.variance_matrix_) * self._norm_std.values
+        delta_betas.columns = self.hazards_.columns
         return delta_betas
 
-    def _compute_score(self, X, T, E, weights):
+
+    def _compute_score(self, X, T, E, weights, index=None):
 
         _, d = X.shape
 
@@ -752,7 +758,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         else:
             score_residuals = self._compute_score_within_strata(X.values, T, E.values, weights.values)
 
-        return score_residuals
+        return pd.DataFrame(score_residuals, columns=self.hazards_.columns, index=index)
 
     def _compute_score_within_strata(self, X, T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
@@ -797,28 +803,26 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return score_residuals * weights[:, None]
 
-    def compute_residuals(self, df, type):
+    def compute_residuals(self, df, kind):
         """
 
         Parameters
         ----------
         df : the same training data given in `fit`
-        type : string
+        kind : string
             {'schoenfeld', 'score', 'delta_beta', 'scaled_schoenfeld', 'martingale'}
-
+        TODO: deviance
         TODO: can I check the same training data is inputted? checksum?
 
         """
         ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "scaled_schoenfeld", "martingale"}
-        assert type in ALLOWED_RESIDUALS, "type must be in %s" % ALLOWED_RESIDUALS
+        assert kind in ALLOWED_RESIDUALS, "kind must be in %s" % ALLOWED_RESIDUALS
 
         X, T, E, weights, original_index, _ = self._preprocess_dataframe(df)
 
-        resids = getattr(self, "_compute_%s" % type)(X, T, E, weights)
-        if not isinstance(resids, pd.Series) and not isinstance(resids, pd.DataFrame):
-            return pd.DataFrame(resids, columns=self.hazards_.columns, index=original_index)
-        else:
-            return resids
+        resids = getattr(self, "_compute_%s" % kind)(X, T, E, weights, index=original_index)
+        return resids
+
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
@@ -841,10 +845,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         delta_betas = self._compute_delta_beta(X, T, E, weights)
 
         if self.cluster_col:
-            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
+            delta_betas = delta_betas.groupby(self._clusters).sum()
 
         sandwich_estimator = delta_betas.T.dot(delta_betas)
-        return sandwich_estimator
+
+        return sandwich_estimator.values
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
@@ -1321,6 +1326,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return ax
 
     def check_assumptions(self, help=True):
+        """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
+        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf"""
+        
         pass
 
     @property

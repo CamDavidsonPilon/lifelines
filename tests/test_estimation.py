@@ -920,7 +920,7 @@ class TestCoxPHFitter:
         cph.fit(df, 'T', 'E')
 
         results = cph.compute_residuals(df, 'schoenfeld')
-        expected = pd.DataFrame([-0.3903793341, -0.5535578141,  0.9439371482, 0.0,  0.0], columns=['var1'])
+        expected = pd.DataFrame([-0.3903793341, -0.5535578141,  0.9439371482, 0.0], columns=['var1'], index=[0, 1, 2, 4])
         assert_frame_equal(results, expected, check_less_precise=3)
 
 
@@ -991,6 +991,41 @@ class TestCoxPHFitter:
         print(results.values + cph.hazards_.values)
         assert False
 
+    def test_original_index_is_respected_in_all_residual_tests(self):
+        cph = CoxPHFitter()
+
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
+                "T": [ 6, 6, 7, 8, 9],
+                "s": [1, 2, 2, 1, 1]
+            }
+        )
+        df.index = ['A', 'B', 'C', 'D', 'E']
+        
+        cph.fit(df, 'T')
+
+        for kind in {'martingale', 'schoenfeld', 'score'}:
+            resids = cph.compute_residuals(df, kind)
+            assert resids.sort_index().index.tolist() == ['A', 'B', 'C', 'D', 'E']
+
+    def test_original_index_is_respected_in_all_residual_tests_with_strata(self):
+        cph = CoxPHFitter()
+
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
+                "T": [ 6, 6, 7, 8, 9],
+                "s": [1, 2, 2, 1, 1]
+            }
+        )
+        df.index = ['A', 'B', 'C', 'D', 'E']
+        
+        cph.fit(df, 'T', strata=["s"])
+
+        for kind in {'martingale', 'schoenfeld', 'score'}:
+            resids = cph.compute_residuals(df, kind)
+            assert resids.sort_index().index.tolist() == ['A', 'B', 'C', 'D', 'E']
 
 
     def test_martingale_residuals(self, regression_dataset):
@@ -999,8 +1034,9 @@ class TestCoxPHFitter:
         cph.fit(regression_dataset, 'T', 'E')
 
         results = cph.compute_residuals(regression_dataset, 'martingale')
-        print(results.sort_index())
-        assert False
+        npt.assert_allclose(results.loc[0], -2.315035744901, rtol=1e-05)
+        npt.assert_allclose(results.loc[1], 0.774216356429, rtol=1e-05)
+        npt.assert_allclose(results.loc[199], 0.868510420157, rtol=1e-05)
 
 
     def test_error_is_raised_if_using_non_numeric_data_in_prediction(self):

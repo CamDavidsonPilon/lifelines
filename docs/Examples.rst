@@ -625,8 +625,8 @@ The original dataset has 432 rows, while the grouped dataset has 387 rows plus a
 
     from lifelines import CoxPHFitter
 
-    cp = CoxPHFitter()
-    cp.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
+    cph = CoxPHFitter()
+    cph.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
 
 
 The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the `CoxTimeVaryingFitter`.
