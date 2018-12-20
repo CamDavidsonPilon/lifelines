@@ -256,25 +256,27 @@ class CoxPHFitter(BaseFitter):
         df = df.copy()
 
 
-        original_index = df.index.copy()
         
         if self.strata is not None:
             df = df.sort_values(by=[self.duration_col] + self.strata)
+            original_index = df.index.copy()
             df = df.set_index(self.strata)
         else:
             df = df.sort_values(by=self.duration_col)
+            original_index = df.index.copy()
+
 
         # Extract time and event
         T = df.pop(self.duration_col)
         E = (
             df.pop(self.event_col)
             if (self.event_col is not None)
-            else pd.Series(np.ones(self._n_examples), index=df.index)
+            else pd.Series(np.ones(self._n_examples), index=df.index, name='weights')
         )
         W = (
             df.pop(self.weights_col)
             if (self.weights_col is not None)
-            else pd.Series(np.ones((self._n_examples,)), index=df.index)
+            else pd.Series(np.ones((self._n_examples,)), index=df.index, name='E')
         )
 
         # check to make sure their weights are okay
@@ -617,12 +619,22 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
+    def _compute_martingale(self, X, T, E, weights):
+        partial_hazard = self.predict_partial_hazard(X)[0]
+        baseline_at_T = self.baseline_cumulative_hazard_.loc[T, 'baseline hazard']
+        #import pdb
+        #pdb.set_trace()
+        return E - (partial_hazard.values * baseline_at_T.values)
+
     def _compute_scaled_schoenfeld(self, X, T, E, weights):
-        return _compute_schoenfeld(X, T, E, weights).dot(self.variance_matrix_)
+        raise NotImplementedError()
+        return self._compute_schoenfeld(X, T, E, weights).dot(self.variance_matrix_)
 
     def _compute_schoenfeld(self, X, T, E, weights):
         # Assumes sorted on T and on strata
         # index will be set later
+        # cluster does nothing to this
+
         _, d = X.shape
 
         if self.strata is not None:
@@ -636,7 +648,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         else:
             schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T, E.values, weights.values)
 
-        return pd.DataFrame(schoenfeld_residuals, columns=self.hazards_.columns)
+        return schoenfeld_residuals
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
         # TODO: the diff_against is gross
@@ -651,7 +663,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
-        scores = weights[:, None] * exp(dot(X, self.hazards_))
+        scores = weights[:, None] * exp(dot(X, self.hazards_.T))
 
         diff_against = []
 
@@ -675,7 +687,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x += phi_x_i
 
             # Calculate sums of Ties, if this is an event
-            diff_against.append((xi, ei))
+            diff_against.append((xi, ei, w))
             if ei:
 
                 tie_phi += phi_i
@@ -701,9 +713,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 numer = risk_phi_x - l * tie_phi_x / tie_count
                 denom = risk_phi - l * tie_phi / tie_count
 
-                weighted_mean += weighted_average * numer / (denom * tie_count)
+                weighted_mean += numer / (denom * tie_count)
 
-            for xi, ei in diff_against:
+            for xi, ei, w in diff_against:
                 schoenfeld_residuals = np.append(schoenfeld_residuals, ei * (xi - weighted_mean), axis=0)
 
             # reset tie values
@@ -792,20 +804,21 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ----------
         df : the same training data given in `fit`
         type : string
-            {'schoenfeld', 'score', 'delta_beta', 'scaled_schoenfeld'}
-
-        TODO: martingale
-        https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
+            {'schoenfeld', 'score', 'delta_beta', 'scaled_schoenfeld', 'martingale'}
 
         TODO: can I check the same training data is inputted? checksum?
 
         """
-        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "scaled_schoenfeld"}
+        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "scaled_schoenfeld", "martingale"}
         assert type in ALLOWED_RESIDUALS, "type must be in %s" % ALLOWED_RESIDUALS
 
         X, T, E, weights, original_index, _ = self._preprocess_dataframe(df)
 
-        return getattr(self, "_compute_%s" % type)(X, T, E, weights).set_index(original_index)
+        resids = getattr(self, "_compute_%s" % type)(X, T, E, weights)
+        if not isinstance(resids, pd.Series) and not isinstance(resids, pd.DataFrame):
+            return pd.DataFrame(resids, columns=self.hazards_.columns, index=original_index)
+        else:
+            return resids
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
@@ -1214,19 +1227,18 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             survival_df.columns = ["baseline survival"]
         return survival_df
 
-    def plot(self, standardized=False, columns=None, **kwargs):
+    def plot(self, columns=None, display_significance_code=True, **errorbar_kwargs):
         """
-        Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
+        Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
         Parameters
         ----------
-        standardized: bool, optional
-            standardize each estimated coefficient and confidence interval
-            endpoints by the standard error of the estimate.
         columns : list, optional
             specifiy a subset of the columns to plot
-        kwargs:
-            pass in additional plotting commands
+        display_significance_code: bool, optional (default: True)
+            display asteriks beside statistically significant variables 
+        errorbar_kwargs:
+            pass in additional plotting commands to matplotlib errorbar command
 
         Returns
         -------
@@ -1236,36 +1248,40 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
+        ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
+        
+        errorbar_kwargs.setdefault('c', 'k')
+        errorbar_kwargs.setdefault('fmt', 's')
+        errorbar_kwargs.setdefault('markerfacecolor', 'white')
+        errorbar_kwargs.setdefault('markeredgewidth', 1.25)
+        errorbar_kwargs.setdefault('elinewidth', 1.25)
+        errorbar_kwargs.setdefault('capsize', 3)
 
-        if columns is not None:
-            yaxis_locations = range(len(columns))
-            summary = self.summary.loc[columns]
-            lower_bound = self.confidence_intervals_[columns].loc["lower-bound"].copy()
-            upper_bound = self.confidence_intervals_[columns].loc["upper-bound"].copy()
-            hazards = self.hazards_[columns].values[0].copy()
-        else:
-            yaxis_locations = range(len(self.hazards_.columns))
-            summary = self.summary
-            lower_bound = self.confidence_intervals_.loc["lower-bound"].copy()
-            upper_bound = self.confidence_intervals_.loc["upper-bound"].copy()
-            hazards = self.hazards_.values[0].copy()
+        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
 
-        if standardized:
-            se = summary["se(coef)"]
-            lower_bound /= se
-            upper_bound /= se
-            hazards /= se
+        if columns is None:
+            columns = self.hazards_.columns
+
+        yaxis_locations = list(range(len(columns)))
+        summary = self.summary.loc[columns]
+        symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
+        hazards = self.hazards_[columns].values[0].copy()
 
         order = np.argsort(hazards)
-        ax.scatter(upper_bound.values[order], yaxis_locations, marker="|", c="k")
-        ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
-        ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
-        ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color="k", lw=1)
 
-        tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
+        ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
+        best_ylim = ax.get_ylim()
+        ax.vlines(0, -2, len(columns)+1, linestyles='dashed', linewidths=1, alpha=0.65)
+        ax.set_ylim(best_ylim)
+
+        if display_significance_code:
+            tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
+        else:
+            tick_labels = columns[order]
+
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("standardized coef" if standardized else "coef")
+        plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
+        
         return ax
 
     def plot_covariate_groups(self, covariate, groups, **kwargs):

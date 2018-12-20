@@ -924,6 +924,34 @@ class TestCoxPHFitter:
         assert_frame_equal(results, expected, check_less_precise=3)
 
 
+    def test_schoenfeld_residuals_with_weights(self):
+        """
+        library(survival)
+        df <- data.frame(
+          "var" = c(-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105),
+          "T" = c(6, 6, 7, 8, 9),
+          "E" = c(1, 1, 1, 0, 1),
+        )
+
+        c = coxph(formula=Surv(T, E) ~ var , data=df)
+        residuals(c, "schoen")
+        """
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
+                "T": [5, 6, 7, 8, 9],
+                "E": [1, 1, 1, 1, 1],
+                "w": [0.5, 1.0, 3.0, 1.0, 1.0]
+            }
+        )
+
+        cph = CoxPHFitter()
+        cph.fit(df, 'T', 'E', weights_col="w", robust=True)
+
+        results = cph.compute_residuals(df, 'schoenfeld')
+        expected = pd.DataFrame([-0.6633324862, -0.9107785234,  0.6176009038, -0.6103579448, 0.0], columns=['var1'])
+        assert_frame_equal(results, expected, check_less_precise=3)
+
     def test_schoenfeld_residuals_with_strata(self):
         """
         library(survival)
@@ -954,6 +982,25 @@ class TestCoxPHFitter:
         expected = pd.DataFrame([ 5.898252711e-02, -2.074325854e-02,  0.0, -3.823926885e-02, 0.0], columns=['var1'])
         assert_frame_equal(results, expected, check_less_precise=3)
 
+    def test_scaled_schoenfeld_residuals_with_weights(self, regression_dataset):
+
+        cph = CoxPHFitter()
+        cph.fit(regression_dataset, 'T', 'E', weights_col='var3')
+
+        results = cph.compute_residuals(regression_dataset, 'scaled_schoenfeld')
+        print(results.values + cph.hazards_.values)
+        assert False
+
+
+
+    def test_martingale_residuals(self, regression_dataset):
+
+        cph = CoxPHFitter()
+        cph.fit(regression_dataset, 'T', 'E')
+
+        results = cph.compute_residuals(regression_dataset, 'martingale')
+        print(results.sort_index())
+        assert False
 
 
     def test_error_is_raised_if_using_non_numeric_data_in_prediction(self):
