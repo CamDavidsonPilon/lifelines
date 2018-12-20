@@ -35,7 +35,7 @@ from lifelines.utils import (
     StepSizer,
     ConvergenceError,
     string_justify,
-    _to_list
+    _to_list,
 )
 
 
@@ -256,8 +256,6 @@ class CoxPHFitter(BaseFitter):
 
         df = df.copy()
 
-
-        
         if self.strata is not None:
             df = df.sort_values(by=[self.duration_col] + _to_list(self.strata))
             original_index = df.index.copy()
@@ -266,18 +264,17 @@ class CoxPHFitter(BaseFitter):
             df = df.sort_values(by=self.duration_col)
             original_index = df.index.copy()
 
-
         # Extract time and event
         T = df.pop(self.duration_col)
         E = (
             df.pop(self.event_col)
             if (self.event_col is not None)
-            else pd.Series(np.ones(self._n_examples), index=df.index, name='weights')
+            else pd.Series(np.ones(self._n_examples), index=df.index, name="weights")
         )
         W = (
             df.pop(self.weights_col)
             if (self.weights_col is not None)
-            else pd.Series(np.ones((self._n_examples,)), index=df.index, name='E')
+            else pd.Series(np.ones((self._n_examples,)), index=df.index, name="E")
         )
 
         # check to make sure their weights are okay
@@ -293,7 +290,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-        
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
         self._check_values(df, T, E)
@@ -623,31 +619,23 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def _compute_martingale(self, X, T, E, weights, index=None):
         # TODO: decide if I want to attach T and E to the final dataframe...
         partial_hazard = self.predict_partial_hazard(X)[0].values
-        
+
         if not self.strata:
-            baseline_at_T = self.baseline_cumulative_hazard_.loc[T, 'baseline hazard'].values
+            baseline_at_T = self.baseline_cumulative_hazard_.loc[T, "baseline hazard"].values
         else:
-            baseline_at_T = np.empty(0)    
+            baseline_at_T = np.empty(0)
             for name, T_ in T.groupby(level=0):
                 baseline_at_T = np.append(baseline_at_T, self.baseline_cumulative_hazard_.loc[T_, name])
-        
+
         martingale = E - (partial_hazard * baseline_at_T)
         martingale.index = index  # overrides the strata index, if necessary
-        return pd.DataFrame({
-            self.duration_col: T, 
-            self.event_col: E,
-            'martingale': martingale
-        })
+        return pd.DataFrame({self.duration_col: T, self.event_col: E, "martingale": martingale})
 
     def _compute_deviance(self, X, T, E, weights, index=None):
-        rmart = self._compute_martingale(X, T, E, weights, index)['martingale']
+        rmart = self._compute_martingale(X, T, E, weights, index)["martingale"]
         log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * np.log(E.values - rmart.values))
-        deviance = np.sign(rmart) * np.sqrt(-2 *(rmart + log_term))
-        return pd.DataFrame({
-            self.duration_col: T, 
-            self.event_col: E,
-            'deviance': deviance
-        })
+        deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
+        return pd.DataFrame({self.duration_col: T, self.event_col: E, "deviance": deviance})
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
         # Assumes sorted on T and on strata
@@ -667,7 +655,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         else:
             schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T, E.values, weights.values)
 
-        # schoenfeld residuals are only defined for subjects with a non-zero event. 
+        # schoenfeld residuals are only defined for subjects with a non-zero event.
         return pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.columns, index=index[E])
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
@@ -834,7 +822,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         resids = getattr(self, "_compute_%s" % kind)(X, T, E, weights, index=shuffled_original_index)
         return resids
-
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
@@ -1266,13 +1253,13 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         from matplotlib import pyplot as plt
 
         ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
-        
-        errorbar_kwargs.setdefault('c', 'k')
-        errorbar_kwargs.setdefault('fmt', 's')
-        errorbar_kwargs.setdefault('markerfacecolor', 'white')
-        errorbar_kwargs.setdefault('markeredgewidth', 1.25)
-        errorbar_kwargs.setdefault('elinewidth', 1.25)
-        errorbar_kwargs.setdefault('capsize', 3)
+
+        errorbar_kwargs.setdefault("c", "k")
+        errorbar_kwargs.setdefault("fmt", "s")
+        errorbar_kwargs.setdefault("markerfacecolor", "white")
+        errorbar_kwargs.setdefault("markeredgewidth", 1.25)
+        errorbar_kwargs.setdefault("elinewidth", 1.25)
+        errorbar_kwargs.setdefault("capsize", 3)
 
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
 
@@ -1288,7 +1275,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
         best_ylim = ax.get_ylim()
-        ax.vlines(0, -2, len(columns)+1, linestyles='dashed', linewidths=1, alpha=0.65)
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
         ax.set_ylim(best_ylim)
 
         if display_significance_code:
@@ -1298,7 +1285,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
-        
+
         return ax
 
     def plot_covariate_groups(self, covariate, groups, **kwargs):
@@ -1340,7 +1327,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
     def check_assumptions(self, help=True):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf"""
-        
+
         pass
 
     @property

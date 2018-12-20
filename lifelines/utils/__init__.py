@@ -1530,6 +1530,7 @@ def _to_array(x):
         return np.array([x])
     return np.asarray(x)
 
+
 def _to_list(x):
     if not isinstance(x, list):
         return [x]
