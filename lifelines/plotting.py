@@ -332,78 +332,102 @@ def plot_estimate(
       ax: a pyplot axis object
     """
 
-    if censor_styles is None:
-        censor_styles = {}
-
-    if (loc is not None) and (iloc is not None):
-        raise ValueError("Cannot set both loc and iloc in call to .plot().")
-
-    set_kwargs_ax(kwargs)
-    set_kwargs_color(kwargs)
-    set_kwargs_drawstyle(kwargs)
-
-    if estimate is None:
-        estimate = cls._estimate_name
-
-    if estimate == "hazard_":
-        if bandwidth is None:
-            raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard.")
-        estimate_ = cls.smoothed_hazard_(bandwidth)
-        confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=estimate_.values[:, 0])
-    else:
-        estimate_ = getattr(cls, estimate)
-        confidence_interval_ = getattr(cls, "confidence_interval_")
-
+    config = PlotEstimateConfig(
+        cls,
+        estimate,
+        loc,
+        iloc,
+        show_censors,
+        censor_styles,
+        bandwidth,
+        **kwargs)
+    
     dataframe_slicer = create_dataframe_slicer(iloc, loc)
-
-    # plot censors
-    ax = kwargs["ax"]
-    colour = kwargs["c"]
 
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(censor_styles)
         times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
-        ax.plot(times, v, linestyle="None", color=colour, **cs)
-
-    # plot estimate
-    dataframe_slicer(estimate_).plot(**kwargs)
+        config.ax.plot(times, v, linestyle="None", color=config.colour, **cs)
+    
+    dataframe_slicer(config.estimate_).plot(**kwargs)
 
     # plot confidence intervals
     if ci_show:
         if ci_force_lines:
-            dataframe_slicer(confidence_interval_).plot(
+            dataframe_slicer(config.confidence_interval_).plot(
                 linestyle="-",
                 linewidth=1,
-                color=[colour],
+                color=[config.colour],
                 legend=ci_legend,
                 drawstyle=kwargs.get("drawstyle", "default"),
-                ax=ax,
+                ax=config.ax,
                 alpha=0.6,
             )
         else:
-            x = dataframe_slicer(confidence_interval_).index.values.astype(float)
-            lower = dataframe_slicer(confidence_interval_.filter(like="lower")).values[:, 0]
-            upper = dataframe_slicer(confidence_interval_.filter(like="upper")).values[:, 0]
-            fill_between_steps(x, lower, y2=upper, ax=ax, alpha=ci_alpha, color=colour, linewidth=1.0)
+            x = dataframe_slicer(config.confidence_interval_).index.values.astype(float)
+            lower = dataframe_slicer(config.confidence_interval_.filter(like="lower")).values[:, 0]
+            upper = dataframe_slicer(config.confidence_interval_.filter(like="upper")).values[:, 0]
+            fill_between_steps(x, lower, y2=upper, ax=config.ax, alpha=ci_alpha, color=config.colour, linewidth=1.0)
 
     if at_risk_counts:
-        add_at_risk_counts(cls, ax=ax)
+        add_at_risk_counts(cls, ax=config.ax)
 
     if invert_y_axis:
         # need to check if it's already inverted
-        original_y_ticks = ax.get_yticks()
-        if not getattr(ax, "__lifelines_inverted", False):
+        original_y_ticks = config.ax.get_yticks()
+        if not getattr(config.ax, "__lifelines_inverted", False):
             # not inverted yet
 
-            ax.invert_yaxis()
+            config.ax.invert_yaxis()
             # don't ask.
             y_ticks = np.round(1.000000000001 - original_y_ticks, decimals=8)
-            ax.set_yticklabels(y_ticks)
-            ax.__lifelines_inverted = True
+            config.ax.set_yticklabels(y_ticks)
+            config.ax.__lifelines_inverted = True
 
-    return ax
+    return config.ax
+
+
+class PlotEstimateConfig:
+    def __init__(self,
+                 cls,
+                 estimate,
+                 loc,
+                 iloc,
+                 show_censors,
+                 censor_styles,
+                 bandwidth,
+                 **kwargs):
+        self.estimate = estimate
+        self.loc = loc
+        self.iloc = iloc
+        self.show_censors = show_censors
+        # plot censors
+        self.ax = kwargs["ax"]
+        self.colour = kwargs["c"]
+
+        if censor_styles is None:
+            self.censor_styles = {}
+
+        if (self.loc is not None) and (self.iloc is not None):
+            raise ValueError("Cannot set both loc and iloc in call to .plot().")
+
+        set_kwargs_ax(kwargs)
+        set_kwargs_color(kwargs)
+        set_kwargs_drawstyle(kwargs)
+
+        if self.estimate is None:
+            self.estimate = cls._estimate_name # qqUMI fix
+
+        if estimate == "hazard_":
+            if bandwidth is None:
+                raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard.")
+            self.estimate_ = cls.smoothed_hazard_(bandwidth)
+            self.confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=self.estimate_.values[:, 0])
+        else:
+            self.estimate_ = getattr(cls, estimate)
+            self.confidence_interval_ = getattr(cls, "confidence_interval_")
 
 
 def fill_between_steps(x, y1, y2=0, h_align="left", ax=None, **kwargs):
