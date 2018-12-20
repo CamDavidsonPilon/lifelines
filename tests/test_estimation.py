@@ -1005,7 +1005,7 @@ class TestCoxPHFitter:
         
         cph.fit(df, 'T')
 
-        for kind in {'martingale', 'schoenfeld', 'score'}:
+        for kind in {'martingale', 'schoenfeld', 'score', 'delta_beta', 'deviance'}:
             resids = cph.compute_residuals(df, kind)
             assert resids.sort_index().index.tolist() == ['A', 'B', 'C', 'D', 'E']
 
@@ -1023,7 +1023,7 @@ class TestCoxPHFitter:
         
         cph.fit(df, 'T', strata=["s"])
 
-        for kind in {'martingale', 'schoenfeld', 'score'}:
+        for kind in {'martingale', 'schoenfeld', 'score', 'delta_beta', 'deviance'}:
             resids = cph.compute_residuals(df, kind)
             assert resids.sort_index().index.tolist() == ['A', 'B', 'C', 'D', 'E']
 

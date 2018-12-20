@@ -210,7 +210,7 @@ class CoxPHFitter(BaseFitter):
         self.cluster_col = cluster_col
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
-        self.strata = _to_list(coalesce(strata, self.strata))
+        self.strata = coalesce(strata, self.strata)
 
         X, T, E, weights, original_index, self._clusters = self._preprocess_dataframe(df)
 
@@ -259,7 +259,7 @@ class CoxPHFitter(BaseFitter):
 
         
         if self.strata is not None:
-            df = df.sort_values(by=[self.duration_col] + self.strata)
+            df = df.sort_values(by=[self.duration_col] + _to_list(self.strata))
             original_index = df.index.copy()
             df = df.set_index(self.strata)
         else:
@@ -621,6 +621,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
     def _compute_martingale(self, X, T, E, weights, index=None):
+        # TODO: decide if I want to attach T and E to the final dataframe...
         partial_hazard = self.predict_partial_hazard(X)[0].values
         
         if not self.strata:
@@ -631,9 +632,22 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 baseline_at_T = np.append(baseline_at_T, self.baseline_cumulative_hazard_.loc[T_, name])
         
         martingale = E - (partial_hazard * baseline_at_T)
-        martingale.index = index
-        return martingale
+        martingale.index = index  # overrides the strata index, if necessary
+        return pd.DataFrame({
+            self.duration_col: T, 
+            self.event_col: E,
+            'martingale': martingale
+        })
 
+    def _compute_deviance(self, X, T, E, weights, index=None):
+        rmart = self._compute_martingale(X, T, E, weights, index)['martingale']
+        log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * np.log(E.values - rmart.values))
+        deviance = np.sign(rmart) * np.sqrt(-2 *(rmart + log_term))
+        return pd.DataFrame({
+            self.duration_col: T, 
+            self.event_col: E,
+            'deviance': deviance
+        })
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
         # Assumes sorted on T and on strata
@@ -733,15 +747,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return schoenfeld_residuals[::-1]
 
-    def _compute_delta_beta(self, X, T, E, weights, **kwargs):
+    def _compute_delta_beta(self, X, T, E, weights, index=None):
         """
         approximate change in betas as a result of excluding ith row. Good for finding outliers
         """
-        score_residuals = self._compute_score(X, T, E, weights)
+        score_residuals = self._compute_score(X, T, E, weights, index=index)
         delta_betas = score_residuals.dot(self.variance_matrix_) * self._norm_std.values
         delta_betas.columns = self.hazards_.columns
         return delta_betas
-
 
     def _compute_score(self, X, T, E, weights, index=None):
 
@@ -810,17 +823,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ----------
         df : the same training data given in `fit`
         kind : string
-            {'schoenfeld', 'score', 'delta_beta', 'scaled_schoenfeld', 'martingale'}
-        TODO: deviance
+            {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale'}
         TODO: can I check the same training data is inputted? checksum?
 
         """
-        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "scaled_schoenfeld", "martingale"}
+        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale"}
         assert kind in ALLOWED_RESIDUALS, "kind must be in %s" % ALLOWED_RESIDUALS
 
-        X, T, E, weights, original_index, _ = self._preprocess_dataframe(df)
+        X, T, E, weights, shuffled_original_index, _ = self._preprocess_dataframe(df)
 
-        resids = getattr(self, "_compute_%s" % kind)(X, T, E, weights, index=original_index)
+        resids = getattr(self, "_compute_%s" % kind)(X, T, E, weights, index=shuffled_original_index)
         return resids
 
 
