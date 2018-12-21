@@ -616,7 +616,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
-    def _compute_martingale(self, X, T, E, weights, index=None):
+    def _compute_martingale(self, X, T, E, _weights, index=None):
         # TODO: decide if I want to attach T and E to the final dataframe...
         partial_hazard = self.predict_partial_hazard(X)[0].values
 
@@ -714,7 +714,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # There was atleast one event and no more ties remain. Time to sum.
             weighted_mean = np.zeros((1, d))
-            weighted_average = weight_count / tie_count
+            _weighted_average = weight_count / tie_count
 
             for l in range(tie_count):
 
@@ -761,7 +761,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return pd.DataFrame(score_residuals, columns=self.hazards_.columns, index=index)
 
-    def _compute_score_within_strata(self, X, T, E, weights):
+    def _compute_score_within_strata(self, X, _T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -1324,7 +1324,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
 
-    def check_assumptions(self, help=True):
+    def check_assumptions(self, help_me=True):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf"""
 
