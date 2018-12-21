@@ -738,8 +738,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # There was atleast one event and no more ties remain. Time to sum.
             weighted_mean = np.zeros((1, d))
-            # TODO: _weighted_average unused
-            _weighted_average = weight_count / tie_count
 
             for l in range(tie_count):
 
@@ -1350,21 +1348,12 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
 
-<<<<<<< HEAD
     def check_assumptions(self, df, help=True):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
         
-
-=======
-    def check_assumptions(self, help_me=True):
-        """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
-        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf"""
->>>>>>> cc6ac2875eef4a66942ffd13d8c42d91765aa3b9
-
-        pass
         
 
     @property

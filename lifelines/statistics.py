@@ -6,7 +6,14 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 
-from lifelines.utils import group_survival_table_from_events, significance_code, significance_codes_as_text
+from lifelines.utils import (
+    group_survival_table_from_events, 
+    significance_code, 
+    significance_codes_as_text,
+    _to_list,
+    string_justify,
+    _to_array
+)
 
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
@@ -422,9 +429,19 @@ def multivariate_logrank_test(
 
 
 class StatisticalResult(object):
-    def __init__(self, p_value, test_statistic, **kwargs):
-        self.p_value = p_value
-        self.test_statistic = test_statistic
+    # TODO: docs
+    def __init__(self, p_values, test_statistics, names=None, **kwargs):
+        self.p_values = _to_array(p_values)
+        self.test_statistics = _to_array(test_statistics)
+        
+        assert len(self.p_values) == len(self.test_statistics)
+
+        if names is not None:
+            self.names = _to_array(names)
+            assert len(self.names) == len(self.test_statistics)
+
+        else:
+            self.names = None
 
         for kw, value in kwargs.items():
             setattr(self, kw, value)
@@ -450,27 +467,37 @@ class StatisticalResult(object):
 
         """
         cols = ["test_statistic", "p"]
-        return pd.DataFrame([[self.test_statistic, self.p_value]], columns=cols)
+
+        return pd.DataFrame(
+            list(zip(self.test_statistics, self.p_values)),
+        columns=cols, index=self.names)
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
 
     def __unicode__(self):
         # pylint: disable=unnecessary-lambda
+
         meta_data = self._pretty_print_meta_data(self._kwargs)
         df = self.summary
-        df[""] = significance_code(self.p_value)
+        df[""] = [significance_code(p) for p in self.p_values]
 
         s = ""
         s += "\n" + meta_data + "\n\n"
-        s += df.to_string(float_format=lambda f: "{:4.4f}".format(f), index=False)
+        s += df.to_string(float_format=lambda f: "{:4.4f}".format(f), index=self.names is not None)
 
         s += "\n---"
         s += "\n" + significance_codes_as_text()
         return s
 
     def _pretty_print_meta_data(self, dictionary):
-        return ", ".join([str(k) + "=" + str(v) for k, v in dictionary.items()])
+        longest_key = max([len(k) for k in dictionary])
+        justify = string_justify(longest_key)
+        s = ""
+        for k, v in dictionary.items():
+            s += "{} = {}\n".format(justify(k), v)
+
+        return s
 
 
 def chisq_test(U, degrees_freedom, alpha):
@@ -493,7 +520,10 @@ def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, **kwargs
     times = fitted_cox_model.durations.loc[fitted_cox_model.event_observed]
     deaths = sum(fitted_cox_model.event_observed)
     times -= times.mean()
-    T = (times.values[:, None] * scaled_resids.values).sum(0) ** 2 / (deaths * np.diag(fitted_cox_model.variance_matrix_) * (times**2).sum())
-    return t
+    T = (times.values[:, None] * scaled_resids.values).sum(0) ** 2 / \
+            (deaths * np.diag(fitted_cox_model.variance_matrix_) * (times**2).sum())
+    p_values = _to_array([chisq_test(t, 1, alpha)[1] for t in T])
+    return StatisticalResult(p_values, T, names=fitted_cox_model.hazards_.columns, 
+        alpha=alpha, test_name='proportional_hazard_test', time_transform='identity')
 
 
