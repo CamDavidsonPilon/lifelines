@@ -868,7 +868,6 @@ class TestRegressionFitters:
 
 
 class TestCoxPHFitter:
-
     def test_schoenfeld_residuals_no_strata_but_with_censorship(self):
         """
         library(survival)
@@ -883,17 +882,17 @@ class TestCoxPHFitter:
         """
         df = pd.DataFrame(
             {
-                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
-                "T": [ 5, 6, 7, 8, 9],
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [5, 6, 7, 8, 9],
                 "E": [1, 1, 1, 1, 1],
             }
         )
 
         cph = CoxPHFitter()
-        cph.fit(df, 'T', 'E')
+        cph.fit(df, "T", "E")
 
-        results = cph.compute_residuals(df, 'schoenfeld')
-        expected = pd.DataFrame([-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344,  0.0], columns=['var1'])
+        results = cph.compute_residuals(df, "schoenfeld")
+        expected = pd.DataFrame([-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344, 0.0], columns=["var1"])
         assert_frame_equal(results, expected, check_less_precise=3)
 
     def test_schoenfeld_residuals_with_censorship_and_ties(self):
@@ -910,19 +909,18 @@ class TestCoxPHFitter:
         """
         df = pd.DataFrame(
             {
-                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
-                "T": [ 6, 6, 7, 8, 9],
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
                 "E": [1, 1, 1, 0, 1],
             }
         )
 
         cph = CoxPHFitter()
-        cph.fit(df, 'T', 'E')
+        cph.fit(df, "T", "E")
 
-        results = cph.compute_residuals(df, 'schoenfeld')
-        expected = pd.DataFrame([-0.3903793341, -0.5535578141,  0.9439371482, 0.0], columns=['var1'], index=[0, 1, 2, 4])
+        results = cph.compute_residuals(df, "schoenfeld")
+        expected = pd.DataFrame([-0.3903793341, -0.5535578141, 0.9439371482, 0.0], columns=["var1"], index=[0, 1, 2, 4])
         assert_frame_equal(results, expected, check_less_precise=3)
-
 
     def test_schoenfeld_residuals_with_weights(self):
         """
@@ -938,18 +936,18 @@ class TestCoxPHFitter:
         """
         df = pd.DataFrame(
             {
-                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
                 "T": [5, 6, 7, 8, 9],
                 "E": [1, 1, 1, 1, 1],
-                "w": [0.5, 1.0, 3.0, 1.0, 1.0]
+                "w": [0.5, 1.0, 3.0, 1.0, 1.0],
             }
         )
 
         cph = CoxPHFitter()
-        cph.fit(df, 'T', 'E', weights_col="w", robust=True)
+        cph.fit(df, "T", "E", weights_col="w", robust=True)
 
-        results = cph.compute_residuals(df, 'schoenfeld')
-        expected = pd.DataFrame([-0.6633324862, -0.9107785234,  0.6176009038, -0.6103579448, 0.0], columns=['var1'])
+        results = cph.compute_residuals(df, "schoenfeld")
+        expected = pd.DataFrame([-0.6633324862, -0.9107785234, 0.6176009038, -0.6103579448, 0.0], columns=["var1"])
         assert_frame_equal(results, expected, check_less_precise=3)
 
     def test_schoenfeld_residuals_with_strata(self):
@@ -968,26 +966,26 @@ class TestCoxPHFitter:
 
         df = pd.DataFrame(
             {
-                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
-                "T": [ 6, 6, 7, 8, 9],
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
                 "E": [1, 1, 1, 1, 1],
-                "s": [1, 2, 2, 1, 1]
+                "s": [1, 2, 2, 1, 1],
             }
         )
 
         cph = CoxPHFitter()
-        cph.fit(df, 'T', 'E', strata=['s'])
+        cph.fit(df, "T", "E", strata=["s"])
 
-        results = cph.compute_residuals(df, 'schoenfeld')
-        expected = pd.DataFrame([ 5.898252711e-02, -2.074325854e-02,  0.0, -3.823926885e-02, 0.0], columns=['var1'])
+        results = cph.compute_residuals(df, "schoenfeld")
+        expected = pd.DataFrame([5.898252711e-02, -2.074325854e-02, 0.0, -3.823926885e-02, 0.0], columns=["var1"])
         assert_frame_equal(results, expected, check_less_precise=3)
 
     def test_scaled_schoenfeld_residuals_with_weights(self, regression_dataset):
 
         cph = CoxPHFitter()
-        cph.fit(regression_dataset, 'T', 'E', weights_col='var3')
+        cph.fit(regression_dataset, "T", "E", weights_col="var3")
 
-        results = cph.compute_residuals(regression_dataset, 'scaled_schoenfeld')
+        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld")
         print(results.values + cph.hazards_.values)
         assert False
 
@@ -996,55 +994,49 @@ class TestCoxPHFitter:
 
         df = pd.DataFrame(
             {
-                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
-                "T": [ 6, 6, 7, 8, 9],
-                "s": [1, 2, 2, 1, 1]
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "s": [1, 2, 2, 1, 1],
             }
         )
-        df.index = ['A', 'B', 'C', 'D', 'E']
-        
-        cph.fit(df, 'T')
+        df.index = ["A", "B", "C", "D", "E"]
 
-        for kind in {'martingale', 'schoenfeld', 'score', 'delta_beta', 'deviance'}:
+        cph.fit(df, "T")
+
+        for kind in {"martingale", "schoenfeld", "score", "delta_beta", "deviance"}:
             resids = cph.compute_residuals(df, kind)
-            assert resids.sort_index().index.tolist() == ['A', 'B', 'C', 'D', 'E']
+            assert resids.sort_index().index.tolist() == ["A", "B", "C", "D", "E"]
 
     def test_original_index_is_respected_in_all_residual_tests_with_strata(self):
         cph = CoxPHFitter()
 
         df = pd.DataFrame(
             {
-                "var1": [-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105],
-                "T": [ 6, 6, 7, 8, 9],
-                "s": [1, 2, 2, 1, 1]
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "s": [1, 2, 2, 1, 1],
             }
         )
-        df.index = ['A', 'B', 'C', 'D', 'E']
-        
-        cph.fit(df, 'T', strata=["s"])
+        df.index = ["A", "B", "C", "D", "E"]
 
-        for kind in {'martingale', 'schoenfeld', 'score', 'delta_beta', 'deviance'}:
+        cph.fit(df, "T", strata=["s"])
+
+        for kind in {"martingale", "schoenfeld", "score", "delta_beta", "deviance"}:
             resids = cph.compute_residuals(df, kind)
-            assert resids.sort_index().index.tolist() == ['A', 'B', 'C', 'D', 'E']
-
+            assert resids.sort_index().index.tolist() == ["A", "B", "C", "D", "E"]
 
     def test_martingale_residuals(self, regression_dataset):
 
         cph = CoxPHFitter()
-        cph.fit(regression_dataset, 'T', 'E')
+        cph.fit(regression_dataset, "T", "E")
 
-        results = cph.compute_residuals(regression_dataset, 'martingale')
+        results = cph.compute_residuals(regression_dataset, "martingale")
         npt.assert_allclose(results.loc[0], -2.315035744901, rtol=1e-05)
         npt.assert_allclose(results.loc[1], 0.774216356429, rtol=1e-05)
         npt.assert_allclose(results.loc[199], 0.868510420157, rtol=1e-05)
 
-
     def test_error_is_raised_if_using_non_numeric_data_in_prediction(self):
-        df = pd.DataFrame({
-            "t": [1.0, 2.0, 3.0, 4.0], 
-            "int_": [1, -1, 0, 0], 
-            "float_": [1.2, -0.5, 0.0, 0.1]
-        })
+        df = pd.DataFrame({"t": [1.0, 2.0, 3.0, 4.0], "int_": [1, -1, 0, 0], "float_": [1.2, -0.5, 0.0, 0.1]})
 
         cp = CoxPHFitter()
         cp.fit(df, duration_col="t")
