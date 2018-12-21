@@ -178,6 +178,6 @@ class ExponentialFitter(UnivariateFitter):
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.4f}".format(f)))
+        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f)))
         print("---")
         print(significance_codes_as_text(), end="\n\n")
