@@ -1027,7 +1027,7 @@ class TestCoxPHFitter:
 
         cph.fit(df, "T", strata=["s"])
 
-        for kind in {"martingale", "schoenfeld", "score", "delta_beta", "deviance"}:
+        for kind in {"martingale", "schoenfeld", "score", "delta_beta", "deviance", "scaled_schoenfeld"}:
             resids = cph.compute_residuals(df, kind)
             assert resids.sort_index().index.tolist() == ["A", "B", "C", "D", "E"]
 
@@ -1037,9 +1037,10 @@ class TestCoxPHFitter:
         cph.fit(regression_dataset, "T", "E")
 
         results = cph.compute_residuals(regression_dataset, "martingale")
-        npt.assert_allclose(results.loc[0], -2.315035744901, rtol=1e-05)
-        npt.assert_allclose(results.loc[1], 0.774216356429, rtol=1e-05)
-        npt.assert_allclose(results.loc[199], 0.868510420157, rtol=1e-05)
+        print(results)
+        npt.assert_allclose(results.loc[0, 'martingale'], -2.315035744901, rtol=1e-05)
+        npt.assert_allclose(results.loc[1, 'martingale'], 0.774216356429, rtol=1e-05)
+        npt.assert_allclose(results.loc[199, 'martingale'], 0.868510420157, rtol=1e-05)
 
     def test_error_is_raised_if_using_non_numeric_data_in_prediction(self):
         df = pd.DataFrame({"t": [1.0, 2.0, 3.0, 4.0], "int_": [1, -1, 0, 0], "float_": [1.2, -0.5, 0.0, 0.1]})
@@ -1412,7 +1413,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", show_progress=True, weights_col="weights")
 
-        X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
+        X = normalize(df.drop(["T", "E", "weights"], axis=1), cph._norm_mean, cph._norm_std)
 
         expected = np.array([[-1.1099688, 0.6620063, 0.4630473, 0.5807250, -0.5958099]]).T
         actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])

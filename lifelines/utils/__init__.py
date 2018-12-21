@@ -1532,7 +1532,7 @@ def _to_array(x):
 
 
 def _to_list(x):
-    if not isinstance(x, list):
+    if not isinstance(x, collections.Iterable):
         return [x]
     return x
 

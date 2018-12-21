@@ -301,7 +301,7 @@ def pairwise_logrank_test(
             alpha=alpha,
             t_0=t_0,
             use_bonferroni=bonferroni,
-            names=[(g1, g2)],
+            name=[(g1, g2)],
             **kwargs
         )
 
@@ -436,29 +436,29 @@ class StatisticalResult(object):
     
     Parameters
     ----------
-    p_values: iterable or float
+    p_value: iterable or float
         the p-values of a statistical test(s)
-    test_statistics: iterable or float
+    test_statistic: iterable or float
         the test statistics of a statistical test(s). Must be the same size as p-values if iterable. 
-    names: iterable or string
+    name: iterable or string
         if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable. 
     kwargs: 
         additional information to display in ``print_summary()``.
 
     """
 
-    def __init__(self, p_values, test_statistics, names=None, **kwargs):
-        self.p_values = _to_array(p_values)
-        self.test_statistics = _to_array(test_statistics)
+    def __init__(self, p_value, test_statistic, name=None, **kwargs):
+        self.p_value = _to_array(p_value)
+        self.test_statistic = _to_array(test_statistic)
 
-        assert len(self.p_values) == len(self.test_statistics)
+        assert len(self.p_value) == len(self.test_statistic)
 
-        if names is not None:
-            self.names = _to_list(names)
-            assert len(self.names) == len(self.test_statistics)
+        if name is not None:
+            self.name = _to_list(name)
+            assert len(self.name) == len(self.test_statistic)
 
         else:
-            self.names = None
+            self.name = None
 
         for kw, value in kwargs.items():
             setattr(self, kw, value)
@@ -486,12 +486,12 @@ class StatisticalResult(object):
         cols = ["test_statistic", "p"]
 
         # test to see if self.names is a tuple
-        if self.names and isinstance(self.names[0], tuple):
-            index = pd.MultiIndex.from_tuples(self.names)
+        if self.name and isinstance(self.name[0], tuple):
+            index = pd.MultiIndex.from_tuples(self.name)
         else:
-            index = self.names
+            index = self.name
 
-        return pd.DataFrame(list(zip(self.test_statistics, self.p_values)), columns=cols, index=index).sort_index()
+        return pd.DataFrame(list(zip(self.test_statistic, self.p_value)), columns=cols, index=index).sort_index()
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
@@ -501,12 +501,12 @@ class StatisticalResult(object):
 
         meta_data = self._pretty_print_meta_data(self._kwargs)
         df = self.summary
-        df[""] = [significance_code(p) for p in self.p_values]
+        df[""] = [significance_code(p) for p in self.p_value]
 
         s = ""
         s += "\n" + meta_data + "\n"
         s += "---\n"
-        s += df.to_string(float_format=lambda f: "{:4.2f}".format(f), index=self.names is not None)
+        s += df.to_string(float_format=lambda f: "{:4.2f}".format(f), index=self.name is not None)
 
         s += "\n---"
         s += "\n" + significance_codes_as_text()
@@ -523,11 +523,11 @@ class StatisticalResult(object):
 
     def __add__(self, other):
         """useful for aggregating results easily"""
-        p_values = np.r_[self.p_values, other.p_values]
-        test_statistics = np.r_[self.test_statistics, other.test_statistics]
-        names = self.names + other.names
+        p_values = np.r_[self.p_value, other.p_value]
+        test_statistics = np.r_[self.test_statistic, other.test_statistic]
+        names = self.name + other.name
         kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
-        return StatisticalResult(p_values, test_statistics, names=names, **kwargs)
+        return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
 
 
 def chisq_test(U, degrees_freedom, alpha):
@@ -561,7 +561,7 @@ def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, time_tra
     return StatisticalResult(
         p_values,
         T,
-        names=fitted_cox_model.hazards_.columns,
+        name=fitted_cox_model.hazards_.columns.tolist(),
         alpha=alpha,
         test_name="proportional_hazard_test",
         time_transform=time_transform,

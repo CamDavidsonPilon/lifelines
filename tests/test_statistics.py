@@ -6,7 +6,8 @@ import numpy.testing as npt
 import pytest
 
 from lifelines import statistics as stats
-from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd
+from lifelines import CoxPHFitter
+from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset
 
 
 def test_sample_size_necessary_under_cph():
@@ -213,9 +214,9 @@ def test_StatisticalResult_kwargs():
 
 def test_StatisticalResult_can_be_added():
 
-    sr1 = stats.StatisticalResult(0.01, 1.0, names=["1"], kw1="some_value1")
-    sr2 = stats.StatisticalResult([0.02], [2.0], names=["2"], kw2="some_value2")
-    sr3 = stats.StatisticalResult([0.03, 0.04], [3.3, 4.4], names=["3", "4"], kw3=3)
+    sr1 = stats.StatisticalResult(0.01, 1.0, name=["1"], kw1="some_value1")
+    sr2 = stats.StatisticalResult([0.02], [2.0], name=["2"], kw2="some_value2")
+    sr3 = stats.StatisticalResult([0.03, 0.04], [3.3, 4.4], name=["3", "4"], kw3=3)
     sr = sr1 + sr2 + sr3
 
     assert sr.summary.shape[0] == 4
@@ -228,3 +229,17 @@ def test_valueerror_is_raised_if_alpha_out_of_bounds():
     data2 = np.random.exponential(1, size=(20, 1))
     with pytest.raises(ValueError):
         stats.logrank_test(data1, data2, alpha=95)
+
+
+def test_proportional_hazard_test():
+    cph = CoxPHFitter()
+    df = load_regression_dataset()
+    cph.fit(df, 'T', 'E')
+    results = stats.proportional_hazard_test(cph, df)
+    npt.assert_allclose(results.summary.loc['var1']['test_statistic'], 1.241649, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc['var2']['test_statistic'], 0.992358, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc['var3']['test_statistic'], 1.445049, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc['var3']['p'], 0.229324, rtol=1e-3)
+
+
+

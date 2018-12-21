@@ -628,14 +628,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 baseline_at_T = np.append(baseline_at_T, self.baseline_cumulative_hazard_.loc[T_, name])
 
         martingale = E - (partial_hazard * baseline_at_T)
-        martingale.index = index  # overrides the strata index, if necessary
-        return pd.DataFrame({self.duration_col: T, self.event_col: E, "martingale": martingale})
+        return pd.DataFrame({self.duration_col: T.values, self.event_col: E.values, "martingale": martingale.values}, index=index)
 
     def _compute_deviance(self, X, T, E, weights, index=None):
-        rmart = self._compute_martingale(X, T, E, weights, index)["martingale"]
+        df = self._compute_martingale(X, T, E, weights, index)
+        rmart = df.pop("martingale")
         log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * np.log(E.values - rmart.values))
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
-        return pd.DataFrame({self.duration_col: T, self.event_col: E, "deviance": deviance})
+        df['deviance'] = deviance
+        return df
 
     def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
         r"""
@@ -759,11 +760,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_delta_beta(self, X, T, E, weights, index=None):
         """
-        approximate change in betas as a result of excluding ith row. Good for finding outliers
+        approximate change in betas as a result of excluding ith row. Good for finding outliers / specific 
+        subjects that influence the model disproportinately. Good advice: don't drop these outliers, model them.
         """
         score_residuals = self._compute_score(X, T, E, weights, index=index)
-        delta_betas = score_residuals.dot(self.variance_matrix_) * self._norm_std.values
+        
+
+        d = X.shape[1]
+        scaled_variance_matrix = self.variance_matrix_ * np.tile(self._norm_std.values, (d, 1)).T
+
+        delta_betas = score_residuals.dot(scaled_variance_matrix) 
         delta_betas.columns = self.hazards_.columns
+        
         return delta_betas
 
     def _compute_score(self, X, T, E, weights, index=None):
@@ -841,7 +849,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale", "scaled_schoenfeld"}
         assert kind in ALLOWED_RESIDUALS, "kind must be in %s" % ALLOWED_RESIDUALS
 
-        X, T, E, weights, shuffled_original_index, _ = self._preprocess_dataframe(df)
+        X, T, E, weights, shuffled_original_index, _ = self._preprocess_dataframe(training_dataframe)
 
         resids = getattr(self, "_compute_%s" % kind)(X, T, E, weights, index=shuffled_original_index)
         return resids
