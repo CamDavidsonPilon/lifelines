@@ -255,8 +255,8 @@ def pairwise_logrank_test(
     Returns
     -------
 
-    results : DataFrame
-        a (n,n) dataframe of StatisticalResults (None on the diagonal)
+    results : StatisticalResult
+        a StatisticalResult object that contains all the pairwise comparisons (try ``StatisticalResult.summary`` or ``StatisticalResult.print_summarty``)
 
 
     See Also
@@ -287,15 +287,13 @@ def pairwise_logrank_test(
         m = 0.5 * n_unique_groups * (n_unique_groups - 1)
         alpha = 1 - (1 - alpha) / m
 
-    R = np.zeros((n_unique_groups, n_unique_groups), dtype=object)
-
-    np.fill_diagonal(R, None)
+    result = StatisticalResult([], [], [])
 
     for i1, i2 in combinations(np.arange(n_unique_groups), 2):
         g1, g2 = unique_groups[[i1, i2]]
         ix1, ix2 = (groups == g1), (groups == g2)
-        test_name = str(g1) + " vs. " + str(g2)
-        result = logrank_test(
+        test_name = str(g1) + "|" + str(g2)
+        result += logrank_test(
             event_durations.loc[ix1],
             event_durations.loc[ix2],
             event_observed.loc[ix1],
@@ -303,12 +301,11 @@ def pairwise_logrank_test(
             alpha=alpha,
             t_0=t_0,
             use_bonferroni=bonferroni,
-            test_name=test_name,
+            names=[(g1, g2)],
             **kwargs
         )
-        R[i1, i2], R[i2, i1] = result, result
 
-    return pd.DataFrame(R, columns=unique_groups, index=unique_groups)
+    return result
 
 
 def multivariate_logrank_test(
@@ -429,7 +426,26 @@ def multivariate_logrank_test(
 
 
 class StatisticalResult(object):
-    # TODO: docs
+    """
+    This class holds the result of statistical tests, like logrank and proportional hazard tests, with a nice
+    printer wrapper to display the results. 
+
+    Note
+    -----
+    This class' API changed in version 0.16.0. 
+    
+    Parameters
+    ----------
+    p_values: iterable or float
+        the p-values of a statistical test(s)
+    test_statistics: iterable or float
+        the test statistics of a statistical test(s). Must be the same size as p-values if iterable. 
+    names: iterable or string
+        if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable. 
+    kwargs: 
+        additional information to display in ``print_summary()``.
+
+    """
     def __init__(self, p_values, test_statistics, names=None, **kwargs):
         self.p_values = _to_array(p_values)
         self.test_statistics = _to_array(test_statistics)
@@ -437,7 +453,7 @@ class StatisticalResult(object):
         assert len(self.p_values) == len(self.test_statistics)
 
         if names is not None:
-            self.names = _to_array(names)
+            self.names = _to_list(names)
             assert len(self.names) == len(self.test_statistics)
 
         else:
@@ -468,7 +484,13 @@ class StatisticalResult(object):
         """
         cols = ["test_statistic", "p"]
 
-        return pd.DataFrame(list(zip(self.test_statistics, self.p_values)), columns=cols, index=self.names)
+        # test to see if self.names is a tuple
+        if self.names and isinstance(self.names[0], tuple):
+            index = pd.MultiIndex.from_tuples(self.names)
+        else:
+            index=self.names
+
+        return pd.DataFrame(list(zip(self.test_statistics, self.p_values)), columns=cols, index=index).sort_index()
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
@@ -481,7 +503,8 @@ class StatisticalResult(object):
         df[""] = [significance_code(p) for p in self.p_values]
 
         s = ""
-        s += "\n" + meta_data + "\n\n"
+        s += "\n" + meta_data + "\n"
+        s += "---\n"
         s += df.to_string(float_format=lambda f: "{:4.4f}".format(f), index=self.names is not None)
 
         s += "\n---"
@@ -496,6 +519,14 @@ class StatisticalResult(object):
             s += "{} = {}\n".format(justify(k), v)
 
         return s
+
+    def __add__(self, other):
+        """useful for aggregating results easily"""
+        p_values = np.r_[self.p_values, other.p_values]
+        test_statistics = np.r_[self.test_statistics, other.test_statistics]
+        names = self.names + other.names
+        kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
+        return StatisticalResult(p_values, test_statistics, names=names, **kwargs)
 
 
 def chisq_test(U, degrees_freedom, alpha):
@@ -533,4 +564,6 @@ def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, time_tra
         alpha=alpha,
         test_name="proportional_hazard_test",
         time_transform=time_transform,
+        null_distribution="chi squared", 
+        df=1
     )

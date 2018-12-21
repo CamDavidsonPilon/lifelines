@@ -15,7 +15,7 @@ from scipy.integrate import trapz
 from scipy import stats
 
 from lifelines.fitters import BaseFitter
-from lifelines.statistics import chisq_test
+from lifelines.statistics import chisq_test, proportional_hazard_test
 from lifelines.utils import (
     survival_table_from_events,
     inv_normal_cdf,
@@ -828,12 +828,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return score_residuals * weights[:, None]
 
-    def compute_residuals(self, df, kind):
+    def compute_residuals(self, training_dataframe, kind):
         """
 
         Parameters
         ----------
-        df : the same training data given in `fit`
+        training_dataframe : pandas DataFrame
+            the same training dataframe given in `fit`
         kind : string
             {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale'}
         TODO: can I check the same training data is inputted? checksum?
@@ -1348,7 +1349,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
 
-    def check_assumptions(self, df, help=True):
+    def check_assumptions(self, df):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf

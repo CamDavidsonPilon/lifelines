@@ -164,16 +164,18 @@ def test_multivariate_unequal_intensities():
 def test_pairwise_waltons_dataset_is_significantly_different():
     waltons_dataset = load_waltons()
     R = stats.pairwise_logrank_test(waltons_dataset["T"], waltons_dataset["group"])
-    assert R.values[0, 1].p_value < 0.05
+    assert R.summary.loc[('control', 'miR-137')]["p"] < 0.05
 
 
-def test_pairwise_allows_dataframes():
+def test_pairwise_allows_dataframes_and_gives_correct_counts():
     N = 100
+    N_groups = 5
     df = pd.DataFrame(np.empty((N, 3)), columns=["T", "C", "group"])
     df["T"] = np.random.exponential(1, size=N)
     df["C"] = np.random.binomial(1, 0.6, size=N)
-    df["group"] = np.random.binomial(2, 0.5, size=N)
-    stats.pairwise_logrank_test(df["T"], df["group"], event_observed=df["C"])
+    df["group"] = np.random.binomial(N_groups, 0.5, size=N)
+    R = stats.pairwise_logrank_test(df["T"], df["group"], event_observed=df["C"])
+    assert R.summary.shape[0] == N_groups * (N_groups + 1) / 2
 
 
 def test_log_rank_returns_None_if_equal_arrays():
@@ -201,7 +203,7 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
     assert result.p_value == result_m.p_value
 
 
-def test_StatisticalResult_class():
+def test_StatisticalResult_kwargs():
 
     sr = stats.StatisticalResult(0.05, 5.0, kw="some_value")
     assert hasattr(sr, "kw")
@@ -209,8 +211,22 @@ def test_StatisticalResult_class():
     assert "some_value" in sr.__unicode__()
 
 
+def test_StatisticalResult_can_be_added():
+
+    sr1 = stats.StatisticalResult(0.01, 1.0, names=["1"], kw1="some_value1")
+    sr2 = stats.StatisticalResult([0.02], [2.0], names=["2"], kw2="some_value2")
+    sr3 = stats.StatisticalResult([0.03, 0.04], [3.3, 4.4], names=["3", "4"], kw3=3)
+    sr = sr1 + sr2 + sr3
+    
+    assert sr.summary.shape[0] == 4
+    assert sr.summary.index.tolist() == ["1", "2", "3", "4"]
+    assert "kw3" in sr._kwargs
+
+
 def test_valueerror_is_raised_if_alpha_out_of_bounds():
     data1 = np.random.exponential(5, size=(20, 1))
     data2 = np.random.exponential(1, size=(20, 1))
     with pytest.raises(ValueError):
         stats.logrank_test(data1, data2, alpha=95)
+
+
