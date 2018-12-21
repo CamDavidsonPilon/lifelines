@@ -618,6 +618,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_martingale(self, X, T, E, _weights, index=None):
         # TODO: decide if I want to attach T and E to the final dataframe...
+        # TODO: _weights unused
         partial_hazard = self.predict_partial_hazard(X)[0].values
 
         if not self.strata:
@@ -714,6 +715,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # There was atleast one event and no more ties remain. Time to sum.
             weighted_mean = np.zeros((1, d))
+            # TODO: _weighted_average unused
             _weighted_average = weight_count / tie_count
 
             for l in range(tie_count):
@@ -767,6 +769,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
         # Assumes X already sorted by T
         # TODO: doesn't handle ties.
+        # TODO: _T unused
 
         n, d = X.shape
 
