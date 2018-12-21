@@ -617,7 +617,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
     def _compute_martingale(self, X, T, E, _weights, index=None):
-        # TODO: decide if I want to attach T and E to the final dataframe...
         # TODO: _weights unused
         partial_hazard = self.predict_partial_hazard(X)[0].values
 
@@ -837,7 +836,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             the same training dataframe given in `fit`
         kind : string
             {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale'}
-        TODO: can I check the same training data is inputted? checksum?
 
         """
         ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale", "scaled_schoenfeld"}

@@ -164,7 +164,7 @@ def test_multivariate_unequal_intensities():
 def test_pairwise_waltons_dataset_is_significantly_different():
     waltons_dataset = load_waltons()
     R = stats.pairwise_logrank_test(waltons_dataset["T"], waltons_dataset["group"])
-    assert R.summary.loc[('control', 'miR-137')]["p"] < 0.05
+    assert R.summary.loc[("control", "miR-137")]["p"] < 0.05
 
 
 def test_pairwise_allows_dataframes_and_gives_correct_counts():
@@ -217,7 +217,7 @@ def test_StatisticalResult_can_be_added():
     sr2 = stats.StatisticalResult([0.02], [2.0], names=["2"], kw2="some_value2")
     sr3 = stats.StatisticalResult([0.03, 0.04], [3.3, 4.4], names=["3", "4"], kw3=3)
     sr = sr1 + sr2 + sr3
-    
+
     assert sr.summary.shape[0] == 4
     assert sr.summary.index.tolist() == ["1", "2", "3", "4"]
     assert "kw3" in sr._kwargs
@@ -228,5 +228,3 @@ def test_valueerror_is_raised_if_alpha_out_of_bounds():
     data2 = np.random.exponential(1, size=(20, 1))
     with pytest.raises(ValueError):
         stats.logrank_test(data1, data2, alpha=95)
-
-

@@ -446,6 +446,7 @@ class StatisticalResult(object):
         additional information to display in ``print_summary()``.
 
     """
+
     def __init__(self, p_values, test_statistics, names=None, **kwargs):
         self.p_values = _to_array(p_values)
         self.test_statistics = _to_array(test_statistics)
@@ -488,7 +489,7 @@ class StatisticalResult(object):
         if self.names and isinstance(self.names[0], tuple):
             index = pd.MultiIndex.from_tuples(self.names)
         else:
-            index=self.names
+            index = self.names
 
         return pd.DataFrame(list(zip(self.test_statistics, self.p_values)), columns=cols, index=index).sort_index()
 
@@ -564,6 +565,6 @@ def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, time_tra
         alpha=alpha,
         test_name="proportional_hazard_test",
         time_transform=time_transform,
-        null_distribution="chi squared", 
-        df=1
+        null_distribution="chi squared",
+        df=1,
     )
