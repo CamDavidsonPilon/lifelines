@@ -991,7 +991,9 @@ class TestCoxPHFitter:
         results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.hazards_.values[0]
         npt.assert_allclose(results.iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=5)
         npt.assert_allclose(results.iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=5)
-        npt.assert_allclose(results.iloc[results.shape[0]-1].values, [0.222207366875,  0.050957334886,  0.218314242931], rtol=5)
+        npt.assert_allclose(
+            results.iloc[results.shape[0] - 1].values, [0.222207366875, 0.050957334886, 0.218314242931], rtol=5
+        )
 
     def test_original_index_is_respected_in_all_residual_tests(self):
         cph = CoxPHFitter()

@@ -15,7 +15,7 @@ from scipy.integrate import trapz
 from scipy import stats
 
 from lifelines.fitters import BaseFitter
-from lifelines.statistics import chisq_test
+from lifelines.statistics import chisq_test, proportional_hazard_test
 from lifelines.utils import (
     survival_table_from_events,
     inv_normal_cdf,
@@ -638,7 +638,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
         return pd.DataFrame({self.duration_col: T, self.event_col: E, "deviance": deviance})
 
-
     def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
         r"""
         Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0. 
@@ -656,10 +655,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
 
         n_deaths = sum(self.event_observed)
-        scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(self.variance_matrix_)
+        scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(
+            self.variance_matrix_
+        )
         scaled_schoenfeld_resids.columns = self.hazards_.columns
         return scaled_schoenfeld_resids
-
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
         # Assumes sorted on T and on strata
@@ -828,12 +828,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return score_residuals * weights[:, None]
 
-    def compute_residuals(self, df, kind):
+    def compute_residuals(self, training_dataframe, kind):
         """
 
         Parameters
         ----------
-        df : the same training data given in `fit`
+        training_dataframe : pandas DataFrame
+            the same training dataframe given in `fit`
         kind : string
             {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale'}
         TODO: can I check the same training data is inputted? checksum?
@@ -1348,13 +1349,12 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
 
-    def check_assumptions(self, df, help=True):
+    def check_assumptions(self, df):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
-        
-        
+        pass
 
     @property
     def score_(self):

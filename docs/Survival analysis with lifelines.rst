@@ -374,17 +374,17 @@ we rule that the series have different generators.
 
 .. parsed-literal::
 
-    Results
-       df: 1
-       alpha: 0.99
-       t 0: -1
-       test: logrank
-       null distribution: chi squared
+                  t_0 = -1
+                alpha = 0.99
+    null_distribution = chi squared
+                   df = 1
 
-       __ p-value ___|__ test statistic __|____ test results ____|__ significant __
-             0.00000 |            208.306 |      Reject Null     |     True
-
-
+    ---
+    test_statistic      p
+          260.4695 0.0000  ***
+    ---
+    Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
+    
 Lets compare the different *types* of regimes present in the dataset:
 
 .. code:: python
