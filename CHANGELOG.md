@@ -1,11 +1,14 @@
 ### Changelogs
 
 #### 0.16.0
- - fixed bug that resulted in incorrect log-likelihood test if using `weights_col` in `CoxPHFitter`
- - removes `estimation` namespace for fitters. Should be using `from lifelines import xxxFitter` now.
+ - removes `estimation` namespace for fitters. Should be using `from lifelines import xFitter` now.
  - removes `predict_log_hazard_relative_to_mean` from Cox model
  - introduction of residual calculations in `CoxPHFitter.compute_residuals`. Residuals include "schoenfeld", "score", "delta_beta", "deviance", "martingale", and "scaled_schoenfeld".
- 
+ - `StatisticalResult` has be generalized to allow for multiple results (ex: from pairwise comparisons). This means a slightly changed API that is mostly backwards compatible. See doc string for how to use it. 
+ - `statistics.pairwise_logrank_test` now returns a `StatisticalResult` object instead of a nasty NxN DataFrame 💗
+ - Drop Python 3.4 support. 
+
+
 
 #### 0.15.4
  - bug fix for the Cox model likelihood ratio test when using non-trivial weights.
