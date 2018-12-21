@@ -332,7 +332,7 @@ def plot_estimate(
       ax: a pyplot axis object
     """
 
-    config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs)
+    plot_estimate_config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs)
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc)
 
@@ -341,44 +341,44 @@ def plot_estimate(
         cs.update(censor_styles)
         times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
-        config.ax.plot(times, v, linestyle="None", color=config.colour, **cs)
+        plot_estimate_config.ax.plot(times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
 
-    dataframe_slicer(config.estimate_).plot(**kwargs)
+    dataframe_slicer(plot_estimate_config.estimate_).plot(**kwargs)
 
     # plot confidence intervals
     if ci_show:
         if ci_force_lines:
-            dataframe_slicer(config.confidence_interval_).plot(
+            dataframe_slicer(plot_estimate_config.confidence_interval_).plot(
                 linestyle="-",
                 linewidth=1,
-                color=[config.colour],
+                color=[plot_estimate_config.colour],
                 legend=ci_legend,
                 drawstyle=kwargs.get("drawstyle", "default"),
-                ax=config.ax,
+                ax=plot_estimate_config.ax,
                 alpha=0.6,
             )
         else:
-            x = dataframe_slicer(config.confidence_interval_).index.values.astype(float)
-            lower = dataframe_slicer(config.confidence_interval_.filter(like="lower")).values[:, 0]
-            upper = dataframe_slicer(config.confidence_interval_.filter(like="upper")).values[:, 0]
-            fill_between_steps(x, lower, y2=upper, ax=config.ax, alpha=ci_alpha, color=config.colour, linewidth=1.0)
+            x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
+            lower = dataframe_slicer(plot_estimate_config.confidence_interval_.filter(like="lower")).values[:, 0]
+            upper = dataframe_slicer(plot_estimate_config.confidence_interval_.filter(like="upper")).values[:, 0]
+            fill_between_steps(x, lower, y2=upper, ax=plot_estimate_config.ax, alpha=ci_alpha, color=plot_estimate_config.colour, linewidth=1.0)
 
     if at_risk_counts:
-        add_at_risk_counts(cls, ax=config.ax)
+        add_at_risk_counts(cls, ax=plot_estimate_config.ax)
 
     if invert_y_axis:
         # need to check if it's already inverted
-        original_y_ticks = config.ax.get_yticks()
-        if not getattr(config.ax, "__lifelines_inverted", False):
+        original_y_ticks = plot_estimate_config.ax.get_yticks()
+        if not getattr(plot_estimate_config.ax, "__lifelines_inverted", False):
             # not inverted yet
 
-            config.ax.invert_yaxis()
+            plot_estimate_config.ax.invert_yaxis()
             # don't ask.
             y_ticks = np.round(1.000000000001 - original_y_ticks, decimals=8)
-            config.ax.set_yticklabels(y_ticks)
-            config.ax.__lifelines_inverted = True
+            plot_estimate_config.ax.set_yticklabels(y_ticks)
+            plot_estimate_config.ax.__lifelines_inverted = True
 
-    return config.ax
+    return plot_estimate_config.ax
 
 
 class PlotEstimateConfig:
@@ -402,7 +402,7 @@ class PlotEstimateConfig:
         set_kwargs_drawstyle(kwargs)
 
         if self.estimate is None:
-            self.estimate = cls._estimate_name  # qqUMI fix
+            self.estimate = cls._estimate_name
 
         if estimate == "hazard_":
             if bandwidth is None:
