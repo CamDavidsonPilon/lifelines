@@ -332,7 +332,9 @@ def plot_estimate(
       ax: a pyplot axis object
     """
 
-    plot_estimate_config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs)
+    plot_estimate_config = PlotEstimateConfig(
+        cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs
+    )
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc)
 
@@ -361,7 +363,15 @@ def plot_estimate(
             x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
             lower = dataframe_slicer(plot_estimate_config.confidence_interval_.filter(like="lower")).values[:, 0]
             upper = dataframe_slicer(plot_estimate_config.confidence_interval_.filter(like="upper")).values[:, 0]
-            fill_between_steps(x, lower, y2=upper, ax=plot_estimate_config.ax, alpha=ci_alpha, color=plot_estimate_config.colour, linewidth=1.0)
+            fill_between_steps(
+                x,
+                lower,
+                y2=upper,
+                ax=plot_estimate_config.ax,
+                alpha=ci_alpha,
+                color=plot_estimate_config.colour,
+                linewidth=1.0,
+            )
 
     if at_risk_counts:
         add_at_risk_counts(cls, ax=plot_estimate_config.ax)

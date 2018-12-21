@@ -1038,9 +1038,9 @@ class TestCoxPHFitter:
 
         results = cph.compute_residuals(regression_dataset, "martingale")
         print(results)
-        npt.assert_allclose(results.loc[0, 'martingale'], -2.315035744901, rtol=1e-05)
-        npt.assert_allclose(results.loc[1, 'martingale'], 0.774216356429, rtol=1e-05)
-        npt.assert_allclose(results.loc[199, 'martingale'], 0.868510420157, rtol=1e-05)
+        npt.assert_allclose(results.loc[0, "martingale"], -2.315035744901, rtol=1e-05)
+        npt.assert_allclose(results.loc[1, "martingale"], 0.774216356429, rtol=1e-05)
+        npt.assert_allclose(results.loc[199, "martingale"], 0.868510420157, rtol=1e-05)
 
     def test_error_is_raised_if_using_non_numeric_data_in_prediction(self):
         df = pd.DataFrame({"t": [1.0, 2.0, 3.0, 4.0], "int_": [1, -1, 0, 0], "float_": [1.2, -0.5, 0.0, 0.1]})

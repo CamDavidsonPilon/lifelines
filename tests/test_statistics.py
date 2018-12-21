@@ -234,12 +234,21 @@ def test_valueerror_is_raised_if_alpha_out_of_bounds():
 def test_proportional_hazard_test():
     cph = CoxPHFitter()
     df = load_regression_dataset()
-    cph.fit(df, 'T', 'E')
+    cph.fit(df, "T", "E")
     results = stats.proportional_hazard_test(cph, df)
-    npt.assert_allclose(results.summary.loc['var1']['test_statistic'], 1.241649, rtol=1e-3)
-    npt.assert_allclose(results.summary.loc['var2']['test_statistic'], 0.992358, rtol=1e-3)
-    npt.assert_allclose(results.summary.loc['var3']['test_statistic'], 1.445049, rtol=1e-3)
-    npt.assert_allclose(results.summary.loc['var3']['p'], 0.229324, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 1.241649, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var2"]["test_statistic"], 0.992358, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["test_statistic"], 1.445049, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["p"], 0.229324, rtol=1e-3)
 
 
+def test_proportional_hazard_test_with_log_transform():
+    cph = CoxPHFitter()
+    df = load_regression_dataset()
+    cph.fit(df, "T", "E")
 
+    results = stats.proportional_hazard_test(cph, df, time_transform=np.log)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 2.227627, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var2"]["test_statistic"], 0.714427, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["test_statistic"], 1.466321, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["p"], 0.225927, rtol=1e-3)

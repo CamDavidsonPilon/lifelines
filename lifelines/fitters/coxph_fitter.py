@@ -628,14 +628,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 baseline_at_T = np.append(baseline_at_T, self.baseline_cumulative_hazard_.loc[T_, name])
 
         martingale = E - (partial_hazard * baseline_at_T)
-        return pd.DataFrame({self.duration_col: T.values, self.event_col: E.values, "martingale": martingale.values}, index=index)
+        return pd.DataFrame(
+            {self.duration_col: T.values, self.event_col: E.values, "martingale": martingale.values}, index=index
+        )
 
     def _compute_deviance(self, X, T, E, weights, index=None):
         df = self._compute_martingale(X, T, E, weights, index)
         rmart = df.pop("martingale")
         log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * np.log(E.values - rmart.values))
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
-        df['deviance'] = deviance
+        df["deviance"] = deviance
         return df
 
     def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
@@ -764,14 +766,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         subjects that influence the model disproportinately. Good advice: don't drop these outliers, model them.
         """
         score_residuals = self._compute_score(X, T, E, weights, index=index)
-        
 
         d = X.shape[1]
         scaled_variance_matrix = self.variance_matrix_ * np.tile(self._norm_std.values, (d, 1)).T
 
-        delta_betas = score_residuals.dot(scaled_variance_matrix) 
+        delta_betas = score_residuals.dot(scaled_variance_matrix)
         delta_betas.columns = self.hazards_.columns
-        
+
         return delta_betas
 
     def _compute_score(self, X, T, E, weights, index=None):
