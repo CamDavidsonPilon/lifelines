@@ -7,12 +7,12 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils import (
-    group_survival_table_from_events, 
-    significance_code, 
+    group_survival_table_from_events,
+    significance_code,
     significance_codes_as_text,
     _to_list,
     string_justify,
-    _to_array
+    _to_array,
 )
 
 
@@ -433,7 +433,7 @@ class StatisticalResult(object):
     def __init__(self, p_values, test_statistics, names=None, **kwargs):
         self.p_values = _to_array(p_values)
         self.test_statistics = _to_array(test_statistics)
-        
+
         assert len(self.p_values) == len(self.test_statistics)
 
         if names is not None:
@@ -468,9 +468,7 @@ class StatisticalResult(object):
         """
         cols = ["test_statistic", "p"]
 
-        return pd.DataFrame(
-            list(zip(self.test_statistics, self.p_values)),
-        columns=cols, index=self.names)
+        return pd.DataFrame(list(zip(self.test_statistics, self.p_values)), columns=cols, index=self.names)
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
@@ -514,16 +512,25 @@ def two_sided_z_test(Z, alpha):
     return None, p_value
 
 
-def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, **kwargs):
+def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, time_transform=lambda x: x, **kwargs):
     # r uses the defalt `km`, we use `identity`
-    scaled_resids = fitted_cox_model.compute_residuals(training_df, kind='scaled_schoenfeld')
-    times = fitted_cox_model.durations.loc[fitted_cox_model.event_observed]
-    deaths = sum(fitted_cox_model.event_observed)
+    events = fitted_cox_model.event_observed
+    deaths = events.sum()
+
+    scaled_resids = fitted_cox_model.compute_residuals(training_df, kind="scaled_schoenfeld")
+
+    times = time_transform(fitted_cox_model.durations.loc[events])
     times -= times.mean()
-    T = (times.values[:, None] * scaled_resids.values).sum(0) ** 2 / \
-            (deaths * np.diag(fitted_cox_model.variance_matrix_) * (times**2).sum())
+
+    T = (times.values[:, None] * scaled_resids.values).sum(0) ** 2 / (
+        deaths * np.diag(fitted_cox_model.variance_matrix_) * (times ** 2).sum()
+    )
     p_values = _to_array([chisq_test(t, 1, alpha)[1] for t in T])
-    return StatisticalResult(p_values, T, names=fitted_cox_model.hazards_.columns, 
-        alpha=alpha, test_name='proportional_hazard_test', time_transform='identity')
-
-
+    return StatisticalResult(
+        p_values,
+        T,
+        names=fitted_cox_model.hazards_.columns,
+        alpha=alpha,
+        test_name="proportional_hazard_test",
+        time_transform=time_transform,
+    )

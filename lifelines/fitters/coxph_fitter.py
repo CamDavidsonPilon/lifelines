@@ -638,7 +638,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
         return pd.DataFrame({self.duration_col: T, self.event_col: E, "deviance": deviance})
 
-
     def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
         r"""
         Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0. 
@@ -656,10 +655,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
 
         n_deaths = sum(self.event_observed)
-        scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(self.variance_matrix_)
+        scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(
+            self.variance_matrix_
+        )
         scaled_schoenfeld_resids.columns = self.hazards_.columns
         return scaled_schoenfeld_resids
-
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
         # Assumes sorted on T and on strata
@@ -1353,8 +1353,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
-        
-        
+        pass
 
     @property
     def score_(self):
