@@ -503,7 +503,7 @@ class StatisticalResult(object):
         df[""] = [significance_code(p) for p in self.p_values]
 
         s = ""
-        s += "\n" + meta_data + "\n\n"
+        s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(float_format=lambda f: "{:4.2f}".format(f), index=self.names is not None)
 
