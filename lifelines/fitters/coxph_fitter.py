@@ -51,17 +51,17 @@ class CoxPHFitter(BaseFitter):
 
       alpha: float, optional (default=0.95)
         the level in the confidence intervals.
-      
+
       tie_method: string, optional
         specify how the fitter should deal with ties. Currently only
         'Efron' is available.
-      
+
       penalizer: float, optional (default=0.0)
         Attach a L2 penalizer to the size of the coeffcients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the absolute value of :math:`\beta_i`. Recommended, even if a small value.
         The penalty is :math:`1/2  \text{penalizer}  ||beta||^2`.
-      
+
       strata: list, optional
         specify a list of columns to use in stratification. This is useful if a
          catagorical covariate does not obey the proportional hazard assumption. This
@@ -111,19 +111,19 @@ class CoxPHFitter(BaseFitter):
         ----------
         df: DataFrame
             a Pandas dataframe with necessary columns `duration_col` and
-            `event_col` (see below), covariates columns, and special columns (weights, strata). 
+            `event_col` (see below), covariates columns, and special columns (weights, strata).
             `duration_col` refers to
             the lifetimes of the subjects. `event_col` refers to whether
             the 'death' events was observed: 1 if observed, 0 else (censored).
-        
+
         duration_col: string
             the name of the column in dataframe that contains the subjects'
             lifetimes.
-        
+
         event_col: string, optional
             the  name of thecolumn in dataframe that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
-        
+
         weights_col: string, optional
             an optional column in the dataframe, df, that denotes the weight per subject.
             This column is expelled and not used as a covariate, but as a weight in the
@@ -131,29 +131,29 @@ class CoxPHFitter(BaseFitter):
             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
             identical observations.
             This can be used for sampling weights. In that case, use `robust=True` to get more accurate standard errors.
-        
+
         show_progress: boolean, optional (default=False)
             since the fitter is iterative, show convergence
-            diagnostics. Useful if convergence is failing. 
-        
+            diagnostics. Useful if convergence is failing.
+
         initial_beta: numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
-        
+
         strata: list or string, optional
             specify a column or list of columns n to use in stratification. This is useful if a
             catagorical covariate does not obey the proportional hazard assumption. This
             is used similar to the `strata` expression in R.
             See http://courses.washington.edu/b515/l17.pdf.
-        
+
         step_size: float, optional
             set an initial step size for the fitting algorithm.
-        
+
         robust: boolean, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
             ties, so if there are high number of ties, results may significantly differ. See
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
-        
+
         cluster_col: string, optional
             specifies what column has unique identifers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
             be used.
@@ -172,7 +172,7 @@ class CoxPHFitter(BaseFitter):
         Examples
         --------
         >>> from lifelines import CoxPHFitter
-        >>> 
+        >>>
         >>> df = pd.DataFrame({
         >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
         >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
@@ -187,7 +187,7 @@ class CoxPHFitter(BaseFitter):
 
 
         >>> from lifelines import CoxPHFitter
-        >>> 
+        >>>
         >>> df = pd.DataFrame({
         >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
         >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
@@ -616,8 +616,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
-    def _compute_martingale(self, X, T, E, weights, index=None):
+    def _compute_martingale(self, X, T, E, _weights, index=None):
         # TODO: decide if I want to attach T and E to the final dataframe...
+        # TODO: _weights unused
         partial_hazard = self.predict_partial_hazard(X)[0].values
 
         if not self.strata:
@@ -636,6 +637,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * np.log(E.values - rmart.values))
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
         return pd.DataFrame({self.duration_col: T, self.event_col: E, "deviance": deviance})
+
 
     def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
         r"""
@@ -736,7 +738,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # There was atleast one event and no more ties remain. Time to sum.
             weighted_mean = np.zeros((1, d))
-            weighted_average = weight_count / tie_count
+            # TODO: _weighted_average unused
+            _weighted_average = weight_count / tie_count
 
             for l in range(tie_count):
 
@@ -783,12 +786,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return pd.DataFrame(score_residuals, columns=self.hazards_.columns, index=index)
 
-    def _compute_score_within_strata(self, X, T, E, weights):
+    def _compute_score_within_strata(self, X, _T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
         # Assumes X already sorted by T
         # TODO: doesn't handle ties.
+        # TODO: _T unused
 
         n, d = X.shape
 
@@ -1035,7 +1039,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Parameters
         ----------
-        
+
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
@@ -1084,12 +1088,12 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def predict_survival_function(self, X, times=None):
         """
-        Predict the survival function for individuals, given their covariates. This assumes that the individual 
+        Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
 
         Parameters
         ----------
-        
+
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
@@ -1138,7 +1142,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
-        
+
         Parameters
         ----------
         X: numpy array or DataFrame
@@ -1146,7 +1150,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        Returns 
+        Returns
         -------
         percentiles: DataFrame
             the median lifetimes for the individuals. If the survival curve of an
@@ -1172,7 +1176,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         Parameters
         ----------
-        
+
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
@@ -1262,7 +1266,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         columns : list, optional
             specifiy a subset of the columns to plot
         display_significance_code: bool, optional (default: True)
-            display asteriks beside statistically significant variables 
+            display asteriks beside statistically significant variables
         errorbar_kwargs:
             pass in additional plotting commands to matplotlib errorbar command
 
@@ -1346,6 +1350,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
 
+<<<<<<< HEAD
     def check_assumptions(self, df, help=True):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
@@ -1353,6 +1358,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         
 
+=======
+    def check_assumptions(self, help_me=True):
+        """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
+        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf"""
+>>>>>>> cc6ac2875eef4a66942ffd13d8c42d91765aa3b9
 
         pass
         
@@ -1361,11 +1371,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
     def score_(self):
         """
         The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the AUC
-        to survival data, including censorships. 
-        
+        to survival data, including censorships.
+
         For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
-        onto the training dataset. It's analgous to the R^2 in linear models. 
-        
+        onto the training dataset. It's analgous to the R^2 in linear models.
+
         """
         # pylint: disable=access-member-before-definition
         if hasattr(self, "_concordance_score_"):

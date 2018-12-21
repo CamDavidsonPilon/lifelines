@@ -104,10 +104,10 @@ def add_at_risk_counts(*fitters, **kwargs):
         # There are equivalent
         add_at_risk_counts(f1, f2)
         add_at_risk_counts(f1, f2, ax=ax, fig=fig)
-        
+
         # This overrides the labels
         add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
-        
+
         # This hides the labels
         add_at_risk_counts(f1, f2, labels=None)
     """
@@ -332,16 +332,8 @@ def plot_estimate(
       ax: a pyplot axis object
     """
 
-    config = PlotEstimateConfig(
-        cls,
-        estimate,
-        loc,
-        iloc,
-        show_censors,
-        censor_styles,
-        bandwidth,
-        **kwargs)
-    
+    config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs)
+
     dataframe_slicer = create_dataframe_slicer(iloc, loc)
 
     if show_censors and cls.event_table["censored"].sum() > 0:
@@ -350,7 +342,7 @@ def plot_estimate(
         times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
         config.ax.plot(times, v, linestyle="None", color=config.colour, **cs)
-    
+
     dataframe_slicer(config.estimate_).plot(**kwargs)
 
     # plot confidence intervals
@@ -390,15 +382,7 @@ def plot_estimate(
 
 
 class PlotEstimateConfig:
-    def __init__(self,
-                 cls,
-                 estimate,
-                 loc,
-                 iloc,
-                 show_censors,
-                 censor_styles,
-                 bandwidth,
-                 **kwargs):
+    def __init__(self, cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs):
         self.estimate = estimate
         self.loc = loc
         self.iloc = iloc
@@ -418,13 +402,15 @@ class PlotEstimateConfig:
         set_kwargs_drawstyle(kwargs)
 
         if self.estimate is None:
-            self.estimate = cls._estimate_name # qqUMI fix
+            self.estimate = cls._estimate_name  # qqUMI fix
 
         if estimate == "hazard_":
             if bandwidth is None:
                 raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard.")
             self.estimate_ = cls.smoothed_hazard_(bandwidth)
-            self.confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(bandwidth, hazard_=self.estimate_.values[:, 0])
+            self.confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(
+                bandwidth, hazard_=self.estimate_.values[:, 0]
+            )
         else:
             self.estimate_ = getattr(cls, estimate)
             self.confidence_interval_ = getattr(cls, "confidence_interval_")

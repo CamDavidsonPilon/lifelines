@@ -54,17 +54,17 @@ class ConvergenceWarning(RuntimeWarning):
 
 def qth_survival_times(q, survival_functions, cdf=False):
     """
-    Find the times when one or more survival functions reach the qth percentile. 
+    Find the times when one or more survival functions reach the qth percentile.
 
     Parameters
     ----------
-    q: float 
+    q: float
       a float between 0 and 1 that represents the time when the survival function hit's the qth percentile.
     survival_functions: a (n,d) dataframe or numpy array.
       If dataframe, will return index values (actual times)
       If numpy array, will return indices.
     cdf: boolean, optional
-      When doing left-censored data, cdf=True is used. 
+      When doing left-censored data, cdf=True is used.
 
     Returns
     -------
@@ -99,15 +99,15 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
 def qth_survival_time(q, survival_function, cdf=False):
     """
-    Returns the time when a single survival function reachess the qth percentile. 
+    Returns the time when a single survival function reachess the qth percentile.
 
     Parameters
     ----------
-    q: float 
+    q: float
       a float between 0 and 1 that represents the time when the survival function hit's the qth percentile.
     survival_function: Series or single-column DataFrame.
     cdf: boolean, optional
-      When doing left-censored data, cdf=True is used. 
+      When doing left-censored data, cdf=True is used.
 
     Returns
     -------
@@ -149,7 +149,7 @@ def group_survival_table_from_events(
 
     Parameters
     ----------
-    groups: a (n,) array 
+    groups: a (n,) array
       individuals' group ids.
     durations: a (n,)  array
       durations of each individual
@@ -261,9 +261,9 @@ def survival_table_from_events(
     """
     Parameters
     ----------
-    death_times: (n,) array 
+    death_times: (n,) array
       represent the event times
-    event_observed: (n,) array 
+    event_observed: (n,) array
       1 if observed event, 0 is censored event.
     birth_times: a (n,) array, optional
       representing when the subject was first observed. A subject's death event is then at [birth times + duration observed].
@@ -278,7 +278,7 @@ def survival_table_from_events(
     intervals: iterable, optional
       Default None, otherwise a list/(n,1) array of interval edge measures. If left as None
       while collapse=True, then Freedman-Diaconis rule for histogram bins will be used to determine intervals.
-    
+
     Returns
     -------
     output: DataFrame
@@ -385,7 +385,7 @@ def survival_events_from_table(event_table, observed_deaths_col="observed", cens
     -------
     T: array
       durations of observation -- one element for each individual in the population.
-    C: array 
+    C: array
       event observations -- one element for each individual in the population. 1 if observed, 0 else.
 
     Example
@@ -434,7 +434,7 @@ def datetimes_to_durations(
         iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
     fill_date: datetime, optional (default=datetime.Today())
         the date to use if end_times is a None or empty string. This corresponds to last date
-        of observation. Anything after this date is also censored. 
+        of observation. Anything after this date is also censored.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
     day_first: boolean, optional (default=False)
@@ -444,9 +444,9 @@ def datetimes_to_durations(
 
     Returns
     -------
-    T: numpy array 
+    T: numpy array
         array of floats representing the durations with time units given by freq.
-    C: numpy array 
+    C: numpy array
         boolean array of event observations: 1 if death observed, 0 else.
 
     """
@@ -542,7 +542,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
 
     Returns
     -------
-    c-index: float 
+    c-index: float
       a value between 0 and 1.
 
     Notes
@@ -604,7 +604,7 @@ def k_fold_cross_validation(
     """
     Perform cross validation on a dataset. If multiple models are provided,
     all models will train on each of the k subsets.
-    
+
     Parameters
     ----------
     fitter(s): one or several objects which possess a method:
@@ -1274,7 +1274,7 @@ def to_long_format(df, duration_col):
         a Dataframe in the standard survival analysis form (one for per observation, with covariates, duration and event flag)
     duration_col: string
         string representing the column in df that represents the durations of each subject.
-    
+
     Returns
     -------
     long_form_df: DataFrame
