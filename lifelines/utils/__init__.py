@@ -12,7 +12,6 @@ import pandas as pd
 from pandas import to_datetime
 
 
-# ipython autocomplete will pick these up, which are probably what users only need.
 __all__ = [
     "qth_survival_times",
     "qth_survival_time",
@@ -532,12 +531,6 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     1.0 is perfect concordance and,
     0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-    Notes
-    -----
-    Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
-    developing models, evaluating assumptions and adequacy, and measuring and
-    reducing errors. Statistics in Medicine 1996;15(4):361-87.
-
     Parameters
     ----------
     event_times: iterable
@@ -551,6 +544,13 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     -------
     c-index: float 
       a value between 0 and 1.
+
+    Notes
+    -----
+    Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
+    developing models, evaluating assumptions and adequacy, and measuring and
+    reducing errors. Statistics in Medicine 1996;15(4):361-87.
+
     """
     event_times = np.asarray(event_times, dtype=float)
     predicted_scores = np.asarray(predicted_scores, dtype=float)

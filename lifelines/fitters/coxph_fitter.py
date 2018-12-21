@@ -637,6 +637,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
         return pd.DataFrame({self.duration_col: T, self.event_col: E, "deviance": deviance})
 
+    def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
+        n_deaths = sum(self.event_observed)
+        scaled_schoenfeld_resids = self._compute_schoenfeld(X, T, E, weights, index).dot(self.variance_matrix_) * n_deaths
+        scaled_schoenfeld_resids.columns = self.hazards_.columns
+        return scaled_schoenfeld_resids + self.hazards_.values[0]
+
+
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
         # Assumes sorted on T and on strata
         # index will be set later
@@ -815,7 +822,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         TODO: can I check the same training data is inputted? checksum?
 
         """
-        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale"}
+        ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale", "scaled_schoenfeld"}
         assert kind in ALLOWED_RESIDUALS, "kind must be in %s" % ALLOWED_RESIDUALS
 
         X, T, E, weights, shuffled_original_index, _ = self._preprocess_dataframe(df)
@@ -1326,9 +1333,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def check_assumptions(self, help=True):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
-        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf"""
-
+        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
+        http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
+        """
         pass
+        
 
     @property
     def score_(self):
