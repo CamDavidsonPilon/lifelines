@@ -485,3 +485,15 @@ def two_sided_z_test(Z, alpha):
     if p_value < 1 - alpha / 2.0:
         return True, p_value
     return None, p_value
+
+
+def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, **kwargs):
+    # r uses the defalt `km`, we use `identity`
+    scaled_resids = fitted_cox_model.compute_residuals(training_df, kind='scaled_schoenfeld')
+    times = fitted_cox_model.durations.loc[fitted_cox_model.event_observed]
+    deaths = sum(fitted_cox_model.event_observed)
+    times -= times.mean()
+    T = (times.values[:, None] * scaled_resids.values).sum(0) ** 2 / (deaths * np.diag(fitted_cox_model.variance_matrix_) * (times**2).sum())
+    return t
+
+

@@ -638,10 +638,25 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return pd.DataFrame({self.duration_col: T, self.event_col: E, "deviance": deviance})
 
     def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
+        r"""
+        Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0. 
+        For tests of proportionality, we want to test if \beta_i(t) is \beta_i (constant) or not.
+
+        Let V_k be the contribution to the information matrix at time t_k. A main result from Grambsch and Therneau is that 
+
+        \beta(t) = E[s_k*V_k^{-1} + \hat{beta}]
+
+        so define s_k^* = s_k*V_k^{-1} + \hat{beta} as the scaled schoenfeld residuals. 
+
+        We can approximate V_k with Hessian/d, so the inverse of Hessian/d is (d * variance_matrix_)
+
+
+        """
+
         n_deaths = sum(self.event_observed)
-        scaled_schoenfeld_resids = self._compute_schoenfeld(X, T, E, weights, index).dot(self.variance_matrix_) * n_deaths
+        scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(self.variance_matrix_)
         scaled_schoenfeld_resids.columns = self.hazards_.columns
-        return scaled_schoenfeld_resids + self.hazards_.values[0]
+        return scaled_schoenfeld_resids
 
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
@@ -1331,11 +1346,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
 
-    def check_assumptions(self, help=True):
+    def check_assumptions(self, df, help=True):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
+        
+
+
         pass
         
 
