@@ -165,20 +165,21 @@ The input of the ``fit`` method's API in a regression is different. All the data
     cph.print_summary()
 
     """
+    <lifelines.CoxPHFitter: fitted with 200 observations, 11 censored>
           duration col = T
              event col = E
     number of subjects = 200
       number of events = 189
         log-likelihood = -807.620
-      time fit was run = 2018-10-23 02:44:18 UTC
+      time fit was run = 2018-12-21 18:17:36 UTC
 
     ---
-           coef  exp(coef)  se(coef)      z      p  lower 0.95  upper 0.95
-    var1 0.2222     1.2488    0.0743 2.9920 0.0028      0.0767      0.3678  **
-    var2 0.0510     1.0523    0.0829 0.6148 0.5387     -0.1115      0.2134
-    var3 0.2183     1.2440    0.0758 2.8805 0.0040      0.0698      0.3669  **
+          coef  exp(coef)  se(coef)    z    p  lower 0.95  upper 0.95
+    var1  0.22       1.25      0.07 2.99 0.00        0.08        0.37  *
+    var2  0.05       1.05      0.08 0.61 0.54       -0.11        0.21
+    var3  0.22       1.24      0.08 2.88 0.00        0.07        0.37  *
     ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
     Concordance = 0.580
     Likelihood ratio test = 15.540 on 3 df, p=0.00141

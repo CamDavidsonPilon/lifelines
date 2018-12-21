@@ -331,7 +331,6 @@ def plot_estimate(
     Returns:
       ax: a pyplot axis object
     """
-
     plot_estimate_config = PlotEstimateConfig(
         cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs
     )
@@ -345,7 +344,7 @@ def plot_estimate(
         v = cls.predict(times)
         plot_estimate_config.ax.plot(times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
 
-    dataframe_slicer(plot_estimate_config.estimate_).plot(**kwargs)
+    dataframe_slicer(plot_estimate_config.estimate_).plot(**plot_estimate_config.kwargs)
 
     # plot confidence intervals
     if ci_show:
@@ -355,7 +354,7 @@ def plot_estimate(
                 linewidth=1,
                 color=[plot_estimate_config.colour],
                 legend=ci_legend,
-                drawstyle=kwargs.get("drawstyle", "default"),
+                drawstyle=plot_estimate_config.kwargs.get("drawstyle", "default"),
                 ax=plot_estimate_config.ax,
                 alpha=0.6,
             )
@@ -392,29 +391,28 @@ def plot_estimate(
 
 
 class PlotEstimateConfig:
+    
     def __init__(self, cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs):
-        self.estimate = estimate
+
+        self.censor_styles = coalesce(censor_styles, {})
+
+        set_kwargs_ax(kwargs)
+        set_kwargs_color(kwargs)
+        set_kwargs_drawstyle(kwargs)
+
+        self.estimate = coalesce(estimate, cls._estimate_name)
         self.loc = loc
         self.iloc = iloc
         self.show_censors = show_censors
         # plot censors
         self.ax = kwargs["ax"]
         self.colour = kwargs["c"]
-
-        if censor_styles is None:
-            self.censor_styles = {}
+        self.kwargs = kwargs
 
         if (self.loc is not None) and (self.iloc is not None):
             raise ValueError("Cannot set both loc and iloc in call to .plot().")
 
-        set_kwargs_ax(kwargs)
-        set_kwargs_color(kwargs)
-        set_kwargs_drawstyle(kwargs)
-
-        if self.estimate is None:
-            self.estimate = cls._estimate_name
-
-        if estimate == "hazard_":
+        if self.estimate == "hazard_":
             if bandwidth is None:
                 raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard.")
             self.estimate_ = cls.smoothed_hazard_(bandwidth)
@@ -422,7 +420,7 @@ class PlotEstimateConfig:
                 bandwidth, hazard_=self.estimate_.values[:, 0]
             )
         else:
-            self.estimate_ = getattr(cls, estimate)
+            self.estimate_ = getattr(cls, self.estimate)
             self.confidence_interval_ = getattr(cls, "confidence_interval_")
 
 

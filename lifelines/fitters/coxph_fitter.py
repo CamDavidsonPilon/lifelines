@@ -36,6 +36,7 @@ from lifelines.utils import (
     ConvergenceError,
     string_justify,
     _to_list,
+    format_p_value
 )
 
 
@@ -905,6 +906,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
+        df["log(p)"] = np.log(df["p"])
         df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
@@ -942,12 +944,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df = self.summary
         # Significance codes last
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f)))
+        print(
+            df.to_string(
+                float_format=lambda f: "{:4.2f}".format(f),
+                formatters={"p": format_p_value},
+            )
+        )
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
         print("Concordance = {:.3f}".format(self.score_))
-        print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
+        print("Likelihood ratio test = {:.2f} on {} df, log(p)={:.2f}".format(*self._compute_likelihood_ratio_test()))
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -969,7 +976,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
         _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
-        return test_stat, degrees_freedom, p_value
+        return test_stat, degrees_freedom, np.log(p_value)
 
     def predict_partial_hazard(self, X):
         r"""

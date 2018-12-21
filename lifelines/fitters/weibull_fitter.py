@@ -16,6 +16,7 @@ from lifelines.utils import (
     significance_code,
     ConvergenceWarning,
     significance_codes_as_text,
+    format_p_value
 )
 
 
@@ -300,6 +301,7 @@ class WeibullFitter(UnivariateFitter):
         df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
         df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
+        df["log(p)"] = np.log(df["p"])
         return df
 
     def print_summary(self):
@@ -316,6 +318,11 @@ class WeibullFitter(UnivariateFitter):
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f)))
+        print(
+            df.to_string(
+                float_format=lambda f: "{:4.2f}".format(f),
+                formatters={"p": format_p_value},
+            )
+        )
         print("---")
         print(significance_codes_as_text(), end="\n\n")

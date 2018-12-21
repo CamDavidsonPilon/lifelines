@@ -33,6 +33,7 @@ from lifelines.utils import (
     ConvergenceError,
     check_nans_or_infs,
     string_justify,
+    format_p_value
 )
 
 
@@ -230,6 +231,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
+        df["log(p)"] = np.log(df["p"])
         df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
@@ -498,11 +500,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df = self.summary
         # Significance codes last
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f)))
+        print(
+            df.to_string(
+                float_format=lambda f: "{:4.2f}".format(f),
+                formatters={"p": format_p_value},
+            )
+        )
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
-        print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
+        print("Likelihood ratio test = {:.3f} on {} df, log(p)={:.2f}".format(*self._compute_likelihood_ratio_test()))
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -527,53 +534,63 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
         _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
-        return test_stat, degrees_freedom, p_value
+        return test_stat, degrees_freedom, np.log(p_value)
 
-    def plot(self, standardized=False, columns=None, **kwargs):
+    def plot(self, columns=None, display_significance_code=True, **errorbar_kwargs):
         """
-        Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
+        Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
-        Parameters:
-            standardized: standardize each estimated coefficient and confidence interval
-                          endpoints by the standard error of the estimate.
-            columns : list-like, default None
-        Returns:
-            ax: the matplotlib axis that be edited.
+        Parameters
+        ----------
+        columns : list, optional
+            specifiy a subset of the columns to plot
+        display_significance_code: bool, optional (default: True)
+            display asteriks beside statistically significant variables
+        errorbar_kwargs:
+            pass in additional plotting commands to matplotlib errorbar command
+
+        Returns
+        -------
+        ax: matplotlib axis
+            the matplotlib axis that be edited.
 
         """
         from matplotlib import pyplot as plt
 
-        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
-        yaxis_locations = range(len(self.hazards_.columns))
+        ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
 
-        if columns is not None:
-            yaxis_locations = range(len(columns))
-            summary = self.summary.loc[columns]
-            lower_bound = self.confidence_intervals_[columns].loc["lower-bound"].copy()
-            upper_bound = self.confidence_intervals_[columns].loc["upper-bound"].copy()
-            hazards = self.hazards_[columns].values[0].copy()
-        else:
-            yaxis_locations = range(len(self.hazards_.columns))
-            summary = self.summary
-            lower_bound = self.confidence_intervals_.loc["lower-bound"].copy()
-            upper_bound = self.confidence_intervals_.loc["upper-bound"].copy()
-            hazards = self.hazards_.values[0].copy()
+        errorbar_kwargs.setdefault("c", "k")
+        errorbar_kwargs.setdefault("fmt", "s")
+        errorbar_kwargs.setdefault("markerfacecolor", "white")
+        errorbar_kwargs.setdefault("markeredgewidth", 1.25)
+        errorbar_kwargs.setdefault("elinewidth", 1.25)
+        errorbar_kwargs.setdefault("capsize", 3)
 
-        if standardized:
-            se = summary["se(coef)"]
-            lower_bound /= se
-            upper_bound /= se
-            hazards /= se
+        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+
+        if columns is None:
+            columns = self.hazards_.columns
+
+        yaxis_locations = list(range(len(columns)))
+        summary = self.summary.loc[columns]
+        symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
+        hazards = self.hazards_[columns].values[0].copy()
 
         order = np.argsort(hazards)
-        ax.scatter(upper_bound.values[order], yaxis_locations, marker="|", c="k")
-        ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
-        ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
-        ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color="k", lw=1)
 
-        tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
+        ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
+        best_ylim = ax.get_ylim()
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.set_ylim(best_ylim)
+
+        if display_significance_code:
+            tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
+        else:
+            tick_labels = columns[order]
+
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("standardized coef" if standardized else "coef")
+        plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
+
         return ax
 
     def _compute_cumulative_baseline_hazard(

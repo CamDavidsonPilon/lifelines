@@ -1537,4 +1537,7 @@ def _to_list(x):
     return x
 
 
+def format_p_value(p):
+    return "<0.0005" if p < 0.0005 else "{:4.3f}".format(p)
+
 string_justify = lambda width: lambda s: s.rjust(width, " ")

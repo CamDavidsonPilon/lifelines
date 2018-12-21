@@ -13,6 +13,7 @@ from lifelines.utils import (
     _to_list,
     string_justify,
     _to_array,
+    format_p_value
 )
 
 
@@ -501,12 +502,17 @@ class StatisticalResult(object):
 
         meta_data = self._pretty_print_meta_data(self._kwargs)
         df = self.summary
+        df["log(p)"] = np.log(df["p"])
         df[""] = [significance_code(p) for p in self.p_value]
 
         s = ""
         s += "\n" + meta_data + "\n"
         s += "---\n"
-        s += df.to_string(float_format=lambda f: "{:4.2f}".format(f), index=self.name is not None)
+        s += df.to_string(
+            float_format=lambda f: "{:4.2f}".format(f),
+            index=self.name is not None,
+            formatters={"p": format_p_value},
+        )
 
         s += "\n---"
         s += "\n" + significance_codes_as_text()
