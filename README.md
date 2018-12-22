@@ -77,7 +77,7 @@ You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965
 #### Setting up a lifelines development environment
 
 1. From the root directory of `lifelines` activate your virtual environment (if you plan to use one).
-2. Install the development requirements and [`pre-commit`](https://pre-commit.com) hooks. If you are on Mac, Linux, or Windows WSL you can use the provided [`Makefile`](https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile). Just type `make` into the console and you're ready to start developing.
+2. Install the development requirements and [`pre-commit`](https://pre-commit.com) hooks. If you are on Mac, Linux, or [Windows `WSL`](https://docs.microsoft.com/en-us/windows/wsl/faq) you can use the provided [`Makefile`](https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile). Just type `make` into the console and you're ready to start developing.
   * `pip install -r reqs/dev-requirements.txt`
   * `pre-commit install`
 
