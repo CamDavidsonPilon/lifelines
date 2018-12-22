@@ -11,7 +11,7 @@ from lifelines.utils import (
     significance_code,
     string_justify,
     significance_codes_as_text,
-    format_p_value
+    format_p_value,
 )
 
 
@@ -180,11 +180,6 @@ class ExponentialFitter(UnivariateFitter):
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]
-        print(
-            df.to_string(
-                float_format=lambda f: "{:4.2f}".format(f),
-                formatters={"p": format_p_value},
-            )
-        )
+        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f), formatters={"p": format_p_value}))
         print("---")
         print(significance_codes_as_text(), end="\n\n")

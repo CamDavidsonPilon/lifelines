@@ -391,7 +391,6 @@ def plot_estimate(
 
 
 class PlotEstimateConfig:
-    
     def __init__(self, cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs):
 
         self.censor_styles = coalesce(censor_styles, {})

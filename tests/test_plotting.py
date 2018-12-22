@@ -279,7 +279,7 @@ class TestPlotting:
         df = load_stanford_heart_transplants()
         ctv = CoxTimeVaryingFitter()
         ctv.fit(df, id_col="id", event_col="event")
-        ctv.plot(fmt='o')
+        ctv.plot(fmt="o")
         self.plt.title("test_coxtv_plotting")
         self.plt.show(block=block)
 

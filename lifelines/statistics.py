@@ -13,7 +13,7 @@ from lifelines.utils import (
     _to_list,
     string_justify,
     _to_array,
-    format_p_value
+    format_p_value,
 )
 
 
@@ -189,11 +189,18 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
 
     Examples
     --------
+    >>> T1 = [1, 4, 10, 12, 12, 3, 5.4]
+    >>> E1 = [1, 0, 1,  0,  1,  1, 1]
+    >>>
+    >>> T2 = [4, 5, 7, 11, 14, 20, 8, 8]
+    >>> E2 = [1, 1, 1, 1,  1,  1,  1, 1]
+    >>>
     >>> from lifelines.statistics import logrank_test
     >>> results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
+    >>>
     >>> results.print_summary()
-    >>> print(results.p_value)        # 0.46759
-    >>> print(results.test_statistic) # 0.528
+    >>> print(results.p_value)        # 0.7676
+    >>> print(results.test_statistic) # 0.0872
 
     Notes
     -----
@@ -293,7 +300,6 @@ def pairwise_logrank_test(
     for i1, i2 in combinations(np.arange(n_unique_groups), 2):
         g1, g2 = unique_groups[[i1, i2]]
         ix1, ix2 = (groups == g1), (groups == g2)
-        test_name = str(g1) + "|" + str(g2)
         result += logrank_test(
             event_durations.loc[ix1],
             event_durations.loc[ix2],
@@ -449,14 +455,17 @@ class StatisticalResult(object):
     """
 
     def __init__(self, p_value, test_statistic, name=None, **kwargs):
-        self.p_value = _to_array(p_value)
-        self.test_statistic = _to_array(test_statistic)
+        self.p_value = p_value
+        self.test_statistic = test_statistic
 
-        assert len(self.p_value) == len(self.test_statistic)
+        self._p_value = _to_array(p_value)
+        self._test_statistic = _to_array(test_statistic)
+
+        assert len(self._p_value) == len(self._test_statistic)
 
         if name is not None:
             self.name = _to_list(name)
-            assert len(self.name) == len(self.test_statistic)
+            assert len(self.name) == len(self._test_statistic)
 
         else:
             self.name = None
@@ -492,7 +501,7 @@ class StatisticalResult(object):
         else:
             index = self.name
 
-        return pd.DataFrame(list(zip(self.test_statistic, self.p_value)), columns=cols, index=index).sort_index()
+        return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
 
     def __repr__(self):
         return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
@@ -503,15 +512,13 @@ class StatisticalResult(object):
         meta_data = self._pretty_print_meta_data(self._kwargs)
         df = self.summary
         df["log(p)"] = np.log(df["p"])
-        df[""] = [significance_code(p) for p in self.p_value]
+        df[""] = [significance_code(p) for p in self._p_value]
 
         s = ""
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
-            float_format=lambda f: "{:4.2f}".format(f),
-            index=self.name is not None,
-            formatters={"p": format_p_value},
+            float_format=lambda f: "{:4.2f}".format(f), index=self.name is not None, formatters={"p": format_p_value}
         )
 
         s += "\n---"
@@ -529,8 +536,8 @@ class StatisticalResult(object):
 
     def __add__(self, other):
         """useful for aggregating results easily"""
-        p_values = np.r_[self.p_value, other.p_value]
-        test_statistics = np.r_[self.test_statistic, other.test_statistic]
+        p_values = np.r_[self._p_value, other._p_value]
+        test_statistics = np.r_[self._test_statistic, other._test_statistic]
         names = self.name + other.name
         kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
@@ -573,4 +580,5 @@ def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, time_tra
         time_transform=time_transform,
         null_distribution="chi squared",
         df=1,
+        **kwargs
     )

@@ -33,7 +33,7 @@ from lifelines.utils import (
     ConvergenceError,
     check_nans_or_infs,
     string_justify,
-    format_p_value
+    format_p_value,
 )
 
 
@@ -42,11 +42,15 @@ class CoxTimeVaryingFitter(BaseFitter):
     """
     This class implements fitting Cox's time-varying proportional hazard model:
 
-    h(t|x(t)) = h_0(t)*exp(x(t)'*beta)
+        .. math::  h(t|x(t)) = h_0(t)*exp(x(t)'*beta)
 
-    Parameters:
-      alpha: the level in the confidence intervals.
-      penalizer: the coefficient of an l2 penalizer in the regression
+    Parameters
+    ----------
+    alpha: float, optional
+       the level in the confidence intervals.
+    penalizer: float, optional
+        the coefficient of an l2 penalizer in the regression
+
     """
 
     def __init__(self, alpha=0.95, penalizer=0.0):
@@ -74,28 +78,39 @@ class CoxTimeVaryingFitter(BaseFitter):
         Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
         are handled using Efron's tie-method.
 
-        Parameters:
-          df: a Pandas dataframe with necessary columns `duration_col` and
-             `event_col`, plus other covariates. `duration_col` refers to
-             the lifetimes of the subjects. `event_col` refers to whether
-             the 'death' events was observed: 1 if observed, 0 else (censored).
-          id_col:  A subject could have multiple rows in the dataframe. This column contains
-             the unique identifer per subject.
-          event_col: the column in dataframe that contains the subjects' death
-             observation. If left as None, assume all individuals are non-censored.
-          start_col: the column that contains the start of a subject's time period.
-          stop_col: the column that contains the end of a subject's time period.
-          weights_col: the column that contains (possibly time-varying) weight of each subject-period row.
-          show_progress: since the fitter is iterative, show convergence
-             diagnostics.
-          step_size: set an initial step size for the fitting algorithm.
-          robust: Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
-            ties, so if there are high number of ties, results may significantly differ. See
-            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+        Parameters
+        -----------
+        df: DataFrame
+            a Pandas dataframe with necessary columns `duration_col` and
+           `event_col`, plus other covariates. `duration_col` refers to
+           the lifetimes of the subjects. `event_col` refers to whether
+           the 'death' events was observed: 1 if observed, 0 else (censored).
+        id_col: string
+            A subject could have multiple rows in the dataframe. This column contains
+           the unique identifer per subject.
+        event_col: string
+           the column in dataframe that contains the subjects' death
+           observation. If left as None, assume all individuals are non-censored.
+        start_col: string
+            the column that contains the start of a subject's time period.
+        stop_col: string
+            the column that contains the end of a subject's time period.
+        weights_col: string, optional
+            the column that contains (possibly time-varying) weight of each subject-period row.
+        show_progress: since the fitter is iterative, show convergence
+           diagnostics.
+        robust: boolean, optional (default: True)
+            Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+          ties, so if there are high number of ties, results may significantly differ. See
+          "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+        step_size: float, optional
+            set an initial step size for the fitting algorithm.
 
 
-        Returns:
-            self, with additional properties: hazards_
+        Returns
+        --------
+        self: CoxTimeVaryingFitter
+            self, with additional properties like ``hazards_`` and ``print_summary``
 
         """
 
@@ -222,8 +237,10 @@ class CoxTimeVaryingFitter(BaseFitter):
         Summary statistics describing the fit.
         Set alpha property in the object before calling.
 
-        Returns:
-            df: DataFrame, contains columns coef, exp(coef), se(coef), z, p, lower, upper
+        Returns
+        -------
+        df: DataFrame 
+            contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
         df = pd.DataFrame(index=self.hazards_.columns)
         df["coef"] = self.hazards_.loc["coef"].values
@@ -244,16 +261,22 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         Note that data is assumed to be sorted on T!
 
-        Parameters:
-            df: (n, d) Pandas DataFrame of observations
-            stop_times_events: (n, d) Pandas DataFrame of meta information about the subjects history
-            show_progress: True to show verbous output of convergence
-            step_size: float > 0 to determine a starting step size in NR algorithm.
-            precision: the convergence halts if the norm of delta between
+        Parameters
+        ----------
+        df: DataFrame 
+        stop_times_events: DataFrame
+             meta information about the subjects history
+        show_progress: boolean, optional (default: True) 
+            to show verbous output of convergence
+        step_size: float 
+            > 0 to determine a starting step size in NR algorithm.
+        precision: float
+            the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
 
-        Returns:
-            beta: (1,d) numpy array.
+        Returns
+        --------
+        beta: (1,d) numpy array.
         """
         assert precision <= 1.0, "precision must be less than or equal to 1."
 
@@ -353,10 +376,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
-        Returns:
-            hessian: (d, d) numpy array,
-            gradient: (1, d) numpy array
-            log_likelihood: double
+        Returns
+        -------
+        hessian: (d, d) numpy array,
+        gradient: (1, d) numpy array
+        log_likelihood: float
         """
 
         _, d = df.shape
@@ -441,15 +465,25 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return hessian, gradient.reshape(1, d), log_lik
 
     def predict_log_partial_hazard(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        r"""
+        This is equivalent to R's linear.predictors.
+        Returns the log of the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to :math:`\beta (X - \bar{X})`
+
+
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        This is equivalent to R's linear.predictors.
-        Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \beta (X - \bar{X})
+        Returns
+        -------
+        DataFrame
 
+        Note
+        -----
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
@@ -465,18 +499,27 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
     def predict_partial_hazard(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        r"""
+        Returns the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to :math:`\exp{\beta (X - \bar{X})}`
+
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
+        Returns
+        -------
+        DataFrame
 
+        Note
+        -----
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
 
-        Returns the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \exp{\beta X}
         """
         return exp(self.predict_log_partial_hazard(X))
 
@@ -485,6 +528,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Print summary statistics describing the fit, the coefficients, and the error bounds.
         """
         # pylint: disable=unnecessary-lambda
+
         # Print information about data first
         justify = string_justify(18)
         print(self)
@@ -500,12 +544,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df = self.summary
         # Significance codes last
         df[""] = [significance_code(p) for p in df["p"]]
-        print(
-            df.to_string(
-                float_format=lambda f: "{:4.2f}".format(f),
-                formatters={"p": format_p_value},
-            )
-        )
+        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f), formatters={"p": format_p_value}))
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
@@ -517,7 +556,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
 
-        Conveniently, we can actually use the class itself to do most of the work.
+        Conveniently, we can actually use another class to do most of the work.
 
         """
 

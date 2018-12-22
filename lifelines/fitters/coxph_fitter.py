@@ -36,7 +36,7 @@ from lifelines.utils import (
     ConvergenceError,
     string_justify,
     _to_list,
-    format_p_value
+    format_p_value,
 )
 
 
@@ -944,12 +944,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df = self.summary
         # Significance codes last
         df[""] = [significance_code(p) for p in df["p"]]
-        print(
-            df.to_string(
-                float_format=lambda f: "{:4.2f}".format(f),
-                formatters={"p": format_p_value},
-            )
-        )
+        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f), formatters={"p": format_p_value}))
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
@@ -1249,21 +1244,20 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
     def _compute_baseline_survival(self):
         """
         Importantly, this agrees with what the KaplanMeierFitter produces. Ex:
-        from lifelines.datasets import load_rossi
-        from lifelines import CoxPHFitter, KaplanMeierFitter
-        rossi = load_rossi()
 
-        kmf = KaplanMeierFitter()
-        kmf.fit(rossi['week'], rossi['arrest'])
-
-        rossi2 = rossi[['week', 'arrest']].copy()
-        rossi2['var1'] = np.random.randn(432)
-
-        cph = CoxPHFitter()
-        cph.fit(rossi2, 'week', 'arrest')
-
-        ax = cph.baseline_survival_.plot()
-        kmf.plot(ax=ax)
+        Example
+        -------
+        >>> from lifelines.datasets import load_rossi
+        >>> from lifelines import CoxPHFitter, KaplanMeierFitter
+        >>> rossi = load_rossi()
+        >>> kmf = KaplanMeierFitter()
+        >>> kmf.fit(rossi['week'], rossi['arrest']) 
+        >>> rossi2 = rossi[['week', 'arrest']].copy()
+        >>> rossi2['var1'] = np.random.randn(432)
+        >>> cph = CoxPHFitter()
+        >>> cph.fit(rossi2, 'week', 'arrest')
+        >>> ax = cph.baseline_survival_.plot()
+        >>> kmf.plot(ax=ax)
         """
         survival_df = exp(-self.baseline_cumulative_hazard_)
         if self.strata is None:

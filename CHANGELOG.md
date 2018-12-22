@@ -1,8 +1,8 @@
 ### Changelogs
 
 #### 0.16.0
- - removes `estimation` namespace for fitters. Should be using `from lifelines import xFitter` now.
- - removes `predict_log_hazard_relative_to_mean` from Cox model
+ - removes `estimation` namespace for fitters. Should be using `from lifelines import xFitter` now. Thanks @usmanatron
+ - removes `predict_log_hazard_relative_to_mean` from Cox model. Thanks @usmanatron
  - introduction of residual calculations in `CoxPHFitter.compute_residuals`. Residuals include "schoenfeld", "score", "delta_beta", "deviance", "martingale", and "scaled_schoenfeld".
  - `StatisticalResult` has be generalized to allow for multiple results (ex: from pairwise comparisons). This means a slightly changed API that is mostly backwards compatible. See doc string for how to use it. 
  - `statistics.pairwise_logrank_test` now returns a `StatisticalResult` object instead of a nasty NxN DataFrame 💗
@@ -10,6 +10,7 @@
  - Display log(p-values) as well as p-values in `print_summary`. Also, p-values below 0.0005 are displayed as "<0.005". The orignal p-values are still recoverable using `.summary`.
  - Floats `print_summary` is now displayed to 2 decimal points. The orignal values are still recoverable using `.summary`.
  - removed `standardized` from `Cox` model plotting. It was confusing. 
+ - visual improvements to Cox models `.plot`
 
 
 #### 0.15.4
