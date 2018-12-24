@@ -1105,7 +1105,7 @@ prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
 Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
 Concordance = 0.640
-Likelihood ratio test = 33.266 on 7 df, log(p)=-10.65
+Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
 """
                 )
                 .strip()
@@ -2788,7 +2788,7 @@ class TestCoxTimeVaryingFitter:
         ctv.fit(heart, id_col="id", event_col="event")
         test_stat, deg_of_freedom, log_p_value = ctv._compute_likelihood_ratio_test()
         assert abs(test_stat - 15.1) < 0.1
-        assert abs(np.exp(p_value) - 0.00448) < 0.001
+        assert abs(np.exp(log_p_value) - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):

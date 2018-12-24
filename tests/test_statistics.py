@@ -36,7 +36,7 @@ def test_logrank_test_output_against_R_1():
     d2, e2 = df.loc[~ix]["time"], df.loc[~ix]["event"]
 
     expected = 0.0138
-    result = stats.logrank_test(d1, d2, event_observed_A=e1, event_observed_B=e2)
+    result = stats.logrank_test(d1, d2, censorship_A=e1, censorship_B=e2)
     assert abs(result.p_value - expected) < 0.0001
 
 
@@ -48,7 +48,7 @@ def test_logrank_test_output_against_R_2():
     treatment_T = [6, 6, 6, 7, 10, 13, 16, 22, 23, 6, 9, 10, 11, 17, 19, 20, 25, 32, 32, 34, 25]
     treatment_E = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-    result = stats.logrank_test(control_T, treatment_T, event_observed_A=control_E, event_observed_B=treatment_E)
+    result = stats.logrank_test(control_T, treatment_T, censorship_A=control_E, censorship_B=treatment_E)
     expected_p_value = 4.17e-05
 
     assert abs(result.p_value - expected_p_value) < 0.0001
@@ -108,7 +108,7 @@ def test_unequal_intensity_event_observed():
     data2 = np.random.exponential(1, size=(2000, 1))
     eventA = np.random.binomial(1, 0.5, size=(2000, 1))
     eventB = np.random.binomial(1, 0.5, size=(2000, 1))
-    result = stats.logrank_test(data1, data2, event_observed_A=eventA, event_observed_B=eventB)
+    result = stats.logrank_test(data1, data2, censorship_A=eventA, censorship_B=eventB)
     assert result.p_value < 0.05
 
 
@@ -175,7 +175,7 @@ def test_pairwise_allows_dataframes_and_gives_correct_counts():
     df["T"] = np.random.exponential(1, size=N)
     df["C"] = np.random.binomial(1, 0.6, size=N)
     df["group"] = np.random.binomial(N_groups, 0.5, size=N)
-    R = stats.pairwise_logrank_test(df["T"], df["group"], event_observed=df["C"])
+    R = stats.pairwise_logrank_test(df["T"], df["group"], censorship=df["C"])
     assert R.summary.shape[0] == N_groups * (N_groups + 1) / 2
 
 

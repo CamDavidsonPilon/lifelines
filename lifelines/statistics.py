@@ -142,7 +142,7 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     )
 
 
-def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs):
+def logrank_test(durations_A, durations_B, censorship_A=None, censorship_B=None, alpha=0.95, t_0=-1, **kwargs):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -163,11 +163,11 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     durations_B: iterable
         a (n,) list-like of event durations (birth to death,...) for the second population.
 
-    event_observed_A: iterable, optional
+    censorship_A: iterable, optional
         a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population. 
         Default assumes all observed.
 
-    event_observed_B: iterable, optional
+    censorship_B: iterable, optional
         a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population. 
         Default assumes all observed.
 
@@ -196,7 +196,7 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     >>> E2 = [1, 1, 1, 1,  1,  1,  1, 1]
     >>>
     >>> from lifelines.statistics import logrank_test
-    >>> results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
+    >>> results = logrank_test(T1, T2, censorship_A=E1, censorship_B=E2)
     >>>
     >>> results.print_summary()
     >>> print(results.p_value)        # 0.7676
@@ -212,20 +212,20 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     multivariate_logrank_test
     pairwise_logrank_test
     """
-    event_times_A, event_times_B = (np.array(durations_A), np.array(durations_B))
-    if event_observed_A is None:
-        event_observed_A = np.ones(event_times_A.shape[0])
-    if event_observed_B is None:
-        event_observed_B = np.ones(event_times_B.shape[0])
+    durations_array_A, durations_array_B = (np.array(durations_A), np.array(durations_B))
+    if censorship_A is None:
+        censorship_A = np.ones(durations_array_A.shape[0])
+    if censorship_B is None:
+        censorship_B = np.ones(durations_array_B.shape[0])
 
-    event_times = np.r_[event_times_A, event_times_B]
-    groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
-    event_observed = np.r_[event_observed_A, event_observed_B]
-    return multivariate_logrank_test(event_times, groups, event_observed, alpha=alpha, t_0=t_0, **kwargs)
+    durations = np.r_[durations_array_A, durations_array_B]
+    groups = np.r_[np.zeros(durations_array_A.shape[0], dtype=int), np.ones(durations_array_B.shape[0], dtype=int)]
+    censorship = np.r_[censorship_A, censorship_B]
+    return multivariate_logrank_test(durations, groups, censorship, alpha=alpha, t_0=t_0, **kwargs)
 
 
 def pairwise_logrank_test(
-    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs
+    durations, groups, censorship=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs
 ):  # pylint: disable=too-many-locals
 
     """
@@ -238,14 +238,14 @@ def pairwise_logrank_test(
     Parameters
     ----------
 
-    event_durations: iterable
+    durations: iterable
         a (n,) list-like representing the (possibly partial) durations of all individuals
 
     groups: iterable
         a (n,) list-like of unique group labels for each individual.
 
-    event_observed: iterable, optional
-        a (n,) list-like of event_observed events: 1 if observed death, 0 if censored. Defaults to all observed.
+    censorship: iterable, optional
+        a (n,) list-like of censorship events: 1 if observed death, 0 if censored. Defaults to all observed.
 
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
@@ -273,19 +273,19 @@ def pairwise_logrank_test(
     logrank_test
     """
 
-    if event_observed is None:
-        event_observed = np.ones((event_durations.shape[0], 1))
+    if censorship is None:
+        censorship = np.ones((durations.shape[0], 1))
 
-    n = np.max(np.asarray(event_durations).shape)
+    n = np.max(np.asarray(durations).shape)
 
-    groups, event_durations, event_observed = map(
-        lambda x: np.asarray(x).reshape(n), [groups, event_durations, event_observed]
+    groups, durations, censorship = map(
+        lambda x: np.asarray(x).reshape(n), [groups, durations, censorship]
     )
 
-    if not (n == event_durations.shape[0] == event_observed.shape[0]):
+    if not (n == durations.shape[0] == censorship.shape[0]):
         raise ValueError("inputs must be of the same length.")
 
-    groups, event_durations, event_observed = pd.Series(groups), pd.Series(event_durations), pd.Series(event_observed)
+    groups, durations, censorship = pd.Series(groups), pd.Series(durations), pd.Series(censorship)
 
     unique_groups = np.unique(groups)
 
@@ -301,10 +301,10 @@ def pairwise_logrank_test(
         g1, g2 = unique_groups[[i1, i2]]
         ix1, ix2 = (groups == g1), (groups == g2)
         result += logrank_test(
-            event_durations.loc[ix1],
-            event_durations.loc[ix2],
-            event_observed.loc[ix1],
-            event_observed.loc[ix2],
+            durations.loc[ix1],
+            durations.loc[ix2],
+            censorship.loc[ix1],
+            censorship.loc[ix2],
             alpha=alpha,
             t_0=t_0,
             use_bonferroni=bonferroni,
@@ -316,7 +316,7 @@ def pairwise_logrank_test(
 
 
 def multivariate_logrank_test(
-    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs
+    durations, groups, censorship=None, alpha=0.95, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
 
     """
@@ -330,14 +330,14 @@ def multivariate_logrank_test(
     Parameters
     ----------
 
-    event_durations: iterable
+    durations: iterable
         a (n,) list-like representing the (possibly partial) durations of all individuals
 
     groups: iterable
         a (n,) list-like of unique group labels for each individual.
 
-    event_observed: iterable, optional
-        a (n,) list-like of event_observed events: 1 if observed death, 0 if censored. Defaults to all observed.
+    censorship: iterable, optional
+        a (n,) list-like of censorship events: 1 if observed death, 0 if censored. Defaults to all observed.
 
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
@@ -385,19 +385,19 @@ def multivariate_logrank_test(
     if not (0 < alpha <= 1.0):
         raise ValueError("alpha parameter must be between 0 and 1.")
 
-    event_durations, groups = np.asarray(event_durations), np.asarray(groups)
-    if event_observed is None:
-        event_observed = np.ones((event_durations.shape[0], 1))
+    durations, groups = np.asarray(durations), np.asarray(groups)
+    if censorship is None:
+        censorship = np.ones((durations.shape[0], 1))
     else:
-        event_observed = np.asarray(event_observed)
+        censorship = np.asarray(censorship)
 
-    n = np.max(event_durations.shape)
-    assert n == np.max(event_durations.shape) == np.max(event_observed.shape), "inputs must be of the same length."
-    groups, event_durations, event_observed = map(
-        lambda x: pd.Series(np.asarray(x).reshape(n)), [groups, event_durations, event_observed]
+    n = np.max(durations.shape)
+    assert n == np.max(durations.shape) == np.max(censorship.shape), "inputs must be of the same length."
+    groups, durations, censorship = map(
+        lambda x: pd.Series(np.asarray(x).reshape(n)), [groups, durations, censorship]
     )
 
-    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, limit=t_0)
+    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, durations, censorship, limit=t_0)
     n_groups = unique_groups.shape[0]
 
     # compute the factors needed
