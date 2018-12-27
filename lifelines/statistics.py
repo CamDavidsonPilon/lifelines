@@ -512,7 +512,7 @@ class StatisticalResult(object):
         meta_data = self._pretty_print_meta_data(self._kwargs)
         df = self.summary
         df["log(p)"] = np.log(df["p"])
-        df[""] = [significance_code(p) for p in self._p_value]
+        df[""] = [significance_code(p) for p in df["p"]]
 
         s = ""
         s += "\n" + meta_data + "\n"

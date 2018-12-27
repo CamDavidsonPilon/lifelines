@@ -150,8 +150,9 @@ def _concordance_index(event_times, predicted_event_times, event_observed):  # p
 
     return (num_correct + num_tied / 2) / num_pairs
 
+
 def _handle_pairs(truth, pred, first_ix, times_to_compare):
-        """
+    """
         Handle all pairs that exited at the same time as truth[first_ix].
 
         Returns:
@@ -160,18 +161,19 @@ def _handle_pairs(truth, pred, first_ix, times_to_compare):
           new_correct: The number of comparisons correctly predicted
           next_ix: The next index that needs to be handled
         """
-        next_ix = first_ix
-        while next_ix < len(truth) and truth[next_ix] == truth[first_ix]:
-            next_ix += 1
-        pairs = len(times_to_compare) * (next_ix - first_ix)
-        correct = np.int64(0)
-        tied = np.int64(0)
-        for i in range(first_ix, next_ix):
-            rank, count = times_to_compare.rank(pred[i])
-            correct += rank
-            tied += count
+    next_ix = first_ix
+    while next_ix < len(truth) and truth[next_ix] == truth[first_ix]:
+        next_ix += 1
+    pairs = len(times_to_compare) * (next_ix - first_ix)
+    correct = np.int64(0)
+    tied = np.int64(0)
+    for i in range(first_ix, next_ix):
+        rank, count = times_to_compare.rank(pred[i])
+        correct += rank
+        tied += count
 
-        return (pairs, correct, tied, next_ix)
+    return (pairs, correct, tied, next_ix)
+
 
 def _naive_concordance_index(event_times, predicted_event_times, event_observed):
     """
@@ -199,6 +201,7 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
         raise ZeroDivisionError("No admissable pairs in the dataset.")
     return csum / paircount
 
+
 def _valid_comparison(time_a, time_b, event_a, event_b):
     """True if times can be compared."""
     if time_a == time_b:
@@ -211,6 +214,7 @@ def _valid_comparison(time_a, time_b, event_a, event_b):
     if event_b and time_b < time_a:
         return True
     return False
+
 
 def _concordance_value(time_a, time_b, pred_a, pred_b, event_a, event_b):
     if pred_a == pred_b:

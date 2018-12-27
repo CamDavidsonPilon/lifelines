@@ -794,9 +794,6 @@ def _get_index(X):
     return index
 
 
-
-
-
 def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col
@@ -967,8 +964,8 @@ def add_covariate_to_timeline(
 ):  # pylint: disable=too-many-arguments
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
-    to be used iteratively as one adds more and more covariates to track over time. If beginning to use this function, it is recommend
-    to view the docs at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-for-time-varying-regression.
+    to be used iteratively as one adds more and more covariates to track over time. Before using this function, it is recommended
+    to view the documentation at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-creation-for-time-varying-regression.
 
 
     Parameters
