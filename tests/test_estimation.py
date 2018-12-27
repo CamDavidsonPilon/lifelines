@@ -1105,7 +1105,7 @@ prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
 Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
 Concordance = 0.640
-Likelihood ratio test = 33.266 on 7 df, log(p)=-10.65
+Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
 """
                 )
                 .strip()
@@ -2834,7 +2834,7 @@ transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
 ---
 Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.001 '.' 0.05 ' ' 1
 
-Likelihood ratio test = 15.111 on 4 df, log(p)=-5.41
+Likelihood ratio test = 15.11 on 4 df, log(p)=-5.41
 """
                 )
                 .strip()

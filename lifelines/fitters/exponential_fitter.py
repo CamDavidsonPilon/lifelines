@@ -12,6 +12,7 @@ from lifelines.utils import (
     string_justify,
     significance_codes_as_text,
     format_p_value,
+    format_floats,
 )
 
 
@@ -166,7 +167,7 @@ class ExponentialFitter(UnivariateFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def print_summary(self):
+    def print_summary(self, decimals=2):
         """
         Print summary statistics describing the fit.
 
@@ -180,6 +181,6 @@ class ExponentialFitter(UnivariateFitter):
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f), formatters={"p": format_p_value}))
+        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
         print("---")
         print(significance_codes_as_text(), end="\n\n")

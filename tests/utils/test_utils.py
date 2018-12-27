@@ -805,3 +805,13 @@ def test_StepSizer_step_will_decrease_if_explodes():
     assert ss.next() == start
     ss.update(20.0)
     assert ss.next() < start
+
+
+def test_format_p_values():
+    assert utils.format_p_value(2)(0.004) == "<0.005"
+    assert utils.format_p_value(3)(0.004) == "0.004"
+
+    assert utils.format_p_value(3)(0.000) == "<0.005"
+    assert utils.format_p_value(3)(0.005) == "0.005"
+    assert utils.format_p_value(3)(0.2111) == "0.211"
+    assert utils.format_p_value(3)(0.2119) == "0.212"

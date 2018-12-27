@@ -1200,8 +1200,13 @@ def _to_list(x):
     return x
 
 
-def format_p_value(p):
-    return "<0.0005" if p < 0.0005 else "{:4.3f}".format(p)
+def format_p_value(decimals):
+    threshold = 0.5 * 10 ** (-decimals)
+    return lambda p: "<%s" % threshold if p < threshold else "{:4.{prec}f}".format(p, prec=decimals)
+
+
+def format_floats(decimals):
+    return lambda f: "{:4.{prec}f}".format(f, prec=decimals)
 
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")

@@ -17,6 +17,7 @@ from lifelines.utils import (
     ConvergenceWarning,
     significance_codes_as_text,
     format_p_value,
+    format_floats,
 )
 
 
@@ -304,12 +305,11 @@ class WeibullFitter(UnivariateFitter):
         df["log(p)"] = np.log(df["p"])
         return df
 
-    def print_summary(self):
+    def print_summary(self, decimals=2):
         """
         Print summary statistics describing the fit.
 
         """
-        # pylint: disable=unnecessary-lambda
         justify = string_justify(18)
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
@@ -318,6 +318,6 @@ class WeibullFitter(UnivariateFitter):
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f), formatters={"p": format_p_value}))
+        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
         print("---")
         print(significance_codes_as_text(), end="\n\n")

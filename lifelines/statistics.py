@@ -14,6 +14,7 @@ from lifelines.utils import (
     string_justify,
     _to_array,
     format_p_value,
+    format_floats,
 )
 
 
@@ -475,12 +476,12 @@ class StatisticalResult(object):
 
         self._kwargs = kwargs
 
-    def print_summary(self):
+    def print_summary(self, decimals=2):
         """
         Prints a prettier version of the ``summary`` DataFrame with more metadata.
 
         """
-        print(self.__unicode__())
+        print(self._to_string(decimals))
 
     @property
     def summary(self):
@@ -504,12 +505,11 @@ class StatisticalResult(object):
         return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
 
     def __repr__(self):
-        return "<lifelines.StatisticalResult: \n%s\n>" % self.__unicode__()
+        return "<lifelines.StatisticalResult>"
 
-    def __unicode__(self):
-        # pylint: disable=unnecessary-lambda
+    def _to_string(self, decimals):
 
-        meta_data = self._pretty_print_meta_data(self._kwargs)
+        meta_data = self._stringify_meta_data(self._kwargs)
         df = self.summary
         df["log(p)"] = np.log(df["p"])
         df[""] = [significance_code(p) for p in df["p"]]
@@ -518,14 +518,16 @@ class StatisticalResult(object):
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
-            float_format=lambda f: "{:4.2f}".format(f), index=self.name is not None, formatters={"p": format_p_value}
+            float_format=format_floats(decimals),
+            index=self.name is not None,
+            formatters={"p": format_p_value(decimals)},
         )
 
         s += "\n---"
         s += "\n" + significance_codes_as_text()
         return s
 
-    def _pretty_print_meta_data(self, dictionary):
+    def _stringify_meta_data(self, dictionary):
         longest_key = max([len(k) for k in dictionary])
         justify = string_justify(longest_key)
         s = ""

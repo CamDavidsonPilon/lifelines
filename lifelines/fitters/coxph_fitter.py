@@ -37,6 +37,7 @@ from lifelines.utils import (
     string_justify,
     _to_list,
     format_p_value,
+    format_floats,
 )
 
 
@@ -911,12 +912,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
-    def print_summary(self):
+    def print_summary(self, decimals=2):
         """
         Print summary statistics describing the fit.
+    
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
 
         """
-        # pylint: disable=unnecessary-lambda
 
         # Print information about data first
         justify = string_justify(18)
@@ -937,19 +942,24 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
-        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n")
         print("---")
 
         df = self.summary
         # Significance codes last
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f), formatters={"p": format_p_value}))
+        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
-        print("Concordance = {:.3f}".format(self.score_))
-        print("Likelihood ratio test = {:.2f} on {} df, log(p)={:.2f}".format(*self._compute_likelihood_ratio_test()))
+        print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+        print(
+            "Likelihood ratio test = {:.{prec}f} on {} df, log(p)={:.{prec}f}".format(
+                *self._compute_likelihood_ratio_test(), prec=decimals
+            )
+        )
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -1362,7 +1372,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
-        pass
+        linear_time_results = proportional_hazard_test(self, df).summary
+        for col, p in linear_time_results["p"]:
+            if p < 0.05:
+                warnings.warn("")
 
     @property
     def score_(self):

@@ -34,6 +34,7 @@ from lifelines.utils import (
     check_nans_or_infs,
     string_justify,
     format_p_value,
+    format_floats,
 )
 
 
@@ -523,20 +524,29 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         return exp(self.predict_log_partial_hazard(X))
 
-    def print_summary(self):
+    def print_summary(self, decimals=2):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
+
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
+
         """
-        # pylint: disable=unnecessary-lambda
 
         # Print information about data first
         justify = string_justify(18)
+
         print(self)
         print("{} = {}".format(justify("event col"), self.event_col))
+        if self.weights_col:
+            print("{} = {}".format(justify("weights col"), self.weights_col))
+
         print("{} = {}".format(justify("number of subjects"), self._n_unique))
         print("{} = {}".format(justify("number of periods"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
-        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
         print("{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n")
 
         print("---")
@@ -544,11 +554,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df = self.summary
         # Significance codes last
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.2f}".format(f), formatters={"p": format_p_value}))
+        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
-        print("Likelihood ratio test = {:.3f} on {} df, log(p)={:.2f}".format(*self._compute_likelihood_ratio_test()))
+        print(
+            "Likelihood ratio test = {:.{prec}f} on {} df, log(p)={:.{prec}f}".format(
+                *self._compute_likelihood_ratio_test(), prec=decimals
+            )
+        )
 
     def _compute_likelihood_ratio_test(self):
         """
