@@ -72,6 +72,8 @@ kmf.plot()
 ### Roadmap
 You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965207f564eb2a3e48b5937873c14?v=47edda47ab774ca2ac7532bb0c750559).
 
+-------------------------------------------------------------------------------
+
 ### Development
 
 #### Setting up a lifelines development environment
@@ -92,6 +94,8 @@ There are 3 different ways to format your code.
    * Code that needs to be formatted will "fail" the commit hooks and be formatted for you.
    * Stage the newly formatted python code: `git add *.py`
    * Recall your original commit command and commit again: `git commit -m "your_commit_message"`
+
+-------------------------------------------------------------------------------
 
 ### Citing lifelines
 
