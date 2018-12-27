@@ -1,4 +1,6 @@
 -r base-requirements.txt
+# installs lifelines as editiable dependancy in develop mode
+-e .
 pytest
 coverage>=4.4
 pytest-cov

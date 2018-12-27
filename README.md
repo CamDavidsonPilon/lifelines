@@ -72,6 +72,29 @@ kmf.plot()
 ### Roadmap
 You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965207f564eb2a3e48b5937873c14?v=47edda47ab774ca2ac7532bb0c750559).
 
+### Development
+
+#### Setting up a lifelines development environment
+
+1. From the root directory of `lifelines` activate your virtual environment (if you plan to use one).
+2. Install the development requirements and [`pre-commit`](https://pre-commit.com) hooks. If you are on Mac, Linux, or [Windows `WSL`](https://docs.microsoft.com/en-us/windows/wsl/faq) you can use the provided [`Makefile`](https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile). Just type `make` into the console and you're ready to start developing.
+  * `pip install -r reqs/dev-requirements.txt`
+  * `pre-commit install`
+
+#### Formatting
+
+`lifelines` uses the [`black`](https://github.com/ambv/black) python formatter.
+There are 3 different way to format your code.
+1. Use the [`Makefile`](https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile).
+  * `make format`
+2. Call `black` directly and pass the correct line length.
+  * `black . -l 120`
+3. Have you code formatted automatically during commit with the `pre-commit` hook.
+ * stage and commit your unformatted changes: `git commit -m "your_commit_message"`
+ * Code that needs to be formatted will "fail" the commit hooks and be formatted for you.
+ * Stage the newly formatted python code: `git add *.py`
+ * Recall your original commit command and commit again: `git commit -m "your_commit_message"`
+
 ### Citing lifelines
 
 You can use this badge below to generate a DOI and reference text for the latest related version of lifelines:
