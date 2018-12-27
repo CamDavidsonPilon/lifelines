@@ -128,11 +128,13 @@ class CoxTimeVaryingFitter(BaseFitter):
             raise KeyError("A column specified in the call to `fit` does not exist in the dataframe provided.")
 
         if weights_col is None:
+            self.weights_col = None
             assert (
                 "__weights" not in df.columns
             ), "__weights is an internal lifelines column, please rename your column first."
             df["__weights"] = 1.0
         else:
+            self.weights_col = weights_col
             if (df[weights_col] <= 0).any():
                 raise ValueError("values in weights_col must be positive.")
 
