@@ -526,7 +526,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         return exp(self.predict_log_partial_hazard(X))
 
-    def print_summary(self, decimals=2):
+    def print_summary(self, decimals=2, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -534,6 +534,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
+        kwargs:
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
+            multiple outputs. 
 
         """
 
@@ -541,16 +544,20 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         justify = string_justify(18)
 
         print(self)
-        print("{} = {}".format(justify("event col"), self.event_col))
+        print("{} = '{}'".format(justify("event col"), self.event_col))
         if self.weights_col:
-            print("{} = {}".format(justify("weights col"), self.weights_col))
+            print("{} = '{}'".format(justify("weights col"), self.weights_col))
 
         print("{} = {}".format(justify("number of subjects"), self._n_unique))
         print("{} = {}".format(justify("number of periods"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
-        print("{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n")
+        print("{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called))
 
+        for k, v in kwargs.items():
+            print("{} = {}\n".format(justify(k), v))
+
+        print(end="\n")
         print("---")
 
         df = self.summary

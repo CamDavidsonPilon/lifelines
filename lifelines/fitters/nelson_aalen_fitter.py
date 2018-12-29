@@ -13,6 +13,7 @@ from lifelines.utils import (
     epanechnikov_kernel,
     inv_normal_cdf,
     check_nans_or_infs,
+    StatisticalWarning,
 )
 
 
@@ -101,7 +102,7 @@ class NelsonAalenFitter(UnivariateFitter):
   estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
   or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
                   """,
-                    RuntimeWarning,
+                    StatisticalWarning,
                 )
 
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)

@@ -305,16 +305,30 @@ class WeibullFitter(UnivariateFitter):
         df["log(p)"] = np.log(df["p"])
         return df
 
-    def print_summary(self, decimals=2):
+    def print_summary(self, decimals=2, **kwargs):
         """
-        Print summary statistics describing the fit.
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
+
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
+        kwargs:
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
+            multiple outputs. 
 
         """
         justify = string_justify(18)
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
-        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood), end="\n\n")
+        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+
+        for k, v in kwargs.items():
+            print("{} = {}\n".format(justify(k), v))
+
+        print(end="\n")
+        print("---")
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]

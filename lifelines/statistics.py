@@ -17,6 +17,8 @@ from lifelines.utils import (
     format_floats,
 )
 
+from lifelines import KaplanMeierFitter
+
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
     """
@@ -429,7 +431,7 @@ def multivariate_logrank_test(
     _, p_value = chisq_test(U, n_groups - 1, alpha)
 
     return StatisticalResult(
-        p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", df=n_groups - 1, **kwargs
+        p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
     )
 
 
@@ -476,12 +478,20 @@ class StatisticalResult(object):
 
         self._kwargs = kwargs
 
-    def print_summary(self, decimals=2):
+    def print_summary(self, decimals=2, **kwargs):
         """
-        Prints a prettier version of the ``summary`` DataFrame with more metadata.
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
+
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
+        kwargs:
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
+            multiple outputs. 
 
         """
-        print(self._to_string(decimals))
+        print(self._to_string(decimals, **kwargs))
 
     @property
     def summary(self):
@@ -507,14 +517,14 @@ class StatisticalResult(object):
     def __repr__(self):
         return "<lifelines.StatisticalResult>"
 
-    def _to_string(self, decimals):
-
-        meta_data = self._stringify_meta_data(self._kwargs)
+    def _to_string(self, decimals=2, **kwargs):
+        extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
+        meta_data = self._stringify_meta_data(extra_kwargs)
         df = self.summary
         df["log(p)"] = np.log(df["p"])
         df[""] = [significance_code(p) for p in df["p"]]
 
-        s = ""
+        s = self.__repr__()
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
@@ -559,28 +569,107 @@ def two_sided_z_test(Z, alpha):
     return None, p_value
 
 
-def proportional_hazard_test(fitted_cox_model, training_df, alpha=0.95, time_transform=lambda x: x, **kwargs):
-    # r uses the defalt `km`, we use `identity`
-    events = fitted_cox_model.event_observed
+class TimeTransformers:
+
+    TIME_TRANSFOMERS = {
+        "rank": lambda t, c: np.cumsum(
+            c
+        ),  # using cumsum is kinda hacky, should be np.argsort but I run into problems later.
+        "identity": lambda t, c: t,
+        "log": lambda t, c: np.log(t),
+        "km": lambda t, c: 1 - KaplanMeierFitter().fit(t, c).survival_function_.loc[t, "KM_estimate"],
+    }
+
+    def get(self, key_or_callable):
+        return self.TIME_TRANSFOMERS.get(key_or_callable, key_or_callable)
+
+    def __iter__(self):
+        for key, item in self.TIME_TRANSFOMERS.items():
+            yield key, item
+
+
+def proportional_hazard_test(
+    fitted_cox_model, training_df, time_transform="rank", precomputed_residuals=None, **kwargs
+):
+    """
+    Test whether any variable in a Cox model breaks the proportional hazard assumption. 
+
+    Parameters
+    ----------
+    fitted_cox_model: CoxPHFitter
+        the fitted Cox model, fitted with `training_df`, you wish to test. Currently only the CoxPHFitter is supported,
+        but later CoxTimeVaryingFitter, too.
+    training_df: DataFrame
+        the DataFrame used in the call to the Cox model's ``fit``. 
+    time_transform: vectorized function or string, optional (default='rank')
+        {'all', 'km', 'rank', 'identity', 'log'} 
+        One of the strings above, or a function to transform the time variable. 'all' will present all the transforms. 
+    precomputed_residuals: DataFrame, optional
+        specify the residuals, if already computed. 
+    kwargs: 
+        additional parameters to add to the StatisticalResult
+
+    Returns
+    -------
+    StatisticalResult
+
+    Notes
+    ------
+    R uses the defalt `km`, we use `rank`, as this performs well versus other transforms. See 
+    http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
+
+    """
+    events, durations = fitted_cox_model.event_observed, fitted_cox_model.durations
     deaths = events.sum()
 
-    scaled_resids = fitted_cox_model.compute_residuals(training_df, kind="scaled_schoenfeld")
+    if precomputed_residuals is None:
+        scaled_resids = fitted_cox_model.compute_residuals(training_df, kind="scaled_schoenfeld")
+    else:
+        scaled_resids = precomputed_residuals
 
-    times = time_transform(fitted_cox_model.durations.loc[events])
-    times -= times.mean()
+    def compute_statistic(times, resids):
+        times -= times.mean()
+        T = (times.values[:, None] * scaled_resids.values).sum(0) ** 2 / (
+            deaths * np.diag(fitted_cox_model.variance_matrix_) * (times ** 2).sum()
+        )
+        return T
 
-    T = (times.values[:, None] * scaled_resids.values).sum(0) ** 2 / (
-        deaths * np.diag(fitted_cox_model.variance_matrix_) * (times ** 2).sum()
-    )
-    p_values = _to_array([chisq_test(t, 1, alpha)[1] for t in T])
-    return StatisticalResult(
-        p_values,
-        T,
-        name=fitted_cox_model.hazards_.columns.tolist(),
-        alpha=alpha,
-        test_name="proportional_hazard_test",
-        time_transform=time_transform,
-        null_distribution="chi squared",
-        df=1,
-        **kwargs
-    )
+    if time_transform == "all":
+
+        result = StatisticalResult([], [], [])
+
+        for transform_name, transform in TimeTransformers():
+            times = transform(durations, events)[events.values]
+            T = compute_statistic(times, scaled_resids)
+            p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
+            result += StatisticalResult(
+                p_values,
+                T,
+                name=[(c, transform_name) for c in fitted_cox_model.hazards_.columns],
+                test_name="proportional_hazard_test",
+                null_distribution="chi squared",
+                degrees_of_freedom=1,
+                **kwargs
+            )
+
+    else:
+        time_transformer = TimeTransformers().get(time_transform)
+        assert callable(
+            time_transformer
+        ), "time_transform must be a callable function, or a string: {'rank', 'km', 'identity', 'log'}."
+
+        times = time_transformer(durations, events)[events.values]
+
+        T = compute_statistic(times, scaled_resids)
+        p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
+        result = StatisticalResult(
+            p_values,
+            T,
+            name=fitted_cox_model.hazards_.columns.tolist(),
+            test_name="proportional_hazard_test",
+            time_transform=time_transform,
+            null_distribution="chi squared",
+            degrees_of_freedom=1,
+            **kwargs
+        )
+    return result

@@ -54,6 +54,14 @@ class ConvergenceWarning(RuntimeWarning):
         return repr(self.msg)
 
 
+class StatisticalWarning(RuntimeWarning):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
 def qth_survival_times(q, survival_functions, cdf=False):
     """
     Find the times when one or more survival functions reach the qth percentile.
@@ -797,8 +805,8 @@ def _get_index(X):
 def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col
-        for col in df.columns
-        if not (np.issubdtype(df[col].dtype, np.number) or np.issubdtype(df[col].dtype, np.bool_))
+        for (col, dtype) in df.dtypes.iteritems()
+        if dtype.name == "categorical" and not (np.issubdtype(dtype, np.number) or np.issubdtype(dtype, np.bool_))
     ]
     if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(

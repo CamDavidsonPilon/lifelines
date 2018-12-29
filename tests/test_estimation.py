@@ -1066,6 +1066,28 @@ class TestCoxPHFitter:
         expectedColumns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95"]
         assert all([col in summary.columns for col in expectedColumns])
 
+    def test_print_summary_with_decimals(self, rossi):
+        import sys
+
+        saved_stdout = sys.stdout
+        try:
+
+            out = StringIO()
+            sys.stdout = out
+
+            cp = CoxPHFitter()
+            cp.fit(rossi, duration_col="week", event_col="arrest")
+            cp._time_fit_was_called = "2018-10-23 02:40:45 UTC"
+            cp.print_summary(decimals=1)
+            output_dec_1 = out.getvalue().strip().split()
+
+            cp.print_summary(decimals=3)
+            output_dec_3 = out.getvalue().strip().split()
+
+            assert output_dec_1 != output_dec_3
+        finally:
+            sys.stdout = saved_stdout
+
     def test_print_summary(self, rossi):
 
         import sys

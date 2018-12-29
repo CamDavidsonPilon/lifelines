@@ -15,7 +15,7 @@ from scipy.integrate import trapz
 from scipy import stats
 
 from lifelines.fitters import BaseFitter
-from lifelines.statistics import chisq_test, proportional_hazard_test
+from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers
 from lifelines.utils import (
     survival_table_from_events,
     inv_normal_cdf,
@@ -32,6 +32,7 @@ from lifelines.utils import (
     check_nans_or_infs,
     StatError,
     ConvergenceWarning,
+    StatisticalWarning,
     StepSizer,
     ConvergenceError,
     string_justify,
@@ -39,6 +40,7 @@ from lifelines.utils import (
     format_p_value,
     format_floats,
 )
+from lifelines.utils.lowess import lowess
 
 
 class CoxPHFitter(BaseFitter):
@@ -271,12 +273,12 @@ class CoxPHFitter(BaseFitter):
         E = (
             df.pop(self.event_col)
             if (self.event_col is not None)
-            else pd.Series(np.ones(self._n_examples), index=df.index, name="weights")
+            else pd.Series(np.ones(self._n_examples), index=df.index, name="E")
         )
         W = (
             df.pop(self.weights_col)
             if (self.weights_col is not None)
-            else pd.Series(np.ones((self._n_examples,)), index=df.index, name="E")
+            else pd.Series(np.ones((self._n_examples,)), index=df.index, name="weights")
         )
 
         # check to make sure their weights are okay
@@ -287,7 +289,7 @@ class CoxPHFitter(BaseFitter):
 It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
 """,
-                    RuntimeWarning,
+                    StatisticalWarning,
                 )
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
@@ -684,7 +686,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T, E.values, weights.values)
 
         # schoenfeld residuals are only defined for subjects with a non-zero event.
-        return pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.columns, index=index[E])
+        df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.columns, index=index[E])
+        return df
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
         # TODO: the diff_against is gross
@@ -912,27 +915,30 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
-    def print_summary(self, decimals=2):
+    def print_summary(self, decimals=2, **kwargs):
         """
-        Print summary statistics describing the fit.
-    
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
+
         Parameters
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
+        kwargs:
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
+            multiple outputs. 
 
         """
 
         # Print information about data first
         justify = string_justify(18)
         print(self)
-        print("{} = {}".format(justify("duration col"), self.duration_col))
-        print("{} = {}".format(justify("event col"), self.event_col))
+        print("{} = '{}'".format(justify("duration col"), self.duration_col))
+        print("{} = '{}'".format(justify("event col"), self.event_col))
         if self.weights_col:
-            print("{} = {}".format(justify("weights col"), self.weights_col))
+            print("{} = '{}'".format(justify("weights col"), self.weights_col))
 
         if self.cluster_col:
-            print("{} = {}".format(justify("cluster col"), self.cluster_col))
+            print("{} = '{}'".format(justify("cluster col"), self.cluster_col))
 
         if self.robust or self.cluster_col:
             print("{} = {}".format(justify("robust variance"), True))
@@ -943,7 +949,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
-        print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n")
+        print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
+
+        for k, v in kwargs.items():
+            print("{} = {}\n".format(justify(k), v))
+
+        print(end="\n")
         print("---")
 
         df = self.summary
@@ -1281,7 +1292,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         Parameters
         ----------
         columns : list, optional
-            specifiy a subset of the columns to plot
+            specify a subset of the columns to plot
         display_significance_code: bool, optional (default: True)
             display asteriks beside statistically significant variables
         errorbar_kwargs:
@@ -1367,15 +1378,88 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self.baseline_survival_.plot(ax=ax, ls="--")
         return ax
 
-    def check_assumptions(self, df):
+    def check_assumptions(
+        self, training_df, advice=True, show_plots=True, p_value_threshold=0.05, plot_n_bootstraps=15
+    ):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
-        linear_time_results = proportional_hazard_test(self, df).summary
-        for col, p in linear_time_results["p"]:
-            if p < 0.05:
-                warnings.warn("")
+        residuals = self.compute_residuals(training_df, kind="scaled_schoenfeld")
+        results = proportional_hazard_test(
+            self, training_df, time_transform="all", precomputed_residuals=residuals
+        ).summary
+
+        results_and_duration = residuals.join(training_df[self.duration_col])
+
+        counter = 0
+        n = results_and_duration.shape[0]
+
+        for variable in self.hazards_.columns:
+            minumum_observed_p_value = results.loc[variable, "p"].min()
+            if minumum_observed_p_value > p_value_threshold:
+                continue
+
+            counter += 1
+            print(
+                "%d. Variable '%s' failed the non-proportional test, p=%.4f."
+                % (counter, variable, minumum_observed_p_value)
+            )
+
+            if advice:
+                values = training_df[variable]
+                value_counts = values.value_counts()
+                n_uniques = values.shape[0]
+                if n_uniques <= 10 and value_counts.min() >= 4:
+                    print(
+                        "   Advice: with so few unique values ({0}), you can try `strata_col=['{1}']` in the call in `.fit` ".format(
+                            n_uniques, variable
+                        )
+                    )
+                else:
+                    print(
+                        """   Advice: start by binning the variable '{var}' using pd.cut, and then specify it in `strata_col=['{var}']` in the call in `.fit`.""".format(
+                            var=variable
+                        )
+                    )
+
+            if show_plots:
+
+                from matplotlib import pyplot as plt
+
+                fig = plt.figure()
+
+                # plot variable against all time transformations.
+                for i, (transform_name, transformer) in enumerate(TimeTransformers(), start=1):
+                    p_value = results.loc[(variable, transform_name), "p"]
+
+                    ax = fig.add_subplot(2, 2, i)
+
+                    y = results_and_duration[variable]
+                    tt = transformer(self.durations, self.event_observed)[self.event_observed.values]
+                    ax.scatter(tt, y, alpha=0.75)
+
+                    y_lowess = lowess(tt.values, y.values)
+                    ax.plot(tt, y_lowess, color="k", alpha=1.0)
+
+                    # bootstrap some possible other lowess lines.
+                    for _ in range(plot_n_bootstraps):
+                        ix = np.random.choice(n, n)
+                        y_lowess = lowess(tt.values[ix], y.values[ix])
+                        sorted_ix = np.argsort(tt.values[ix])
+                        ax.plot(tt.values[ix][sorted_ix], y_lowess[sorted_ix], color="k", alpha=0.33)
+
+                    best_xlim = ax.get_xlim()
+                    ax.hlines(0, 0, tt.max(), linestyles="dashed", linewidths=1)
+                    ax.set_xlim(best_xlim)
+
+                    ax.set_xlabel("%s-transformed time\n(p=%.4f)" % (transform_name, p_value), fontsize=10)
+
+                fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
+                plt.tight_layout()
+                plt.subplots_adjust(top=0.90)
+
+        return
 
     @property
     def score_(self):
