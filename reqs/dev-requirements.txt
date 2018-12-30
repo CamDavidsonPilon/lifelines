@@ -1,5 +1,6 @@
 -r base-requirements.txt
 pytest
+pytest-icdiff;python_version > '3.5'
 coverage>=4.4
 pytest-cov
 pypandoc
