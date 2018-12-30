@@ -572,12 +572,13 @@ def two_sided_z_test(Z, alpha):
 class TimeTransformers:
 
     TIME_TRANSFOMERS = {
-        "rank": lambda t, c: np.cumsum(
+        # using cumsum is kinda hacky, should be np.argsort but I run into problems later.
+        "rank": lambda t, c, w: np.cumsum(
             c
-        ),  # using cumsum is kinda hacky, should be np.argsort but I run into problems later.
-        "identity": lambda t, c: t,
-        "log": lambda t, c: np.log(t),
-        "km": lambda t, c: 1 - KaplanMeierFitter().fit(t, c).survival_function_.loc[t, "KM_estimate"],
+        ),  
+        "identity": lambda t, c, w: t,
+        "log": lambda t, c, w: np.log(t),
+        "km": lambda t, c, w: 1 - KaplanMeierFitter().fit(t, c, weights=w).survival_function_.loc[t, "KM_estimate"],
     }
 
     def get(self, key_or_callable):
@@ -619,7 +620,8 @@ def proportional_hazard_test(
     http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
 
     """
-    events, durations = fitted_cox_model.event_observed, fitted_cox_model.durations
+
+    events, durations, weights = fitted_cox_model.event_observed, fitted_cox_model.durations, fitted_cox_model.weights
     deaths = events.sum()
 
     if precomputed_residuals is None:
@@ -639,7 +641,7 @@ def proportional_hazard_test(
         result = StatisticalResult([], [], [])
 
         for transform_name, transform in TimeTransformers():
-            times = transform(durations, events)[events.values]
+            times = transform(durations, events, weights)[events.values]
             T = compute_statistic(times, scaled_resids)
             p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
             result += StatisticalResult(
@@ -658,8 +660,8 @@ def proportional_hazard_test(
             time_transformer
         ), "time_transform must be a callable function, or a string: {'rank', 'km', 'identity', 'log'}."
 
-        times = time_transformer(durations, events)[events.values]
-
+        times = time_transformer(durations, events, weights)[events.values]
+        print(times)
         T = compute_statistic(times, scaled_resids)
         p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
         result = StatisticalResult(

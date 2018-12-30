@@ -261,7 +261,7 @@ class CoxPHFitter(BaseFitter):
         df = df.copy()
 
         if self.strata is not None:
-            df = df.sort_values(by=[self.duration_col] + _to_list(self.strata))
+            df = df.sort_values(by=_to_list(self.strata) + [self.duration_col])
             original_index = df.index.copy()
             df = df.set_index(self.strata)
         else:
@@ -668,6 +668,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return scaled_schoenfeld_resids
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
+        # TODO: should the index by times, i.e. T[E]?
         # Assumes sorted on T and on strata
         # index will be set later
         # cluster does nothing to this, as expected.
@@ -801,7 +802,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
-        # Assumes X already sorted by T
+        # Assumes X already sorted by T with strata
         # TODO: doesn't handle ties.
         # TODO: _T unused
 
@@ -1410,6 +1411,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 values = training_df[variable]
                 value_counts = values.value_counts()
                 n_uniques = values.shape[0]
+
+                # arbitrarly chosen 10 and 4.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
                         "   Advice: with so few unique values ({0}), you can try `strata_col=['{1}']` in the call in `.fit` ".format(
@@ -1440,14 +1443,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     ax.scatter(tt, y, alpha=0.75)
 
                     y_lowess = lowess(tt.values, y.values)
-                    ax.plot(tt, y_lowess, color="k", alpha=1.0)
+                    ax.plot(tt, y_lowess, color="k", alpha=1.0, linewidth=2)
 
-                    # bootstrap some possible other lowess lines.
+                    # bootstrap some possible other lowess lines. This is an approximation of the 100% confidence intervals
                     for _ in range(plot_n_bootstraps):
-                        ix = np.random.choice(n, n)
-                        y_lowess = lowess(tt.values[ix], y.values[ix])
-                        sorted_ix = np.argsort(tt.values[ix])
-                        ax.plot(tt.values[ix][sorted_ix], y_lowess[sorted_ix], color="k", alpha=0.33)
+                        ix = sorted(np.random.choice(n, n))
+                        tt_ = tt.values[ix]
+                        y_lowess = lowess(tt_, y.values[ix])
+                        ax.plot(tt_, y_lowess, color="k", alpha=0.35)
 
                     best_xlim = ax.get_xlim()
                     ax.hlines(0, 0, tt.max(), linestyles="dashed", linewidths=1)
