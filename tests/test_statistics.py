@@ -209,7 +209,7 @@ def test_StatisticalResult_kwargs():
     sr = stats.StatisticalResult(0.05, 5.0, kw="some_value")
     assert hasattr(sr, "kw")
     assert getattr(sr, "kw") == "some_value"
-    assert "some_value" in sr.__unicode__()
+    assert "some_value" in sr._to_string()
 
 
 def test_StatisticalResult_can_be_added():
@@ -232,14 +232,19 @@ def test_valueerror_is_raised_if_alpha_out_of_bounds():
 
 
 def test_proportional_hazard_test():
+    """
+    c = coxph(formula=Surv(T, E) ~ var1 + var2 + var3, data=df)
+    cz = cox.zph(c, transform='rank')
+    cz
+    """
     cph = CoxPHFitter()
     df = load_regression_dataset()
     cph.fit(df, "T", "E")
     results = stats.proportional_hazard_test(cph, df)
-    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 1.241649, rtol=1e-3)
-    npt.assert_allclose(results.summary.loc["var2"]["test_statistic"], 0.992358, rtol=1e-3)
-    npt.assert_allclose(results.summary.loc["var3"]["test_statistic"], 1.445049, rtol=1e-3)
-    npt.assert_allclose(results.summary.loc["var3"]["p"], 0.229324, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 1.4938293, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var2"]["test_statistic"], 0.8792998, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["test_statistic"], 2.2686088, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["p"], 0.1320184, rtol=1e-3)
 
 
 def test_proportional_hazard_test_with_log_transform():
@@ -247,7 +252,7 @@ def test_proportional_hazard_test_with_log_transform():
     df = load_regression_dataset()
     cph.fit(df, "T", "E")
 
-    results = stats.proportional_hazard_test(cph, df, time_transform=np.log)
+    results = stats.proportional_hazard_test(cph, df, time_transform="log")
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 2.227627, rtol=1e-3)
     npt.assert_allclose(results.summary.loc["var2"]["test_statistic"], 0.714427, rtol=1e-3)
     npt.assert_allclose(results.summary.loc["var3"]["test_statistic"], 1.466321, rtol=1e-3)
@@ -281,9 +286,8 @@ def test_proportional_hazard_test_with_weights():
     cph = CoxPHFitter()
     cph.fit(df, "T", "E", weights_col="w")
 
-
     results = stats.proportional_hazard_test(cph, df)
-    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.108, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.1083698, rtol=1e-3)
 
 
 def test_proportional_hazard_test_with_weights_and_strata():
@@ -307,7 +311,7 @@ def test_proportional_hazard_test_with_weights_and_strata():
             "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
             "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
             "w": [1, 0.5, 2, 1, 1],
-            "s": [1, 1, 0, 0, 0]
+            "s": [1, 1, 0, 0, 0],
         }
     )
     df["E"] = True
@@ -315,8 +319,7 @@ def test_proportional_hazard_test_with_weights_and_strata():
     cph = CoxPHFitter()
     cph.fit(df, "T", "E", weights_col="w", strata="s")
 
-
-    results = stats.proportional_hazard_test(cph, df, time_transform='identity')
+    results = stats.proportional_hazard_test(cph, df, time_transform="identity")
     cph.print_summary()
 
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.0283, rtol=1e-3)
@@ -340,13 +343,12 @@ def test_proportional_hazard_test_with_kmf():
         {
             "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
             "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-            "E": [1, 1, 1, 1, 1]
+            "E": [1, 1, 1, 1, 1],
         }
     )
 
     cph = CoxPHFitter()
     cph.fit(df, "T", "E")
-
 
     results = stats.proportional_hazard_test(cph, df)
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.00971, rtol=1e-3)
@@ -370,13 +372,12 @@ def test_proportional_hazard_test_with_kmf_with_some_censorship():
         {
             "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
             "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-            "E": [1, 1, 1, 0, 1]
+            "E": [1, 1, 1, 0, 1],
         }
     )
 
     cph = CoxPHFitter()
     cph.fit(df, "T", "E")
-
 
     results = stats.proportional_hazard_test(cph, df)
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 1.013802, rtol=1e-3)
@@ -409,9 +410,5 @@ def test_proportional_hazard_test_with_kmf_with_some_censorship_and_weights():
     cph = CoxPHFitter()
     cph.fit(df, "T", "E", weights_col="w")
 
-
     results = stats.proportional_hazard_test(cph, df)
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.916, rtol=1e-2)
-
-
-

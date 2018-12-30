@@ -806,7 +806,7 @@ def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col
         for (col, dtype) in df.dtypes.iteritems()
-        if dtype.name == "categorical" and not (np.issubdtype(dtype, np.number) or np.issubdtype(dtype, np.bool_))
+        if dtype.name == "categorical" or not (np.issubdtype(dtype, np.number) or np.issubdtype(dtype, np.bool_))
     ]
     if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(

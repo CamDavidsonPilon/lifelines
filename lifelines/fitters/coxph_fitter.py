@@ -684,7 +684,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 schoenfeld_residuals = np.append(schoenfeld_residuals, schoenfeld_residuals_in_strata, axis=0)
 
         else:
-            schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T, E.values, weights.values)
+            schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T.values, E.values, weights.values)
 
         # schoenfeld residuals are only defined for subjects with a non-zero event.
         df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.columns, index=index[E])
@@ -695,6 +695,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # This uses Efron ties.
 
         n, d = X.shape
+
+        if E.sum() == 0:
+            # sometimes strata have no deaths. This means nothing is returned
+            # in the below code.
+            return np.zeros((n, d))
 
         # Init risk and tie sums to zero
         risk_phi, tie_phi = 0, 0
@@ -727,7 +732,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x += phi_x_i
 
             # Calculate sums of Ties, if this is an event
-            diff_against.append((xi, ei))
+            diff_against.append((xi, ei, i))
             if ei:
 
                 tie_phi += phi_i
@@ -741,7 +746,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # There are more ties/members of the risk set
                 continue
             elif tie_count == 0:
-                # Only censored with current time, move on
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
@@ -754,7 +758,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 weighted_mean += numer / (denom * tie_count)
 
-            for xi, ei in diff_against:
+            for xi, ei, i in diff_against:
                 schoenfeld_residuals = np.append(schoenfeld_residuals, ei * (xi - weighted_mean), axis=0)
 
             # reset tie values
@@ -1249,8 +1253,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def _compute_baseline_hazards(self, X, T, E, weights):
         if self.strata:
+
             index = self.durations.unique()
-            baseline_hazards_ = pd.DataFrame(index=index)
+            baseline_hazards_ = pd.DataFrame(index=index).sort_index()
 
             for (X_, T_, E_, W_), name in self._partition_by_strata(X, T, E, weights, as_dataframes=True):
                 baseline_hazards_ = baseline_hazards_.merge(
@@ -1380,16 +1385,16 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return ax
 
     def check_assumptions(
-        self, training_df, advice=True, show_plots=True, p_value_threshold=0.05, plot_n_bootstraps=15
+        self, training_df, advice=True, show_plots=True, p_value_threshold=0.05, plot_n_bootstraps=10
     ):
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
         residuals = self.compute_residuals(training_df, kind="scaled_schoenfeld")
-        results = proportional_hazard_test(
+        test_results = proportional_hazard_test(
             self, training_df, time_transform="all", precomputed_residuals=residuals
-        ).summary
+        )
 
         results_and_duration = residuals.join(training_df[self.duration_col])
 
@@ -1397,11 +1402,17 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         n = results_and_duration.shape[0]
 
         for variable in self.hazards_.columns:
-            minumum_observed_p_value = results.loc[variable, "p"].min()
+            minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if minumum_observed_p_value > p_value_threshold:
                 continue
 
             counter += 1
+
+            if counter == 1:
+                print()
+                test_results.print_summary()
+                print()
+
             print(
                 "%d. Variable '%s' failed the non-proportional test, p=%.4f."
                 % (counter, variable, minumum_observed_p_value)
@@ -1410,7 +1421,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             if advice:
                 values = training_df[variable]
                 value_counts = values.value_counts()
-                n_uniques = values.shape[0]
+                n_uniques = value_counts.shape[0]
 
                 # arbitrarly chosen 10 and 4.
                 if n_uniques <= 10 and value_counts.min() >= 4:
@@ -1434,12 +1445,12 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
                 # plot variable against all time transformations.
                 for i, (transform_name, transformer) in enumerate(TimeTransformers(), start=1):
-                    p_value = results.loc[(variable, transform_name), "p"]
+                    p_value = test_results.summary.loc[(variable, transform_name), "p"]
 
                     ax = fig.add_subplot(2, 2, i)
 
                     y = results_and_duration[variable]
-                    tt = transformer(self.durations, self.event_observed)[self.event_observed.values]
+                    tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
                     ax.scatter(tt, y, alpha=0.75)
 
                     y_lowess = lowess(tt.values, y.values)
@@ -1462,6 +1473,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 plt.tight_layout()
                 plt.subplots_adjust(top=0.90)
 
+        if counter == 0:
+            print("Proportional hazard assumption looks okay.")
         return
 
     @property

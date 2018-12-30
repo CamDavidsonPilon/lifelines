@@ -572,10 +572,8 @@ def two_sided_z_test(Z, alpha):
 class TimeTransformers:
 
     TIME_TRANSFOMERS = {
-        # using cumsum is kinda hacky, should be np.argsort but I run into problems later.
-        "rank": lambda t, c, w: np.cumsum(
-            c
-        ),  
+        # using cumsum is kinda hacky (but smart), should be np.argsort but I run into problems later.
+        "rank": lambda t, c, w: np.cumsum(c),
         "identity": lambda t, c, w: t,
         "log": lambda t, c, w: np.log(t),
         "km": lambda t, c, w: 1 - KaplanMeierFitter().fit(t, c, weights=w).survival_function_.loc[t, "KM_estimate"],
@@ -604,7 +602,7 @@ def proportional_hazard_test(
         the DataFrame used in the call to the Cox model's ``fit``. 
     time_transform: vectorized function or string, optional (default='rank')
         {'all', 'km', 'rank', 'identity', 'log'} 
-        One of the strings above, or a function to transform the time variable. 'all' will present all the transforms. 
+        One of the strings above, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms. 
     precomputed_residuals: DataFrame, optional
         specify the residuals, if already computed. 
     kwargs: 

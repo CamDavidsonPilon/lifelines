@@ -977,7 +977,10 @@ class TestCoxPHFitter:
         cph.fit(df, "T", "E", strata=["s"])
 
         results = cph.compute_residuals(df, "schoenfeld")
-        expected = pd.DataFrame([5.898252711e-02, -2.074325854e-02, 0.0, -3.823926885e-02, 0.0], columns=["var1"])
+        print(results)
+        expected = pd.DataFrame(
+            [5.898252711e-02, -2.074325854e-02, 0.0, -3.823926885e-02, 0.0], columns=["var1"], index=[0, 3, 4, 1, 2]
+        )
         assert_frame_equal(results, expected, check_less_precise=3)
 
     def test_scaled_schoenfeld_residuals_against_R(self, regression_dataset):
@@ -2810,7 +2813,7 @@ class TestCoxTimeVaryingFitter:
         ctv.fit(heart, id_col="id", event_col="event")
         test_stat, deg_of_freedom, log_p_value = ctv._compute_likelihood_ratio_test()
         assert abs(test_stat - 15.1) < 0.1
-        assert abs(np.exp(p_value) - 0.00448) < 0.001
+        assert abs(np.exp(log_p_value) - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
