@@ -937,6 +937,12 @@ def check_nans_or_infs(df_or_array):
             raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
 
 
+
+def to_episodic_format(df, id_col, duration_col, event_col):
+    # TODO
+    pass
+
+
 def to_long_format(df, duration_col):
     """
     Parameters
