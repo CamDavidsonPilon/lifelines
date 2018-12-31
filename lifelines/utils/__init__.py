@@ -806,11 +806,11 @@ def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col
         for (col, dtype) in df.dtypes.iteritems()
-        if dtype.name == "categorical" or not (np.issubdtype(dtype, np.number) or np.issubdtype(dtype, np.bool_))
+        if dtype.name == "category" or not (np.issubdtype(dtype, np.number) or np.issubdtype(dtype, np.bool_))
     ]
     if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(
-            "DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)."
+            "DataFrame contains nonnumeric columns: %s. Try 1) using pandas.get_dummies to convert the non-numeric column(s) to numerical data, 2) using it in stratification `strata=`, or 3) dropping the column(s)."
             % nonnumeric_cols
         )
 
@@ -935,7 +935,6 @@ def check_nans_or_infs(df_or_array):
     else:
         if infs.any():
             raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
-
 
 
 def to_episodic_format(df, id_col, duration_col, event_col):

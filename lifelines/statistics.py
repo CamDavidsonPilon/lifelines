@@ -629,7 +629,7 @@ def proportional_hazard_test(
 
     def compute_statistic(times, resids):
         times -= times.mean()
-        T = (times.values[:, None] * scaled_resids.values).sum(0) ** 2 / (
+        T = (times.values[:, None] * resids.values).sum(0) ** 2 / (
             deaths * np.diag(fitted_cox_model.variance_matrix_) * (times ** 2).sum()
         )
         return T
@@ -659,8 +659,9 @@ def proportional_hazard_test(
         ), "time_transform must be a callable function, or a string: {'rank', 'km', 'identity', 'log'}."
 
         times = time_transformer(durations, events, weights)[events.values]
-        print(times)
+
         T = compute_statistic(times, scaled_resids)
+
         p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
         result = StatisticalResult(
             p_values,

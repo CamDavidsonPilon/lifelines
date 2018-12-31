@@ -628,8 +628,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             baseline_at_T = self.baseline_cumulative_hazard_.loc[T, "baseline hazard"].values
         else:
             baseline_at_T = np.empty(0)
-            for name, T_ in T.groupby(level=0):
-                baseline_at_T = np.append(baseline_at_T, self.baseline_cumulative_hazard_.loc[T_, name])
+            for name, T_ in T.groupby(by=self.strata):
+                baseline_at_T = np.append(baseline_at_T, self.baseline_cumulative_hazard_[name].loc[T_])
 
         martingale = E - (partial_hazard * baseline_at_T)
         return pd.DataFrame(
@@ -639,7 +639,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def _compute_deviance(self, X, T, E, weights, index=None):
         df = self._compute_martingale(X, T, E, weights, index)
         rmart = df.pop("martingale")
-        log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * np.log(E.values - rmart.values))
+
+        with np.warnings.catch_warnings():
+            np.warnings.filterwarnings("ignore")
+            log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * np.log(E.values - rmart.values))
+
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
         df["deviance"] = deviance
         return df
@@ -657,6 +661,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         We can approximate V_k with Hessian/d, so the inverse of Hessian/d is (d * variance_matrix_)
 
+        Notes
+        -------
+        lifelines does not add the coefficients to the final results, but R does when you call residuals(c, "scaledsch")
+
 
         """
 
@@ -669,8 +677,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
         # TODO: should the index by times, i.e. T[E]?
+
         # Assumes sorted on T and on strata
-        # index will be set later
         # cluster does nothing to this, as expected.
 
         _, d = X.shape
@@ -1426,7 +1434,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 # arbitrarly chosen 10 and 4.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
-                        "   Advice: with so few unique values ({0}), you can try `strata_col=['{1}']` in the call in `.fit` ".format(
+                        "   Advice: with so few unique values (only {0}), you can try `strata_col=['{1}']` in the call in `.fit` ".format(
                             n_uniques, variable
                         )
                     )
@@ -1461,7 +1469,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                         ix = sorted(np.random.choice(n, n))
                         tt_ = tt.values[ix]
                         y_lowess = lowess(tt_, y.values[ix])
-                        ax.plot(tt_, y_lowess, color="k", alpha=0.35)
+                        ax.plot(tt_, y_lowess, color="k", alpha=0.30)
 
                     best_xlim = ax.get_xlim()
                     ax.hlines(0, 0, tt.max(), linestyles="dashed", linewidths=1)
@@ -1475,7 +1483,6 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         if counter == 0:
             print("Proportional hazard assumption looks okay.")
-        return
 
     @property
     def score_(self):

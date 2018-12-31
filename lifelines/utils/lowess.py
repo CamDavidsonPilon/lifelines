@@ -15,12 +15,15 @@ Statistical Association, September 1988, volume 83, number 403, pp. 596-610.
 #
 # License: BSD (3-clause)
 
+
+# Slight updates in lifelines 0.16.0, 2018
+
 from math import ceil
 import numpy as np
 from scipy import linalg
 
 
-def lowess(x, y, f=2.0 / 3.0, iter=3):
+def lowess(x, y, f=2.0 / 3.0, iterations=3):
     """lowess(x, y, f=2./3., iter=3) -> yest
     Lowess smoother: Robust locally weighted regression.
     The lowess function fits a nonparametric regression curve to a scatterplot.
@@ -38,12 +41,13 @@ def lowess(x, y, f=2.0 / 3.0, iter=3):
     w = (1 - w ** 3) ** 3
     yest = np.zeros(n)
     delta = np.ones(n)
-    for iteration in range(iter):
+    for _ in range(iterations):
         for i in range(n):
             weights = delta * w[:, i]
             b = np.array([np.sum(weights * y), np.sum(weights * y * x)])
             A = np.array([[np.sum(weights), np.sum(weights * x)], [np.sum(weights * x), np.sum(weights * x * x)]])
-            beta = linalg.solve(A, b)
+            # I think it is safe to assume this.
+            beta = linalg.solve(A, b, assume_a='pos', check_finite=False)
             yest[i] = beta[0] + beta[1] * x[i]
 
         residuals = y - yest
