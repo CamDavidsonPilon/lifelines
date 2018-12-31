@@ -35,6 +35,8 @@ from lifelines.utils import (
     string_justify,
     format_p_value,
     format_floats,
+    _to_list,
+    coalesce
 )
 
 
@@ -54,7 +56,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     """
 
-    def __init__(self, alpha=0.95, penalizer=0.0):
+    def __init__(self, alpha=0.95, penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         if penalizer < 0:
@@ -62,6 +64,8 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         self.alpha = alpha
         self.penalizer = penalizer
+        self.strata = strata
+
 
     def fit(
         self,
@@ -74,6 +78,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         show_progress=False,
         step_size=None,
         robust=False,
+        strata=None
     ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
@@ -106,7 +111,7 @@ class CoxTimeVaryingFitter(BaseFitter):
           "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
         step_size: float, optional
             set an initial step size for the fitting algorithm.
-
+        strata: TODO
 
         Returns
         --------
@@ -114,7 +119,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             self, with additional properties like ``hazards_`` and ``print_summary``
 
         """
-
+        self.strata = _to_list(coalesce(strata, self.strata))
         self.robust = robust
         if self.robust:
             raise NotImplementedError("Not available yet.")
@@ -141,7 +146,12 @@ class CoxTimeVaryingFitter(BaseFitter):
         df = df.rename(
             columns={id_col: "id", event_col: "event", start_col: "start", stop_col: "stop", weights_col: "__weights"}
         )
-        df = df.set_index("id")
+
+        if self.strata is None:
+            df = df.set_index("id")
+        else:
+            df = df.set_index(self.strata + ["id"]) # TODO: needs to be a list
+       
         stop_times_events = df[["event", "stop", "start"]].copy()
         weights = df[["__weights"]].copy().astype(float)
         df = df.drop(["event", "stop", "start", "__weights"], axis=1)
@@ -187,35 +197,19 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-    def _compute_residuals(self, df, stop_times_events, weights):
-        raise NotImplementedError()
 
-    def _compute_delta_beta(self, df, stop_times_events, weights):
-        """ approximate change in betas as a result of excluding ith row"""
+    def _partition_by_strata(self, X, stop_times_events, weights, as_dataframes=False):
+        for stratum, stratified_X in X.groupby(self.strata):
+            stratified_stop_times_events, stratified_W = (stop_times_events.loc[[stratum]], weights.loc[[stratum]])
+            if not as_dataframes:
+                yield (stratified_X.values, stratified_stop_times_events.values, stratified_W.values), stratum
+            else:
+                yield (stratified_X, stratified_stop_times_events, stratified_W), stratum
 
-        score_residuals = self._compute_residuals(df, stop_times_events, weights) * weights[:, None]
+    def _partition_by_strata_and_apply(self, X, stop_times_events, weights, function, *args, as_dataframes=False):
+        for (stratified_X, stratified_stop_times_events, stratified_W), _ in self._partition_by_strata(X, stop_times_events, weights, as_dataframes=as_dataframes):
+            yield function(stratified_X, stratified_stop_times_events, stratified_W, *args)
 
-        naive_var = inv(self._hessian_)
-        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
-
-        return delta_betas
-
-    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
-
-        delta_betas = self._compute_delta_beta(df, stop_times_events, weights)
-
-        if self.cluster_col:
-            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
-
-        sandwich_estimator = delta_betas.T.dot(delta_betas)
-        return sandwich_estimator
-
-    def _compute_standard_errors(self, df, stop_times_events, weights):
-        if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal())
-        else:
-            se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
@@ -256,13 +250,12 @@ class CoxTimeVaryingFitter(BaseFitter):
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
+
     def _newton_rhaphson(
         self, df, stop_times_events, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Newton Rhaphson algorithm for fitting CPH model.
-
-        Note that data is assumed to be sorted on T!
 
         Parameters
         ----------
@@ -298,7 +291,17 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         while converging:
             i += 1
-            h, g, ll = self._get_gradients(df, stop_times_events, weights, beta)
+
+            if self.strata is None:
+                h, g, ll = self._get_gradients(df, stop_times_events, weights, beta)
+            else:
+                g = np.zeros_like(beta).T
+                h = np.zeros((beta.shape[0], beta.shape[0]))
+                ll = 0
+                for _h, _g, _ll in self._partition_by_strata_and_apply(df, stop_times_events, weights, self._get_gradients, beta, as_dataframes=True):
+                    g += _g
+                    h += _h
+                    ll += _ll
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -385,7 +388,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         gradient: (1, d) numpy array
         log_likelihood: float
         """
-
+        #import pdb
+        #pdb.set_trace()
         _, d = df.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
@@ -545,8 +549,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         print(self)
         print("{} = '{}'".format(justify("event col"), self.event_col))
+
         if self.weights_col:
             print("{} = '{}'".format(justify("weights col"), self.weights_col))
+
+        if self.strata:
+            print("{} = {}".format(justify("strata"), self.strata))
 
         print("{} = {}".format(justify("number of subjects"), self._n_unique))
         print("{} = {}".format(justify("number of periods"), self._n_examples))
@@ -698,3 +706,33 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s
+
+    def _compute_residuals(self, df, stop_times_events, weights):
+        raise NotImplementedError()
+
+    def _compute_delta_beta(self, df, stop_times_events, weights):
+        """ approximate change in betas as a result of excluding ith row"""
+
+        score_residuals = self._compute_residuals(df, stop_times_events, weights) * weights[:, None]
+
+        naive_var = inv(self._hessian_)
+        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
+
+        return delta_betas
+
+    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
+
+        delta_betas = self._compute_delta_beta(df, stop_times_events, weights)
+
+        if self.cluster_col:
+            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
+
+        sandwich_estimator = delta_betas.T.dot(delta_betas)
+        return sandwich_estimator
+
+    def _compute_standard_errors(self, df, stop_times_events, weights):
+        if self.robust:
+            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal())
+        else:
+            se = np.sqrt(self.variance_matrix_.diagonal())
+        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)

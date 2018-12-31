@@ -14,7 +14,7 @@
  - `print_summary` methods accepts kwargs to also be displayed.
  - `CoxPHFitter` has a new human-readable method, `check_assumptions`, to check the assumptions of your Cox proportional hazard model. 
  - A new helper util to "expand" static datasets into long-form: `lifelines.utils.to_episodic_format`. 
- 
+ - `CoxTimeVaryingFitter` now accepts `strata`. 
 
 #### 0.15.4
  - bug fix for the Cox model likelihood ratio test when using non-trivial weights.
