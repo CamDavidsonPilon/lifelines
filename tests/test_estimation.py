@@ -30,6 +30,7 @@ from lifelines.utils import (
     ConvergenceWarning,
     to_long_format,
     normalize,
+    to_episodic_format,
 )
 
 from lifelines.fitters import BaseFitter
@@ -2988,3 +2989,16 @@ class TestAalenJohansenFitter:
 
         fitter.fit(duration, event_observed, event_of_interest=2)
         npt.assert_allclose(ci_from_sas, np.array(fitter.confidence_interval_))
+
+    def test_ctv_against_cph_for_static_datasets_but_one_is_long(self):
+        rossi = load_rossi()
+        long_rossi = to_episodic_format(rossi, "week", "arrest")
+        assert rossi.shape[0] < long_rossi.shape[0]
+
+        ctv = CoxTimeVaryingFitter()
+        ctv.fit(long_rossi, id_col="id", event_col="arrest")
+
+        cph = CoxPHFitter()
+        cph.fit(rossi, "week", "arrest")
+
+        assert_frame_equal(cph.summary, ctv.summary, check_like=True, check_less_precise=3)
