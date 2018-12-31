@@ -972,14 +972,19 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
     >>> from lifelines.datasets import load_rossi
     >>> from lifelines.utils import to_episodic_format
     >>> rossi = load_rossi()
-    >>> long_rossi = to_episodic_format(df, 'week', 'arrest', time_gaps=2.)
-    >>> long_rossi['time * age'] = long_rossi['stop'] * long_rossi['age']
+    >>> long_rossi = to_episodic_format(rossi, 'week', 'arrest', time_gaps=2.)
     >>>
     >>> from lifelines import CoxTimeVaryingFitter
     >>> ctv = CoxTimeVaryingFitter()
+    >>> # age variable violates proprotional hazard
+    >>> long_rossi['time * age'] = long_rossi['stop'] * long_rossi['age']
     >>> ctv.fit(long_rossi, id_col='id', event_col='arrest', show_progress=True)
     >>> ctv.print_summary()
 
+    See Also
+    --------
+    add_covariate_to_timeline
+    to_long_format
 
     """
     df = df.copy()
@@ -993,11 +998,20 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
 
     if id_col is None:
         id_col = "id"
-        df[id_col] = np.arange(1, n + 1)
+        df.index.rename(id_col, inplace=True)
+        df = df.reset_index()
+        d_dftv = d + 1
+    else:
+        d_dftv = d
+
+    # what dtype can I make it?
+    dtype_dftv = object if (df.dtypes == object).any() else float
 
     # how many rows/cols do I need?
     n_dftv = int(np.ceil(df[stop_col]).sum())
-    tv_array = np.empty((n_dftv, d + 1))
+
+    # alocate temporary numpy array to insert into
+    tv_array = np.empty((n_dftv, d_dftv), dtype=dtype_dftv)
 
     special_columns = [stop_col, start_col, event_col]
     non_special_columns = df.columns.difference(special_columns).tolist()
@@ -1054,6 +1068,7 @@ def to_long_format(df, duration_col):
 
     See Also
     --------
+    to_episodic_format
     add_covariate_to_timeline
     """
     return df.assign(start=0, stop=lambda s: s[duration_col]).drop(duration_col, axis=1)
@@ -1114,6 +1129,8 @@ def add_covariate_to_timeline(
 
     See Also
     --------
+    to_episodic_format
+    to_long_format
     covariates_from_event_matrix
 
 

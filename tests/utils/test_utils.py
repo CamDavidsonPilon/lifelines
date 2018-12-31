@@ -14,6 +14,16 @@ from lifelines.datasets import load_regression_dataset, load_larynx, load_walton
 from lifelines import utils
 
 
+def test_format_p_values():
+    assert utils.format_p_value(2)(0.004) == "<0.005"
+    assert utils.format_p_value(3)(0.004) == "0.004"
+
+    assert utils.format_p_value(3)(0.000) == "<0.0005"
+    assert utils.format_p_value(3)(0.005) == "0.005"
+    assert utils.format_p_value(3)(0.2111) == "0.211"
+    assert utils.format_p_value(3)(0.2119) == "0.212"
+
+
 def test_ridge_regression_with_penalty_is_less_than_without_penalty():
     X = randn(2, 2)
     Y = randn(2)
@@ -774,44 +784,86 @@ class TestLongDataFrameUtils(object):
 
         assert_frame_equal(expected, ldf, check_dtype=False, check_like=True)
 
+    def test_to_episodic_format_with_long_time_gap_is_identical(self):
+        rossi = load_rossi()
+        rossi["id"] = np.arange(rossi.shape[0])
 
-def test_StepSizer_step_will_decrease_if_unstable():
-    start = 0.95
-    ss = utils.StepSizer(start)
-    assert ss.next() == start
-    ss.update(1.0)
-    ss.update(2.0)
-    ss.update(1.0)
-    ss.update(2.0)
+        long_rossi = utils.to_episodic_format(
+            rossi, duration_col="week", event_col="arrest", id_col="id", time_gaps=1000.0
+        )
 
-    assert ss.next() < start
+        long_rossi["week"] = long_rossi["stop"].astype(int)
+        del long_rossi["start"]
+        del long_rossi["stop"]
+
+        assert_frame_equal(long_rossi, rossi, check_like=True)
+
+    def test_to_episodic_format_preserves_outcome(self):
+        E = [1, 1, 0, 0]
+        df = pd.DataFrame({"T": [1, 3, 1, 3], "E": E, "id": [1, 2, 3, 4]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id").sort_values(["id", "stop"])
+        assert long_df.shape[0] == 1 + 3 + 1 + 3
+
+        assert long_df.groupby("id").last()["E"].tolist() == E
+
+    def test_to_episodic_format_handles_floating_durations(self):
+        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 1], "id": [1, 2]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id").sort_values(["id", "stop"])
+        assert long_df.shape[0] == 1 + 4
+        assert long_df["stop"].tolist() == [0.1, 1, 2, 3, 3.5]
+
+    def test_to_episodic_format_handles_floating_durations_with_time_gaps(self):
+        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 1], "id": [1, 2]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id", time_gaps=2.0).sort_values(["id", "stop"])
+        assert long_df["stop"].tolist() == [0.1, 2, 3.5]
+
+    def test_to_episodic_format_handles_floating_durations_and_preserves_events(self):
+        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 0], "id": [1, 2]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id", time_gaps=2.0).sort_values(["id", "stop"])
+        assert long_df.groupby("id").last()["E"].tolist() == [1, 0]
+
+    def test_to_episodic_format_handles_floating_durations_and_preserves_events(self):
+        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 0], "id": [1, 2]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id", time_gaps=2.0).sort_values(["id", "stop"])
+        assert long_df.groupby("id").last()["E"].tolist() == [1, 0]
+
+    def test_to_episodic_format_adds_id_col(self):
+        df = pd.DataFrame({"T": [1, 3], "E": [1, 0]})
+        long_df = utils.to_episodic_format(df, "T", "E")
+        assert "id" in long_df.columns
+
+    def test_to_episodic_format_uses_custom_index_as_id(self):
+        df = pd.DataFrame({"T": [1, 3], "E": [1, 0]}, index=["A", "B"])
+        long_df = utils.to_episodic_format(df, "T", "E")
+        assert long_df["id"].tolist() == ["A", "B", "B", "B"]
 
 
-def test_StepSizer_step_will_increase_if_stable():
-    start = 0.5
-    ss = utils.StepSizer(start)
-    assert ss.next() == start
-    ss.update(1.0)
-    ss.update(0.5)
-    ss.update(0.4)
-    ss.update(0.1)
+class TestStepSizer:
+    def test_StepSizer_step_will_decrease_if_unstable(self):
+        start = 0.95
+        ss = utils.StepSizer(start)
+        assert ss.next() == start
+        ss.update(1.0)
+        ss.update(2.0)
+        ss.update(1.0)
+        ss.update(2.0)
 
-    assert ss.next() > start
+        assert ss.next() < start
 
+    def test_StepSizer_step_will_increase_if_stable(self):
+        start = 0.5
+        ss = utils.StepSizer(start)
+        assert ss.next() == start
+        ss.update(1.0)
+        ss.update(0.5)
+        ss.update(0.4)
+        ss.update(0.1)
 
-def test_StepSizer_step_will_decrease_if_explodes():
-    start = 0.5
-    ss = utils.StepSizer(start)
-    assert ss.next() == start
-    ss.update(20.0)
-    assert ss.next() < start
+        assert ss.next() > start
 
-
-def test_format_p_values():
-    assert utils.format_p_value(2)(0.004) == "<0.005"
-    assert utils.format_p_value(3)(0.004) == "0.004"
-
-    assert utils.format_p_value(3)(0.000) == "<0.0005"
-    assert utils.format_p_value(3)(0.005) == "0.005"
-    assert utils.format_p_value(3)(0.2111) == "0.211"
-    assert utils.format_p_value(3)(0.2119) == "0.212"
+    def test_StepSizer_step_will_decrease_if_explodes(self):
+        start = 0.5
+        ss = utils.StepSizer(start)
+        assert ss.next() == start
+        ss.update(20.0)
+        assert ss.next() < start

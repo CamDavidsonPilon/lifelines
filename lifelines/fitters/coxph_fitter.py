@@ -699,6 +699,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return df
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
+        """
+        A positive value of the residual shows an X value that is higher than expected at that death time.
+        """
         # TODO: the diff_against is gross
         # This uses Efron ties.
 
@@ -1431,16 +1434,22 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 value_counts = values.value_counts()
                 n_uniques = value_counts.shape[0]
 
-                # arbitrarly chosen 10 and 4.
+                # Arbitrarly chosen 10 and 4 to check for ability to use strata col.
+                # This should capture dichotomous / low cardinality values.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
-                        "   Advice: with so few unique values (only {0}), you can try `strata_col=['{1}']` in the call in `.fit` ".format(
+                        "   Advice: with so few unique values (only {0}), you can try `strata_col=['{1}']` in the call in `.fit`. See documentation here: ...".format(
                             n_uniques, variable
                         )
                     )
                 else:
                     print(
-                        """   Advice: start by binning the variable '{var}' using pd.cut, and then specify it in `strata_col=['{var}']` in the call in `.fit`.""".format(
+                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata_col=['{var}']` in the call in `.fit`. See more documentation here: ...""".format(
+                            var=variable
+                        )
+                    )
+                    print(
+                        """   Advice: try adding an interaction term with your time variable. See more documentation here: ...""".format(
                             var=variable
                         )
                     )

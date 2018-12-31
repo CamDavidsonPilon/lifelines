@@ -1,17 +1,20 @@
 ### Changelogs
 
 #### 0.16.0
+ - Drop Python 3.4 support. 
  - introduction of residual calculations in `CoxPHFitter.compute_residuals`. Residuals include "schoenfeld", "score", "delta_beta", "deviance", "martingale", and "scaled_schoenfeld".
  - removes `estimation` namespace for fitters. Should be using `from lifelines import xFitter` now. Thanks @usmanatron
  - removes `predict_log_hazard_relative_to_mean` from Cox model. Thanks @usmanatron
  - `StatisticalResult` has be generalized to allow for multiple results (ex: from pairwise comparisons). This means a slightly changed API that is mostly backwards compatible. See doc string for how to use it. 
  - `statistics.pairwise_logrank_test` now returns a `StatisticalResult` object instead of a nasty NxN DataFrame 💗
- - Drop Python 3.4 support. 
  - Display log(p-values) as well as p-values in `print_summary`. Also, p-values below thesholds will be truncated. The orignal p-values are still recoverable using `.summary`.
  - Floats `print_summary` is now displayed to 2 decimal points. This can be changed using the `decimal` kwarg. 
  - removed `standardized` from `Cox` model plotting. It was confusing. 
  - visual improvements to Cox models `.plot`
- - `print_summary` methods accpt 
+ - `print_summary` methods accepts kwargs to also be displayed.
+ - `CoxPHFitter` has a new human-readable method, `check_assumptions`, to check the assumptions of your Cox proportional hazard model. 
+ - A new helper util to "expand" static datasets into long-form: `lifelines.utils.to_episodic_format`. 
+ 
 
 #### 0.15.4
  - bug fix for the Cox model likelihood ratio test when using non-trivial weights.
