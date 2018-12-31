@@ -36,7 +36,7 @@ from lifelines.utils import (
     format_p_value,
     format_floats,
     _to_list,
-    coalesce
+    coalesce,
 )
 
 
@@ -66,7 +66,6 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.penalizer = penalizer
         self.strata = strata
 
-
     def fit(
         self,
         df,
@@ -78,7 +77,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         show_progress=False,
         step_size=None,
         robust=False,
-        strata=None
+        strata=None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
@@ -150,8 +149,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         if self.strata is None:
             df = df.set_index("id")
         else:
-            df = df.set_index(self.strata + ["id"]) # TODO: needs to be a list
-       
+            df = df.set_index(self.strata + ["id"])  # TODO: needs to be a list
+
         stop_times_events = df[["event", "stop", "start"]].copy()
         weights = df[["__weights"]].copy().astype(float)
         df = df.drop(["event", "stop", "start", "__weights"], axis=1)
@@ -197,7 +196,6 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-
     def _partition_by_strata(self, X, stop_times_events, weights, as_dataframes=False):
         for stratum, stratified_X in X.groupby(self.strata):
             stratified_stop_times_events, stratified_W = (stop_times_events.loc[[stratum]], weights.loc[[stratum]])
@@ -207,9 +205,10 @@ class CoxTimeVaryingFitter(BaseFitter):
                 yield (stratified_X, stratified_stop_times_events, stratified_W), stratum
 
     def _partition_by_strata_and_apply(self, X, stop_times_events, weights, function, *args, as_dataframes=False):
-        for (stratified_X, stratified_stop_times_events, stratified_W), _ in self._partition_by_strata(X, stop_times_events, weights, as_dataframes=as_dataframes):
+        for (stratified_X, stratified_stop_times_events, stratified_W), _ in self._partition_by_strata(
+            X, stop_times_events, weights, as_dataframes=as_dataframes
+        ):
             yield function(stratified_X, stratified_stop_times_events, stratified_W, *args)
-
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
@@ -249,7 +248,6 @@ class CoxTimeVaryingFitter(BaseFitter):
         df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
-
 
     def _newton_rhaphson(
         self, df, stop_times_events, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
@@ -298,7 +296,9 @@ class CoxTimeVaryingFitter(BaseFitter):
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
-                for _h, _g, _ll in self._partition_by_strata_and_apply(df, stop_times_events, weights, self._get_gradients, beta, as_dataframes=True):
+                for _h, _g, _ll in self._partition_by_strata_and_apply(
+                    df, stop_times_events, weights, self._get_gradients, beta, as_dataframes=True
+                ):
                     g += _g
                     h += _h
                     ll += _ll
@@ -388,8 +388,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         gradient: (1, d) numpy array
         log_likelihood: float
         """
-        #import pdb
-        #pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
         _, d = df.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)

@@ -2847,6 +2847,32 @@ Likelihood ratio test = 15.11 on 4 df, log(p)=-5.41
         finally:
             sys.stdout = saved_stdout
 
+    def test_ctv_against_cph_for_static_datasets_but_one_is_long(self):
+        rossi = load_rossi()
+        long_rossi = to_episodic_format(rossi, "week", "arrest")
+        assert rossi.shape[0] < long_rossi.shape[0]
+
+        ctv = CoxTimeVaryingFitter()
+        ctv.fit(long_rossi, id_col="id", event_col="arrest")
+
+        cph = CoxPHFitter()
+        cph.fit(rossi, "week", "arrest")
+
+        assert_frame_equal(cph.summary, ctv.summary, check_like=True, check_less_precise=3)
+
+    def test_ctv_with_strata_against_R(self, ctv, heart):
+        """
+        library(survival)
+        data(heart)
+        r = coxph(Surv(start, stop, event) ~ age + strata(transplant) + surgery + year, data=heart)
+        r
+        """
+        ctv.fit(heart, id_col="id", event_col="event", strata="transplant")
+        summary = ctv.summary.sort_index()
+        npt.assert_allclose(summary["coef"].tolist(), [0.0293, -0.6176, -0.1527], atol=0.001)
+        npt.assert_allclose(summary["se(coef)"].tolist(), [0.0139, 0.3707, 0.0710], atol=0.001)
+        npt.assert_allclose(summary["z"].tolist(), [2.11, -1.67, -2.15], atol=0.01)
+
 
 class TestAalenJohansenFitter:
     @pytest.fixture  # pytest fixtures are functions that are "executed" before every test
@@ -2989,16 +3015,3 @@ class TestAalenJohansenFitter:
 
         fitter.fit(duration, event_observed, event_of_interest=2)
         npt.assert_allclose(ci_from_sas, np.array(fitter.confidence_interval_))
-
-    def test_ctv_against_cph_for_static_datasets_but_one_is_long(self):
-        rossi = load_rossi()
-        long_rossi = to_episodic_format(rossi, "week", "arrest")
-        assert rossi.shape[0] < long_rossi.shape[0]
-
-        ctv = CoxTimeVaryingFitter()
-        ctv.fit(long_rossi, id_col="id", event_col="arrest")
-
-        cph = CoxPHFitter()
-        cph.fit(rossi, "week", "arrest")
-
-        assert_frame_equal(cph.summary, ctv.summary, check_like=True, check_less_precise=3)
