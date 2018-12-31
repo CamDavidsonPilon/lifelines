@@ -23,6 +23,7 @@ __all__ = [
     "concordance_index",
     "k_fold_cross_validation",
     "to_long_format",
+    "to_episodic_format",
     "add_covariate_to_timeline",
     "covariates_from_event_matrix",
 ]
@@ -937,13 +938,108 @@ def check_nans_or_infs(df_or_array):
             raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
 
 
-def to_episodic_format(df, id_col, duration_col, event_col):
-    # TODO
-    pass
+def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
+    """
+    This function takes a "flat" dataset (that is, non-time-varying), and converts it into a time-varying dataset 
+    with static variables. 
+    
+    Useful if your dataset has variables that do not satisfy the proportional hazard assumption, and you need to create a 
+    time-varying dataset to include interaction terms with time. 
+
+
+    Parameters
+    ----------
+    df: DataFrame
+        a DataFrame of the static dataset.
+    duration_col: string
+        string representing the column in df that represents the durations of each subject.
+    event_col: string
+        string representing the column in df that represents whether the subject experienced the event or not.
+    id_col: string, optional
+        Specify the column that represents an id, else lifelines creates an autoincrementing one. 
+    time_gaps: float or int
+        Specify a desired time_gap. For example, if time_gap is 2 and a subject lives for 10.5 units of time, 
+        then the final long form will have 5 + 1 rows for that subject: [0, 2), [2, 4), [4, 6), [6, 8), [8, 10), [10, 10.5)
+        Smaller time_gaps will produce larger dataframes, and larger time_gaps will produce smaller dataframes. In the limit,
+        the long dataframe will be identical to the original dataframe. 
+
+    Returns
+    --------
+    DataFrame
+
+    Example
+    --------
+    >>> from lifelines.datasets import load_rossi
+    >>> from lifelines.utils import to_episodic_format
+    >>> rossi = load_rossi()
+    >>> long_rossi = to_episodic_format(df, 'week', 'arrest', time_gaps=2.)
+    >>> long_rossi['time * age'] = long_rossi['stop'] * long_rossi['age']
+    >>>
+    >>> from lifelines import CoxTimeVaryingFitter
+    >>> ctv = CoxTimeVaryingFitter()
+    >>> ctv.fit(long_rossi, id_col='id', event_col='arrest', show_progress=True)
+    >>> ctv.print_summary()
+
+
+    """
+    df = df.copy()
+    df[duration_col] /= time_gaps
+    df = to_long_format(df, duration_col)
+
+    stop_col = "stop"
+    start_col = "start"
+
+    n, d = df.shape
+
+    if id_col is None:
+        id_col = "id"
+        df[id_col] = np.arange(1, n + 1)
+
+    # how many rows/cols do I need?
+    n_dftv = int(np.ceil(df[stop_col]).sum())
+    tv_array = np.empty((n_dftv, d + 1))
+
+    special_columns = [stop_col, start_col, event_col]
+    non_special_columns = df.columns.difference(special_columns).tolist()
+
+    order_I_want = special_columns + non_special_columns
+
+    df = df[order_I_want]
+
+    position_counter = 0
+
+    for _, row in df.iterrows():
+        T, E = row[stop_col], row[event_col]
+        T_int = int(np.ceil(T))
+        values = np.tile(row.values, (T_int, 1))
+
+        # modify first column, which is the old duration col.
+        values[:, 0] = np.arange(1, T + 1, dtype=float)
+        values[-1, 0] = T
+
+        # modify second column.
+        values[:, 1] = np.arange(0, T, dtype=float)
+
+        # modify third column, which is the old event col
+        values[:, 2] = 0.0
+        values[-1, 2] = float(E)
+
+        tv_array[position_counter : position_counter + T_int, :] = values
+
+        position_counter += T_int
+
+    dftv = pd.DataFrame(tv_array, columns=df.columns)
+    dftv = dftv.astype(dtype=df.dtypes[non_special_columns + [event_col]].to_dict())
+    dftv[start_col] *= time_gaps
+    dftv[stop_col] *= time_gaps
+    return dftv
 
 
 def to_long_format(df, duration_col):
     """
+    This function converts a survival analysis dataframe to a lifelines "long" format. The lifelines "long"
+    format is used in a common next function, ``add_covariate_to_timeline``. 
+
     Parameters
     ----------
     df: DataFrame
