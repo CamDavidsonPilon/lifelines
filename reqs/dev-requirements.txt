@@ -1,4 +1,6 @@
 -r base-requirements.txt
+# installs lifelines as editiable dependancy in develop mode
+-e .
 pytest
 pytest-icdiff;python_version > '3.5'
 coverage>=4.4
