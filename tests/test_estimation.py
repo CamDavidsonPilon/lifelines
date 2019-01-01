@@ -1099,7 +1099,7 @@ class TestCoxPHFitter:
             output = out.getvalue().strip().split()
             expected = (
                 (
-                    repr(cp)
+                    repr(cph)
                     + "\n"
                     + """
       duration col = week

@@ -118,7 +118,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             self, with additional properties like ``hazards_`` and ``print_summary``
 
         """
-        self.strata = _to_list(coalesce(strata, self.strata))
+        self.strata = coalesce(strata, self.strata)
         self.robust = robust
         if self.robust:
             raise NotImplementedError("Not available yet.")
@@ -149,7 +149,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         if self.strata is None:
             df = df.set_index("id")
         else:
-            df = df.set_index(self.strata + ["id"])  # TODO: needs to be a list
+            df = df.set_index(_to_list(self.strata) + ["id"])  # TODO: needs to be a list
 
         stop_times_events = df[["event", "stop", "start"]].copy()
         weights = df[["__weights"]].copy().astype(float)
