@@ -236,7 +236,7 @@ def load_lcd(**kwargs):
 
 def load_waltons(**kwargs):
     """
-    Genotypes and number of days survived in Drosophila . Since we work with flies, we don't need to worry about left-censoring. We know the birth date of all flies. We do have issues with accidentally killing some or if some escape. These would be right-censored as we do not actually observe their death due to "natural" causes.
+    Genotypes and number of days survived in Drosophila. Since we work with flies, we don't need to worry about left-censoring. We know the birth date of all flies. We do have issues with accidentally killing some or if some escape. These would be right-censored as we do not actually observe their death due to "natural" causes.
 
     Size: (163,3)
     Example:
