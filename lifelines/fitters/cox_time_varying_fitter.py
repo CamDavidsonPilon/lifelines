@@ -196,17 +196,14 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-    def _partition_by_strata(self, X, stop_times_events, weights, as_dataframes=False):
+    def _partition_by_strata(self, X, stop_times_events, weights):
         for stratum, stratified_X in X.groupby(self.strata):
             stratified_stop_times_events, stratified_W = (stop_times_events.loc[[stratum]], weights.loc[[stratum]])
-            if not as_dataframes:
-                yield (stratified_X.values, stratified_stop_times_events.values, stratified_W.values), stratum
-            else:
-                yield (stratified_X, stratified_stop_times_events, stratified_W), stratum
+            yield (stratified_X, stratified_stop_times_events, stratified_W), stratum
 
-    def _partition_by_strata_and_apply(self, X, stop_times_events, weights, function, *args, as_dataframes=False):
+    def _partition_by_strata_and_apply(self, X, stop_times_events, weights, function, *args):
         for (stratified_X, stratified_stop_times_events, stratified_W), _ in self._partition_by_strata(
-            X, stop_times_events, weights, as_dataframes=as_dataframes
+            X, stop_times_events, weights
         ):
             yield function(stratified_X, stratified_stop_times_events, stratified_W, *args)
 
@@ -297,7 +294,7 @@ class CoxTimeVaryingFitter(BaseFitter):
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(
-                    df, stop_times_events, weights, self._get_gradients, beta, as_dataframes=True
+                    df, stop_times_events, weights, self._get_gradients, beta
                 ):
                     g += _g
                     h += _h
