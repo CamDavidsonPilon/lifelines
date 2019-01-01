@@ -21,3 +21,6 @@ Pipfile.lock
 
 # Jupyter
 .ipynb_checkpoints
+
+# docs artifacts
+docs/_build/
