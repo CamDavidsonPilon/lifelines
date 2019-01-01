@@ -165,7 +165,7 @@ class CoxPHFitter(BaseFitter):
         Returns
         -------
         self: CoxPHFitter
-            self with additional new properties: print_summary, hazards_, confidence_intervals_, baseline_survival_, etc.
+            self with additional new properties: ``print_summary``, ``hazards_``, ``confidence_intervals_``, ``baseline_survival_``, etc.
 
 
         Note

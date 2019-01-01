@@ -305,31 +305,40 @@ def plot_estimate(
 
     Matplotlib plot arguments can be passed in inside the kwargs, plus
 
-    Parameters:
-      show_censors: place markers at censorship events. Default: False
-      censor_styles: If show_censors, this dictionary will be passed into
-                     the plot call.
-      ci_alpha: the transparency level of the confidence interval.
-                Default: 0.3
-      ci_force_lines: force the confidence intervals to be line plots
-                      (versus default shaded areas). Default: False
-      ci_show: show confidence intervals. Default: True
-      ci_legend: if ci_force_lines is True, this is a boolean flag to add
-                 the lines' labels to the legend. Default: False
-      at_risk_counts: show group sizes at time points. See function
-                      'add_at_risk_counts' for details. Default: False
-      loc: specify a time-based subsection of the curves to plot, ex:
-               .plot(loc=slice(0.,10.))
-          will plot the time values between t=0. and t=10.
-      iloc: specify a location-based subsection of the curves to plot, ex:
-               .plot(iloc=slice(0,10))
-            will plot the first 10 time points.
-      invert_y_axis: boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs.
-      bandwidth: specify the bandwidth of the kernel smoother for the
-                 smoothed-hazard rate. Only used when called 'plot_hazard'.
+    Parameters
+    -----------
+    show_censors: bool
+        place markers at censorship events. Default: False
+    censor_styles: bool
+        If show_censors, this dictionary will be passed into the plot call.
+    ci_alpha: bool
+        the transparency level of the confidence interval. Default: 0.3
+    ci_force_lines: bool 
+        force the confidence intervals to be line plots (versus default shaded areas). Default: False
+    ci_show: bool
+        show confidence intervals. Default: True
+    ci_legend: bool
+        if ci_force_lines is True, this is a boolean flag to add the lines' labels to the legend. Default: False
+    at_risk_counts: bool
+        show group sizes at time points. See function ``add_at_risk_counts`` for details. Default: False
+    loc: slice
+        specify a time-based subsection of the curves to plot, ex:
+             .plot(loc=slice(0.,10.))
+        will plot the time values between t=0. and t=10.
+    iloc: slice
+        specify a location-based subsection of the curves to plot, ex:
+             .plot(iloc=slice(0,10))
+          will plot the first 10 time points.
+    invert_y_axis: bool
+        boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs.
+    bandwidth: float
+        specify the bandwidth of the kernel smoother for the
+               smoothed-hazard rate. Only used when called 'plot_hazard'.
 
-    Returns:
-      ax: a pyplot axis object
+    Returns
+    -------
+    ax: 
+        a pyplot axis object
     """
     plot_estimate_config = PlotEstimateConfig(
         cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs

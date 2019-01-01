@@ -16,8 +16,6 @@ before_install:
   # - sudo apt-get update
 install: "make"
 script:
-  # enforce coding standards
-  - make lint
   # enforce formatting
   - make check_format
   # command to run tests

@@ -558,30 +558,39 @@ def k_fold_cross_validation(
 
     Parameters
     ----------
-    fitter(s): one or several objects which possess a method:
+    fitter(s): model
+                one or several objects which possess a method:
                    fit(self, data, duration_col, event_col)
                Note that the last two arguments will be given as keyword arguments,
                and that event_col is optional. The objects must also have
                the "predictor" method defined below.
-    df: a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
+    df: DataFrame
+        a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
         other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
         refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
-    duration_col: the column in dataframe that contains the subjects lifetimes.
-    event_col: the column in dataframe that contains the subject's death observation. If left
-               as None, assumes all individuals are non-censored.
-    k: the number of folds to perform. n/k data will be withheld for testing on.
-    evaluation_measure: a function that accepts either (event_times, predicted_event_times),
-                        or (event_times, predicted_event_times, event_observed)
-                        and returns something (could be anything).
-                        Default: statistics.concordance_index: (C-index)
-                        between two series of event times
-    predictor: a string that matches a prediction method on the fitter instances.
-               For example, "predict_expectation" or "predict_percentile".
-               Default is "predict_expectation"
-               The interface for the method is:
-                   predict(self, data, **optional_kwargs)
-    fitter_kwargs: keyword args to pass into fitter.fit method
-    predictor_kwargs: keyword args to pass into predictor-method.
+    duration_col: (n,) array
+        the column in dataframe that contains the subjects lifetimes.
+    event_col: (n,) array
+        the column in dataframe that contains the subject's death observation. If left
+        as None, assumes all individuals are non-censored.
+    k: int
+        the number of folds to perform. n/k data will be withheld for testing on.
+    evaluation_measure: function
+        a function that accepts either (event_times, predicted_event_times),
+        or (event_times, predicted_event_times, event_observed)
+        and returns something (could be anything).
+        Default: statistics.concordance_index: (C-index)
+        between two series of event times
+    predictor: string
+       a string that matches a prediction method on the fitter instances.
+       For example, "predict_expectation" or "predict_percentile".
+       Default is "predict_expectation"
+       The interface for the method is:
+           predict(self, data, **optional_kwargs)
+    fitter_kwargs: 
+        keyword args to pass into fitter.fit method
+    predictor_kwargs: 
+        keyword args to pass into predictor-method.
 
     Returns
     -------
@@ -663,8 +672,9 @@ def epanechnikov_kernel(t, T, bandwidth=1.0):
 
 def significance_code(p):
     """
-    v0.15.0:
-        p-values between 0.05 and 0.1 have such little information gain. For that reason, I am deviating
+    Notes
+    ------
+    v0.15.0: p-values between 0.05 and 0.1 have such little information gain. For that reason, I am deviating
         from the traditional "astericks" in R and making everthing an order-of-magnitude less.
     """
     if p < 0.0001:
@@ -695,8 +705,8 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     ----------
     X: a (n,d) numpy array
     Y: a (n,) numpy array
-    c1: a scalar
-    c2: a scalar
+    c1: float
+    c2: float
     offset: a (d,) numpy array.
 
     Returns
@@ -994,7 +1004,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
     stop_col = "stop"
     start_col = "start"
 
-    n, d = df.shape
+    _, d = df.shape
 
     if id_col is None:
         id_col = "id"

@@ -19,5 +19,5 @@ Pipfile.lock
 # Pyenv
 .python-version
 
-# Jupyer
+# Jupyter
 .ipynb_checkpoints

@@ -237,6 +237,16 @@ man_pages = [("index", "lifelines", "lifelines Documentation", ["Cam Davidson-Pi
 # man_show_urls = False
 
 
+# nbsphinx
+nbsphinx_prolog = r"""
+.. image:: http://i.imgur.com/EOowdSD.png
+
+-------------------------------------
+
+
+"""
+
+
 # -- Options for Texinfo output -------------------------------------------
 
 # Grouping the document tree into Texinfo files. List of tuples
