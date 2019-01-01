@@ -30,19 +30,23 @@ from lifelines.utils import (
     ConvergenceWarning,
     to_long_format,
     normalize,
+    to_episodic_format,
 )
-from lifelines.estimation import (
-    CoxPHFitter,
-    AalenAdditiveFitter,
-    KaplanMeierFitter,
-    NelsonAalenFitter,
-    BreslowFlemingHarringtonFitter,
-    ExponentialFitter,
+
+from lifelines.fitters import BaseFitter
+
+from lifelines import (
     WeibullFitter,
-    BaseFitter,
+    ExponentialFitter,
+    NelsonAalenFitter,
+    KaplanMeierFitter,
+    BreslowFlemingHarringtonFitter,
+    CoxPHFitter,
     CoxTimeVaryingFitter,
+    AalenAdditiveFitter,
     AalenJohansenFitter,
 )
+
 from lifelines.datasets import (
     load_larynx,
     load_waltons,
@@ -865,31 +869,222 @@ class TestRegressionFitters:
 
 
 class TestCoxPHFitter:
-    def test_error_is_raised_if_using_non_numeric_data_in_prediction(self):
-        df = pd.DataFrame.from_dict({"t": [1.0, 2.0, 3.0, 4.0], "int_": [1, -1, 0, 0], "float_": [1.2, -0.5, 0.0, 0.1]})
+    @pytest.fixture
+    def cph(self):
+        return CoxPHFitter()
 
-        cp = CoxPHFitter()
-        cp.fit(df, duration_col="t")
+    def test_schoenfeld_residuals_no_strata_but_with_censorship(self, cph):
+        """
+        library(survival)
+        df <- data.frame(
+          "var" = c(-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105),
+          "T" = c(5, 6, 7, 8, 9),
+          "E" = c(1, 1, 1, 1, 1),
+        )
 
-        df_predict_on = pd.DataFrame.from_dict({"int_": ["1", "-1", "0"], "float_": [1.2, -0.5, 0.0]})
+        c = coxph(formula=Surv(T, E) ~ var , data=df)
+        residuals(c, "schoen")
+        """
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [5, 6, 7, 8, 9],
+                "E": [1, 1, 1, 1, 1],
+            }
+        )
+
+        cph.fit(df, "T", "E")
+
+        results = cph.compute_residuals(df, "schoenfeld")
+        expected = pd.DataFrame([-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344, 0.0], columns=["var1"])
+        assert_frame_equal(results, expected, check_less_precise=3)
+
+    def test_schoenfeld_residuals_with_censorship_and_ties(self, cph):
+        """
+        library(survival)
+        df <- data.frame(
+          "var" = c(-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105),
+          "T" = c(6, 6, 7, 8, 9),
+          "E" = c(1, 1, 1, 0, 1),
+        )
+
+        c = coxph(formula=Surv(T, E) ~ var , data=df)
+        residuals(c, "schoen")
+        """
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "E": [1, 1, 1, 0, 1],
+            }
+        )
+
+        cph.fit(df, "T", "E")
+
+        results = cph.compute_residuals(df, "schoenfeld")
+        expected = pd.DataFrame([-0.3903793341, -0.5535578141, 0.9439371482, 0.0], columns=["var1"], index=[0, 1, 2, 4])
+        assert_frame_equal(results, expected, check_less_precise=3)
+
+    def test_schoenfeld_residuals_with_weights(self, cph):
+        """
+        library(survival)
+        df <- data.frame(
+          "var" = c(-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105),
+          "T" = c(6, 6, 7, 8, 9),
+          "E" = c(1, 1, 1, 0, 1),
+        )
+
+        c = coxph(formula=Surv(T, E) ~ var , data=df)
+        residuals(c, "schoen")
+        """
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [5, 6, 7, 8, 9],
+                "E": [1, 1, 1, 1, 1],
+                "w": [0.5, 1.0, 3.0, 1.0, 1.0],
+            }
+        )
+
+        cph.fit(df, "T", "E", weights_col="w", robust=True)
+
+        results = cph.compute_residuals(df, "schoenfeld")
+        expected = pd.DataFrame([-0.6633324862, -0.9107785234, 0.6176009038, -0.6103579448, 0.0], columns=["var1"])
+        assert_frame_equal(results, expected, check_less_precise=3)
+
+    def test_schoenfeld_residuals_with_strata(self, cph):
+        """
+        library(survival)
+        df <- data.frame(
+          "var" = c(-0.71163379, -0.87481227,  0.99557251, -0.83649751,  1.42737105),
+          "T" = c( 6, 6, 7, 8, 9),
+          "E" = c(1, 1, 1, 1, 1),
+          "s" = c(1, 2, 2, 1, 1)
+        )
+
+        c = coxph(formula=Surv(T, E) ~ var + stata(s), data=df)
+        residuals(c, "schoen")
+        """
+
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "E": [1, 1, 1, 1, 1],
+                "s": [1, 2, 2, 1, 1],
+            }
+        )
+
+        cph.fit(df, "T", "E", strata=["s"])
+
+        results = cph.compute_residuals(df, "schoenfeld")
+        expected = pd.DataFrame(
+            [5.898252711e-02, -2.074325854e-02, 0.0, -3.823926885e-02, 0.0], columns=["var1"], index=[0, 3, 4, 1, 2]
+        )
+        assert_frame_equal(results, expected, check_less_precise=3)
+
+    def test_scaled_schoenfeld_residuals_against_R(self, regression_dataset, cph):
+        """
+        NOTE: lifelines does not add the coefficients to the final results, but R does when you call residuals(c, "scaledsch")
+        """
+
+        cph.fit(regression_dataset, "T", "E")
+
+        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.hazards_.values[0]
+        npt.assert_allclose(results.iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=5)
+        npt.assert_allclose(results.iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=5)
+        npt.assert_allclose(
+            results.iloc[results.shape[0] - 1].values, [0.222207366875, 0.050957334886, 0.218314242931], rtol=5
+        )
+
+    def test_original_index_is_respected_in_all_residual_tests(self, cph):
+
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "s": [1, 2, 2, 1, 1],
+            }
+        )
+        df.index = ["A", "B", "C", "D", "E"]
+
+        cph.fit(df, "T")
+
+        for kind in {"martingale", "schoenfeld", "score", "delta_beta", "deviance"}:
+            resids = cph.compute_residuals(df, kind)
+            assert resids.sort_index().index.tolist() == ["A", "B", "C", "D", "E"]
+
+    def test_original_index_is_respected_in_all_residual_tests_with_strata(self, cph):
+
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "s": [1, 2, 2, 1, 1],
+            }
+        )
+        df.index = ["A", "B", "C", "D", "E"]
+
+        cph.fit(df, "T", strata=["s"])
+
+        for kind in {"martingale", "schoenfeld", "score", "delta_beta", "deviance", "scaled_schoenfeld"}:
+            resids = cph.compute_residuals(df, kind)
+            assert resids.sort_index().index.tolist() == ["A", "B", "C", "D", "E"]
+
+    def test_martingale_residuals(self, regression_dataset, cph):
+
+        cph.fit(regression_dataset, "T", "E")
+
+        results = cph.compute_residuals(regression_dataset, "martingale")
+        print(results)
+        npt.assert_allclose(results.loc[0, "martingale"], -2.315035744901, rtol=1e-05)
+        npt.assert_allclose(results.loc[1, "martingale"], 0.774216356429, rtol=1e-05)
+        npt.assert_allclose(results.loc[199, "martingale"], 0.868510420157, rtol=1e-05)
+
+    def test_error_is_raised_if_using_non_numeric_data_in_prediction(self, cph):
+        df = pd.DataFrame({"t": [1.0, 2.0, 3.0, 4.0], "int_": [1, -1, 0, 0], "float_": [1.2, -0.5, 0.0, 0.1]})
+
+        cph.fit(df, duration_col="t")
+
+        df_predict_on = pd.DataFrame({"int_": ["1", "-1", "0"], "float_": [1.2, -0.5, 0.0]})
 
         with pytest.raises(TypeError):
-            cp.predict_partial_hazard(df_predict_on)
+            cph.predict_partial_hazard(df_predict_on)
 
-    def test_strata_will_work_with_matched_pairs(self, rossi):
+    def test_strata_will_work_with_matched_pairs(self, rossi, cph):
         rossi["matched_pairs"] = np.floor(rossi.index / 2.0).astype(int)
-        cp = CoxPHFitter()
-        cp.fit(rossi, duration_col="week", event_col="arrest", strata=["matched_pairs"], show_progress=True)
-        assert cp.baseline_cumulative_hazard_.shape[1] == 216
+        cph.fit(rossi, duration_col="week", event_col="arrest", strata=["matched_pairs"], show_progress=True)
+        assert cph.baseline_cumulative_hazard_.shape[1] == 216
 
-    def test_summary(self, rossi):
-        cp = CoxPHFitter()
-        cp.fit(rossi, duration_col="week", event_col="arrest")
-        summary = cp.summary
-        expectedColumns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95"]
-        assert all([col in summary.columns for col in expectedColumns])
+    def test_summary(self, rossi, cph):
+        cph.fit(rossi, duration_col="week", event_col="arrest")
+        summary = cph.summary
+        expected_columns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95"]
+        assert all([col in summary.columns for col in expected_columns])
 
-    def test_print_summary(self, rossi):
+    def test_print_summary_with_decimals(self, rossi, cph):
+        import sys
+
+        saved_stdout = sys.stdout
+        try:
+
+            out = StringIO()
+            sys.stdout = out
+
+            cph = CoxPHFitter()
+            cph.fit(rossi, duration_col="week", event_col="arrest")
+            cph._time_fit_was_called = "2018-10-23 02:40:45 UTC"
+            cph.print_summary(decimals=1)
+            output_dec_1 = out.getvalue().strip().split()
+
+            cph.print_summary(decimals=3)
+            output_dec_3 = out.getvalue().strip().split()
+
+            assert output_dec_1 != output_dec_3
+        finally:
+            sys.stdout = saved_stdout
+
+    def test_print_summary(self, rossi, cph):
 
         import sys
 
@@ -898,14 +1093,13 @@ class TestCoxPHFitter:
             out = StringIO()
             sys.stdout = out
 
-            cp = CoxPHFitter()
-            cp.fit(rossi, duration_col="week", event_col="arrest")
-            cp._time_fit_was_called = "2018-10-23 02:40:45 UTC"
-            cp.print_summary()
+            cph.fit(rossi, duration_col="week", event_col="arrest")
+            cph._time_fit_was_called = "2018-10-23 02:40:45 UTC"
+            cph.print_summary()
             output = out.getvalue().strip().split()
             expected = (
                 (
-                    repr(cp)
+                    repr(cph)
                     + "\n"
                     + """
       duration col = week
@@ -928,7 +1122,7 @@ prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
 Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
 Concordance = 0.640
-Likelihood ratio test = 33.266 on 7 df, p=0.00002
+Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
 """
                 )
                 .strip()
@@ -939,13 +1133,11 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         finally:
             sys.stdout = saved_stdout
 
-    def test_log_likelihood_is_available_in_output(self, data_nus):
-        cox = CoxPHFitter()
-        cox.fit(data_nus, duration_col="t", event_col="E")
-        assert abs(cox._log_likelihood - -12.7601409152) < 0.001
+    def test_log_likelihood(self, data_nus, cph):
+        cph.fit(data_nus, duration_col="t", event_col="E")
+        assert abs(cph._log_likelihood - -12.7601409152) < 0.001
 
-    def test_efron_computed_by_hand_examples(self, data_nus):
-        cox = CoxPHFitter()
+    def test_efron_computed_by_hand_examples(self, data_nus, cph):
 
         X = data_nus["x"][:, None]
         T = data_nus["t"]
@@ -963,7 +1155,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
+        l, u, _ = cph._get_efron_values(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(l[0][0] - 77.13) < 0.05
@@ -971,7 +1163,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
+        l, u, _ = cph._get_efron_values(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.83) < 0.05
@@ -979,7 +1171,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         beta = beta + u / l
         assert np.abs(beta - -0.0325) < 0.01
 
-        l, u, _ = cox._get_efron_values(X, beta, T, E, weights)
+        l, u, _ = cph._get_efron_values(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.70) < 0.01
@@ -987,64 +1179,58 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         beta = beta + u / l
         assert np.abs(beta - -0.0335) < 0.01
 
-    def test_efron_newtons_method(self, data_nus):
-        newton = CoxPHFitter()._newton_rhaphson
+    def test_efron_newtons_method(self, data_nus, cph):
+        newton = cph._newton_rhaphson
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
         assert np.abs(newton(X, T, E, W)[0][0] - -0.0335) < 0.0001
 
-    def test_fit_method(self, data_nus):
-        cf = CoxPHFitter()
-        cf.fit(data_nus, duration_col="t", event_col="E")
-        assert np.abs(cf.hazards_.iloc[0][0] - -0.0335) < 0.0001
+    def test_fit_method(self, data_nus, cph):
+        cph.fit(data_nus, duration_col="t", event_col="E")
+        assert np.abs(cph.hazards_.iloc[0][0] - -0.0335) < 0.0001
 
-    def test_using_dataframes_vs_numpy_arrays(self, data_pred2):
-        cf = CoxPHFitter()
-        cf.fit(data_pred2, "t", "E")
+    def test_using_dataframes_vs_numpy_arrays(self, data_pred2, cph):
+        cph.fit(data_pred2, "t", "E")
 
         X = data_pred2[data_pred2.columns.difference(["t", "E"])]
-        assert_frame_equal(cf.predict_partial_hazard(np.array(X)), cf.predict_partial_hazard(X))
+        assert_frame_equal(cph.predict_partial_hazard(np.array(X)), cph.predict_partial_hazard(X))
 
-    def test_prediction_methods_will_accept_a_times_arg_to_reindex_the_predictions(self, data_pred2):
-        cf = CoxPHFitter()
-        cf.fit(data_pred2, duration_col="t", event_col="E")
+    def test_prediction_methods_will_accept_a_times_arg_to_reindex_the_predictions(self, data_pred2, cph):
+        cph.fit(data_pred2, duration_col="t", event_col="E")
         times_of_interest = np.arange(0, 10, 0.5)
 
-        actual_index = cf.predict_survival_function(data_pred2.drop(["t", "E"], axis=1), times=times_of_interest).index
+        actual_index = cph.predict_survival_function(data_pred2.drop(["t", "E"], axis=1), times=times_of_interest).index
         np.testing.assert_allclose(actual_index.values, times_of_interest)
 
-        actual_index = cf.predict_cumulative_hazard(data_pred2.drop(["t", "E"], axis=1), times=times_of_interest).index
+        actual_index = cph.predict_cumulative_hazard(data_pred2.drop(["t", "E"], axis=1), times=times_of_interest).index
         np.testing.assert_allclose(actual_index.values, times_of_interest)
 
-    def test_data_normalization(self, data_pred2):
+    def test_data_normalization(self, data_pred2, cph):
         # During fit, CoxPH copies the training data and normalizes it.
         # Future calls should be normalized in the same way and
 
-        cf = CoxPHFitter()
-        cf.fit(data_pred2, duration_col="t", event_col="E")
+        cph.fit(data_pred2, duration_col="t", event_col="E")
 
         # Internal training set
-        ci_trn = cf.score_
+        ci_trn = cph.score_
         # New data should normalize in the exact same way
         ci_org = concordance_index(
-            data_pred2["t"], -cf.predict_partial_hazard(data_pred2[["x1", "x2"]]).values, data_pred2["E"]
+            data_pred2["t"], -cph.predict_partial_hazard(data_pred2[["x1", "x2"]]).values, data_pred2["E"]
         )
 
         assert ci_org == ci_trn
 
-    def test_cox_ph_prediction_with_series(self, rossi):
-        cf = CoxPHFitter()
-        cf.fit(rossi, duration_col="week", event_col="arrest")
+    def test_cox_ph_prediction_with_series(self, rossi, cph):
+        cph.fit(rossi, duration_col="week", event_col="arrest")
         rossi_mean = rossi.mean()
-        result = cf.predict_survival_function(rossi_mean)
-        assert_series_equal(cf.baseline_survival_["baseline survival"], result[0], check_names=False)
+        result = cph.predict_survival_function(rossi_mean)
+        assert_series_equal(cph.baseline_survival_["baseline survival"], result[0], check_names=False)
 
-    def test_cox_ph_prediction_with_series_of_longer_length(self, rossi):
+    def test_cox_ph_prediction_with_series_of_longer_length(self, rossi, cph):
         rossi = rossi[["week", "arrest", "age"]]
-        cf = CoxPHFitter()
-        cf.fit(rossi, duration_col="week", event_col="arrest")
+        cph.fit(rossi, duration_col="week", event_col="arrest")
 
         X = pd.Series([1, 2, 3, 4, 5])
-        result = cf.predict_survival_function(X)
+        result = cph.predict_survival_function(X)
 
     @pytest.mark.xfail
     def test_cox_ph_prediction_monotonicity(self, data_pred2):
@@ -1236,10 +1422,10 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", show_progress=True, weights_col="weights")
 
-        X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
+        X = normalize(df.drop(["T", "E", "weights"], axis=1), cph._norm_mean, cph._norm_std)
 
         expected = np.array([[-1.1099688, 0.6620063, 0.4630473, 0.5807250, -0.5958099]]).T
-        actual = cph._compute_delta_beta(X, df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_delta_betas_with_strata_are_the_same_as_in_R(self):
@@ -1272,7 +1458,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-0.6960789, 1.6729761, 0.3094744, -0.2895864, -0.9967852]]).T
-        actual = cph._compute_delta_beta(X, df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_delta_betas_with_weights_are_the_same_as_in_R(self):
@@ -1303,7 +1489,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         X = normalize(df.drop(["T", "E", "weights"], axis=1), 0, cph._norm_std)
 
         expected = np.array([[-1.1156470, 0.7698781, 0.3923246, 0.8040079, -0.8505637]]).T
-        actual = cph._compute_delta_beta(X, df["E"], df["weights"])
+        actual = cph._compute_delta_beta(X, df["T"], df["E"], df["weights"])
         npt.assert_allclose(expected, actual, rtol=0.001)
 
     def test_cluster_option(self):
@@ -1503,10 +1689,9 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         without_weights = cph._compute_likelihood_ratio_test()
 
-
-        regression_dataset['weights'] = 0.5
+        regression_dataset["weights"] = 0.5
         cph = CoxPHFitter()
-        cph.fit(regression_dataset, "T", "E", weights_col='weights')
+        cph.fit(regression_dataset, "T", "E", weights_col="weights")
 
         with_weights = cph._compute_likelihood_ratio_test()
         assert with_weights[0] != without_weights[0]
@@ -1526,7 +1711,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             {
                 "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
                 "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-                "w": [1, 0.5, 2, 1, 1]
+                "w": [1, 0.5, 2, 1, 1],
             }
         )
         df["E"] = True
@@ -1535,7 +1720,6 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cph.fit(df, "T", "E", show_progress=True, weights_col="w")
         expected = 0.05
         assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
-
 
     def test_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -1740,7 +1924,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         cf.fit(df, duration_col="time", event_col="death")
 
         # standard errors
-        actual_se = cf._compute_standard_errors(None, None, None).values
+        actual_se = cf._compute_standard_errors(None, None, None, None).values
         expected_se = np.array([[0.0143, 0.4623, 0.3561, 0.4222]])
         npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 
@@ -1947,16 +2131,6 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             cp2.predict_survival_function(df_scaled.iloc[[0]][["var1", "var2", "var3"]]),
         )
 
-    def test_predict_log_hazard_relative_to_mean(self, rossi):
-        cox = CoxPHFitter()
-        cox.fit(rossi, "week", "arrest")
-        log_relative_hazards = cox.predict_log_hazard_relative_to_mean(rossi)
-        means = rossi.mean(0).to_frame().T
-        assert_frame_equal(
-            log_relative_hazards,
-            np.log(cox.predict_partial_hazard(rossi) / cox.predict_partial_hazard(means).squeeze()),
-        )
-
     def test_warning_is_raised_if_df_has_a_near_constant_column(self, rossi):
         cox = CoxPHFitter()
         rossi["constant"] = 1.0
@@ -1989,9 +2163,8 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
             assert issubclass(w[-1].category, ConvergenceWarning)
             assert "complete separation" in str(w[-1].message)
 
-    def test_warning_is_raised_if_complete_seperation_is_present(self):
+    def test_warning_is_raised_if_complete_seperation_is_present(self, cph):
         # check for a warning if we have complete seperation
-        cp = CoxPHFitter()
 
         df = pd.DataFrame.from_records(
             [(-5, 1), (-4, 2), (-3, 3), (-2, 4), (-1, 5), (1, 6), (2, 7), (3, 8), (4, 9)], columns=["x", "T"]
@@ -2000,7 +2173,7 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            cp.fit(df, "T", "E")
+            cph.fit(df, "T", "E")
             assert len(w) == 3
             assert issubclass(w[0].category, ConvergenceWarning)
             assert "complete separation" in str(w[0].message)
@@ -2015,16 +2188,14 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         assert cp.summary.loc["paro", "exp(coef)"] < 100
 
     @pytest.mark.xfail
-    def test_what_happens_with_colinear_inputs(self, rossi):
-        cp = CoxPHFitter()
+    def test_what_happens_with_colinear_inputs(self, rossi, cph):
         rossi["duped"] = rossi["paro"] + rossi["prio"]
-        cp.fit(rossi, "week", "arrest", show_progress=True)
-        assert cp.summary.loc["duped", "se(coef)"] < 100
+        cph.fit(rossi, "week", "arrest", show_progress=True)
+        assert cph.summary.loc["duped", "se(coef)"] < 100
 
-    def test_durations_of_zero_are_okay(self, rossi):
-        cp = CoxPHFitter()
+    def test_durations_of_zero_are_okay(self, rossi, cph):
         rossi.loc[range(10), "week"] = 0
-        cp.fit(rossi, "week", "arrest")
+        cph.fit(rossi, "week", "arrest")
 
     def test_all_okay_with_non_trivial_index_in_dataframe(self, rossi):
         n = rossi.shape[0]
@@ -2038,14 +2209,13 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
 
         assert_frame_equal(cp2.summary, cp1.summary)
 
-    def test_robust_errors_against_R_no_ties(self, regression_dataset):
+    def test_robust_errors_against_R_no_ties(self, regression_dataset, cph):
         df = regression_dataset
-        cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True)
         expected = pd.Series({"var1": 0.0879, "var2": 0.0847, "var3": 0.0655})
         assert_series_equal(cph.standard_errors_.loc["se"], expected, check_less_precise=2, check_names=False)
 
-    def test_robust_errors_with_strata_against_R(self, rossi):
+    def test_robust_errors_with_strata_against_R(self, rossi, cph):
         """
         df <- data.frame(
           "var1" = c(1, 1, 2, 2, 2, 1),
@@ -2068,12 +2238,11 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         )
         df["E"] = 1
 
-        cf = CoxPHFitter()
-        cf.fit(df, duration_col="T", event_col="E", strata=["var1"], robust=True)
-        npt.assert_allclose(cf.summary["se(coef)"].values, np.array([1.076, 0.680]), rtol=1e-2)
+        cph.fit(df, duration_col="T", event_col="E", strata=["var1"], robust=True)
+        npt.assert_allclose(cph.summary["se(coef)"].values, np.array([1.076, 0.680]), rtol=1e-2)
 
     @pytest.mark.xfail
-    def test_robust_errors_with_strata_against_R_super_accurate(self, rossi):
+    def test_robust_errors_with_strata_against_R_super_accurate(self, rossi, cph):
         """
         df <- data.frame(
             "var1" = c(1, 1, 2, 2, 2),
@@ -2094,15 +2263,13 @@ Likelihood ratio test = 33.266 on 7 df, p=0.00002
         )
         df["E"] = 1
 
-        cf = CoxPHFitter()
-        cf.fit(df, duration_col="T", event_col="E", strata=["var1"], robust=True)
-        npt.assert_allclose(cf.summary["se(coef)"].values, 2.78649, rtol=1e-4)
+        cph.fit(df, duration_col="T", event_col="E", strata=["var1"], robust=True)
+        npt.assert_allclose(cph.summary["se(coef)"].values, 2.78649, rtol=1e-4)
 
-    def test_what_happens_to_nans(self, rossi):
+    def test_what_happens_to_nans(self, rossi, cph):
         rossi["var4"] = np.nan
-        cf = CoxPHFitter()
         with pytest.raises(TypeError):
-            cf.fit(rossi, duration_col="week", event_col="arrest")
+            cph.fit(rossi, duration_col="week", event_col="arrest")
 
 
 class TestAalenAdditiveFitter:
@@ -2621,9 +2788,9 @@ class TestCoxTimeVaryingFitter:
 
     def test_likelihood_ratio_test_against_R(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event")
-        test_stat, deg_of_freedom, p_value = ctv._compute_likelihood_ratio_test()
+        test_stat, deg_of_freedom, log_p_value = ctv._compute_likelihood_ratio_test()
         assert abs(test_stat - 15.1) < 0.1
-        assert abs(p_value - 0.00448) < 0.001
+        assert abs(np.exp(log_p_value) - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
@@ -2669,7 +2836,7 @@ transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
 ---
 Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.001 '.' 0.05 ' ' 1
 
-Likelihood ratio test = 15.111 on 4 df, p=0.00448
+Likelihood ratio test = 15.11 on 4 df, log(p)=-5.41
 """
                 )
                 .strip()
@@ -2679,6 +2846,32 @@ Likelihood ratio test = 15.111 on 4 df, p=0.00448
                 assert output[i] == expected[i]
         finally:
             sys.stdout = saved_stdout
+
+    def test_ctv_against_cph_for_static_datasets_but_one_is_long(self):
+        rossi = load_rossi()
+        long_rossi = to_episodic_format(rossi, "week", "arrest")
+        assert rossi.shape[0] < long_rossi.shape[0]
+
+        ctv = CoxTimeVaryingFitter()
+        ctv.fit(long_rossi, id_col="id", event_col="arrest")
+
+        cph = CoxPHFitter()
+        cph.fit(rossi, "week", "arrest")
+
+        assert_frame_equal(cph.summary, ctv.summary, check_like=True, check_less_precise=3)
+
+    def test_ctv_with_strata_against_R(self, ctv, heart):
+        """
+        library(survival)
+        data(heart)
+        r = coxph(Surv(start, stop, event) ~ age + strata(transplant) + surgery + year, data=heart)
+        r
+        """
+        ctv.fit(heart, id_col="id", event_col="event", strata="transplant")
+        summary = ctv.summary.sort_index()
+        npt.assert_allclose(summary["coef"].tolist(), [0.0293, -0.6176, -0.1527], atol=0.001)
+        npt.assert_allclose(summary["se(coef)"].tolist(), [0.0139, 0.3707, 0.0710], atol=0.001)
+        npt.assert_allclose(summary["z"].tolist(), [2.11, -1.67, -2.15], atol=0.01)
 
 
 class TestAalenJohansenFitter:

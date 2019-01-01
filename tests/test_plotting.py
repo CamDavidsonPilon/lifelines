@@ -5,13 +5,10 @@ import os
 import pytest
 import pandas as pd
 import numpy as np
-from lifelines.estimation import (
-    NelsonAalenFitter,
-    KaplanMeierFitter,
-    AalenAdditiveFitter,
-    CoxPHFitter,
-    CoxTimeVaryingFitter,
-)
+
+from lifelines import NelsonAalenFitter, KaplanMeierFitter, CoxPHFitter, CoxTimeVaryingFitter, AalenAdditiveFitter
+
+
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes
 from lifelines.datasets import (
@@ -270,28 +267,20 @@ class TestPlotting:
         self.plt.title("test_coxph_plotting_with_subset_of_columns")
         self.plt.show(block=block)
 
-    def test_coxph_plotting_with_subset_of_columns_and_standardized(self, block):
-        df = load_regression_dataset()
-        cp = CoxPHFitter()
-        cp.fit(df, "T", "E")
-        cp.plot(True, columns=["var1", "var2"])
-        self.plt.title("test_coxph_plotting_with_subset_of_columns_and_standardized")
-        self.plt.show(block=block)
-
-    def test_coxph_plotting_normalized(self, block):
-        df = load_regression_dataset()
-        cp = CoxPHFitter()
-        cp.fit(df, "T", "E")
-        cp.plot(True)
-        self.plt.title("test_coxph_plotting_normalized")
-        self.plt.show(block=block)
-
-    def test_coxtv_plotting_with_subset_of_columns_and_standardized(self, block):
+    def test_coxtv_plotting_with_subset_of_columns(self, block):
         df = load_stanford_heart_transplants()
         ctv = CoxTimeVaryingFitter()
         ctv.fit(df, id_col="id", event_col="event")
-        ctv.plot(True, columns=["age", "year"])
+        ctv.plot(columns=["age", "year"])
         self.plt.title("test_coxtv_plotting_with_subset_of_columns_and_standardized")
+        self.plt.show(block=block)
+
+    def test_coxtv_plotting(self, block):
+        df = load_stanford_heart_transplants()
+        ctv = CoxTimeVaryingFitter()
+        ctv.fit(df, id_col="id", event_col="event")
+        ctv.plot(fmt="o")
+        self.plt.title("test_coxtv_plotting")
         self.plt.show(block=block)
 
     def test_kmf_left_censorship_plots(self, block):

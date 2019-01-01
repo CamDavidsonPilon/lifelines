@@ -40,3 +40,6 @@ pyroma:
 
 pep257:
   run: false
+
+ignore-paths:
+  - build

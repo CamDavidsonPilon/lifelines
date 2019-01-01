@@ -13,6 +13,7 @@ from lifelines.utils import (
     inv_normal_cdf,
     median_survival_times,
     check_nans_or_infs,
+    StatisticalWarning,
 )
 from lifelines.plotting import plot_loglogs
 
@@ -88,7 +89,7 @@ class KaplanMeierFitter(UnivariateFitter):
   estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
   or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
                   """,
-                    RuntimeWarning,
+                    StatisticalWarning,
                 )
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,

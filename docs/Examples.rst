@@ -37,12 +37,18 @@ compares whether the "death" generation process of the two populations are equal
 
     from lifelines.statistics import logrank_test
 
+
     results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
     results.print_summary()
 
     """
-   df=1, alpha=0.95, t0=-1, test=logrank, null distribution=chi squared
+              t_0 = -1
+            alpha = 0.95
+null_distribution = chi squared
+               df = 1
+   use_bonferroni = True
 
+   ---
    test_statistic        p
             3.528  0.00034  **
 
@@ -73,12 +79,16 @@ hypothesis that all the populations have the same "death" generation process).
     results.print_summary()
 
     """
-    t_0=-1, alpha=0.95, null_distribution=chi squared, df=2
+                  t_0 = -1
+                alpha = 0.95
+    null_distribution = chi squared
+                   df = 2
 
+    ---
     test_statistic      p
             1.0800 0.5827
     ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
     """
 
 
@@ -625,8 +635,8 @@ The original dataset has 432 rows, while the grouped dataset has 387 rows plus a
 
     from lifelines import CoxPHFitter
 
-    cp = CoxPHFitter()
-    cp.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
+    cph = CoxPHFitter()
+    cph.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
 
 
 The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the `CoxTimeVaryingFitter`.

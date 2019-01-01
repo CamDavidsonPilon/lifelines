@@ -3,13 +3,10 @@ cache: pip
 dist: trusty
 python:
    - "2.7"
-   - "3.4"
    - "3.5"
    - "3.6"
 # Enable newer 3.7 without globally enabling sudo and dist: xenial for other build jobs
 matrix:
-  allow_failures:
-    - python: "3.4"
   include:
     - python: 3.7
       dist: xenial
@@ -19,8 +16,6 @@ before_install:
   # - sudo apt-get update
 install: "make"
 script:
-  # enforce coding standards
-  - make lint
   # enforce formatting
   - make check_format
   # command to run tests

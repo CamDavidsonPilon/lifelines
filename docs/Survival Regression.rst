@@ -178,49 +178,16 @@ holding everything else equal. This is useful to understand the impact of a cova
 Checking the proportional hazards assumption
 #############################################
 
-A quick and visual way to check the proportional hazards assumption of a variable is to plot the survival curves segmented by the values of the variable. If the survival curves are the same "shape" and differ only by a constant factor, then the assumption holds. A more clear way to see this is to plot what's called the logs curve: the loglogs (-log(survival curve)) vs log(time). If the curves are parallel (and hence do not cross each other), then it's likely the variable satisfies the assumption. If the curves do cross, likely you'll have to "stratify" the variable (see next section). In lifelines, the ``KaplanMeierFitter`` object has a ``.plot_loglogs`` function for this purpose.
-
-The following is the loglogs curves of two variables in our regime dataset. The first is the democracy type, which does have (close to) parallel lines, hence satisfies our assumption:
-
-.. code:: python
-
-    from lifelines.datasets import load_dd
-    from lifelines import KaplanMeierFitter
-
-    data = load_dd()
-
-    democracy_0 = data.loc[data['democracy'] == 'Non-democracy']
-    democracy_1 = data.loc[data['democracy'] == 'Democracy']
-
-    kmf0 = KaplanMeierFitter()
-    kmf0.fit(democracy_0['duration'], event_observed=democracy_0['observed'])
-
-    kmf1 = KaplanMeierFitter()
-    kmf1.fit(democracy_1['duration'], event_observed=democracy_1['observed'])
-
-    fig, axes = plt.subplots()
-    kmf0.plot_loglogs(ax=axes)
-    kmf1.plot_loglogs(ax=axes)
-
-    axes.legend(['Non-democracy', 'Democracy'])
-
-    plt.show()
-
-.. image:: images/lls_democracy.png
+``CoxPHFitter`` has a ``check_assumptions`` method that will output violations of the proportional hazard assumption. For a tutorial on how to fix violations, see `Testing the Proportional Hazard Assumptions`_.
 
 
-The second variable is the regime type, and this variable does not follow the proportional hazards assumption.
-
-.. image:: images/lls_regime_type.png
-
-
-Non-proportional hazards is a case of *model misspecification*. Two suggestions are to look for ways to *stratify* a column (see below), or to go ahead with the current model but use ``robust`` errors (in this case, the sandwhich error). In the latter case, you can specify this with with ``CoxPHFitter.fit(..., robust=True)``.
+Non-proportional hazards is a case of *model misspecification*. Suggestions are to look for ways to *stratify* a column (see docs below), or use a time-varying model (see docs much further below).
 
 
 Stratification
 ################
 
-Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* datasets, defined by the covariate(s). Each dataset has its own baseline hazard (the non-parametric part ofthe model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``.
+Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* datasets, defined by the covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``.
 
 To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
 
@@ -318,6 +285,10 @@ We call these grouped subjects "clusters", and assume they are designated by som
 
 For more examples, see _`Correlations between subjects in a Cox model`.
 
+Residuals
+##########################
+
+After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modelling questions. See `Assessing Cox model fit using residuals`_.
 
 Aalen's Additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1013,6 +984,15 @@ Unlike the other regression models, prediction in a time-varying setting is not 
 Model Selection in Survival Regression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Model selection based on residuals
+################################################
+
+The sections `Testing the Proportional Hazard Assumptions`_ and `Assessing Cox model fit using residuals`_ may be useful for modelling your data better.
+
+
+Model selection based on predictive power
+################################################
+
 If censorship is present, it's not appropriate to use a loss function like mean-squared-error or
 mean-absolute-loss. Instead, one measure is the concordance-index, also known as the c-index. This measure
 evaluates the accuracy of the ordering of predicted time. It is infact a generalization
@@ -1022,7 +1002,7 @@ of AUC, another common loss function, and is interpreted similarly:
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-A fitted model's concordance-index is present in the `print_summary()`, but also available under the `score_` property. Generally, the measure is implemented in lifelines under `lifelines.utils.concordance_index` and accepts the actual times (along with any censorships) and the predicted times.
+A fitted model's concordance-index is present in the ``print_summary()``, but also available under the ``score_`` property. Generally, the measure is implemented in lifelines under ``lifelines.utils.concordance_index`` and accepts the actual times (along with any censorships) and the predicted times.
 
 .. code:: python
 
@@ -1045,13 +1025,10 @@ A fitted model's concordance-index is present in the `print_summary()`, but also
     print(concordance_index(rossi['week'], -cph.predict_partial_hazard(rossi).values, rossi['arrest']))
 
 
-However, there are other, arguably better, methods to measure the fit of a model. Included in `print_summary` is the log-likelihood, which can be used in an `AIC calculation <https://en.wikipedia.org/wiki/Akaike_information_criterion>`, and the `log-likelihood ratio statistic <https://en.wikipedia.org/wiki/Likelihood-ratio_test>`. Generally, I personally loved this article by Frank Harrell, `"Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements" <http://www.fharrell.com/post/addvalue/>`.
+However, there are other, arguably better, methods to measure the fit of a model. Included in `print_summary` is the log-likelihood, which can be used in an `AIC calculation <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, and the `log-likelihood ratio statistic <https://en.wikipedia.org/wiki/Likelihood-ratio_test>`_. Generally, I personally loved this article by Frank Harrell, `"Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements" <http://www.fharrell.com/post/addvalue/>`_.
 
 
-Cross Validation
-######################################
-
-Lifelines has an implementation of k-fold cross validation under `lifelines.utils.k_fold_cross_validation`. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus `k` (the number of folds to perform, default 5). On each fold, it splits the data
+Lifelines has an implementation of k-fold cross validation under ``lifelines.utils.k_fold_cross_validation``. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus `k` (the number of folds to perform, default 5). On each fold, it splits the data
 into a training set and a testing set fits itself on the training set and evaluates itself on the testing set (using the concordance measure).
 
 .. code:: python
@@ -1070,3 +1047,8 @@ into a training set and a testing set fits itself on the training set and evalua
         #[ 0.5896  0.5358  0.5028]
         # 0.542
         # 0.035
+
+
+.. _Assessing Cox model fit using residuals: jupyter_notebooks/Cox%20residuals.html
+.. _Testing the Proportional Hazard Assumptions: jupyter_notebooks/Proportional%20hazard%20assumption.html
+

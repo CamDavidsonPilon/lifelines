@@ -9,12 +9,19 @@ import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
 
-from lifelines.estimation import CoxPHFitter
+from lifelines import CoxPHFitter
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
 from lifelines import utils
-from lifelines.utils import _concordance_index as fast_cindex
-from lifelines.utils import _naive_concordance_index as slow_cindex
-from lifelines.utils import _BTree as BTree
+
+
+def test_format_p_values():
+    assert utils.format_p_value(2)(0.004) == "<0.005"
+    assert utils.format_p_value(3)(0.004) == "0.004"
+
+    assert utils.format_p_value(3)(0.000) == "<0.0005"
+    assert utils.format_p_value(3)(0.005) == "0.005"
+    assert utils.format_p_value(3)(0.2111) == "0.211"
+    assert utils.format_p_value(3)(0.2119) == "0.212"
 
 
 def test_ridge_regression_with_penalty_is_less_than_without_penalty():
@@ -417,40 +424,6 @@ def test_concordance_index():
     assert abs(utils.concordance_index(T, P, C) - 0.5) < 0.05
 
 
-def test_concordance_index_returns_same_after_shifting():
-    T = np.array([1, 2, 3, 4, 5, 6])
-    T_ = np.array([2, 1, 4, 6, 5, 3])
-    assert (
-        utils.concordance_index(T, T_)
-        == utils.concordance_index(T - 5, T_ - 5)
-        == utils.concordance_index(T, T_ - 5)
-        == utils.concordance_index(T - 5, T_)
-    )
-
-
-def test_both_concordance_index_function_deal_with_ties_the_same_way():
-    actual_times = np.array([1, 1, 2])
-    predicted_times = np.array([1, 2, 3])
-    obs = np.ones(3)
-    assert fast_cindex(actual_times, predicted_times, obs) == slow_cindex(actual_times, predicted_times, obs) == 1.0
-
-
-def test_concordance_index_function_exits():
-    N = 10 * 1000
-    actual_times = np.random.exponential(1, size=N)
-    predicted_times = np.random.exponential(1, size=N)
-    obs = np.ones(N)
-    assert fast_cindex(actual_times, predicted_times, obs)
-
-
-def test_concordance_index_will_not_overflow():
-    a = np.arange(65536)
-    assert utils.concordance_index(a, a) == 1.0
-    b = np.arange(65537)
-    assert utils.concordance_index(b, b) == 1.0
-    assert utils.concordance_index(b, b[::-1]) == 0.0
-
-
 def test_survival_table_from_events_with_non_negative_T_and_no_lagged_births():
     n = 10
     T = np.arange(n)
@@ -503,63 +476,6 @@ def test_survival_table_from_events_raises_value_error_if_too_early_births():
     min_obs[1] = min_obs[1] + 10
     with pytest.raises(ValueError):
         utils.survival_table_from_events(T, C, min_obs)
-
-
-def test_btree():
-    t = BTree(np.arange(10))
-    for i in range(10):
-        assert t.rank(i) == (0, 0)
-
-    assert len(t) == 0
-    t.insert(5)
-    t.insert(6)
-    t.insert(6)
-    t.insert(0)
-    t.insert(9)
-    assert len(t) == 5
-
-    assert t.rank(0) == (0, 1)
-    assert t.rank(0.5) == (1, 0)
-    assert t.rank(4.5) == (1, 0)
-    assert t.rank(5) == (1, 1)
-    assert t.rank(5.5) == (2, 0)
-    assert t.rank(6) == (2, 2)
-    assert t.rank(6.5) == (4, 0)
-    assert t.rank(8.5) == (4, 0)
-    assert t.rank(9) == (4, 1)
-    assert t.rank(9.5) == (5, 0)
-
-    for i in range(1, 32):
-        BTree(np.arange(i))
-
-    with pytest.raises(ValueError):
-        # This has to go last since it screws up the counts
-        t.insert(5.5)
-
-
-def test_concordance_index_fast_is_same_as_slow():
-    size = 100
-    T = np.random.normal(size=size)
-    P = np.random.normal(size=size)
-    C = np.random.choice([0, 1], size=size)
-    Z = np.zeros_like(T)
-
-    # Hard to imagine these failing
-    assert slow_cindex(T, Z, C) == fast_cindex(T, Z, C)
-    assert slow_cindex(T, T, C) == fast_cindex(T, T, C)
-    # This is the real test though
-    assert slow_cindex(T, P, C) == fast_cindex(T, P, C)
-
-    cp = CoxPHFitter()
-    df = load_rossi()
-    cp.fit(df, duration_col="week", event_col="arrest")
-
-    T = cp.durations.values.ravel()
-    P = -cp.predict_partial_hazard(df[df.columns.difference(["week", "arrest"])]).values.ravel()
-
-    E = cp.event_observed.values.ravel()
-
-    assert slow_cindex(T, P, E) == fast_cindex(T, P, E)
 
 
 class TestLongDataFrameUtils(object):
@@ -868,34 +784,86 @@ class TestLongDataFrameUtils(object):
 
         assert_frame_equal(expected, ldf, check_dtype=False, check_like=True)
 
+    def test_to_episodic_format_with_long_time_gap_is_identical(self):
+        rossi = load_rossi()
+        rossi["id"] = np.arange(rossi.shape[0])
 
-def test_StepSizer_step_will_decrease_if_unstable():
-    start = 0.95
-    ss = utils.StepSizer(start)
-    assert ss.next() == start
-    ss.update(1.0)
-    ss.update(2.0)
-    ss.update(1.0)
-    ss.update(2.0)
+        long_rossi = utils.to_episodic_format(
+            rossi, duration_col="week", event_col="arrest", id_col="id", time_gaps=1000.0
+        )
 
-    assert ss.next() < start
+        long_rossi["week"] = long_rossi["stop"].astype(int)
+        del long_rossi["start"]
+        del long_rossi["stop"]
+
+        assert_frame_equal(long_rossi, rossi, check_like=True)
+
+    def test_to_episodic_format_preserves_outcome(self):
+        E = [1, 1, 0, 0]
+        df = pd.DataFrame({"T": [1, 3, 1, 3], "E": E, "id": [1, 2, 3, 4]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id").sort_values(["id", "stop"])
+        assert long_df.shape[0] == 1 + 3 + 1 + 3
+
+        assert long_df.groupby("id").last()["E"].tolist() == E
+
+    def test_to_episodic_format_handles_floating_durations(self):
+        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 1], "id": [1, 2]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id").sort_values(["id", "stop"])
+        assert long_df.shape[0] == 1 + 4
+        assert long_df["stop"].tolist() == [0.1, 1, 2, 3, 3.5]
+
+    def test_to_episodic_format_handles_floating_durations_with_time_gaps(self):
+        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 1], "id": [1, 2]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id", time_gaps=2.0).sort_values(["id", "stop"])
+        assert long_df["stop"].tolist() == [0.1, 2, 3.5]
+
+    def test_to_episodic_format_handles_floating_durations_and_preserves_events(self):
+        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 0], "id": [1, 2]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id", time_gaps=2.0).sort_values(["id", "stop"])
+        assert long_df.groupby("id").last()["E"].tolist() == [1, 0]
+
+    def test_to_episodic_format_handles_floating_durations_and_preserves_events(self):
+        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 0], "id": [1, 2]})
+        long_df = utils.to_episodic_format(df, "T", "E", id_col="id", time_gaps=2.0).sort_values(["id", "stop"])
+        assert long_df.groupby("id").last()["E"].tolist() == [1, 0]
+
+    def test_to_episodic_format_adds_id_col(self):
+        df = pd.DataFrame({"T": [1, 3], "E": [1, 0]})
+        long_df = utils.to_episodic_format(df, "T", "E")
+        assert "id" in long_df.columns
+
+    def test_to_episodic_format_uses_custom_index_as_id(self):
+        df = pd.DataFrame({"T": [1, 3], "E": [1, 0]}, index=["A", "B"])
+        long_df = utils.to_episodic_format(df, "T", "E")
+        assert long_df["id"].tolist() == ["A", "B", "B", "B"]
 
 
-def test_StepSizer_step_will_increase_if_stable():
-    start = 0.5
-    ss = utils.StepSizer(start)
-    assert ss.next() == start
-    ss.update(1.0)
-    ss.update(0.5)
-    ss.update(0.4)
-    ss.update(0.1)
+class TestStepSizer:
+    def test_StepSizer_step_will_decrease_if_unstable(self):
+        start = 0.95
+        ss = utils.StepSizer(start)
+        assert ss.next() == start
+        ss.update(1.0)
+        ss.update(2.0)
+        ss.update(1.0)
+        ss.update(2.0)
 
-    assert ss.next() > start
+        assert ss.next() < start
 
+    def test_StepSizer_step_will_increase_if_stable(self):
+        start = 0.5
+        ss = utils.StepSizer(start)
+        assert ss.next() == start
+        ss.update(1.0)
+        ss.update(0.5)
+        ss.update(0.4)
+        ss.update(0.1)
 
-def test_StepSizer_step_will_decrease_if_explodes():
-    start = 0.5
-    ss = utils.StepSizer(start)
-    assert ss.next() == start
-    ss.update(20.0)
-    assert ss.next() < start
+        assert ss.next() > start
+
+    def test_StepSizer_step_will_decrease_if_explodes(self):
+        start = 0.5
+        ss = utils.StepSizer(start)
+        assert ss.next() == start
+        ss.update(20.0)
+        assert ss.next() < start

@@ -13,14 +13,6 @@ Subpackages
 Submodules
 ----------
 
-lifelines.estimation module
----------------------------
-
-.. automodule:: lifelines.estimation
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 lifelines.generate_datasets module
 ----------------------------------
 

@@ -13,6 +13,7 @@ from lifelines.utils import (
     epanechnikov_kernel,
     inv_normal_cdf,
     check_nans_or_infs,
+    StatisticalWarning,
 )
 
 
@@ -21,12 +22,14 @@ class NelsonAalenFitter(UnivariateFitter):
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard.
 
-    NelsonAalenFitter( alpha=0.95, nelson_aalen_smoothing=True)
+    NelsonAalenFitter(alpha=0.95, nelson_aalen_smoothing=True)
 
     alpha: The alpha value associated with the confidence intervals.
     nelson_aalen_smoothing: If the event times are naturally discrete (like discrete years, minutes, etc.)
       then it is advisable to turn this parameter to False. See [1], pg.84.
 
+    Notes
+    ------
     [1] Aalen, O., Borgan, O., Gjessing, H., 2008. Survival and Event History Analysis
 
     """
@@ -56,24 +59,33 @@ class NelsonAalenFitter(UnivariateFitter):
         weights=None,
     ):  # pylint: disable=too-many-arguments
         """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
-          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
-          label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
-             alpha for this call to fit only.
-          ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-          weights: n array, or pd.Series, of length n, if providing a weighted dataset. For example, instead
-              of providing every subject as a single element of `durations` and `event_observed`, one could
-              weigh subject differently.
+        Parameters
+        -----------
+        duration: an array, or pd.Series, of length n
+          duration subject was observed for
+        timeline: iterable
+            return the best estimate at the values in timelines (postively increasing)
+        event_observed: an array, or pd.Series, of length n 
+            True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+        entry: an array, or pd.Series, of length n 
+           relative time when a subject entered the study. This is
+           useful for left-truncated observations, i.e the birth event was not observed.
+           If None, defaults to all 0 (all birth events observed.)
+        label: string
+            a string to name the column of the estimate.
+        alpha: float
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: iterable
+            add custom column names to the generated confidence intervals
+              as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        weights: n array, or pd.Series, of length n
+            if providing a weighted dataset. For example, instead
+            of providing every subject as a single element of `durations` and `event_observed`, one could
+            weigh subject differently.
 
-        Returns:
+        Returns
+        -------
           self, with new properties like 'cumulative_hazard_'.
 
         """
@@ -90,7 +102,7 @@ class NelsonAalenFitter(UnivariateFitter):
   estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
   or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
                   """,
-                    RuntimeWarning,
+                    StatisticalWarning,
                 )
 
         v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
@@ -161,10 +173,14 @@ class NelsonAalenFitter(UnivariateFitter):
 
     def smoothed_hazard_(self, bandwidth):
         """
-        Parameters:
-          bandwidth: the bandwith used in the Epanechnikov kernel.
+        Parameters
+        -----------
+        bandwidth: float
+            the bandwith used in the Epanechnikov kernel.
 
-        Returns:
+        Returns
+        -------
+        DataFrame:
           a DataFrame of the smoothed hazard
         """
         timeline = self.timeline
@@ -182,9 +198,12 @@ class NelsonAalenFitter(UnivariateFitter):
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
         """
-        Parameter:
-          bandwidth: the bandwith to use in the Epanechnikov kernel.
-          hazard_: a computed (n,) numpy array of estimated hazard rates. If none, uses naf.smoothed_hazard_
+        Parameters
+        ----------
+          bandwidth: float
+            the bandwith to use in the Epanechnikov kernel. > 0
+          hazard_: numpy array
+            a computed (n,) numpy array of estimated hazard rates. If none, uses naf.smoothed_hazard_
         """
         if hazard_ is None:
             hazard_ = self.smoothed_hazard_(bandwidth).values[:, 0]

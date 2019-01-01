@@ -7,7 +7,7 @@ import warnings
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import _preprocess_inputs, inv_normal_cdf
-from lifelines.fitters.kaplan_meier_fitter import KaplanMeierFitter
+from lifelines import KaplanMeierFitter
 
 
 class AalenJohansenFitter(UnivariateFitter):

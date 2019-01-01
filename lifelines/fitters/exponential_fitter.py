@@ -11,6 +11,8 @@ from lifelines.utils import (
     significance_code,
     string_justify,
     significance_codes_as_text,
+    format_p_value,
+    format_floats,
 )
 
 
@@ -155,6 +157,7 @@ class ExponentialFitter(UnivariateFitter):
         df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
         df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
+        df["log(p)"] = np.log(df["p"])
         return df
 
     def _compute_z_values(self):
@@ -164,9 +167,17 @@ class ExponentialFitter(UnivariateFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def print_summary(self):
+    def print_summary(self, decimals=2, **kwargs):
         """
-        Print summary statistics describing the fit.
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
+
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
+        kwargs:
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
+            multiple outputs. 
 
         """
         # pylint: disable=unnecessary-lambda
@@ -174,10 +185,16 @@ class ExponentialFitter(UnivariateFitter):
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
-        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood), end="\n\n")
+        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+
+        for k, v in kwargs.items():
+            print("{} = {}\n".format(justify(k), v))
+
+        print(end="\n")
+        print("---")
 
         df = self.summary
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.4f}".format(f)))
+        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
         print("---")
         print(significance_codes_as_text(), end="\n\n")

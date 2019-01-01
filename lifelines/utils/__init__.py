@@ -11,8 +11,9 @@ from scipy import stats
 import pandas as pd
 from pandas import to_datetime
 
+from lifelines.utils.concordance import concordance_index
 
-# ipython autocomplete will pick these up, which are probably what users only need.
+
 __all__ = [
     "qth_survival_times",
     "qth_survival_time",
@@ -22,6 +23,7 @@ __all__ = [
     "concordance_index",
     "k_fold_cross_validation",
     "to_long_format",
+    "to_episodic_format",
     "add_covariate_to_timeline",
     "covariates_from_event_matrix",
 ]
@@ -53,19 +55,27 @@ class ConvergenceWarning(RuntimeWarning):
         return repr(self.msg)
 
 
+class StatisticalWarning(RuntimeWarning):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return repr(self.msg)
+
+
 def qth_survival_times(q, survival_functions, cdf=False):
     """
-    Find the times when one or more survival functions reach the qth percentile. 
+    Find the times when one or more survival functions reach the qth percentile.
 
     Parameters
     ----------
-    q: float 
+    q: float
       a float between 0 and 1 that represents the time when the survival function hit's the qth percentile.
     survival_functions: a (n,d) dataframe or numpy array.
       If dataframe, will return index values (actual times)
       If numpy array, will return indices.
     cdf: boolean, optional
-      When doing left-censored data, cdf=True is used. 
+      When doing left-censored data, cdf=True is used.
 
     Returns
     -------
@@ -100,15 +110,15 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
 def qth_survival_time(q, survival_function, cdf=False):
     """
-    Returns the time when a single survival function reachess the qth percentile. 
+    Returns the time when a single survival function reachess the qth percentile.
 
     Parameters
     ----------
-    q: float 
+    q: float
       a float between 0 and 1 that represents the time when the survival function hit's the qth percentile.
     survival_function: Series or single-column DataFrame.
     cdf: boolean, optional
-      When doing left-censored data, cdf=True is used. 
+      When doing left-censored data, cdf=True is used.
 
     Returns
     -------
@@ -150,7 +160,7 @@ def group_survival_table_from_events(
 
     Parameters
     ----------
-    groups: a (n,) array 
+    groups: a (n,) array
       individuals' group ids.
     durations: a (n,)  array
       durations of each individual
@@ -262,9 +272,9 @@ def survival_table_from_events(
     """
     Parameters
     ----------
-    death_times: (n,) array 
+    death_times: (n,) array
       represent the event times
-    event_observed: (n,) array 
+    event_observed: (n,) array
       1 if observed event, 0 is censored event.
     birth_times: a (n,) array, optional
       representing when the subject was first observed. A subject's death event is then at [birth times + duration observed].
@@ -279,7 +289,7 @@ def survival_table_from_events(
     intervals: iterable, optional
       Default None, otherwise a list/(n,1) array of interval edge measures. If left as None
       while collapse=True, then Freedman-Diaconis rule for histogram bins will be used to determine intervals.
-    
+
     Returns
     -------
     output: DataFrame
@@ -386,7 +396,7 @@ def survival_events_from_table(event_table, observed_deaths_col="observed", cens
     -------
     T: array
       durations of observation -- one element for each individual in the population.
-    C: array 
+    C: array
       event observations -- one element for each individual in the population. 1 if observed, 0 else.
 
     Example
@@ -435,7 +445,7 @@ def datetimes_to_durations(
         iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
     fill_date: datetime, optional (default=datetime.Today())
         the date to use if end_times is a None or empty string. This corresponds to last date
-        of observation. Anything after this date is also censored. 
+        of observation. Anything after this date is also censored.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
     day_first: boolean, optional (default=False)
@@ -445,9 +455,9 @@ def datetimes_to_durations(
 
     Returns
     -------
-    T: numpy array 
+    T: numpy array
         array of floats representing the durations with time units given by freq.
-    C: numpy array 
+    C: numpy array
         boolean array of event observations: 1 if death observed, 0 else.
 
     """
@@ -520,65 +530,6 @@ def l2_log_loss(event_times, predicted_event_times, event_observed=None):
     return np.power(np.log(event_times[ix]) - np.log(predicted_event_times[ix]), 2).mean()
 
 
-def concordance_index(event_times, predicted_scores, event_observed=None):
-    """
-    Calculates the concordance index (C-index) between two series
-    of event times. The first is the real survival times from
-    the experimental data, and the other is the predicted survival
-    times from a model of some kind.
-
-    The concordance index is a value between 0 and 1 where,
-    0.5 is the expected result from random predictions,
-    1.0 is perfect concordance and,
-    0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
-
-    Notes
-    -----
-    Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
-    developing models, evaluating assumptions and adequacy, and measuring and
-    reducing errors. Statistics in Medicine 1996;15(4):361-87.
-
-    Parameters
-    ----------
-    event_times: iterable
-         a length-n iterable of observed survival times.
-    predicted_scores: iterable
-        a length-n iterable of predicted scores - these could be survival times, or hazards, etc. See https://stats.stackexchange.com/questions/352183/use-median-survival-time-to-calculate-cph-c-statistic/352435#352435
-    event_observed: iterable, optional
-        a length-n iterable censorship flags, 1 if observed, 0 if not. Default None assumes all observed.
-
-    Returns
-    -------
-    c-index: float 
-      a value between 0 and 1.
-    """
-    event_times = np.asarray(event_times, dtype=float)
-    predicted_scores = np.asarray(predicted_scores, dtype=float)
-
-    # Allow for (n, 1) or (1, n) arrays
-    if event_times.ndim == 2 and (event_times.shape[0] == 1 or event_times.shape[1] == 1):
-        # Flatten array
-        event_times = event_times.ravel()
-    # Allow for (n, 1) or (1, n) arrays
-    if predicted_scores.ndim == 2 and (predicted_scores.shape[0] == 1 or predicted_scores.shape[1] == 1):
-        # Flatten array
-        predicted_scores = predicted_scores.ravel()
-
-    if event_times.shape != predicted_scores.shape:
-        raise ValueError("Event times and predictions must have the same shape")
-    if event_times.ndim != 1:
-        raise ValueError("Event times can only be 1-dimensional: (n,)")
-
-    if event_observed is None:
-        event_observed = np.ones(event_times.shape[0], dtype=float)
-    else:
-        event_observed = np.asarray(event_observed, dtype=float).ravel()
-        if event_observed.shape != event_times.shape:
-            raise ValueError("Observed events must be 1-dimensional of same length as event times")
-
-    return _concordance_index(event_times, predicted_scores, event_observed)
-
-
 def coalesce(*args):
     for arg in args:
         if arg is not None:
@@ -604,33 +555,42 @@ def k_fold_cross_validation(
     """
     Perform cross validation on a dataset. If multiple models are provided,
     all models will train on each of the k subsets.
-    
+
     Parameters
     ----------
-    fitter(s): one or several objects which possess a method:
+    fitter(s): model
+                one or several objects which possess a method:
                    fit(self, data, duration_col, event_col)
                Note that the last two arguments will be given as keyword arguments,
                and that event_col is optional. The objects must also have
                the "predictor" method defined below.
-    df: a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
+    df: DataFrame
+        a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
         other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
         refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
-    duration_col: the column in dataframe that contains the subjects lifetimes.
-    event_col: the column in dataframe that contains the subject's death observation. If left
-               as None, assumes all individuals are non-censored.
-    k: the number of folds to perform. n/k data will be withheld for testing on.
-    evaluation_measure: a function that accepts either (event_times, predicted_event_times),
-                        or (event_times, predicted_event_times, event_observed)
-                        and returns something (could be anything).
-                        Default: statistics.concordance_index: (C-index)
-                        between two series of event times
-    predictor: a string that matches a prediction method on the fitter instances.
-               For example, "predict_expectation" or "predict_percentile".
-               Default is "predict_expectation"
-               The interface for the method is:
-                   predict(self, data, **optional_kwargs)
-    fitter_kwargs: keyword args to pass into fitter.fit method
-    predictor_kwargs: keyword args to pass into predictor-method.
+    duration_col: (n,) array
+        the column in dataframe that contains the subjects lifetimes.
+    event_col: (n,) array
+        the column in dataframe that contains the subject's death observation. If left
+        as None, assumes all individuals are non-censored.
+    k: int
+        the number of folds to perform. n/k data will be withheld for testing on.
+    evaluation_measure: function
+        a function that accepts either (event_times, predicted_event_times),
+        or (event_times, predicted_event_times, event_observed)
+        and returns something (could be anything).
+        Default: statistics.concordance_index: (C-index)
+        between two series of event times
+    predictor: string
+       a string that matches a prediction method on the fitter instances.
+       For example, "predict_expectation" or "predict_percentile".
+       Default is "predict_expectation"
+       The interface for the method is:
+           predict(self, data, **optional_kwargs)
+    fitter_kwargs: 
+        keyword args to pass into fitter.fit method
+    predictor_kwargs: 
+        keyword args to pass into predictor-method.
 
     Returns
     -------
@@ -712,8 +672,9 @@ def epanechnikov_kernel(t, T, bandwidth=1.0):
 
 def significance_code(p):
     """
-    v0.15.0:
-        p-values between 0.05 and 0.1 have such little information gain. For that reason, I am deviating
+    Notes
+    ------
+    v0.15.0: p-values between 0.05 and 0.1 have such little information gain. For that reason, I am deviating
         from the traditional "astericks" in R and making everthing an order-of-magnitude less.
     """
     if p < 0.0001:
@@ -744,15 +705,14 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     ----------
     X: a (n,d) numpy array
     Y: a (n,) numpy array
-    c1: a scalar
-    c2: a scalar
+    c1: float
+    c2: float
     offset: a (d,) numpy array.
 
     Returns
     -------
     beta_hat: numpy array
       the solution to the minimization problem.V = (X*X^T + (c1+c2)I)^{-1} X^T
-
     """
     _, d = X.shape
 
@@ -853,293 +813,15 @@ def _get_index(X):
     return index
 
 
-class _BTree(object):
-
-    """A simple balanced binary order statistic tree to help compute the concordance.
-
-    When computing the concordance, we know all the values the tree will ever contain. That
-    condition simplifies this tree a lot. It means that instead of crazy AVL/red-black shenanigans
-    we can simply do the following:
-
-    - Store the final tree in flattened form in an array (so node i's children are 2i+1, 2i+2)
-    - Additionally, store the current size of each subtree in another array with the same indices
-    - To insert a value, just find its index, increment the size of the subtree at that index and
-      propagate
-    - To get the rank of an element, you add up a bunch of subtree counts
-
-    """
-
-    def __init__(self, values):
-        """
-        Parameters
-        ----------
-        values: list
-            List of sorted (ascending), unique values that will be inserted.
-        """
-        self._tree = self._treeify(values)
-        self._counts = np.zeros_like(self._tree, dtype=int)
-
-    @staticmethod
-    def _treeify(values):
-        """Convert the np.ndarray `values` into a complete balanced tree.
-
-        Assumes `values` is sorted ascending. Returns a list `t` of the same length in which t[i] >
-        t[2i+1] and t[i] < t[2i+2] for all i."""
-        if len(values) == 1:  # this case causes problems later
-            return values
-        tree = np.empty_like(values)
-        # Tree indices work as follows:
-        # 0 is the root
-        # 2n+1 is the left child of n
-        # 2n+2 is the right child of n
-        # So we now rearrange `values` into that format...
-
-        # The first step is to remove the bottom row of leaves, which might not be exactly full
-        last_full_row = int(np.log2(len(values) + 1) - 1)
-        len_ragged_row = len(values) - (2 ** (last_full_row + 1) - 1)
-        if len_ragged_row > 0:
-            bottom_row_ix = np.s_[: 2 * len_ragged_row : 2]
-            tree[-len_ragged_row:] = values[bottom_row_ix]
-            values = np.delete(values, bottom_row_ix)
-
-        # Now `values` is length 2**n - 1, so can be packed efficiently into a tree
-        # Last row of nodes is indices 0, 2, ..., 2**n - 2
-        # Second-last row is indices 1, 5, ..., 2**n - 3
-        # nth-last row is indices (2**n - 1)::(2**(n+1))
-        values_start = 0
-        values_space = 2
-        values_len = 2 ** last_full_row
-        while values_start < len(values):
-            tree[values_len - 1 : 2 * values_len - 1] = values[values_start::values_space]
-            values_start += int(values_space / 2)
-            values_space *= 2
-            values_len = int(values_len / 2)
-        return tree
-
-    def insert(self, value):
-        """Insert an occurrence of `value` into the btree."""
-        i = 0
-        n = len(self._tree)
-        while i < n:
-            cur = self._tree[i]
-            self._counts[i] += 1
-            if value < cur:
-                i = 2 * i + 1
-            elif value > cur:
-                i = 2 * i + 2
-            else:
-                return
-        raise ValueError("Value %s not contained in tree." "Also, the counts are now messed up." % value)
-
-    def __len__(self):
-        return self._counts[0]
-
-    def rank(self, value):
-        """Returns the rank and count of the value in the btree."""
-        i = 0
-        n = len(self._tree)
-        rank = 0
-        count = 0
-        while i < n:
-            cur = self._tree[i]
-            if value < cur:
-                i = 2 * i + 1
-                continue
-            elif value > cur:
-                rank += self._counts[i]
-                # subtract off the right tree if exists
-                nexti = 2 * i + 2
-                if nexti < n:
-                    rank -= self._counts[nexti]
-                    i = nexti
-                    continue
-                else:
-                    return (rank, count)
-            else:  # value == cur
-                count = self._counts[i]
-                lefti = 2 * i + 1
-                if lefti < n:
-                    nleft = self._counts[lefti]
-                    count -= nleft
-                    rank += nleft
-                    righti = lefti + 1
-                    if righti < n:
-                        count -= self._counts[righti]
-                return (rank, count)
-        return (rank, count)
-
-
-def _concordance_index(event_times, predicted_event_times, event_observed):  # pylint: disable=too-many-locals
-    """Find the concordance index in n * log(n) time.
-
-    Assumes the data has been verified by lifelines.utils.concordance_index first.
-    """
-    # Here's how this works.
-    #
-    # It would be pretty easy to do if we had no censored data and no ties. There, the basic idea
-    # would be to iterate over the cases in order of their true event time (from least to greatest),
-    # while keeping track of a pool of *predicted* event times for all cases previously seen (= all
-    # cases that we know should be ranked lower than the case we're looking at currently).
-    #
-    # If the pool has O(log n) insert and O(log n) RANK (i.e., "how many things in the pool have
-    # value less than x"), then the following algorithm is n log n:
-    #
-    # Sort the times and predictions by time, increasing
-    # n_pairs, n_correct := 0
-    # pool := {}
-    # for each prediction p:
-    #     n_pairs += len(pool)
-    #     n_correct += rank(pool, p)
-    #     add p to pool
-    #
-    # There are three complications: tied ground truth values, tied predictions, and censored
-    # observations.
-    #
-    # - To handle tied true event times, we modify the inner loop to work in *batches* of observations
-    # p_1, ..., p_n whose true event times are tied, and then add them all to the pool
-    # simultaneously at the end.
-    #
-    # - To handle tied predictions, which should each count for 0.5, we switch to
-    #     n_correct += min_rank(pool, p)
-    #     n_tied += count(pool, p)
-    #
-    # - To handle censored observations, we handle each batch of tied, censored observations just
-    # after the batch of observations that died at the same time (since those censored observations
-    # are comparable all the observations that died at the same time or previously). However, we do
-    # NOT add them to the pool at the end, because they are NOT comparable with any observations
-    # that leave the study afterward--whether or not those observations get censored.
-
-    died_mask = event_observed.astype(bool)
-    # TODO: is event_times already sorted? That would be nice...
-    died_truth = event_times[died_mask]
-    ix = np.argsort(died_truth)
-    died_truth = died_truth[ix]
-    died_pred = predicted_event_times[died_mask][ix]
-
-    censored_truth = event_times[~died_mask]
-    ix = np.argsort(censored_truth)
-    censored_truth = censored_truth[ix]
-    censored_pred = predicted_event_times[~died_mask][ix]
-
-    censored_ix = 0
-    died_ix = 0
-    times_to_compare = _BTree(np.unique(died_pred))
-    num_pairs = np.int64(0)
-    num_correct = np.int64(0)
-    num_tied = np.int64(0)
-
-    def handle_pairs(truth, pred, first_ix):
-        """
-        Handle all pairs that exited at the same time as truth[first_ix].
-
-        Returns:
-          (pairs, correct, tied, next_ix)
-          new_pairs: The number of new comparisons performed
-          new_correct: The number of comparisons correctly predicted
-          next_ix: The next index that needs to be handled
-        """
-        next_ix = first_ix
-        while next_ix < len(truth) and truth[next_ix] == truth[first_ix]:
-            next_ix += 1
-        pairs = len(times_to_compare) * (next_ix - first_ix)
-        correct = np.int64(0)
-        tied = np.int64(0)
-        for i in range(first_ix, next_ix):
-            rank, count = times_to_compare.rank(pred[i])
-            correct += rank
-            tied += count
-
-        return (pairs, correct, tied, next_ix)
-
-    # we iterate through cases sorted by exit time:
-    # - First, all cases that died at time t0. We add these to the sortedlist of died times.
-    # - Then, all cases that were censored at time t0. We DON'T add these since they are NOT
-    #   comparable to subsequent elements.
-    while True:
-        has_more_censored = censored_ix < len(censored_truth)
-        has_more_died = died_ix < len(died_truth)
-        # Should we look at some censored indices next, or died indices?
-        if has_more_censored and (not has_more_died or died_truth[died_ix] > censored_truth[censored_ix]):
-            pairs, correct, tied, next_ix = handle_pairs(censored_truth, censored_pred, censored_ix)
-            censored_ix = next_ix
-        elif has_more_died and (not has_more_censored or died_truth[died_ix] <= censored_truth[censored_ix]):
-            pairs, correct, tied, next_ix = handle_pairs(died_truth, died_pred, died_ix)
-            for pred in died_pred[died_ix:next_ix]:
-                times_to_compare.insert(pred)
-            died_ix = next_ix
-        else:
-            assert not (has_more_died or has_more_censored)
-            break
-
-        num_pairs += pairs
-        num_correct += correct
-        num_tied += tied
-
-    if num_pairs == 0:
-        raise ZeroDivisionError("No admissable pairs in the dataset.")
-
-    return (num_correct + num_tied / 2) / num_pairs
-
-
-def _naive_concordance_index(event_times, predicted_event_times, event_observed):
-    """
-    Fallback, simpler method to compute concordance.
-
-    Assumes the data has been verified by lifelines.utils.concordance_index first.
-    """
-
-    def valid_comparison(time_a, time_b, event_a, event_b):
-        """True if times can be compared."""
-        if time_a == time_b:
-            # Ties are only informative if exactly one event happened
-            return event_a != event_b
-        if event_a and event_b:
-            return True
-        if event_a and time_a < time_b:
-            return True
-        if event_b and time_b < time_a:
-            return True
-        return False
-
-    def concordance_value(time_a, time_b, pred_a, pred_b):
-        if pred_a == pred_b:
-            # Same as random
-            return 0.5
-        if pred_a < pred_b:
-            return (time_a < time_b) or (time_a == time_b and event_a and not event_b)
-        # pred_a > pred_b
-        return (time_a > time_b) or (time_a == time_b and not event_a and event_b)
-
-    paircount = 0.0
-    csum = 0.0
-
-    for a, time_a in enumerate(event_times):
-        pred_a = predicted_event_times[a]
-        event_a = event_observed[a]
-        # Don't want to double count
-        for b in range(a + 1, len(event_times)):
-            time_b = event_times[b]
-            pred_b = predicted_event_times[b]
-            event_b = event_observed[b]
-
-            if valid_comparison(time_a, time_b, event_a, event_b):
-                paircount += 1.0
-                csum += concordance_value(time_a, time_b, pred_a, pred_b)
-
-    if paircount == 0:
-        raise ZeroDivisionError("No admissable pairs in the dataset.")
-    return csum / paircount
-
-
 def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col
-        for col in df.columns
-        if not (np.issubdtype(df[col].dtype, np.number) or np.issubdtype(df[col].dtype, np.bool_))
+        for (col, dtype) in df.dtypes.iteritems()
+        if dtype.name == "category" or not (np.issubdtype(dtype, np.number) or np.issubdtype(dtype, np.bool_))
     ]
     if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(
-            "DataFrame contains nonnumeric columns: %s. Try using pandas.get_dummies to convert the non-numeric column(s) to numerical data, or dropping the column(s)."
+            "DataFrame contains nonnumeric columns: %s. Try 1) using pandas.get_dummies to convert the non-numeric column(s) to numerical data, 2) using it in stratification `strata=`, or 3) dropping the column(s)."
             % nonnumeric_cols
         )
 
@@ -1266,15 +948,129 @@ def check_nans_or_infs(df_or_array):
             raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
 
 
+def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
+    """
+    This function takes a "flat" dataset (that is, non-time-varying), and converts it into a time-varying dataset 
+    with static variables. 
+    
+    Useful if your dataset has variables that do not satisfy the proportional hazard assumption, and you need to create a 
+    time-varying dataset to include interaction terms with time. 
+
+
+    Parameters
+    ----------
+    df: DataFrame
+        a DataFrame of the static dataset.
+    duration_col: string
+        string representing the column in df that represents the durations of each subject.
+    event_col: string
+        string representing the column in df that represents whether the subject experienced the event or not.
+    id_col: string, optional
+        Specify the column that represents an id, else lifelines creates an autoincrementing one. 
+    time_gaps: float or int
+        Specify a desired time_gap. For example, if time_gap is 2 and a subject lives for 10.5 units of time, 
+        then the final long form will have 5 + 1 rows for that subject: (0, 2], (2, 4], (4, 6], (6, 8], (8, 10], (10, 10.5]
+        Smaller time_gaps will produce larger dataframes, and larger time_gaps will produce smaller dataframes. In the limit,
+        the long dataframe will be identical to the original dataframe. 
+
+    Returns
+    --------
+    DataFrame
+
+    Example
+    --------
+    >>> from lifelines.datasets import load_rossi
+    >>> from lifelines.utils import to_episodic_format
+    >>> rossi = load_rossi()
+    >>> long_rossi = to_episodic_format(rossi, 'week', 'arrest', time_gaps=2.)
+    >>>
+    >>> from lifelines import CoxTimeVaryingFitter
+    >>> ctv = CoxTimeVaryingFitter()
+    >>> # age variable violates proprotional hazard
+    >>> long_rossi['time * age'] = long_rossi['stop'] * long_rossi['age']
+    >>> ctv.fit(long_rossi, id_col='id', event_col='arrest', show_progress=True)
+    >>> ctv.print_summary()
+
+    See Also
+    --------
+    add_covariate_to_timeline
+    to_long_format
+
+    """
+    df = df.copy()
+    df[duration_col] /= time_gaps
+    df = to_long_format(df, duration_col)
+
+    stop_col = "stop"
+    start_col = "start"
+
+    _, d = df.shape
+
+    if id_col is None:
+        id_col = "id"
+        df.index.rename(id_col, inplace=True)
+        df = df.reset_index()
+        d_dftv = d + 1
+    else:
+        d_dftv = d
+
+    # what dtype can I make it?
+    dtype_dftv = object if (df.dtypes == object).any() else float
+
+    # how many rows/cols do I need?
+    n_dftv = int(np.ceil(df[stop_col]).sum())
+
+    # alocate temporary numpy array to insert into
+    tv_array = np.empty((n_dftv, d_dftv), dtype=dtype_dftv)
+
+    special_columns = [stop_col, start_col, event_col]
+    non_special_columns = df.columns.difference(special_columns).tolist()
+
+    order_I_want = special_columns + non_special_columns
+
+    df = df[order_I_want]
+
+    position_counter = 0
+
+    for _, row in df.iterrows():
+        T, E = row[stop_col], row[event_col]
+        T_int = int(np.ceil(T))
+        values = np.tile(row.values, (T_int, 1))
+
+        # modify first column, which is the old duration col.
+        values[:, 0] = np.arange(1, T + 1, dtype=float)
+        values[-1, 0] = T
+
+        # modify second column.
+        values[:, 1] = np.arange(0, T, dtype=float)
+
+        # modify third column, which is the old event col
+        values[:, 2] = 0.0
+        values[-1, 2] = float(E)
+
+        tv_array[position_counter : position_counter + T_int, :] = values
+
+        position_counter += T_int
+
+    dftv = pd.DataFrame(tv_array, columns=df.columns)
+    dftv = dftv.astype(dtype=df.dtypes[non_special_columns + [event_col]].to_dict())
+    dftv[start_col] *= time_gaps
+    dftv[stop_col] *= time_gaps
+    return dftv
+
+
 def to_long_format(df, duration_col):
     """
+    This function converts a survival analysis dataframe to a lifelines "long" format. The lifelines "long"
+    format is used in a common next function, ``add_covariate_to_timeline``. 
+
     Parameters
     ----------
     df: DataFrame
         a Dataframe in the standard survival analysis form (one for per observation, with covariates, duration and event flag)
     duration_col: string
         string representing the column in df that represents the durations of each subject.
-    
+
     Returns
     -------
     long_form_df: DataFrame
@@ -1282,6 +1078,7 @@ def to_long_format(df, duration_col):
 
     See Also
     --------
+    to_episodic_format
     add_covariate_to_timeline
     """
     return df.assign(start=0, stop=lambda s: s[duration_col]).drop(duration_col, axis=1)
@@ -1301,8 +1098,8 @@ def add_covariate_to_timeline(
 ):  # pylint: disable=too-many-arguments
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
-    to be used iteratively as one adds more and more covariates to track over time. If beginning to use this function, it is recommend
-    to view the docs at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-for-time-varying-regression.
+    to be used iteratively as one adds more and more covariates to track over time. Before using this function, it is recommended
+    to view the documentation at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-creation-for-time-varying-regression.
 
 
     Parameters
@@ -1342,6 +1139,8 @@ def add_covariate_to_timeline(
 
     See Also
     --------
+    to_episodic_format
+    to_long_format
     covariates_from_event_matrix
 
 
@@ -1529,6 +1328,21 @@ def _to_array(x):
     if not isinstance(x, collections.Iterable):
         return np.array([x])
     return np.asarray(x)
+
+
+def _to_list(x):
+    if not isinstance(x, list):
+        return [x]
+    return x
+
+
+def format_p_value(decimals):
+    threshold = 0.5 * 10 ** (-decimals)
+    return lambda p: "<%s" % threshold if p < threshold else "{:4.{prec}f}".format(p, prec=decimals)
+
+
+def format_floats(decimals):
+    return lambda f: "{:4.{prec}f}".format(f, prec=decimals)
 
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")

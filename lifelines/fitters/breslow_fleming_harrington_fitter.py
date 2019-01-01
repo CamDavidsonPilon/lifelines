@@ -3,7 +3,7 @@ from __future__ import print_function
 import numpy as np
 
 from lifelines.fitters import UnivariateFitter
-from lifelines.fitters.nelson_aalen_fitter import NelsonAalenFitter
+from lifelines import NelsonAalenFitter
 from lifelines.utils import median_survival_times
 
 
@@ -19,7 +19,10 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
     BreslowFlemingHarringtonFitter(alpha=0.95)
 
-    alpha: The alpha value associated with the confidence intervals.
+    Parameters
+    ----------
+    alpha: float
+        The alpha value associated with the confidence intervals.
 
     """
 
@@ -34,22 +37,30 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         ci_labels=None,
     ):  # pylint: disable=too-many-arguments
         """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
-          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
-          label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
-             alpha for this call to fit only.
-          ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        Parameters
+        ----------
+        duration: an array, or pd.Series, of length n
+            duration subject was observed for
+        timeline: 
+            return the best estimate at the values in timelines (postively increasing)
+        event_observed: an array, or pd.Series, of length n 
+            True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+        entry: an array, or pd.Series, of length n 
+           relative time when a subject entered the study. This is
+           useful for left-truncated observations, i.e the birth event was not observed.
+           If None, defaults to all 0 (all birth events observed.)
+        label: string
+            a string to name the column of the estimate.
+        alpha: float
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: iterable
+            add custom column names to the generated confidence intervals
+              as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
 
 
-        Returns:
+        Returns
+        -------
           self, with new properties like 'survival_function_'.
 
         """

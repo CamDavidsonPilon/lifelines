@@ -14,7 +14,7 @@ from numpy import dot, exp
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
 from lifelines.fitters import BaseFitter
-from lifelines.fitters.coxph_fitter import CoxPHFitter
+from lifelines import CoxPHFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (
     inv_normal_cdf,
@@ -33,6 +33,10 @@ from lifelines.utils import (
     ConvergenceError,
     check_nans_or_infs,
     string_justify,
+    format_p_value,
+    format_floats,
+    _to_list,
+    coalesce,
 )
 
 
@@ -41,14 +45,18 @@ class CoxTimeVaryingFitter(BaseFitter):
     """
     This class implements fitting Cox's time-varying proportional hazard model:
 
-    h(t|x(t)) = h_0(t)*exp(x(t)'*beta)
+        .. math::  h(t|x(t)) = h_0(t)*exp(x(t)'*beta)
 
-    Parameters:
-      alpha: the level in the confidence intervals.
-      penalizer: the coefficient of an l2 penalizer in the regression
+    Parameters
+    ----------
+    alpha: float, optional
+       the level in the confidence intervals.
+    penalizer: float, optional
+        the coefficient of an l2 penalizer in the regression
+
     """
 
-    def __init__(self, alpha=0.95, penalizer=0.0):
+    def __init__(self, alpha=0.95, penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         if penalizer < 0:
@@ -56,6 +64,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         self.alpha = alpha
         self.penalizer = penalizer
+        self.strata = strata
 
     def fit(
         self,
@@ -68,36 +77,48 @@ class CoxTimeVaryingFitter(BaseFitter):
         show_progress=False,
         step_size=None,
         robust=False,
+        strata=None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
         are handled using Efron's tie-method.
 
-        Parameters:
-          df: a Pandas dataframe with necessary columns `duration_col` and
-             `event_col`, plus other covariates. `duration_col` refers to
-             the lifetimes of the subjects. `event_col` refers to whether
-             the 'death' events was observed: 1 if observed, 0 else (censored).
-          id_col:  A subject could have multiple rows in the dataframe. This column contains
-             the unique identifer per subject.
-          event_col: the column in dataframe that contains the subjects' death
-             observation. If left as None, assume all individuals are non-censored.
-          start_col: the column that contains the start of a subject's time period.
-          stop_col: the column that contains the end of a subject's time period.
-          weights_col: the column that contains (possibly time-varying) weight of each subject-period row.
-          show_progress: since the fitter is iterative, show convergence
-             diagnostics.
-          step_size: set an initial step size for the fitting algorithm.
-          robust: Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
-            ties, so if there are high number of ties, results may significantly differ. See
-            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+        Parameters
+        -----------
+        df: DataFrame
+            a Pandas dataframe with necessary columns `duration_col` and
+           `event_col`, plus other covariates. `duration_col` refers to
+           the lifetimes of the subjects. `event_col` refers to whether
+           the 'death' events was observed: 1 if observed, 0 else (censored).
+        id_col: string
+            A subject could have multiple rows in the dataframe. This column contains
+           the unique identifer per subject.
+        event_col: string
+           the column in dataframe that contains the subjects' death
+           observation. If left as None, assume all individuals are non-censored.
+        start_col: string
+            the column that contains the start of a subject's time period.
+        stop_col: string
+            the column that contains the end of a subject's time period.
+        weights_col: string, optional
+            the column that contains (possibly time-varying) weight of each subject-period row.
+        show_progress: since the fitter is iterative, show convergence
+           diagnostics.
+        robust: boolean, optional (default: True)
+            Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+          ties, so if there are high number of ties, results may significantly differ. See
+          "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+        step_size: float, optional
+            set an initial step size for the fitting algorithm.
+        strata: TODO
 
-
-        Returns:
-            self, with additional properties: hazards_
+        Returns
+        --------
+        self: CoxTimeVaryingFitter
+            self, with additional properties like ``hazards_`` and ``print_summary``
 
         """
-
+        self.strata = coalesce(strata, self.strata)
         self.robust = robust
         if self.robust:
             raise NotImplementedError("Not available yet.")
@@ -111,18 +132,25 @@ class CoxTimeVaryingFitter(BaseFitter):
             raise KeyError("A column specified in the call to `fit` does not exist in the dataframe provided.")
 
         if weights_col is None:
+            self.weights_col = None
             assert (
                 "__weights" not in df.columns
             ), "__weights is an internal lifelines column, please rename your column first."
             df["__weights"] = 1.0
         else:
+            self.weights_col = weights_col
             if (df[weights_col] <= 0).any():
                 raise ValueError("values in weights_col must be positive.")
 
         df = df.rename(
             columns={id_col: "id", event_col: "event", start_col: "start", stop_col: "stop", weights_col: "__weights"}
         )
-        df = df.set_index("id")
+
+        if self.strata is None:
+            df = df.set_index("id")
+        else:
+            df = df.set_index(_to_list(self.strata) + ["id"])  # TODO: needs to be a list
+
         stop_times_events = df[["event", "stop", "start"]].copy()
         weights = df[["__weights"]].copy().astype(float)
         df = df.drop(["event", "stop", "start", "__weights"], axis=1)
@@ -168,35 +196,16 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_for_immediate_deaths(stop_times_events)
         check_for_instantaneous_events(stop_times_events)
 
-    def _compute_residuals(self, df, stop_times_events, weights):
-        raise NotImplementedError()
+    def _partition_by_strata(self, X, stop_times_events, weights):
+        for stratum, stratified_X in X.groupby(self.strata):
+            stratified_stop_times_events, stratified_W = (stop_times_events.loc[[stratum]], weights.loc[[stratum]])
+            yield (stratified_X, stratified_stop_times_events, stratified_W), stratum
 
-    def _compute_delta_beta(self, df, stop_times_events, weights):
-        """ approximate change in betas as a result of excluding ith row"""
-
-        score_residuals = self._compute_residuals(df, stop_times_events, weights) * weights[:, None]
-
-        naive_var = inv(self._hessian_)
-        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
-
-        return delta_betas
-
-    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
-
-        delta_betas = self._compute_delta_beta(df, stop_times_events, weights)
-
-        if self.cluster_col:
-            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
-
-        sandwich_estimator = delta_betas.T.dot(delta_betas)
-        return sandwich_estimator
-
-    def _compute_standard_errors(self, df, stop_times_events, weights):
-        if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal())
-        else:
-            se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
+    def _partition_by_strata_and_apply(self, X, stop_times_events, weights, function, *args):
+        for (stratified_X, stratified_stop_times_events, stratified_W), _ in self._partition_by_strata(
+            X, stop_times_events, weights
+        ):
+            yield function(stratified_X, stratified_stop_times_events, stratified_W, *args)
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
@@ -221,8 +230,10 @@ class CoxTimeVaryingFitter(BaseFitter):
         Summary statistics describing the fit.
         Set alpha property in the object before calling.
 
-        Returns:
-            df: DataFrame, contains columns coef, exp(coef), se(coef), z, p, lower, upper
+        Returns
+        -------
+        df: DataFrame 
+            contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
         df = pd.DataFrame(index=self.hazards_.columns)
         df["coef"] = self.hazards_.loc["coef"].values
@@ -230,28 +241,33 @@ class CoxTimeVaryingFitter(BaseFitter):
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
+        df["log(p)"] = np.log(df["p"])
         df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
     def _newton_rhaphson(
         self, df, stop_times_events, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
-    ):  # pylint: disable=too-many-arguments,too-many-locals
+    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
-        Note that data is assumed to be sorted on T!
-
-        Parameters:
-            df: (n, d) Pandas DataFrame of observations
-            stop_times_events: (n, d) Pandas DataFrame of meta information about the subjects history
-            show_progress: True to show verbous output of convergence
-            step_size: float > 0 to determine a starting step size in NR algorithm.
-            precision: the convergence halts if the norm of delta between
+        Parameters
+        ----------
+        df: DataFrame 
+        stop_times_events: DataFrame
+             meta information about the subjects history
+        show_progress: boolean, optional (default: True) 
+            to show verbous output of convergence
+        step_size: float 
+            > 0 to determine a starting step size in NR algorithm.
+        precision: float
+            the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
 
-        Returns:
-            beta: (1,d) numpy array.
+        Returns
+        --------
+        beta: (1,d) numpy array.
         """
         assert precision <= 1.0, "precision must be less than or equal to 1."
 
@@ -270,7 +286,19 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         while converging:
             i += 1
-            h, g, ll = self._get_gradients(df, stop_times_events, weights, beta)
+
+            if self.strata is None:
+                h, g, ll = self._get_gradients(df, stop_times_events, weights, beta)
+            else:
+                g = np.zeros_like(beta).T
+                h = np.zeros((beta.shape[0], beta.shape[0]))
+                ll = 0
+                for _h, _g, _ll in self._partition_by_strata_and_apply(
+                    df, stop_times_events, weights, self._get_gradients, beta
+                ):
+                    g += _g
+                    h += _h
+                    ll += _ll
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -351,12 +379,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
-        Returns:
-            hessian: (d, d) numpy array,
-            gradient: (1, d) numpy array
-            log_likelihood: double
+        Returns
+        -------
+        hessian: (d, d) numpy array,
+        gradient: (1, d) numpy array
+        log_likelihood: float
         """
-
+        # import pdb
+        # pdb.set_trace()
         _, d = df.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
@@ -439,15 +469,25 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return hessian, gradient.reshape(1, d), log_lik
 
     def predict_log_partial_hazard(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        r"""
+        This is equivalent to R's linear.predictors.
+        Returns the log of the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to :math:`\beta (X - \bar{X})`
+
+
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
-        This is equivalent to R's linear.predictors.
-        Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \beta (X - \bar{X})
+        Returns
+        -------
+        DataFrame
 
+        Note
+        -----
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
@@ -463,46 +503,81 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
 
     def predict_partial_hazard(self, X):
-        """
-        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        r"""
+        Returns the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to :math:`\exp{\beta (X - \bar{X})}`
+
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
+        Returns
+        -------
+        DataFrame
 
+        Note
+        -----
         If X is a dataframe, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
 
-        Returns the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to \exp{\beta X}
         """
         return exp(self.predict_log_partial_hazard(X))
 
-    def print_summary(self):
+    def print_summary(self, decimals=2, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
+
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
+        kwargs:
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
+            multiple outputs. 
+
         """
-        # pylint: disable=unnecessary-lambda
+
         # Print information about data first
         justify = string_justify(18)
+
         print(self)
-        print("{} = {}".format(justify("event col"), self.event_col))
+        print("{} = '{}'".format(justify("event col"), self.event_col))
+
+        if self.weights_col:
+            print("{} = '{}'".format(justify("weights col"), self.weights_col))
+
+        if self.strata:
+            print("{} = {}".format(justify("strata"), self.strata))
+
         print("{} = {}".format(justify("number of subjects"), self._n_unique))
         print("{} = {}".format(justify("number of periods"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
-        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        print("{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called), end="\n\n")
+        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
+        print("{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called))
 
+        for k, v in kwargs.items():
+            print("{} = {}\n".format(justify(k), v))
+
+        print(end="\n")
         print("---")
 
         df = self.summary
         # Significance codes last
         df[""] = [significance_code(p) for p in df["p"]]
-        print(df.to_string(float_format=lambda f: "{:4.4f}".format(f)))
+        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
-        print("Likelihood ratio test = {:.3f} on {} df, p={:.5f}".format(*self._compute_likelihood_ratio_test()))
+        print(
+            "Likelihood ratio test = {:.{prec}f} on {} df, log(p)={:.{prec}f}".format(
+                *self._compute_likelihood_ratio_test(), prec=decimals
+            )
+        )
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -510,7 +585,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
 
-        Conveniently, we can actually use the class itself to do most of the work.
+        Conveniently, we can actually use another class to do most of the work.
 
         """
 
@@ -519,7 +594,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         trivial_dataset = trivial_dataset.join(weights)
 
         cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "stop", "event", weights_col='__weights', show_progress=False)
+        cp_null.fit(trivial_dataset, "stop", "event", weights_col="__weights", show_progress=False)
 
         ll_null = cp_null._log_likelihood
         ll_alt = self._log_likelihood
@@ -527,53 +602,63 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
         _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
-        return test_stat, degrees_freedom, p_value
+        return test_stat, degrees_freedom, np.log(p_value)
 
-    def plot(self, standardized=False, columns=None, **kwargs):
+    def plot(self, columns=None, display_significance_code=True, **errorbar_kwargs):
         """
-        Produces a visual representation of the fitted coefficients, including their standard errors and magnitudes.
+        Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
-        Parameters:
-            standardized: standardize each estimated coefficient and confidence interval
-                          endpoints by the standard error of the estimate.
-            columns : list-like, default None
-        Returns:
-            ax: the matplotlib axis that be edited.
+        Parameters
+        ----------
+        columns : list, optional
+            specifiy a subset of the columns to plot
+        display_significance_code: bool, optional (default: True)
+            display asteriks beside statistically significant variables
+        errorbar_kwargs:
+            pass in additional plotting commands to matplotlib errorbar command
+
+        Returns
+        -------
+        ax: matplotlib axis
+            the matplotlib axis that be edited.
 
         """
         from matplotlib import pyplot as plt
 
-        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
-        yaxis_locations = range(len(self.hazards_.columns))
+        ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
 
-        if columns is not None:
-            yaxis_locations = range(len(columns))
-            summary = self.summary.loc[columns]
-            lower_bound = self.confidence_intervals_[columns].loc["lower-bound"].copy()
-            upper_bound = self.confidence_intervals_[columns].loc["upper-bound"].copy()
-            hazards = self.hazards_[columns].values[0].copy()
-        else:
-            yaxis_locations = range(len(self.hazards_.columns))
-            summary = self.summary
-            lower_bound = self.confidence_intervals_.loc["lower-bound"].copy()
-            upper_bound = self.confidence_intervals_.loc["upper-bound"].copy()
-            hazards = self.hazards_.values[0].copy()
+        errorbar_kwargs.setdefault("c", "k")
+        errorbar_kwargs.setdefault("fmt", "s")
+        errorbar_kwargs.setdefault("markerfacecolor", "white")
+        errorbar_kwargs.setdefault("markeredgewidth", 1.25)
+        errorbar_kwargs.setdefault("elinewidth", 1.25)
+        errorbar_kwargs.setdefault("capsize", 3)
 
-        if standardized:
-            se = summary["se(coef)"]
-            lower_bound /= se
-            upper_bound /= se
-            hazards /= se
+        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+
+        if columns is None:
+            columns = self.hazards_.columns
+
+        yaxis_locations = list(range(len(columns)))
+        summary = self.summary.loc[columns]
+        symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
+        hazards = self.hazards_[columns].values[0].copy()
 
         order = np.argsort(hazards)
-        ax.scatter(upper_bound.values[order], yaxis_locations, marker="|", c="k")
-        ax.scatter(lower_bound.values[order], yaxis_locations, marker="|", c="k")
-        ax.scatter(hazards[order], yaxis_locations, marker="o", c="k")
-        ax.hlines(yaxis_locations, lower_bound.values[order], upper_bound.values[order], color="k", lw=1)
 
-        tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
+        ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
+        best_ylim = ax.get_ylim()
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.set_ylim(best_ylim)
+
+        if display_significance_code:
+            tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
+        else:
+            tick_labels = columns[order]
+
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("standardized coef" if standardized else "coef")
+        plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
+
         return ax
 
     def _compute_cumulative_baseline_hazard(
@@ -618,3 +703,33 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s
+
+    def _compute_residuals(self, df, stop_times_events, weights):
+        raise NotImplementedError()
+
+    def _compute_delta_beta(self, df, stop_times_events, weights):
+        """ approximate change in betas as a result of excluding ith row"""
+
+        score_residuals = self._compute_residuals(df, stop_times_events, weights) * weights[:, None]
+
+        naive_var = inv(self._hessian_)
+        delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
+
+        return delta_betas
+
+    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
+
+        delta_betas = self._compute_delta_beta(df, stop_times_events, weights)
+
+        if self.cluster_col:
+            delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
+
+        sandwich_estimator = delta_betas.T.dot(delta_betas)
+        return sandwich_estimator
+
+    def _compute_standard_errors(self, df, stop_times_events, weights):
+        if self.robust:
+            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal())
+        else:
+            se = np.sqrt(self.variance_matrix_.diagonal())
+        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)

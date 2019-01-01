@@ -6,7 +6,8 @@ import numpy.testing as npt
 import pytest
 
 from lifelines import statistics as stats
-from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd
+from lifelines import CoxPHFitter
+from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset
 
 
 def test_sample_size_necessary_under_cph():
@@ -164,16 +165,18 @@ def test_multivariate_unequal_intensities():
 def test_pairwise_waltons_dataset_is_significantly_different():
     waltons_dataset = load_waltons()
     R = stats.pairwise_logrank_test(waltons_dataset["T"], waltons_dataset["group"])
-    assert R.values[0, 1].p_value < 0.05
+    assert R.summary.loc[("control", "miR-137")]["p"] < 0.05
 
 
-def test_pairwise_allows_dataframes():
+def test_pairwise_allows_dataframes_and_gives_correct_counts():
     N = 100
+    N_groups = 5
     df = pd.DataFrame(np.empty((N, 3)), columns=["T", "C", "group"])
     df["T"] = np.random.exponential(1, size=N)
     df["C"] = np.random.binomial(1, 0.6, size=N)
-    df["group"] = np.random.binomial(2, 0.5, size=N)
-    stats.pairwise_logrank_test(df["T"], df["group"], event_observed=df["C"])
+    df["group"] = np.random.binomial(N_groups, 0.5, size=N)
+    R = stats.pairwise_logrank_test(df["T"], df["group"], event_observed=df["C"])
+    assert R.summary.shape[0] == N_groups * (N_groups + 1) / 2
 
 
 def test_log_rank_returns_None_if_equal_arrays():
@@ -201,12 +204,24 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
     assert result.p_value == result_m.p_value
 
 
-def test_StatisticalResult_class():
+def test_StatisticalResult_kwargs():
 
     sr = stats.StatisticalResult(0.05, 5.0, kw="some_value")
     assert hasattr(sr, "kw")
     assert getattr(sr, "kw") == "some_value"
-    assert "some_value" in sr.__unicode__()
+    assert "some_value" in sr._to_string()
+
+
+def test_StatisticalResult_can_be_added():
+
+    sr1 = stats.StatisticalResult(0.01, 1.0, name=["1"], kw1="some_value1")
+    sr2 = stats.StatisticalResult([0.02], [2.0], name=["2"], kw2="some_value2")
+    sr3 = stats.StatisticalResult([0.03, 0.04], [3.3, 4.4], name=["3", "4"], kw3=3)
+    sr = sr1 + sr2 + sr3
+
+    assert sr.summary.shape[0] == 4
+    assert sr.summary.index.tolist() == ["1", "2", "3", "4"]
+    assert "kw3" in sr._kwargs
 
 
 def test_valueerror_is_raised_if_alpha_out_of_bounds():
@@ -214,3 +229,186 @@ def test_valueerror_is_raised_if_alpha_out_of_bounds():
     data2 = np.random.exponential(1, size=(20, 1))
     with pytest.raises(ValueError):
         stats.logrank_test(data1, data2, alpha=95)
+
+
+def test_proportional_hazard_test():
+    """
+    c = coxph(formula=Surv(T, E) ~ var1 + var2 + var3, data=df)
+    cz = cox.zph(c, transform='rank')
+    cz
+    """
+    cph = CoxPHFitter()
+    df = load_regression_dataset()
+    cph.fit(df, "T", "E")
+    results = stats.proportional_hazard_test(cph, df)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 1.4938293, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var2"]["test_statistic"], 0.8792998, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["test_statistic"], 2.2686088, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["p"], 0.1320184, rtol=1e-3)
+
+
+def test_proportional_hazard_test_with_log_transform():
+    cph = CoxPHFitter()
+    df = load_regression_dataset()
+    cph.fit(df, "T", "E")
+
+    results = stats.proportional_hazard_test(cph, df, time_transform="log")
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 2.227627, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var2"]["test_statistic"], 0.714427, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["test_statistic"], 1.466321, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var3"]["p"], 0.225927, rtol=1e-3)
+
+
+def test_proportional_hazard_test_with_weights():
+    """
+
+    library(survival)
+    df <- data.frame(
+      "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+      "T" = c(5.269797, 6.601666, 7.335846, 11.684092, 12.678458),
+      "E" = c(1, 1, 1, 1, 1),
+      "w" = c(1, 0.5, 2, 1, 1)
+    )
+
+    c = coxph(formula=Surv(T, E) ~ var1 , data=df, weights=w)
+    cox.zph(c, transform='rank')
+    """
+
+    df = pd.DataFrame(
+        {
+            "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+            "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+            "w": [1, 0.5, 2, 1, 1],
+        }
+    )
+    df["E"] = True
+
+    cph = CoxPHFitter()
+    cph.fit(df, "T", "E", weights_col="w")
+
+    results = stats.proportional_hazard_test(cph, df)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.1083698, rtol=1e-3)
+
+
+def test_proportional_hazard_test_with_weights_and_strata():
+    """
+    library(survival)
+    df <- data.frame(
+      "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+      "T" = c(5.269797, 6.601666, 7.335846, 11.684092, 12.678458),
+      "E" = c(1, 1, 1, 1, 1),
+      "w" = c(1, 0.5, 2, 1, 1),
+      "s" = c(1, 1, 0, 0, 0)
+    )
+
+    c = coxph(formula=Surv(T, E) ~ var1 + strata(s), data=df, weights=w)
+    cz = cox.zph(c, transform='identity')
+
+    """
+
+    df = pd.DataFrame(
+        {
+            "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+            "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+            "w": [1, 0.5, 2, 1, 1],
+            "s": [1, 1, 0, 0, 0],
+        }
+    )
+    df["E"] = True
+
+    cph = CoxPHFitter()
+    cph.fit(df, "T", "E", weights_col="w", strata="s")
+
+    results = stats.proportional_hazard_test(cph, df, time_transform="identity")
+    cph.print_summary()
+
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.0283, rtol=1e-3)
+
+
+def test_proportional_hazard_test_with_kmf():
+    """
+
+    library(survival)
+    df <- data.frame(
+      "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+      "T" = c(5.269797, 6.601666, 7.335846, 11.684092, 12.678458),
+      "E" = c(1, 1, 1, 1, 1)
+    )
+
+    c = coxph(formula=Surv(T, E) ~ var1 , data=df)
+    cox.zph(c, transform='km')
+    """
+
+    df = pd.DataFrame(
+        {
+            "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+            "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+            "E": [1, 1, 1, 1, 1],
+        }
+    )
+
+    cph = CoxPHFitter()
+    cph.fit(df, "T", "E")
+
+    results = stats.proportional_hazard_test(cph, df)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.00971, rtol=1e-3)
+
+
+def test_proportional_hazard_test_with_kmf_with_some_censorship():
+    """
+
+    library(survival)
+    df <- data.frame(
+      "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+      "T" = c(5.269797, 6.601666, 7.335846, 11.684092, 12.678458),
+      "E" = c(1, 1, 1, 0, 1)
+    )
+
+    c = coxph(formula=Surv(T, E) ~ var1 , data=df)
+    cox.zph(c, transform='km')
+    """
+
+    df = pd.DataFrame(
+        {
+            "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+            "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+            "E": [1, 1, 1, 0, 1],
+        }
+    )
+
+    cph = CoxPHFitter()
+    cph.fit(df, "T", "E")
+
+    results = stats.proportional_hazard_test(cph, df)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 1.013802, rtol=1e-3)
+
+
+def test_proportional_hazard_test_with_kmf_with_some_censorship_and_weights():
+    """
+
+    library(survival)
+    df <- data.frame(
+      "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+      "T" = c(5.269797, 6.601666, 7.335846, 11.684092, 12.678458),
+      "E" = c(1, 1, 1, 0, 1),
+      "w" = c(1, 0.5, 2, 1, 1),
+    )
+
+    c = coxph(formula=Surv(T, E) ~ var1 , data=df, weights=w)
+    cox.zph(c, transform='km')
+    """
+
+    df = pd.DataFrame(
+        {
+            "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+            "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+            "E": [1, 1, 1, 0, 1],
+            "w": [1, 0.5, 5, 1, 1],
+        }
+    )
+
+    cph = CoxPHFitter()
+    cph.fit(df, "T", "E", weights_col="w")
+
+    results = stats.proportional_hazard_test(cph, df)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.916, rtol=1e-2)

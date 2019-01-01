@@ -18,3 +18,9 @@ Pipfile.lock
 
 # Pyenv
 .python-version
+
+# Jupyter
+.ipynb_checkpoints
+
+# docs artifacts
+docs/_build/
