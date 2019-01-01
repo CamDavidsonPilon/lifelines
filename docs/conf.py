@@ -33,7 +33,10 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
+    "nbsphinx",
 ]
+
+exclude_patterns = ["_build", "jupyter_notebooks/.ipynb_checkpoints/*"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

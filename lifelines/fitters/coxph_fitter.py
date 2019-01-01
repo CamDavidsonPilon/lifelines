@@ -1438,18 +1438,18 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 # This should capture dichotomous / low cardinality values.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
-                        "   Advice: with so few unique values (only {0}), you can try `strata_col=['{1}']` in the call in `.fit`. See documentation here: ...".format(
+                        "   Advice: with so few unique values (only {0}), you can try `strata_col=['{1}']` in the call in `.fit`. See documentation here: https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html".format(
                             n_uniques, variable
                         )
                     )
                 else:
                     print(
-                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata_col=['{var}']` in the call in `.fit`. See more documentation here: ...""".format(
+                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata_col=['{var}']` in the call in `.fit`. See more documentation here: https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html""".format(
                             var=variable
                         )
                     )
                     print(
-                        """   Advice: try adding an interaction term with your time variable. See more documentation here: ...""".format(
+                        """   Advice: try adding an interaction term with your time variable. See more documentation here: https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html""".format(
                             var=variable
                         )
                     )

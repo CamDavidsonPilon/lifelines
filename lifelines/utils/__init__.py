@@ -959,7 +959,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
         Specify the column that represents an id, else lifelines creates an autoincrementing one. 
     time_gaps: float or int
         Specify a desired time_gap. For example, if time_gap is 2 and a subject lives for 10.5 units of time, 
-        then the final long form will have 5 + 1 rows for that subject: [0, 2), [2, 4), [4, 6), [6, 8), [8, 10), [10, 10.5)
+        then the final long form will have 5 + 1 rows for that subject: (0, 2], (2, 4], (4, 6], (6, 8], (8, 10], (10, 10.5]
         Smaller time_gaps will produce larger dataframes, and larger time_gaps will produce smaller dataframes. In the limit,
         the long dataframe will be identical to the original dataframe. 
 
