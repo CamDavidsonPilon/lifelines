@@ -42,6 +42,8 @@ Installation
 
 Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and optionally Matplotlib. Install using:
 
+.. code-block:: console
+
     pip install lifelines
 
 

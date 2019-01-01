@@ -14,10 +14,9 @@ Installation
 
 Install via ``pip``:
 
-.. code::
+.. code-block:: console
 
     pip install lifelines
-
 
 
 Kaplan-Meier and Nelson-Aalen
@@ -86,7 +85,22 @@ Multiple groups
     kmf.fit(T[ix], E[ix], label='miR-137')
     ax = kmf.plot(ax=ax)
 
+
 .. image:: images/quickstart_multi.png
+
+
+Alternatively, for many more groups and more "pandas-esque":
+
+.. code:: python
+
+
+    ax = plt.subplot(111)
+
+    kmf = KaplanMeierFitter()
+
+    for name, grouped_df in df.groupby('group'):
+        kmf.fit(grouped_df["T"], grouped_df["E"], label=name)
+        kmf.plot(ax=ax)
 
 
 Similar functionality exists for the ``NelsonAalenFitter``:
@@ -143,6 +157,9 @@ Alternatively, perhaps you are interested in viewing the survival table given so
 Survival Regression
 -------------------
 
+.. note:: Much more comprehensive docs are available in `Survival Regression`_.
+
+
 While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter`` and ``CoxPHFitter``.
 
 .. code:: python
@@ -166,23 +183,23 @@ The input of the ``fit`` method's API in a regression is different. All the data
 
     """
     <lifelines.CoxPHFitter: fitted with 200 observations, 11 censored>
-          duration col = T
-             event col = E
+          duration col = 'T'
+             event col = 'E'
     number of subjects = 200
       number of events = 189
-        log-likelihood = -807.620
-      time fit was run = 2018-12-21 18:17:36 UTC
+        log-likelihood = -807.62
+      time fit was run = 2019-01-01 23:15:47 UTC
 
     ---
-          coef  exp(coef)  se(coef)    z    p  lower 0.95  upper 0.95
-    var1  0.22       1.25      0.07 2.99 0.00        0.08        0.37  *
-    var2  0.05       1.05      0.08 0.61 0.54       -0.11        0.21
-    var3  0.22       1.24      0.08 2.88 0.00        0.07        0.37  *
+          coef  exp(coef)  se(coef)    z      p  log(p)  lower 0.95  upper 0.95
+    var1  0.22       1.25      0.07 2.99 <0.005   -5.89        0.08        0.37  *
+    var2  0.05       1.05      0.08 0.61   0.54   -0.62       -0.11        0.21
+    var3  0.22       1.24      0.08 2.88 <0.005   -5.53        0.07        0.37  *
     ---
     Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
-    Concordance = 0.580
-    Likelihood ratio test = 15.540 on 3 df, p=0.00141
+    Concordance = 0.58
+    Likelihood ratio test = 15.54 on 3 df, log(p)=-6.56
     """
 
     cph.plot()
@@ -216,3 +233,6 @@ Like the above estimators, there is also a built-in plotting method:
     aaf.plot()
 
 .. image:: images/quickstart_aaf.png
+
+
+.. _Survival Regression: Survival%20Regression.html

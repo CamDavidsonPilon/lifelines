@@ -42,22 +42,22 @@ compares whether the "death" generation process of the two populations are equal
     results.print_summary()
 
     """
-              t_0 = -1
-            alpha = 0.95
-null_distribution = chi squared
-               df = 1
-   use_bonferroni = True
+                  t_0 = -1
+                alpha = 0.95
+    null_distribution = chi squared
+                   df = 1
+       use_bonferroni = True
 
-   ---
-   test_statistic        p
-            3.528  0.00034  **
+    ---
+    test_statistic        p
+             3.528  0.00034  **
 
     ---
     Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-   """
+    """
 
-   print(results.p_value)        # 0.46759
-   print(results.test_statistic) # 0.528
+    print(results.p_value)        # 0.46759
+    print(results.test_statistic) # 0.528
 
 
 If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares
@@ -119,24 +119,129 @@ If using *lifelines* for prediction work, it's ideal that you perform some type 
 From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
 
 
-Displaying at-risk counts below plots
-#####################################################
-The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add At-Risk counts at the bottom of your figures. For example:
+Plotting multiple figures on a plot
+##############################################
+
+When `.plot` is called, an `axis` object is returned which can be passed into future calls of `.plot`:
 
 .. code-block:: python
 
-    from numpy.random import exponential
-    T_control = exponential(10, size=250)
-    T_experiment = exponential(20, size=200)
-    ax = plt.subplot(111)
+    kmf.fit(data1)
+    ax = kmf.plot()
+
+    kmf.fit(data2)
+    ax = kmf.plot(ax=ax)
+
+
+If you have a pandas `DataFrame` with columns "group", "T", and "E", then something like the following would work:
+
+.. code-block:: python
 
     from lifelines import KaplanMeierFitter
+    from matplotlib import pyplot as plt
+
+    ax = plt.subplot(111)
+
+    kmf = KaplanMeierFitter()
+
+    for name, grouped_df in df.groupby('group'):
+        kmf.fit(grouped_df["T"], grouped_df["E"], label=name)
+        kmf.plot(ax=ax)
+
+
+Plotting options and styles
+##############################################
+
+Let's load some data
+
+
+.. code-block:: python
+
+    from lifelines.datasets import load_waltons
+
+    waltons = load_waltons()
+    T = waltons['T']
+    E = waltons['E']
+
+
+Standard
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    
+    kmf = KaplanMeierFitter()
+    kmf.fit(T, E, label="kmf.plot()")
+    kmf.plot()
+
+.. image:: /images/normal_plot.png
+
+
+Show censors and edit markers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.fit(T, E, label="kmf.plot(show_censors=True, \ncensor_styles={'ms': 6, 'marker': 's'})")
+    kmf.plot(show_censors=True, censor_styles={'ms': 6, 'marker': 's'})
+
+.. image:: images/flat_plot.png
+
+
+
+Hide confidence intervals
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.fit(T, E, label="kmf.plot(ci_show=False)")
+    kmf.plot(ci_show=False)
+
+.. image:: /images/ci_show_plot.png
+
+
+
+Invert axis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.fit(T, E, label="kmf.plot(invert_y_axis=True)")
+    kmf.plot(invert_y_axis=True)
+
+.. image:: /images/invert_y_axis.png
+
+
+
+Displaying at-risk counts below plots
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    kmf.fit(T, E, label="label name")
+    kmf.plot(at_risk_counts=True)
+
+.. image:: /images/single_at_risk_plots.png
+
+
+Displaying multiple at-risk counts below plots
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add At-Risk counts at the bottom of your figures. For example:
+
+.. code-block:: python
+    
+    from lifelines import KaplanMeierFitter
+    
+    ix = waltons['group'] == 'control'
+
+    ax = plt.subplot(111)
 
     kmf_control = KaplanMeierFitter()
-    ax = kmf_control.fit(T_control, label='control').plot(ax=ax)
+    ax = kmf_control.fit(waltons.loc[ix]['T'], waltons.loc[ix]['E'], label='control').plot(ax=ax)
 
     kmf_exp = KaplanMeierFitter()
-    ax = kmf_exp.fit(T_experiment, label='experiment').plot(ax=ax)
+    ax = kmf_exp.fit(waltons.loc[~ix]['T'], waltons.loc[~ix]['E'], label='exp').plot(ax=ax)
 
 
     from lifelines.plotting import add_at_risk_counts
@@ -145,10 +250,6 @@ The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add 
 will display
 
 .. image:: /images/add_at_risk.png
-   :height: 300
-
-
-Alternatively, you can add this at the call to ``plot``: ``kmf.plot(at_risk_counts=True)``
 
 
 Transforming survival-table data into lifelines format
@@ -206,102 +307,6 @@ Perhaps you are interested in viewing the survival table given some durations an
     5              12         6         6         0       50
     """
 
-
-
-Plotting multiple figures on a plot
-##############################################
-
-When `.plot` is called, an `axis` object is returned which can be passed into future calls of `.plot`:
-
-.. code-block:: python
-
-    kmf.fit(data1)
-    ax = kmf.plot()
-
-    kmf.fit(data2)
-    ax = kmf.plot(ax=ax)
-
-
-If you have a pandas `DataFrame` with columns "group", "T", and "E", then something like the following would work:
-
-.. code-block:: python
-
-    from lifelines import KaplanMeierFitter
-    from matplotlib import pyplot as plt
-
-    ax = plt.subplot(111)
-
-    kmf = KaplanMeierFitter()
-
-    for name, grouped_df in df.groupby('group'):
-        kmf.fit(grouped_df["T"], grouped_df["E"], label=name)
-        kmf.plot(ax=ax)
-
-
-Plotting options and styles
-##############################################
-
-
-
-Standard
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    kmf = KaplanMeierFitter()
-    kmf.fit(T, E, label="kmf.plot()")
-    kmf.plot()
-
-.. image:: /images/normal_plot.png
-   :height: 300
-
-
-R-style
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    kmf.fit(T,C,label="kmf.plot(flat=True)")
-    kmf.plot(flat=True)
-
-.. image:: images/flat_plot.png
-   :height: 300
-
-
-Show censorships
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    kmf.fit(T, C, label="kmf.plot(show_censors=True)")
-    kmf.plot(show_censors=True)
-
-.. image:: images/show_censors_plot.png
-   :height: 300
-
-
-Hide confidence intervals
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    kmf.fit(T,C,label="kmf.plot(ci_show=False)")
-    kmf.plot(ci_show=False)
-
-.. image:: /images/ci_show_plot.png
-   :height: 300
-
-
-Invert axis
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    kmf.fit(T, label="kmf.plot(invert_y_axis=True)")
-    kmf.plot(invert_y_axis=True)
-
-.. image:: /images/invert_y_axis.png
-   :height: 300
 
 
 Set the index/timeline of a estimate

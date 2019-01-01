@@ -12,8 +12,8 @@ they were head of, and the year they were elected. Can we use this data
 in survival analysis?
 
 Yes, the technique is called *survival regression* -- the name implies
-we regress covariates (e.g., year elected, country, etc.) against a
-another variable -- in this case durations and lifetimes. Similar to the
+we regress covariates (e.g., age, country, etc.) against
+another variable -- in this case durations *and* lifetimes. Similar to the
 logic in the first part of this tutorial, we cannot use traditional
 methods like linear regression.
 
@@ -55,14 +55,14 @@ An example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/
 The dataframe ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occured, and the other columns represent variables we wish to regress against. 
 
 
-If you need to first "clean" your dataset (encode categorical variables, add interation terms, etc.), that should happen _before_ using lifelines. Libraries like Pandas and Patsy help with that. 
+If you need to first "clean" your dataset (encode categorical variables, add interation terms, etc.), that should happen *before* using lifelines. Libraries like Pandas and Patsy help with that. 
 
 
 Running the regression
 ########################
 
 
-The implementation of the Cox model in lifelines, called ``CoxPHFitter`` has a similar API to ``AalensAdditiveFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats.
+The implementation of the Cox model in lifelines is called ``CoxPHFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats.
 
 
 .. code:: python

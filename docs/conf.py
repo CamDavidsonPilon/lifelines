@@ -36,7 +36,7 @@ extensions = [
     "nbsphinx",
 ]
 
-exclude_patterns = ["_build", "jupyter_notebooks/.ipynb_checkpoints/*"]
+exclude_patterns = ["_build", "jupyter_notebooks/.ipynb_checkpoints/*.ipynb"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
