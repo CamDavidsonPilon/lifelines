@@ -1158,8 +1158,8 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         l, u, _ = cph._get_efron_values(X, T, E, weights, beta)
         l = -l
 
-        assert np.abs(l[0][0] - 77.13) < 0.05
         assert np.abs(u[0] - -2.51) < 0.05
+        assert np.abs(l[0][0] - 77.13) < 0.05
         beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
 
@@ -2873,6 +2873,10 @@ Likelihood ratio test = 15.11 on 4 df, log(p)=-5.41
         npt.assert_allclose(summary["se(coef)"].tolist(), [0.0139, 0.3707, 0.0710], atol=0.001)
         npt.assert_allclose(summary["z"].tolist(), [2.11, -1.67, -2.15], atol=0.01)
 
+
+    def test_ctv_with_multiple_strata(self, ctv, heart):
+        ctv.fit(heart, id_col="id", event_col="event", strata=["transplant", "surgery"])
+        assert True
 
 class TestAalenJohansenFitter:
     @pytest.fixture  # pytest fixtures are functions that are "executed" before every test

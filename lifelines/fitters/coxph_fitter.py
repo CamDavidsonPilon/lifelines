@@ -477,136 +477,103 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    def _get_efron_values(self, X, T, E, weights, beta):
+    def _get_efron_values(self, X, T, E, weights, beta):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
-        Note that X, T, E are assumed to be sorted on T!
-
-        A good explaination for Efron. Consider three of five subjects who fail at the time.
-        As it is not known a priori that who is the first to fail, so one-third of
-        (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-        of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
-
-        From https://cran.r-project.org/web/packages/survival/survival.pdf:
-
-        "Setting all weights to 2 for instance will give the same coefficient estimate but halve the variance. When
-        the Efron approximation for ties (default) is employed replication of the data will not give exactly the same coefficients as the
-        weights option, and in this case the weighted fit is arguably the correct one."
-
-        Parameters
-        ----------
-        X: array
-            (n,d) numpy array of observations.
-        T: array
-            (n) numpy array representing observed durations.
-        E: array
-            (n) numpy array representing death events.
-        weights: array
-            (n) an array representing weights per observation.
-        beta: array
-            (1, d) numpy array of coefficients.
 
         Returns
         -------
-        hessian:
-            (d, d) numpy array,
-        gradient:
-            (1, d) numpy array
+        hessian: (d, d) numpy array,
+        gradient: (1, d) numpy array
         log_likelihood: float
         """
-
-        n, d = X.shape
+        # import pdb
+        # pdb.set_trace()
+        _, d = X.shape
         hessian = np.zeros((d, d))
-        gradient = np.zeros((1, d))
+        gradient = np.zeros(d)
         log_lik = 0
 
-        # Init risk and tie sums to zero
-        x_tie_sum = np.zeros((1, d))
-        risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
-        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
+        unique_death_times = np.unique(T[E])
 
-        # Init number of ties and weights
-        weight_count = 0.0
-        tie_count = 0
-        scores = weights[:, None] * exp(dot(X, beta))
+        for t in unique_death_times:
 
-        # Iterate backwards to utilize recursive relationship
-        for i in range(n - 1, -1, -1):
-            # Doing it like this to preserve shape
-            ti = T[i]
-            ei = E[i]
-            xi = X[i : i + 1]
-            score = scores[i : i + 1]
-            w = weights[i]
+            ix = (T >= t) # everyone in the risk set
 
-            # Calculate phi values
-            phi_i = score
-            phi_x_i = phi_i * xi
-            phi_x_x_i = dot(xi.T, phi_x_i)
+            X_at_t = X[ix]
+            weights_at_t = weights[ix]
+            events_at_t = E[ix]
+
+            phi_i = weights_at_t[:, None] * exp(dot(X_at_t, beta))
+            phi_x_i = phi_i * X_at_t
+            phi_x_x_i = dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
-            risk_phi += phi_i
-            risk_phi_x += phi_x_i
-            risk_phi_x_x += phi_x_x_i
+            risk_phi = phi_i.sum()
+            risk_phi_x = phi_x_i.sum(0)
+            risk_phi_x_x = phi_x_x_i
 
-            # Calculate sums of Ties, if this is an event
-            if ei:
-                x_tie_sum += w * xi
-                tie_phi += phi_i
-                tie_phi_x += phi_x_i
-                tie_phi_x_x += phi_x_x_i
+            # Calculate the sums of Tie set
+            deaths = (T[ix] == t) & events_at_t
 
-                # Keep track of count
-                tie_count += 1
-                weight_count += w
+            ties_counts = deaths.sum()  # should always at 1 or more
+            assert ties_counts >= 1
 
-            if i > 0 and T[i - 1] == ti:
-                # There are more ties/members of the risk set
-                continue
-            elif tie_count == 0:
-                # Only censored with current time, move on
-                continue
+            xi_deaths = X_at_t[deaths]
+            weights_deaths = weights_at_t[deaths]
 
-            # There was atleast one event and no more ties remain. Time to sum.
-            partial_gradient = np.zeros((1, d))
-            weighted_average = weight_count / tie_count
+            x_death_sum = (weights_deaths[:, None] * xi_deaths).sum(0)
 
-            for l in range(tie_count):
+            if ties_counts > 1:
+                # it's faster if we can skip computing these when we don't need to.
+                tie_phi = phi_i[deaths].sum()
+                tie_phi_x = phi_x_i[deaths].sum(0)
+                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
-                # A good explaination for Efron. Consider three of five subjects who fail at the time.
-                # As it is not known a priori that who is the first to fail, so one-third of
-                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+            partial_gradient = np.zeros(d)
+            partial_ll = 0
+            partial_hessian = np.zeros((d, d))
+            
+            weight_count = weights_deaths.sum()
+            weighted_average = weight_count / ties_counts
 
-                numer = risk_phi_x - l * tie_phi_x / tie_count
-                denom = risk_phi - l * tie_phi / tie_count
+            for l in range(ties_counts):
+
+                if ties_counts > 1:
+
+                    # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+                    # As it is not known a priori that who is the first to fail, so one-third of
+                    # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                    # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+                    increasing_proportion = l / ties_counts
+                    denom = risk_phi - increasing_proportion * tie_phi
+                    numer = risk_phi_x - increasing_proportion * tie_phi_x
+                    # Hessian
+                    a1 = (risk_phi_x_x - increasing_proportion * tie_phi_x_x) / denom
+                else:
+                    denom = risk_phi
+                    numer = risk_phi_x
+                    # Hessian
+                    a1 = risk_phi_x_x / denom
 
                 # Gradient
-                partial_gradient += weighted_average * numer / denom
-                # Hessian
-                a1 = (risk_phi_x_x - l * tie_phi_x_x / tie_count) / denom
-
+                partial_gradient += numer / denom
                 # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                a2 = dot(numer.T / denom, numer / denom)
+                t = numer[:, None] / denom
+                # this is faster than an outerproduct
+                a2 = t.dot(t.T)
 
-                hessian -= weighted_average * (a1 - a2)
-
-                log_lik -= weighted_average * np.log(denom[0][0])
+                partial_hessian -= (a1 - a2)
+                partial_ll -= np.log(denom)
 
             # Values outside tie sum
-            gradient += x_tie_sum - partial_gradient
-            log_lik += dot(x_tie_sum, beta)[0][0]
+            gradient += x_death_sum - weighted_average * partial_gradient
+            log_lik += dot(x_death_sum, beta)[0] + weighted_average * partial_ll
+            hessian += weighted_average * partial_hessian
 
-            # reset tie values
-            tie_count = 0
-            weight_count = 0.0
-            x_tie_sum = np.zeros((1, d))
-            tie_phi = 0
-            tie_phi_x = np.zeros((1, d))
-            tie_phi_x_x = np.zeros((d, d))
-        return hessian, gradient, log_lik
+        return hessian, gradient.reshape(1, d), log_lik
 
     def _partition_by_strata(self, X, T, E, weights, as_dataframes=False):
         for stratum, stratified_X in X.groupby(self.strata):
