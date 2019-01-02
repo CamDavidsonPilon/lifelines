@@ -1,5 +1,9 @@
 ### Changelogs
 
+#### 0.16.2
+ - Fixed `CoxTimeVaryingFitter` to allow more than one variable to be stratafied
+ - Significant performance improvements for `CoxPHFitter` with dataset has lots of duplicate times. See https://github.com/CamDavidsonPilon/lifelines/issues/591
+
 #### 0.16.1
  - Fixed py2 division error in `concordance` method.
 

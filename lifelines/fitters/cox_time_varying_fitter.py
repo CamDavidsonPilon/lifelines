@@ -198,7 +198,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     def _partition_by_strata(self, X, stop_times_events, weights):
         for stratum, stratified_X in X.groupby(self.strata):
-            stratified_stop_times_events, stratified_W = (stop_times_events.loc[[stratum]], weights.loc[[stratum]])
+            stratified_stop_times_events, stratified_W = (stop_times_events.loc[stratum], weights.loc[stratum])
             yield (stratified_X, stratified_stop_times_events, stratified_W), stratum
 
     def _partition_by_strata_and_apply(self, X, stop_times_events, weights, function, *args):
@@ -385,8 +385,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         gradient: (1, d) numpy array
         log_likelihood: float
         """
-        # import pdb
-        # pdb.set_trace()
+
         _, d = df.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
@@ -454,16 +453,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                     a1 = risk_phi_x_x / denom
 
                 # Gradient
-                partial_gradient += weighted_average * numer / denom
+                partial_gradient += numer / denom
                 # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                a2 = np.outer(numer / denom, numer / denom)
+                t = numer[:, None] / denom
+                a2 = t.dot(t.T)
 
                 hessian -= weighted_average * (a1 - a2)
                 log_lik -= weighted_average * np.log(denom)
 
             # Values outside tie sum
-            gradient += x_death_sum - partial_gradient
+            gradient += x_death_sum - weighted_average * partial_gradient
             log_lik += dot(x_death_sum, beta)[0]
 
         return hessian, gradient.reshape(1, d), log_lik

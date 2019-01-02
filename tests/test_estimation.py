@@ -1137,7 +1137,7 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         cph.fit(data_nus, duration_col="t", event_col="E")
         assert abs(cph._log_likelihood - -12.7601409152) < 0.001
 
-    def test_efron_computed_by_hand_examples(self, data_nus, cph):
+    def test_single_efron_computed_by_hand_examples(self, data_nus, cph):
 
         X = data_nus["x"][:, None]
         T = data_nus["t"]
@@ -1155,15 +1155,15 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([[0]])
 
-        l, u, _ = cph._get_efron_values(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
         l = -l
 
-        assert np.abs(l[0][0] - 77.13) < 0.05
         assert np.abs(u[0] - -2.51) < 0.05
+        assert np.abs(l[0][0] - 77.13) < 0.05
         beta = beta + u / l
         assert np.abs(beta - -0.0326) < 0.05
 
-        l, u, _ = cph._get_efron_values(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.83) < 0.05
@@ -1171,7 +1171,49 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         beta = beta + u / l
         assert np.abs(beta - -0.0325) < 0.01
 
-        l, u, _ = cph._get_efron_values(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
+        l = -l
+
+        assert np.abs(l[0][0] - 72.70) < 0.01
+        assert np.abs(u[0] - -0.000061) < 0.01
+        beta = beta + u / l
+        assert np.abs(beta - -0.0335) < 0.01
+
+    def test_batch_efron_computed_by_hand_examples(self, data_nus, cph):
+
+        X = data_nus["x"][:, None]
+        T = data_nus["t"]
+        E = data_nus["E"]
+        weights = np.ones_like(T)
+
+        # Enforce numpy arrays
+        X = np.array(X)
+        T = np.array(T)
+        E = np.array(E)
+
+        # Want as bools
+        E = E.astype(bool)
+
+        # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
+        beta = np.array([[0]])
+
+        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
+        l = -l
+
+        assert np.abs(u[0] - -2.51) < 0.05
+        assert np.abs(l[0][0] - 77.13) < 0.05
+        beta = beta + u / l
+        assert np.abs(beta - -0.0326) < 0.05
+
+        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
+        l = -l
+
+        assert np.abs(l[0][0] - 72.83) < 0.05
+        assert np.abs(u[0] - -0.069) < 0.05
+        beta = beta + u / l
+        assert np.abs(beta - -0.0325) < 0.01
+
+        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.70) < 0.01
@@ -1180,6 +1222,7 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         assert np.abs(beta - -0.0335) < 0.01
 
     def test_efron_newtons_method(self, data_nus, cph):
+        cph._batch_mode = False
         newton = cph._newton_rhaphson
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
         assert np.abs(newton(X, T, E, W)[0][0] - -0.0335) < 0.0001
@@ -2872,6 +2915,10 @@ Likelihood ratio test = 15.11 on 4 df, log(p)=-5.41
         npt.assert_allclose(summary["coef"].tolist(), [0.0293, -0.6176, -0.1527], atol=0.001)
         npt.assert_allclose(summary["se(coef)"].tolist(), [0.0139, 0.3707, 0.0710], atol=0.001)
         npt.assert_allclose(summary["z"].tolist(), [2.11, -1.67, -2.15], atol=0.01)
+
+    def test_ctv_with_multiple_strata(self, ctv, heart):
+        ctv.fit(heart, id_col="id", event_col="event", strata=["transplant", "surgery"])
+        assert True
 
 
 class TestAalenJohansenFitter:
