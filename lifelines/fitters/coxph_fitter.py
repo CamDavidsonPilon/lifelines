@@ -628,8 +628,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         gradient: (1, d) numpy array
         log_likelihood: float
         """
-        # import pdb
-        # pdb.set_trace()
+
         _, d = X.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
