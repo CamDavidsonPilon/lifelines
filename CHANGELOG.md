@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.16.1
+ - Fixed py2 division error in `concordance` method.
+
 #### 0.16.0
  - Drop Python 3.4 support. 
  - introduction of residual calculations in `CoxPHFitter.compute_residuals`. Residuals include "schoenfeld", "score", "delta_beta", "deviance", "martingale", and "scaled_schoenfeld".
