@@ -107,6 +107,7 @@ class CoxPHFitter(BaseFitter):
         weights_col=None,
         cluster_col=None,
         robust=False,
+        batch_mode=None,
     ):
         """
         Fit the Cox Propertional Hazard model to a dataset.
@@ -162,6 +163,9 @@ class CoxPHFitter(BaseFitter):
             specifies what column has unique identifers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
             be used.
 
+        batch_mode: bool, optional
+            enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
+
         Returns
         -------
         self: CoxPHFitter
@@ -214,6 +218,7 @@ class CoxPHFitter(BaseFitter):
         self.cluster_col = cluster_col
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
+        self._batch_mode = batch_mode
         self.strata = coalesce(strata, self.strata)
 
         X, T, E, weights, original_index, self._clusters = self._preprocess_dataframe(df)
@@ -357,7 +362,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         """
         self.path = []
         assert precision <= 1.0, "precision must be less than or equal to 1."
-        _, d = X.shape
+        n, d = X.shape
 
         # make sure betas are correct size.
         if initial_beta is not None:
@@ -371,7 +376,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # Method of choice is just efron right now
         if self.tie_method == "Efron":
-            get_gradients = self._get_efron_values
+            # https://github.com/CamDavidsonPilon/lifelines/issues/591
+            frac_dups = T.unique().shape[0] / n
+            if self._batch_mode or (0.4690 + 3.045e-05 * n + 2.374137 * frac_dups + 0.000711 * n * frac_dups < 1):
+                get_gradients = self._get_efron_values_batch
+            else:
+                get_gradients = self._get_efron_values_single
         else:
             raise NotImplementedError("Only Efron is available.")
 
@@ -477,7 +487,138 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    def _get_efron_values(self, X, T, E, weights, beta):  # pylint: disable=too-many-locals
+    def _get_efron_values_single(self, X, T, E, weights, beta):
+        """
+        Calculates the first and second order vector differentials, with respect to beta.
+        Note that X, T, E are assumed to be sorted on T!
+
+        A good explaination for Efron. Consider three of five subjects who fail at the time.
+        As it is not known a priori that who is the first to fail, so one-third of
+        (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+        of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+        From https://cran.r-project.org/web/packages/survival/survival.pdf:
+
+        "Setting all weights to 2 for instance will give the same coefficient estimate but halve the variance. When
+        the Efron approximation for ties (default) is employed replication of the data will not give exactly the same coefficients as the
+        weights option, and in this case the weighted fit is arguably the correct one."
+
+        Parameters
+        ----------
+        X: array
+            (n,d) numpy array of observations.
+        T: array
+            (n) numpy array representing observed durations.
+        E: array
+            (n) numpy array representing death events.
+        weights: array
+            (n) an array representing weights per observation.
+        beta: array
+            (1, d) numpy array of coefficients.
+
+        Returns
+        -------
+        hessian:
+            (d, d) numpy array,
+        gradient:
+            (1, d) numpy array
+        log_likelihood: float
+        """
+
+        n, d = X.shape
+        hessian = np.zeros((d, d))
+        gradient = np.zeros((1, d))
+        log_lik = 0
+
+        # Init risk and tie sums to zero
+        x_tie_sum = np.zeros((1, d))
+        risk_phi, tie_phi = 0, 0
+        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
+
+        # Init number of ties and weights
+        weight_count = 0.0
+        tie_count = 0
+        scores = weights[:, None] * exp(dot(X, beta))
+
+        # Iterate backwards to utilize recursive relationship
+        for i in range(n - 1, -1, -1):
+            # Doing it like this to preserve shape
+            ti = T[i]
+            ei = E[i]
+            xi = X[i : i + 1]
+            score = scores[i : i + 1]
+            w = weights[i]
+
+            # Calculate phi values
+            phi_i = score
+            phi_x_i = phi_i * xi
+            phi_x_x_i = dot(xi.T, phi_x_i)
+
+            # Calculate sums of Risk set
+            risk_phi += phi_i
+            risk_phi_x += phi_x_i
+            risk_phi_x_x += phi_x_x_i
+
+            # Calculate sums of Ties, if this is an event
+            if ei:
+                x_tie_sum += w * xi
+                tie_phi += phi_i
+                tie_phi_x += phi_x_i
+                tie_phi_x_x += phi_x_x_i
+
+                # Keep track of count
+                tie_count += 1
+                weight_count += w
+
+            if i > 0 and T[i - 1] == ti:
+                # There are more ties/members of the risk set
+                continue
+            elif tie_count == 0:
+                # Only censored with current time, move on
+                continue
+
+            # There was atleast one event and no more ties remain. Time to sum.
+            partial_gradient = np.zeros((1, d))
+            weighted_average = weight_count / tie_count
+
+            for l in range(tie_count):
+
+                # A good explaination for Efron. Consider three of five subjects who fail at the time.
+                # As it is not known a priori that who is the first to fail, so one-third of
+                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+                numer = risk_phi_x - l * tie_phi_x / tie_count
+                denom = risk_phi - l * tie_phi / tie_count
+
+                # Gradient
+                partial_gradient += weighted_average * numer / denom
+                # Hessian
+                a1 = (risk_phi_x_x - l * tie_phi_x_x / tie_count) / denom
+
+                # In case numer and denom both are really small numbers,
+                # make sure to do division before multiplications
+                a2 = dot(numer.T / denom, numer / denom)
+
+                hessian -= weighted_average * (a1 - a2)
+
+                log_lik -= weighted_average * np.log(denom[0][0])
+
+            # Values outside tie sum
+            gradient += x_tie_sum - partial_gradient
+            log_lik += dot(x_tie_sum, beta)[0][0]
+
+            # reset tie values
+            tie_count = 0
+            weight_count = 0.0
+            x_tie_sum = np.zeros((1, d))
+            tie_phi = 0
+            tie_phi_x = np.zeros((1, d))
+            tie_phi_x_x = np.zeros((d, d))
+        return hessian, gradient, log_lik
+
+    def _get_efron_values_batch(self, X, T, E, weights, beta):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
@@ -498,7 +639,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         for t in unique_death_times:
 
-            ix = (T >= t) # everyone in the risk set
+            ix = T >= t  # everyone in the risk set
 
             X_at_t = X[ix]
             weights_at_t = weights[ix]
@@ -533,7 +674,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             partial_gradient = np.zeros(d)
             partial_ll = 0
             partial_hessian = np.zeros((d, d))
-            
+
             weight_count = weights_deaths.sum()
             weighted_average = weight_count / ties_counts
 
@@ -565,7 +706,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # this is faster than an outerproduct
                 a2 = t.dot(t.T)
 
-                partial_hessian -= (a1 - a2)
+                partial_hessian -= a1 - a2
                 partial_ll -= np.log(denom)
 
             # Values outside tie sum
