@@ -43,15 +43,17 @@ from lifelines.utils import (
 from lifelines.utils.lowess import lowess
 
 
-class BatchVsSingle():
-
+class BatchVsSingle:
     @staticmethod
     def decide(batch_mode, T):
         n = T.shape[0]
-        frac_dups = T.unique().shape[0] / n
+        n_unique = T.unique().shape[0]
+        frac_dups = n_unique / n
         if batch_mode or (
-            # https://github.com/CamDavidsonPilon/lifelines/issues/591
-            (batch_mode is None) and (0.5465 + -1.187e-05 * n + 1.0899 * frac_dups + 0.0001 * n * frac_dups < 1)
+            # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
+            # new values from from perf/batch_vs_single script.
+            (batch_mode is None)
+            and (0.5465 + -1.187e-05 * n + 1.0899 * frac_dups + 0.0001 * n * frac_dups < 1)
         ):
             return "batch"
         else:
@@ -391,7 +393,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # Method of choice is just efron right now
         if self.tie_method == "Efron":
-            get_gradients = getattr(self, '_get_efron_values_%s' % BatchVsSingle.decide(self._batch_mode, T))
+            get_gradients = getattr(self, "_get_efron_values_%s" % BatchVsSingle.decide(self._batch_mode, T))
         else:
             raise NotImplementedError("Only Efron is available.")
 
@@ -654,10 +656,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         for t in reversed(unique_death_times):
 
-            ix = (T == t)
+            ix = T == t
 
             # this can be improved by "stepping", ex: X[pos: pos+removals], since X is sorted by T
-            #slice_ = slice(pos - ix.sum(), pos)
+            # slice_ = slice(pos - ix.sum(), pos)
 
             X_at_t = X[ix]
             weights_at_t = weights[ix][:, None]
@@ -674,7 +676,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             # Calculate the sums of Tie set
             deaths = E[ix]
 
-            tied_death_counts = deaths.sum() 
+            tied_death_counts = deaths.sum()
             if tied_death_counts == 0:
                 # no deaths, can continue
                 continue
@@ -733,7 +735,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             log_lik += dot(x_death_sum, beta)[0] + weighted_average * partial_ll
             hessian += weighted_average * partial_hessian
 
-        return hessian, gradient.reshape(1, d), log_lik
+        return hessian, gradient, log_lik
 
     def _partition_by_strata(self, X, T, E, weights, as_dataframes=False):
         for stratum, stratified_X in X.groupby(self.strata):
