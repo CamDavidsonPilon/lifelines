@@ -46,11 +46,12 @@ from lifelines.utils.lowess import lowess
 class BatchVsSingle():
 
     @staticmethod
-    def decide(batch_mode, T, n):
+    def decide(batch_mode, T):
+        n = T.shape[0]
         frac_dups = T.unique().shape[0] / n
         if batch_mode or (
             # https://github.com/CamDavidsonPilon/lifelines/issues/591
-            (batch_mode is None) and (0.4690 + 3.045e-05 * n + 2.374137 * frac_dups + 0.000711 * n * frac_dups < 1)
+            (batch_mode is None) and (0.5465 + -1.187e-05 * n + 1.0899 * frac_dups + 0.0001 * n * frac_dups < 1)
         ):
             return "batch"
         else:
@@ -390,7 +391,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # Method of choice is just efron right now
         if self.tie_method == "Efron":
-            get_gradients = getattr(self, '_get_efron_values_%s' % BatchVsSingle.decide(self._batch_mode, T, n))
+            get_gradients = getattr(self, '_get_efron_values_%s' % BatchVsSingle.decide(self._batch_mode, T))
         else:
             raise NotImplementedError("Only Efron is available.")
 
