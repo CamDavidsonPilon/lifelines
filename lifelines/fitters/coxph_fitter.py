@@ -629,7 +629,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_likelihood: float
         """
 
-        _, d = X.shape
+        n, d = X.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros((1, d))
         log_lik = 0
@@ -641,15 +641,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         unique_death_times = np.unique(T[E])
+        pos = n
 
         for t in reversed(unique_death_times):
-            #import pdb
-            #pdb.set_trace()
-            # later this can be improved by "stepping", ex: X[pos: pos+step]
+
             ix = (T == t)
 
-            X_at_t = X[ix]
-            weights_at_t = weights[ix][:, None]
+            # this is be improved by "stepping", ex: X[pos: pos+removals], since X is sorted by T
+            slice_ = slice(pos-ix.sum(), pos)
+            X_at_t = X[slice_]
+            weights_at_t = weights[slice_][:, None]
 
             phi_i = weights_at_t * exp(dot(X_at_t, beta))
             phi_x_i = phi_i * X_at_t
@@ -661,39 +662,39 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x_x += phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = E[ix]
+            deaths = E[slice_]
 
-            ties_counts = deaths.sum()  # should always at 1 or more
-            assert ties_counts >= 1
+            tied_death_counts = deaths.sum()  # should always at 1 or more
+            assert tied_death_counts >= 1
 
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
             x_death_sum = (weights_deaths * xi_deaths).sum(0)
 
-            if ties_counts > 1:
+            if tied_death_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
-                tie_phi += phi_i[deaths].sum()
-                tie_phi_x += phi_x_i[deaths].sum(0)
-                tie_phi_x_x += dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
+                tie_phi = phi_i[deaths].sum()
+                tie_phi_x = phi_x_i[deaths].sum(0)
+                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
             partial_gradient = np.zeros((1, d))
             partial_ll = 0
             partial_hessian = np.zeros((d, d))
 
             weight_count = weights_deaths.sum()
-            weighted_average = weight_count / ties_counts
+            weighted_average = weight_count / tied_death_counts
 
-            for l in range(ties_counts):
+            for l in range(tied_death_counts):
 
-                if ties_counts > 1:
+                if tied_death_counts > 1:
 
                     # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
                     # As it is not known a priori that who is the first to fail, so one-third of
                     # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
                     # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
-                    increasing_proportion = l / ties_counts
+                    increasing_proportion = l / tied_death_counts
                     denom = risk_phi - increasing_proportion * tie_phi
                     numer = risk_phi_x - increasing_proportion * tie_phi_x
                     # Hessian
@@ -719,6 +720,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             gradient += x_death_sum - weighted_average * partial_gradient
             log_lik += dot(x_death_sum, beta)[0] + weighted_average * partial_ll
             hessian += weighted_average * partial_hessian
+            pos = pos - ix.sum()
 
         return hessian, gradient.reshape(1, d), log_lik
 

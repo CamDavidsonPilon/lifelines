@@ -17,4 +17,4 @@ if __name__ == "__main__":
     start_time = time.time()
     cp.fit(df, duration_col="week", event_col="arrest", batch_mode=True)
     print("--- %s seconds ---" % (time.time() - start_time))
-    cp.print_summary()
+    cp.print_summary(4)
