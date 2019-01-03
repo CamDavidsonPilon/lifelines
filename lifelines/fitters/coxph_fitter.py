@@ -43,6 +43,23 @@ from lifelines.utils import (
 from lifelines.utils.lowess import lowess
 
 
+class BatchVsSingle:
+    @staticmethod
+    def decide(batch_mode, T):
+        n = T.shape[0]
+        n_unique = T.unique().shape[0]
+        frac_dups = n_unique / n
+        if batch_mode or (
+            # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
+            # new values from from perf/batch_vs_single script.
+            (batch_mode is None)
+            and (0.5465 + -1.187e-05 * n + 1.0899 * frac_dups + 0.0001 * n * frac_dups < 1)
+        ):
+            return "batch"
+        else:
+            return "single"
+
+
 class CoxPHFitter(BaseFitter):
 
     r"""
@@ -376,12 +393,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # Method of choice is just efron right now
         if self.tie_method == "Efron":
-            # https://github.com/CamDavidsonPilon/lifelines/issues/591
-            frac_dups = T.unique().shape[0] / n
-            if self._batch_mode or (0.4690 + 3.045e-05 * n + 2.374137 * frac_dups + 0.000711 * n * frac_dups < 1):
-                get_gradients = self._get_efron_values_batch
-            else:
-                get_gradients = self._get_efron_values_single
+            get_gradients = getattr(self, "_get_efron_values_%s" % BatchVsSingle.decide(self._batch_mode, T))
         else:
             raise NotImplementedError("Only Efron is available.")
 
@@ -629,64 +641,74 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_likelihood: float
         """
 
-        _, d = X.shape
+        n, d = X.shape
         hessian = np.zeros((d, d))
-        gradient = np.zeros(d)
+        gradient = np.zeros((1, d))
         log_lik = 0
 
-        unique_death_times = np.unique(T[E])
+        # Init risk and tie sums to zero
+        x_tie_sum = np.zeros((1, d))
+        risk_phi, tie_phi = 0, 0
+        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-        for t in unique_death_times:
+        unique_death_times = np.unique(T)
 
-            ix = T >= t  # everyone in the risk set
+        for t in reversed(unique_death_times):
+
+            ix = T == t
+
+            # this can be improved by "stepping", ex: X[pos: pos+removals], since X is sorted by T
+            # slice_ = slice(pos - ix.sum(), pos)
 
             X_at_t = X[ix]
-            weights_at_t = weights[ix]
-            events_at_t = E[ix]
+            weights_at_t = weights[ix][:, None]
 
-            phi_i = weights_at_t[:, None] * exp(dot(X_at_t, beta))
+            phi_i = weights_at_t * exp(dot(X_at_t, beta))
             phi_x_i = phi_i * X_at_t
             phi_x_x_i = dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
-            risk_phi = phi_i.sum()
-            risk_phi_x = phi_x_i.sum(0)
-            risk_phi_x_x = phi_x_x_i
+            risk_phi += phi_i.sum()
+            risk_phi_x += phi_x_i.sum(0)
+            risk_phi_x_x += phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = (T[ix] == t) & events_at_t
+            deaths = E[ix]
 
-            ties_counts = deaths.sum()  # should always at 1 or more
-            assert ties_counts >= 1
+            tied_death_counts = deaths.sum()
+            if tied_death_counts == 0:
+                # no deaths, can continue
+                continue
 
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = (weights_deaths[:, None] * xi_deaths).sum(0)
+            x_death_sum = (weights_deaths * xi_deaths).sum(0)
 
-            if ties_counts > 1:
+            if tied_death_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
                 tie_phi = phi_i[deaths].sum()
                 tie_phi_x = phi_x_i[deaths].sum(0)
                 tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
-            partial_gradient = np.zeros(d)
+            partial_gradient = np.zeros((1, d))
             partial_ll = 0
             partial_hessian = np.zeros((d, d))
 
             weight_count = weights_deaths.sum()
-            weighted_average = weight_count / ties_counts
+            weighted_average = weight_count / tied_death_counts
 
-            for l in range(ties_counts):
+            for l in range(tied_death_counts):
 
-                if ties_counts > 1:
+                if tied_death_counts > 1:
 
                     # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
                     # As it is not known a priori that who is the first to fail, so one-third of
                     # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
                     # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
-                    increasing_proportion = l / ties_counts
+                    increasing_proportion = l / tied_death_counts
                     denom = risk_phi - increasing_proportion * tie_phi
                     numer = risk_phi_x - increasing_proportion * tie_phi_x
                     # Hessian
@@ -701,9 +723,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 partial_gradient += numer / denom
                 # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                t = numer[:, None] / denom
+                t = numer / denom
                 # this is faster than an outerproduct
-                a2 = t.dot(t.T)
+                a2 = t.T.dot(t)
 
                 partial_hessian -= a1 - a2
                 partial_ll -= np.log(denom)
@@ -713,7 +735,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             log_lik += dot(x_death_sum, beta)[0] + weighted_average * partial_ll
             hessian += weighted_average * partial_hessian
 
-        return hessian, gradient.reshape(1, d), log_lik
+        return hessian, gradient, log_lik
 
     def _partition_by_strata(self, X, T, E, weights, as_dataframes=False):
         for stratum, stratified_X in X.groupby(self.strata):
@@ -1115,7 +1137,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
         _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
-        return test_stat, degrees_freedom, np.log(p_value)
+        with np.warnings.catch_warnings():
+            np.warnings.filterwarnings("ignore")
+            return test_stat, degrees_freedom, np.log(p_value)
 
     def predict_partial_hazard(self, X):
         r"""

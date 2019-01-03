@@ -873,6 +873,17 @@ class TestCoxPHFitter:
     def cph(self):
         return CoxPHFitter()
 
+    def test_cph_will_handle_times_with_only_censored_individuals(self, rossi):
+        rossi_29 = rossi.iloc[0:10].copy()
+        rossi_29["week"] = 29
+        rossi_29["arrest"] = False
+
+        cph1_summary = CoxPHFitter().fit(rossi.append(rossi_29), "week", "arrest").summary
+
+        cph2_summary = CoxPHFitter().fit(rossi, "week", "arrest").summary
+
+        assert cph2_summary["coef"].iloc[0] != cph1_summary["coef"].iloc[0]
+
     def test_schoenfeld_residuals_no_strata_but_with_censorship(self, cph):
         """
         library(survival)
