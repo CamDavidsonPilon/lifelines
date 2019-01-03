@@ -882,7 +882,7 @@ class TestCoxPHFitter:
 
         cph2_summary = CoxPHFitter().fit(rossi, "week", "arrest").summary
 
-        assert cph2_summary['coef'].iloc[0] != cph1_summary['coef'].iloc[0]
+        assert cph2_summary["coef"].iloc[0] != cph1_summary["coef"].iloc[0]
 
     def test_schoenfeld_residuals_no_strata_but_with_censorship(self, cph):
         """
