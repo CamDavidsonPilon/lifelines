@@ -13,11 +13,11 @@ ROSSI_ROWS = 432
 results = {}
 
 
-for n_copies in [1, 2, 4, 6, 8, 10, 12, 14]:
+for n_copies in [1, 2, 4, 6, 8, 10, 13, 17, 20]:
 
     # lower percents means more ties.
     # original rossi dataset has 0.113
-    for fraction in np.linspace(0.01, 0.30, 10):
+    for fraction in np.linspace(0.01, 0.99, 10):
         print(n_copies, fraction)
 
         df = pd.concat([load_rossi()] * n_copies)
@@ -40,11 +40,10 @@ for n_copies in [1, 2, 4, 6, 8, 10, 12, 14]:
         results[(n_copies * ROSSI_ROWS, fraction)] = {"batch": batch_time, "single": single_time}
 
 results = pd.DataFrame(results).T.sort_index()
-results["ratio"] = results["batch"] / results["single"]
-print(results)
-
 results = results.reset_index()
 results = results.rename(columns={"level_0": "N", "level_1": "frac"})
+results["ratio"] = results["batch"] / results["single"]
+print(results)
 
 
 results["N * frac"] = results["N"] * results["frac"]

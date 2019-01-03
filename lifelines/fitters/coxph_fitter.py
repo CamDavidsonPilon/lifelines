@@ -43,6 +43,20 @@ from lifelines.utils import (
 from lifelines.utils.lowess import lowess
 
 
+class BatchVsSingle():
+
+    @staticmethod
+    def decide(batch_mode, T, n):
+        frac_dups = T.unique().shape[0] / n
+        if batch_mode or (
+            # https://github.com/CamDavidsonPilon/lifelines/issues/591
+            (batch_mode is None) and (0.4690 + 3.045e-05 * n + 2.374137 * frac_dups + 0.000711 * n * frac_dups < 1)
+        ):
+            return "batch"
+        else:
+            return "single"
+
+
 class CoxPHFitter(BaseFitter):
 
     r"""
@@ -376,12 +390,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # Method of choice is just efron right now
         if self.tie_method == "Efron":
-            # https://github.com/CamDavidsonPilon/lifelines/issues/591
-            frac_dups = T.unique().shape[0] / n
-            if self._batch_mode or (0.4690 + 3.045e-05 * n + 2.374137 * frac_dups + 0.000711 * n * frac_dups < 1):
-                get_gradients = self._get_efron_values_batch
-            else:
-                get_gradients = self._get_efron_values_single
+            get_gradients = getattr(self, '_get_efron_values_%s' % BatchVsSingle.decide(self._batch_mode, T, n))
         else:
             raise NotImplementedError("Only Efron is available.")
 
@@ -640,17 +649,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-        unique_death_times = np.unique(T[E])
-        pos = n
+        unique_death_times = np.unique(T)
 
         for t in reversed(unique_death_times):
 
             ix = (T == t)
 
-            # this is be improved by "stepping", ex: X[pos: pos+removals], since X is sorted by T
-            slice_ = slice(pos-ix.sum(), pos)
-            X_at_t = X[slice_]
-            weights_at_t = weights[slice_][:, None]
+            # this can be improved by "stepping", ex: X[pos: pos+removals], since X is sorted by T
+            #slice_ = slice(pos - ix.sum(), pos)
+
+            X_at_t = X[ix]
+            weights_at_t = weights[ix][:, None]
 
             phi_i = weights_at_t * exp(dot(X_at_t, beta))
             phi_x_i = phi_i * X_at_t
@@ -662,10 +671,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x_x += phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = E[slice_]
+            deaths = E[ix]
 
-            tied_death_counts = deaths.sum()  # should always at 1 or more
-            assert tied_death_counts >= 1
+            tied_death_counts = deaths.sum() 
+            if tied_death_counts == 0:
+                # no deaths, can continue
+                continue
 
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
@@ -720,7 +731,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             gradient += x_death_sum - weighted_average * partial_gradient
             log_lik += dot(x_death_sum, beta)[0] + weighted_average * partial_ll
             hessian += weighted_average * partial_hessian
-            pos = pos - ix.sum()
 
         return hessian, gradient.reshape(1, d), log_lik
 
@@ -1124,7 +1134,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
         _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
-        return test_stat, degrees_freedom, np.log(p_value)
+        with np.warnings.catch_warnings():
+            np.warnings.filterwarnings("ignore")
+            return test_stat, degrees_freedom, np.log(p_value)
 
     def predict_partial_hazard(self, X):
         r"""

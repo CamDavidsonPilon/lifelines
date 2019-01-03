@@ -11,7 +11,7 @@ if __name__ == "__main__":
     from lifelines.datasets import load_rossi
 
     df = load_rossi()
-    df = pd.concat([df] * 40)
+    df = pd.concat([df] * 100)
     # df['week'] = np.random.exponential(1, size=df.shape[0])
     cp = CoxPHFitter()
     start_time = time.time()
