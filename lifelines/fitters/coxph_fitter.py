@@ -631,30 +631,38 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         _, d = X.shape
         hessian = np.zeros((d, d))
-        gradient = np.zeros(d)
+        gradient = np.zeros((1, d))
         log_lik = 0
+
+        # Init risk and tie sums to zero
+        x_tie_sum = np.zeros((1, d))
+        risk_phi, tie_phi = 0, 0
+        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
+
 
         unique_death_times = np.unique(T[E])
 
-        for t in unique_death_times:
-
-            ix = T >= t  # everyone in the risk set
+        for t in reversed(unique_death_times):
+            #import pdb
+            #pdb.set_trace()
+            # later this can be improved by "stepping", ex: X[pos: pos+step]
+            ix = (T == t)
 
             X_at_t = X[ix]
-            weights_at_t = weights[ix]
-            events_at_t = E[ix]
+            weights_at_t = weights[ix][:, None]
 
-            phi_i = weights_at_t[:, None] * exp(dot(X_at_t, beta))
+            phi_i = weights_at_t * exp(dot(X_at_t, beta))
             phi_x_i = phi_i * X_at_t
             phi_x_x_i = dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
-            risk_phi = phi_i.sum()
-            risk_phi_x = phi_x_i.sum(0)
-            risk_phi_x_x = phi_x_x_i
+            risk_phi += phi_i.sum()
+            risk_phi_x += phi_x_i.sum(0)
+            risk_phi_x_x += phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = (T[ix] == t) & events_at_t
+            deaths = E[ix]
 
             ties_counts = deaths.sum()  # should always at 1 or more
             assert ties_counts >= 1
@@ -662,15 +670,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = (weights_deaths[:, None] * xi_deaths).sum(0)
+            x_death_sum = (weights_deaths * xi_deaths).sum(0)
 
             if ties_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
-                tie_phi = phi_i[deaths].sum()
-                tie_phi_x = phi_x_i[deaths].sum(0)
-                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
+                tie_phi += phi_i[deaths].sum()
+                tie_phi_x += phi_x_i[deaths].sum(0)
+                tie_phi_x_x += dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
-            partial_gradient = np.zeros(d)
+            partial_gradient = np.zeros((1, d))
             partial_ll = 0
             partial_hessian = np.zeros((d, d))
 
@@ -701,7 +709,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 partial_gradient += numer / denom
                 # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                t = numer[:, None] / denom
+                t = numer / denom
                 # this is faster than an outerproduct
                 a2 = t.dot(t.T)
 
@@ -713,6 +721,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             log_lik += dot(x_death_sum, beta)[0] + weighted_average * partial_ll
             hessian += weighted_average * partial_hessian
 
+        print(hessian, gradient)
         return hessian, gradient.reshape(1, d), log_lik
 
     def _partition_by_strata(self, X, T, E, weights, as_dataframes=False):
