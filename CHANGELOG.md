@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.16.3
+ - More `CoxPHFitter` performance improvements. Up to a 40% reduction vs 0.16.2 for some datasets. 
+
 #### 0.16.2
  - Fixed `CoxTimeVaryingFitter` to allow more than one variable to be stratafied
  - Significant performance improvements for `CoxPHFitter` with dataset has lots of duplicate times. See https://github.com/CamDavidsonPilon/lifelines/issues/591
