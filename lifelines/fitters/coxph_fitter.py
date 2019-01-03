@@ -640,7 +640,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-
         unique_death_times = np.unique(T[E])
 
         for t in reversed(unique_death_times):
@@ -711,7 +710,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # make sure to do division before multiplications
                 t = numer / denom
                 # this is faster than an outerproduct
-                a2 = t.dot(t.T)
+                a2 = t.T.dot(t)
 
                 partial_hessian -= a1 - a2
                 partial_ll -= np.log(denom)
@@ -721,7 +720,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             log_lik += dot(x_death_sum, beta)[0] + weighted_average * partial_ll
             hessian += weighted_average * partial_hessian
 
-        print(hessian, gradient)
         return hessian, gradient.reshape(1, d), log_lik
 
     def _partition_by_strata(self, X, T, E, weights, as_dataframes=False):
