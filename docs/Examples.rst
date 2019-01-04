@@ -446,7 +446,7 @@ Base dataset: ``base_df``
     FROM dimension_table dt
 
 
-Time-varying variables
+Time-varying variables: ``cv``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: mysql
@@ -470,10 +470,10 @@ Time-varying variables
     df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
 
 
-Event variables
+Event variables: ``event_df``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Another very common operation is to fold in event data. For example, a dataset that contains information about the dates of an event (and NULLS if the event didn't occur). For example:
+Another very common operation is to add event data to our time-varying dataset. For example, a dataset/SQL table that contains information about the dates of an event (and NULLS if the event didn't occur). An example SQL query may look like:
 
 .. code-block:: mysql
 
@@ -496,17 +496,33 @@ In Pandas, this may look like:
     2   3     3.0     5.0    7.0
     ...
 
-Initially, this can't be added to our baseline dataframe. Using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added.
+Initially, this can't be added to our baseline time-varying dataset. Using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added.
 
 .. code-block:: python
 
     from lifelines.utils import covariates_from_event_matrix
 
-    cv = covariates_from_event_matrix(df, 'id')
-    df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", cumulative_sum=True)
+    cv = covariates_from_event_matrix(event_df, id_col='id')
+    print(cv)
 
 
-Example cumulative total using and time-varying covariates
+.. code-block:: python
+
+           id  duration  E1  E2  E3
+    0       1       1.0   1   0   0
+    1       1       2.0   0   1   0
+    2       2       5.0   0   1   0
+    3       3       3.0   1   0   0
+    4       3       5.0   0   1   0
+    5       3       7.0   0   0   1
+
+
+.. code-block:: python
+
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
+
+
+Example cumulative sums over time-varying covariates
 ############################################################
 
 Often we have either transactional covariate datasets or state covariate datasets. In a transactional dataset, it may make sense to sum up the covariates to represent administration of a treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
@@ -515,7 +531,7 @@ Suppose we have an initial DataFrame of start-ups like:
 
 .. code-block:: python
 
-    seed_df = pd.DataFrame.from_records([
+    seed_df = pd.DataFrame([
         {'id': 'FB', 'E': True, 'T': 12, 'funding': 0},
         {'id': 'SU', 'E': True, 'T': 10, 'funding': 0},
     ])
@@ -526,7 +542,7 @@ And a covariate dataframe representing funding rounds like:
 
 .. code-block:: python
 
-    cv = pd.DataFrame.from_records([
+    cv = pd.DataFrame([
         {'id': 'FB', 'funding': 30, 't': 5},
         {'id': 'FB', 'funding': 15, 't': 10},
         {'id': 'FB', 'funding': 50, 't': 15},
