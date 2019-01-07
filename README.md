@@ -7,7 +7,6 @@
 [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/CamDavidsonPilon/lifelines.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/CamDavidsonPilon/lifelines/alerts/)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/CamDavidsonPilon/lifelines.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/CamDavidsonPilon/lifelines/alerts/)
 
 
 [What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
