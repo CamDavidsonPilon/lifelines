@@ -6,8 +6,8 @@
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/CamDavidsonPilon/lifelines.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/CamDavidsonPilon/lifelines/alerts/)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/CamDavidsonPilon/lifelines.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/CamDavidsonPilon/lifelines/context:python)
 [![Join the chat at https://gitter.im/python-lifelines/Lobby](https://badges.gitter.im/python-lifelines/Lobby.svg)](https://gitter.im/python-lifelines/Lobby)
-[![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
 
 
 [What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
