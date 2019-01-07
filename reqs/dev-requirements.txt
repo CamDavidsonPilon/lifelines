@@ -4,7 +4,7 @@
 pytest
 pytest-icdiff;python_version > '3.5'
 coverage>=4.4
-pytest-cov
+pytest-cov<=v2.6.0
 pypandoc
 prospector[with_pyroma]
 pre-commit
