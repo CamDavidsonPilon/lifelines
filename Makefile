@@ -1,6 +1,7 @@
 init:
 ifeq ($(TRAVIS), true)
 		pip install -r reqs/travis-requirements.txt
+		pip list --local
 else
 		pip install -r reqs/dev-requirements.txt
 		pre-commit install
