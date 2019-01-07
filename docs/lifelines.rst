@@ -13,8 +13,16 @@ Subpackages
 Submodules
 ----------
 
-lifelines.generate_datasets module
-----------------------------------
+lifelines.compat module
+-----------------------
+
+.. automodule:: lifelines.compat
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lifelines.generate\_datasets module
+-----------------------------------
 
 .. automodule:: lifelines.generate_datasets
     :members:

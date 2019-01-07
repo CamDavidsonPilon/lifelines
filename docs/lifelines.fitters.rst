@@ -4,56 +4,72 @@ lifelines.fitters package
 Submodules
 ----------
 
-lifelines.fitters.aalen_additive_fitter module
-----------------------------------------------
+lifelines.fitters.aalen\_additive\_fitter module
+------------------------------------------------
 
 .. automodule:: lifelines.fitters.aalen_additive_fitter
     :members:
     :undoc-members:
     :show-inheritance:
 
-lifelines.fitters.breslow_fleming_harrington_fitter module
-----------------------------------------------------------
+lifelines.fitters.aalen\_johansen\_fitter module
+------------------------------------------------
+
+.. automodule:: lifelines.fitters.aalen_johansen_fitter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lifelines.fitters.breslow\_fleming\_harrington\_fitter module
+-------------------------------------------------------------
 
 .. automodule:: lifelines.fitters.breslow_fleming_harrington_fitter
     :members:
     :undoc-members:
     :show-inheritance:
 
-lifelines.fitters.coxph_fitter module
--------------------------------------
+lifelines.fitters.cox\_time\_varying\_fitter module
+---------------------------------------------------
+
+.. automodule:: lifelines.fitters.cox_time_varying_fitter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lifelines.fitters.coxph\_fitter module
+--------------------------------------
 
 .. automodule:: lifelines.fitters.coxph_fitter
     :members:
     :undoc-members:
     :show-inheritance:
 
-lifelines.fitters.exponential_fitter module
--------------------------------------------
+lifelines.fitters.exponential\_fitter module
+--------------------------------------------
 
 .. automodule:: lifelines.fitters.exponential_fitter
     :members:
     :undoc-members:
     :show-inheritance:
 
-lifelines.fitters.kaplan_meier_fitter module
---------------------------------------------
+lifelines.fitters.kaplan\_meier\_fitter module
+----------------------------------------------
 
 .. automodule:: lifelines.fitters.kaplan_meier_fitter
     :members:
     :undoc-members:
     :show-inheritance:
 
-lifelines.fitters.nelson_aalen_fitter module
---------------------------------------------
+lifelines.fitters.nelson\_aalen\_fitter module
+----------------------------------------------
 
 .. automodule:: lifelines.fitters.nelson_aalen_fitter
     :members:
     :undoc-members:
     :show-inheritance:
 
-lifelines.fitters.weibull_fitter module
----------------------------------------
+lifelines.fitters.weibull\_fitter module
+----------------------------------------
 
 .. automodule:: lifelines.fitters.weibull_fitter
     :members:

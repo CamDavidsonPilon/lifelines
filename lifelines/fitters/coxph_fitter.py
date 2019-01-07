@@ -1129,7 +1129,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         trivial_dataset = pd.DataFrame({"E": self.event_observed, "T": self.durations, "W": self.weights})
 
         cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "T", "E", weights_col="W", show_progress=False)
+        cp_null.fit(trivial_dataset, "T", "E", weights_col="W", show_progress=True)
 
         ll_null = cp_null._log_likelihood
         ll_alt = self._log_likelihood
