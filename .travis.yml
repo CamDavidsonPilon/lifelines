@@ -22,6 +22,8 @@ script:
   - make test
 after_success:
   - coveralls
+  # run linter but don't fail for errors
+  - make lint
 # Don't want notifications
 notifications:
   email: false
