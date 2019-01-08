@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import warnings
+import time
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,9 @@ from lifelines.utils import (
     concordance_index,
     check_nans_or_infs,
     ConvergenceWarning,
+    check_low_var,
+    normalize,
+    _to_list
 )
 
 from lifelines.utils.progress_bar import progress_bar
@@ -73,13 +77,6 @@ class AalenAdditiveFitter(BaseFitter):
 
         df = df.copy()
 
-        # if the regression should fit an intercept
-        if self.fit_intercept:
-            assert (
-                "_baseline" not in df.columns
-            ), "_baseline is an internal lifelines column, please rename your column first."
-            df["_baseline"] = 1.0
-
         self.duration_col = duration_col
         self.event_col = event_col
         self.weights_col = weights_col
@@ -91,13 +88,94 @@ class AalenAdditiveFitter(BaseFitter):
         self.event_observed = E.copy()
         self.weights = weights.copy()
 
+        self._norm_std = X.std(0)
+
+        # if we included an intercept, we need to fix not divide by zero.
+        if self.fit_intercept:
+            self._norm_std['baseline'] = 1.0
+
+        self.cumulative_hazards_, self.cumulative_variance_ = self._fit_model(
+            normalize(X, 0, self._norm_std), 
+            T, 
+            E, 
+            weights, 
+            show_progress,
+        )
+        self.cumulative_hazards_ /= self._norm_std
+        self.cumulative_variance_ /= self._norm_std
+        self.confidence_intervals_ = self._compute_confidence_intervals()
+        
+        # TODO: delay and cache this.
+        #self.score_ = concordance_index(self.durations, self.predict_percentile(X, 0.75).values.ravel(), self.event_observed)
+        return self
+
+    def _fit_model(self, X, T, E, weights, show_progress):
+        # do algo prediction in here
+
+        columns = X.columns
+        index = np.sort(np.unique(T[E]))
+        if True:
+            hazards_, variance_hazards_ = self._fit_model_to_data_batch(X.values, T.values, E.values, weights.values, show_progress)
+        else:
+            hazards_, variance_hazards_ = self._fit_model_to_data_single(X.values, T.values, E.values, weights.values, show_progress)
+
+        cumulative_hazards_ = pd.DataFrame(hazards_, columns=columns, index=index).cumsum()
+        cumulative_variance_hazards_ = pd.DataFrame(variance_hazards_, columns=columns, index=index).cumsum()
+
+        return cumulative_hazards_, cumulative_variance_hazards_
+
+    def _fit_model_to_data_single(self, X, T, E, weights, show_progress):
+        pass
+
+    def _fit_model_to_data_batch(self, X, T, E, weights, show_progress):
+
+        _, d = X.shape
+
+        # we are mutating values of X, so copy it.
+        X = X.copy()
+
+        #iterate over all the unique death times
+        unique_death_times = np.sort(np.unique(T[E]))
+        n_deaths = unique_death_times.shape[0]
+
+        hazards_ = np.zeros((n_deaths, d))
+        variance_hazards_ = np.zeros((n_deaths, d))
+        v = np.zeros(d)
+        start = time.time()
 
 
-    def _fit_model_to_data(X, T, E, weights):
+        for i, t in enumerate(unique_death_times):
 
+            exits = (T == t)
+            deaths = (exits & E)
+            try:
+                v, V = lr(
+                    X,
+                    deaths,
+                    c1=self.coef_penalizer,
+                    c2=self.smoothing_penalizer,
+                    offset=v,
+                )
+            except LinAlgError:
+                warnings.warn("Linear regression error. Try increasing the coef_penalizer value.", ConvergenceWarning)
+                v = np.zeros(d)
 
+            hazards_[i, :] = v
+            variance_hazards_[i, :] = V[:, deaths][:, 0]**2
 
-    def _preprocess_dataframe(df):
+            X[exits, :] = 0
+
+            if show_progress:
+                print(
+                    "Iteration %d/%d, seconds_since_start = %.2f"
+                    % (i+1, n_deaths, time.time() - start)
+                )
+
+        return hazards_, variance_hazards_
+
+    def _preprocess_dataframe(self, df):
+        n, d = df.shape
+
         df = df.sort_values(by=self.duration_col)
 
         # Extract time and event
@@ -105,12 +183,12 @@ class AalenAdditiveFitter(BaseFitter):
         E = (
             df.pop(self.event_col)
             if (self.event_col is not None)
-            else pd.Series(np.ones(self._n_examples), index=df.index, name="E")
+            else pd.Series(np.ones(n), index=df.index, name="E")
         )
         W = (
             df.pop(self.weights_col)
             if (self.weights_col is not None)
-            else pd.Series(np.ones((self._n_examples,)), index=df.index, name="weights")
+            else pd.Series(np.ones((n,)), index=df.index, name="weights")
         )
 
         # check to make sure their weights are okay
@@ -125,6 +203,12 @@ It's important to know that the naive variance estimates of the coefficients are
 
         self._check_values(df, T, E)
 
+        if self.fit_intercept:
+            assert (
+                "baseline" not in df.columns
+            ), "baseline is an internal lifelines column, please rename your column first."
+            df["baseline"] = 1.0
+
         X = df.astype(float)
         T = T.astype(float)
         E = E.astype(bool)
@@ -132,13 +216,38 @@ It's important to know that the naive variance estimates of the coefficients are
         return X, T, E, W
 
 
-
     def predict_cumulative_hazard(self, X):
-        pass
+        """
+        Returns the hazard rates for the individuals
 
+        Parameters
+        ----------
+        X: a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
 
-    def _check_values(self, df, T, E):
-        pass_for_numeric_dtypes_or_raise(df)
+        """
+        n, _ = X.shape
+
+        cols = _get_index(X)
+        if isinstance(X, pd.DataFrame):
+            order = self.cumulative_hazards_.columns
+            order = order.drop("baseline") if self.fit_intercept else order
+            X_ = X[order].values
+        else:
+            X_ = X
+
+        X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
+
+        timeline = self.cumulative_hazards_.index
+        individual_cumulative_hazards_ = pd.DataFrame(
+            np.dot(self.cumulative_hazards_, X_.T), index=timeline, columns=cols
+        )
+
+        return individual_cumulative_hazards_
+
+    def _check_values(self, X, T, E):
+        pass_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
         check_nans_or_infs(X)
@@ -206,23 +315,29 @@ It's important to know that the naive variance estimates of the coefficients are
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
 
+    def _compute_confidence_intervals(self):
+        alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
+        std_error = alpha2 * np.sqrt(self.cumulative_variance_)
+        return pd.concat({
+            'lower-bound': self.cumulative_hazards_ - std_error,
+            'upper-bound': self.cumulative_hazards_ + std_error,
+            })
 
-    def plot(
-        self, loc=None, iloc=None, columns=None, **kwargs
-    ):
+
+    def plot(self, columns=None, loc=None, iloc=None, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
         Parameters
         -----------
+        columns: string or list-like, optional
+          If not empty, plot a subset of columns from the ``cumulative_hazards_``. Default all.
         ix: slice, optional
           specify a time-based subsection of the curves to plot, ex:
                  ``.plot(loc=slice(0.,10.))`` will plot the time values between t=0. and t=10.
         iloc: slice, optional
           specify a location-based subsection of the curves to plot, ex:
                  ``.plot(iloc=slice(0,10))`` will plot the first 10 time points.
-        columns: list-like, optional
-          If not empty, plot a subset of columns from the cumulative_hazards_. Default all.
         """
         from matplotlib import pyplot as plt
 
@@ -235,7 +350,7 @@ It's important to know that the naive variance estimates of the coefficients are
         def create_df_slicer(loc, iloc):
             get_method = "loc" if loc is not None else "iloc"
             
-            if iloc == loc is None:
+            if iloc is None and loc is None:
                 user_submitted_ix = slice(0, None)
             else:
                 user_submitted_ix = loc if loc is not None else iloc
@@ -246,17 +361,18 @@ It's important to know that the naive variance estimates of the coefficients are
 
         if not columns:
             columns = self.cumulative_hazards_.columns
+        else:
+            columns = _to_list(columns)
 
-        ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
+        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
 
         x = subset_df(self.cumulative_hazards_).index.values.astype(float)
 
         for column in columns:
             y = subset_df(self.cumulative_hazards_[column]).values
-            y_upper = subset_df(self.confidence_intervals_[column].loc["upper"]).values
-            y_lower = subset_df(self.confidence_intervals_[column].loc["lower"]).values
-            shaded_plot(ax, x, y, y_upper, y_lower, label=kwargs.get("label", column))
+            y_upper = subset_df(self.confidence_intervals_[column].loc["upper-bound"]).values
+            y_lower = subset_df(self.confidence_intervals_[column].loc["lower-bound"]).values
+            shaded_plot(ax, x, y, y_upper, y_lower, label=column)
 
         ax.legend()
-
         return ax

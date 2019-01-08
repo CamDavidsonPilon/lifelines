@@ -873,6 +873,22 @@ class TestCoxPHFitter:
     def cph(self):
         return CoxPHFitter()
 
+    def test_cph_doesnt_modify_original_dataframe(self, cph):
+        df = pd.DataFrame(
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [5, 6, 7, 8, 9],
+                "E": [1, 1, 1, 1, 1],
+                "W": [1, 1, 1, 1, 1],
+            }
+        )
+
+        cph.fit(df, "T", "E", weights_col="W")
+        assert df.dtypes['E'] == int
+        assert df.dtypes['W'] == int
+        assert df.dtypes['T'] == int
+
+
     def test_cph_will_handle_times_with_only_censored_individuals(self, rossi):
         rossi_29 = rossi.iloc[0:10].copy()
         rossi_29["week"] = 29

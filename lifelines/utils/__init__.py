@@ -729,8 +729,8 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
 
     # rather than explicitly computing the inverse, just solve the system of equations
     return (
-        solve(A, b, assume_a="pos", overwrite_b=True, check_finite=False),
-        solve(A, X.T, assume_a="pos", overwrite_b=True, check_finite=False),
+        solve(A, b, assume_a="pos", check_finite=False),
+        solve(A, X.T, assume_a="pos", check_finite=False),
     )
 
 
