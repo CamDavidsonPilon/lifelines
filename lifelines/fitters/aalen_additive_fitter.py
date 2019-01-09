@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import warnings
@@ -149,22 +148,18 @@ class AalenAdditiveFitter(BaseFitter):
 
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
-            self._norm_std['baseline'] = 1.0
+            self._norm_std["baseline"] = 1.0
         else:
             # a baseline was provided
             self._norm_std[self._norm_std < 1e-8] = 1.0
 
         self.cumulative_hazards_, self.cumulative_variance_ = self._fit_model(
-            normalize(X, 0, self._norm_std), 
-            T, 
-            E, 
-            weights, 
-            show_progress,
+            normalize(X, 0, self._norm_std), T, E, weights, show_progress
         )
         self.cumulative_hazards_ /= self._norm_std
         self.cumulative_variance_ /= self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        
+
         self._predicted_hazards_ = self.predict_cumulative_hazard(X).iloc[-1].values.ravel()
         return self
 
@@ -173,8 +168,10 @@ class AalenAdditiveFitter(BaseFitter):
         columns = X.columns
         index = np.sort(np.unique(T[E]))
 
-        hazards_, variance_hazards_ = self._fit_model_to_data_batch(X.values, T.values, E.values, weights.values, show_progress)
-        
+        hazards_, variance_hazards_ = self._fit_model_to_data_batch(
+            X.values, T.values, E.values, weights.values, show_progress
+        )
+
         cumulative_hazards_ = pd.DataFrame(hazards_, columns=columns, index=index).cumsum()
         cumulative_variance_hazards_ = pd.DataFrame(variance_hazards_, columns=columns, index=index).cumsum()
 
@@ -187,7 +184,7 @@ class AalenAdditiveFitter(BaseFitter):
         # we are mutating values of X, so copy it.
         X = X.copy()
 
-        #iterate over all the unique death times
+        # iterate over all the unique death times
         unique_death_times = np.sort(np.unique(T[E]))
         n_deaths = unique_death_times.shape[0]
 
@@ -198,31 +195,22 @@ class AalenAdditiveFitter(BaseFitter):
 
         for i, t in enumerate(unique_death_times):
 
-            exits = (T == t)
-            deaths = (exits & E)
+            exits = T == t
+            deaths = exits & E
             try:
-                v, V = lr(
-                    X,
-                    deaths,
-                    c1=self.coef_penalizer,
-                    c2=self.smoothing_penalizer,
-                    offset=v,
-                )
+                v, V = lr(X, deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v)
             except LinAlgError:
                 warnings.warn("Linear regression error. Try increasing the coef_penalizer value.", ConvergenceWarning)
                 v = np.zeros(d)
 
             hazards_[i, :] = v
 
-            variance_hazards_[i, :] = (V[:, deaths].mean(1))**2 
+            variance_hazards_[i, :] = (V[:, deaths].mean(1)) ** 2
 
             X[exits, :] = 0
 
             if show_progress:
-                print(
-                    "Iteration %d/%d, seconds_since_start = %.2f"
-                    % (i+1, n_deaths, time.time() - start)
-                )
+                print("Iteration %d/%d, seconds_since_start = %.2f" % (i + 1, n_deaths, time.time() - start))
 
         return hazards_, variance_hazards_
 
@@ -233,11 +221,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         # Extract time and event
         T = df.pop(self.duration_col)
-        E = (
-            df.pop(self.event_col)
-            if (self.event_col is not None)
-            else pd.Series(np.ones(n), index=df.index, name="E")
-        )
+        E = df.pop(self.event_col) if (self.event_col is not None) else pd.Series(np.ones(n), index=df.index, name="E")
         W = (
             df.pop(self.weights_col)
             if (self.weights_col is not None)
@@ -250,7 +234,9 @@ class AalenAdditiveFitter(BaseFitter):
                 warnings.warn(
                     """It appears your weights are not integers, possibly propensity or sampling scores then?
 It's important to know that the naive variance estimates of the coefficients are biased."
-""", StatisticalWarning, )
+""",
+                    StatisticalWarning,
+                )
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
@@ -365,15 +351,15 @@ It's important to know that the naive variance estimates of the coefficients are
         t = self.cumulative_hazards_.index
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
-
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
         std_error = np.sqrt(self.cumulative_variance_)
-        return pd.concat({
-            'lower-bound': self.cumulative_hazards_ - alpha2 * std_error,
-            'upper-bound': self.cumulative_hazards_ + alpha2 * std_error,
-            })
-
+        return pd.concat(
+            {
+                "lower-bound": self.cumulative_hazards_ - alpha2 * std_error,
+                "upper-bound": self.cumulative_hazards_ + alpha2 * std_error,
+            }
+        )
 
     def plot(self, columns=None, loc=None, iloc=None, **kwargs):
         """"
@@ -400,14 +386,14 @@ It's important to know that the naive variance estimates of the coefficients are
 
         def create_df_slicer(loc, iloc):
             get_method = "loc" if loc is not None else "iloc"
-            
+
             if iloc is None and loc is None:
                 user_submitted_ix = slice(0, None)
             else:
                 user_submitted_ix = loc if loc is not None else iloc
-            
+
             return lambda df: getattr(df, get_method)[user_submitted_ix]
-        
+
         subset_df = create_df_slicer(loc, iloc)
 
         if not columns:
@@ -440,7 +426,6 @@ It's important to know that the naive variance estimates of the coefficients are
             index=timeline,
         )
 
-
     @property
     def score_(self):
         """
@@ -453,9 +438,7 @@ It's important to know that the naive variance estimates of the coefficients are
         """
         # pylint: disable=access-member-before-definition
         if hasattr(self, "_predicted_hazards_"):
-            self._concordance_score_ = concordance_index(
-                self.durations, -self._predicted_hazards_, self.event_observed
-            )
+            self._concordance_score_ = concordance_index(self.durations, -self._predicted_hazards_, self.event_observed)
             del self._predicted_hazards_
             return self._concordance_score_
         return self._concordance_score_
@@ -474,8 +457,12 @@ It's important to know that the naive variance estimates of the coefficients are
         variance_weights_sum = (1 / self.cumulative_variance_).sum()
         df = pd.DataFrame(index=self.cumulative_hazards_.columns)
         df["mean(hazard_t)"] = (diff(self.cumulative_hazards_) / self.cumulative_variance_).sum() / variance_weights_sum
-        df["lower %.2f" % self.alpha] = (diff(self.confidence_intervals_.loc["lower-bound"]) / self.cumulative_variance_).sum() / variance_weights_sum
-        df["upper %.2f" % self.alpha] = (diff(self.confidence_intervals_.loc["upper-bound"]) / self.cumulative_variance_).sum() / variance_weights_sum
+        df["lower %.2f" % self.alpha] = (
+            diff(self.confidence_intervals_.loc["lower-bound"]) / self.cumulative_variance_
+        ).sum() / variance_weights_sum
+        df["upper %.2f" % self.alpha] = (
+            diff(self.confidence_intervals_.loc["upper-bound"]) / self.cumulative_variance_
+        ).sum() / variance_weights_sum
         return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -512,11 +499,10 @@ It's important to know that the naive variance estimates of the coefficients are
 
         df = self.summary
         # Significance codes as last column
-        #df[""] = [significance_code(p) for p in df["p"]]
+        # df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
         # Significance code explanation
         print("---")
         print(significance_codes_as_text(), end="\n\n")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
-

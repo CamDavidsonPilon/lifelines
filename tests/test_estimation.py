@@ -761,7 +761,11 @@ class TestBreslowFlemingHarringtonFitter:
 class TestRegressionFitters:
     @pytest.fixture
     def regression_models(self):
-        return [CoxPHFitter(), AalenAdditiveFitter(coef_penalizer=0.1), CoxPHFitter(strata=["race", "paro", "mar", "wexp"])]
+        return [
+            CoxPHFitter(),
+            AalenAdditiveFitter(coef_penalizer=0.1),
+            CoxPHFitter(strata=["race", "paro", "mar", "wexp"]),
+        ]
 
     def test_pickle(self, rossi, regression_models):
         from pickle import dump
@@ -809,16 +813,18 @@ class TestRegressionFitters:
             # we drop indexs since aaf will have a different "time" index.
             try:
                 hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_.reset_index(drop=True)
-                hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").hazards_.reset_index(
-                    drop=True
-                )
+                hazards_norm = fitter.fit(
+                    normalized_rossi, duration_col="week", event_col="arrest"
+                ).hazards_.reset_index(drop=True)
                 assert_frame_equal(hazards, hazards_norm)
             except:
 
-                hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").cumulative_hazards_.reset_index(drop=True)
-                hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").cumulative_hazards_.reset_index(
+                hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").cumulative_hazards_.reset_index(
                     drop=True
                 )
+                hazards_norm = fitter.fit(
+                    normalized_rossi, duration_col="week", event_col="arrest"
+                ).cumulative_hazards_.reset_index(drop=True)
             finally:
                 assert_frame_equal(hazards, hazards_norm)
 
@@ -904,10 +910,9 @@ class TestCoxPHFitter:
         )
 
         cph.fit(df, "T", "E", weights_col="W")
-        assert df.dtypes['E'] == int
-        assert df.dtypes['W'] == int
-        assert df.dtypes['T'] == int
-
+        assert df.dtypes["E"] == int
+        assert df.dtypes["W"] == int
+        assert df.dtypes["T"] == int
 
     def test_cph_will_handle_times_with_only_censored_individuals(self, rossi):
         rossi_29 = rossi.iloc[0:10].copy()
@@ -2363,7 +2368,6 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
 
 
 class TestAalenAdditiveFitter:
-
     @pytest.fixture()
     def aaf(self):
         return AalenAdditiveFitter()
@@ -2423,10 +2427,10 @@ class TestAalenAdditiveFitter:
         timeline = np.linspace(0, 70, 5000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         T = generate_random_lifetimes(hz, timeline)
-        
+
         X["T"] = T
         X = X.replace([np.inf, -np.inf], 10.0)
-        #del X[5]
+        # del X[5]
 
         # fit it to Aalen's model
         aaf = AalenAdditiveFitter(coef_penalizer=0.5, fit_intercept=False)
@@ -2471,9 +2475,9 @@ class TestAalenAdditiveFitter:
         """
         aaf.fit(rossi, "week", "arrest")
         actual = aaf.cumulative_hazards_ - aaf.cumulative_hazards_.shift().fillna(0)
-        npt.assert_allclose(actual.loc[:2, 'fin'].tolist(), [-0.004628582, -0.005842295], rtol=1e-06)
-        npt.assert_allclose(actual.loc[:2, 'prio'].tolist(), [-1.268344e-03, 1.119377e-04], rtol=1e-06)
-        npt.assert_allclose(actual.loc[:2, 'baseline'].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
+        npt.assert_allclose(actual.loc[:2, "fin"].tolist(), [-0.004628582, -0.005842295], rtol=1e-06)
+        npt.assert_allclose(actual.loc[:2, "prio"].tolist(), [-1.268344e-03, 1.119377e-04], rtol=1e-06)
+        npt.assert_allclose(actual.loc[:2, "baseline"].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
 
 
 class TestCoxTimeVaryingFitter:
