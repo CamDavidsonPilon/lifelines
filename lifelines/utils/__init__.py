@@ -727,7 +727,8 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     else:
         b = np.dot(X.T, Y) + c2 * offset
 
-    return (solve(A, b, assume_a="pos", check_finite=False), solve(A, X.T, assume_a="pos", check_finite=False))
+    M = np.c_[X.T, b]
+    return solve(A, M, assume_a="pos", check_finite=False)
 
 
 def _smart_search(minimizing_function, n, *args):

@@ -2462,7 +2462,7 @@ class TestAalenAdditiveFitter:
             assert np.mean(mean_scores) > expected, msg.format(expected, np.mean(scores))
 
     def test_predict_cumulative_hazard_inputs(self, data_pred1):
-        aaf = AalenAdditiveFitter()
+        aaf = AalenAdditiveFitter(coef_penalizer=0.001)
         aaf.fit(data_pred1, duration_col="t", event_col="E")
         x = data_pred1.iloc[:5].drop(["t", "E"], axis=1)
         y_df = aaf.predict_cumulative_hazard(x)
@@ -2478,6 +2478,22 @@ class TestAalenAdditiveFitter:
         npt.assert_allclose(actual.loc[:2, "fin"].tolist(), [-0.004628582, -0.005842295], rtol=1e-06)
         npt.assert_allclose(actual.loc[:2, "prio"].tolist(), [-1.268344e-03, 1.119377e-04], rtol=1e-06)
         npt.assert_allclose(actual.loc[:2, "baseline"].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
+
+    def test_cumulative_hazards_versus_R(self, aaf, regression_dataset):
+        """
+        df['E'] = 1
+        a = aareg(formula=Surv(T, E) ~ var1 + var2 + var3, data=df)
+        c = a$coefficient
+        apply(c, 2, cumsum)
+        """
+        regression_dataset["E"] = 1
+
+        aaf.fit(regression_dataset, "T", "E")
+        actual = aaf.cumulative_hazards_.loc[regression_dataset["T"].max()]
+        npt.assert_allclose(actual["baseline"], 2.1675130235, rtol=1e-06)
+        npt.assert_allclose(actual["var1"], 0.6820086125, rtol=1e-06)
+        npt.assert_allclose(actual["var2"], -0.0776583514, rtol=1e-06)
+        npt.assert_allclose(actual["var3"], 0.5515174017, rtol=1e-06)
 
 
 class TestCoxTimeVaryingFitter:

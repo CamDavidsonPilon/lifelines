@@ -179,7 +179,7 @@ class AalenAdditiveFitter(BaseFitter):
 
     def _fit_model_to_data_batch(self, X, T, E, weights, show_progress):
 
-        _, d = X.shape
+        n, d = X.shape
 
         # we are mutating values of X, so copy it.
         X = X.copy()
@@ -187,6 +187,7 @@ class AalenAdditiveFitter(BaseFitter):
         # iterate over all the unique death times
         unique_death_times = np.sort(np.unique(T[E]))
         n_deaths = unique_death_times.shape[0]
+        total_observed_exits = 0
 
         hazards_ = np.zeros((n_deaths, d))
         variance_hazards_ = np.zeros((n_deaths, d))
@@ -198,19 +199,34 @@ class AalenAdditiveFitter(BaseFitter):
             exits = T == t
             deaths = exits & E
             try:
-                v, V = lr(X, deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v)
+                R = lr(X, deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v)
+                V = R[:, :-1]
+                v = R[:, -1]
             except LinAlgError:
-                warnings.warn("Linear regression error. Try increasing the coef_penalizer value.", ConvergenceWarning)
+                warnings.warn(
+                    "Linear regression error at index=%d, time=%.3f. Try increasing the coef_penalizer value." % (i, t),
+                    ConvergenceWarning,
+                )
                 v = np.zeros(d)
+                # TODO: handle V here.
 
             hazards_[i, :] = v
 
-            variance_hazards_[i, :] = (V[:, deaths].mean(1)) ** 2
+            variance_hazards_[i, :] = (V[:, deaths] ** 2).sum(1)
 
             X[exits, :] = 0
 
             if show_progress:
                 print("Iteration %d/%d, seconds_since_start = %.2f" % (i + 1, n_deaths, time.time() - start))
+
+            # terminate early when there are less than (3 * d) subjects left, where d does not include the intercept.
+            # the value 3 if from R survival lib.
+            if (3 * (d - 1)) >= n - total_observed_exits:
+                if show_progress:
+                    print("Terminating early due to too few subjects in the tail. This is expected behaviour.")
+                break
+
+            total_observed_exits += exits.sum()
 
         return hazards_, variance_hazards_
 
@@ -455,6 +471,7 @@ It's important to know that the naive variance estimates of the coefficients are
 
         diff = lambda s: s - s.shift().fillna(0)
         variance_weights_sum = (1 / self.cumulative_variance_).sum()
+
         df = pd.DataFrame(index=self.cumulative_hazards_.columns)
         df["mean(hazard_t)"] = (diff(self.cumulative_hazards_) / self.cumulative_variance_).sum() / variance_weights_sum
         df["lower %.2f" % self.alpha] = (
