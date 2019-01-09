@@ -11,10 +11,10 @@ if __name__ == "__main__":
     from lifelines.datasets import load_rossi
 
     df = load_rossi()
-    df = pd.concat([df] * 1)
+    df = pd.concat([df] * 10)
     # df['week'] = np.random.exponential(size=df.shape[0])
     aaf = AalenAdditiveFitter()
     start_time = time.time()
     aaf.fit(df, duration_col="week", event_col="arrest")
     print("--- %s seconds ---" % (time.time() - start_time))
-    aaf.plot("fin")
+    aaf.print_summary(5)

@@ -473,12 +473,12 @@ It's important to know that the naive variance estimates of the coefficients are
         variance_weights_sum = (1 / self.cumulative_variance_).sum()
 
         df = pd.DataFrame(index=self.cumulative_hazards_.columns)
-        df["mean(hazard_t)"] = (diff(self.cumulative_hazards_) / self.cumulative_variance_).sum() / variance_weights_sum
-        df["lower %.2f" % self.alpha] = (
-            diff(self.confidence_intervals_.loc["lower-bound"]) / self.cumulative_variance_
+        df["avg(coef)"] = (self.cumulative_hazards_ / self.cumulative_variance_).sum() / variance_weights_sum
+        df["avg(lower %.2f)" % self.alpha] = (
+            self.confidence_intervals_.loc["lower-bound"] / self.cumulative_variance_
         ).sum() / variance_weights_sum
-        df["upper %.2f" % self.alpha] = (
-            diff(self.confidence_intervals_.loc["upper-bound"]) / self.cumulative_variance_
+        df["avg(upper %.2f)" % self.alpha] = (
+            self.confidence_intervals_.loc["upper-bound"] / self.cumulative_variance_
         ).sum() / variance_weights_sum
         return df
 
