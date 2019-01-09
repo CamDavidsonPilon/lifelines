@@ -23,6 +23,7 @@ def exponential_survival_data(n, cr=0.05, scale=1.0):
     h = newton(pF, 1.0, maxiter=500)
 
     # generate truncated data
+    # pylint: disable=invalid-unary-operand-type
     R = (1 - np.exp(-h / scale)) * stats.uniform.rvs(size=n)
     entrance = -np.log(1 - R) * scale
 

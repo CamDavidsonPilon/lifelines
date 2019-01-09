@@ -56,8 +56,7 @@ class BatchVsSingle:
             and (0.5465 + -1.187e-05 * n + 1.0899 * frac_dups + 0.0001 * n * frac_dups < 1)
         ):
             return "batch"
-        else:
-            return "single"
+        return "single"
 
 
 class CoxPHFitter(BaseFitter):
@@ -379,7 +378,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         """
         self.path = []
         assert precision <= 1.0, "precision must be less than or equal to 1."
-        n, d = X.shape
+        _, d = X.shape
 
         # make sure betas are correct size.
         if initial_beta is not None:
@@ -641,13 +640,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_likelihood: float
         """
 
-        n, d = X.shape
+        _, d = X.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros((1, d))
         log_lik = 0
 
         # Init risk and tie sums to zero
-        x_tie_sum = np.zeros((1, d))
         risk_phi, tie_phi = 0, 0
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
