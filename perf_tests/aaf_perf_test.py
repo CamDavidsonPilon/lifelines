@@ -4,6 +4,7 @@
 
 if __name__ == "__main__":
     import pandas as pd
+    import numpy as np
     import time
 
     from lifelines.fitters.aalen_additive_fitter2 import AalenAdditiveFitter
@@ -11,8 +12,9 @@ if __name__ == "__main__":
 
     df = load_rossi()
     df = pd.concat([df] * 1)
+    #df['week'] = np.random.exponential(size=df.shape[0])
     aaf = AalenAdditiveFitter()
     start_time = time.time()
-    aaf.fit(df, duration_col="week", event_col="arrest", show_progress=True)
+    aaf.fit(df, duration_col="week", event_col="arrest")
     print("--- %s seconds ---" % (time.time() - start_time))
-    aaf.plot()
+    aaf.plot("fin")

@@ -9,6 +9,8 @@ import numpy as np
 from scipy.linalg import solve
 from scipy import stats
 import pandas as pd
+from scipy.linalg import cho_factor, cho_solve
+
 from pandas import to_datetime
 
 from lifelines.utils.concordance import concordance_index
@@ -727,12 +729,10 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     else:
         b = np.dot(X.T, Y) + c2 * offset
 
-    # rather than explicitly computing the inverse, just solve the system of equations
     return (
         solve(A, b, assume_a="pos", check_finite=False),
-        solve(A, X.T, assume_a="pos", check_finite=False),
+        solve(A, X.T, assume_a="pos", check_finite=False)
     )
-
 
 def _smart_search(minimizing_function, n, *args):
     from scipy.optimize import fmin_powell
