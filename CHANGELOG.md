@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.17.0
+ - corrected behaviour in `CoxPHFitter` where `score_` was not being refreshed on every new `fit`. 
+
 #### 0.16.3
  - More `CoxPHFitter` performance improvements. Up to a 40% reduction vs 0.16.2 for some datasets. 
 

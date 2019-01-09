@@ -864,6 +864,17 @@ class TestRegressionFitters:
             fitter.fit(rossi, duration_col="week", event_col="arrest")
             assert hasattr(fitter, "score_")
 
+    def test_regression_model_updates_score_(self, regression_models, rossi):
+
+        for fitter in regression_models:
+            assert not hasattr(fitter, "score_")
+            fitter.fit(rossi, duration_col="week", event_col="arrest")
+            assert hasattr(fitter, "score_")
+            first_score_ = fitter.score_
+
+            fitter.fit(rossi.head(20), duration_col="week", event_col="arrest")
+            assert first_score_ != fitter.score_
+
     def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, regression_models, rossi):
         rossi.loc[3, "week"] = None
         for fitter in regression_models:

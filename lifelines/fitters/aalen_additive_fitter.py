@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import warnings
+from datetime import datetime
 import time
 
 import numpy as np
@@ -22,7 +23,11 @@ from lifelines.utils import (
     ConvergenceWarning,
     check_low_var,
     normalize,
-    _to_list
+    string_justify,
+    _to_list,
+    format_floats,
+    significance_codes_as_text,
+    format_p_value,
 )
 
 from lifelines.utils.progress_bar import progress_bar
@@ -124,6 +129,7 @@ class AalenAdditiveFitter(BaseFitter):
         >>> aaf.predict_median(df)
 
         """
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
 
         df = df.copy()
 
@@ -131,6 +137,7 @@ class AalenAdditiveFitter(BaseFitter):
         self.event_col = event_col
         self.weights_col = weights_col
 
+        self._n_examples = df.shape[0]
 
         X, T, E, weights = self._preprocess_dataframe(df)
 
@@ -207,7 +214,7 @@ class AalenAdditiveFitter(BaseFitter):
 
             hazards_[i, :] = v
 
-            variance_hazards_[i, :] = (V[:, deaths].sum(1))**2
+            variance_hazards_[i, :] = (V[:, deaths].mean(1))**2 
 
             X[exits, :] = 0
 
@@ -361,10 +368,10 @@ It's important to know that the naive variance estimates of the coefficients are
 
     def _compute_confidence_intervals(self):
         alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
-        std_error = alpha2 * np.sqrt(self.cumulative_variance_)
+        std_error = np.sqrt(self.cumulative_variance_)
         return pd.concat({
-            'lower-bound': self.cumulative_hazards_ - std_error,
-            'upper-bound': self.cumulative_hazards_ + std_error,
+            'lower-bound': self.cumulative_hazards_ - alpha2 * std_error,
+            'upper-bound': self.cumulative_hazards_ + alpha2 * std_error,
             })
 
 
@@ -445,10 +452,71 @@ It's important to know that the naive variance estimates of the coefficients are
 
         """
         # pylint: disable=access-member-before-definition
-        if hasattr(self, "_concordance_score_"):
+        if hasattr(self, "_predicted_hazards_"):
+            self._concordance_score_ = concordance_index(
+                self.durations, -self._predicted_hazards_, self.event_observed
+            )
+            del self._predicted_hazards_
             return self._concordance_score_
-        self._concordance_score_ = concordance_index(
-            self.durations, -self._predicted_hazards_, self.event_observed
-        )
-        del self._predicted_hazards_
         return self._concordance_score_
+
+    @property
+    def summary(self):
+        """Summary statistics describing the fit.
+        Set alpha property in the object before calling.
+
+        Returns
+        -------
+        df : DataFrame
+            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
+
+        diff = lambda s: s - s.shift().fillna(0)
+        variance_weights_sum = (1 / self.cumulative_variance_).sum()
+        df = pd.DataFrame(index=self.cumulative_hazards_.columns)
+        df["mean(hazard_t)"] = (diff(self.cumulative_hazards_) / self.cumulative_variance_).sum() / variance_weights_sum
+        df["lower %.2f" % self.alpha] = (diff(self.confidence_intervals_.loc["lower-bound"]) / self.cumulative_variance_).sum() / variance_weights_sum
+        df["upper %.2f" % self.alpha] = (diff(self.confidence_intervals_.loc["upper-bound"]) / self.cumulative_variance_).sum() / variance_weights_sum
+        return df
+
+    def print_summary(self, decimals=2, **kwargs):
+        """
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
+
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
+        kwargs:
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
+            multiple outputs. 
+
+        """
+
+        # Print information about data first
+        justify = string_justify(18)
+        print(self)
+        print("{} = '{}'".format(justify("duration col"), self.duration_col))
+        print("{} = '{}'".format(justify("event col"), self.event_col))
+        if self.weights_col:
+            print("{} = '{}'".format(justify("weights col"), self.weights_col))
+
+        print("{} = {}".format(justify("number of subjects"), self._n_examples))
+        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
+        print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
+
+        for k, v in kwargs.items():
+            print("{} = {}\n".format(justify(k), v))
+
+        print(end="\n")
+        print("---")
+
+        df = self.summary
+        # Significance codes as last column
+        #df[""] = [significance_code(p) for p in df["p"]]
+        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+
+        # Significance code explanation
+        print("---")
+        print(significance_codes_as_text(), end="\n\n")
+        print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+

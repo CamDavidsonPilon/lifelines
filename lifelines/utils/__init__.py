@@ -9,8 +9,6 @@ import numpy as np
 from scipy.linalg import solve
 from scipy import stats
 import pandas as pd
-from scipy.linalg import cho_factor, cho_solve
-
 from pandas import to_datetime
 
 from lifelines.utils.concordance import concordance_index
