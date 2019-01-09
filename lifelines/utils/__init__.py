@@ -693,7 +693,7 @@ def significance_codes_as_text():
     return "Signif. codes: " + " ".join(["%s '%s'" % (p, significance_code(p)) for p in p_values]) + " 1"
 
 
-def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
+def ridge_regression_plus(X, Y, c1=0.0, c2=0.0, offset=None):
     """
     Also known as Tikhonov regularization. This solves the minimization problem:
 
@@ -712,7 +712,7 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     Returns
     -------
     beta_hat: numpy array
-      the solution to the minimization problem.V = (X*X^T + (c1+c2)I)^{-1} X^T
+      the solution to the minimization problem. V = (X*X^T + (c1+c2)I)^{-1} X^T
     """
     _, d = X.shape
 
@@ -730,10 +730,23 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     M = np.c_[X.T, b]
     return solve(A, M, assume_a="pos", check_finite=False)
 
+def _univariate_linear_regression_without_intercept(X, Y):
+    beta = X.dot(Y) / X.dot(X)
+    errors = Y.values - np.outer(X, beta)
+    var = (errors**2).sum(0) / (Y.shape[0]-2) /  X.dot(X)
+    return beta, np.sqrt(var)
+
+def _univariate_linear_regression_with_intercept(X, Y):
+    X -= X.mean()
+    Y -= Y.mean()
+    beta = X.dot(Y) / X.dot(X)
+    errors = Y.values - np.outer(X, beta)
+    var = (errors**2).sum(0) / (Y.shape[0]-2) /  X.dot(X)
+    return beta, np.sqrt(var)
+
 
 def _smart_search(minimizing_function, n, *args):
     from scipy.optimize import fmin_powell
-
     x = np.ones(n)
     return fmin_powell(minimizing_function, x, args=args, disp=False)
 

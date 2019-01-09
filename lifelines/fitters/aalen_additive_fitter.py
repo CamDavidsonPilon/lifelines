@@ -7,14 +7,14 @@ import time
 import numpy as np
 import pandas as pd
 from numpy.linalg import LinAlgError
-from scipy.integrate import trapz
+from scipy import stats
 
 from lifelines.fitters import BaseFitter
 from lifelines.utils import (
     _get_index,
     inv_normal_cdf,
     epanechnikov_kernel,
-    ridge_regression as lr,
+    ridge_regression_plus as lr,
     qth_survival_times,
     pass_for_numeric_dtypes_or_raise,
     concordance_index,
@@ -26,7 +26,9 @@ from lifelines.utils import (
     _to_list,
     format_floats,
     significance_codes_as_text,
+    significance_code,
     format_p_value,
+    _univariate_linear_regression_without_intercept
 )
 
 from lifelines.utils.progress_bar import progress_bar
@@ -168,12 +170,12 @@ class AalenAdditiveFitter(BaseFitter):
         columns = X.columns
         index = np.sort(np.unique(T[E]))
 
-        hazards_, variance_hazards_ = self._fit_model_to_data_batch(
+        hazards_, variance_hazards_, stop = self._fit_model_to_data_batch(
             X.values, T.values, E.values, weights.values, show_progress
         )
 
-        cumulative_hazards_ = pd.DataFrame(hazards_, columns=columns, index=index).cumsum()
-        cumulative_variance_hazards_ = pd.DataFrame(variance_hazards_, columns=columns, index=index).cumsum()
+        cumulative_hazards_ = pd.DataFrame(hazards_, columns=columns, index=index).iloc[:stop].cumsum()
+        cumulative_variance_hazards_ = pd.DataFrame(variance_hazards_, columns=columns, index=index).iloc[:stop].cumsum()
 
         return cumulative_hazards_, cumulative_variance_hazards_
 
@@ -228,7 +230,8 @@ class AalenAdditiveFitter(BaseFitter):
 
             total_observed_exits += exits.sum()
 
-        return hazards_, variance_hazards_
+        last_iteration = i + 1
+        return hazards_, variance_hazards_, last_iteration
 
     def _preprocess_dataframe(self, df):
         n, d = df.shape
@@ -459,6 +462,15 @@ It's important to know that the naive variance estimates of the coefficients are
             return self._concordance_score_
         return self._concordance_score_
 
+    def _compute_slopes(self):
+        y = self.cumulative_hazards_
+        X = self.cumulative_hazards_.index.values
+        betas, se = _univariate_linear_regression_without_intercept(X, y)
+        return pd.Series(betas, index=y.columns), pd.Series(se, index=y.columns)
+
+    def _compute_p_values(self, z, df):
+        return stats.t.sf(z, df)
+
     @property
     def summary(self):
         """Summary statistics describing the fit.
@@ -467,19 +479,16 @@ It's important to know that the naive variance estimates of the coefficients are
         Returns
         -------
         df : DataFrame
-            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
-
-        diff = lambda s: s - s.shift().fillna(0)
-        variance_weights_sum = (1 / self.cumulative_variance_).sum()
+        """
+        n = self.cumulative_hazards_.shape[0]
 
         df = pd.DataFrame(index=self.cumulative_hazards_.columns)
-        df["avg(coef)"] = (self.cumulative_hazards_ / self.cumulative_variance_).sum() / variance_weights_sum
-        df["avg(lower %.2f)" % self.alpha] = (
-            self.confidence_intervals_.loc["lower-bound"] / self.cumulative_variance_
-        ).sum() / variance_weights_sum
-        df["avg(upper %.2f)" % self.alpha] = (
-            self.confidence_intervals_.loc["upper-bound"] / self.cumulative_variance_
-        ).sum() / variance_weights_sum
+
+        betas, se = self._compute_slopes()
+        df["slope(coef)"] = betas
+        df["se(slope(coef))"] = se
+        df["z"] = betas/se
+        df["p"] = self._compute_p_values(betas/se, n-2)
         return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -516,7 +525,7 @@ It's important to know that the naive variance estimates of the coefficients are
 
         df = self.summary
         # Significance codes as last column
-        # df[""] = [significance_code(p) for p in df["p"]]
+        df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
         # Significance code explanation
