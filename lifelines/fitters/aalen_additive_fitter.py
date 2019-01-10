@@ -28,7 +28,7 @@ from lifelines.utils import (
     significance_codes_as_text,
     significance_code,
     format_p_value,
-    _univariate_linear_regression_without_intercept
+    survival_table_from_events,
 )
 
 from lifelines.utils.progress_bar import progress_bar
@@ -155,12 +155,15 @@ class AalenAdditiveFitter(BaseFitter):
             # a baseline was provided
             self._norm_std[self._norm_std < 1e-8] = 1.0
 
-        self.cumulative_hazards_, self.cumulative_variance_ = self._fit_model(
+        self.hazards_, self.cumulative_hazards_, self.cumulative_variance_ = self._fit_model(
             normalize(X, 0, self._norm_std), T, E, weights, show_progress
         )
+        self.hazards_ /= self._norm_std
         self.cumulative_hazards_ /= self._norm_std
         self.cumulative_variance_ /= self._norm_std
         self.confidence_intervals_ = self._compute_confidence_intervals()
+
+        self._index = self.hazards_.index
 
         self._predicted_hazards_ = self.predict_cumulative_hazard(X).iloc[-1].values.ravel()
         return self
@@ -174,10 +177,13 @@ class AalenAdditiveFitter(BaseFitter):
             X.values, T.values, E.values, weights.values, show_progress
         )
 
-        cumulative_hazards_ = pd.DataFrame(hazards_, columns=columns, index=index).iloc[:stop].cumsum()
-        cumulative_variance_hazards_ = pd.DataFrame(variance_hazards_, columns=columns, index=index).iloc[:stop].cumsum()
+        hazards = pd.DataFrame(hazards_, columns=columns, index=index).iloc[:stop]
+        cumulative_hazards_ = hazards.cumsum()
+        cumulative_variance_hazards_ = (
+            pd.DataFrame(variance_hazards_, columns=columns, index=index).iloc[:stop].cumsum()
+        )
 
-        return cumulative_hazards_, cumulative_variance_hazards_
+        return hazards, cumulative_hazards_, cumulative_variance_hazards_
 
     def _fit_model_to_data_batch(self, X, T, E, weights, show_progress):
 
@@ -296,7 +302,7 @@ It's important to know that the naive variance estimates of the coefficients are
 
         X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
 
-        timeline = self.cumulative_hazards_.index
+        timeline = self._index
         individual_cumulative_hazards_ = pd.DataFrame(
             np.dot(self.cumulative_hazards_, X_.T), index=timeline, columns=cols
         )
@@ -367,7 +373,7 @@ It's important to know that the naive variance estimates of the coefficients are
         Returns the expected lifetimes for the individuals
         """
         index = _get_index(X)
-        t = self.cumulative_hazards_.index
+        t = self._index
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def _compute_confidence_intervals(self):
@@ -428,7 +434,9 @@ It's important to know that the naive variance estimates of the coefficients are
             y = subset_df(self.cumulative_hazards_[column]).values
             y_upper = subset_df(self.confidence_intervals_[column].loc["upper-bound"]).values
             y_lower = subset_df(self.confidence_intervals_[column].loc["lower-bound"]).values
-            shaded_plot(ax, x, y, y_upper, y_lower, label=column)
+            shaded_plot(ax, x, y, y_upper, y_lower, label=column, **kwargs)         
+
+        plt.hlines(0, self._index.min()-1, self._index.max(), color='k', linestyles='--', alpha=0.5)
 
         ax.legend()
         return ax
@@ -438,7 +446,7 @@ It's important to know that the naive variance estimates of the coefficients are
         Using the epanechnikov kernel to smooth the hazard function, with sigma/bandwidth
 
         """
-        timeline = self.cumulative_hazards_.index
+        timeline = self._index
         return pd.DataFrame(
             np.dot(epanechnikov_kernel(timeline[:, None], timeline, bandwidth), self.hazards_.values),
             columns=self.hazards_.columns,
@@ -463,13 +471,18 @@ It's important to know that the naive variance estimates of the coefficients are
         return self._concordance_score_
 
     def _compute_slopes(self):
-        y = self.cumulative_hazards_
-        X = self.cumulative_hazards_.index.values
-        betas, se = _univariate_linear_regression_without_intercept(X, y)
-        return pd.Series(betas, index=y.columns), pd.Series(se, index=y.columns)
 
-    def _compute_p_values(self, z, df):
-        return stats.t.sf(z, df)
+        def _univariate_linear_regression_without_intercept(X, Y, weights):
+            beta = (weights * X).dot(Y) / X.dot(weights * X)
+            errors = Y.values - np.outer(X, beta)
+            var = (errors ** 2).sum(0) / (Y.shape[0] - 2) / X.dot(weights * X)
+            return beta, np.sqrt(var)
+
+        weights = survival_table_from_events(self.durations, self.event_observed).loc[self._index, 'at_risk'].values
+        y = (self.hazards_).cumsum(0)
+        X = self._index.values
+        betas, se = _univariate_linear_regression_without_intercept(X, y, weights)
+        return pd.Series(betas, index=y.columns), pd.Series(se, index=y.columns)
 
     @property
     def summary(self):
@@ -487,8 +500,8 @@ It's important to know that the naive variance estimates of the coefficients are
         betas, se = self._compute_slopes()
         df["slope(coef)"] = betas
         df["se(slope(coef))"] = se
-        df["z"] = betas/se
-        df["p"] = self._compute_p_values(betas/se, n-2)
+        # df["z"] = betas / se
+        # df["p"] = self._compute_p_values(betas / se, n-2)
         return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -525,7 +538,7 @@ It's important to know that the naive variance estimates of the coefficients are
 
         df = self.summary
         # Significance codes as last column
-        df[""] = [significance_code(p) for p in df["p"]]
+        # df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
         # Significance code explanation
