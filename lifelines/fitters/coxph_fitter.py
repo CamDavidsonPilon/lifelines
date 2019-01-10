@@ -1127,7 +1127,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         trivial_dataset = pd.DataFrame({"E": self.event_observed, "T": self.durations, "W": self.weights})
 
         cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "T", "E", weights_col="W", show_progress=True)
+        cp_null.fit(trivial_dataset, "T", "E", weights_col="W", show_progress=False)
 
         ll_null = cp_null._log_likelihood
         ll_alt = self._log_likelihood
@@ -1452,8 +1452,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
-
+        ax = errorbar_kwargs.setdefault("ax", plt.figure().add_subplot(111))
+        del kwargs["ax"]
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
         errorbar_kwargs.setdefault("markerfacecolor", "white")
@@ -1633,10 +1633,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         """
         # pylint: disable=access-member-before-definition
-        if hasattr(self, "_concordance_score_"):
+        if hasattr(self, "_predicted_partial_hazards_"):
+            self._concordance_score_ = concordance_index(
+                self.durations, -self._predicted_partial_hazards_, self.event_observed
+            )
+            del self._predicted_partial_hazards_
             return self._concordance_score_
-        self._concordance_score_ = concordance_index(
-            self.durations, -self._predicted_partial_hazards_, self.event_observed
-        )
-        del self._predicted_partial_hazards_
         return self._concordance_score_

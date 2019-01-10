@@ -693,7 +693,7 @@ def significance_codes_as_text():
     return "Signif. codes: " + " ".join(["%s '%s'" % (p, significance_code(p)) for p in p_values]) + " 1"
 
 
-def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
+def ridge_regression_plus(X, Y, c1=0.0, c2=0.0, offset=None, ix=None):
     """
     Also known as Tikhonov regularization. This solves the minimization problem:
 
@@ -708,11 +708,12 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     c1: float
     c2: float
     offset: a (d,) numpy array.
+    ix: a boolean array of index to slice.
 
     Returns
     -------
     beta_hat: numpy array
-      the solution to the minimization problem.V = (X*X^T + (c1+c2)I)^{-1} X^T
+      the solution to the minimization problem. V = (X*X^T + (c1+c2)I)^{-1} X^T
     """
     _, d = X.shape
 
@@ -727,11 +728,11 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None):
     else:
         b = np.dot(X.T, Y) + c2 * offset
 
-    # rather than explicitly computing the inverse, just solve the system of equations
-    return (
-        solve(A, b, assume_a="pos", overwrite_b=True, check_finite=False),
-        solve(A, X.T, assume_a="pos", overwrite_b=True, check_finite=False),
-    )
+    if ix is not None:
+        M = np.c_[X.T[:, ix], b]
+    else:
+        M = np.c_[X.T, b]
+    return solve(A, M, assume_a="pos", check_finite=False)
 
 
 def _smart_search(minimizing_function, n, *args):

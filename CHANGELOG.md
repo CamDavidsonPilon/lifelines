@@ -1,5 +1,15 @@
 ### Changelogs
 
+#### 0.17.0
+ - corrected behaviour in `CoxPHFitter` where `score_` was not being refreshed on every new `fit`.
+ - Reimplentation of `AalenAdditiveFitter`. There were significant changes to it:
+   - implementation is at least 10x faster, and possibly up to 100x faster for some datasets.
+   - memory consumption is way down
+   - removed the time-varying component from `AalenAdditiveFitter`. This will return in a future release.
+   - new `print_summary`
+   - `weights_col` is added
+
+
 #### 0.16.3
  - More `CoxPHFitter` performance improvements. Up to a 40% reduction vs 0.16.2 for some datasets. 
 
