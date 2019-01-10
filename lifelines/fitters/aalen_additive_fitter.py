@@ -435,8 +435,10 @@ It's important to know that the naive variance estimates of the coefficients are
         else:
             columns = _to_list(columns)
 
-        ax = kwargs.setdefault("ax", plt.figure().add_subplot(111))
-        del kwargs["ax"]
+        if 'ax' in kwargs:
+            ax = kwargs.pop('ax')
+        else:
+            ax = plt.figure().add_subplot(111)
 
         x = subset_df(self.cumulative_hazards_).index.values.astype(float)
 
