@@ -728,7 +728,7 @@ def ridge_regression_plus(X, Y, c1=0.0, c2=0.0, offset=None, ix=None):
     else:
         b = np.dot(X.T, Y) + c2 * offset
 
-    if ix is None:
+    if ix is not None:
         M = np.c_[X.T[:, ix], b]
     else:
         M = np.c_[X.T, b]
