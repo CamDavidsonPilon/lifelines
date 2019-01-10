@@ -218,7 +218,7 @@ class AalenAdditiveFitter(BaseFitter):
             try:
                 import pdb
                 #pdb.set_trace()
-                R = lr(X, W * deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v)
+                R = lr(X, W * deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v, ix=deaths)
                 V = R[:, :-1]
                 v = R[:, -1]
             except LinAlgError:
@@ -231,7 +231,7 @@ class AalenAdditiveFitter(BaseFitter):
 
             hazards_[i, :] = v
 
-            variance_hazards_[i, :] = (V[:, deaths] ** 2).sum(1)
+            variance_hazards_[i, :] = (V ** 2).sum(1)
 
             X[exits, :] = 0
 
