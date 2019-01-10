@@ -1454,8 +1454,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        ax = errorbar_kwargs.setdefault("ax", plt.figure().add_subplot(111))
-        del kwargs["ax"]
+        if "ax" in errorbar_kwargs:
+            ax = errorbar_kwargs.pop("ax")
+        else:
+            ax = plt.figure().add_subplot(111)
+
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
         errorbar_kwargs.setdefault("markerfacecolor", "white")
@@ -1516,7 +1519,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if covariate not in self.hazards_.columns:
             raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
-        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
+        if "ax" in errorbar_kwargs:
+            ax = errorbar_kwargs.pop("ax")
+        else:
+            ax = plt.figure().add_subplot(111)
+
         x_bar = self._norm_mean.to_frame().T
         X = pd.concat([x_bar] * len(groups))
         X.index = ["%s=%s" % (covariate, g) for g in groups]
