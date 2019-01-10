@@ -811,22 +811,11 @@ class TestRegressionFitters:
 
         for fitter in regression_models:
             # we drop indexs since aaf will have a different "time" index.
-            try:
-                hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_.reset_index(drop=True)
-                hazards_norm = fitter.fit(
-                    normalized_rossi, duration_col="week", event_col="arrest"
-                ).hazards_.reset_index(drop=True)
-                assert_frame_equal(hazards, hazards_norm)
-            except:
-
-                hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").cumulative_hazards_.reset_index(
-                    drop=True
-                )
-                hazards_norm = fitter.fit(
-                    normalized_rossi, duration_col="week", event_col="arrest"
-                ).cumulative_hazards_.reset_index(drop=True)
-            finally:
-                assert_frame_equal(hazards, hazards_norm)
+            hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_.reset_index(drop=True)
+            hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").hazards_.reset_index(
+                drop=True
+            )
+            assert_frame_equal(hazards, hazards_norm)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)
@@ -2372,6 +2361,17 @@ class TestAalenAdditiveFitter:
     def aaf(self):
         return AalenAdditiveFitter()
 
+    def test_slope_tests_against_R(self, aaf, regression_dataset):
+        """
+        df['E'] = 1
+        a = aareg(formula=Surv(T, E) ~ var1 + var2 + var3, data=df)
+        plot(a)
+        summary(a, test='nrisk')
+        """
+        regression_dataset["E"] = 1
+        aaf.fit(regression_dataset, "T", "E")
+        npt.assert_allclose(aaf.summary["slope(coef)"], [0.05141401, 0.01059746, 0.03923360, 0.07753566])
+
     def test_penalizer_reduces_norm_of_hazards(self, rossi):
         from numpy.linalg import norm
 
@@ -2474,10 +2474,24 @@ class TestAalenAdditiveFitter:
         a = aareg(formula=Surv(week, arrest) ~ fin + age + race+ wexp + mar + paro + prio, data=head(rossi, 432))
         """
         aaf.fit(rossi, "week", "arrest")
-        actual = aaf.cumulative_hazards_ - aaf.cumulative_hazards_.shift().fillna(0)
+        actual = aaf.hazards_
         npt.assert_allclose(actual.loc[:2, "fin"].tolist(), [-0.004628582, -0.005842295], rtol=1e-06)
         npt.assert_allclose(actual.loc[:2, "prio"].tolist(), [-1.268344e-03, 1.119377e-04], rtol=1e-06)
         npt.assert_allclose(actual.loc[:2, "baseline"].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
+
+    def test_aalen_additive_fitter_versus_R_with_weights(self, aaf, regression_dataset):
+        """
+        df['E'] = 1
+        a = aareg(formula=Surv(T, E) ~ var1 + var2, data=df, weights=var3)
+        a$coefficient
+        """
+        regression_dataset["E"] = 1
+        aaf.fit(regression_dataset, "T", "E", weights_col="var3")
+        actual = aaf.hazards_
+        npt.assert_allclose(actual.iloc[:3]["var1"].tolist(), [1.301523e-02, -4.925302e-04, 2.304792e-02], rtol=1e-06)
+        npt.assert_allclose(
+            actual.iloc[:3]["baseline"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06
+        )
 
     def test_cumulative_hazards_versus_R(self, aaf, regression_dataset):
         """

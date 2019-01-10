@@ -1454,8 +1454,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
-
+        ax = errorbar_kwargs.setdefault("ax", plt.figure().add_subplot(111))
+        del kwargs["ax"]
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
         errorbar_kwargs.setdefault("markerfacecolor", "white")

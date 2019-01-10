@@ -29,9 +29,9 @@ from lifelines.utils import (
     significance_code,
     format_p_value,
     survival_table_from_events,
+    StatisticalWarning,
 )
 
-from lifelines.utils.progress_bar import progress_bar
 from lifelines.plotting import fill_between_steps
 
 
@@ -103,7 +103,12 @@ class AalenAdditiveFitter(BaseFitter):
             observation. If left as None, assume all individuals are uncensored.
 
         weights_col: string, optional
-            TODO
+            an optional column in the dataframe, df, that denotes the weight per subject.
+            This column is expelled and not used as a covariate, but as a weight in the
+            final regression. Default weight is 1.
+            This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+            identical observations.
+            This can be used for sampling weights. 
 
         show_progress: boolean, optional (default=False)
             Since the fitter is iterative, show iteration number.
@@ -128,6 +133,7 @@ class AalenAdditiveFitter(BaseFitter):
         >>> aaf = AalenAdditiveFitter()
         >>> aaf.fit(df, 'T', 'E')
         >>> aaf.predict_median(df)
+        >>> aaf.print_summary()
 
         """
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
@@ -202,12 +208,17 @@ class AalenAdditiveFitter(BaseFitter):
         v = np.zeros(d)
         start = time.time()
 
+        W = np.sqrt(weights)
+        X = W[:, None] * X
+
         for i, t in enumerate(unique_death_times):
 
             exits = T == t
             deaths = exits & E
             try:
-                R = lr(X, deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v)
+                import pdb
+                #pdb.set_trace()
+                R = lr(X, W * deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v)
                 V = R[:, :-1]
                 v = R[:, -1]
             except LinAlgError:
@@ -215,8 +226,8 @@ class AalenAdditiveFitter(BaseFitter):
                     "Linear regression error at index=%d, time=%.3f. Try increasing the coef_penalizer value." % (i, t),
                     ConvergenceWarning,
                 )
-                v = np.zeros(d)
-                # TODO: handle V here.
+                v = np.zeros_like(v)
+                V = np.zeros_like(V)
 
             hazards_[i, :] = v
 
@@ -224,14 +235,14 @@ class AalenAdditiveFitter(BaseFitter):
 
             X[exits, :] = 0
 
-            if show_progress:
+            if show_progress and i % int((n_deaths / 10)) == 0:
                 print("Iteration %d/%d, seconds_since_start = %.2f" % (i + 1, n_deaths, time.time() - start))
 
             # terminate early when there are less than (3 * d) subjects left, where d does not include the intercept.
             # the value 3 if from R survival lib.
             if (3 * (d - 1)) >= n - total_observed_exits:
                 if show_progress:
-                    print("Terminating early due to too few subjects in the tail. This is expected behaviour.")
+                    print("Terminating early due to too few subjects remaining. This is expected behaviour.")
                 break
 
             total_observed_exits += exits.sum()
@@ -255,7 +266,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         # check to make sure their weights are okay
         if self.weights_col:
-            if (W.astype(int) != W).any() and not self.robust:
+            if (W.astype(int) != W).any():
                 warnings.warn(
                     """It appears your weights are not integers, possibly propensity or sampling scores then?
 It's important to know that the naive variance estimates of the coefficients are biased."
@@ -426,7 +437,8 @@ It's important to know that the naive variance estimates of the coefficients are
         else:
             columns = _to_list(columns)
 
-        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
+        ax = kwargs.setdefault("ax", plt.figure().add_subplot(111))
+        del kwargs["ax"]
 
         x = subset_df(self.cumulative_hazards_).index.values.astype(float)
 
@@ -434,9 +446,9 @@ It's important to know that the naive variance estimates of the coefficients are
             y = subset_df(self.cumulative_hazards_[column]).values
             y_upper = subset_df(self.confidence_intervals_[column].loc["upper-bound"]).values
             y_lower = subset_df(self.confidence_intervals_[column].loc["lower-bound"]).values
-            shaded_plot(ax, x, y, y_upper, y_lower, label=column, **kwargs)         
+            shaded_plot(ax, x, y, y_upper, y_lower, label=column, **kwargs)
 
-        plt.hlines(0, self._index.min()-1, self._index.max(), color='k', linestyles='--', alpha=0.5)
+        plt.hlines(0, self._index.min() - 1, self._index.max(), color="k", linestyles="--", alpha=0.5)
 
         ax.legend()
         return ax
@@ -446,7 +458,7 @@ It's important to know that the naive variance estimates of the coefficients are
         Using the epanechnikov kernel to smooth the hazard function, with sigma/bandwidth
 
         """
-        timeline = self._index
+        timeline = self._index.values
         return pd.DataFrame(
             np.dot(epanechnikov_kernel(timeline[:, None], timeline, bandwidth), self.hazards_.values),
             columns=self.hazards_.columns,
@@ -471,15 +483,15 @@ It's important to know that the naive variance estimates of the coefficients are
         return self._concordance_score_
 
     def _compute_slopes(self):
-
         def _univariate_linear_regression_without_intercept(X, Y, weights):
-            beta = (weights * X).dot(Y) / X.dot(weights * X)
+            # normally (weights * X).dot(Y) / X.dot(weights * X), but we have a slightly different form here.
+            beta = X.dot(Y) / X.dot(weights * X)
             errors = Y.values - np.outer(X, beta)
             var = (errors ** 2).sum(0) / (Y.shape[0] - 2) / X.dot(weights * X)
             return beta, np.sqrt(var)
 
-        weights = survival_table_from_events(self.durations, self.event_observed).loc[self._index, 'at_risk'].values
-        y = (self.hazards_).cumsum(0)
+        weights = survival_table_from_events(self.durations, self.event_observed).loc[self._index, "at_risk"].values
+        y = (weights[:, None] * self.hazards_).cumsum()
         X = self._index.values
         betas, se = _univariate_linear_regression_without_intercept(X, y, weights)
         return pd.Series(betas, index=y.columns), pd.Series(se, index=y.columns)
@@ -500,8 +512,6 @@ It's important to know that the naive variance estimates of the coefficients are
         betas, se = self._compute_slopes()
         df["slope(coef)"] = betas
         df["se(slope(coef))"] = se
-        # df["z"] = betas / se
-        # df["p"] = self._compute_p_values(betas / se, n-2)
         return df
 
     def print_summary(self, decimals=2, **kwargs):
