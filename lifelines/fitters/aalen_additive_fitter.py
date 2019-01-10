@@ -216,8 +216,6 @@ class AalenAdditiveFitter(BaseFitter):
             exits = T == t
             deaths = exits & E
             try:
-                import pdb
-                #pdb.set_trace()
                 R = lr(X, W * deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v, ix=deaths)
                 V = R[:, :-1]
                 v = R[:, -1]

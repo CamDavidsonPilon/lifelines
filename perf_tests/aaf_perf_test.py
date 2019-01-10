@@ -11,7 +11,7 @@ if __name__ == "__main__":
     from lifelines.datasets import load_rossi
 
     df = load_rossi()
-    df = pd.concat([df] * 20)
+    df = pd.concat([df] * 1)
     # df['week'] = np.random.exponential(size=df.shape[0])
     aaf = AalenAdditiveFitter()
     start_time = time.time()
