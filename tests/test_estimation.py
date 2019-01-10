@@ -2503,7 +2503,7 @@ class TestAalenAdditiveFitter:
         regression_dataset["E"] = 1
 
         aaf.fit(regression_dataset, "T", "E")
-        actual = aaf.cumulative_hazards_.loc[regression_dataset["T"].max()]
+        actual = aaf.cumulative_hazards_.iloc[-1]
         npt.assert_allclose(actual["baseline"], 2.1675130235, rtol=1e-06)
         npt.assert_allclose(actual["var1"], 0.6820086125, rtol=1e-06)
         npt.assert_allclose(actual["var2"], -0.0776583514, rtol=1e-06)

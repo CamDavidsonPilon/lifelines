@@ -8,13 +8,14 @@ import numpy as np
 import pandas as pd
 from numpy.linalg import LinAlgError
 from scipy import stats
+from scipy.integrate import trapz
 
 from lifelines.fitters import BaseFitter
 from lifelines.utils import (
     _get_index,
     inv_normal_cdf,
     epanechnikov_kernel,
-    ridge_regression_plus as lr,
+    ridge_regression as lr,
     qth_survival_times,
     pass_for_numeric_dtypes_or_raise,
     concordance_index,
@@ -216,9 +217,7 @@ class AalenAdditiveFitter(BaseFitter):
             exits = T == t
             deaths = exits & E
             try:
-                R = lr(X, W * deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v, ix=deaths)
-                V = R[:, :-1]
-                v = R[:, -1]
+                v, V = lr(X, W * deaths, c1=self.coef_penalizer, c2=self.smoothing_penalizer, offset=v, ix=deaths)
             except LinAlgError:
                 warnings.warn(
                     "Linear regression error at index=%d, time=%.3f. Try increasing the coef_penalizer value." % (i, t),

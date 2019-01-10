@@ -8,6 +8,7 @@
    - removed the time-varying component from `AalenAdditiveFitter`. This will return in a future release.
    - new `print_summary`
    - `weights_col` is added
+   - `nn_cumulative_hazard` is removed (may add back)
 
 
 #### 0.16.3
