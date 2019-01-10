@@ -9,6 +9,7 @@
    - new `print_summary`
    - `weights_col` is added
    - `nn_cumulative_hazard` is removed (may add back)
+ - some plotting improvemnts to `plotting.plot_lifetimes` 
 
 
 #### 0.16.3

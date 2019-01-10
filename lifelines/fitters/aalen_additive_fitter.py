@@ -409,6 +409,7 @@ It's important to know that the naive variance estimates of the coefficients are
           specify a location-based subsection of the curves to plot, ex:
                  ``.plot(iloc=slice(0,10))`` will plot the first 10 time points.
         """
+        set_kwargs_ax
         from matplotlib import pyplot as plt
 
         assert loc is None or iloc is None, "Cannot set both loc and iloc in call to .plot"

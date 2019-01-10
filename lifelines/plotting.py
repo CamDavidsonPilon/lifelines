@@ -191,11 +191,11 @@ def plot_lifetimes(
 
     """
     set_kwargs_ax(kwargs)
-    ax = kwargs["ax"]
+    ax = kwargs.pop("ax")
 
     N = duration.shape[0]
-    if N > 100:
-        warnings.warn("For less visual clutter, you may want to subsample to less than 100 individuals.")
+    if N > 75:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 75 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
@@ -206,15 +206,18 @@ def plot_lifetimes(
     if sort_by_duration:
         # order by length of lifetimes; probably not very informative.
         ix = np.argsort(duration, 0)
-        duration = duration[ix, 0]
-        event_observed = event_observed[ix, 0]
+        duration = duration[ix]
+        event_observed = event_observed[ix]
         entry = entry[ix]
 
     for i in range(N):
         c = event_observed_color if event_observed[i] else event_censored_color
-        ax.hlines(N - 1 - i, entry[i], entry[i] + duration[i], color=c, lw=3)
-        m = "|" if not event_observed[i] else "o"
-        ax.scatter((entry[i]) + duration[i], N - 1 - i, color=c, s=30, marker=m)
+        ax.hlines(N - 1 - i, entry[i], entry[i] + duration[i], color=c, lw=1.5)
+        ax.hlines(N - 1 - i, 0, entry[i], color=c, lw=1.0, linestyle='--')
+        m = "" if not event_observed[i] else "o"
+        ax.scatter(entry[i] + duration[i], N - 1 - i, color=c, marker=m, s=10)
+
+
 
     ax.set_ylim(-0.5, N)
     return ax

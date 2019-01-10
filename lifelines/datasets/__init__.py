@@ -49,6 +49,29 @@ def load_recur(**kwargs):
     """
     return load_dataset("recur.csv", **kwargs)
 
+def multicenter_aids_cohort_study(**kwargs):
+    """
+    Originally in [1]
+
+    Siz: (78, 4)
+
+    AIDSYi: date of AIDS diagnosis
+    Wi: years from AIDS diagnosis to study entry
+    Ti: years from AIDS diagnosis to minimum of death or censoring 
+    Di: indicator of death during follow up
+
+
+    i   AIDSYi      Wi      Ti    Di
+    1   1990.425    4.575   7.575   0
+    2   1991.250    3.750   6.750   0
+    3   1992.014    2.986   5.986   0
+    4   1992.030    2.970   5.970   0
+    5   1992.072    2.928   5.928   0
+    6   1992.220    2.780   4.688   1
+
+    [1] Cole SR, Hudgens MG. Survival analysis in infectious disease research: describing events in time. AIDS. 2010;24(16):2423-31.
+    """
+    return load_dataset("multicenter_aids_cohort.tsv", sep="\t", index_col=0, **kwargs)
 
 def load_holly_molly_polly(**kwargs):
     """
