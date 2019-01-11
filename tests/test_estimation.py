@@ -57,6 +57,7 @@ from lifelines.datasets import (
     load_holly_molly_polly,
     load_regression_dataset,
     load_stanford_heart_transplants,
+    multicenter_aids_cohort_study
 )
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
 
@@ -433,12 +434,27 @@ class TestKaplanMeierFitter:
             km = np.insert(km, 0, 1.0)
         return km.reshape(len(km), 1)
 
+    def test_left_truncation_against_Cole_and_Hudgens(self):
+        df = multicenter_aids_cohort_study()
+        kmf = KaplanMeierFitter()
+        kmf.fit(df['T'], event_observed=df['D'], entry=df['W'])
+
+        # the papers event table only looks at times when the individuals die
+        event_table = kmf.event_table[kmf.event_table['observed']>0]
+
+        assert event_table.shape[0] == 26
+        assert event_table.loc[0.26899999999999996, 'at_risk'] == 42
+        assert event_table.loc[0.7909999999999999, 'at_risk'] == 44
+        assert event_table.loc[4.688, 'at_risk'] == 11
+
+        assert kmf.survival_function_.loc[0.7909999999999999, 'KM_estimate'] == 0.9540043290043292
+        assert abs(kmf.median_ - 3) < 0.1
+
+
     def test_kaplan_meier_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes
         kmf = KaplanMeierFitter()
         kmf.fit(T)
-        print(kmf.survival_function_)
-        print(kmf.event_table)
         npt.assert_almost_equal(kmf.survival_function_.values, self.kaplan_meier(T))
 
     def test_kaplan_meier_with_censorship(self, sample_lifetimes):
@@ -620,13 +636,10 @@ class TestKaplanMeierFitter:
         rf = pd.DataFrame(index=km1.survival_function_.index)
         rf["KM_true"] = km1.survival_function_
 
-        print(dfo[["t_out", "t_enter", "d"]])
-
         # Fitting KM to "observed" data
         km2 = KaplanMeierFitter()
         km2.fit(dfo["t_out"], entry=dfo["t_enter"], event_observed=dfo["d"])
         rf["KM_lifelines_latest"] = km2.survival_function_
-        print(km2.event_table)
 
         # Version of KM where late entries occur after
         rf["KM_lateenterafter"] = np.cumprod(
@@ -635,7 +648,6 @@ class TestKaplanMeierFitter:
 
         # drop the first NA from comparison
         rf = rf.dropna()
-        print(rf)
 
         npt.assert_allclose(rf["KM_true"].values, rf["KM_lateenterafter"].values, rtol=10e-2)
         npt.assert_allclose(rf["KM_lifelines_latest"].values, rf["KM_lateenterafter"].values, rtol=10e-2)
@@ -1077,7 +1089,6 @@ class TestCoxPHFitter:
         cph.fit(regression_dataset, "T", "E")
 
         results = cph.compute_residuals(regression_dataset, "martingale")
-        print(results)
         npt.assert_allclose(results.loc[0, "martingale"], -2.315035744901, rtol=1e-05)
         npt.assert_allclose(results.loc[1, "martingale"], 0.774216356429, rtol=1e-05)
         npt.assert_allclose(results.loc[199, "martingale"], 0.868510420157, rtol=1e-05)

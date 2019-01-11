@@ -174,28 +174,40 @@ def plot_lifetimes(
     duration,
     event_observed=None,
     entry=None,
+    left_truncated=False,
     sort_by_duration=False,
     event_observed_color="#A60628",
     event_censored_color="#348ABD",
     **kwargs
 ):
     """
-    Parameters:
-      duration: an array, or pd.Series, of length n -- duration subject was observed for
-      event_observed: an (n,) numpy array of booleans: True if event observed, else False.
-      entry: an (n,) numpy array offsetting the births away from t=0.
-      sort_by_duration: sort by the duration vector
-
-
     Retuns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#censorship
+    
+    Parameters
+    -----------
+    duration: (n,) numpy array or pd.Series
+       duration subject was observed for.
+    event_observed: (n,) numpy array or pd.Series
+      array of booleans: True if event observed, else False.
+    entry: (n,) numpy array or pd.Series 
+      offsetting the births away from t=0. This could be from left-truncation, or delayed entry into study.
+    left_truncated: boolean
+      if entry is provided, and the data is left-truncated, this will display additional information in the plot to reflect this. 
+    sort_by_duration: boolean
+      sort by the duration vector
+
+    Returns
+    -------
+    ax
+
 
     """
     set_kwargs_ax(kwargs)
     ax = kwargs.pop("ax")
 
     N = duration.shape[0]
-    if N > 75:
-        warnings.warn("For less visual clutter, you may want to subsample to less than 75 individuals.")
+    if N > 80:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
@@ -213,11 +225,10 @@ def plot_lifetimes(
     for i in range(N):
         c = event_observed_color if event_observed[i] else event_censored_color
         ax.hlines(N - 1 - i, entry[i], entry[i] + duration[i], color=c, lw=1.5)
-        ax.hlines(N - 1 - i, 0, entry[i], color=c, lw=1.0, linestyle='--')
+        if left_truncated:
+            ax.hlines(N - 1 - i, 0, entry[i], color=c, lw=1.0, linestyle="--")
         m = "" if not event_observed[i] else "o"
         ax.scatter(entry[i] + duration[i], N - 1 - i, color=c, marker=m, s=10)
-
-
 
     ax.set_ylim(-0.5, N)
     return ax

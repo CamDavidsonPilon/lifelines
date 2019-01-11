@@ -7,7 +7,6 @@ import time
 import numpy as np
 import pandas as pd
 from numpy.linalg import LinAlgError
-from scipy import stats
 from scipy.integrate import trapz
 
 from lifelines.fitters import BaseFitter
@@ -21,7 +20,6 @@ from lifelines.utils import (
     concordance_index,
     check_nans_or_infs,
     ConvergenceWarning,
-    check_low_var,
     normalize,
     string_justify,
     _to_list,
@@ -33,7 +31,7 @@ from lifelines.utils import (
     StatisticalWarning,
 )
 
-from lifelines.plotting import fill_between_steps
+from lifelines.plotting import fill_between_steps, set_kwargs_ax
 
 
 class AalenAdditiveFitter(BaseFitter):
@@ -235,6 +233,7 @@ class AalenAdditiveFitter(BaseFitter):
             if show_progress and i % int((n_deaths / 10)) == 0:
                 print("Iteration %d/%d, seconds_since_start = %.2f" % (i + 1, n_deaths, time.time() - start))
 
+            last_iteration = i + 1
             # terminate early when there are less than (3 * d) subjects left, where d does not include the intercept.
             # the value 3 if from R survival lib.
             if (3 * (d - 1)) >= n - total_observed_exits:
@@ -244,11 +243,10 @@ class AalenAdditiveFitter(BaseFitter):
 
             total_observed_exits += exits.sum()
 
-        last_iteration = i + 1
         return hazards_, variance_hazards_, last_iteration
 
     def _preprocess_dataframe(self, df):
-        n, d = df.shape
+        n, _ = df.shape
 
         df = df.sort_values(by=self.duration_col)
 
@@ -409,7 +407,6 @@ It's important to know that the naive variance estimates of the coefficients are
           specify a location-based subsection of the curves to plot, ex:
                  ``.plot(iloc=slice(0,10))`` will plot the first 10 time points.
         """
-        set_kwargs_ax
         from matplotlib import pyplot as plt
 
         assert loc is None or iloc is None, "Cannot set both loc and iloc in call to .plot"
@@ -435,10 +432,8 @@ It's important to know that the naive variance estimates of the coefficients are
         else:
             columns = _to_list(columns)
 
-        if 'ax' in kwargs:
-            ax = kwargs.pop('ax')
-        else:
-            ax = plt.figure().add_subplot(111)
+        set_kwargs_ax(kwargs)
+        ax = kwargs.pop("ax")
 
         x = subset_df(self.cumulative_hazards_).index.values.astype(float)
 
@@ -505,8 +500,6 @@ It's important to know that the naive variance estimates of the coefficients are
         -------
         df : DataFrame
         """
-        n = self.cumulative_hazards_.shape[0]
-
         df = pd.DataFrame(index=self.cumulative_hazards_.columns)
 
         betas, se = self._compute_slopes()

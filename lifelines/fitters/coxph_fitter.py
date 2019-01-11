@@ -15,6 +15,7 @@ from scipy.integrate import trapz
 from scipy import stats
 
 from lifelines.fitters import BaseFitter
+from lifelines.plotting import set_kwargs_ax
 from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers
 from lifelines.utils import (
     survival_table_from_events,
@@ -114,7 +115,7 @@ class CoxPHFitter(BaseFitter):
     def fit(
         self,
         df,
-        duration_col,
+        duration_col=None,
         event_col=None,
         show_progress=False,
         initial_beta=None,
@@ -227,6 +228,9 @@ class CoxPHFitter(BaseFitter):
         >>> cph.predict_median(df)
 
         """
+        if duration_col is None:
+            raise ValueError("duration_col cannot be None.")
+
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
@@ -1452,8 +1456,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        ax = errorbar_kwargs.setdefault("ax", plt.figure().add_subplot(111))
-        del kwargs["ax"]
+        ax = set_kwargs_ax(errorbar_kwargs)
+        ax = errorbar_kwargs.pop("ax")
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
         errorbar_kwargs.setdefault("markerfacecolor", "white")
