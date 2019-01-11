@@ -167,7 +167,7 @@ class TestPlotting:
         current = 10
         birthtimes = current * np.random.uniform(size=(N,))
         T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
-        ax = plot_lifetimes(T, event_observed=C, entry=birthtimes, left_truncation=True)
+        ax = plot_lifetimes(T, event_observed=C, entry=birthtimes, left_truncated=True)
         assert ax is not None
         self.plt.title("test_plot_lifetimes_left_truncation")
         self.plt.show(block=block)
