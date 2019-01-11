@@ -15,6 +15,7 @@ from scipy.integrate import trapz
 from scipy import stats
 
 from lifelines.fitters import BaseFitter
+from lifelines.plotting import set_kwargs_ax
 from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers
 from lifelines.utils import (
     survival_table_from_events,
@@ -56,8 +57,7 @@ class BatchVsSingle:
             and (0.5465 + -1.187e-05 * n + 1.0899 * frac_dups + 0.0001 * n * frac_dups < 1)
         ):
             return "batch"
-        else:
-            return "single"
+        return "single"
 
 
 class CoxPHFitter(BaseFitter):
@@ -115,7 +115,7 @@ class CoxPHFitter(BaseFitter):
     def fit(
         self,
         df,
-        duration_col,
+        duration_col=None,
         event_col=None,
         show_progress=False,
         initial_beta=None,
@@ -228,6 +228,9 @@ class CoxPHFitter(BaseFitter):
         >>> cph.predict_median(df)
 
         """
+        if duration_col is None:
+            raise TypeError("duration_col cannot be None.")
+
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
@@ -379,7 +382,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         """
         self.path = []
         assert precision <= 1.0, "precision must be less than or equal to 1."
-        n, d = X.shape
+        _, d = X.shape
 
         # make sure betas are correct size.
         if initial_beta is not None:
@@ -641,13 +644,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_likelihood: float
         """
 
-        n, d = X.shape
+        _, d = X.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros((1, d))
         log_lik = 0
 
         # Init risk and tie sums to zero
-        x_tie_sum = np.zeros((1, d))
         risk_phi, tie_phi = 0, 0
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
@@ -1129,7 +1131,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         trivial_dataset = pd.DataFrame({"E": self.event_observed, "T": self.durations, "W": self.weights})
 
         cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "T", "E", weights_col="W", show_progress=True)
+        cp_null.fit(trivial_dataset, "T", "E", weights_col="W", show_progress=False)
 
         ll_null = cp_null._log_likelihood
         ll_alt = self._log_likelihood
@@ -1454,8 +1456,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
-
+        set_kwargs_ax(errorbar_kwargs)
+        ax = errorbar_kwargs.pop("ax")
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
         errorbar_kwargs.setdefault("markerfacecolor", "white")
@@ -1635,10 +1637,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         """
         # pylint: disable=access-member-before-definition
-        if hasattr(self, "_concordance_score_"):
+        if hasattr(self, "_predicted_partial_hazards_"):
+            self._concordance_score_ = concordance_index(
+                self.durations, -self._predicted_partial_hazards_, self.event_observed
+            )
+            del self._predicted_partial_hazards_
             return self._concordance_score_
-        self._concordance_score_ = concordance_index(
-            self.durations, -self._predicted_partial_hazards_, self.event_observed
-        )
-        del self._predicted_partial_hazards_
         return self._concordance_score_

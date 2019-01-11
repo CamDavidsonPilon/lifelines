@@ -316,101 +316,21 @@ above). This is important to keep in mind when analyzing the output.
     data.head()
 
 
-.. raw:: html
+.. table::
 
-    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th style="padding:8px;">ctryname</th>
-          <th style="padding:8px;">cowcode2</th>
-          <th style="padding:8px;">politycode</th>
-          <th style="padding:8px;">un_region_name</th>
-          <th style="padding:8px;">un_continent_name</th>
-          <th style="padding:8px;">ehead</th>
-          <th style="padding:8px;">leaderspellreg</th>
-          <th style="padding:8px;">democracy</th>
-          <th style="padding:8px;">regime</th>
-          <th style="padding:8px;">start_year</th>
-          <th style="padding:8px;">duration</th>
-          <th style="padding:8px;">observed</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="padding: 8px;"> Afghanistan</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> Southern Asia</td>
-          <td style="padding: 8px;"> Asia</td>
-          <td style="padding: 8px;">   Mohammad Zahir Shah</td>
-          <td style="padding: 8px;"> Mohammad Zahir Shah.Afghanistan.1946.1952.Mona...</td>
-          <td style="padding: 8px;"> Non-democracy</td>
-          <td style="padding: 8px;">      Monarchy</td>
-          <td style="padding: 8px;"> 1946</td>
-          <td style="padding: 8px;">  7</td>
-          <td style="padding: 8px;"> 1</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px;"> Afghanistan</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> Southern Asia</td>
-          <td style="padding: 8px;"> Asia</td>
-          <td style="padding: 8px;"> Sardar Mohammad Daoud</td>
-          <td style="padding: 8px;"> Sardar Mohammad Daoud.Afghanistan.1953.1962.Ci...</td>
-          <td style="padding: 8px;"> Non-democracy</td>
-          <td style="padding: 8px;"> Civilian Dict</td>
-          <td style="padding: 8px;"> 1953</td>
-          <td style="padding: 8px;"> 10</td>
-          <td style="padding: 8px;"> 1</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px;"> Afghanistan</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> Southern Asia</td>
-          <td style="padding: 8px;"> Asia</td>
-          <td style="padding: 8px;">   Mohammad Zahir Shah</td>
-          <td style="padding: 8px;"> Mohammad Zahir Shah.Afghanistan.1963.1972.Mona...</td>
-          <td style="padding: 8px;"> Non-democracy</td>
-          <td style="padding: 8px;">      Monarchy</td>
-          <td style="padding: 8px;"> 1963</td>
-          <td style="padding: 8px;"> 10</td>
-          <td style="padding: 8px;"> 1</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px;"> Afghanistan</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> Southern Asia</td>
-          <td style="padding: 8px;"> Asia</td>
-          <td style="padding: 8px;"> Sardar Mohammad Daoud</td>
-          <td style="padding: 8px;"> Sardar Mohammad Daoud.Afghanistan.1973.1977.Ci...</td>
-          <td style="padding: 8px;"> Non-democracy</td>
-          <td style="padding: 8px;"> Civilian Dict</td>
-          <td style="padding: 8px;"> 1973</td>
-          <td style="padding: 8px;">  5</td>
-          <td style="padding: 8px;"> 0</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px;"> Afghanistan</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> 700</td>
-          <td style="padding: 8px;"> Southern Asia</td>
-          <td style="padding: 8px;"> Asia</td>
-          <td style="padding: 8px;">   Nur Mohammad Taraki</td>
-          <td style="padding: 8px;"> Nur Mohammad Taraki.Afghanistan.1978.1978.Civi...</td>
-          <td style="padding: 8px;"> Non-democracy</td>
-          <td style="padding: 8px;"> Civilian Dict</td>
-          <td style="padding: 8px;"> 1978</td>
-          <td style="padding: 8px;">  1</td>
-          <td style="padding: 8px;"> 0</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>5 rows × 12 columns</p>
-    </div>
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    | ctryname  |cowcode2|politycode|un_region_name|un_continent_name|        ehead        |                     leaderspellreg                      |  democracy  |   regime    |start_year|duration|observed|
+    +===========+========+==========+==============+=================+=====================+=========================================================+=============+=============+==========+========+========+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Mohammad Zahir Shah  |Mohammad Zahir Shah.Afghanistan.1946.1952.Monarchy       |Non-democracy|Monarchy     |      1946|       7|       1|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Sardar Mohammad Daoud|Sardar Mohammad Daoud.Afghanistan.1953.1962.Civilian Dict|Non-democracy|Civilian Dict|      1953|      10|       1|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Mohammad Zahir Shah  |Mohammad Zahir Shah.Afghanistan.1963.1972.Monarchy       |Non-democracy|Monarchy     |      1963|      10|       1|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Sardar Mohammad Daoud|Sardar Mohammad Daoud.Afghanistan.1973.1977.Civilian Dict|Non-democracy|Civilian Dict|      1973|       5|       0|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Nur Mohammad Taraki  |Nur Mohammad Taraki.Afghanistan.1978.1978.Civilian Dict  |Non-democracy|Civilian Dict|      1978|       1|       0|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
 
 
 I'm using the lovely library `patsy <https://github.com/pydata/patsy>`__ here to create a
@@ -451,7 +371,7 @@ or small sample sizes) -- adding a penalizer term controls the stability. I reco
 
 .. code:: python
 
-    aaf = AalenAdditiveFitter(coef_penalizer=1.0)
+    aaf = AalenAdditiveFitter(coef_penalizer=1.0, fit_intercept=False)
 
 An instance of ``AalenAdditiveFitter``
 includes a ``fit`` method that performs the inference on the coefficients. This method accepts a pandas DataFrame: each row is an individual and columns are the covariates and
@@ -478,100 +398,21 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
 
 
 .. raw:: html
+.. table::
 
-    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th style="padding:8px;">un_continent_name[Africa]</th>
-          <th style="padding:8px;">un_continent_name[Americas]</th>
-          <th style="padding:8px;">un_continent_name[Asia]</th>
-          <th style="padding:8px;">un_continent_name[Europe]</th>
-          <th style="padding:8px;">un_continent_name[Oceania]</th>
-          <th style="padding:8px;">regime[T.Military Dict]</th>
-          <th style="padding:8px;">regime[T.Mixed Dem]</th>
-          <th style="padding:8px;">regime[T.Monarchy]</th>
-          <th style="padding:8px;">regime[T.Parliamentary Dem]</th>
-          <th style="padding:8px;">regime[T.Presidential Dem]</th>
-          <th style="padding:8px;">start_year</th>
-          <th style="padding:8px;">baseline</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="padding: 8px;">-0.051595</td>
-          <td style="padding: 8px;">-0.082406</td>
-          <td style="padding: 8px;"> 0.010666</td>
-          <td style="padding: 8px;"> 0.154493</td>
-          <td style="padding: 8px;">-0.060438</td>
-          <td style="padding: 8px;"> 0.075333</td>
-          <td style="padding: 8px;"> 0.086274</td>
-          <td style="padding: 8px;">-0.133938</td>
-          <td style="padding: 8px;"> 0.048077</td>
-          <td style="padding: 8px;"> 0.127171</td>
-          <td style="padding: 8px;"> 0.000116</td>
-          <td style="padding: 8px;">-0.029280</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px;">-0.014713</td>
-          <td style="padding: 8px;">-0.039471</td>
-          <td style="padding: 8px;"> 0.095668</td>
-          <td style="padding: 8px;"> 0.194251</td>
-          <td style="padding: 8px;">-0.092696</td>
-          <td style="padding: 8px;"> 0.115033</td>
-          <td style="padding: 8px;"> 0.358702</td>
-          <td style="padding: 8px;">-0.226233</td>
-          <td style="padding: 8px;"> 0.168783</td>
-          <td style="padding: 8px;"> 0.121862</td>
-          <td style="padding: 8px;"> 0.000053</td>
-          <td style="padding: 8px;"> 0.143039</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px;"> 0.007389</td>
-          <td style="padding: 8px;">-0.064758</td>
-          <td style="padding: 8px;"> 0.115121</td>
-          <td style="padding: 8px;"> 0.170549</td>
-          <td style="padding: 8px;"> 0.069371</td>
-          <td style="padding: 8px;"> 0.161490</td>
-          <td style="padding: 8px;"> 0.677347</td>
-          <td style="padding: 8px;">-0.271183</td>
-          <td style="padding: 8px;"> 0.328483</td>
-          <td style="padding: 8px;"> 0.146234</td>
-          <td style="padding: 8px;"> 0.000004</td>
-          <td style="padding: 8px;"> 0.297672</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px;">-0.058418</td>
-          <td style="padding: 8px;"> 0.011399</td>
-          <td style="padding: 8px;"> 0.091784</td>
-          <td style="padding: 8px;"> 0.205824</td>
-          <td style="padding: 8px;"> 0.125722</td>
-          <td style="padding: 8px;"> 0.220028</td>
-          <td style="padding: 8px;"> 0.932674</td>
-          <td style="padding: 8px;">-0.294900</td>
-          <td style="padding: 8px;"> 0.365604</td>
-          <td style="padding: 8px;"> 0.422617</td>
-          <td style="padding: 8px;"> 0.000002</td>
-          <td style="padding: 8px;"> 0.376311</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px;">-0.099282</td>
-          <td style="padding: 8px;"> 0.106641</td>
-          <td style="padding: 8px;"> 0.112083</td>
-          <td style="padding: 8px;"> 0.150708</td>
-          <td style="padding: 8px;"> 0.091900</td>
-          <td style="padding: 8px;"> 0.241575</td>
-          <td style="padding: 8px;"> 1.123860</td>
-          <td style="padding: 8px;">-0.391103</td>
-          <td style="padding: 8px;"> 0.536185</td>
-          <td style="padding: 8px;"> 0.743913</td>
-          <td style="padding: 8px;"> 0.000057</td>
-          <td style="padding: 8px;"> 0.362049</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>5 rows × 12 columns</p>
-    </div>
+    +--------+-----------------------------+-------------------------+---------------------------+----------------------------+-----------------------+-------------------+------------------+---------------------------+--------------------------+----------+
+    |baseline|un_continent_name[T.Americas]|un_continent_name[T.Asia]|un_continent_name[T.Europe]|un_continent_name[T.Oceania]|regime[T.Military Dict]|regime[T.Mixed Dem]|regime[T.Monarchy]|regime[T.Parliamentary Dem]|regime[T.Presidential Dem]|start_year|
+    +========+=============================+=========================+===========================+============================+=======================+===================+==================+===========================+==========================+==========+
+    |-0.03447|                     -0.03173|                  0.06216|                     0.2058|                   -0.009559|                0.07611|            0.08729|           -0.1362|                    0.04885|                    0.1285|  0.000092|
+    +--------+-----------------------------+-------------------------+---------------------------+----------------------------+-----------------------+-------------------+------------------+---------------------------+--------------------------+----------+
+    | 0.14278|                     -0.02496|                  0.11122|                     0.2083|                   -0.079042|                0.11704|            0.36254|           -0.2293|                    0.17103|                    0.1238|  0.000044|
+    +--------+-----------------------------+-------------------------+---------------------------+----------------------------+-----------------------+-------------------+------------------+---------------------------+--------------------------+----------+
+    | 0.30153|                     -0.07212|                  0.10929|                     0.1614|                    0.063030|                0.16553|            0.68693|           -0.2738|                    0.33300|                    0.1499|  0.000004|
+    +--------+-----------------------------+-------------------------+---------------------------+----------------------------+-----------------------+-------------------+------------------+---------------------------+--------------------------+----------+
+    | 0.37969|                      0.06853|                  0.15162|                     0.2609|                    0.185569|                0.22695|            0.95016|           -0.2961|                    0.37351|                    0.4311| -0.000032|
+    +--------+-----------------------------+-------------------------+---------------------------+----------------------------+-----------------------+-------------------+------------------+---------------------------+--------------------------+----------+
+    | 0.36749|                      0.20201|                  0.21252|                     0.2429|                    0.188740|                0.25127|            1.15132|           -0.3926|                    0.54952|                    0.7593| -0.000000|
+    +--------+-----------------------------+-------------------------+---------------------------+----------------------------+-----------------------+-------------------+------------------+---------------------------+--------------------------+----------+
 
 
 
@@ -601,15 +442,9 @@ Prime Minister Stephen Harper.
 
 .. parsed-literal::
 
-    Harper's unique data point
-
-
-
-.. parsed-literal::
-
-    array([[    0.,     0.,     1.,     0.,     0.,     0.,     0.,     1.,
-                0.,     0.,  2003.]])
-
+    Harper's unique data point:
+         baseline  un_continent_name[T.Americas]  un_continent_name[T.Asia] ...  start_year  T  E
+    268       1.0                            1.0                        0.0 ...      2006.0  3  0
 
 
 .. code:: python

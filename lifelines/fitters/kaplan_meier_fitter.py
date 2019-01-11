@@ -59,7 +59,7 @@ class KaplanMeierFitter(UnivariateFitter):
              was lost (right-censored). Defaults all True if event_observed==None
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
              useful for left-truncated (not left-censored) observations. If None, all members of the population
-             were born at time 0.
+             entered study when they were "born".
           label: a string to name the column of the estimate.
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.

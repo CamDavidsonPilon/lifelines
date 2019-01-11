@@ -47,6 +47,7 @@ def lowess(x, y, f=2.0 / 3.0, iterations=3):
             b = np.array([np.sum(weights * y), np.sum(weights * y * x)])
             A = np.array([[np.sum(weights), np.sum(weights * x)], [np.sum(weights * x), np.sum(weights * x * x)]])
             # I think it is safe to assume this.
+            # pylint: disable=unexpected-keyword-arg
             beta = linalg.solve(A, b, assume_a="pos", check_finite=False)
             yest[i] = beta[0] + beta[1] * x[i]
 

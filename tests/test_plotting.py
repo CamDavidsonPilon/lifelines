@@ -86,7 +86,7 @@ class TestPlotting:
         naf.fit(data1)
         ax = naf.plot(color="r")
         naf.fit(data2)
-        naf.plot(ax=ax, c="k")
+        naf.plot(ax=ax, color="k")
         self.plt.title("test_naf_plotting_with_custom_coloirs")
         self.plt.show(block=block)
         return
@@ -157,6 +157,18 @@ class TestPlotting:
         ax = plot_lifetimes(T, event_observed=C, entry=birthtimes)
         assert ax is not None
         self.plt.title("test_plot_lifetimes_calendar")
+        self.plt.show(block=block)
+
+    def test_plot_lifetimes_left_truncation(self, block):
+        t = np.linspace(0, 20, 1000)
+        hz, coef, covrt = generate_hazard_rates(1, 5, t)
+        N = 20
+        current = 10
+        birthtimes = current * np.random.uniform(size=(N,))
+        T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
+        ax = plot_lifetimes(T, event_observed=C, entry=birthtimes, left_truncated=True)
+        assert ax is not None
+        self.plt.title("test_plot_lifetimes_left_truncation")
         self.plt.show(block=block)
 
     def test_plot_lifetimes_relative(self, block):
@@ -297,16 +309,6 @@ class TestPlotting:
         self.plt.show(block=block)
         return
 
-    def test_aaf_panel_dataset(self, block):
-
-        panel_dataset = load_panel_test()
-        aaf = AalenAdditiveFitter()
-        aaf.fit(panel_dataset, id_col="id", duration_col="t", event_col="E")
-        aaf.plot()
-        self.plt.title("test_aaf_panel_dataset")
-        self.plt.show(block=block)
-        return
-
     def test_aalen_additive_fit_no_censor(self, block):
         n = 2500
         d = 6
@@ -319,14 +321,15 @@ class TestPlotting:
         T = generate_random_lifetimes(hz, timeline)
         X["T"] = T
         X["E"] = np.random.binomial(1, 1, n)
+        X[np.isinf(X)] = 10
         aaf = AalenAdditiveFitter()
         aaf.fit(X, "T", "E")
 
         for i in range(d + 1):
             ax = self.plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
+            ax = cumulative_hazards[col].loc[:15].plot(ax=ax)
+            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col])
         self.plt.title("test_aalen_additive_fit_no_censor")
         self.plt.show(block=block)
         return
@@ -351,8 +354,8 @@ class TestPlotting:
         for i in range(d + 1):
             ax = self.plt.subplot(d + 1, 1, i + 1)
             col = cumulative_hazards.columns[i]
-            ax = cumulative_hazards[col].loc[:15].plot(legend=False, ax=ax)
-            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col], legend=False)
+            ax = cumulative_hazards[col].loc[:15].plot(ax=ax)
+            ax = aaf.plot(loc=slice(0, 15), ax=ax, columns=[col])
         self.plt.title("test_aalen_additive_fit_with_censor")
         self.plt.show(block=block)
         return

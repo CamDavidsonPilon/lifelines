@@ -692,12 +692,14 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 Left Truncated Data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another form of bias that is introduced into a dataset is called left-truncation. (Also a form of censorship).
-Left-truncation occurs when individuals may die even before ever entering into the study. Both  ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional argument for ``entry``, which is an array of equal size to the duration array.
-It describes the offset from birth to entering the study. This is also useful when subjects enter the study at different
-points in their lifetime. For example, if you are measuring time to death of prisoners in
-prison, the prisoners will enter the study at different ages.
+ .. note:: Not to be confused with left-censorship, which is also supported in ``KaplanMeierFitter``.
 
- .. note:: Nothing changes in the duration array: it still measures time from entry of study to time left study (either by death or censorship)
+Another form of bias that is introduced into a dataset is called left-truncation. Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. Some theoretical indiviuals who would have entered into your study (i.e. went to prison) have already died. 
+
+Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited indivduals previously diagnosed with AIDS, possibly years before. 
+
+Both ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between "birth" (or "exposure") to entering the study.  
+
+ .. note:: Nothing changes in the duration array: it still measures time from "birth" to time left study (either by death or censorship). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
 
  .. note:: Other types of censorship, like interval-censorship, are not implemented in *lifelines* yet.
