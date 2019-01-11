@@ -25,7 +25,6 @@ from lifelines.utils import (
     _to_list,
     format_floats,
     significance_codes_as_text,
-    significance_code,
     format_p_value,
     survival_table_from_events,
     StatisticalWarning,
@@ -439,11 +438,12 @@ It's important to know that the naive variance estimates of the coefficients are
 
         for column in columns:
             y = subset_df(self.cumulative_hazards_[column]).values
+            index = subset_df(self.cumulative_hazards_[column]).index
             y_upper = subset_df(self.confidence_intervals_[column].loc["upper-bound"]).values
             y_lower = subset_df(self.confidence_intervals_[column].loc["lower-bound"]).values
             shaded_plot(ax, x, y, y_upper, y_lower, label=column, **kwargs)
 
-        plt.hlines(0, self._index.min() - 1, self._index.max(), color="k", linestyles="--", alpha=0.5)
+        plt.hlines(0, index.min() - 1, index.max(), color="k", linestyles="--", alpha=0.5)
 
         ax.legend()
         return ax
@@ -546,5 +546,5 @@ It's important to know that the naive variance estimates of the coefficients are
 
         # Significance code explanation
         print("---")
-        print(significance_codes_as_text(), end="\n\n")
+        # print(significance_codes_as_text(), end="\n\n")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))

@@ -1456,7 +1456,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        ax = set_kwargs_ax(errorbar_kwargs)
+        set_kwargs_ax(errorbar_kwargs)
         ax = errorbar_kwargs.pop("ax")
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")

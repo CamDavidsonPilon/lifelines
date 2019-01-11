@@ -30,7 +30,7 @@ Contents:
 
   Quickstart
   Survival Analysis intro
-  Survival Analysis with lifelines
+  Survival analysis with lifelines
   Survival Regression
   jupyter_notebooks/Proportional hazard assumption.ipynb
   jupyter_notebooks/Cox residuals.ipynb
