@@ -57,7 +57,7 @@ from lifelines.datasets import (
     load_holly_molly_polly,
     load_regression_dataset,
     load_stanford_heart_transplants,
-    multicenter_aids_cohort_study
+    multicenter_aids_cohort_study,
 )
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
 
@@ -437,19 +437,18 @@ class TestKaplanMeierFitter:
     def test_left_truncation_against_Cole_and_Hudgens(self):
         df = multicenter_aids_cohort_study()
         kmf = KaplanMeierFitter()
-        kmf.fit(df['T'], event_observed=df['D'], entry=df['W'])
+        kmf.fit(df["T"], event_observed=df["D"], entry=df["W"])
 
         # the papers event table only looks at times when the individuals die
-        event_table = kmf.event_table[kmf.event_table['observed']>0]
+        event_table = kmf.event_table[kmf.event_table["observed"] > 0]
 
         assert event_table.shape[0] == 26
-        assert event_table.loc[0.26899999999999996, 'at_risk'] == 42
-        assert event_table.loc[0.7909999999999999, 'at_risk'] == 44
-        assert event_table.loc[4.688, 'at_risk'] == 11
+        assert event_table.loc[0.26899999999999996, "at_risk"] == 42
+        assert event_table.loc[0.7909999999999999, "at_risk"] == 44
+        assert event_table.loc[4.688, "at_risk"] == 11
 
-        assert kmf.survival_function_.loc[0.7909999999999999, 'KM_estimate'] == 0.9540043290043292
+        assert kmf.survival_function_.loc[0.7909999999999999, "KM_estimate"] == 0.9540043290043292
         assert abs(kmf.median_ - 3) < 0.1
-
 
     def test_kaplan_meier_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes
