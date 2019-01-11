@@ -229,7 +229,7 @@ class CoxPHFitter(BaseFitter):
 
         """
         if duration_col is None:
-            raise ValueError("duration_col cannot be None.")
+            raise TypeError("duration_col cannot be None.")
 
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
