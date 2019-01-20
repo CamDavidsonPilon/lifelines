@@ -213,7 +213,13 @@ class CoxTimeVaryingFitter(BaseFitter):
             stratified_start = start.loc[stratum]
             stratified_events = events.loc[stratum]
             stratified_stop = stop.loc[stratum]
-            yield (stratified_X.values, stratified_events.values, stratified_start.values, stratified_stop.values, stratified_W.values), stratum
+            yield (
+                stratified_X.values,
+                stratified_events.values,
+                stratified_start.values,
+                stratified_stop.values,
+                stratified_W.values,
+            ), stratum
 
     def _partition_by_strata_and_apply(self, X, events, start, stop, weights, function, *args):
         for (
@@ -221,7 +227,6 @@ class CoxTimeVaryingFitter(BaseFitter):
             _,
         ) in self._partition_by_strata(X, events, start, stop, weights):
             yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
-
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
