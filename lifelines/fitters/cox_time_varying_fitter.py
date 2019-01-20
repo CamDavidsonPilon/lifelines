@@ -726,13 +726,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             s = """<lifelines.%s>""" % classname
         return s
 
-    def _compute_residuals(self, df, stop_times_events, weights):
+    def _compute_residuals(self, df, events, start, stop, weights):
         raise NotImplementedError()
 
-    def _compute_delta_beta(self, df, stop_times_events, weights):
+    def _compute_delta_beta(self, df, events, start, stop, weights):
         """ approximate change in betas as a result of excluding ith row"""
 
-        score_residuals = self._compute_residuals(df, stop_times_events, weights) * weights[:, None]
+        score_residuals = self._compute_residuals(df, events, start, stop, weights) * weights[:, None]
 
         naive_var = inv(self._hessian_)
         delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
@@ -741,7 +741,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_sandwich_estimator(self, X, events, start, stop, weights):
 
-        delta_betas = self._compute_delta_beta(X, stop_times_events, weights)
+        delta_betas = self._compute_delta_beta(X, events, start, stop, weights)
 
         if self.cluster_col:
             delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
