@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import pytest
+import os
 import numpy as np
 import pandas as pd
 from pandas.util.testing import assert_frame_equal, assert_series_equal
@@ -582,7 +583,18 @@ class TestLongDataFrameUtils(object):
 
         idx = df["id"] == 1
         n = idx.sum()
-        assert_series_equal(df["enum"].loc[idx], pd.Series(np.arange(1, n + 1)), check_names=False)
+        try:
+            assert_series_equal(df["enum"].loc[idx], pd.Series(np.arange(1, n + 1)), check_names=False)
+        except AssertionError as e:
+            # Windows Numpy and Pandas sometimes have int32 or int64 as default dtype
+            if os.name == "nt" and "int32" in str(e) and "int64" in str(e):
+                assert_series_equal(
+                    df["enum"].loc[idx],
+                    pd.Series(np.arange(1, n + 1), dtype=df["enum"].loc[idx].dtypes),
+                    check_names=False,
+                )
+            else:
+                raise e
 
     def test_event_col_is_properly_inserted(self, seed_df, cv2):
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv2, "id", "t", "E")
@@ -792,7 +804,8 @@ class TestLongDataFrameUtils(object):
             rossi, duration_col="week", event_col="arrest", id_col="id", time_gaps=1000.0
         )
 
-        long_rossi["week"] = long_rossi["stop"].astype(int)
+        # using astype(int) would fail on Windows because int32 and int64 are used as dtype
+        long_rossi["week"] = long_rossi["stop"].astype(rossi["week"].dtype)
         del long_rossi["start"]
         del long_rossi["stop"]
 

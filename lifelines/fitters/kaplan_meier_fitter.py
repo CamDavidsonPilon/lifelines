@@ -53,7 +53,7 @@ class KaplanMeierFitter(UnivariateFitter):
         """
         Parameters
         ----------
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
+          durations: an array, or pd.Series, of length n -- duration subject was observed for
           timeline: return the best estimate at the values in timelines (postively increasing)
           event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
              was lost (right-censored). Defaults all True if event_observed==None

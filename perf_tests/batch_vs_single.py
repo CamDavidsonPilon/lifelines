@@ -26,16 +26,22 @@ for n_copies in [1, 2, 4, 6, 8, 10, 13, 17, 20]:
 
         df["week"] = np.tile(unique_durations, int(np.ceil(1 / fraction)))[: df.shape[0]]
 
-        cph_batch = CoxPHFitter()
-        start_time = time()
-        cph_batch.fit(df, "week", "arrest", batch_mode=True)
-        batch_time = time() - start_time
+        batch_results = []
+        for _ in range(3):
+            cph_batch = CoxPHFitter()
+            start_time = time()
+            cph_batch.fit(df, "week", "arrest", batch_mode=True)
+            batch_results.append(time() - start_time)
 
-        cph_single = CoxPHFitter()
-        start_time = time()
-        cph_single.fit(df, "week", "arrest", batch_mode=False)
-        single_time = time() - start_time
+        single_results = []
+        for _ in range(3):
+            cph_single = CoxPHFitter()
+            start_time = time()
+            cph_single.fit(df, "week", "arrest", batch_mode=False)
+            single_results.append(time() - start_time)
 
+        batch_time = min(batch_results)
+        single_time = min(single_results)
         print({"batch": batch_time, "single": single_time})
         results[(n_copies * ROSSI_ROWS, fraction)] = {"batch": batch_time, "single": single_time}
 
@@ -58,3 +64,4 @@ Y = results["ratio"]
 
 model = sm.OLS(Y, X).fit()
 print(model.summary())
+print(model.params)

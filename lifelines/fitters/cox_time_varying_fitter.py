@@ -13,6 +13,16 @@ from scipy import stats
 from numpy import dot, exp
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
+
+# for some summations, bottleneck is faster than numpy sums. Let's use them intelligently.
+try:
+    from bottleneck import nansum as array_sum_to_scalar
+except ImportError:
+    from numpy import sum as array_sum_to_scalar
+finally:
+    matrix_axis_0_sum_to_array = lambda m: np.sum(m, 0)
+
+
 from lifelines.fitters import BaseFitter
 from lifelines import CoxPHFitter
 from lifelines.statistics import chisq_test
@@ -150,13 +160,12 @@ class CoxTimeVaryingFitter(BaseFitter):
             df = df.set_index("id")
         else:
             df = df.set_index(_to_list(self.strata) + ["id"])  # TODO: needs to be a list
+            df = df.sort_index()
 
-        stop_times_events = df[["event", "stop", "start"]].copy()
-        weights = df[["__weights"]].copy().astype(float)
-        df = df.drop(["event", "stop", "start", "__weights"], axis=1)
-        stop_times_events["event"] = stop_times_events["event"].astype(bool)
+        events, start, stop = df.pop("event").astype(bool), df.pop("start"), df.pop("stop")
+        weights = df.pop("__weights").astype(float)
 
-        self._check_values(df, stop_times_events)
+        self._check_values(df, events, start, stop)
         df = df.astype(float)
 
         self._norm_mean = df.mean(0)
@@ -164,7 +173,9 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         hazards_ = self._newton_rhaphson(
             normalize(df, self._norm_mean, self._norm_std),
-            stop_times_events,
+            events,
+            start,
+            stop,
             weights,
             show_progress=show_progress,
             step_size=step_size,
@@ -173,13 +184,13 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
-            normalize(df, self._norm_mean, self._norm_std), stop_times_events, weights
+            normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, stop_times_events, weights)
+        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, events, start, stop, weights)
         self.baseline_survival_ = self._compute_baseline_survival()
-        self.event_observed = stop_times_events["event"]
-        self.start_stop_and_events = stop_times_events
+        self.event_observed = events
+        self.start_stop_and_events = pd.DataFrame({"event": events, "start": start, "stop": stop})
         self.weights = weights
 
         self._n_examples = df.shape[0]
@@ -187,25 +198,35 @@ class CoxTimeVaryingFitter(BaseFitter):
         return self
 
     @staticmethod
-    def _check_values(df, stop_times_events):
+    def _check_values(df, events, start, stop):
         # check_for_overlapping_intervals(df) # this is currenty too slow for production.
         check_nans_or_infs(df)
         check_low_var(df)
-        check_complete_separation_low_variance(df, stop_times_events["event"])
+        check_complete_separation_low_variance(df, events)
         pass_for_numeric_dtypes_or_raise(df)
-        check_for_immediate_deaths(stop_times_events)
-        check_for_instantaneous_events(stop_times_events)
+        check_for_immediate_deaths(events, start, stop)
+        check_for_instantaneous_events(start, stop)
 
-    def _partition_by_strata(self, X, stop_times_events, weights):
+    def _partition_by_strata(self, X, events, start, stop, weights):
         for stratum, stratified_X in X.groupby(self.strata):
-            stratified_stop_times_events, stratified_W = (stop_times_events.loc[stratum], weights.loc[stratum])
-            yield (stratified_X, stratified_stop_times_events, stratified_W), stratum
+            stratified_W = weights.loc[stratum]
+            stratified_start = start.loc[stratum]
+            stratified_events = events.loc[stratum]
+            stratified_stop = stop.loc[stratum]
+            yield (
+                stratified_X.values,
+                stratified_events.values,
+                stratified_start.values,
+                stratified_stop.values,
+                stratified_W.values,
+            ), stratum
 
-    def _partition_by_strata_and_apply(self, X, stop_times_events, weights, function, *args):
-        for (stratified_X, stratified_stop_times_events, stratified_W), _ in self._partition_by_strata(
-            X, stop_times_events, weights
-        ):
-            yield function(stratified_X, stratified_stop_times_events, stratified_W, *args)
+    def _partition_by_strata_and_apply(self, X, events, start, stop, weights, function, *args):
+        for (
+            (stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W),
+            _,
+        ) in self._partition_by_strata(X, events, start, stop, weights):
+            yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
@@ -247,7 +268,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         return df
 
     def _newton_rhaphson(
-        self, df, stop_times_events, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
+        self, df, events, start, stop, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
     ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -279,7 +300,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         i = 0
         converging = True
         ll, previous_ll = 0, 0
-        start = time.time()
+        start_time = time.time()
 
         step_sizer = StepSizer(step_size)
         step_size = step_sizer.next()
@@ -288,13 +309,15 @@ class CoxTimeVaryingFitter(BaseFitter):
             i += 1
 
             if self.strata is None:
-                h, g, ll = self._get_gradients(df, stop_times_events, weights, beta)
+                h, g, ll = self._get_gradients(
+                    df.values, events.values, start.values, stop.values, weights.values, beta
+                )
             else:
                 g = np.zeros_like(beta).T
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(
-                    df, stop_times_events, weights, self._get_gradients, beta
+                    df, events, start, stop, weights, self._get_gradients, beta
                 ):
                     g += _g
                     h += _h
@@ -335,7 +358,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             if show_progress:
                 print(
                     "Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
-                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start)
+                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start_time)
                 )
 
             # convergence criteria
@@ -354,7 +377,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 converging, completed = False, False
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn(
-                    "The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
+                    "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ",
                     ConvergenceWarning,
                 )
@@ -375,7 +398,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return beta
 
-    def _get_gradients(self, df, stops_events, weights, beta):  # pylint: disable=too-many-locals
+    def _get_gradients(self, X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
@@ -386,46 +409,46 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_likelihood: float
         """
 
-        _, d = df.shape
+        _, d = X.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
         log_lik = 0
-
-        unique_death_times = np.unique(stops_events["stop"].loc[stops_events["event"]])
+        weights = weights[:, None]
+        unique_death_times = np.unique(stop[events])
 
         for t in unique_death_times:
 
             # I feel like this can be made into some tree-like structure
-            ix = (stops_events["start"].values < t) & (t <= stops_events["stop"].values)
+            ix = (start < t) & (t <= stop)
 
-            df_at_t = df.values[ix]
-            weights_at_t = weights.values[ix]
-            stops_events_at_t = stops_events["stop"].values[ix]
-            events_at_t = stops_events["event"].values[ix]
+            X_at_t = X[ix]
+            weights_at_t = weights[ix]
+            stops_events_at_t = stop[ix]
+            events_at_t = events[ix]
 
-            phi_i = weights_at_t * exp(dot(df_at_t, beta))
-            phi_x_i = phi_i * df_at_t
-            phi_x_x_i = dot(df_at_t.T, phi_x_i)
+            phi_i = weights_at_t * exp(dot(X_at_t, beta))
+            phi_x_i = phi_i * X_at_t
+            phi_x_x_i = dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
-            risk_phi = phi_i.sum()
-            risk_phi_x = phi_x_i.sum(0)
+            risk_phi = array_sum_to_scalar(phi_i)
+            risk_phi_x = matrix_axis_0_sum_to_array(phi_x_i)
             risk_phi_x_x = phi_x_x_i
 
             # Calculate the sums of Tie set
             deaths = events_at_t & (stops_events_at_t == t)
 
-            ties_counts = deaths.sum()  # should always at least 1
+            ties_counts = array_sum_to_scalar(deaths.astype(int))  # should always at least 1
 
-            xi_deaths = df_at_t[deaths]
+            xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = (weights_deaths * xi_deaths).sum(0)
+            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths)
 
             if ties_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
-                tie_phi = phi_i[deaths].sum()
-                tie_phi_x = phi_x_i[deaths].sum(0)
+                tie_phi = array_sum_to_scalar(phi_i[deaths])
+                tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
                 tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
             partial_gradient = np.zeros(d)
@@ -585,21 +608,20 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
 
-        Conveniently, we can actually use another class to do most of the work.
+        Conveniently, we can actually use CoxPHFitter class to do most of the work.
 
         """
 
         trivial_dataset = self.start_stop_and_events.groupby(level=0).last()[["event", "stop"]]
-        weights = self.weights.groupby(level=0).last()[["__weights"]]
+        weights = self.weights.groupby(level=0).last()
         trivial_dataset = trivial_dataset.join(weights)
 
-        cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "stop", "event", weights_col="__weights", show_progress=False)
-
-        ll_null = cp_null._log_likelihood
+        ll_null = CoxPHFitter._trivial_log_likelihood(
+            trivial_dataset["stop"].values, trivial_dataset["event"].values, trivial_dataset["__weights"].values
+        )
         ll_alt = self._log_likelihood
 
-        test_stat = 2 * ll_alt - 2 * ll_null
+        test_stat = 2 * (ll_alt - ll_null)
         degrees_freedom = self.hazards_.shape[1]
         _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
         return test_stat, degrees_freedom, np.log(p_value)
@@ -662,20 +684,20 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return ax
 
     def _compute_cumulative_baseline_hazard(
-        self, tv_data, stop_times_events, weights
+        self, tv_data, events, start, stop, weights
     ):  # pylint: disable=too-many-locals
         hazards = self.predict_partial_hazard(tv_data).values
 
-        unique_death_times = np.unique(stop_times_events["stop"].loc[stop_times_events["event"]])
+        unique_death_times = np.unique(stop[events.values])
         baseline_hazard_ = pd.DataFrame(
             np.zeros_like(unique_death_times), index=unique_death_times, columns=["baseline hazard"]
         )
 
         for t in unique_death_times:
-            ix = (stop_times_events["start"].values < t) & (t <= stop_times_events["stop"].values)
+            ix = (start.values < t) & (t <= stop.values)
 
-            events_at_t = stop_times_events["event"].values[ix]
-            stops_at_t = stop_times_events["stop"].values[ix]
+            events_at_t = events.values[ix]
+            stops_at_t = stop.values[ix]
             weights_at_t = weights.values[ix]
             hazards_at_t = hazards[ix]
 
@@ -704,22 +726,22 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             s = """<lifelines.%s>""" % classname
         return s
 
-    def _compute_residuals(self, df, stop_times_events, weights):
+    def _compute_residuals(self, df, events, start, stop, weights):
         raise NotImplementedError()
 
-    def _compute_delta_beta(self, df, stop_times_events, weights):
+    def _compute_delta_beta(self, df, events, start, stop, weights):
         """ approximate change in betas as a result of excluding ith row"""
 
-        score_residuals = self._compute_residuals(df, stop_times_events, weights) * weights[:, None]
+        score_residuals = self._compute_residuals(df, events, start, stop, weights) * weights[:, None]
 
         naive_var = inv(self._hessian_)
         delta_betas = -score_residuals.dot(naive_var) / self._norm_std.values
 
         return delta_betas
 
-    def _compute_sandwich_estimator(self, df, stop_times_events, weights):
+    def _compute_sandwich_estimator(self, X, events, start, stop, weights):
 
-        delta_betas = self._compute_delta_beta(df, stop_times_events, weights)
+        delta_betas = self._compute_delta_beta(X, events, start, stop, weights)
 
         if self.cluster_col:
             delta_betas = pd.DataFrame(delta_betas).groupby(self._clusters).sum().values
@@ -727,9 +749,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         sandwich_estimator = delta_betas.T.dot(delta_betas)
         return sandwich_estimator
 
-    def _compute_standard_errors(self, df, stop_times_events, weights):
+    def _compute_standard_errors(self, X, events, start, stop, weights):
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_estimator(df, stop_times_events, weights).diagonal())
+            se = np.sqrt(self._compute_sandwich_estimator(X, events, start, stop, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
