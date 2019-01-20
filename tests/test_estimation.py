@@ -910,9 +910,9 @@ class TestCoxPHFitter:
         )
 
         cph.fit(df, "T", "E", weights_col="W")
-        assert df.dtypes["E"] == int
-        assert df.dtypes["W"] == int
-        assert df.dtypes["T"] == int
+        assert df.dtypes["E"] in (int, np.dtype('int64'))
+        assert df.dtypes["W"] in (int, np.dtype('int64'))
+        assert df.dtypes["T"] in (int, np.dtype('int64'))
 
     def test_cph_will_handle_times_with_only_censored_individuals(self, rossi):
         rossi_29 = rossi.iloc[0:10].copy()

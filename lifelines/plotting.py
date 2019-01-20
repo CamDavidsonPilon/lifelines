@@ -195,6 +195,10 @@ def plot_lifetimes(
       if entry is provided, and the data is left-truncated, this will display additional information in the plot to reflect this. 
     sort_by_duration: boolean
       sort by the duration vector
+    event_observed_color: str
+      default: "#A60628"
+    event_censored_color: str
+      default: "#348ABD"
 
     Returns
     -------
@@ -321,6 +325,10 @@ def plot_estimate(
 
     Parameters
     -----------
+    cls:
+
+    estimate:
+        default: None
     show_censors: bool
         place markers at censorship events. Default: False
     censor_styles: bool

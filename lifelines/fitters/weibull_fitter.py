@@ -100,7 +100,7 @@ class WeibullFitter(UnivariateFitter):
         """
         Parameters
         ----------
-        duration: an array, or pd.Series
+        durations: an array, or pd.Series
           length n, duration subject was observed for
         event_observed: numpy array or pd.Series, optional
           length n, True if the the death was observed, False if the event

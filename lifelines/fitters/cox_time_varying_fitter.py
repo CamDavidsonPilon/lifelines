@@ -377,7 +377,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 converging, completed = False, False
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn(
-                    "The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
+                    "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ",
                     ConvergenceWarning,
                 )

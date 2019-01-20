@@ -345,6 +345,8 @@ It's important to know that the naive variance estimates of the coefficients are
             If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        p: float
+            default: 0.5
 
         """
         index = _get_index(X)
@@ -399,9 +401,8 @@ It's important to know that the naive variance estimates of the coefficients are
         -----------
         columns: string or list-like, optional
           If not empty, plot a subset of columns from the ``cumulative_hazards_``. Default all.
-        ix: slice, optional
-          specify a time-based subsection of the curves to plot, ex:
-                 ``.plot(loc=slice(0.,10.))`` will plot the time values between t=0. and t=10.
+        loc:
+
         iloc: slice, optional
           specify a location-based subsection of the curves to plot, ex:
                  ``.plot(iloc=slice(0,10))`` will plot the first 10 time points.

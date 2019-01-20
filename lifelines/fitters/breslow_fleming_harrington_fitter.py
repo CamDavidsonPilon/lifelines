@@ -39,7 +39,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         """
         Parameters
         ----------
-        duration: an array, or pd.Series, of length n
+        durations: an array, or pd.Series, of length n
             duration subject was observed for
         timeline: 
             return the best estimate at the values in timelines (postively increasing)
