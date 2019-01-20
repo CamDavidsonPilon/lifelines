@@ -213,24 +213,15 @@ class CoxTimeVaryingFitter(BaseFitter):
             stratified_start = start.loc[stratum]
             stratified_events = events.loc[stratum]
             stratified_stop = stop.loc[stratum]
-            yield (stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W), stratum
+            yield (stratified_X.values, stratified_events.values, stratified_start.values, stratified_stop.values, stratified_W.values), stratum
 
-    def _partition_by_strata_and_apply(self, X, events, start, stop, weights, function, *args, as_dataframes=True):
+    def _partition_by_strata_and_apply(self, X, events, start, stop, weights, function, *args):
         for (
             (stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W),
             _,
         ) in self._partition_by_strata(X, events, start, stop, weights):
-            if as_dataframes:
-                yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
-            else:
-                yield function(
-                    stratified_X.values,
-                    stratified_events.values,
-                    stratified_start.values,
-                    stratified_stop.values,
-                    stratified_W,
-                    *args
-                )
+            yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
+
 
     def _compute_z_values(self):
         return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
@@ -321,7 +312,7 @@ class CoxTimeVaryingFitter(BaseFitter):
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(
-                    df, events, start, stop, weights, self._get_gradients, beta, as_dataframes=False
+                    df, events, start, stop, weights, self._get_gradients, beta
                 ):
                     g += _g
                     h += _h
