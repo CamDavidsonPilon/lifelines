@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from numpy import dot, exp, zeros
+from numpy import dot, exp
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
 from scipy.integrate import trapz
