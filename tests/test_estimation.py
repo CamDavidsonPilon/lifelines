@@ -1423,12 +1423,15 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         rossi <- read.csv('.../lifelines/datasets/rossi.csv')
         r <- coxph(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio,
             data=rossi)
-        cat(round(r$coefficients, 4), sep=", ")
+        cat(round(r$coefficients, 8), sep=", ")
         """
-        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849, 0.0915]])
+        expected = np.array([[-0.3794222, -0.0574377, 0.3138998, -0.1497957, -0.4337039, -0.0848711, 0.0914971]])
         cf = CoxPHFitter()
-        cf.fit(rossi, duration_col="week", event_col="arrest", show_progress=True)
-        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
+        cf.fit(rossi, duration_col="week", event_col="arrest", show_progress=True, batch_mode=True)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=6)
+
+        cf.fit(rossi, duration_col="week", event_col="arrest", show_progress=True, batch_mode=False)
+        npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=6)
 
     def test_coef_output_against_R_with_strata_super_accurate(self, rossi):
         """
@@ -1443,7 +1446,7 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         """
         expected = np.array([[-0.3788, -0.0576, -0.1427, -0.4388, -0.0858, 0.0922]])
         cf = CoxPHFitter()
-        cf.fit(rossi, duration_col="week", event_col="arrest", strata=["race"], show_progress=True)
+        cf.fit(rossi, duration_col="week", event_col="arrest", strata=["race"], show_progress=True, batch_mode=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
 
     def test_coef_output_against_R_using_non_trivial_but_integer_weights(self, rossi):
@@ -1973,7 +1976,7 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         expected = 33.27
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest")
-        assert (cf._compute_likelihood_ratio_test()[0] - expected) < 0.01
+        assert (cf._compute_likelihood_ratio_test()[0] - expected) < 0.001
 
     def test_output_with_strata_against_R(self, rossi):
         """

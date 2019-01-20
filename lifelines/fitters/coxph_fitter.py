@@ -8,23 +8,35 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from numpy import dot, exp
+from numpy import dot, exp, zeros
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve
 from scipy.integrate import trapz
 from scipy import stats
 
+
+# for some summations, bottleneck is faster than numpy sums. Let's use them intelligently.
+try:
+    from bottleneck import nansum as array_sum_to_scalar
+except ImportError:
+    from numpy import sum as array_sum_to_scalar
+finally:
+    from numpy import sum as matrix_axis_0_sum_to_array
+
+
 from lifelines.fitters import BaseFitter
 from lifelines.plotting import set_kwargs_ax
 from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers
+from lifelines.utils.lowess import lowess
 from lifelines.utils import (
+    _get_index,
+    _to_list,
     survival_table_from_events,
     inv_normal_cdf,
     normalize,
     significance_code,
     significance_codes_as_text,
     concordance_index,
-    _get_index,
     qth_survival_times,
     pass_for_numeric_dtypes_or_raise,
     check_low_var,
@@ -37,24 +49,22 @@ from lifelines.utils import (
     StepSizer,
     ConvergenceError,
     string_justify,
-    _to_list,
     format_p_value,
     format_floats,
 )
-from lifelines.utils.lowess import lowess
 
 
 class BatchVsSingle:
     @staticmethod
     def decide(batch_mode, T):
-        n = T.shape[0]
+        n_total = T.shape[0]
         n_unique = T.unique().shape[0]
-        frac_dups = n_unique / n
+        frac_dups = n_unique / n_total
         if batch_mode or (
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
-            and (0.5465 + -1.187e-05 * n + 1.0899 * frac_dups + 0.0001 * n * frac_dups < 1)
+            and (0.4940 + -2.236e-05 * n_total + 1.0065 * frac_dups + 0.0002 * n_total * frac_dups < 1)
         ):
             return "batch"
         return "single"
@@ -571,16 +581,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             phi_x_x_i = dot(xi.T, phi_x_i)
 
             # Calculate sums of Risk set
-            risk_phi += phi_i
-            risk_phi_x += phi_x_i
-            risk_phi_x_x += phi_x_x_i
+            risk_phi = risk_phi + phi_i
+            risk_phi_x = risk_phi_x + phi_x_i
+            risk_phi_x_x = risk_phi_x_x + phi_x_x_i
 
             # Calculate sums of Ties, if this is an event
             if ei:
-                x_tie_sum += w * xi
-                tie_phi += phi_i
-                tie_phi_x += phi_x_i
-                tie_phi_x_x += phi_x_x_i
+                x_tie_sum = x_tie_sum + w * xi
+                tie_phi = tie_phi + phi_i
+                tie_phi_x = tie_phi_x + phi_x_i
+                tie_phi_x_x = tie_phi_x_x + phi_x_x_i
 
                 # Keep track of count
                 tie_count += 1
@@ -608,7 +618,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 denom = risk_phi - l * tie_phi / tie_count
 
                 # Gradient
-                partial_gradient += weighted_average * numer / denom
+                partial_gradient = partial_gradient + (weighted_average * numer / denom)
                 # Hessian
                 a1 = (risk_phi_x_x - l * tie_phi_x_x / tie_count) / denom
 
@@ -616,12 +626,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # make sure to do division before multiplications
                 a2 = dot(numer.T / denom, numer / denom)
 
-                hessian -= weighted_average * (a1 - a2)
+                hessian = hessian - (weighted_average * (a1 - a2))
 
-                log_lik -= weighted_average * np.log(denom[0][0])
+                log_lik = log_lik - (weighted_average * np.log(denom[0][0]))
 
             # Values outside tie sum
-            gradient += x_tie_sum - partial_gradient
+            gradient = gradient + (x_tie_sum - partial_gradient)
             log_lik += dot(x_tie_sum, beta)[0][0]
 
             # reset tie values
@@ -632,6 +642,45 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
         return hessian, gradient, log_lik
+
+    @staticmethod
+    def _trivial_log_likelihood(T, E, weights):
+        # used for log-likelihood test
+        log_lik = 0
+        unique_death_times = np.unique(T)
+        risk_phi = 0
+
+        for t in reversed(unique_death_times):
+
+            ix = T == t
+
+            weights_at_t = weights[ix]
+
+            phi_i = weights_at_t
+
+            # Calculate sums of Risk set
+            risk_phi = risk_phi + array_sum_to_scalar(phi_i)
+
+            # Calculate the sums of Tie set
+            deaths = E[ix]
+
+            tied_death_counts = array_sum_to_scalar(deaths.astype(int))
+            if tied_death_counts == 0:
+                # no deaths, can continue
+                continue
+
+            weights_deaths = weights_at_t[deaths]
+            weight_count = array_sum_to_scalar(weights_deaths)
+
+            if tied_death_counts > 1:
+                tie_phi = array_sum_to_scalar(phi_i[deaths])
+                factor = np.log(risk_phi - np.arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
+            else:
+                factor = np.log(risk_phi)
+
+            log_lik = log_lik - weight_count / tied_death_counts * factor
+
+        return log_lik
 
     def _get_efron_values_batch(self, X, T, E, weights, beta):  # pylint: disable=too-many-locals
         """
@@ -648,6 +697,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         hessian = np.zeros((d, d))
         gradient = np.zeros((1, d))
         log_lik = 0
+        weights = weights[:, None]
 
         # Init risk and tie sums to zero
         risk_phi, tie_phi = 0, 0
@@ -655,6 +705,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         unique_death_times = np.unique(T)
+        scores = weights * exp(dot(X, beta))
 
         for t in reversed(unique_death_times):
 
@@ -664,21 +715,21 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             # slice_ = slice(pos - ix.sum(), pos)
 
             X_at_t = X[ix]
-            weights_at_t = weights[ix][:, None]
+            weights_at_t = weights[ix]
 
-            phi_i = weights_at_t * exp(dot(X_at_t, beta))
+            phi_i = scores[ix]
             phi_x_i = phi_i * X_at_t
             phi_x_x_i = dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
-            risk_phi += phi_i.sum()
-            risk_phi_x += phi_x_i.sum(0)
-            risk_phi_x_x += phi_x_x_i
+            risk_phi = risk_phi + array_sum_to_scalar(phi_i)
+            risk_phi_x = risk_phi_x + matrix_axis_0_sum_to_array(phi_x_i, 0)
+            risk_phi_x_x = risk_phi_x_x + phi_x_x_i
 
             # Calculate the sums of Tie set
             deaths = E[ix]
 
-            tied_death_counts = deaths.sum()
+            tied_death_counts = array_sum_to_scalar(deaths.astype(int))
             if tied_death_counts == 0:
                 # no deaths, can continue
                 continue
@@ -686,19 +737,19 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = (weights_deaths * xi_deaths).sum(0)
+            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths, 0)
 
             if tied_death_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
-                tie_phi = phi_i[deaths].sum()
-                tie_phi_x = phi_x_i[deaths].sum(0)
+                tie_phi = array_sum_to_scalar(phi_i[deaths])
+                tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths], 0)
                 tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
-            partial_gradient = np.zeros((1, d))
             partial_ll = 0
+            partial_gradient = np.zeros((1, d))
             partial_hessian = np.zeros((d, d))
 
-            weight_count = weights_deaths.sum()
+            weight_count = array_sum_to_scalar(weights_deaths)
             weighted_average = weight_count / tied_death_counts
 
             for l in range(tied_death_counts):
@@ -722,20 +773,20 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                     a1 = risk_phi_x_x / denom
 
                 # Gradient
-                partial_gradient += numer / denom
+                partial_gradient = partial_gradient + numer / denom
                 # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
                 t = numer / denom
                 # this is faster than an outerproduct
                 a2 = t.T.dot(t)
 
-                partial_hessian -= a1 - a2
-                partial_ll -= np.log(denom)
+                partial_hessian = partial_hessian - (a1 - a2)
+                partial_ll = partial_ll - np.log(denom)
 
             # Values outside tie sum
-            gradient += x_death_sum - weighted_average * partial_gradient
-            log_lik += dot(x_death_sum, beta)[0] + weighted_average * partial_ll
-            hessian += weighted_average * partial_hessian
+            gradient = gradient + (x_death_sum - weighted_average * partial_gradient)
+            log_lik = log_lik + (dot(x_death_sum, beta)[0] + weighted_average * partial_ll)
+            hessian = hessian + (weighted_average * partial_hessian)
 
         return hessian, gradient, log_lik
 
@@ -799,7 +850,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         """
 
-        n_deaths = sum(self.event_observed)
+        n_deaths = array_sum_to_scalar(self.event_observed)
         scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(
             self.variance_matrix_
         )
@@ -838,7 +889,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         n, d = X.shape
 
-        if E.sum() == 0:
+        if array_sum_to_scalar(E) == 0:
             # sometimes strata have no deaths. This means nothing is returned
             # in the below code.
             return np.zeros((n, d))
@@ -870,15 +921,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             phi_x_i = phi_i * xi
 
             # Calculate sums of Risk set
-            risk_phi += phi_i
-            risk_phi_x += phi_x_i
+            risk_phi = risk_phi + phi_i
+            risk_phi_x = risk_phi_x + phi_x_i
 
             # Calculate sums of Ties, if this is an event
             diff_against.append((xi, ei, i))
             if ei:
 
-                tie_phi += phi_i
-                tie_phi_x += phi_x_i
+                tie_phi = tie_phi + phi_i
+                tie_phi_x = tie_phi_x + phi_x_i
 
                 # Keep track of count
                 tie_count += 1  # aka death counts
@@ -974,12 +1025,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             xi = X[i : i + 1]
             phi_i = phi_s[i]
 
-            score = -phi_i * (
+            score = -phi_i * matrix_axis_0_sum_to_array(
                 (
                     E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T
                 ).T  # this is constant-ish, and could be cached
-                * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1])
-            ).sum(0)
+                * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1]),
+                0,
+            )
 
             if E[i]:
                 score = score + (xi - risk_phi_x_history[i] / risk_phi_history[i])
@@ -1094,7 +1146,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             print("{} = {}".format(justify("strata"), self.strata))
 
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
-        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
+        print("{} = {}".format(justify("number of events"), array_sum_to_scalar(self.event_observed)))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 
@@ -1125,15 +1177,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
 
-        Conveniently, we can actually use the class itself to do most of the work.
-
         """
-        trivial_dataset = pd.DataFrame({"E": self.event_observed, "T": self.durations, "W": self.weights})
-
-        cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "T", "E", weights_col="W", show_progress=False)
-
-        ll_null = cp_null._log_likelihood
+        ll_null = self._trivial_log_likelihood(self.durations.values, self.event_observed.values, self.weights.values)
         ll_alt = self._log_likelihood
 
         test_stat = 2 * ll_alt - 2 * ll_null

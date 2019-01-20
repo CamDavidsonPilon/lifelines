@@ -585,7 +585,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
 
-        Conveniently, we can actually use another class to do most of the work.
+        Conveniently, we can actually use CoxPHFitter class to do most of the work.
 
         """
 
@@ -593,10 +593,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         weights = self.weights.groupby(level=0).last()[["__weights"]]
         trivial_dataset = trivial_dataset.join(weights)
 
-        cp_null = CoxPHFitter()
-        cp_null.fit(trivial_dataset, "stop", "event", weights_col="__weights", show_progress=False)
-
-        ll_null = cp_null._log_likelihood
+        ll_null = CoxPHFitter._trivial_log_likelihood(trivial_dataset['stop'].values, trivial_dataset['event'].values, trivial_dataset['__weights'].values)
         ll_alt = self._log_likelihood
 
         test_stat = 2 * ll_alt - 2 * ll_null
