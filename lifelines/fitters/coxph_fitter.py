@@ -1025,7 +1025,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             xi = X[i : i + 1]
             phi_i = phi_s[i]
 
-            score = -phi_i * (
+            score = -phi_i * matrix_axis_0_sum_to_array(
                 (
                     E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T
                 ).T  # this is constant-ish, and could be cached
