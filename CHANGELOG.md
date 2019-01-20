@@ -4,6 +4,8 @@
  - adding bottleneck as a dependency. This library is highly-recommended by Pandas, and in lifelines we see some nice performance improvements with it too. (~15% for `CoxPHFitter`)
  - There was a small bug in `CoxPHFitter` when using `batch_mode` that was causing coefficients to deviate from their MLE value. This bug elluded tests, which means that it's discrepancy was less than 0.0001 difference. It's fixed now, and even more accurate tests are added. 
  - Faster `CoxPHFitter._compute_likelihood_ratio_test()`
+ - Fixes a Pandas performance warning in `CoxTimeVaryingFitter`.
+ - Performances improvements to `CoxTimeVaryingFitter`. 
 
 #### 0.17.0
  - corrected behaviour in `CoxPHFitter` where `score_` was not being refreshed on every new `fit`.

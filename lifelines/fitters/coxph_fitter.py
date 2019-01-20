@@ -21,7 +21,7 @@ try:
 except ImportError:
     from numpy import sum as array_sum_to_scalar
 finally:
-    from numpy import sum as matrix_axis_0_sum_to_array
+    matrix_axis_0_sum_to_array = lambda m: np.sum(m, 0)
 
 
 from lifelines.fitters import BaseFitter
@@ -723,7 +723,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + array_sum_to_scalar(phi_i)
-            risk_phi_x = risk_phi_x + matrix_axis_0_sum_to_array(phi_x_i, 0)
+            risk_phi_x = risk_phi_x + matrix_axis_0_sum_to_array(phi_x_i)
             risk_phi_x_x = risk_phi_x_x + phi_x_x_i
 
             # Calculate the sums of Tie set
@@ -737,12 +737,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths, 0)
+            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths)
 
             if tied_death_counts > 1:
                 # it's faster if we can skip computing these when we don't need to.
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
-                tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths], 0)
+                tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
                 tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
             partial_ll = 0
@@ -1025,12 +1025,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             xi = X[i : i + 1]
             phi_i = phi_s[i]
 
-            score = -phi_i * matrix_axis_0_sum_to_array(
+            score = -phi_i * p(
                 (
                     E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T
                 ).T  # this is constant-ish, and could be cached
-                * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1]),
-                0,
+                * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1])
             )
 
             if E[i]:

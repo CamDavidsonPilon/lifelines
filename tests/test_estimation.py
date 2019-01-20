@@ -2729,8 +2729,9 @@ class TestCoxTimeVaryingFitter:
                 ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
             except (LinAlgError, ValueError):
                 pass
-            assert len(w) == 2
-            assert issubclass(w[-1].category, ConvergenceWarning)
+            print(w)
+            assert len(w) == 8
+            assert issubclass(w[0].category, ConvergenceWarning)
             assert "variance" in str(w[0].message)
 
     def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, ctv, dfcv):

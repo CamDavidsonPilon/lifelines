@@ -828,13 +828,9 @@ def pass_for_numeric_dtypes_or_raise(df):
         )
 
 
-def check_for_immediate_deaths(stop_times_events):
+def check_for_immediate_deaths(events, start, stop):
     # Only used in CTV. This checks for deaths immediately, that is (0,0) lives.
-    if (
-        (stop_times_events["start"] == stop_times_events["stop"])
-        & (stop_times_events["stop"] == 0)
-        & stop_times_events["event"]
-    ).any():
+    if ((start == stop) & (stop == 0) & events).any():
         raise ValueError(
             """The dataset provided has subjects that die on the day of entry. (0, 0)
 is not allowed in CoxTimeVaryingFitter. If suffices to add a small non-zero value to their end - example Pandas code:
@@ -846,8 +842,8 @@ Alternatively, add 1 to every subjects' final end period.
         )
 
 
-def check_for_instantaneous_events(stop_times_events):
-    if ((stop_times_events["start"] == stop_times_events["stop"]) & (stop_times_events["stop"] == 0)).any():
+def check_for_instantaneous_events(events, start, stop):
+    if ((start == stop) & (stop == 0)).any():
         warning_text = """There exist rows in your dataframe with start and stop both at time 0:
 
         > df.loc[(df[start_col] == df[stop_col]) & (df[start_col] == 0)]
