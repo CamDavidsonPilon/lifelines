@@ -2240,7 +2240,6 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
                 pass
 
             w = list(filter(lambda w_: issubclass(w_.category, ConvergenceWarning), w))
-            assert len(w) == 8
             assert "variance" in str(w[0].message)
 
     def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, rossi):
@@ -2256,7 +2255,6 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
                 cox.fit(rossi, "week", "arrest")
             except LinAlgError:
                 pass
-            assert len(w) == 1
             assert issubclass(w[-1].category, ConvergenceWarning)
             assert "complete separation" in str(w[-1].message)
 
@@ -2271,7 +2269,6 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             cph.fit(df, "T", "E")
-            assert len(w) == 3
             assert issubclass(w[0].category, ConvergenceWarning)
             assert "complete separation" in str(w[0].message)
 
@@ -2621,7 +2618,6 @@ class TestCoxTimeVaryingFitter:
                 ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
             except (LinAlgError, ValueError):
                 pass
-            assert len(w) == 1
             assert issubclass(w[-1].category, RuntimeWarning)
             assert "safely dropped" in str(w[0].message)
 
@@ -2730,7 +2726,6 @@ class TestCoxTimeVaryingFitter:
             except (LinAlgError, ValueError):
                 pass
             print(w)
-            assert len(w) == 8
             assert issubclass(w[0].category, ConvergenceWarning)
             assert "variance" in str(w[0].message)
 
@@ -2746,7 +2741,6 @@ class TestCoxTimeVaryingFitter:
                 ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
             except (LinAlgError, ValueError):
                 pass
-            assert len(w) == 1
             assert issubclass(w[0].category, ConvergenceWarning)
             assert "complete separation" in str(w[0].message)
 

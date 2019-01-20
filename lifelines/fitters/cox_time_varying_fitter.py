@@ -205,7 +205,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_complete_separation_low_variance(df, events)
         pass_for_numeric_dtypes_or_raise(df)
         check_for_immediate_deaths(events, start, stop)
-        check_for_instantaneous_events(events, start, stop)
+        check_for_instantaneous_events(start, stop)
 
     def _partition_by_strata(self, X, events, start, stop, weights):
         for stratum, stratified_X in X.groupby(self.strata):
@@ -739,7 +739,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         return delta_betas
 
-    def _compute_sandwich_estimator(self, X, stop_times_events, weights):
+    def _compute_sandwich_estimator(self, X, events, start, stop, weights):
 
         delta_betas = self._compute_delta_beta(X, stop_times_events, weights)
 

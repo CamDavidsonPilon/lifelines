@@ -24,7 +24,7 @@ from lifelines.utils import (
     string_justify,
     _to_list,
     format_floats,
-    significance_codes_as_text,
+    # significance_codes_as_text,
     format_p_value,
     survival_table_from_events,
     StatisticalWarning,

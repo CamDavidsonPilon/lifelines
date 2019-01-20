@@ -842,7 +842,7 @@ Alternatively, add 1 to every subjects' final end period.
         )
 
 
-def check_for_instantaneous_events(events, start, stop):
+def check_for_instantaneous_events(start, stop):
     if ((start == stop) & (stop == 0)).any():
         warning_text = """There exist rows in your dataframe with start and stop both at time 0:
 
