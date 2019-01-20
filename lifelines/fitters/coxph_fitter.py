@@ -900,7 +900,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 weighted_mean += numer / (denom * tie_count)
 
-            for xi, ei, i in diff_against:
+            for xi, ei, _ in diff_against:
                 schoenfeld_residuals = np.append(schoenfeld_residuals, ei * (xi - weighted_mean), axis=0)
 
             # reset tie values

@@ -70,7 +70,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
     Parameters
     ----------
     q: float
-      a float between 0 and 1 that represents the time when the survival function hit's the qth percentile.
+      a float between 0 and 1 that represents the time when the survival function hits the qth percentile.
     survival_functions: a (n,d) dataframe or numpy array.
       If dataframe, will return index values (actual times)
       If numpy array, will return indices.
@@ -89,7 +89,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
     q = pd.Series(q)
-
+    print(q)
     if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError("q must be between 0 and 1")
 
@@ -169,6 +169,7 @@ def group_survival_table_from_events(
     birth_times: a (n,) array
       when the subject was first observed. A subject's death event is then at [birth times + duration observed].
       Normally set to all zeros, but can be positive or negative.
+    limit:
 
     Returns
     -------
@@ -391,6 +392,10 @@ def survival_events_from_table(event_table, observed_deaths_col="observed", cens
     event_table: DataFrame
         a pandas DataFrame with index as the durations (!!) and columns "observed" and "censored", referring to
            the number of individuals that died and were censored at time t.
+    observed_deaths_col: str
+        default: "observed"
+    censored_col: str
+        default: "censored"
 
     Returns
     -------
@@ -448,7 +453,7 @@ def datetimes_to_durations(
         of observation. Anything after this date is also censored.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
-    day_first: boolean, optional (default=False)
+    dayfirst: boolean, optional (default=False)
          convert assuming European-style dates, i.e. day/month/year.
     na_values : list, optional
         list of values to recognize as NA/NaN. Ex: ['', 'NaT']
@@ -558,12 +563,12 @@ def k_fold_cross_validation(
 
     Parameters
     ----------
-    fitter(s): model
-                one or several objects which possess a method:
-                   fit(self, data, duration_col, event_col)
-               Note that the last two arguments will be given as keyword arguments,
-               and that event_col is optional. The objects must also have
-               the "predictor" method defined below.
+    fitters: model
+        one or several objects which possess a method:
+        fit(self, data, duration_col, event_col)
+        Note that the last two arguments will be given as keyword arguments,
+        and that event_col is optional. The objects must also have
+        the "predictor" method defined below.
     df: DataFrame
         a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
         other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
@@ -937,7 +942,6 @@ def check_nans_or_infs(df_or_array):
         if nulls.any():
             raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     # isinf check is done after isnull check since np.isinf doesn't work on None values
-    infs = []
     if isinstance(df_or_array, (pd.Series, pd.DataFrame)):
         infs = df_or_array == np.Inf
     else:

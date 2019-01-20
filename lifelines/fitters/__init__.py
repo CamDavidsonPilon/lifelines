@@ -118,7 +118,7 @@ class UnivariateFitter(BaseFitter):
 
         Parameters
         ----------
-        time: a scalar or an array of times to predict the value of {0} at.
+        times: a scalar or an array of times to predict the value of {0} at.
 
         Returns
         -------

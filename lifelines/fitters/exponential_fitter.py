@@ -48,7 +48,7 @@ class ExponentialFitter(UnivariateFitter):
         """
         Parameters
         ----------
-          duration: iterable
+          durations: iterable
             an array, or pd.Series, of length n -- duration subject was observed for
           event_observed: iterable, optional
             an array, list, or pd.Series, of length n -- True if the the death was observed, False if the event
