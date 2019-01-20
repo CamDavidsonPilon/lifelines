@@ -850,7 +850,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         """
 
-        n_deaths = array_sum_to_scalar(self.event_observed)
+        n_deaths = self.event_observed.sum()
         scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(
             self.variance_matrix_
         )
@@ -889,7 +889,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         n, d = X.shape
 
-        if array_sum_to_scalar(E) == 0:
+        if E.sum() == 0:
             # sometimes strata have no deaths. This means nothing is returned
             # in the below code.
             return np.zeros((n, d))
@@ -1145,7 +1145,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             print("{} = {}".format(justify("strata"), self.strata))
 
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
-        print("{} = {}".format(justify("number of events"), array_sum_to_scalar(self.event_observed)))
+        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 

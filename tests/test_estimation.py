@@ -2240,7 +2240,7 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
                 pass
 
             w = list(filter(lambda w_: issubclass(w_.category, ConvergenceWarning), w))
-            assert len(w) == 2
+            assert len(w) == 8
             assert "variance" in str(w[0].message)
 
     def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, rossi):
