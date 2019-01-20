@@ -64,7 +64,7 @@ class BatchVsSingle:
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
-            and (0.4940 + -2.236e-05 * n_total + 1.0065 * frac_dups + 0.0002 * n_total * frac_dups < 1)
+            and (0.5264 + -1.594e-05 * n_total + 1.1511 * frac_dups + 0.0002 * n_total * frac_dups < 1)
         ):
             return "batch"
         return "single"
