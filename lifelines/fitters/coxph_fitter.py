@@ -619,23 +619,25 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
                 # alot of this is now in einstien notation for performance, but see original "expanded" code here
-                # 
+                #
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
-                denom = 1. / (risk_phi - increasing_proportion * tie_phi)
+                denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
                 numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
                 # Hessian
                 # computes outer products and sums them together.
-                a1 = np.einsum('ab, i->ab', risk_phi_x_x, denom) - np.einsum('ab, i->ab', tie_phi_x_x, increasing_proportion * denom)
+                a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
+                    "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
+                )
             else:
-                # no tensors here, but do some casting to make it easier in the converging step next. 
-                denom = 1. /np.array([risk_phi])
+                # no tensors here, but do some casting to make it easier in the converging step next.
+                denom = 1.0 / np.array([risk_phi])
                 numer = risk_phi_x
                 # Hessian
                 a1 = risk_phi_x_x * denom
 
-            t = numer  * denom[:, None]
-            a2 = np.einsum('Bi, Bj->ij', t, t) # batch outer product
+            t = numer * denom[:, None]
+            a2 = np.einsum("Bi, Bj->ij", t, t)  # batch outer product
 
             gradient = gradient + x_death_sum - weighted_average * t.sum(0)
 
@@ -748,40 +750,40 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths)
 
-            if tied_death_counts > 1:
-                # it's faster if we can skip computing these when we don't need to.
-                tie_phi = array_sum_to_scalar(phi_i[deaths])
-                tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
-                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
-
             weight_count = array_sum_to_scalar(weights_deaths)
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
-
                 # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
                 # As it is not known a priori that who is the first to fail, so one-third of
                 # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
                 # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
                 # alot of this is now in einstien notation for performance, but see original "expanded" code here
-                # 
+                #
+
+                # it's faster if we can skip computing these when we don't need to.
+                tie_phi = array_sum_to_scalar(phi_i[deaths])
+                tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
+                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
-                denom = 1. / (risk_phi - increasing_proportion * tie_phi)
+                denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
                 numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
                 # Hessian
                 # computes outer products and sums them together.
-                a1 = np.einsum('ab,i->ab', risk_phi_x_x, denom) - np.einsum('ab,i->ab', tie_phi_x_x, increasing_proportion * denom)
+                a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
+                    "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
+                )
             else:
-                # no tensors here, but do some casting to make it easier in the converging step next. 
-                denom = 1. /np.array([risk_phi])
+                # no tensors here, but do some casting to make it easier in the converging step next.
+                denom = 1.0 / np.array([risk_phi])
                 numer = risk_phi_x
                 # Hessian
                 a1 = risk_phi_x_x * denom
 
-            t = numer  * denom[:, None]
-            a2 = np.einsum('Bi, Bj->ij', t, t) # batch outer product
+            t = numer * denom[:, None]
+            a2 = np.einsum("Bi, Bj->ij", t, t)  # batch outer product
 
             gradient = gradient + x_death_sum - weighted_average * t.sum(0)
             log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
