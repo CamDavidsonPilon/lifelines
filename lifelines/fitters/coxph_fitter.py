@@ -65,7 +65,7 @@ class BatchVsSingle:
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
             and (0.553591 + -1.001e-05 * n_total + 1.296786 * frac_dups + 0.000214 * n_total * frac_dups < 1)
-       ):
+        ):
             return "batch"
         return "single"
 
