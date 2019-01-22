@@ -64,7 +64,7 @@ class BatchVsSingle:
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
-            and (0.568249 + -0.000020 * n_total + 0.997904 * frac_dups + 0.000223 * n_total * frac_dups < 1)
+            and (0.553591 + -1.001e-05 * n_total + 1.296786 * frac_dups + 0.000214 * n_total * frac_dups < 1)
         ):
             return "batch"
         return "single"
@@ -513,6 +513,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return beta
 
     def _get_efron_values_single(self, X, T, E, weights, beta):
+        # TODO: push the beta.reshape up one level.
         """
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
@@ -554,17 +555,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         hessian = np.zeros((d, d))
         gradient = np.zeros((1, d))
         log_lik = 0
+        beta = beta.reshape(d)
 
         # Init risk and tie sums to zero
-        x_tie_sum = np.zeros((1, d))
+        x_death_sum = np.zeros((1, d))
         risk_phi, tie_phi = 0, 0
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         # Init number of ties and weights
         weight_count = 0.0
-        tie_count = 0
-        scores = weights[:, None] * exp(dot(X, beta))
+        tied_death_counts = 0
+        scores = weights * exp(dot(X, beta))
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
@@ -572,7 +574,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             ti = T[i]
             ei = E[i]
             xi = X[i : i + 1]
-            score = scores[i : i + 1]
+            score = scores[i]
             w = weights[i]
 
             # Calculate phi values
@@ -587,60 +589,56 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # Calculate sums of Ties, if this is an event
             if ei:
-                x_tie_sum = x_tie_sum + w * xi
+                x_death_sum = x_death_sum + w * xi
                 tie_phi = tie_phi + phi_i
                 tie_phi_x = tie_phi_x + phi_x_i
                 tie_phi_x_x = tie_phi_x_x + phi_x_x_i
 
                 # Keep track of count
-                tie_count += 1
+                tied_death_counts += 1
                 weight_count += w
 
             if i > 0 and T[i - 1] == ti:
                 # There are more ties/members of the risk set
                 continue
-            elif tie_count == 0:
+            elif tied_death_counts == 0:
                 # Only censored with current time, move on
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
-            partial_gradient = np.zeros((1, d))
-            weighted_average = weight_count / tie_count
+            #
+            # This code is near identical to the _batch algorithm below. In fact, see _batch for comments.
+            #
+            weighted_average = weight_count / tied_death_counts
 
-            for l in range(tie_count):
+            if tied_death_counts > 1:
+                increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
+                denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
+                numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
+                a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
+                    "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
+                )
+            else:
+                denom = 1.0 / np.array([risk_phi])
+                numer = risk_phi_x
+                a1 = risk_phi_x_x * denom
 
-                # A good explaination for Efron. Consider three of five subjects who fail at the time.
-                # As it is not known a priori that who is the first to fail, so one-third of
-                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+            summand = numer * denom[:, None]
+            a2 = np.einsum("Bi, Bj->ij", summand, summand)
 
-                numer = risk_phi_x - l * tie_phi_x / tie_count
-                denom = risk_phi - l * tie_phi / tie_count
+            gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
-                # Gradient
-                partial_gradient = partial_gradient + (weighted_average * numer / denom)
-                # Hessian
-                a1 = (risk_phi_x_x - l * tie_phi_x_x / tie_count) / denom
-
-                # In case numer and denom both are really small numbers,
-                # make sure to do division before multiplications
-                a2 = dot(numer.T / denom, numer / denom)
-
-                hessian = hessian - (weighted_average * (a1 - a2))
-
-                log_lik = log_lik - (weighted_average * np.log(denom[0][0]))
-
-            # Values outside tie sum
-            gradient = gradient + (x_tie_sum - partial_gradient)
-            log_lik += dot(x_tie_sum, beta)[0][0]
+            log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            hessian = hessian + weighted_average * (a2 - a1)
 
             # reset tie values
-            tie_count = 0
+            tied_death_counts = 0
             weight_count = 0.0
-            x_tie_sum = np.zeros((1, d))
+            x_death_sum = np.zeros((1, d))
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
+
         return hessian, gradient, log_lik
 
     @staticmethod
@@ -739,54 +737,55 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths)
 
+            weight_count = array_sum_to_scalar(weights_deaths)
+            weighted_average = weight_count / tied_death_counts
+
             if tied_death_counts > 1:
+                # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+                # As it is not known a priori that who is the first to fail, so one-third of
+                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
+                # a lot of this is now in einstien notation for performance, but see original "expanded" code here
+                # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/coxph_fitter.py#L755-L789
+
                 # it's faster if we can skip computing these when we don't need to.
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
                 tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
                 tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
-            partial_ll = 0
-            partial_gradient = np.zeros((1, d))
-            partial_hessian = np.zeros((d, d))
+                increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
+                denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
+                numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
 
-            weight_count = array_sum_to_scalar(weights_deaths)
-            weighted_average = weight_count / tied_death_counts
+                # computes outer products and sums them together.
+                # Naive approach is to
+                # 1) broadcast tie_phi_x_x and increasing_proportion into a (tied_death_counts, d, d) matrix
+                # 2) broadcast risk_phi_x_x and denom into a (tied_death_counts, d, d) matrix
+                # 3) subtract them, and then sum to (d, d)
+                # Alternatively, we can sum earlier without having to explicitly create (_, d, d) matrices. This is used here.
+                #
+                a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
+                    "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
+                )
+            else:
+                # no tensors here, but do some casting to make it easier in the converging step next.
+                denom = 1.0 / np.array([risk_phi])
+                numer = risk_phi_x
+                a1 = risk_phi_x_x * denom
 
-            for l in range(tied_death_counts):
+            summand = numer * denom[:, None]
 
-                if tied_death_counts > 1:
+            # This is a batch outer product.
+            # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
+            # which would be: np.einsum("Bi, Bj->Bij", t, t)
+            # Ultimately, we sum along this new axis, so we can just get einsum to do the sum for us.
+            # https://obilaniu6266h16.wordpress.com/2016/02/04/einstein-summation-in-numpy/
+            a2 = np.einsum("Bi, Bj->ij", summand, summand)
 
-                    # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
-                    # As it is not known a priori that who is the first to fail, so one-third of
-                    # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                    # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
-
-                    increasing_proportion = l / tied_death_counts
-                    denom = risk_phi - increasing_proportion * tie_phi
-                    numer = risk_phi_x - increasing_proportion * tie_phi_x
-                    # Hessian
-                    a1 = (risk_phi_x_x - increasing_proportion * tie_phi_x_x) / denom
-                else:
-                    denom = risk_phi
-                    numer = risk_phi_x
-                    # Hessian
-                    a1 = risk_phi_x_x / denom
-
-                # Gradient
-                partial_gradient = partial_gradient + numer / denom
-                # In case numer and denom both are really small numbers,
-                # make sure to do division before multiplications
-                t = numer / denom
-                # this is faster than an outerproduct
-                a2 = t.T.dot(t)
-
-                partial_hessian = partial_hessian - (a1 - a2)
-                partial_ll = partial_ll - np.log(denom)
-
-            # Values outside tie sum
-            gradient = gradient + (x_death_sum - weighted_average * partial_gradient)
-            log_lik = log_lik + (dot(x_death_sum, beta)[0] + weighted_average * partial_ll)
-            hessian = hessian + (weighted_average * partial_hessian)
+            gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
+            log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            hessian = hessian + weighted_average * (a2 - a1)
 
         return hessian, gradient, log_lik
 

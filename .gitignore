@@ -24,3 +24,6 @@ Pipfile.lock
 
 # docs artifacts
 docs/_build/
+
+# asv builds
+\.asv/
