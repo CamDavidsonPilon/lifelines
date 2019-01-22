@@ -1123,7 +1123,7 @@ class TestCoxPHFitter:
             sys.stdout = out
 
             cph = CoxPHFitter()
-            cph.fit(rossi, duration_col="week", event_col="arrest")
+            cph.fit(rossi, duration_col="week", event_col="arrest", batch_mode=True)
             cph._time_fit_was_called = "2018-10-23 02:40:45 UTC"
             cph.print_summary(decimals=1)
             output_dec_1 = out.getvalue().strip().split()
@@ -1134,6 +1134,7 @@ class TestCoxPHFitter:
             assert output_dec_1 != output_dec_3
         finally:
             sys.stdout = saved_stdout
+            cph.fit(rossi, duration_col="week", event_col="arrest", batch_mode=False)
 
     def test_print_summary(self, rossi, cph):
 
@@ -1645,7 +1646,6 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", cluster_col="id", strata=["strata"], show_progress=True)
         expected = pd.Series({"var": 0.643})
-        cph.print_summary()
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
 
     def test_robust_errors_with_less_trival_weights_is_the_same_as_R(self, regression_dataset):
