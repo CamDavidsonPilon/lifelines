@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.17.2
+ - Another round of serious performance improvements for the Cox models. Up to 2x faster for CoxPHFitter and CoxTimeVaryingFitter. This was mostly the result of using NumPy's `einsum` to simplify a previous `for` loop. The downside is the code is more esoteric now. I've added comments as necessary though 🤞
+
 #### 0.17.1
  - adding bottleneck as a dependency. This library is highly-recommended by Pandas, and in lifelines we see some nice performance improvements with it too. (~15% for `CoxPHFitter`)
  - There was a small bug in `CoxPHFitter` when using `batch_mode` that was causing coefficients to deviate from their MLE value. This bug eluded tests, which means that it's discrepancy was less than 0.0001 difference. It's fixed now, and even more accurate tests are added. 
