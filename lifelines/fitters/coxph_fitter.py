@@ -612,14 +612,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
-
-                # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
-                # As it is not known a priori that who is the first to fail, so one-third of
-                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
-
-                # alot of this is now in einstien notation for performance, but see original "expanded" code here
-                #
+                # This code is near identical to the _batch algorithm below. In fact, see _batch for comments.
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
@@ -636,10 +629,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # Hessian
                 a1 = risk_phi_x_x * denom
 
-            t = numer * denom[:, None]
-            a2 = np.einsum("Bi, Bj->ij", t, t)  # batch outer product
+            summand = numer * denom[:, None]
+            a2 = np.einsum("Bi, Bj->ij", summand, summand)  # batch outer product
 
-            gradient = gradient + x_death_sum - weighted_average * t.sum(0)
+            gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
             log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
@@ -759,8 +752,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
                 # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
-                # alot of this is now in einstien notation for performance, but see original "expanded" code here
-                #
+                # a lot of this is now in einstien notation for performance, but see original "expanded" code here
+                # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/coxph_fitter.py#L755-L789
 
                 # it's faster if we can skip computing these when we don't need to.
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
@@ -770,8 +763,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
                 numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
-                # Hessian
+
                 # computes outer products and sums them together.
+                # Naive approach is to
+                # 1) broadcast tie_phi_x_x and increasing_proportion into a (tied_death_counts, d, d) matrix
+                # 2) broadcast risk_phi_x_x and denom into a (tied_death_counts, d, d) matrix
+                # 3) subtract them, and then sum to (d, d)
+                # Alternatively, we can sum earlier without having to explicitly create (_, d, d) matrices. This is used here.
+                #
                 a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
                     "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
                 )
@@ -779,13 +778,18 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # no tensors here, but do some casting to make it easier in the converging step next.
                 denom = 1.0 / np.array([risk_phi])
                 numer = risk_phi_x
-                # Hessian
                 a1 = risk_phi_x_x * denom
 
-            t = numer * denom[:, None]
-            a2 = np.einsum("Bi, Bj->ij", t, t)  # batch outer product
+            summand = numer * denom[:, None]
 
-            gradient = gradient + x_death_sum - weighted_average * t.sum(0)
+            # This is a batch outer product.
+            # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
+            # which would be: np.einsum("Bi, Bj->Bij", t, t)
+            # Ultimately, we sum along this new axis, so we can just get einsum to do the sum for us.
+            # https://obilaniu6266h16.wordpress.com/2016/02/04/einstein-summation-in-numpy/
+            a2 = np.einsum("Bi, Bj->ij", summand, summand)
+
+            gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 

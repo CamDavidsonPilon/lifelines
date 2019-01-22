@@ -455,8 +455,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
                 # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
-                # alot of this is now in einstien notation for performance, but see original "expanded" code here
-                #
+                # a lot of this is now in einstien notation for performance, but see original "expanded" code here
+                # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/cox_time_varying_fitter.py#L458-L490
 
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
                 tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
@@ -478,10 +478,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # Hessian
                 a1 = risk_phi_x_x * denom
 
-            t = numer * denom[:, None]
-            a2 = np.einsum("Bi, Bj->ij", t, t)  # batch outer product
+            summand = numer * denom[:, None]
+            a2 = np.einsum("Bi, Bj->ij", summand, summand)  # batch outer product
 
-            gradient = gradient + x_death_sum - weighted_average * t.sum(0)
+            gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
