@@ -556,14 +556,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         log_lik = 0
 
         # Init risk and tie sums to zero
-        x_tie_sum = np.zeros((1, d))
+        x_death_sum = np.zeros((1, d))
         risk_phi, tie_phi = 0, 0
         risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         # Init number of ties and weights
         weight_count = 0.0
-        tie_count = 0
+        tied_death_counts = 0
         scores = weights[:, None] * exp(dot(X, beta))
 
         # Iterate backwards to utilize recursive relationship
@@ -587,60 +587,72 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             # Calculate sums of Ties, if this is an event
             if ei:
-                x_tie_sum = x_tie_sum + w * xi
+                x_death_sum = x_death_sum + w * xi
                 tie_phi = tie_phi + phi_i
                 tie_phi_x = tie_phi_x + phi_x_i
                 tie_phi_x_x = tie_phi_x_x + phi_x_x_i
 
                 # Keep track of count
-                tie_count += 1
+                tied_death_counts += 1
                 weight_count += w
 
             if i > 0 and T[i - 1] == ti:
                 # There are more ties/members of the risk set
                 continue
-            elif tie_count == 0:
+            elif tied_death_counts == 0:
                 # Only censored with current time, move on
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
             partial_gradient = np.zeros((1, d))
-            weighted_average = weight_count / tie_count
+            partial_hessian = np.zeros((d, d))
+            partial_ll = 0
+            weighted_average = weight_count / tied_death_counts
 
-            for l in range(tie_count):
+            for l in range(tied_death_counts):
 
-                # A good explaination for Efron. Consider three of five subjects who fail at the time.
-                # As it is not known a priori that who is the first to fail, so one-third of
-                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+                if tied_death_counts > 1:
 
-                numer = risk_phi_x - l * tie_phi_x / tie_count
-                denom = risk_phi - l * tie_phi / tie_count
+                    # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+                    # As it is not known a priori that who is the first to fail, so one-third of
+                    # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+                    # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
+                    increasing_proportion = l / tied_death_counts
+                    denom = risk_phi - increasing_proportion * tie_phi
+                    numer = risk_phi_x - increasing_proportion * tie_phi_x
+                    # Hessian
+                    a1 = (risk_phi_x_x - increasing_proportion * tie_phi_x_x) / denom
+                else:
+                    denom = risk_phi
+                    numer = risk_phi_x
+                    # Hessian
+                    a1 = risk_phi_x_x / denom
+
+                t = numer / denom
                 # Gradient
-                partial_gradient = partial_gradient + (weighted_average * numer / denom)
-                # Hessian
-                a1 = (risk_phi_x_x - l * tie_phi_x_x / tie_count) / denom
-
+                partial_gradient = partial_gradient + t
                 # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                a2 = dot(numer.T / denom, numer / denom)
+                # this is faster than an outerproduct
+                a2 = t.T.dot(t)
 
-                hessian = hessian - (weighted_average * (a1 - a2))
-
-                log_lik = log_lik - (weighted_average * np.log(denom[0][0]))
+                partial_hessian = partial_hessian - (a1 - a2)
+                partial_ll = partial_ll - np.log(denom[0][0])
 
             # Values outside tie sum
-            gradient = gradient + (x_tie_sum - partial_gradient)
-            log_lik += dot(x_tie_sum, beta)[0][0]
+            gradient = gradient + (x_death_sum - weighted_average * partial_gradient)
+            log_lik = log_lik + (dot(x_death_sum, beta)[0][0] + weighted_average * partial_ll)
+            hessian = hessian + (weighted_average * partial_hessian)
 
             # reset tie values
-            tie_count = 0
+            tied_death_counts = 0
             weight_count = 0.0
-            x_tie_sum = np.zeros((1, d))
+            x_death_sum = np.zeros((1, d))
             tie_phi = 0
             tie_phi_x = np.zeros((1, d))
             tie_phi_x_x = np.zeros((d, d))
+
         return hessian, gradient, log_lik
 
     @staticmethod
@@ -772,11 +784,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                     # Hessian
                     a1 = risk_phi_x_x / denom
 
+                t = numer / denom
                 # Gradient
-                partial_gradient = partial_gradient + numer / denom
+                partial_gradient = partial_gradient + t
                 # In case numer and denom both are really small numbers,
                 # make sure to do division before multiplications
-                t = numer / denom
                 # this is faster than an outerproduct
                 a2 = t.T.dot(t)
 
