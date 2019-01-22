@@ -448,6 +448,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             weight_count = array_sum_to_scalar(weights_deaths)
             weighted_average = weight_count / tied_death_counts
 
+            #
+            # This code is near identical to the _batch algorithm in CoxPHFitter. In fact, see _batch for comments.
+            #
+
             if tied_death_counts > 1:
 
                 # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
@@ -466,8 +470,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
                 numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
 
-                # Hessian
-                # computes outer products and sums them together.
                 a1 = np.einsum("ab, i->ab", risk_phi_x_x, denom) - np.einsum(
                     "ab, i->ab", tie_phi_x_x, increasing_proportion * denom
                 )
@@ -475,11 +477,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # no tensors here, but do some casting to make it easier in the converging step next.
                 denom = 1.0 / np.array([risk_phi])
                 numer = risk_phi_x
-                # Hessian
                 a1 = risk_phi_x_x * denom
 
             summand = numer * denom[:, None]
-            a2 = np.einsum("Bi, Bj->ij", summand, summand)  # batch outer product
+            a2 = np.einsum("Bi, Bj->ij", summand, summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()

@@ -606,31 +606,25 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
-            partial_gradient = np.zeros((1, d))
-            partial_hessian = np.zeros((d, d))
-            partial_ll = 0
+            #
+            # This code is near identical to the _batch algorithm below. In fact, see _batch for comments.
+            #
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
-                # This code is near identical to the _batch algorithm below. In fact, see _batch for comments.
-
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
                 numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
-                # Hessian
-                # computes outer products and sums them together.
                 a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
                     "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
                 )
             else:
-                # no tensors here, but do some casting to make it easier in the converging step next.
                 denom = 1.0 / np.array([risk_phi])
                 numer = risk_phi_x
-                # Hessian
                 a1 = risk_phi_x_x * denom
 
             summand = numer * denom[:, None]
-            a2 = np.einsum("Bi, Bj->ij", summand, summand)  # batch outer product
+            a2 = np.einsum("Bi, Bj->ij", summand, summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
