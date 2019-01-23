@@ -1036,10 +1036,10 @@ class TestCoxPHFitter:
         assert_frame_equal(results, expected, check_less_precise=3)
 
     def test_schoenfeld_residuals_with_first_subjects_censored(self, rossi, cph):
-        rossi.loc[rossi['week'] == 1, 'arrest'] = 0
+        rossi.loc[rossi["week"] == 1, "arrest"] = 0
 
-        cph.fit(rossi, 'week', 'arrest')
-        cph.compute_residuals(rossi, 'schoenfeld')
+        cph.fit(rossi, "week", "arrest")
+        cph.compute_residuals(rossi, "schoenfeld")
 
     def test_scaled_schoenfeld_residuals_against_R(self, regression_dataset, cph):
         """
