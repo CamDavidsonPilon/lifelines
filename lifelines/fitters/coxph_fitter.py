@@ -888,7 +888,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         n, d = X.shape
 
-        if E.sum() == 0:
+        if not np.any(E):
             # sometimes strata have no deaths. This means nothing is returned
             # in the below code.
             return np.zeros((n, d))
@@ -924,7 +924,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x = risk_phi_x + phi_x_i
 
             # Calculate sums of Ties, if this is an event
-            diff_against.append((xi, ei, i))
+            diff_against.append((xi, ei))
             if ei:
 
                 tie_phi = tie_phi + phi_i
@@ -938,6 +938,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # There are more ties/members of the risk set
                 continue
             elif tie_count == 0:
+                for _ in diff_against:
+                    schoenfeld_residuals = np.append(schoenfeld_residuals, np.zeros((1,d)), axis=0)
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
@@ -950,7 +952,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 weighted_mean += numer / (denom * tie_count)
 
-            for xi, ei, _ in diff_against:
+            for xi, ei in diff_against:
                 schoenfeld_residuals = np.append(schoenfeld_residuals, ei * (xi - weighted_mean), axis=0)
 
             # reset tie values
@@ -1046,7 +1048,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         training_dataframe : pandas DataFrame
             the same training dataframe given in `fit`
         kind : string
-            {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale'}
+            {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale', 'scaled_schoenfeld'}
 
         """
         ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale", "scaled_schoenfeld"}
