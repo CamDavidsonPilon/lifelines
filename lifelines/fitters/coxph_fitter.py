@@ -940,6 +940,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             elif tie_count == 0:
                 for _ in diff_against:
                     schoenfeld_residuals = np.append(schoenfeld_residuals, np.zeros((1,d)), axis=0)
+                diff_against = []
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
