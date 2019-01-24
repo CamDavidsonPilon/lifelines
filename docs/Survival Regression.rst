@@ -6,18 +6,18 @@ Survival Regression
 =====================================
 
 Often we have additional data aside from the duration, and if
-applicable any censorships that occurred. In the regime dataset, we have
+applicable any censorships that occurred. In the previous section's regime dataset, we have
 the type of government the political leader was part of, the country
 they were head of, and the year they were elected. Can we use this data
 in survival analysis?
 
 Yes, the technique is called *survival regression* -- the name implies
 we regress covariates (e.g., age, country, etc.) against
-another variable -- in this case durations *and* lifetimes. Similar to the
+another variable -- in this case durations. Similar to the
 logic in the first part of this tutorial, we cannot use traditional
 methods like linear regression.
 
-There are two popular competing techniques in survival regression: Cox's
+There are two popular techniques in survival regression: Cox's
 model and Aalen's additive model. Both models attempt to represent the
 hazard rate :math:`\lambda(t | x)` as a function of :math:`t` and some covariates :math:`x`. We explore these models next. 
 
@@ -25,7 +25,7 @@ hazard rate :math:`\lambda(t | x)` as a function of :math:`t` and some covariate
 Cox's proportional hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Lifelines has an implementation of the Cox propotional hazards regression model (implemented in
+lifelines has an implementation of the Cox proportional hazards regression model (implemented in
 R as ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
 .. math::  \underbrace{\lambda(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
@@ -34,9 +34,9 @@ Note a few facts about this model: the only time component is in the baseline ha
 
 The dataset for regression
 ###########################
-The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. Optionally, there could be a column denoting the event status of each observation (1 if event occured, 0 is censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial. 
+The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. Optionally, there could be a column denoting the event status of each observation (1 if event occured, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial. 
 
-An example data is from the paper `here <http://socserv.socsci.mcmaster.ca/jfox/Books/Companion/appendix/Appendix-Cox-Regression.pdf>`_, available in lifelines as ``datasets.load_rossi``.
+An example dataset is called the Rossi recidivism dataset, available in lifelines as ``datasets.load_rossi``.
 
 .. code:: python
 
@@ -252,9 +252,9 @@ Non-proportional hazards is a case of *model misspecification*. Suggestions are 
 Stratification
 ################
 
-Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* datasets, defined by the covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``.
+Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* smaller datasets, defined by the unique values of the stratifing covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``.
 
-To specify categorical variables to be used in stratification, we define them in the call to ``fit``:
+To specify variables to be used in stratification, we define them in the call to ``fit``:
 
 .. code:: python
 
@@ -328,7 +328,7 @@ Another property your dataset may have is groups of related subjects. This could
  - a single individual having multiple occurrences, and hence showing up in the dataset more than once. 
  - subjects that share some common property, like members of the same family or being matched on prospensity scores. 
 
-We call these grouped subjects "clusters", and assume they are designated by some column in the dataframe (example below). The point estimates of the model don't change, but the standard errors will increase (in fact, internally this uses the sandwich estimator). An intuitive argument for this is that 100 observations on 100 individuals provide more information than 100 observations on 10 individuals (or clusters). 
+We call these grouped subjects "clusters", and assume they are designated by some column in the dataframe (example below). When using clustesr, the point estimates of the model don't change, but the standard errors will increase. An intuitive argument for this is that 100 observations on 100 individuals provide more information than 100 observations on 10 individuals (or clusters). 
 
 
 .. code:: python
@@ -360,17 +360,29 @@ Aalen's Additive model
 
 .. warning:: This implementation is still experimental.
 
-The estimator to fit unknown coefficients in Aalen's additive model is
-located in ``estimators`` under ``AalenAdditiveFitter``. For this
+.. note:: This API of this model changed in version 0.17.0
+
+Aalen's Additive model is another regression model we can use. Like the Cox model, it defines 
+the hazard rate, but instead of the linear model being multiplicative like the Cox model, the Aalen model is 
+additive. Specifically:
+
+
+.. math:: 
+    \lambda(t|x)  = b_0(t) + b_1(t) x_1 + ... + b_N(t) x_N
+
+
+Inference typically does not estimate the individual
+:math:`b_i(t)` but instead estimates :math:`\int_0^t b_i(s) \; ds`
+(similar to the estimate of the hazard rate using ``NelsonAalenFitter``). This is important
+when interpreting plots produced.  
+
+
+For this
 exercise, we will use the regime dataset and include the categorical
 variables ``un_continent_name`` (eg: Asia, North America,...), the
 ``regime`` type (e.g., monarchy, civilian,...) and the year the regime
-started in, ``start_year``.
-
-Aalen's additive model typically does not estimate the individual
-:math:`b_i(t)` but instead estimates :math:`\int_0^t b_i(s) \; ds`
-(similar to the estimate of the hazard rate using ``NelsonAalenFitter``
-above). This is important to keep in mind when analyzing the output.
+started in, ``start_year``. The estimator to fit unknown coefficients in Aalen's additive model is
+located under ``lifelines.AalenAdditiveFitter``. 
 
 .. code:: python
 
@@ -399,7 +411,7 @@ above). This is important to keep in mind when analyzing the output.
 
 
 I'm using the lovely library `patsy <https://github.com/pydata/patsy>`__ here to create a
-covariance matrix from my original dataframe.
+design matrix from my original dataframe.
 
 .. code:: python
 
@@ -407,10 +419,7 @@ covariance matrix from my original dataframe.
     X = patsy.dmatrix('un_continent_name + regime + start_year', data, return_type='dataframe')
     X = X.rename(columns={'Intercept': 'baseline'})
 
-.. code:: python
-
-    X.columns.tolist()
-
+    print(X.columns.tolist())
 
 
 .. parsed-literal::
@@ -431,8 +440,7 @@ covariance matrix from my original dataframe.
 We have also included the ``coef_penalizer`` option. During the estimation, a
 linear regression is computed at each step. Often the regression can be
 unstable (due to high
-`co-linearity <http://camdp.com/blogs/machine-learning-counter-examples-pt1>`__
-or small sample sizes) -- adding a penalizer term controls the stability. I recommend always starting with a small penalizer term -- if the estimates still appear to be too unstable, try increasing it.
+co-linearity or small sample sizes) -- adding a penalizer term controls the stability. I recommend always starting with a small penalizer term -- if the estimates still appear to be too unstable, try increasing it.
 
 .. code:: python
 
