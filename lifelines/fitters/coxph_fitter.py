@@ -624,7 +624,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 a1 = risk_phi_x_x * denom
 
             summand = numer * denom[:, None]
-            a2 = np.einsum("Bi, Bj->ij", summand, summand)
+            a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
@@ -684,6 +684,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
+        A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+        As it is not known a priori that who is the first to fail, so one-third of
+        (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+        of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
         Returns
         -------
         hessian: (d, d) numpy array,
@@ -741,10 +746,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
-                # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
-                # As it is not known a priori that who is the first to fail, so one-third of
-                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
                 # a lot of this is now in einstien notation for performance, but see original "expanded" code here
                 # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/coxph_fitter.py#L755-L789
@@ -779,9 +780,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             # This is a batch outer product.
             # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
             # which would be: np.einsum("Bi, Bj->Bij", t, t)
-            # Ultimately, we sum along this new axis, so we can just get einsum to do the sum for us.
-            # https://obilaniu6266h16.wordpress.com/2016/02/04/einstein-summation-in-numpy/
-            a2 = np.einsum("Bi, Bj->ij", summand, summand)
+            a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
