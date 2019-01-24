@@ -89,7 +89,6 @@ def qth_survival_times(q, survival_functions, cdf=False):
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
     q = pd.Series(q)
-    print(q)
     if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError("q must be between 0 and 1")
 

@@ -624,7 +624,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 a1 = risk_phi_x_x * denom
 
             summand = numer * denom[:, None]
-            a2 = np.einsum("Bi, Bj->ij", summand, summand)
+            a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
@@ -684,6 +684,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
+        A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+        As it is not known a priori that who is the first to fail, so one-third of
+        (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
+        of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
+
         Returns
         -------
         hessian: (d, d) numpy array,
@@ -741,10 +746,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
-                # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
-                # As it is not known a priori that who is the first to fail, so one-third of
-                # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
-                # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
                 # a lot of this is now in einstien notation for performance, but see original "expanded" code here
                 # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/coxph_fitter.py#L755-L789
@@ -779,9 +780,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             # This is a batch outer product.
             # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
             # which would be: np.einsum("Bi, Bj->Bij", t, t)
-            # Ultimately, we sum along this new axis, so we can just get einsum to do the sum for us.
-            # https://obilaniu6266h16.wordpress.com/2016/02/04/einstein-summation-in-numpy/
-            a2 = np.einsum("Bi, Bj->ij", summand, summand)
+            a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
@@ -888,7 +887,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         n, d = X.shape
 
-        if E.sum() == 0:
+        if not np.any(E):
             # sometimes strata have no deaths. This means nothing is returned
             # in the below code.
             return np.zeros((n, d))
@@ -924,7 +923,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             risk_phi_x = risk_phi_x + phi_x_i
 
             # Calculate sums of Ties, if this is an event
-            diff_against.append((xi, ei, i))
+            diff_against.append((xi, ei))
             if ei:
 
                 tie_phi = tie_phi + phi_i
@@ -938,6 +937,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # There are more ties/members of the risk set
                 continue
             elif tie_count == 0:
+                for _ in diff_against:
+                    schoenfeld_residuals = np.append(schoenfeld_residuals, np.zeros((1, d)), axis=0)
+                diff_against = []
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
@@ -950,7 +952,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 weighted_mean += numer / (denom * tie_count)
 
-            for xi, ei, _ in diff_against:
+            for xi, ei in diff_against:
                 schoenfeld_residuals = np.append(schoenfeld_residuals, ei * (xi - weighted_mean), axis=0)
 
             # reset tie values
@@ -1046,7 +1048,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         training_dataframe : pandas DataFrame
             the same training dataframe given in `fit`
         kind : string
-            {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale'}
+            {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale', 'scaled_schoenfeld'}
 
         """
         ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale", "scaled_schoenfeld"}
