@@ -1,5 +1,8 @@
 ### Changelogs
 
+#### 0.17.3
+ - Fix in `compute_residuals` when using `schoenfeld` and the minumum duration has only censored subjects. 
+
 #### 0.17.2
  - Another round of serious performance improvements for the Cox models. Up to 2x faster for CoxPHFitter and CoxTimeVaryingFitter. This was mostly the result of using NumPy's `einsum` to simplify a previous `for` loop. The downside is the code is more esoteric now. I've added comments as necessary though 🤞
 
