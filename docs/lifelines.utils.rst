@@ -28,14 +28,6 @@ lifelines.utils.lowess module
     :undoc-members:
     :show-inheritance:
 
-lifelines.utils.progress\_bar module
-------------------------------------
-
-.. automodule:: lifelines.utils.progress_bar
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

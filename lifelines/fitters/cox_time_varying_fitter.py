@@ -480,7 +480,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 a1 = risk_phi_x_x * denom
 
             summand = numer * denom[:, None]
-            a2 = np.einsum("Bi, Bj->ij", summand, summand)
+            a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()

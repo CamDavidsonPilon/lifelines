@@ -112,7 +112,7 @@ Fitting the Cox model to the data involves using gradient descent. Lifelines tak
 After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively.
 
 
-Goodness of fit and prediction
+Goodness of fit
 ###########################################
 
 After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? Interpret the spread as how much "variance" is provided by the baseline hazard versus the partial hazard. The baseline hazard is approximately equal to the Kaplan-Meier curve if none of the variance is explained by the covariates / partial hazard. Deviations from this provide a visual measure of variance explained). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
@@ -120,6 +120,10 @@ After fitting, you may want to know how "good" of a fit your model was to the da
 .. image:: images/goodfit.png
 
 .. image:: images/badfit.png
+
+
+Prediction
+###########################################
 
 
 After fitting, you can use use the suite of prediction methods: ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
@@ -134,6 +138,67 @@ After fitting, you can use use the suite of prediction methods: ``.predict_parti
 
     cph.predict_median(X)
 
+
+A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their surival function. We are interested to know *What is the new survival function, given I know the subject has lived past time s, where s < t?* Mathmematically:
+
+.. math:: 
+
+    \begin{align*}
+    P(T > t \;|\; T > s) &= \frac{P(T > t \;\text{and}\; T > s)}{P(T > s)} \\
+                         &= \frac{P(T > t)}{P(T > s)} \\ 
+                         &= \frac{S(t)}{S(s)}
+    \end{align*}
+
+Thus we scale the original survival function by the survival function at time :math:`s` (everything prior to :math:`s` should be mapped to 1.0 as well, since we are working with probabilities and we know that the subject was alive before :math:`s`). 
+
+Back to our original problem of predicting the event time of censored individuals, we do the same thing:
+
+.. code:: python
+
+    from lifelines import CoxPHFitter
+    from lifelines.datasets import load_regression_dataset
+    
+    df = load_regression_dataset()
+    
+    cph = CoxPHFitter().fit(df, 'T', 'E')
+    
+    censored_subjects = df.loc[df['E'] == 0]
+    
+    unconditioned_sf = cph.predict_survival_function(censored_subjects)
+    
+    conditioned_sf = unconditioned_sf.apply(lambda c: (c / c.loc[df.loc[c.name, 'T']]).clip_upper(1))
+
+    # let's focus on a single subject
+    subject = 13
+    unconditioned_sf[subject].plot(ls="--", color="#A60628", label="unconditioned")
+    conditioned_sf[subject].plot(color="#A60628", label="conditioned on $T>10$")
+    plt.legend()
+
+
+.. image:: images/survival_regression_conditioning.png
+
+
+From here, you can pick a median or percentile as a best guess as to the subject's event time:
+
+.. code:: python
+
+
+    from lifelines.utils import median_survival_times, qth_survival_times
+
+    predictions_50 = median_survival_times(conditioned_sf)
+    predictions_75 = qth_survival_times(0.75, conditioned_sf)
+
+
+    # plotting subject 13 again
+    plt.hlines([0.5, 0.75], 0, 23, alpha=0.5, label="percentiles")
+
+    plt.scatter(median_survival_times(conditioned_sf[subject]), 0.5,  color="#E24A33", label="median prediction", zorder=20)
+    plt.scatter(qth_survival_times(0.75, conditioned_sf[subject]), 0.75,  color="#467821", label="q=75 prediction", zorder=20)
+
+    plt.legend()
+
+
+.. image:: images/survival_regression_conditioning_with_median.png
 
 
 Plotting the coefficients
