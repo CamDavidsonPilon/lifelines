@@ -1,8 +1,12 @@
 ### Changelogs
 
+### 0.17.5
+ - more bugs in `plot_covariate_groups` fixed when using non-numeric strata.
+
 #### 0.17.4
  - Fix bug in `plot_covariate_groups` that wasn't allowing for strata to be used. 
  - change name of `multicenter_aids_cohort_study` to `load_multicenter_aids_cohort_study`
+ - `groups` is now called `values` in `CoxPHFitter.plot_covariate_groups`
 
 #### 0.17.3
  - Fix in `compute_residuals` when using `schoenfeld` and the minumum duration has only censored subjects. 

@@ -308,9 +308,26 @@ class TestPlotting:
     def test_coxph_plot_covariate_groups_with_strata(self, block):
         df = load_rossi()
         cp = CoxPHFitter()
-        cp.fit(df, "week", "arrest", strata=["paro"])
+        cp.fit(df, "week", "arrest", strata=["paro", "fin"])
         cp.plot_covariate_groups("age", [10, 50, 80])
         self.plt.title("test_coxph_plot_covariate_groups_with_strata")
+        self.plt.show(block=block)
+
+    def test_coxph_plot_covariate_groups_with_single_strata(self, block):
+        df = load_rossi()
+        cp = CoxPHFitter()
+        cp.fit(df, "week", "arrest", strata="paro")
+        cp.plot_covariate_groups("age", [10, 50, 80])
+        self.plt.title("test_coxph_plot_covariate_groups_with_strata")
+        self.plt.show(block=block)
+
+    def test_coxph_plot_covariate_groups_with_nonnumeric_strata(self, block):
+        df = load_rossi()
+        df["strata"] = np.random.choice(["A", "B"], size=df.shape[0])
+        cp = CoxPHFitter()
+        cp.fit(df, "week", "arrest", strata="strata")
+        cp.plot_covariate_groups("age", [10, 50, 80])
+        self.plt.title("test_coxph_plot_covariate_groups_with_single_strata")
         self.plt.show(block=block)
 
     def test_coxtv_plotting_with_subset_of_columns(self, block):

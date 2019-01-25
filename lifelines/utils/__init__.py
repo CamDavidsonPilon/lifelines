@@ -1337,6 +1337,12 @@ def _to_list(x):
     return x
 
 
+def _to_tuple(x):
+    if not isinstance(x, tuple):
+        return (x,)
+    return x
+
+
 def format_p_value(decimals):
     threshold = 0.5 * 10 ** (-decimals)
     return lambda p: "<%s" % threshold if p < threshold else "{:4.{prec}f}".format(p, prec=decimals)
