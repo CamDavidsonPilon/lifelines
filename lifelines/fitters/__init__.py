@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from lifelines.plotting import plot_estimate
-from lifelines.utils import qth_survival_times, _to_array
+from lifelines.utils import qth_survival_times, _to_array, dataframe_interpolate_at_times
 from lifelines.compat import PY2, PY3
 
 
@@ -128,7 +128,7 @@ class UnivariateFitter(BaseFitter):
             return pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
         estimate = getattr(self, self._estimation_method)
         # non-linear interpolations can push the survival curves above 1 and below 0.
-        return estimate.reindex(estimate.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
+        return dataframe_interpolate_at_times(estimate, times)
 
     @property
     @_must_call_fit_first

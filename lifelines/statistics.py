@@ -7,14 +7,15 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils import (
+    _to_array,
+    _to_list,
     group_survival_table_from_events,
     significance_code,
     significance_codes_as_text,
-    _to_list,
     string_justify,
-    _to_array,
     format_p_value,
     format_floats,
+    dataframe_interpolate_at_times
 )
 
 from lifelines import KaplanMeierFitter
@@ -145,12 +146,88 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     )
 
 
-def _test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs)
+def survival_difference_at_fixed_point_in_time_test(point_in_time, durations_A, durations_B, event_observed_A=None, event_observed_B=None, **kwargs):
+    """
+    
+    Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other. 
+    For example, analysts may be interested in 5-year survival. Statistically comparing the naive Kaplan-Meier points at a specific time
+    actually has reduced power (see [1]). By transforming the Kaplan-Meier curve, we can recover more power. This function uses 
+    the log(-log) transformation. 
+
+
+    Parameters
+    ----------
+    point_in_time: float,
+        the point in time to analyze the survival curves at. 
+
+    durations_A: iterable
+        a (n,) list-like of event durations (birth to death,...) for the first population.
+
+    durations_B: iterable
+        a (n,) list-like of event durations (birth to death,...) for the second population.
+
+    event_observed_A: iterable, optional
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population. 
+        Default assumes all observed.
+
+    event_observed_B: iterable, optional
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population. 
+        Default assumes all observed.
+
+    kwargs: 
+        add keywords and meta-data to the experiment summary
+
+
+    Returns
+    -------
+
+    results : StatisticalResult
+      a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
+
+    Examples
+    --------
+    >>> T1 = [1, 4, 10, 12, 12, 3, 5.4]
+    >>> E1 = [1, 0, 1,  0,  1,  1, 1]
+    >>>
+    >>> T2 = [4, 5, 7, 11, 14, 20, 8, 8]
+    >>> E2 = [1, 1, 1, 1,  1,  1,  1, 1]
+    >>>
+    >>> from lifelines.statistics import survival_difference_at_fixed_point_in_time_test
+    >>> results = survival_difference_at_fixed_point_in_time_test(12, T1, T2, event_observed_A=E1, event_observed_B=E2)
+    >>>
+    >>> results.print_summary()
+    >>> print(results.p_value)        # 0.893
+    >>> print(results.test_statistic) # 0.017
+
+    Notes
+    -----
+    Other transformations are possible, but Klein et al. [1] showed that the log(-log(c)) transform has the most desirable
+    statistical properties. 
+
+    [1] Klein, J. P., Logan, B. , Harhoff, M. and Andersen, P. K. (2007), Analyzing survival curves at a fixed point in time. Statist. Med., 26: 4505-4519. doi:10.1002/sim.2864
+    
     """
 
+    kmfA = KaplanMeierFitter().fit(durations_A, event_observed=event_observed_A)
+    kmfB = KaplanMeierFitter().fit(durations_B, event_observed=event_observed_B)
 
+    sA_t = kmfA.predict(point_in_time)
+    sB_t = kmfB.predict(point_in_time)
 
-    """
+    # this is doing a prediction/interpolation between the kmf's index.
+    σsqA = dataframe_interpolate_at_times(kmfA._cumulative_sq_, point_in_time)
+    σsqB = dataframe_interpolate_at_times(kmfB._cumulative_sq_, point_in_time)
+
+    log = np.log
+    clog = lambda s: log(-log(s))
+
+    X = (clog(sA_t) - clog(sB_t))**2 / (σsqA / log(sA_t) ** 2 + σsqB / log(sB_t) ** 2)
+    p_value = chisq_test(X, 1)
+
+    return StatisticalResult(
+        p_value, X, null_distribution="chi squared", degrees_of_freedom=1, point_in_time=point_in_time, **kwargs
+    )
+
 
 def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs):
     """
@@ -628,7 +705,7 @@ def proportional_hazard_test(
         for transform_name, transform in TimeTransformers():
             times = transform(durations, events, weights)[events.values]
             T = compute_statistic(times, scaled_resids)
-            p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
+            p_values = _to_array([chisq_test(t, 1) for t in T])
             result += StatisticalResult(
                 p_values,
                 T,
@@ -649,7 +726,7 @@ def proportional_hazard_test(
 
         T = compute_statistic(times, scaled_resids)
 
-        p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
+        p_values = _to_array([chisq_test(t, 1) for t in T])
         result = StatisticalResult(
             p_values,
             T,

@@ -1184,7 +1184,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
-        _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
+        p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         with np.warnings.catch_warnings():
             np.warnings.filterwarnings("ignore")
             return test_stat, degrees_freedom, np.log(p_value)

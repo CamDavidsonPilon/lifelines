@@ -121,6 +121,7 @@ class KaplanMeierFitter(UnivariateFitter):
         self.__estimate = getattr(self, estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self.median_ = median_survival_times(self.__estimate, left_censorship=left_censorship)
+        self._cumulative_sq_ = cumulative_sq_
 
         # estimation methods
         self._estimation_method = estimate_name

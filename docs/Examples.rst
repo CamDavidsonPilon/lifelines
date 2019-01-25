@@ -11,10 +11,9 @@ This section goes through some examples and recipes to help you use lifelines.
 Statistically compare two populations
 ##############################################
 
-(though this applies just as well to Nelson-Aalen estimates). Often researchers want to compare
-survival curves between different populations. Here are some techniques to do that:
+Often researchers want to compare survival-ness between different populations. Here are some techniques to do that:
 
-Subtract the difference between survival curves
+Subtraction and division between survival curves
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you are interested in taking the difference between two survival curves, simply trying to
@@ -25,13 +24,17 @@ the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built-in ``subtract``
 
     kmf1.subtract(kmf2)
 
-will produce the difference at every relevant time point. A similar function exists for division: ``divide``.
+will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, lifelines comes with a statistics library. See below. 
 
-Compare using a hypothesis test
+
+Logrank test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For rigorous testing of differences, lifelines comes with a statistics library. The ``logrank_test`` function
-compares whether the "death" generation process of the two populations are equal:
+.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival 
+    curves cross, the logrank test will give an inaccurate assessment of differences. 
+
+
+The ``lifelines.statistics.logrank_test`` function compares whether the "death" generation process of the two populations are equal:
 
 .. code-block:: python
 
@@ -90,6 +93,24 @@ hypothesis that all the populations have the same "death" generation process).
     ---
     Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
     """
+
+Survival differences at a point in time
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other.  For example, analysts may be interested in 5-year survival. Statistically comparing the naive Kaplan-Meier points at a specific time
+actually has reduced power. By transforming the Kaplan-Meier curve, we can recover more power. The function ``statistics.survival_difference_at_fixed_point_in_time_test`` uses 
+the log(-log) transformation implicitly and compares the survival-ness of populations at a specific point in time. 
+
+
+
+.. code-block:: python
+
+    from lifelines.statistics import survival_difference_at_fixed_point_in_time_test
+
+
+    results = survival_difference_at_fixed_point_in_time_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
+    results.print_summary()
+
 
 
 Model selection using lifelines

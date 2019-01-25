@@ -620,7 +620,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         test_stat = 2 * (ll_alt - ll_null)
         degrees_freedom = self.hazards_.shape[1]
-        _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
+        p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         return test_stat, degrees_freedom, np.log(p_value)
 
     def plot(self, columns=None, display_significance_code=True, **errorbar_kwargs):

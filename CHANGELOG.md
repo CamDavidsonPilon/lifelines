@@ -1,5 +1,10 @@
 ### Changelogs
 
+### 0.18.0
+ - remove `alpha` keyword from all statistical functions. 
+ - introduce new statistical tests between univariate datasets: `survival_difference_at_fixed_point_in_time_test`,...
+ 
+
 ### 0.17.5
  - more bugs in `plot_covariate_groups` fixed when using non-numeric strata.
 
