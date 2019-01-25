@@ -31,6 +31,7 @@ from lifelines.utils.lowess import lowess
 from lifelines.utils import (
     _get_index,
     _to_list,
+    _to_array,
     survival_table_from_events,
     inv_normal_cdf,
     normalize,
@@ -1555,7 +1556,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         Returns
         -------
-        ax: matplotlib axis
+        ax: matplotlib axis, or list of axis'
             the matplotlib axis that be edited.
         """
         from matplotlib import pyplot as plt
@@ -1563,15 +1564,34 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if covariate not in self.hazards_.columns:
             raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
-        ax = kwargs.get("ax", None) or plt.figure().add_subplot(111)
-        x_bar = self._norm_mean.to_frame().T
-        X = pd.concat([x_bar] * len(groups))
-        X.index = ["%s=%s" % (covariate, g) for g in groups]
-        X[covariate] = groups
+        if self.strata is None:
+            axes = kwargs.get("ax", None) or plt.figure().add_subplot(111)
+            x_bar = self._norm_mean.to_frame().T
+            X = pd.concat([x_bar] * len(groups))
+            X.index = ["%s=%s" % (covariate, g) for g in groups]
+            X[covariate] = groups
 
-        self.predict_survival_function(X).plot(ax=ax)
-        self.baseline_survival_.plot(ax=ax, ls="--")
-        return ax
+            self.predict_survival_function(X).plot(ax=ax)
+            self.baseline_survival_.plot(ax=ax, ls="--")
+
+        else:
+            axes = []
+            for stratum, baseline_survival_ in self.baseline_survival_.iteritems():
+                ax = plt.figure().add_subplot(1, 1, 1)
+                x_bar = self._norm_mean.to_frame().T
+
+                for name, value in zip(self.strata, _to_array(stratum)):
+                    x_bar[name] = value
+
+                X = pd.concat([x_bar] * len(groups))
+                X.index = ["%s=%s" % (covariate, g) for g in groups]
+                X[covariate] = groups
+
+                self.predict_survival_function(X).plot(ax=ax)
+                baseline_survival_.plot(ax=ax, ls="--", label="stratum %s baseline survival" % str(stratum))
+                plt.legend()
+                axes.append(ax)
+        return axes
 
     def check_assumptions(
         self, training_df, advice=True, show_plots=True, p_value_threshold=0.05, plot_n_bootstraps=10

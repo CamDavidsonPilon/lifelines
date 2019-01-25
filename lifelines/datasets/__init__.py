@@ -50,7 +50,7 @@ def load_recur(**kwargs):
     return load_dataset("recur.csv", **kwargs)
 
 
-def multicenter_aids_cohort_study(**kwargs):
+def load_multicenter_aids_cohort_study(**kwargs):
     """
     Originally in [1]
 
@@ -62,7 +62,7 @@ def multicenter_aids_cohort_study(**kwargs):
     D: indicator of death during follow up
 
 
-    i   AIDSY       W      T    D
+    i   AIDSY       W      T        D
     1   1990.425    4.575   7.575   0
     2   1991.250    3.750   6.750   0
     3   1992.014    2.986   5.986   0
