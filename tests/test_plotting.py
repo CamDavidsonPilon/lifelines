@@ -17,6 +17,8 @@ from lifelines.datasets import (
     load_lcd,
     load_panel_test,
     load_stanford_heart_transplants,
+    load_rossi,
+    load_multicenter_aids_cohort_study,
 )
 from lifelines.generate_datasets import cumulative_integral
 
@@ -171,6 +173,22 @@ class TestPlotting:
         self.plt.title("test_plot_lifetimes_left_truncation")
         self.plt.show(block=block)
 
+    def test_MACS_data_with_plot_lifetimes(self, block):
+        df = load_multicenter_aids_cohort_study()
+
+        plot_lifetimes(
+            df["T"] - df["W"],
+            event_observed=df["D"],
+            entry=df["W"],
+            event_observed_color="#383838",
+            event_censored_color="#383838",
+            left_truncated=True,
+        )
+        self.plt.ylabel("Patient Number")
+        self.plt.xlabel("Years from AIDS diagnosis")
+        self.plt.title("test_MACS_data_with_plot_lifetimes")
+        self.plt.show(block=block)
+
     def test_plot_lifetimes_relative(self, block):
         t = np.linspace(0, 20, 1000)
         hz, coef, covrt = generate_hazard_rates(1, 5, t)
@@ -279,12 +297,28 @@ class TestPlotting:
         self.plt.title("test_coxph_plotting_with_subset_of_columns")
         self.plt.show(block=block)
 
+    def test_coxph_plot_covariate_groups(self, block):
+        df = load_rossi()
+        cp = CoxPHFitter()
+        cp.fit(df, "week", "arrest")
+        cp.plot_covariate_groups("age", [10, 50, 80])
+        self.plt.title("test_coxph_plot_covariate_groups")
+        self.plt.show(block=block)
+
+    def test_coxph_plot_covariate_groups_with_strata(self, block):
+        df = load_rossi()
+        cp = CoxPHFitter()
+        cp.fit(df, "week", "arrest", strata=["paro"])
+        cp.plot_covariate_groups("age", [10, 50, 80])
+        self.plt.title("test_coxph_plot_covariate_groups_with_strata")
+        self.plt.show(block=block)
+
     def test_coxtv_plotting_with_subset_of_columns(self, block):
         df = load_stanford_heart_transplants()
         ctv = CoxTimeVaryingFitter()
         ctv.fit(df, id_col="id", event_col="event")
         ctv.plot(columns=["age", "year"])
-        self.plt.title("test_coxtv_plotting_with_subset_of_columns_and_standardized")
+        self.plt.title("test_coxtv_plotting_with_subset_of_columns")
         self.plt.show(block=block)
 
     def test_coxtv_plotting(self, block):

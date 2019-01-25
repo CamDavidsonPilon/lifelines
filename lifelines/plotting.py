@@ -171,11 +171,11 @@ def add_at_risk_counts(*fitters, **kwargs):
 
 
 def plot_lifetimes(
-    duration,
+    durations,
     event_observed=None,
     entry=None,
     left_truncated=False,
-    sort_by_duration=False,
+    sort_by_duration=True,
     event_observed_color="#A60628",
     event_censored_color="#348ABD",
     **kwargs
@@ -185,7 +185,7 @@ def plot_lifetimes(
     
     Parameters
     -----------
-    duration: (n,) numpy array or pd.Series
+    durations: (n,) numpy array or pd.Series
        duration subject was observed for.
     event_observed: (n,) numpy array or pd.Series
       array of booleans: True if event observed, else False.
@@ -209,7 +209,7 @@ def plot_lifetimes(
     set_kwargs_ax(kwargs)
     ax = kwargs.pop("ax")
 
-    N = duration.shape[0]
+    N = durations.shape[0]
     if N > 80:
         warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
 
@@ -219,20 +219,23 @@ def plot_lifetimes(
     if entry is None:
         entry = np.zeros(N)
 
+    assert durations.shape == (N,)
+    assert event_observed.shape == (N,)
+
     if sort_by_duration:
-        # order by length of lifetimes; probably not very informative.
-        ix = np.argsort(duration, 0)
-        duration = duration[ix]
+        # order by length of lifetimes;
+        ix = np.argsort(entry + durations, 0)
+        durations = durations[ix]
         event_observed = event_observed[ix]
         entry = entry[ix]
 
     for i in range(N):
         c = event_observed_color if event_observed[i] else event_censored_color
-        ax.hlines(N - 1 - i, entry[i], entry[i] + duration[i], color=c, lw=1.5)
+        ax.hlines(N - 1 - i, entry[i], entry[i] + durations[i], color=c, lw=1.5)
         if left_truncated:
             ax.hlines(N - 1 - i, 0, entry[i], color=c, lw=1.0, linestyle="--")
         m = "" if not event_observed[i] else "o"
-        ax.scatter(entry[i] + duration[i], N - 1 - i, color=c, marker=m, s=10)
+        ax.scatter(entry[i] + durations[i], N - 1 - i, color=c, marker=m, s=10)
 
     ax.set_ylim(-0.5, N)
     return ax

@@ -57,7 +57,7 @@ from lifelines.datasets import (
     load_holly_molly_polly,
     load_regression_dataset,
     load_stanford_heart_transplants,
-    multicenter_aids_cohort_study,
+    load_multicenter_aids_cohort_study,
 )
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
 
@@ -435,7 +435,7 @@ class TestKaplanMeierFitter:
         return km.reshape(len(km), 1)
 
     def test_left_truncation_against_Cole_and_Hudgens(self):
-        df = multicenter_aids_cohort_study()
+        df = load_multicenter_aids_cohort_study()
         kmf = KaplanMeierFitter()
         kmf.fit(df["T"], event_observed=df["D"], entry=df["W"])
 
