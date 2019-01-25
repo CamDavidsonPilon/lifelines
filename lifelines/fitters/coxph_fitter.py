@@ -31,7 +31,7 @@ from lifelines.utils.lowess import lowess
 from lifelines.utils import (
     _get_index,
     _to_list,
-    _to_array,
+    _to_tuple,
     survival_table_from_events,
     inv_normal_cdf,
     normalize,
@@ -1580,7 +1580,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 ax = plt.figure().add_subplot(1, 1, 1)
                 x_bar = self._norm_mean.to_frame().T
 
-                for name, value in zip(self.strata, _to_array(stratum)):
+                for name, value in zip(_to_list(self.strata), _to_tuple(stratum)):
                     x_bar[name] = value
 
                 X = pd.concat([x_bar] * len(values))

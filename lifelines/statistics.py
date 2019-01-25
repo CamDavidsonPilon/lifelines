@@ -149,13 +149,21 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     """
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
-    The test-statistic is chi-squared under the null hypothesis.
+    The test-statistic is chi-squared under the null hypothesis. Let h_i(t) be the hazard ratio of 
+    group i at time t:
 
-     - H_0: both event series are from the same generating processes
-     - H_A: the event series are from different generating processes.
+     - H_0: h_1(t) = h_2(t)
+     - H_A: h_1(t) = k * h_2(t), k <> 1
 
 
     This implicitly uses the log-rank weights.
+
+    Important
+    ----------
+
+    The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival 
+    curves cross, the logrank test will give an inaccurate assessment of differences. 
+
 
     Parameters
     ----------
@@ -326,7 +334,8 @@ def multivariate_logrank_test(
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
     be equal when n=2):
 
-     - H_0: all event series are from the same generating processes
+
+     - H_0: h_1(t) = h_2(t) = h_3(t) = ... = h_n(t)
      - H_A: there exist atleast one group that differs from the other.
 
 
