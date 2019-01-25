@@ -1538,7 +1538,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         return ax
 
-    def plot_covariate_groups(self, covariate, groups, **kwargs):
+    def plot_covariate_groups(self, covariate, values, **kwargs):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
         what happens when a covariate is varied over values in a group. This is useful to compare
@@ -1549,7 +1549,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         ----------
         covariate: string
             a string of the covariate in the original dataset that we wish to vary.
-        groups: iterable
+        values: iterable
             an iterable of the values we wish the covariate to take on.
         kwargs:
             pass in additional plotting commands
@@ -1567,12 +1567,12 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if self.strata is None:
             axes = kwargs.get("ax", None) or plt.figure().add_subplot(111)
             x_bar = self._norm_mean.to_frame().T
-            X = pd.concat([x_bar] * len(groups))
-            X.index = ["%s=%s" % (covariate, g) for g in groups]
-            X[covariate] = groups
+            X = pd.concat([x_bar] * len(values))
+            X.index = ["%s=%s" % (covariate, g) for g in values]
+            X[covariate] = values
 
-            self.predict_survival_function(X).plot(ax=ax)
-            self.baseline_survival_.plot(ax=ax, ls="--")
+            self.predict_survival_function(X).plot(ax=axes)
+            self.baseline_survival_.plot(ax=axes, ls="--")
 
         else:
             axes = []
@@ -1583,9 +1583,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 for name, value in zip(self.strata, _to_array(stratum)):
                     x_bar[name] = value
 
-                X = pd.concat([x_bar] * len(groups))
-                X.index = ["%s=%s" % (covariate, g) for g in groups]
-                X[covariate] = groups
+                X = pd.concat([x_bar] * len(values))
+                X.index = ["%s=%s" % (covariate, g) for g in values]
+                X[covariate] = values
 
                 self.predict_survival_function(X).plot(ax=ax)
                 baseline_survival_.plot(ax=ax, ls="--", label="stratum %s baseline survival" % str(stratum))
