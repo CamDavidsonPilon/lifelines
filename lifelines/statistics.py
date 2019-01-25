@@ -145,7 +145,14 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     )
 
 
-def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs):
+def _test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs)
+    """
+
+
+
+    """
+
+def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -184,9 +191,6 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
 
     t_0: float, optional (default=-1)
         the final time period under observation, -1 for all time.
-
-    alpha: float, optional (default=0.95)
-        the confidence level
 
     kwargs: 
         add keywords and meta-data to the experiment summary
@@ -232,19 +236,15 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
     event_observed = np.r_[event_observed_A, event_observed_B]
-    return multivariate_logrank_test(event_times, groups, event_observed, alpha=alpha, t_0=t_0, **kwargs)
+    return multivariate_logrank_test(event_times, groups, event_observed, t_0=t_0, **kwargs)
 
 
 def pairwise_logrank_test(
-    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs
+    event_durations, groups, event_observed=None, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
 
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
-    We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase
-    the chance that here will exist a significantly different pair purely by chance. For this reason, we use the
-    Bonferroni correction (rewight the alpha value higher to accomidate the multiple tests).
-
 
     Parameters
     ----------
@@ -260,12 +260,6 @@ def pairwise_logrank_test(
 
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
-
-    alpha: float, optional (default=0.95)
-        the confidence level
-
-    bonferroni: boolean, optional (default=True)
-        If True, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M.
 
     kwargs: 
         add keywords and meta-data to the experiment summary.
@@ -302,10 +296,6 @@ def pairwise_logrank_test(
 
     n_unique_groups = unique_groups.shape[0]
 
-    if bonferroni:
-        m = 0.5 * n_unique_groups * (n_unique_groups - 1)
-        alpha = 1 - (1 - alpha) / m
-
     result = StatisticalResult([], [], [])
 
     for i1, i2 in combinations(np.arange(n_unique_groups), 2):
@@ -316,9 +306,7 @@ def pairwise_logrank_test(
             event_durations.loc[ix2],
             event_observed.loc[ix1],
             event_observed.loc[ix2],
-            alpha=alpha,
             t_0=t_0,
-            use_bonferroni=bonferroni,
             name=[(g1, g2)],
             **kwargs
         )
@@ -327,7 +315,7 @@ def pairwise_logrank_test(
 
 
 def multivariate_logrank_test(
-    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs
+    event_durations, groups, event_observed=None, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
 
     """
@@ -353,9 +341,6 @@ def multivariate_logrank_test(
 
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
-
-    alpha: float, optional (default=0.95)
-        the confidence level
 
     kwargs: 
         add keywords and meta-data to the experiment summary.
@@ -394,9 +379,6 @@ def multivariate_logrank_test(
     pairwise_logrank_test
     logrank_test
     """
-    if not (0 < alpha <= 1.0):
-        raise ValueError("alpha parameter must be between 0 and 1.")
-
     event_durations, groups = np.asarray(event_durations), np.asarray(groups)
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
@@ -437,10 +419,10 @@ def multivariate_logrank_test(
     U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1])).dot(Z_j.iloc[:-1])  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
-    _, p_value = chisq_test(U, n_groups - 1, alpha)
+    p_value = chisq_test(U, n_groups - 1)
 
     return StatisticalResult(
-        p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
+        p_value, U, t_0=t_0, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
     )
 
 
@@ -564,18 +546,14 @@ class StatisticalResult(object):
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
 
 
-def chisq_test(U, degrees_freedom, alpha):
+def chisq_test(U, degrees_freedom):
     p_value = stats.chi2.sf(U, degrees_freedom)
-    if p_value < 1 - alpha:
-        return True, p_value
-    return None, p_value
+    return p_value
 
 
-def two_sided_z_test(Z, alpha):
+def two_sided_z_test(Z):
     p_value = 1 - np.max(stats.norm.cdf(Z), 1 - stats.norm.cdf(Z))
-    if p_value < 1 - alpha / 2.0:
-        return True, p_value
-    return None, p_value
+    return p_value
 
 
 class TimeTransformers:
