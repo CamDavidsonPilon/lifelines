@@ -76,7 +76,7 @@ class CoxPHFitter(BaseFitter):
     r"""
     This class implements fitting Cox's proportional hazard model:
 
-    .. math::  h(t|x) = h_0(t) \exp(x \beta)
+    .. math::  h(t|x) = h_0(t) \np.exp(x \beta)
 
     Parameters
     ----------
@@ -577,7 +577,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tied_death_counts = 0
-        scores = weights * exp(dot(X, beta))
+        scores = weights * np.exp(dot(X, beta))
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
@@ -591,7 +591,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             # Calculate phi values
             phi_i = score
             phi_x_i = phi_i * xi
-            phi_x_x_i = dot(xi.T, phi_x_i)
+            phi_x_x_i = np.dot(xi.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + phi_i
@@ -639,7 +639,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
-            log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
             # reset tie values
@@ -719,7 +719,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         unique_death_times = np.unique(T)
-        scores = weights * exp(dot(X, beta))
+        scores = weights * np.exp(dot(X, beta))
 
         for t in reversed(unique_death_times):
 
@@ -733,7 +733,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             phi_i = scores[ix]
             phi_x_i = phi_i * X_at_t
-            phi_x_x_i = dot(X_at_t.T, phi_x_i)
+            phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + array_sum_to_scalar(phi_i)
@@ -764,7 +764,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 # it's faster if we can skip computing these when we don't need to.
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
                 tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
-                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
+                tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
@@ -794,7 +794,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
-            log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
         return hessian, gradient, log_lik
@@ -910,7 +910,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
-        scores = weights[:, None] * exp(dot(X, self.hazards_.T))
+        scores = weights[:, None] * np.exp(dot(X, self.hazards_.T))
 
         diff_against = []
 
@@ -1024,7 +1024,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         E = E.astype(int)
         score_residuals = np.zeros((n, d))
 
-        phi_s = exp(dot(X, beta))
+        phi_s = np.exp(dot(X, beta))
 
         # need to store these histories, as we access them often
         # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
@@ -1112,11 +1112,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Returns
         -------
         df : DataFrame
-            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
+            Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
 
         df = pd.DataFrame(index=self.hazards_.columns)
         df["coef"] = self.hazards_.loc["coef"].values
-        df["exp(coef)"] = exp(self.hazards_.loc["coef"].values)
+        df["np.exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
@@ -1125,7 +1125,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
-    def print_summary(self, decimals=2, **kwargs):
+    def print_summary(self, decimals=2, alpha=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -1133,11 +1133,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
+        alpha: float or iterable
+            specify confidence intervals to show
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
             multiple outputs. 
 
         """
+
 
         # Print information about data first
         justify = string_justify(18)
@@ -1220,7 +1223,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
-        return exp(self.predict_log_partial_hazard(X))
+        return np.exp(self.predict_log_partial_hazard(X))
 
     def predict_log_partial_hazard(self, X):
         r"""
@@ -1343,7 +1346,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         survival_function : DataFrame
             the survival probabilities of individuals over the timeline
         """
-        return exp(-self.predict_cumulative_hazard(X, times=times))
+        return np.exp(-self.predict_cumulative_hazard(X, times=times))
 
     def predict_percentile(self, X, p=0.5):
         """
@@ -1486,7 +1489,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>> ax = cph.baseline_survival_.plot()
         >>> kmf.plot(ax=ax)
         """
-        survival_df = exp(-self.baseline_cumulative_hazard_)
+        survival_df = np.exp(-self.baseline_cumulative_hazard_)
         if self.strata is None:
             survival_df.columns = ["baseline survival"]
         return survival_df

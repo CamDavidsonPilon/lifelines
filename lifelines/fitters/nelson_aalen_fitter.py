@@ -35,6 +35,7 @@ class NelsonAalenFitter(UnivariateFitter):
     """
 
     def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
+        super(NelsonAalenFitter, self).__init__(alpha=alpha)
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha

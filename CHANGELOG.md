@@ -1,11 +1,11 @@
 ### Changelogs
 
 ### 0.18.0
- - remove `alpha` keyword from all statistical functions. 
+ - remove `alpha` keyword from all statistical functions. This was never being used. 
  - introduce new statistical tests between univariate datasets: `survival_difference_at_fixed_point_in_time_test`,...
  - new warning message when lifelines detects possible non-unique solutions to maximum likelihood. 
- - catch `LinAlgError: Matrix is singular.` and report back to the user. 
- - Generally: clean up lifelines exception handling. 
+ - Generally: clean up lifelines exception handling. Ex: catch `LinAlgError: Matrix is singular.` and report back to the user advice. 
+ - The default `step_size` in the Cox models has been changed from 0.95 to 0.9999. This reduces the number of iterations, sometimes. If users start to experience convergence errors, it's suggested to explicitly set `fit(..., step_size=0.95)`, or some other smaller value. 
  
 
 ### 0.17.5

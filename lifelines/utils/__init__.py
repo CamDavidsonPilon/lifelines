@@ -9,7 +9,6 @@ import numpy as np
 from scipy.linalg import solve
 from scipy import stats
 import pandas as pd
-from pandas import to_datetime
 
 from lifelines.utils.concordance import concordance_index
 
@@ -458,8 +457,8 @@ def datetimes_to_durations(
 
     C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
     end_times[~C] = fill_date
-    start_times_ = to_datetime(start_times, dayfirst=dayfirst)
-    end_times_ = to_datetime(end_times, dayfirst=dayfirst, errors="coerce")
+    start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst)
+    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce")
 
     deaths_after_cutoff = end_times_ > fill_date
     C[deaths_after_cutoff] = False
@@ -1287,7 +1286,7 @@ class StepSizer:
         if norm_of_delta >= 15.0:
             self.step_size *= 0.25
             self.temper_back_up = True
-        elif 15.0 > norm_of_delta > 5.0:
+        elif 15.0 > norm_of_delta  and norm_of_delta > 5.0:
             self.step_size *= 0.75
             self.temper_back_up = True
 

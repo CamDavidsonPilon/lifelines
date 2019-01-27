@@ -67,6 +67,7 @@ class AalenAdditiveFitter(BaseFitter):
     """
 
     def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.0, smoothing_penalizer=0.0):
+        super(AalenAdditiveFitter, self).__init__(alpha=alpha)
         self.fit_intercept = fit_intercept
         self.alpha = alpha
         self.coef_penalizer = coef_penalizer
