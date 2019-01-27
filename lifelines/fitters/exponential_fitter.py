@@ -157,7 +157,7 @@ class ExponentialFitter(UnivariateFitter):
         df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
         df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
-        df["log(p)"] = np.log(df["p"])
+        df["-log2(p)"] = -np.log2(df["p"])
         return df
 
     def _compute_z_values(self):

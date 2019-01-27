@@ -1116,7 +1116,7 @@ class TestCoxPHFitter:
     def test_summary(self, rossi, cph):
         cph.fit(rossi, duration_col="week", event_col="arrest")
         summary = cph.summary
-        expected_columns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95"]
+        expected_columns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95", '-log2(p)']
         assert all([col in summary.columns for col in expected_columns])
 
     def test_print_summary_with_decimals(self, rossi, cph):
@@ -1180,7 +1180,7 @@ prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
 Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
 Concordance = 0.640
-Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
+Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 """
                 )
                 .strip()
@@ -2908,9 +2908,9 @@ class TestCoxTimeVaryingFitter:
 
     def test_likelihood_ratio_test_against_R(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event")
-        test_stat, deg_of_freedom, log_p_value = ctv._compute_likelihood_ratio_test()
+        test_stat, deg_of_freedom, neg_log2_p_value = ctv._compute_likelihood_ratio_test()
         assert abs(test_stat - 15.1) < 0.1
-        assert abs(np.exp(log_p_value) - 0.00448) < 0.001
+        assert abs(2**(-neg_log2_p_value) - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
@@ -2956,7 +2956,7 @@ transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
 ---
 Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.001 '.' 0.05 ' ' 1
 
-Likelihood ratio test = 15.11 on 4 df, log(p)=-5.41
+Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
 """
                 )
                 .strip()

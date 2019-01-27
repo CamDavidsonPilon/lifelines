@@ -6,6 +6,7 @@
  - new warning message when lifelines detects possible non-unique solutions to maximum likelihood. 
  - Generally: clean up lifelines exception handling. Ex: catch `LinAlgError: Matrix is singular.` and report back to the user advice. 
  - The default `step_size` in the Cox models has been changed from 0.95 to 0.9999. This reduces the number of iterations, sometimes. If users start to experience convergence errors, it's suggested to explicitly set `fit(..., step_size=0.95)`, or some other smaller value. 
+ - in models' `summary` (including `print_summary`), the `log(p)` term has changed to `-log2(p)`. This is known as the s-value. See https://lesslikely.com/statistics/s-values/
  
 
 ### 0.17.5

@@ -1116,11 +1116,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         df = pd.DataFrame(index=self.hazards_.columns)
         df["coef"] = self.hazards_.loc["coef"].values
-        df["np.exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
+        df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
-        df["log(p)"] = np.log(df["p"])
+        df["-log2(p)"] = -np.log2(df["p"])
         df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
@@ -1180,7 +1180,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print(significance_codes_as_text(), end="\n\n")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
         print(
-            "Likelihood ratio test = {:.{prec}f} on {} df, log(p)={:.{prec}f}".format(
+            "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
             )
         )
@@ -1200,7 +1200,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         with np.warnings.catch_warnings():
             np.warnings.filterwarnings("ignore")
-            return test_stat, degrees_freedom, np.log(p_value)
+            return test_stat, degrees_freedom, -np.log2(p_value)
 
     def predict_partial_hazard(self, X):
         r"""

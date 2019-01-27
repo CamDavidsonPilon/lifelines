@@ -589,7 +589,7 @@ class StatisticalResult(object):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
         df = self.summary
-        df["log(p)"] = np.log(df["p"])
+        df["-log2(p)"] = -np.log2(df["p"])
         df[""] = [significance_code(p) for p in df["p"]]
 
         s = self.__repr__()
