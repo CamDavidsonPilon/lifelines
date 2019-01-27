@@ -34,7 +34,9 @@ Note a few facts about this model: the only time component is in the baseline ha
 
 The dataset for regression
 ###########################
-The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. Optionally, there could be a column denoting the event status of each observation (1 if event occured, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial. 
+The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. There may be a column denoting the event status of each observation (1 if event occured, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial. 
+
+.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. _lifelines_ will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
 
 An example dataset is called the Rossi recidivism dataset, available in lifelines as ``datasets.load_rossi``.
 
@@ -55,7 +57,7 @@ An example dataset is called the Rossi recidivism dataset, available in lifeline
 The dataframe ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occured, and the other columns represent variables we wish to regress against. 
 
 
-If you need to first "clean" your dataset (encode categorical variables, add interation terms, etc.), that should happen *before* using lifelines. Libraries like Pandas and Patsy help with that. 
+If you need to first clean or transform your dataset (encode categorical variables, add interation terms, etc.), that should happen *before* using lifelines. Libraries like Pandas and Patsy help with that. 
 
 
 Running the regression

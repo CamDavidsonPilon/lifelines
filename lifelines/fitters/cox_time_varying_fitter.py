@@ -12,7 +12,7 @@ from scipy import stats
 
 from numpy import dot, exp
 from numpy.linalg import norm, inv
-from scipy.linalg import solve as spsolve
+from scipy.linalg import solve as spsolve, LinAlgError
 
 # for some summations, bottleneck is faster than numpy sums. Let's use them intelligently.
 try:
@@ -337,10 +337,16 @@ class CoxTimeVaryingFitter(BaseFitter):
                         """hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """
-                    )
+                    , e)
                 else:
                     # something else?
                     raise e
+            except LinAlgError as e:
+                raise ConvergenceError(
+                    """Convergence halted due to matrix inversion problems. Suspicion is high colinearity. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+"""
+                , e)
 
             delta = step_size * inv_h_dot_g_T
 

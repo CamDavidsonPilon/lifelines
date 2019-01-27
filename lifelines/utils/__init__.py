@@ -31,37 +31,23 @@ __all__ = [
 
 class StatError(Exception):
     def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return repr(self.msg)
-
+        super(StatError, self).__init__(msg)
 
 class ConvergenceError(ValueError):
     # inherits from ValueError for backwards compatilibity reasons
-
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return repr(self.msg)
+    
+    def __init__(self, msg, original_exception=""):
+        super(ConvergenceError, self).__init__(msg + (": %s" % original_exception))
+        self.original_exception = original_exception
 
 
 class ConvergenceWarning(RuntimeWarning):
     def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return repr(self.msg)
-
+        super(ConvergenceWarning, self).__init__(msg)
 
 class StatisticalWarning(RuntimeWarning):
     def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return repr(self.msg)
-
+        super(StatisticalWarning, self).__init__(msg)
 
 def qth_survival_times(q, survival_functions, cdf=False):
     """
@@ -1281,7 +1267,7 @@ class StepSizer:
     """
 
     def __init__(self, initial_step_size):
-        initial_step_size = coalesce(initial_step_size, 0.9999)
+        initial_step_size = coalesce(initial_step_size, 0.95)
         self.initial_step_size = initial_step_size
         self.step_size = initial_step_size
         self.temper_back_up = False
@@ -1313,7 +1299,7 @@ class StepSizer:
 
         # recent monotonically decreasing is good though
         if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
-            self.step_size = min(self.step_size * SCALE, 0.9999)
+            self.step_size = min(self.step_size * SCALE, 0.95)
 
         return self
 

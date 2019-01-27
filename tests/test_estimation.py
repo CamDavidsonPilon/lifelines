@@ -2261,8 +2261,10 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
                 cox.fit(rossi, "week", "arrest")
             except LinAlgError:
                 pass
-            assert issubclass(w[-1].category, ConvergenceWarning)
-            assert "complete separation" in str(w[-1].message)
+            assert issubclass(w[0].category, ConvergenceWarning)
+            assert issubclass(w[1].category, ConvergenceWarning)
+            assert "complete separation" in str(w[0].message)
+            assert "non-unique" in str(w[1].message)
 
     def test_warning_is_raised_if_complete_seperation_is_present(self, cph):
         # check for a warning if we have complete seperation

@@ -10,7 +10,7 @@ import pandas as pd
 
 from numpy import dot, exp
 from numpy.linalg import norm, inv
-from scipy.linalg import solve as spsolve
+from scipy.linalg import solve as spsolve, LinAlgError
 from scipy.integrate import trapz
 from scipy import stats
 
@@ -443,13 +443,19 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             except ValueError as e:
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
-                        """hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
+                        """Hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """
-                    )
+                    , e)
                 else:
                     # something else?
                     raise e
+            except LinAlgError as e:
+                raise ConvergenceError(
+                    """Convergence halted due to matrix inversion problems. Suspicion is high colinearity. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+"""
+                , e)
 
             delta = step_size * inv_h_dot_g_T
 
@@ -458,7 +464,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                     """delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """
-                )
+                , e)
 
             # Save these as pending result
             hessian, gradient = h, g
@@ -507,8 +513,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
         elif show_progress and not completed:
-            print("Convergence failed. See warning messages.")
-        if not completed:
+            print("Convergence failed. See any warning messages.")
+        
+        # report to the user problems that we detect.
+        if completed and norm_delta > 0.1:
+            warnings.warn("Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity in the dataset?" % norm_delta, ConvergenceWarning)
+        elif not completed:
             warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
         return beta
