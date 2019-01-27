@@ -1281,7 +1281,7 @@ class StepSizer:
     """
 
     def __init__(self, initial_step_size):
-        initial_step_size = coalesce(initial_step_size, 0.95)
+        initial_step_size = coalesce(initial_step_size, 0.9999)
         self.initial_step_size = initial_step_size
         self.step_size = initial_step_size
         self.temper_back_up = False
@@ -1313,7 +1313,7 @@ class StepSizer:
 
         # recent monotonically decreasing is good though
         if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
-            self.step_size = min(self.step_size * SCALE, 0.95)
+            self.step_size = min(self.step_size * SCALE, 0.9999)
 
         return self
 

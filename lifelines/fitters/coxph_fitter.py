@@ -469,7 +469,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 
             if show_progress:
                 print(
-                    "Iteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
+                    "Iteration %d: norm_delta = %.5f, step_size = %.3f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
                     % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start)
                 )
 
@@ -1599,6 +1599,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
+
+        TODO: this needs doc string and the p-value threshold should be corrected to account for multiple comparisons
         """
         residuals = self.compute_residuals(training_df, kind="scaled_schoenfeld")
         test_results = proportional_hazard_test(
@@ -1623,8 +1625,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 print()
 
             print(
-                "%d. Variable '%s' failed the non-proportional test, p=%.4f."
-                % (counter, variable, minumum_observed_p_value)
+                "%d. Variable '%s' failed the non-proportional test with threshold value %0.2f (p=%.4f.)"
+                % (counter, variable, p_value_threshold, minumum_observed_p_value)
             )
 
             if advice:
