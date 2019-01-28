@@ -355,8 +355,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         weights=None,
         initial_beta=None,
         step_size=None,
-        precision=10e-06,
-        show_progress=True,
+        precision=1e-07,
+        show_progress=True, 
         max_steps=50,
     ):  # pylint: disable=too-many-statements,too-many-branches
         """
@@ -1606,11 +1606,51 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
     def check_assumptions(
         self, training_df, advice=True, show_plots=True, p_value_threshold=0.05, plot_n_bootstraps=10
     ):
-        """section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
+        """
+        Use this function to test the proportional hazards assumption. See iterative usage example at 
+        https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
+
+        
+        Parameters
+        -----------
+
+        training_df: DataFrame
+            the original DataFrame used in the call to ``fit(...)``
+        advice: boolean, optional
+            display advice as output to the user's screen
+        show_plots: boolean, optional
+            display plots of the scaled schoenfeld residuals and loess curves. This is an eyeball test for violations
+        p_value_threshold: float, optional
+            the threshold to use to alert the user of violations. See note below. 
+        plot_n_bootstraps:
+            in the plots displayed, also display plot_n_bootstraps bootstrapped loess curves. 
+    
+        
+        Examples
+        ----------
+
+        >>> from lifelines.datasets import load_rossi
+        >>> from lifelines import CoxPHFitter
+        >>>
+        >>> rossi = load_rossi()
+        >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+        >>>
+        >>> cph.check_assumptions(rossi)
+
+
+        Notes
+        -------
+        The ``p_value_threshold`` is arbitrarily set at 0.05. Under the null, some covariates
+        will be below the threshold (i.e. by chance). This is compounded when there are many covariates. 
+        With that in mind, it's best to use a combination of statistical tests and eyeball tests to 
+        determine violations. 
+
+        
+        References
+        -----------
+        section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
-
-        TODO: this needs doc string and the p-value threshold should be corrected to account for multiple comparisons
         """
         residuals = self.compute_residuals(training_df, kind="scaled_schoenfeld")
         test_results = proportional_hazard_test(
