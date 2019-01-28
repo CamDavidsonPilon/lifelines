@@ -24,7 +24,6 @@ from lifelines.utils import (
     string_justify,
     _to_list,
     format_floats,
-    # significance_codes_as_text,
     format_p_value,
     survival_table_from_events,
     StatisticalWarning,
@@ -542,11 +541,8 @@ It's important to know that the naive variance estimates of the coefficients are
         print("---")
 
         df = self.summary
-        # Significance codes as last column
-        # df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
         # Significance code explanation
         print("---")
-        # print(significance_codes_as_text(), end="\n\n")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))

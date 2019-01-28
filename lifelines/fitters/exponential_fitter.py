@@ -8,9 +8,7 @@ from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
     inv_normal_cdf,
     check_nans_or_infs,
-    significance_code,
     string_justify,
-    significance_codes_as_text,
     format_p_value,
     format_floats,
 )
@@ -194,7 +192,4 @@ class ExponentialFitter(UnivariateFitter):
         print("---")
 
         df = self.summary
-        df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
-        print("---")
-        print(significance_codes_as_text(), end="\n\n")

@@ -28,9 +28,7 @@ from lifelines import CoxPHFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (
     inv_normal_cdf,
-    significance_code,
     normalize,
-    significance_codes_as_text,
     pass_for_numeric_dtypes_or_raise,
     check_low_var,
     # check_for_overlapping_intervals,
@@ -336,8 +334,9 @@ class CoxTimeVaryingFitter(BaseFitter):
                     raise ConvergenceError(
                         """hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-"""
-                    , e)
+""",
+                        e,
+                    )
                 else:
                     # something else?
                     raise e
@@ -345,8 +344,9 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 raise ConvergenceError(
                     """Convergence halted due to matrix inversion problems. Suspicion is high colinearity. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-"""
-                , e)
+""",
+                    e,
+                )
 
             delta = step_size * inv_h_dot_g_T
 
@@ -593,12 +593,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         df = self.summary
         # Significance codes last
-        df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
         # Significance code explanation
         print("---")
-        print(significance_codes_as_text(), end="\n\n")
         print(
             "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
@@ -629,7 +627,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         return test_stat, degrees_freedom, -np.log2(p_value)
 
-    def plot(self, columns=None, display_significance_code=True, **errorbar_kwargs):
+    def plot(self, columns=None, **errorbar_kwargs):
         """
         Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
@@ -637,8 +635,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ----------
         columns : list, optional
             specifiy a subset of the columns to plot
-        display_significance_code: bool, optional (default: True)
-            display asteriks beside statistically significant variables
         errorbar_kwargs:
             pass in additional plotting commands to matplotlib errorbar command
 
@@ -676,10 +672,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
         ax.set_ylim(best_ylim)
 
-        if display_significance_code:
-            tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
-        else:
-            tick_labels = columns[order]
+        tick_labels = columns[order]
 
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))

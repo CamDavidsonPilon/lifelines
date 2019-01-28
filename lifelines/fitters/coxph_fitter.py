@@ -35,8 +35,6 @@ from lifelines.utils import (
     survival_table_from_events,
     inv_normal_cdf,
     normalize,
-    significance_code,
-    significance_codes_as_text,
     concordance_index,
     qth_survival_times,
     pass_for_numeric_dtypes_or_raise,
@@ -357,7 +355,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         weights=None,
         initial_beta=None,
         step_size=None,
-        precision=10e-6,
+        precision=10e-06,
         show_progress=True,
         max_steps=50,
     ):  # pylint: disable=too-many-statements,too-many-branches
@@ -445,8 +443,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                     raise ConvergenceError(
                         """Hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-"""
-                    , e)
+""",
+                        e,
+                    )
                 else:
                     # something else?
                     raise e
@@ -454,8 +453,9 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 raise ConvergenceError(
                     """Convergence halted due to matrix inversion problems. Suspicion is high colinearity. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-"""
-                , e)
+""",
+                    e,
+                )
 
             delta = step_size * inv_h_dot_g_T
 
@@ -463,8 +463,9 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 raise ConvergenceError(
                     """delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-"""
-                , e)
+""",
+                    e,
+                )
 
             # Save these as pending result
             hessian, gradient = h, g
@@ -475,7 +476,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
 
             if show_progress:
                 print(
-                    "Iteration %d: norm_delta = %.5f, step_size = %.3f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
+                    "Iteration %d: norm_delta = %.5f, step_size = %.4f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
                     % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start)
                 )
 
@@ -514,10 +515,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             print("Convergence completed after %d iterations." % (i))
         elif show_progress and not completed:
             print("Convergence failed. See any warning messages.")
-        
+
         # report to the user problems that we detect.
         if completed and norm_delta > 0.1:
-            warnings.warn("Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity in the dataset?" % norm_delta, ConvergenceWarning)
+            warnings.warn(
+                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity in the dataset?"
+                % norm_delta,
+                ConvergenceWarning,
+            )
         elif not completed:
             warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
@@ -1141,7 +1146,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         """
 
-
         # Print information about data first
         justify = string_justify(18)
         print(self)
@@ -1172,12 +1176,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         df = self.summary
         # Significance codes as last column
-        df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
         # Significance code explanation
         print("---")
-        print(significance_codes_as_text(), end="\n\n")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
         print(
             "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
@@ -1494,7 +1496,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             survival_df.columns = ["baseline survival"]
         return survival_df
 
-    def plot(self, columns=None, display_significance_code=True, **errorbar_kwargs):
+    def plot(self, columns=None, **errorbar_kwargs):
         """
         Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
@@ -1502,8 +1504,6 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         ----------
         columns : list, optional
             specify a subset of the columns to plot
-        display_significance_code: bool, optional (default: True)
-            display asteriks beside statistically significant variables
         errorbar_kwargs:
             pass in additional plotting commands to matplotlib errorbar command
 
@@ -1541,10 +1541,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
         ax.set_ylim(best_ylim)
 
-        if display_significance_code:
-            tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
-        else:
-            tick_labels = columns[order]
+        tick_labels = columns[order]
 
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))

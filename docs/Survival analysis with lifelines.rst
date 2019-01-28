@@ -382,8 +382,6 @@ we rule that the series have different generators.
     ---
     test_statistic      p
           260.4695 0.0000  ***
-    ---
-    Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
     
 Lets compare the different *types* of regimes present in the dataset:
 
@@ -405,6 +403,8 @@ Lets compare the different *types* of regimes present in the dataset:
 
 .. image:: images/lifelines_intro_all_regimes.png
 
+
+There are alternative (and sometimes better) tests of survival curves, and we explain more here: `Statistically compare two populations`_
 
 --------------
 

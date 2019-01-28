@@ -55,8 +55,7 @@ The ``lifelines.statistics.logrank_test`` function compares whether the "death" 
     test_statistic        p
              3.528  0.00034  **
 
-    ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
     """
 
     print(results.p_value)        # 0.46759
@@ -91,7 +90,6 @@ hypothesis that all the populations have the same "death" generation process).
     test_statistic      p
             1.0800 0.5827
     ---
-    Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
     """
 
 Survival differences at a point in time

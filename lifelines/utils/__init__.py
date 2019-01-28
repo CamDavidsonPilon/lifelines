@@ -32,9 +32,10 @@ class StatError(Exception):
     def __init__(self, msg):
         super(StatError, self).__init__(msg)
 
+
 class ConvergenceError(ValueError):
     # inherits from ValueError for backwards compatilibity reasons
-    
+
     def __init__(self, msg, original_exception=""):
         super(ConvergenceError, self).__init__(msg + (": %s" % original_exception))
         self.original_exception = original_exception
@@ -44,9 +45,11 @@ class ConvergenceWarning(RuntimeWarning):
     def __init__(self, msg):
         super(ConvergenceWarning, self).__init__(msg)
 
+
 class StatisticalWarning(RuntimeWarning):
     def __init__(self, msg):
         super(StatisticalWarning, self).__init__(msg)
+
 
 def qth_survival_times(q, survival_functions, cdf=False):
     """
@@ -659,29 +662,6 @@ def epanechnikov_kernel(t, T, bandwidth=1.0):
     return M
 
 
-def significance_code(p):
-    """
-    Notes
-    ------
-    v0.15.0: p-values between 0.05 and 0.1 have such little information gain. For that reason, I am deviating
-        from the traditional "astericks" in R and making everthing an order-of-magnitude less.
-    """
-    if p < 0.0001:
-        return "***"
-    if p < 0.001:
-        return "**"
-    if p < 0.01:
-        return "*"
-    if p < 0.05:
-        return "."
-    return " "
-
-
-def significance_codes_as_text():
-    p_values = [0, 0.0001, 0.001, 0.01, 0.05]
-    return "Signif. codes: " + " ".join(["%s '%s'" % (p, significance_code(p)) for p in p_values]) + " 1"
-
-
 def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None, ix=None):
     """
     Also known as Tikhonov regularization. This solves the minimization problem:
@@ -1286,7 +1266,7 @@ class StepSizer:
         if norm_of_delta >= 15.0:
             self.step_size *= 0.25
             self.temper_back_up = True
-        elif 15.0 > norm_of_delta  and norm_of_delta > 5.0:
+        elif 15.0 > norm_of_delta and norm_of_delta > 5.0:
             self.step_size *= 0.75
             self.temper_back_up = True
 
@@ -1298,7 +1278,7 @@ class StepSizer:
 
         # recent monotonically decreasing is good though
         if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
-            self.step_size = min(self.step_size * SCALE, 0.95)
+            self.step_size = min(self.step_size * SCALE, 1.0)
 
         return self
 
@@ -1339,5 +1319,6 @@ def format_floats(decimals):
 
 def dataframe_interpolate_at_times(df, times):
     return df.reindex(df.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
+
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")

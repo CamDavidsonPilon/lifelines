@@ -1116,7 +1116,7 @@ class TestCoxPHFitter:
     def test_summary(self, rossi, cph):
         cph.fit(rossi, duration_col="week", event_col="arrest")
         summary = cph.summary
-        expected_columns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95", '-log2(p)']
+        expected_columns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95", "-log2(p)"]
         assert all([col in summary.columns for col in expected_columns])
 
     def test_print_summary_with_decimals(self, rossi, cph):
@@ -1169,15 +1169,14 @@ number of subjects = 432
 
 ---
         coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043   *
-age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143  **
+fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043
+age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143
 race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
 wexp -0.1498     0.8609    0.2122 -0.7058 0.4803     -0.5657      0.2662
 mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
 paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
-prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
+prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476
 ---
-Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
 Concordance = 0.640
 Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
@@ -2910,7 +2909,7 @@ class TestCoxTimeVaryingFitter:
         ctv.fit(heart, id_col="id", event_col="event")
         test_stat, deg_of_freedom, neg_log2_p_value = ctv._compute_likelihood_ratio_test()
         assert abs(test_stat - 15.1) < 0.1
-        assert abs(2**(-neg_log2_p_value) - 0.00448) < 0.001
+        assert abs(2 ** (-neg_log2_p_value) - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
@@ -2949,12 +2948,11 @@ number of subjects = 103
 
 ---
               coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540  *
-year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082  *
-surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825  .
+age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540
+year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082
+surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825
 transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
 ---
-Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.001 '.' 0.05 ' ' 1
 
 Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
 """

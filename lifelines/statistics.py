@@ -10,12 +10,10 @@ from lifelines.utils import (
     _to_array,
     _to_list,
     group_survival_table_from_events,
-    significance_code,
-    significance_codes_as_text,
     string_justify,
     format_p_value,
     format_floats,
-    dataframe_interpolate_at_times
+    dataframe_interpolate_at_times,
 )
 
 from lifelines import KaplanMeierFitter
@@ -146,7 +144,9 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     )
 
 
-def survival_difference_at_fixed_point_in_time_test(point_in_time, durations_A, durations_B, event_observed_A=None, event_observed_B=None, **kwargs):
+def survival_difference_at_fixed_point_in_time_test(
+    point_in_time, durations_A, durations_B, event_observed_A=None, event_observed_B=None, **kwargs
+):
     """
     
     Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other. 
@@ -221,7 +221,7 @@ def survival_difference_at_fixed_point_in_time_test(point_in_time, durations_A, 
     log = np.log
     clog = lambda s: log(-log(s))
 
-    X = (clog(sA_t) - clog(sB_t))**2 / (σsqA / log(sA_t) ** 2 + σsqB / log(sB_t) ** 2)
+    X = (clog(sA_t) - clog(sB_t)) ** 2 / (σsqA / log(sA_t) ** 2 + σsqB / log(sB_t) ** 2)
     p_value = chisq_test(X, 1)
 
     return StatisticalResult(
@@ -590,7 +590,6 @@ class StatisticalResult(object):
         meta_data = self._stringify_meta_data(extra_kwargs)
         df = self.summary
         df["-log2(p)"] = -np.log2(df["p"])
-        df[""] = [significance_code(p) for p in df["p"]]
 
         s = self.__repr__()
         s += "\n" + meta_data + "\n"
@@ -601,8 +600,6 @@ class StatisticalResult(object):
             formatters={"p": format_p_value(decimals)},
         )
 
-        s += "\n---"
-        s += "\n" + significance_codes_as_text()
         return s
 
     def _stringify_meta_data(self, dictionary):

@@ -13,9 +13,7 @@ from lifelines.utils import (
     check_nans_or_infs,
     ConvergenceError,
     string_justify,
-    significance_code,
     ConvergenceWarning,
-    significance_codes_as_text,
     format_p_value,
     format_floats,
 )
@@ -331,7 +329,4 @@ class WeibullFitter(UnivariateFitter):
         print("---")
 
         df = self.summary
-        df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
-        print("---")
-        print(significance_codes_as_text(), end="\n\n")
