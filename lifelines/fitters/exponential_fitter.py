@@ -6,6 +6,7 @@ from scipy import stats
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
+    _to_array,
     inv_normal_cdf,
     check_nans_or_infs,
     string_justify,
@@ -77,11 +78,12 @@ class ExponentialFitter(UnivariateFitter):
         self.event_observed = (
             np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
-        self.timeline = (
-            np.sort(np.asarray(timeline))
-            if timeline is not None
-            else np.arange(int(self.durations.min()), int(self.durations.max()) + 1)
-        )
+        
+        if timeline is not None:
+            self.timeline = np.sort(np.asarray(timeline))
+        else:
+            self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
+
         self._label = label
 
         # estimation
@@ -108,7 +110,28 @@ class ExponentialFitter(UnivariateFitter):
         return self
 
     def _estimation_method(self, t):
-        return np.exp(-self.lambda_ * t)
+        return self.survival_function_at_times(t)
+
+    def hazard_at_times(self, times):        
+        return pd.Series(-self.lambda_, index=_to_array(times))
+
+    def survival_function_at_times(self, times):
+        """
+        Return a Pandas series of the predicted survival value at specific times
+
+        Parameters
+        -----------
+        times: iterable or float
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        return pd.Series(np.exp(-self.lambda_ * times), index=_to_array(times))
+
+    def cumulative_hazard_at_times(self, times):
+        return pd.Series(-self.lambda_ * times, index=_to_array(times))
 
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)

@@ -9,6 +9,7 @@ from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
     _preprocess_inputs,
     _additive_estimate,
+    _to_array,
     StatError,
     inv_normal_cdf,
     median_survival_times,
@@ -135,6 +136,21 @@ class KaplanMeierFitter(UnivariateFitter):
 
     def plot_loglogs(self, *args, **kwargs):
         return plot_loglogs(self, *args, **kwargs)
+
+    def survival_function_at_times(self, times):
+        """
+        Return a Pandas series of the predicted survival value at specific times
+
+        Parameters
+        -----------
+        times: iterable or float
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        return pd.Series(self.predict(times), index=_to_array(times))
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.

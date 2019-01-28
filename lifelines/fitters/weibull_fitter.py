@@ -9,6 +9,7 @@ from scipy import stats
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
+    _to_array,
     inv_normal_cdf,
     check_nans_or_infs,
     ConvergenceError,
@@ -152,13 +153,11 @@ class WeibullFitter(UnivariateFitter):
         )
         self._log_likelihood = -_negative_log_likelihood((self.lambda_, self.rho_), self.durations, self.event_observed)
         self.variance_matrix_ = -inv(self._hessian_)
-        self.survival_function_ = pd.DataFrame(
-            self.survival_function_at_times(self.timeline), columns=[self._label], index=self.timeline
-        )
-        self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
-        self.cumulative_hazard_ = pd.DataFrame(
-            self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline
-        )
+
+        self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
+        self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
+        self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
+
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
         self.median_ = 1.0 / self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
 
@@ -173,16 +172,16 @@ class WeibullFitter(UnivariateFitter):
         return self
 
     def _estimation_method(self, t):
-        return np.exp(-(self.lambda_ * t) ** self.rho_)
+        return self.survival_function_at_times(t)
 
     def hazard_at_times(self, times):
-        return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
+        return pd.Series(self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1), index=_to_array(times))
 
     def survival_function_at_times(self, times):
-        return np.exp(-self.cumulative_hazard_at_times(times))
+        return pd.Series(np.exp(-self.cumulative_hazard_at_times(times)), index=_to_array(times))
 
     def cumulative_hazard_at_times(self, times):
-        return (self.lambda_ * times) ** self.rho_
+        return pd.Series((self.lambda_ * times) ** self.rho_, index=_to_array(times))
 
     def _newton_rhaphson(self, T, E, precision=1e-5, show_progress=False):  # pylint: disable=too-many-locals
         from lifelines.utils import _smart_search

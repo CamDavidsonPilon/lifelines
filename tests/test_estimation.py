@@ -45,6 +45,7 @@ from lifelines import (
     CoxTimeVaryingFitter,
     AalenAdditiveFitter,
     AalenJohansenFitter,
+    LogNormalFitter,
 )
 
 from lifelines.datasets import (
@@ -93,7 +94,7 @@ def data_pred1():
 
 @pytest.fixture
 def univariate_fitters():
-    return [KaplanMeierFitter, NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, WeibullFitter]
+    return [KaplanMeierFitter, NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, WeibullFitter, LogNormalFitter]
 
 
 @pytest.fixture
@@ -306,7 +307,8 @@ class TestUnivariateFitters:
 
             result = f1.divide(f2)
             assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
-
+            import pdb
+            #pdb.set_trace()
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
     def test_divide_function_with_labelled_data(self, positive_sample_lifetimes, univariate_fitters):
@@ -352,7 +354,43 @@ class TestUnivariateFitters:
             assert dif == 0
 
 
+class TestLogNormal:
+
+    @pytest.fixture()
+    def lnf(self):
+        return LogNormalFitter()
+
+    def test_fit(self, lnf):
+        T = np.exp(np.random.randn(10000))
+
+        lnf.fit(T)
+        assert abs(lnf.mu_) < 0.1
+        assert abs(lnf.sigma_ - 1) < 0.1
+
+
+    def test_lognormal_model_does_not_except_negative_or_zero_values(self, lnf):
+        T = [0, 1, 2, 4, 5]
+        with pytest.raises(ValueError):
+            lnf.fit(T)
+
+        T[0] = -1
+        with pytest.raises(ValueError):
+            lnf.fit(T)
+
+    def test_cumulative_hazard_doesnt_fail(self, lnf):
+        T = np.exp(np.random.randn(100))
+        lnf.fit(T)
+        results = lnf.cumulative_hazard_at_times([1,2,3])
+        assert results.shape[0] == 3
+
+        results = lnf.cumulative_hazard_at_times(pd.Series([1,2,3]))
+        assert results.shape[0] == 3
+
+        results = lnf.cumulative_hazard_at_times(1)
+        assert results.shape[0] == 1
+
 class TestWeibullFitter:
+
     def test_weibull_fit_returns_float_timelines(self):
         wf = WeibullFitter()
         T = np.linspace(0.1, 10)

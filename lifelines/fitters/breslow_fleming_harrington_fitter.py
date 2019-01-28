@@ -93,3 +93,18 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         # plotting functions
         self.plot_survival_function = self.plot
         return self
+
+    def survival_function_at_times(self, times):
+        """
+        Return a Pandas series of the predicted survival value at specific times
+
+        Parameters
+        -----------
+        times: iterable or float
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        return pd.Series(self.predict(times), index=_to_array(times))

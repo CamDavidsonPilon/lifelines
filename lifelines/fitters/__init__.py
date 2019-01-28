@@ -103,12 +103,13 @@ class UnivariateFitter(BaseFitter):
         other_estimate = getattr(other, other._estimate_name)
         new_index = np.concatenate((other_estimate.index, self_estimate.index))
         new_index = np.unique(new_index)
-        return pd.DataFrame(
+        t = pd.DataFrame(
             self_estimate.reindex(new_index, method="ffill").values
             / other_estimate.reindex(new_index, method="ffill").values,
             index=new_index,
             columns=["ratio"],
         )
+        return t
 
     @_must_call_fit_first
     def predict(self, times):
