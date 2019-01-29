@@ -19,7 +19,7 @@ methods like linear regression.
 
 There are two popular techniques in survival regression: Cox's
 model and Aalen's additive model. Both models attempt to represent the
-hazard rate :math:`\lambda(t | x)` as a function of :math:`t` and some covariates :math:`x`. We explore these models next. 
+hazard rate :math:`h(t | x)` as a function of :math:`t` and some covariates :math:`x`. We explore these models next. 
 
 
 Cox's proportional hazard model
@@ -28,7 +28,7 @@ Cox's proportional hazard model
 lifelines has an implementation of the Cox proportional hazards regression model (implemented in
 R as ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
-.. math::  \underbrace{\lambda(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
+.. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
 Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease the baseline hazard.
 
@@ -368,7 +368,7 @@ additive. Specifically:
 
 
 .. math:: 
-    \lambda(t|x)  = b_0(t) + b_1(t) x_1 + ... + b_N(t) x_N
+    h(t|x)  = b_0(t) + b_1(t) x_1 + ... + b_N(t) x_N
 
 
 Inference typically does not estimate the individual
@@ -544,7 +544,7 @@ Often an individual will have a covariate change over time. An example of this i
 
 We can incorporate changes over time into our survival analysis by using a modification of the Cox model above. The general mathematical description is:
 
-.. math::  \lambda(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i (x_i(t) - \overline{x_i}) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
+.. math::  h(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i (x_i(t) - \overline{x_i}) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
 Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this.
 

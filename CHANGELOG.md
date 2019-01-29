@@ -13,7 +13,7 @@
  - `WeibullFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
  - `ExponentialFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
  - `ExponentialFitter.plot` now displays the cumulative hazard, instead of the survival function. This is to make it easier to compare to `WeibullFitter` and `LogNormalFitter`
- - 
+ 
 
 ### 0.17.5
  - more bugs in `plot_covariate_groups` fixed when using non-numeric strata.

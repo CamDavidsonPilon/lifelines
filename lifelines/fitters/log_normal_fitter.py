@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.stats import norm
 from scipy import stats
 from numpy import log
-from scipy.optimize import minimize
+from scipy.optimize import minimize, check_grad
 from scipy.integrate import cumtrapz
 
 
@@ -23,46 +23,44 @@ from lifelines.utils import (
 
 
 def _negative_log_likelihood(params, log_T, E):
-    mu, sigma = params
-    if sigma <= 0.00001:
-        return 1e10
+    mu, log_sigma = params
+    sigma = np.exp(log_sigma)
+
     Z = (log_T - mu) / sigma
     log_sf = norm.logsf(Z)
 
     ll = (E * (norm.logpdf(Z) - log_T - log(sigma) - log_sf)).sum() + log_sf.sum()
     return -ll
 
-
-def diff_norm_pdf(z):
-    return -z * norm.pdf(z)
-
-
 def _mu_gradient(params, log_T, E):
-    mu, sigma = params
+    mu, log_sigma = params
+    sigma = np.exp(log_sigma)
 
     Z = (log_T - mu) / sigma
     dZ_dmu = -1 / sigma
 
     sf = norm.sf(Z)
 
-    return (
-        -(E * (diff_norm_pdf(Z) * dZ_dmu / norm.pdf(Z) + norm.pdf(Z) * dZ_dmu / sf)).sum()
+    x = (
+        -(E * (-Z * dZ_dmu + norm.pdf(Z) * dZ_dmu / sf)).sum()
         + (norm.pdf(Z) / sf * dZ_dmu).sum()
     )
-
+    return x
 
 def _sigma_gradient(params, log_T, E):
-    mu, sigma = params
+    mu, log_sigma = params
+    sigma = np.exp(log_sigma)
 
     Z = (log_T - mu) / sigma
-    dZ_dsigma = -(log_T - mu) / sigma ** 2
+    dZ_dsigma = -Z / sigma
 
     sf = norm.sf(Z)
 
-    return (
-        -(E * (diff_norm_pdf(Z) * dZ_dsigma / norm.pdf(Z) - 1 / sigma + norm.pdf(Z) * dZ_dsigma / sf)).sum()
+    x = (
+        -(E * (-Z * dZ_dsigma - 1 / sigma + norm.pdf(Z) * dZ_dsigma / sf)).sum()
         + (norm.pdf(Z) / sf * dZ_dsigma).sum()
     )
+    return x
 
 
 class LogNormalFitter(UnivariateFitter):
@@ -109,7 +107,7 @@ class LogNormalFitter(UnivariateFitter):
 
         Returns
         -------
-        self : ExpontentialFitter
+        self : LogNormalFitter
           self, with new properties like 'survival_function_', 'sigma_' and 'mu_'.
 
         """
@@ -137,15 +135,16 @@ class LogNormalFitter(UnivariateFitter):
 
         self._label = label
 
-        (self.mu_, self.sigma_), self._log_likelihood, self.variance_matrix_ = self._fit_model(
+        (self.mu_, log_sigma_), self._log_likelihood, self.variance_matrix_ = self._fit_model(
             self.durations, self.event_observed
         )
+        self.sigma_ = np.exp(log_sigma_)
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(name=self._label)
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(name=self._label)
         self.median_ = np.exp(self.mu_)
-        # self.confidence_interval_ = self._bounds(alpha, ci_labels)
+        self.confidence_interval_ = self._bounds(alpha, ci_labels)
 
         # estimation methods
         self._estimate_name = "cumulative_hazard_"
@@ -186,18 +185,25 @@ class LogNormalFitter(UnivariateFitter):
         return pd.Series(-log(1 - norm.cdf((log(times) - self.mu_) / self.sigma_)), index=_to_array(times))
 
     def _fit_model(self, T, E, initial_values=None):
+        """
+        Since we have the positivity constraint on sigma, and BFGS doesn't want to work with 
+        bounds, we will instead minimize over (mu, sigma) = (mu, exp(ln_sigma))
+
+        """
         if initial_values is None:
-            initial_values = np.array([log(T).mean() + 1, log(T).std()])
+            initial_values = np.array([log(T).mean(), log(log(T).std())])
 
         def gradient_function(parameters, log_T, E):
             return np.array([_mu_gradient(parameters, log_T, E), _sigma_gradient(parameters, log_T, E)])
 
         results = minimize(
-            _negative_log_likelihood, initial_values, args=(log(T), E), jac=gradient_function, method="BFGS"
+            _negative_log_likelihood, initial_values, args=(log(T), E), jac=gradient_function, method="BFGS",
+            options={'gtol': 1e-5},
         )
         if results.success:
             return results.x, -results.fun, results.hess_inv
         else:
+            print(results)
             raise ConvergenceError("Did not converge.")
 
     @property
@@ -240,11 +246,11 @@ class LogNormalFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        print("{} = {}".format(justify("hypothesis"), "mu != 0, sigma != 1"))
 
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
 
-        print("hyp: mu != 0, sigma != 1")
         print(end="\n")
         print("---")
 
@@ -276,6 +282,25 @@ class LogNormalFitter(UnivariateFitter):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
         var_mu_, var_sigma_ = self.variance_matrix_.diagonal()
+
+        def _d_cumulative_hazard_d_mu(mu_, sigma_, log_T):
+            Z = (log_T - mu_) / sigma_
+            return norm.pdf(Z) / norm.sf(Z) / sigma_
+
+        def _d_cumulative_hazard_d_sigma(mu_, sigma_, log_T):
+            Z = (log_T - mu_) / sigma_
+            return Z * norm.pdf(Z) / norm.sf(Z) / sigma_
+
+        def sensitivity_analysis(mu_, sigma_, var_mu_, var_sigma_, T):
+            return (
+                var_mu_ * _d_cumulative_hazard_d_mu(mu_, sigma_, log(T)) ** 2
+                + var_sigma_ * _d_cumulative_hazard_d_sigma(mu_, sigma_, log(T)) ** 2
+            )
+
+        std_cumulative_hazard = np.sqrt(
+            sensitivity_analysis(self.mu_, self.sigma_, var_mu_, var_sigma_, self.timeline)
+        )
+
 
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]

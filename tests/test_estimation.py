@@ -256,6 +256,12 @@ class TestUnivariateFitters:
             fitter.fit(positive_sample_lifetimes[0], ci_labels=expected)
             npt.assert_array_equal(fitter.confidence_interval_.columns, expected)
 
+    def test_ci_is_not_all_nan(self, positive_sample_lifetimes, univariate_fitters):
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(positive_sample_lifetimes[0])
+            assert not pd.isnull(fitter.confidence_interval_).all()
+
     def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
         for f in univariate_fitters:
@@ -388,6 +394,21 @@ class TestLogNormal:
 
         results = lnf.cumulative_hazard_at_times(1)
         assert results.shape[0] == 1
+
+
+    def test_lnf_inference(self, lnf):
+        N = 60000
+        mu = 5
+        sigma = 0.5
+        X, C = np.exp(sigma * np.random.randn(N) + mu),  np.exp(np.random.randn(N) + mu) 
+        E = X <= C
+        T = np.minimum(X, C)
+
+        lnf.fit(T, E)
+
+        assert abs(mu - lnf.mu_) < 0.01
+        assert abs(sigma - lnf.sigma_) < 0.01
+
 
 class TestWeibullFitter:
 

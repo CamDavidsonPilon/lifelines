@@ -164,29 +164,29 @@ given that the death event has not occurred until time :math:`t`. Mathematically
 
 This quantity goes to 0 as :math:`\delta t` shrinks, so we divide this
 by the interval :math:`\delta t` (like we might do in calculus). This
-defines the hazard function at time :math:`t`, :math:`\lambda(t)`:
+defines the hazard function at time :math:`t`, :math:`h(t)`:
 
-.. math:: \lambda(t) =  \lim_{\delta t \rightarrow 0 } \; \frac{Pr( t \le T \le t + \delta t | T > t)}{\delta t}
+.. math:: h(t) =  \lim_{\delta t \rightarrow 0 } \; \frac{Pr( t \le T \le t + \delta t | T > t)}{\delta t}
 
 It can be shown with quite elementary probability that this is equal to:
 
-.. math:: \lambda(t) = \frac{-S'(t)}{S(t)}
+.. math:: h(t) = \frac{-S'(t)}{S(t)}
 
 and solving this differential equation (yes, it is a differential
 equation), we get:
 
-.. math:: S(t) = \exp\left( -\int_0^t \lambda(z) \mathrm{d}z \right)
+.. math:: S(t) = \exp\left( -\int_0^t h(z) \mathrm{d}z \right)
 
 What I love about the above equation is that it defines **all** survival
 functions, and because the hazard function is arbitrary (i.e. there is
 no parametric form), the entire function is non-parametric (this allows
 for very flexible curves). Notice that we can now speak either about the
 survival function, :math:`S(t)`, or the hazard function,
-:math:`\lambda(t)`, and we can convert back and forth quite easily. It
+:math:`h(t)`, and we can convert back and forth quite easily. It
 also gives us another, albeit less useful, expression for :math:`T`:
 Upon differentiation and some algebra, we recover:
 
-.. math:: f_T(t) = \lambda(t)\exp\left( -\int_0^t \lambda(z) \mathrm{d}z \right)
+.. math:: f_T(t) = h(t)\exp\left( -\int_0^t h(z) \mathrm{d}z \right)
 
 Of course, we do not observe the true survival curve of a population. We
 must use the observed data to estimate it. We also want to continue to

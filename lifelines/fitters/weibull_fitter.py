@@ -241,11 +241,11 @@ class WeibullFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
         var_lambda_, var_rho_ = self.variance_matrix_.diagonal()
 
-        def _d_cumulative_hazard_d_lambda(lambda_, rho, T):
-            return rho / lambda_ * (lambda_ * T) ** rho
+        def _d_cumulative_hazard_d_lambda(lambda_, rho_, T):
+            return rho_ / lambda_ * (lambda_ * T) ** rho_
 
-        def _d_cumulative_hazard_d_rho(lambda_, rho, T):
-            return np.log(lambda_ * T) * (lambda_ * T) ** rho
+        def _d_cumulative_hazard_d_rho(lambda_, rho_, T):
+            return np.log(lambda_ * T) * (lambda_ * T) ** rho_
 
         def sensitivity_analysis(lambda_, rho, var_lambda_, var_rho_, T):
             return (
@@ -325,11 +325,11 @@ class WeibullFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        print("{} = {}".format(justify("hypothesis"), "lambda != 1, rho != 1"))
 
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
 
-        print("hyp: lambda != 1, rho != 1")
         print(end="\n")
         print("---")
 

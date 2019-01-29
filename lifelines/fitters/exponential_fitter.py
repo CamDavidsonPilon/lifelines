@@ -58,7 +58,7 @@ class ExponentialFitter(UnivariateFitter):
 
         Returns
         -------
-        self : ExpontentialFitter
+        self : ExponentialFitter
           self, with new properties like 'survival_function_', 'cumulative_hazard_', and 'lambda_'.
 
         """
@@ -136,10 +136,10 @@ class ExponentialFitter(UnivariateFitter):
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         std = np.sqrt(self._lambda_variance_)
-        ch = self.cumulative_hazard_
-        error = std * self.timeline[:, None] ** 2
-        df[ci_labels[0]] = ch + alpha2 * error
-        df[ci_labels[1]] = ch - alpha2 * error
+        cum_hazard = self.cumulative_hazard_
+        error = std * self.timeline[:, None]
+        df[ci_labels[0]] = cum_hazard + alpha2 * error
+        df[ci_labels[1]] = cum_hazard - alpha2 * error
         return df
 
     def _compute_standard_errors(self):
@@ -201,11 +201,11 @@ class ExponentialFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        print("{} = {}".format(justify("hypothesis"), "lambda != 1"))
 
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
 
-        print("hyp: lambda != 1")
         print(end="\n")
         print("---")
 
