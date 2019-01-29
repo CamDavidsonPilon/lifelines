@@ -94,7 +94,14 @@ def data_pred1():
 
 @pytest.fixture
 def univariate_fitters():
-    return [KaplanMeierFitter, NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, WeibullFitter, LogNormalFitter]
+    return [
+        KaplanMeierFitter,
+        NelsonAalenFitter,
+        BreslowFlemingHarringtonFitter,
+        ExponentialFitter,
+        WeibullFitter,
+        LogNormalFitter,
+    ]
 
 
 @pytest.fixture
@@ -314,7 +321,8 @@ class TestUnivariateFitters:
             result = f1.divide(f2)
             assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
             import pdb
-            #pdb.set_trace()
+
+            # pdb.set_trace()
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
     def test_divide_function_with_labelled_data(self, positive_sample_lifetimes, univariate_fitters):
@@ -361,7 +369,6 @@ class TestUnivariateFitters:
 
 
 class TestLogNormal:
-
     @pytest.fixture()
     def lnf(self):
         return LogNormalFitter()
@@ -372,7 +379,6 @@ class TestLogNormal:
         lnf.fit(T)
         assert abs(lnf.mu_) < 0.1
         assert abs(lnf.sigma_ - 1) < 0.1
-
 
     def test_lognormal_model_does_not_except_negative_or_zero_values(self, lnf):
         T = [0, 1, 2, 4, 5]
@@ -386,21 +392,20 @@ class TestLogNormal:
     def test_cumulative_hazard_doesnt_fail(self, lnf):
         T = np.exp(np.random.randn(100))
         lnf.fit(T)
-        results = lnf.cumulative_hazard_at_times([1,2,3])
+        results = lnf.cumulative_hazard_at_times([1, 2, 3])
         assert results.shape[0] == 3
 
-        results = lnf.cumulative_hazard_at_times(pd.Series([1,2,3]))
+        results = lnf.cumulative_hazard_at_times(pd.Series([1, 2, 3]))
         assert results.shape[0] == 3
 
         results = lnf.cumulative_hazard_at_times(1)
         assert results.shape[0] == 1
 
-
     def test_lnf_inference(self, lnf):
         N = 60000
         mu = 5
         sigma = 0.5
-        X, C = np.exp(sigma * np.random.randn(N) + mu),  np.exp(np.random.randn(N) + mu) 
+        X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
         E = X <= C
         T = np.minimum(X, C)
 
@@ -411,7 +416,6 @@ class TestLogNormal:
 
 
 class TestWeibullFitter:
-
     def test_weibull_fit_returns_float_timelines(self):
         wf = WeibullFitter()
         T = np.linspace(0.1, 10)

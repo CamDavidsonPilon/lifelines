@@ -5,9 +5,7 @@ import pandas as pd
 from scipy.stats import norm
 from scipy import stats
 from numpy import log
-from scipy.optimize import minimize, check_grad
-from scipy.integrate import cumtrapz
-
+from scipy.optimize import minimize
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
@@ -17,7 +15,6 @@ from lifelines.utils import (
     format_floats,
     ConvergenceError,
     inv_normal_cdf,
-    dataframe_interpolate_at_times,
     format_p_value,
 )
 
@@ -32,6 +29,7 @@ def _negative_log_likelihood(params, log_T, E):
     ll = (E * (norm.logpdf(Z) - log_T - log(sigma) - log_sf)).sum() + log_sf.sum()
     return -ll
 
+
 def _mu_gradient(params, log_T, E):
     mu, log_sigma = params
     sigma = np.exp(log_sigma)
@@ -41,11 +39,9 @@ def _mu_gradient(params, log_T, E):
 
     sf = norm.sf(Z)
 
-    x = (
-        -(E * (-Z * dZ_dmu + norm.pdf(Z) * dZ_dmu / sf)).sum()
-        + (norm.pdf(Z) / sf * dZ_dmu).sum()
-    )
+    x = -(E * (-Z * dZ_dmu + norm.pdf(Z) * dZ_dmu / sf)).sum() + (norm.pdf(Z) / sf * dZ_dmu).sum()
     return x
+
 
 def _sigma_gradient(params, log_T, E):
     mu, log_sigma = params
@@ -56,10 +52,7 @@ def _sigma_gradient(params, log_T, E):
 
     sf = norm.sf(Z)
 
-    x = (
-        -(E * (-Z * dZ_dsigma - 1 / sigma + norm.pdf(Z) * dZ_dsigma / sf)).sum()
-        + (norm.pdf(Z) / sf * dZ_dsigma).sum()
-    )
+    x = -(E * (-Z * dZ_dsigma - 1 / sigma + norm.pdf(Z) * dZ_dsigma / sf)).sum() + (norm.pdf(Z) / sf * dZ_dsigma).sum()
     return x
 
 
@@ -120,7 +113,6 @@ class LogNormalFitter(UnivariateFitter):
         self.event_observed = (
             np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
-        n = self.durations.shape[0]
 
         # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
@@ -197,14 +189,16 @@ class LogNormalFitter(UnivariateFitter):
             return np.array([_mu_gradient(parameters, log_T, E), _sigma_gradient(parameters, log_T, E)])
 
         results = minimize(
-            _negative_log_likelihood, initial_values, args=(log(T), E), jac=gradient_function, method="BFGS",
-            options={'gtol': 1e-5},
+            _negative_log_likelihood,
+            initial_values,
+            args=(log(T), E),
+            jac=gradient_function,
+            method="BFGS",
+            options={"gtol": 1e-5},
         )
         if results.success:
             return results.x, -results.fun, results.hess_inv
-        else:
-            print(results)
-            raise ConvergenceError("Did not converge.")
+        raise ConvergenceError("Did not converge. Try subsampling your data if you have more than 500k elements.")
 
     @property
     def summary(self):
@@ -297,10 +291,7 @@ class LogNormalFitter(UnivariateFitter):
                 + var_sigma_ * _d_cumulative_hazard_d_sigma(mu_, sigma_, log(T)) ** 2
             )
 
-        std_cumulative_hazard = np.sqrt(
-            sensitivity_analysis(self.mu_, self.sigma_, var_mu_, var_sigma_, self.timeline)
-        )
-
+        std_cumulative_hazard = np.sqrt(sensitivity_analysis(self.mu_, self.sigma_, var_mu_, var_sigma_, self.timeline))
 
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]

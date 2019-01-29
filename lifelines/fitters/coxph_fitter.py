@@ -8,7 +8,6 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from numpy import dot, exp
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve, LinAlgError
 from scipy.integrate import trapz
@@ -724,7 +723,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         unique_death_times = np.unique(T)
-        scores = weights * np.exp(dot(X, beta))
+        scores = weights * np.exp(np.dot(X, beta))
 
         for t in reversed(unique_death_times):
 
@@ -915,7 +914,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
-        scores = weights[:, None] * np.exp(dot(X, self.hazards_.T))
+        scores = weights[:, None] * np.exp(np.dot(X, self.hazards_.T))
 
         diff_against = []
 
@@ -1029,7 +1028,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         E = E.astype(int)
         score_residuals = np.zeros((n, d))
 
-        phi_s = np.exp(dot(X, beta))
+        phi_s = np.exp(np.dot(X, beta))
 
         # need to store these histories, as we access them often
         # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
@@ -1130,7 +1129,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
-    def print_summary(self, decimals=2, alpha=None, **kwargs):
+    def print_summary(self, decimals=2, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -1530,7 +1529,6 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             columns = self.hazards_.columns
 
         yaxis_locations = list(range(len(columns)))
-        summary = self.summary.loc[columns]
         symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
         hazards = self.hazards_[columns].values[0].copy()
 

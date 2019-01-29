@@ -661,7 +661,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             columns = self.hazards_.columns
 
         yaxis_locations = list(range(len(columns)))
-        summary = self.summary.loc[columns]
         symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
         hazards = self.hazards_[columns].values[0].copy()
 

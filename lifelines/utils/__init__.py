@@ -29,9 +29,7 @@ __all__ = [
 
 
 class StatError(Exception):
-    def __init__(self, msg):
-        super(StatError, self).__init__(msg)
-
+    pass
 
 class ConvergenceError(ValueError):
     # inherits from ValueError for backwards compatilibity reasons
@@ -42,14 +40,10 @@ class ConvergenceError(ValueError):
 
 
 class ConvergenceWarning(RuntimeWarning):
-    def __init__(self, msg):
-        super(ConvergenceWarning, self).__init__(msg)
-
+    pass
 
 class StatisticalWarning(RuntimeWarning):
-    def __init__(self, msg):
-        super(StatisticalWarning, self).__init__(msg)
-
+    pass
 
 def qth_survival_times(q, survival_functions, cdf=False):
     """
@@ -1266,7 +1260,7 @@ class StepSizer:
         if norm_of_delta >= 15.0:
             self.step_size *= 0.25
             self.temper_back_up = True
-        elif 15.0 > norm_of_delta and norm_of_delta > 5.0:
+        elif 15.0 > norm_of_delta and norm_of_delta < 5.0:
             self.step_size *= 0.75
             self.temper_back_up = True
 
