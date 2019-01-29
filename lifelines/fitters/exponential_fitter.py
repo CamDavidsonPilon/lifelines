@@ -5,14 +5,7 @@ import pandas as pd
 from scipy import stats
 
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import (
-    _to_array,
-    inv_normal_cdf,
-    check_nans_or_infs,
-    string_justify,
-    format_p_value,
-    format_floats,
-)
+from lifelines.utils import _to_array, inv_normal_cdf, check_nans_or_infs, string_justify, format_p_value, format_floats
 
 
 class ExponentialFitter(UnivariateFitter):
@@ -31,7 +24,7 @@ class ExponentialFitter(UnivariateFitter):
     .. math::  h(t) = \lambda
 
     After calling the `.fit` method, you have access to properties like:
-     'survival_function_', 'lambda_'
+     'survival_function_', 'lambda_', 'cumulative_hazard_'
 
     A summary of the fit is available with the method 'print_summary()'
 
@@ -66,7 +59,7 @@ class ExponentialFitter(UnivariateFitter):
         Returns
         -------
         self : ExpontentialFitter
-          self, with new properties like 'survival_function_' and 'lambda_'.
+          self, with new properties like 'survival_function_', 'cumulative_hazard_', and 'lambda_'.
 
         """
 
@@ -78,7 +71,7 @@ class ExponentialFitter(UnivariateFitter):
         self.event_observed = (
             np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
-        
+
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline))
         else:
@@ -93,27 +86,28 @@ class ExponentialFitter(UnivariateFitter):
         self.lambda_ = D / T
         self._lambda_variance_ = self.lambda_ / T
         self._log_likelihood = np.log(self.lambda_) * D - self.lambda_ * T
-        self.survival_function_ = pd.DataFrame(
-            np.exp(-self.lambda_ * self.timeline), columns=[self._label], index=self.timeline
-        )
+        self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(self._label)
+        self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
+        self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
+
         self.confidence_interval_ = self._bounds(alpha if alpha else self.alpha, ci_labels)
         self.median_ = 1.0 / self.lambda_ * (np.log(2))
 
         # estimation methods
-        self._estimate_name = "survival_function_"
+        self._estimate_name = "cumulative_hazard_"
         self._predict_label = label
         self._update_docstrings()
 
         # plotting
-        self.plot_survival_function_ = self.plot
+        self.plot_cumulative_hazards_ = self.plot
 
         return self
 
     def _estimation_method(self, t):
         return self.survival_function_at_times(t)
 
-    def hazard_at_times(self, times):        
-        return pd.Series(-self.lambda_, index=_to_array(times))
+    def hazard_at_times(self, times):
+        return pd.Series(self.lambda_, index=_to_array(times))
 
     def survival_function_at_times(self, times):
         """
@@ -131,7 +125,7 @@ class ExponentialFitter(UnivariateFitter):
         return pd.Series(np.exp(-self.lambda_ * times), index=_to_array(times))
 
     def cumulative_hazard_at_times(self, times):
-        return pd.Series(-self.lambda_ * times, index=_to_array(times))
+        return pd.Series(self.lambda_ * times, index=_to_array(times))
 
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
@@ -142,10 +136,10 @@ class ExponentialFitter(UnivariateFitter):
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         std = np.sqrt(self._lambda_variance_)
-        sv = self.survival_function_
-        error = std * self.timeline[:, None] * sv
-        df[ci_labels[0]] = sv + alpha2 * error
-        df[ci_labels[1]] = sv - alpha2 * error
+        ch = self.cumulative_hazard_
+        error = std * self.timeline[:, None] ** 2
+        df[ci_labels[0]] = ch + alpha2 * error
+        df[ci_labels[1]] = ch - alpha2 * error
         return df
 
     def _compute_standard_errors(self):
@@ -182,7 +176,7 @@ class ExponentialFitter(UnivariateFitter):
         return df
 
     def _compute_z_values(self):
-        return self.lambda_ / self._compute_standard_errors().loc["se"]
+        return (self.lambda_ - 1) / self._compute_standard_errors().loc["se"]
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -211,6 +205,7 @@ class ExponentialFitter(UnivariateFitter):
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
 
+        print("hyp: lambda != 1")
         print(end="\n")
         print("---")
 

@@ -7,7 +7,13 @@
  - introduce new statistical tests between univariate datasets: `survival_difference_at_fixed_point_in_time_test`,...
  - new warning message when lifelines detects possible non-unique solutions to maximum likelihood. 
  - Generally: clean up lifelines exception handling. Ex: catch `LinAlgError: Matrix is singular.` and report back to the user advice. 
-
+ - Univariate fitters' `cumulative_hazard_at_times`, `hazard_at_times`, `survival_function_at_times` return pandas Series now (use to be numpy arrays)
+ - `LogNormalFitter` is a new univariate fitter you can use. 
+ - `WeibullFitter` now correctly returns the confidence intervals (previously returned only NaNs)
+ - `WeibullFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
+ - `ExponentialFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
+ - `ExponentialFitter.plot` now displays the cumulative hazard, instead of the survival function. This is to make it easier to compare to `WeibullFitter` and `LogNormalFitter`
+ - 
 
 ### 0.17.5
  - more bugs in `plot_covariate_groups` fixed when using non-numeric strata.

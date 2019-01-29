@@ -152,7 +152,7 @@ class WeibullFitter(UnivariateFitter):
             self.durations, self.event_observed, show_progress=show_progress
         )
         self._log_likelihood = -_negative_log_likelihood((self.lambda_, self.rho_), self.durations, self.event_observed)
-        self.variance_matrix_ = -inv(self._hessian_)
+        self.variance_matrix_ = inv(self._hessian_)
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
@@ -239,16 +239,19 @@ class WeibullFitter(UnivariateFitter):
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
-        var_lambda_, var_rho_ = inv(self._hessian_).diagonal()
+        var_lambda_, var_rho_ = self.variance_matrix_.diagonal()
 
-        def _dH_d_lambda(lambda_, rho, T):
+        def _d_cumulative_hazard_d_lambda(lambda_, rho, T):
             return rho / lambda_ * (lambda_ * T) ** rho
 
-        def _dH_d_rho(lambda_, rho, T):
+        def _d_cumulative_hazard_d_rho(lambda_, rho, T):
             return np.log(lambda_ * T) * (lambda_ * T) ** rho
 
         def sensitivity_analysis(lambda_, rho, var_lambda_, var_rho_, T):
-            return var_lambda_ * _dH_d_lambda(lambda_, rho, T) ** 2 + var_rho_ * _dH_d_rho(lambda_, rho, T) ** 2
+            return (
+                var_lambda_ * _d_cumulative_hazard_d_lambda(lambda_, rho, T) ** 2
+                + var_rho_ * _d_cumulative_hazard_d_rho(lambda_, rho, T) ** 2
+            )
 
         std_cumulative_hazard = np.sqrt(
             sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline)
@@ -263,7 +266,7 @@ class WeibullFitter(UnivariateFitter):
         return df
 
     def _compute_standard_errors(self):
-        var_lambda_, var_rho_ = inv(self._hessian_).diagonal()
+        var_lambda_, var_rho_ = self.variance_matrix_.diagonal()
         return pd.DataFrame([[np.sqrt(var_lambda_), np.sqrt(var_rho_)]], index=["se"], columns=["lambda_", "rho_"])
 
     def _compute_confidence_bounds_of_parameters(self):
@@ -276,7 +279,7 @@ class WeibullFitter(UnivariateFitter):
         )
 
     def _compute_z_values(self):
-        return np.asarray([self.lambda_, self.rho_]) / self._compute_standard_errors().loc["se"]
+        return np.asarray([self.lambda_ - 1, self.rho_ - 1]) / self._compute_standard_errors().loc["se"]
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -299,7 +302,9 @@ class WeibullFitter(UnivariateFitter):
         df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
         df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
-        df["-log2(p)"] = -np.log2(df["p"])
+        with np.warnings.catch_warnings():
+            np.warnings.filterwarnings("ignore")
+            df["-log2(p)"] = -np.log2(df["p"])
         return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -324,6 +329,7 @@ class WeibullFitter(UnivariateFitter):
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
 
+        print("hyp: lambda != 1, rho != 1")
         print(end="\n")
         print("---")
 

@@ -356,7 +356,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         initial_beta=None,
         step_size=None,
         precision=1e-07,
-        show_progress=True, 
+        show_progress=True,
         max_steps=50,
     ):  # pylint: disable=too-many-statements,too-many-branches
         """
