@@ -399,8 +399,8 @@ class TestLogNormal:
         N = np.random.binomial(100000, 0.5)
         mu = 3 * np.random.randn()
         print(mu)
-        print(sigma)
         sigma = np.random.exponential(2)
+        print(sigma)
 
         X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
         E = X <= C
