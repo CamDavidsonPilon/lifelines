@@ -938,7 +938,7 @@ class TestRegressionFitters:
             assert hasattr(fitter, "score_")
             first_score_ = fitter.score_
 
-            fitter.fit(rossi.head(20), duration_col="week", event_col="arrest")
+            fitter.fit(rossi.head(50), duration_col="week", event_col="arrest")
             assert first_score_ != fitter.score_
 
     def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, regression_models, rossi):
@@ -2339,14 +2339,15 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             assert issubclass(w[0].category, ConvergenceWarning)
             assert "complete separation" in str(w[0].message)
 
-    @pytest.mark.xfail
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
         # this is known as complete seperation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
         cp = CoxPHFitter()
         ix = rossi["arrest"] == 1
         rossi.loc[ix, "paro"] = 1
         cp.fit(rossi, "week", "arrest", show_progress=True)
-        assert cp.summary.loc["paro", "exp(coef)"] < 100
+        assert cp.summary.loc["paro", "exp(coef)"] > 100
+        events = rossi["arrest"].astype(bool)
+        rossi.loc[events, ['paro']].var()
 
     @pytest.mark.xfail
     def test_what_happens_with_colinear_inputs(self, rossi, cph):

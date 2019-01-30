@@ -848,17 +848,20 @@ if convergence fails.%s"
 
 
 def check_complete_separation_low_variance(df, events):
+    #import pdb
+    #pdb.set_trace()
     events = events.astype(bool)
-    rhs = df.columns[_low_var(df.loc[events])]
-    lhs = df.columns[_low_var(df.loc[~events])]
-    inter = lhs.intersection(rhs).tolist()
-    if inter:
-        warning_text = (
-            "Column(s) %s have very low variance when conditioned on \
-death event or not. This may harm convergence. This could be a form of 'complete separation'. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ "
-            % (inter)
-        )
+    deaths_only = df.columns[_low_var(df.loc[events])]
+    censors_only = df.columns[_low_var(df.loc[~events])]
+    problem_columns = censors_only.union(deaths_only).tolist()
+    if problem_columns:
+        warning_text ="""Column(s) {cols} have very low variance when conditioned on
+death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
+>>> events = df[event_observed_col].astype(bool)
+>>> df.loc[events, {cols}].var()
+>>> df.loc[~events, {cols}].var()
+
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ """.format(cols=problem_columns[0])
         warnings.warn(warning_text, ConvergenceWarning)
 
 
@@ -1260,7 +1263,7 @@ class StepSizer:
         if norm_of_delta >= 15.0:
             self.step_size *= 0.25
             self.temper_back_up = True
-        elif 15.0 > norm_of_delta and norm_of_delta < 5.0:
+        elif norm_of_delta > 5.0 and 15.0 > norm_of_delta:
             self.step_size *= 0.75
             self.temper_back_up = True
 
@@ -1272,7 +1275,7 @@ class StepSizer:
 
         # recent monotonically decreasing is good though
         if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
-            self.step_size = min(self.step_size * SCALE, 1.0)
+            self.step_size = min(self.step_size * SCALE, 0.95)
 
         return self
 

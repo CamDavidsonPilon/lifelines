@@ -398,7 +398,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
-        if not completed:
+        elif show_progress and not completed:
+            print("Convergence failed. See any warning messages.")
+
+        # report to the user problems that we detect.
+        if completed and norm_delta > 0.1:
+            warnings.warn(
+                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity or complete separation in the dataset?"
+                % norm_delta,
+                ConvergenceWarning,
+            )
+        elif not completed:
             warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
         return beta

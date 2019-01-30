@@ -518,7 +518,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # report to the user problems that we detect.
         if completed and norm_delta > 0.1:
             warnings.warn(
-                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity in the dataset?"
+                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity or complete separation in the dataset?"
                 % norm_delta,
                 ConvergenceWarning,
             )
