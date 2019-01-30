@@ -209,6 +209,7 @@ class LogNormalFitter(UnivariateFitter):
         )
         if results.success:
             return results.x, -results.fun, results.hess_inv
+        print(results)
         raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
 
     @property

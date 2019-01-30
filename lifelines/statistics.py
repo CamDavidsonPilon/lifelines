@@ -215,13 +215,13 @@ def survival_difference_at_fixed_point_in_time_test(
     sB_t = kmfB.predict(point_in_time)
 
     # this is doing a prediction/interpolation between the kmf's index.
-    σsqA = dataframe_interpolate_at_times(kmfA._cumulative_sq_, point_in_time)
-    σsqB = dataframe_interpolate_at_times(kmfB._cumulative_sq_, point_in_time)
+    sigma_sqA = dataframe_interpolate_at_times(kmfA._cumulative_sq_, point_in_time)
+    sigma_sqB = dataframe_interpolate_at_times(kmfB._cumulative_sq_, point_in_time)
 
     log = np.log
     clog = lambda s: log(-log(s))
 
-    X = (clog(sA_t) - clog(sB_t)) ** 2 / (σsqA / log(sA_t) ** 2 + σsqB / log(sB_t) ** 2)
+    X = (clog(sA_t) - clog(sB_t)) ** 2 / (sigma_sqA / log(sA_t) ** 2 + sigma_sqB / log(sB_t) ** 2)
     p_value = chisq_test(X, 1)
 
     return StatisticalResult(

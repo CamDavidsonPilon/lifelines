@@ -398,6 +398,8 @@ class TestLogNormal:
     def test_lnf_inference(self, lnf):
         N = np.random.binomial(100000, 0.5)
         mu = 3 * np.random.randn()
+        print(mu)
+        print(sigma)
         sigma = np.random.exponential(2)
 
         X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
