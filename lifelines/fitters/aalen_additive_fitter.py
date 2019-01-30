@@ -530,6 +530,12 @@ It's important to know that the naive variance estimates of the coefficients are
         if self.weights_col:
             print("{} = '{}'".format(justify("weights col"), self.weights_col))
 
+        if self.coef_penalizer > 0:
+            print("{} = '{}'".format(justify("coef penalizer"), self.coef_penalizer))
+        
+        if self.smoothing_penalizer > 0:
+            print("{} = '{}'".format(justify("smoothing penalizer"), self.smoothing_penalizer))
+
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))

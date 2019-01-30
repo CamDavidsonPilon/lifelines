@@ -588,6 +588,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if self.strata:
             print("{} = {}".format(justify("strata"), self.strata))
 
+        if self.penalizer > 0:
+            print("{} = {}".format(justify("penalizer"), self.penalizer))
+
         print("{} = {}".format(justify("number of subjects"), self._n_unique))
         print("{} = {}".format(justify("number of periods"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))

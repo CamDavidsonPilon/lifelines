@@ -205,7 +205,7 @@ class LogNormalFitter(UnivariateFitter):
             args=(log(T), E),
             jac=gradient_function,
             method="BFGS",
-            options={"gtol": 1e-5},
+            options={"gtol": 1e-4},
         )
         if results.success:
             return results.x, -results.fun, results.hess_inv
