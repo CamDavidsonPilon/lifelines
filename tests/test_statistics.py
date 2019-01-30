@@ -406,6 +406,6 @@ def test_proportional_hazard_test_with_kmf_with_some_censorship_and_weights():
 
     cph = CoxPHFitter()
     with pytest.warns(StatisticalWarning, match="weights are not integers"):
-        cph.fit(df, "T", "E", weights_col="w")g
+        cph.fit(df, "T", "E", weights_col="w")
         results = stats.proportional_hazard_test(cph, df)
         npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.916, rtol=1e-2)
