@@ -7,6 +7,7 @@ import pytest
 
 from lifelines import statistics as stats
 from lifelines import CoxPHFitter
+from lifelines.utils import StatisticalWarning
 from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset
 
 
@@ -276,11 +277,13 @@ def test_proportional_hazard_test_with_weights():
     )
     df["E"] = True
 
-    cph = CoxPHFitter()
-    cph.fit(df, "T", "E", weights_col="w")
+    with pytest.warns(StatisticalWarning, match='weights are not integers'):
 
-    results = stats.proportional_hazard_test(cph, df)
-    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.1083698, rtol=1e-3)
+        cph = CoxPHFitter()
+        cph.fit(df, "T", "E", weights_col="w")
+
+        results = stats.proportional_hazard_test(cph, df)
+        npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.1083698, rtol=1e-3)
 
 
 def test_proportional_hazard_test_with_weights_and_strata():
@@ -308,9 +311,10 @@ def test_proportional_hazard_test_with_weights_and_strata():
         }
     )
     df["E"] = True
+    with pytest.warns(StatisticalWarning, match='weights are not integers'):
 
-    cph = CoxPHFitter()
-    cph.fit(df, "T", "E", weights_col="w", strata="s")
+        cph = CoxPHFitter()
+        cph.fit(df, "T", "E", weights_col="w", strata="s")
 
     results = stats.proportional_hazard_test(cph, df, time_transform="identity")
     cph.print_summary()
@@ -401,7 +405,8 @@ def test_proportional_hazard_test_with_kmf_with_some_censorship_and_weights():
     )
 
     cph = CoxPHFitter()
-    cph.fit(df, "T", "E", weights_col="w")
+    with pytest.warns(StatisticalWarning, match='weights are not integers'):
+        cph.fit(df, "T", "E", weights_col="w")
 
     results = stats.proportional_hazard_test(cph, df)
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.916, rtol=1e-2)

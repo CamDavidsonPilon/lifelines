@@ -53,7 +53,7 @@ def test_ridge_regression_with_extreme_c2_penalty_equals_close_to_offset():
 def test_lstsq_returns_similar_values_to_ridge_regression():
     X = randn(2, 2)
     Y = randn(2)
-    expected = lstsq(X, Y)[0]
+    expected = lstsq(X, Y, rcond=None)[0]
     assert norm(utils.ridge_regression(X, Y)[0] - expected) < 10e-4
 
 
