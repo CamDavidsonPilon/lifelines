@@ -408,8 +408,8 @@ class TestLogNormal:
 
         lnf.fit(T, E)
 
-        assert abs(mu/lnf.mu_ - 1) < 0.01
-        assert abs(sigma/lnf.sigma_-1) < 0.01
+        assert abs(mu / lnf.mu_ - 1) < 0.01
+        assert abs(sigma / lnf.sigma_ - 1) < 0.01
 
 
 class TestWeibullFitter:
