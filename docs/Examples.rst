@@ -30,8 +30,7 @@ will produce the difference at every relevant time point. A similar function exi
 Logrank test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival 
-    curves cross, the logrank test will give an inaccurate assessment of differences. 
+.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival curves cross, the logrank test will give an inaccurate assessment of differences. 
 
 
 The ``lifelines.statistics.logrank_test`` function compares whether the "death" generation process of the two populations are equal:
