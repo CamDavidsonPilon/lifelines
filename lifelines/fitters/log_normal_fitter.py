@@ -20,6 +20,14 @@ from lifelines.utils import (
 
 
 def _negative_log_likelihood(params, log_T, E):
+    """
+    Why is this scaled by n? When T is large, then the gradient becomes more and more sensitive
+    and smaller and smaller steps are needed to achieve a less than gtol (gtol is the abs min value in the gradient). Unfortunately
+    for very "spikey" log-likelihoods / functions, a small enough step size is not present and the gradient never gets near 0. 
+
+    Another way to think of this: ll ~= E[ll_i] * N, so gradient = diff(E[ll]) * N, so we need to scale ll. 
+
+    """
     n = log_T.shape[0]
     mu, log_sigma = params
     sigma = np.exp(log_sigma)
@@ -28,7 +36,7 @@ def _negative_log_likelihood(params, log_T, E):
     log_sf = norm.logsf(Z)
 
     ll = (E * (norm.logpdf(Z) - log_T - log(sigma) - log_sf)).sum() + log_sf.sum()
-    return -ll/n
+    return -ll / n
 
 
 def _mu_gradient(params, log_T, E):
@@ -42,7 +50,7 @@ def _mu_gradient(params, log_T, E):
     sf = norm.sf(Z)
 
     x = -(E * (-Z * dZ_dmu + norm.pdf(Z) * dZ_dmu / sf)).sum() + (norm.pdf(Z) * dZ_dmu / sf).sum()
-    return x/n
+    return x / n
 
 
 def _sigma_gradient(params, log_T, E):
@@ -56,7 +64,7 @@ def _sigma_gradient(params, log_T, E):
     sf = norm.sf(Z)
 
     x = -(E * (-Z * dZ_dsigma - 1 / sigma + norm.pdf(Z) * dZ_dsigma / sf)).sum() + (norm.pdf(Z) * dZ_dsigma / sf).sum()
-    return x/n
+    return x / n
 
 
 class LogNormalFitter(UnivariateFitter):
@@ -191,15 +199,6 @@ class LogNormalFitter(UnivariateFitter):
         def gradient_function(parameters, log_T, E):
             return np.array([_mu_gradient(parameters, log_T, E), _sigma_gradient(parameters, log_T, E)])
 
-
-        """
-        Why is gtol equal to 1e-7 * T.shape[0]? When T is large, then the gradient becomes more and more sensitive
-        and smaller and smaller steps are needed to achieve a less than gtol (gtol is the abs min value in the gradient). Unfortunately
-        for very "spikey" log-likelihoods / functions, a small enough step size is not present and the gradient never gets near 0. 
-
-        Another way to think of this: ll ~= E[ll_i] * N, so gradient = diff(E[ll]) * N, so we need to scale our gtol. 
-
-        """
         results = minimize(
             _negative_log_likelihood,
             initial_values,

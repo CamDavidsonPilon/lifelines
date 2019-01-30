@@ -43,3 +43,4 @@ pep257:
 
 ignore-paths:
   - build
+  - benchmarks

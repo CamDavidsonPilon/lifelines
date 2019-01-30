@@ -277,7 +277,7 @@ def test_proportional_hazard_test_with_weights():
     )
     df["E"] = True
 
-    with pytest.warns(StatisticalWarning, match='weights are not integers'):
+    with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", weights_col="w")
@@ -311,7 +311,7 @@ def test_proportional_hazard_test_with_weights_and_strata():
         }
     )
     df["E"] = True
-    with pytest.warns(StatisticalWarning, match='weights are not integers'):
+    with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", weights_col="w", strata="s")
@@ -405,7 +405,7 @@ def test_proportional_hazard_test_with_kmf_with_some_censorship_and_weights():
     )
 
     cph = CoxPHFitter()
-    with pytest.warns(StatisticalWarning, match='weights are not integers'):
+    with pytest.warns(StatisticalWarning, match="weights are not integers"):
         cph.fit(df, "T", "E", weights_col="w")
 
     results = stats.proportional_hazard_test(cph, df)

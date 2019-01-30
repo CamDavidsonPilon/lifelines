@@ -29,7 +29,7 @@ from lifelines.utils import (
     normalize,
     to_episodic_format,
     ConvergenceError,
-    StatisticalWarning
+    StatisticalWarning,
 )
 
 from lifelines.fitters import BaseFitter
@@ -60,6 +60,7 @@ from lifelines.datasets import (
     load_multicenter_aids_cohort_study,
 )
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
+
 
 @pytest.fixture
 def sample_lifetimes():
@@ -1849,7 +1850,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         regression_dataset["weights"] = 0.5
         cph = CoxPHFitter()
 
-        with pytest.warns(StatisticalWarning, match='weights are not integers'):
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
             cph.fit(regression_dataset, "T", "E", weights_col="weights")
 
@@ -1877,7 +1878,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         df["E"] = True
 
         cph = CoxPHFitter()
-        with pytest.warns(StatisticalWarning, match='weights are not integers'):
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
             cph.fit(df, "T", "E", show_progress=True, weights_col="w")
             expected = 0.05
             assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
@@ -1900,7 +1901,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         df["var3"] = [0.75] * 5
 
         cph = CoxPHFitter()
-        with pytest.warns(StatisticalWarning, match='weights are not integers'):
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
 
@@ -1932,7 +1933,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         df["var3"] = [1.75] + [0.75] * 4
 
         cph = CoxPHFitter()
-        with pytest.warns(StatisticalWarning, match='weights are not integers'):
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
             expected = pd.Series({"var1": 7.995, "var2": -1.154})
@@ -1949,7 +1950,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         df = regression_dataset
 
         cph = CoxPHFitter()
-        with pytest.warns(StatisticalWarning, match='weights are not integers'):
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
             expected = pd.Series({"var1": 0.3268, "var2": 0.0775})
@@ -2298,7 +2299,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cox = CoxPHFitter()
         rossi["constant"] = 1.0
 
-        with pytest.warns(ConvergenceWarning, match='variance') as w:
+        with pytest.warns(ConvergenceWarning, match="variance") as w:
             with pytest.raises(ConvergenceError):
                 cox.fit(rossi, "week", "arrest")
 
@@ -2325,7 +2326,6 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         with pytest.warns(ConvergenceWarning, match="complete separation") as w:
             cph.fit(df, "T", "E")
 
-
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
         # this is known as complete separation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
         cp = CoxPHFitter()
@@ -2335,9 +2335,9 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             cp.fit(rossi, "week", "arrest", show_progress=True)
             assert cp.summary.loc["paro", "exp(coef)"] > 100
             events = rossi["arrest"].astype(bool)
-            rossi.loc[events, ['paro']].var()
-            assert "paro have very low variance" in  w[0].message.args[0]
-            assert "norm(delta)" in  w[1].message.args[0]
+            rossi.loc[events, ["paro"]].var()
+            assert "paro have very low variance" in w[0].message.args[0]
+            assert "norm(delta)" in w[1].message.args[0]
 
     def test_what_happens_with_colinear_inputs(self, rossi, cph):
         with pytest.raises(ConvergenceError):
@@ -2670,7 +2670,7 @@ class TestCoxTimeVaryingFitter:
             ]
         )
 
-        with pytest.warns(RuntimeWarning, match='safely dropped') as w:
+        with pytest.warns(RuntimeWarning, match="safely dropped") as w:
             ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
         df = df.loc[~((df["start"] == df["stop"]) & (df["start"] == 0))]
@@ -2779,7 +2779,6 @@ class TestCoxTimeVaryingFitter:
 
         with pytest.warns(ConvergenceWarning, match="complete separation") as w:
             ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
-
 
     def test_summary_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
