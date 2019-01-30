@@ -396,7 +396,7 @@ class TestLogNormal:
         assert results.shape[0] == 1
 
     def test_lnf_inference(self, lnf):
-        N = np.random.binomial(400000, 0.5)
+        N = 800000
         mu = 3 * np.random.randn()
         print(mu)
         sigma = np.random.exponential(1)
@@ -408,8 +408,8 @@ class TestLogNormal:
 
         lnf.fit(T, E)
 
-        assert abs(mu - lnf.mu_) < 0.01
-        assert abs(sigma - lnf.sigma_) < 0.01
+        assert abs(mu/lnf.mu_ - 1) < 0.01
+        assert abs(sigma/lnf.sigma_-1) < 0.01
 
 
 class TestWeibullFitter:
