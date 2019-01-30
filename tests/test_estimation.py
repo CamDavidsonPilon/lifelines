@@ -396,10 +396,10 @@ class TestLogNormal:
         assert results.shape[0] == 1
 
     def test_lnf_inference(self, lnf):
-        N = np.random.binomial(100000, 0.5)
+        N = np.random.binomial(400000, 0.5)
         mu = 3 * np.random.randn()
         print(mu)
-        sigma = np.random.exponential(2)
+        sigma = np.random.exponential(1)
         print(sigma)
 
         X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
