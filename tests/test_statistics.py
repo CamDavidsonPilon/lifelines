@@ -312,7 +312,6 @@ def test_proportional_hazard_test_with_weights_and_strata():
     )
     df["E"] = True
 
-
     cph = CoxPHFitter()
     cph.fit(df, "T", "E", weights_col="w", strata="s", robust=True)
 
