@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from numpy import dot, exp
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve, LinAlgError
 
@@ -256,7 +255,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
         df = pd.DataFrame(index=self.hazards_.columns)
         df["coef"] = self.hazards_.loc["coef"].values
-        df["exp(coef)"] = exp(self.hazards_.loc["coef"].values)
+        df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
@@ -432,9 +431,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             stops_events_at_t = stop[ix]
             events_at_t = events[ix]
 
-            phi_i = weights_at_t * exp(dot(X_at_t, beta))
+            phi_i = weights_at_t * np.exp(np.dot(X_at_t, beta))
             phi_x_i = phi_i * X_at_t
-            phi_x_x_i = dot(X_at_t.T, phi_x_i)
+            phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = array_sum_to_scalar(phi_i)
@@ -470,7 +469,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
                 tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
-                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
+                tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
@@ -489,7 +488,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
-            log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
         return hessian, gradient.reshape(1, d), log_lik
@@ -551,7 +550,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         same as the training dataset.
 
         """
-        return exp(self.predict_log_partial_hazard(X))
+        return np.exp(self.predict_log_partial_hazard(X))
 
     def print_summary(self, decimals=2, **kwargs):
         """
@@ -704,7 +703,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return baseline_hazard_.cumsum()
 
     def _compute_baseline_survival(self):
-        survival_df = exp(-self.baseline_cumulative_hazard_)
+        survival_df = np.exp(-self.baseline_cumulative_hazard_)
         survival_df.columns = ["baseline survival"]
         return survival_df
 

@@ -267,7 +267,7 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0])
-            assert not pd.isnull(fitter.confidence_interval_).all()
+            assert not np.all(pd.isnull(fitter.confidence_interval_))
 
     def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
@@ -320,9 +320,6 @@ class TestUnivariateFitters:
 
             result = f1.divide(f2)
             assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
-            import pdb
-
-            # pdb.set_trace()
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
     def test_divide_function_with_labelled_data(self, positive_sample_lifetimes, univariate_fitters):

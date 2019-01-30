@@ -134,6 +134,18 @@ class UnivariateFitter(BaseFitter):
     @property
     @_must_call_fit_first
     def conditional_time_to_event_(self):
+        """
+        Return a DataFrame, with index equal to survival_function_, that estimates the median
+        duration remaining until the death event, given survival up until time t. For example, if an
+        individual exists until age 1, their expected life remaining *given they lived to time 1*
+        might be 9 years.
+
+        Returns
+        -------
+        conditional_time_to_: DataFrame 
+            with index equal to survival_function_
+
+        """
         return self._conditional_time_to_event_()
 
     @_must_call_fit_first
@@ -162,3 +174,16 @@ class UnivariateFitter(BaseFitter):
             )
             - age
         )
+
+    @_must_call_fit_first
+    def hazard_at_times(self, times):
+        raise NotImplementedError
+
+    @_must_call_fit_first
+    def survival_function_at_times(self, times):
+        raise NotImplementedError
+
+    @_must_call_fit_first
+    def cumulative_hazard_at_times(self, times):
+        raise NotImplementedError
+

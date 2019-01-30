@@ -73,7 +73,7 @@ class CoxPHFitter(BaseFitter):
     r"""
     This class implements fitting Cox's proportional hazard model:
 
-    .. math::  h(t|x) = h_0(t) \np.exp(x \beta)
+    .. math::  h(t|x) = h_0(t) \exp(x \beta)
 
     Parameters
     ----------
@@ -581,7 +581,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tied_death_counts = 0
-        scores = weights * np.exp(dot(X, beta))
+        scores = weights * np.exp(np.dot(X, beta))
 
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):

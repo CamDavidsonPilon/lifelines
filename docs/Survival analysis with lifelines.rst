@@ -454,7 +454,7 @@ Estimating hazard rates using Nelson-Aalen
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The survival curve is a great way to summarize and visualize the
-lifetime data, however it is not the only way. If we are curious about the hazard function :math:`\lambda(t)` of a
+lifetime data, however it is not the only way. If we are curious about the hazard function :math:`\h(t)` of a
 population, we unfortunately cannot transform the Kaplan Meier estimate
 -- statistics doesn't work quite that well. Fortunately, there is a
 proper estimator of the *cumulative* hazard function:
