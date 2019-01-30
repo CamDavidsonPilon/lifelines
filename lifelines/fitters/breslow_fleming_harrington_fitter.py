@@ -5,7 +5,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines import NelsonAalenFitter
-from lifelines.utils import median_survival_times
+from lifelines.utils import median_survival_times, _to_array
 
 
 class BreslowFlemingHarringtonFitter(UnivariateFitter):

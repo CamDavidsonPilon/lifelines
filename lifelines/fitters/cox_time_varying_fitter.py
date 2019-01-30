@@ -266,7 +266,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     def _newton_rhaphson(
         self, df, events, start, stop, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
-    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
+    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
         """
         Newton Rhaphson algorithm for fitting CPH model.
 

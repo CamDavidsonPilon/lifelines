@@ -186,4 +186,3 @@ class UnivariateFitter(BaseFitter):
     @_must_call_fit_first
     def cumulative_hazard_at_times(self, times):
         raise NotImplementedError
-
