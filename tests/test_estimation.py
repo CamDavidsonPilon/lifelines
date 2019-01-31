@@ -405,7 +405,7 @@ class TestLogNormal:
         assert results.shape[0] == 1
 
     def test_lnf_inference(self, lnf):
-        N = 160000
+        N = 250000
         mu = 3 * np.random.randn()
         sigma = np.random.uniform(0.1, 3.0)
 
@@ -419,7 +419,7 @@ class TestLogNormal:
         assert abs(sigma - lnf.sigma_) < 0.01
 
     def test_lnf_inference_with_large_sigma(self, lnf):
-        N = 160000
+        N = 250000
         mu = 3 * np.random.randn()
         sigma = 35
 
@@ -433,7 +433,23 @@ class TestLogNormal:
         assert abs(sigma / lnf.sigma_ - 1) < 0.05
 
     def test_lnf_inference_with_small_sigma(self, lnf):
-        N = 80000
+        N = 250000
+        mu = 3 * np.random.randn()
+        print(mu)
+        sigma = 0.04
+
+        X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
+        E = X <= C
+        T = np.minimum(X, C)
+
+        lnf.fit(T, E)
+
+        assert abs(mu / lnf.mu_ - 1) < 0.01
+        assert abs(sigma / lnf.sigma_ - 1) < 0.01
+
+    @pytest.mark.xfail()
+    def test_lnf_inference_with_really_small_sigma(self, lnf):
+        N = 250000
         mu = 3 * np.random.randn()
         print(mu)
         sigma = 0.02
