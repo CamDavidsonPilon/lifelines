@@ -415,8 +415,8 @@ class TestLogNormal:
 
         lnf.fit(T, E)
 
-        assert abs(mu / lnf.mu_ - 1) < 0.01
-        assert abs(sigma / lnf.sigma_ - 1) < 0.01
+        assert abs(mu - lnf.mu_) < 0.01
+        assert abs(sigma - lnf.sigma_) < 0.01
 
     @pytest.mark.xfail
     def test_lnf_inference_with_too_large_sigma(self, lnf):

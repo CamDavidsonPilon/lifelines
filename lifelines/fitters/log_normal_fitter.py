@@ -20,12 +20,21 @@ from lifelines.utils import (
 
 
 def _negative_log_likelihood(params, log_T, E):
-    """
-    Why is this scaled by n? When T is large, then the gradient becomes more and more sensitive
+    r"""
+    The log likelihood is:
+
+    .. math:: sum_{all deaths events} \log{h(t_i)} + sum_{all events} \log{S(t_i)}
+
+    where h is the hazard function, and S is the survival function. 
+
+
+    1. Why is this scaled by n? When T is large, then the gradient becomes more and more sensitive
     and smaller and smaller steps are needed to achieve a less than gtol (gtol is the abs min value in the gradient). Unfortunately
     for very "spikey" log-likelihoods / functions, a small enough step size is not present and the gradient never gets near 0. 
 
     Another way to think of this: ll ~= E[ll_i] * N, so gradient = diff(E[ll]) * N, so we need to scale ll. 
+
+    2. Instead of fitting sigma, with the constrain sigma > 0, I choose to model the unconstrained log(sigma). 
 
     """
     n = log_T.shape[0]
@@ -196,7 +205,7 @@ class LogNormalFitter(UnivariateFitter):
 
         """
         if initial_values is None:
-            initial_values = np.array([log(T).mean(), 0])
+            initial_values = np.array([log(T).mean(), log(log(T).std())])
 
         def gradient_function(parameters, log_T, E):
             return np.array([_mu_gradient(parameters, log_T, E), _sigma_gradient(parameters, log_T, E)])
@@ -207,7 +216,7 @@ class LogNormalFitter(UnivariateFitter):
             args=(log(T), E),
             jac=gradient_function,
             method="BFGS",
-            options={"gtol": 1e-5},
+            options={"gtol": 1e-4},
         )
         if results.success:
             return results.x, -results.fun, results.hess_inv
