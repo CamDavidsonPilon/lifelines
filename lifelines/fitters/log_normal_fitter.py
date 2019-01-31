@@ -33,13 +33,11 @@ def _negative_log_likelihood(params, log_T, E):
     for very "spikey" log-likelihoods / functions, a small enough step size is not present and the gradient never gets near 0. 
 
     Another way to think of this: ll ~= E[ll_i] * N, so gradient = diff(E[ll]) * N, so we need to scale ll. 
-
-    2. Instead of fitting sigma, with the constrain sigma > 0, I choose to model the unconstrained log(sigma). 
-
     """
     n = log_T.shape[0]
-    mu, log_sigma = params
-    sigma = np.exp(log_sigma)
+    mu, sigma = params
+    if sigma < 0.0001:
+        return 1e16
 
     Z = (log_T - mu) / sigma
     log_sf = norm.logsf(Z)
@@ -50,13 +48,13 @@ def _negative_log_likelihood(params, log_T, E):
 
 def _mu_gradient(params, log_T, E):
     n = log_T.shape[0]
-    mu, log_sigma = params
-    sigma = np.exp(log_sigma)
+    mu, sigma = params
 
     Z = (log_T - mu) / sigma
     dZ_dmu = -1 / sigma
 
     sf = norm.sf(Z)
+    sf = np.clip(sf, 1e-10, 1)
     pdf = norm.pdf(Z)
 
     x = (E * (-Z * dZ_dmu - -pdf * dZ_dmu / sf)).sum() + (-pdf * dZ_dmu / sf).sum()
@@ -65,13 +63,13 @@ def _mu_gradient(params, log_T, E):
 
 def _sigma_gradient(params, log_T, E):
     n = log_T.shape[0]
-    mu, log_sigma = params
-    sigma = np.exp(log_sigma)
+    mu, sigma = params
 
     Z = (log_T - mu) / sigma
-    dZ_dsigma = -Z / sigma
+    dZ_dsigma = -(log_T - mu) / sigma ** 2
 
     sf = norm.sf(Z)
+    sf = np.clip(sf, 1e-10, 1)
     pdf = norm.pdf(Z)
 
     x = (E * (-Z * dZ_dsigma - 1 / sigma - -pdf * dZ_dsigma / sf)).sum() + (-pdf * dZ_dsigma / sf).sum()
@@ -149,10 +147,9 @@ class LogNormalFitter(UnivariateFitter):
 
         self._label = label
 
-        (self.mu_, log_sigma_), self._log_likelihood, self.variance_matrix_ = self._fit_model(
+        (self.mu_, self.sigma_), self._log_likelihood, self.variance_matrix_ = self._fit_model(
             self.durations, self.event_observed
         )
-        self.sigma_ = np.exp(log_sigma_)
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(name=self._label)
@@ -199,13 +196,8 @@ class LogNormalFitter(UnivariateFitter):
         return pd.Series(-log(1 - norm.cdf((log(times) - self.mu_) / self.sigma_)), index=_to_array(times))
 
     def _fit_model(self, T, E, initial_values=None):
-        """
-        Since we have the positivity constraint on sigma, and BFGS doesn't want to work with 
-        bounds, we will instead minimize over (mu, sigma) = (mu, exp(ln_sigma))
-
-        """
         if initial_values is None:
-            initial_values = np.array([log(T).mean(), log(log(T).std())])
+            initial_values = np.array([log(T).mean(), log(T).std()])
 
         def gradient_function(parameters, log_T, E):
             return np.array([_mu_gradient(parameters, log_T, E), _sigma_gradient(parameters, log_T, E)])
@@ -216,7 +208,7 @@ class LogNormalFitter(UnivariateFitter):
             args=(log(T), E),
             jac=gradient_function,
             method="BFGS",
-            options={"gtol": 1e-4},
+            options={"gtol": 1e-5},
         )
         if results.success:
             return results.x, -results.fun, results.hess_inv
