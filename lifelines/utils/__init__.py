@@ -783,9 +783,7 @@ def _get_index(X):
 
 def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
-        col
-        for (col, dtype) in df.dtypes.iteritems()
-        if dtype.name == "category" or not (np.issubdtype(dtype, np.number) or np.issubdtype(dtype, np.bool_))
+        col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"
     ]
     if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(
@@ -896,6 +894,9 @@ def check_complete_separation(df, events, durations):
 
 
 def check_nans_or_infs(df_or_array):
+    if hasattr(df_or_array, "dtype") and df_or_array.dtype.kind not in "biuf":
+        raise ValueError("Values must be a subtype of number: so no strings, timedeltas, datetimes, objects, etc.")
+
     nulls = pd.isnull(df_or_array)
     if hasattr(nulls, "values"):
         if nulls.values.any():

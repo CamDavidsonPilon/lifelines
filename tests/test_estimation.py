@@ -194,6 +194,15 @@ class TestUnivariateFitters:
             fitter.fit(T)
             assert hasattr(fitter, "plot")
 
+    def test_univariate_fitters_fail_if_given_timedelta(self, univariate_fitters):
+        x = pd.Series(pd.to_datetime("2015-01-01"))
+        T = x - x
+        for fitter in univariate_fitters:
+            with pytest.raises(ValueError, match="timedelta"):
+                print(T.dtype)
+                print(T)
+                fitter().fit(T)
+
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(
         self, positive_sample_lifetimes, univariate_fitters
     ):
@@ -338,7 +347,7 @@ class TestUnivariateFitters:
                 fitter(alpha=95)
 
     def test_typeerror_is_thrown_if_there_is_nans_in_the_duration_col(self, univariate_fitters):
-        T = np.array([1.0, 2.0, 4.0, None, 8.0])
+        T = np.array([1.0, 2.0, 4.0, np.nan, 8.0])
         for fitter in univariate_fitters:
             with pytest.raises(TypeError):
                 fitter().fit(T)
@@ -396,11 +405,39 @@ class TestLogNormal:
         assert results.shape[0] == 1
 
     def test_lnf_inference(self, lnf):
-        N = 800000
+        N = 160000
         mu = 3 * np.random.randn()
-        print(mu)
-        sigma = np.random.exponential(1)
-        print(sigma)
+        sigma = np.random.uniform(0.1, 3.0)
+
+        X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
+        E = X <= C
+        T = np.minimum(X, C)
+
+        lnf.fit(T, E)
+
+        assert abs(mu / lnf.mu_ - 1) < 0.01
+        assert abs(sigma / lnf.sigma_ - 1) < 0.01
+
+    @pytest.mark.xfail
+    def test_lnf_inference_with_too_large_sigma(self, lnf):
+        N = 80000
+        mu = 3 * np.random.randn()
+        sigma = 6
+
+        X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
+        E = X <= C
+        T = np.minimum(X, C)
+
+        lnf.fit(T, E)
+
+        assert abs(mu / lnf.mu_ - 1) < 0.01
+        assert abs(sigma / lnf.sigma_ - 1) < 0.01
+
+    @pytest.mark.xfail
+    def test_lnf_inference_with_too_small_sigma(self, lnf):
+        N = 80000
+        mu = 3 * np.random.randn()
+        sigma = 0.02
 
         X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
         E = X <= C
@@ -2510,7 +2547,7 @@ class TestAalenAdditiveFitter:
         assert abs((T_pred.values > T).mean() - 0.5) < 0.05
 
     def test_dataframe_input_with_nonstandard_index(self):
-        aaf = AalenAdditiveFitter(coef_penalizer=0.1)
+        aaf = AalenAdditiveFitter(coef_penalizer=2.0)
         df = pd.DataFrame(
             [(16, True, True), (1, True, True), (4, False, True)],
             columns=["duration", "done_feeding", "white"],

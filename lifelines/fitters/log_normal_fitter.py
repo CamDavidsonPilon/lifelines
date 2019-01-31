@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.stats import norm
 from scipy import stats
 from numpy import log
-from scipy.optimize import minimize
+from scipy.optimize import minimize, check_grad
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
@@ -48,9 +48,10 @@ def _mu_gradient(params, log_T, E):
     dZ_dmu = -1 / sigma
 
     sf = norm.sf(Z)
+    pdf = norm.pdf(Z)
 
-    x = -(E * (-Z * dZ_dmu + norm.pdf(Z) * dZ_dmu / sf)).sum() + (norm.pdf(Z) * dZ_dmu / sf).sum()
-    return x / n
+    x = (E * (-Z * dZ_dmu - -pdf * dZ_dmu / sf)).sum() + (-pdf * dZ_dmu / sf).sum()
+    return -x / n
 
 
 def _sigma_gradient(params, log_T, E):
@@ -62,9 +63,10 @@ def _sigma_gradient(params, log_T, E):
     dZ_dsigma = -Z / sigma
 
     sf = norm.sf(Z)
+    pdf = norm.pdf(Z)
 
-    x = -(E * (-Z * dZ_dsigma - 1 / sigma + norm.pdf(Z) * dZ_dsigma / sf)).sum() + (norm.pdf(Z) * dZ_dsigma / sf).sum()
-    return x / n
+    x = (E * (-Z * dZ_dsigma - 1 / sigma - -pdf * dZ_dsigma / sf)).sum() + (-pdf * dZ_dsigma / sf).sum()
+    return -x / n
 
 
 class LogNormalFitter(UnivariateFitter):
@@ -194,7 +196,7 @@ class LogNormalFitter(UnivariateFitter):
 
         """
         if initial_values is None:
-            initial_values = np.array([log(T).mean(), log(log(T).std())])
+            initial_values = np.array([log(T).mean(), 0])
 
         def gradient_function(parameters, log_T, E):
             return np.array([_mu_gradient(parameters, log_T, E), _sigma_gradient(parameters, log_T, E)])
@@ -205,7 +207,7 @@ class LogNormalFitter(UnivariateFitter):
             args=(log(T), E),
             jac=gradient_function,
             method="BFGS",
-            options={"gtol": 1e-4},
+            options={"gtol": 1e-5},
         )
         if results.success:
             return results.x, -results.fun, results.hess_inv

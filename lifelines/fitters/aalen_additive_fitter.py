@@ -532,7 +532,7 @@ It's important to know that the naive variance estimates of the coefficients are
 
         if self.coef_penalizer > 0:
             print("{} = '{}'".format(justify("coef penalizer"), self.coef_penalizer))
-        
+
         if self.smoothing_penalizer > 0:
             print("{} = '{}'".format(justify("smoothing penalizer"), self.smoothing_penalizer))
 
