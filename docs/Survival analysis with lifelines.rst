@@ -47,134 +47,28 @@ Let's bring in our dataset.
 
 .. code:: python
 
-    import pandas as pd
     from lifelines.datasets import load_dd
 
     data = load_dd()
-
-.. code:: python
-
-    data.sample(6)
-    #the boolean columns `observed` refers to whether the death (leaving office)
-    #was observed or not.
+    data.head()
 
 
-.. raw:: html
 
-    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>ctryname</th>
-          <th>cowcode2</th>
-          <th>politycode</th>
-          <th>un_region_name</th>
-          <th>un_continent_name</th>
-          <th>ehead</th>
-          <th>leaderspellreg</th>
-          <th>democracy</th>
-          <th>regime</th>
-          <th>start_year</th>
-          <th>duration</th>
-          <th>observed</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>164</th>
-          <td>Bolivia</td>
-          <td>145</td>
-          <td>145.0</td>
-          <td>South America</td>
-          <td>Americas</td>
-          <td>Rene Barrientos Ortuno</td>
-          <td>Rene Barrientos Ortuno.Bolivia.1966.1968.Milit...</td>
-          <td>Non-democracy</td>
-          <td>Military Dict</td>
-          <td>1966</td>
-          <td>3</td>
-          <td>0</td>
-        </tr>
-        <tr>
-          <th>740</th>
-          <td>India</td>
-          <td>750</td>
-          <td>750.0</td>
-          <td>Southern Asia</td>
-          <td>Asia</td>
-          <td>Chandra Shekhar</td>
-          <td>Chandra Shekhar.India.1990.1990.Parliamentary Dem</td>
-          <td>Democracy</td>
-          <td>Parliamentary Dem</td>
-          <td>1990</td>
-          <td>1</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <th>220</th>
-          <td>Bulgaria</td>
-          <td>355</td>
-          <td>355.0</td>
-          <td>Eastern Europe</td>
-          <td>Europe</td>
-          <td>Todor Zhivkov</td>
-          <td>Todor Zhivkov.Bulgaria.1954.1988.Civilian Dict</td>
-          <td>Non-democracy</td>
-          <td>Civilian Dict</td>
-          <td>1954</td>
-          <td>35</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <th>772</th>
-          <td>Ireland</td>
-          <td>205</td>
-          <td>205.0</td>
-          <td>Northern Europe</td>
-          <td>Europe</td>
-          <td>Charles Haughey</td>
-          <td>Charles Haughey.Ireland.1979.1980.Mixed Dem</td>
-          <td>Democracy</td>
-          <td>Mixed Dem</td>
-          <td>1979</td>
-          <td>2</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <th>1718</th>
-          <td>United States of America</td>
-          <td>2</td>
-          <td>2.0</td>
-          <td>Northern America</td>
-          <td>Americas</td>
-          <td>Gerald Ford</td>
-          <td>Gerald Ford.United States of America.1974.1976...</td>
-          <td>Democracy</td>
-          <td>Presidential Dem</td>
-          <td>1974</td>
-          <td>3</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <th>712</th>
-          <td>Iceland</td>
-          <td>395</td>
-          <td>395.0</td>
-          <td>Northern Europe</td>
-          <td>Europe</td>
-          <td>Stefan Stefansson</td>
-          <td>Stefan Stefansson.Iceland.1947.1948.Mixed Dem</td>
-          <td>Democracy</td>
-          <td>Mixed Dem</td>
-          <td>1947</td>
-          <td>2</td>
-          <td>1</td>
-        </tr>
-      </tbody>
-    </table>
-    <p>6 rows × 12 columns</p>
-    </div>
+.. table::
+
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    | ctryname  |cowcode2|politycode|un_region_name|un_continent_name|        ehead        |                     leaderspellreg                      |  democracy  |   regime    |start_year|duration|observed|
+    +===========+========+==========+==============+=================+=====================+=========================================================+=============+=============+==========+========+========+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Mohammad Zahir Shah  |Mohammad Zahir Shah.Afghanistan.1946.1952.Monarchy       |Non-democracy|Monarchy     |      1946|       7|       1|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Sardar Mohammad Daoud|Sardar Mohammad Daoud.Afghanistan.1953.1962.Civilian Dict|Non-democracy|Civilian Dict|      1953|      10|       1|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Mohammad Zahir Shah  |Mohammad Zahir Shah.Afghanistan.1963.1972.Monarchy       |Non-democracy|Monarchy     |      1963|      10|       1|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Sardar Mohammad Daoud|Sardar Mohammad Daoud.Afghanistan.1973.1977.Civilian Dict|Non-democracy|Civilian Dict|      1973|       5|       0|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
+    |Afghanistan|     700|       700|Southern Asia |Asia             |Nur Mohammad Taraki  |Nur Mohammad Taraki.Afghanistan.1978.1978.Civilian Dict  |Non-democracy|Civilian Dict|      1978|       1|       0|
+    +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
 
 
 
@@ -186,7 +80,7 @@ From the ``lifelines`` library, we'll need the
     from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
 
-..  note:: Other ways to estimate the survival function in lifelines are ``BreslowFlemingHarringtonFitter``, ``WeibullFitter``, ``ExponentialFitter``
+..  note:: Other ways to estimate the survival function in lifelines are discussed below. 
 
 For this estimation, we need the duration each leader was/has been in
 office, and whether or not they were observed to have left office
@@ -242,8 +136,8 @@ Below we fit our data with the ``KaplanMeierFitter``:
 
 
 After calling the ``fit`` method, the ``KaplanMeierFitter`` has a property
-called ``survival_function_``. (Again, we follow the styling of
-scikit-learn, and append an underscore to all properties that were computational estimated)
+called ``survival_function_`` (again, we follow the styling of
+scikit-learn, and append an underscore to all properties that were computational estimated).
 The property is a Pandas DataFrame, so we can call ``plot`` on it:
 
 .. code:: python
@@ -272,8 +166,6 @@ to plot both the KM estimate and its confidence intervals:
 
 .. image:: images/lifelines_intro_kmf_fitter.png
 
-.. note::  Don't like the shaded area for confidence intervals? See below for examples on how to change this.
-
 
 The median time in office, which defines the point in time where on
 average 1/2 of the population has expired, is a property:
@@ -281,15 +173,12 @@ average 1/2 of the population has expired, is a property:
 .. code:: python
 
     kmf.median_
-
-    #   4
-    #
+    #   4.0
 
 
 
-Interesting that it is only three years. That means, around the world, elected leaders
-have a 50% chance of cessation in three
-years!
+Interesting that it is only four years. That means, around the world, elected leaders
+have a 50% chance of cessation in four years or less!
 
 Let's segment on democratic regimes vs non-democratic regimes. Calling
 ``plot`` on either the estimate itself or the fitter object will return
@@ -300,10 +189,11 @@ an ``axis`` object, that can be used for plotting further estimates:
     ax = plt.subplot(111)
 
     dem = (data["democracy"] == "Democracy")
+    
     kmf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
-    kmf.plot(ax=ax, ci_force_lines=True)
+    kmf.plot(ax=ax)
     kmf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
-    kmf.plot(ax=ax, ci_force_lines=True)
+    kmf.plot(ax=ax)
 
     plt.ylim(0, 1);
     plt.title("Lifespans of different global regimes");
@@ -374,15 +264,16 @@ we rule that the series have different generators.
 
 .. parsed-literal::
 
-                  t_0 = -1
-                alpha = 0.99
-    null_distribution = chi squared
-                   df = 1
+  <lifelines.StatisticalResult>
+                 t_0 = -1
+   null_distribution = chi squared
+  degrees_of_freedom = 1
+               alpha = 0.99
 
-    ---
-    test_statistic      p
-          260.4695 0.0000  ***
-    
+  ---
+   test_statistic      p  -log2(p)
+           260.47 <0.005    192.23
+
 Lets compare the different *types* of regimes present in the dataset:
 
 .. code:: python
@@ -447,7 +338,6 @@ end times/dates (or ``None`` if not observed):
 
 The function ``datetimes_to_durations`` is very flexible, and has many
 keywords to tinker with.
-
 
 
 Estimating hazard rates using Nelson-Aalen
