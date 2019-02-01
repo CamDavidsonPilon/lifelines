@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import time
 import numpy as np
 import pandas as pd
+import warnings
+import autograd.numpy as autograd_np
+from autograd import jacobian, hessian, elementwise_grad as egrad
+from autograd.scipy.stats import norm as autograd_norm
 from scipy.stats import norm
+from numpy.linalg import inv
 from scipy import stats
 from numpy import log
-from scipy.optimize import minimize, check_grad
+from scipy.optimize import minimize
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
@@ -20,60 +26,19 @@ from lifelines.utils import (
 
 
 def _negative_log_likelihood(params, log_T, E):
-    r"""
-    The log likelihood is:
-
-    .. math:: sum_{all deaths events} \log{h(t_i)} + sum_{all events} \log{S(t_i)}
-
-    where h is the hazard function, and S is the survival function. 
-
-
-    1. Why is this scaled by n? When T is large, then the gradient becomes more and more sensitive
-    and smaller and smaller steps are needed to achieve a less than gtol (gtol is the abs min value in the gradient). Unfortunately
-    for very "spikey" log-likelihoods / functions, a small enough step size is not present and the gradient never gets near 0. 
-
-    Another way to think of this: ll ~= E[ll_i] * N, so gradient = diff(E[ll]) * N, so we need to scale ll. 
-    """
     n = log_T.shape[0]
-    mu, sigma = params
-    if sigma < 0.0001:
-        return 1e16
+    mu, log_sigma = params
+    sigma = autograd_np.exp(log_sigma)
 
     Z = (log_T - mu) / sigma
-    log_sf = norm.logsf(Z)
+    cdf = autograd_norm.cdf(Z, loc=0, scale=1)
+    cdf = autograd_np.clip(cdf, 1e-15, 1 - 1e-15)
+    log_sf = autograd_np.log(1-cdf)
 
-    ll = (E * (norm.logpdf(Z) - log_T - log(sigma) - log_sf)).sum() + log_sf.sum()
-    return -ll / n
+    log_pdf = autograd_norm.logpdf(Z, loc=0, scale=1)
 
-
-def _mu_gradient(params, log_T, E):
-    n = log_T.shape[0]
-    mu, sigma = params
-
-    Z = (log_T - mu) / sigma
-    dZ_dmu = -1 / sigma
-
-    sf = norm.sf(Z)
-    sf = np.clip(sf, 1e-10, 1)
-    pdf = norm.pdf(Z)
-
-    x = (E * (-Z * dZ_dmu - -pdf * dZ_dmu / sf)).sum() + (-pdf * dZ_dmu / sf).sum()
-    return -x / n
-
-
-def _sigma_gradient(params, log_T, E):
-    n = log_T.shape[0]
-    mu, sigma = params
-
-    Z = (log_T - mu) / sigma
-    dZ_dsigma = -(log_T - mu) / sigma ** 2
-
-    sf = norm.sf(Z)
-    sf = np.clip(sf, 1e-10, 1)
-    pdf = norm.pdf(Z)
-
-    x = (E * (-Z * dZ_dsigma - 1 / sigma - -pdf * dZ_dsigma / sf)).sum() + (-pdf * dZ_dsigma / sf).sum()
-    return -x / n
+    ll = (E * (log_pdf - log_T - autograd_np.log(sigma) - log_sf)).sum() + log_sf.sum()
+    return -ll/n 
 
 
 class LogNormalFitter(UnivariateFitter):
@@ -147,9 +112,12 @@ class LogNormalFitter(UnivariateFitter):
 
         self._label = label
 
-        (self.mu_, self.sigma_), self._log_likelihood, self.variance_matrix_ = self._fit_model(
+        (self.mu_, self.log_sigma_), self._log_likelihood, self._hessian_ = self._fit_model(
             self.durations, self.event_observed
         )
+        self.sigma_ = np.exp(self.log_sigma_)
+        self.variance_matrix_ = inv(self._hessian_)
+
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(name=self._label)
@@ -192,27 +160,39 @@ class LogNormalFitter(UnivariateFitter):
         """
         return pd.Series(1 - norm.cdf((log(times) - self.mu_) / self.sigma_), index=_to_array(times))
 
+    @staticmethod
+    def _cumulative_hazard_(params, t):
+        mu_, log_sigma_ = params
+        Z = (autograd_np.log(t) - mu_) / autograd_np.exp(log_sigma_)
+        cdf = autograd_norm.cdf(Z, loc=0, scale=1)
+        x = -autograd_np.log(1 - cdf)
+        return x
+
     def cumulative_hazard_at_times(self, times):
-        return pd.Series(-log(1 - norm.cdf((log(times) - self.mu_) / self.sigma_)), index=_to_array(times))
+        return pd.Series(self._cumulative_hazard_([self.mu_, self.log_sigma_], times), index=_to_array(times))
 
     def _fit_model(self, T, E, initial_values=None):
         if initial_values is None:
-            initial_values = np.array([log(T).mean(), log(T).std()])
+            initial_values = np.array([log(T).mean(), np.log(np.log(T).std())])
 
-        def gradient_function(parameters, log_T, E):
-            return np.array([_mu_gradient(parameters, log_T, E), _sigma_gradient(parameters, log_T, E)])
+        n = T.shape[0]
 
+        jac = jacobian(_negative_log_likelihood)
+        hess =  hessian(_negative_log_likelihood)
+        
         results = minimize(
             _negative_log_likelihood,
             initial_values,
+            jac=jac,
+            hess= hess,
+            method='Newton-CG',
             args=(log(T), E),
-            jac=gradient_function,
-            method="BFGS",
-            options={"gtol": 1e-5},
-        )
+            options={'disp': False}
+        )  
+
         if results.success:
-            return results.x, -results.fun, results.hess_inv
-        print(results)
+            hessian_ = hess(results.x, log(T), E)
+            return results.x, -results.fun, hessian_ * n
         raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
 
     @property
@@ -267,7 +247,10 @@ class LogNormalFitter(UnivariateFitter):
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
     def _compute_standard_errors(self):
-        var_mu_, var_sigma_ = self.variance_matrix_.diagonal()
+        var_mu_, var_log_sigma_ = self.variance_matrix_.diagonal()
+        grad_h_beta = np.array([0, self.sigma_])
+        var_sigma_ = grad_h_beta.dot(self.variance_matrix_).dot(grad_h_beta.T)
+
         return pd.DataFrame([[np.sqrt(var_mu_), np.sqrt(var_sigma_)]], index=["se"], columns=["mu_", "sigma_"])
 
     def _compute_confidence_bounds_of_parameters(self):
@@ -290,23 +273,11 @@ class LogNormalFitter(UnivariateFitter):
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
-        var_mu_, var_sigma_ = self.variance_matrix_.diagonal()
+        import pdb
+        pdb.set_trace()
+        gradient_at_mle = jacobian(self._cumulative_hazard_)(np.array([self.mu_, self.log_sigma_]), self.timeline)
 
-        def _d_cumulative_hazard_d_mu(mu_, sigma_, log_T):
-            Z = (log_T - mu_) / sigma_
-            return norm.pdf(Z) / norm.sf(Z) / sigma_
-
-        def _d_cumulative_hazard_d_sigma(mu_, sigma_, log_T):
-            Z = (log_T - mu_) / sigma_
-            return Z * norm.pdf(Z) / norm.sf(Z) / sigma_
-
-        def sensitivity_analysis(mu_, sigma_, var_mu_, var_sigma_, T):
-            return (
-                var_mu_ * _d_cumulative_hazard_d_mu(mu_, sigma_, log(T)) ** 2
-                + var_sigma_ * _d_cumulative_hazard_d_sigma(mu_, sigma_, log(T)) ** 2
-            )
-
-        std_cumulative_hazard = np.sqrt(sensitivity_analysis(self.mu_, self.sigma_, var_mu_, var_sigma_, self.timeline))
+        std_cumulative_hazard = np.sqrt(np.einsum('nj,jk,nk->n', gradient_at_mle, self.variance_matrix_, gradient_at_mle))
 
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
