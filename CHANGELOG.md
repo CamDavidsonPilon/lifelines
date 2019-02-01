@@ -1,5 +1,19 @@
 ### Changelogs
 
+### 0.18.0
+ - `LogNormalFitter` is a new univariate fitter you can use.
+ - `WeibullFitter` now correctly returns the confidence intervals (previously returned only NaNs)
+ - `WeibullFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
+ - `ExponentialFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
+ - `ExponentialFitter.plot` now displays the cumulative hazard, instead of the survival function. This is to make it easier to compare to `WeibullFitter` and `LogNormalFitter`
+ - Univariate fitters' `cumulative_hazard_at_times`, `hazard_at_times`, `survival_function_at_times` return pandas Series now (use to be numpy arrays)
+ - remove `alpha` keyword from all statistical functions. This was never being used. 
+ - Gone are astericks and dots in `print_summary` functions that represent signficance thresholds. 
+ - In models' `summary` (including `print_summary`), the `log(p)` term has changed to `-log2(p)`. This is known as the s-value. See https://lesslikely.com/statistics/s-values/
+ - introduce new statistical tests between univariate datasets: `survival_difference_at_fixed_point_in_time_test`,...
+ - new warning message when Cox models detects possible non-unique solutions to maximum likelihood. 
+ - Generally: clean up lifelines exception handling. Ex: catch `LinAlgError: Matrix is singular.` and report back to the user advice. 
+
 ### 0.17.5
  - more bugs in `plot_covariate_groups` fixed when using non-numeric strata.
 

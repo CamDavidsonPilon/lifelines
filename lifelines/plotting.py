@@ -219,8 +219,8 @@ def plot_lifetimes(
     if entry is None:
         entry = np.zeros(N)
 
-    assert durations.shape == (N,)
-    assert event_observed.shape == (N,)
+    assert durations.shape[0] == N
+    assert event_observed.shape[0] == N
 
     if sort_by_duration:
         # order by length of lifetimes;

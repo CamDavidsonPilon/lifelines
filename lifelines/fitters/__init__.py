@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from lifelines.plotting import plot_estimate
-from lifelines.utils import qth_survival_times, _to_array
+from lifelines.utils import qth_survival_times, _to_array, dataframe_interpolate_at_times
 from lifelines.compat import PY2, PY3
 
 
@@ -103,12 +103,13 @@ class UnivariateFitter(BaseFitter):
         other_estimate = getattr(other, other._estimate_name)
         new_index = np.concatenate((other_estimate.index, self_estimate.index))
         new_index = np.unique(new_index)
-        return pd.DataFrame(
+        t = pd.DataFrame(
             self_estimate.reindex(new_index, method="ffill").values
             / other_estimate.reindex(new_index, method="ffill").values,
             index=new_index,
             columns=["ratio"],
         )
+        return t
 
     @_must_call_fit_first
     def predict(self, times):
@@ -128,11 +129,23 @@ class UnivariateFitter(BaseFitter):
             return pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
         estimate = getattr(self, self._estimation_method)
         # non-linear interpolations can push the survival curves above 1 and below 0.
-        return estimate.reindex(estimate.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
+        return dataframe_interpolate_at_times(estimate, times)
 
     @property
     @_must_call_fit_first
     def conditional_time_to_event_(self):
+        """
+        Return a DataFrame, with index equal to survival_function_, that estimates the median
+        duration remaining until the death event, given survival up until time t. For example, if an
+        individual exists until age 1, their expected life remaining *given they lived to time 1*
+        might be 9 years.
+
+        Returns
+        -------
+        conditional_time_to_: DataFrame 
+            with index equal to survival_function_
+
+        """
         return self._conditional_time_to_event_()
 
     @_must_call_fit_first
@@ -161,3 +174,15 @@ class UnivariateFitter(BaseFitter):
             )
             - age
         )
+
+    @_must_call_fit_first
+    def hazard_at_times(self, times):
+        raise NotImplementedError
+
+    @_must_call_fit_first
+    def survival_function_at_times(self, times):
+        raise NotImplementedError
+
+    @_must_call_fit_first
+    def cumulative_hazard_at_times(self, times):
+        raise NotImplementedError

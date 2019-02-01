@@ -9,7 +9,6 @@ import numpy as np
 from scipy.linalg import solve
 from scipy import stats
 import pandas as pd
-from pandas import to_datetime
 
 from lifelines.utils.concordance import concordance_index
 
@@ -30,37 +29,23 @@ __all__ = [
 
 
 class StatError(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return repr(self.msg)
+    pass
 
 
 class ConvergenceError(ValueError):
     # inherits from ValueError for backwards compatilibity reasons
 
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return repr(self.msg)
+    def __init__(self, msg, original_exception=""):
+        super(ConvergenceError, self).__init__(msg + (": %s" % original_exception))
+        self.original_exception = original_exception
 
 
 class ConvergenceWarning(RuntimeWarning):
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return repr(self.msg)
+    pass
 
 
 class StatisticalWarning(RuntimeWarning):
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __str__(self):
-        return repr(self.msg)
+    pass
 
 
 def qth_survival_times(q, survival_functions, cdf=False):
@@ -472,8 +457,8 @@ def datetimes_to_durations(
 
     C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
     end_times[~C] = fill_date
-    start_times_ = to_datetime(start_times, dayfirst=dayfirst)
-    end_times_ = to_datetime(end_times, dayfirst=dayfirst, errors="coerce")
+    start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst)
+    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce")
 
     deaths_after_cutoff = end_times_ > fill_date
     C[deaths_after_cutoff] = False
@@ -674,29 +659,6 @@ def epanechnikov_kernel(t, T, bandwidth=1.0):
     return M
 
 
-def significance_code(p):
-    """
-    Notes
-    ------
-    v0.15.0: p-values between 0.05 and 0.1 have such little information gain. For that reason, I am deviating
-        from the traditional "astericks" in R and making everthing an order-of-magnitude less.
-    """
-    if p < 0.0001:
-        return "***"
-    if p < 0.001:
-        return "**"
-    if p < 0.01:
-        return "*"
-    if p < 0.05:
-        return "."
-    return " "
-
-
-def significance_codes_as_text():
-    p_values = [0, 0.0001, 0.001, 0.01, 0.05]
-    return "Signif. codes: " + " ".join(["%s '%s'" % (p, significance_code(p)) for p in p_values]) + " 1"
-
-
 def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None, ix=None):
     """
     Also known as Tikhonov regularization. This solves the minimization problem:
@@ -821,9 +783,7 @@ def _get_index(X):
 
 def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
-        col
-        for (col, dtype) in df.dtypes.iteritems()
-        if dtype.name == "category" or not (np.issubdtype(dtype, np.number) or np.issubdtype(dtype, np.bool_))
+        col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"
     ]
     if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(
@@ -889,16 +849,21 @@ if convergence fails.%s"
 
 
 def check_complete_separation_low_variance(df, events):
+    # import pdb
+    # pdb.set_trace()
     events = events.astype(bool)
-    rhs = df.columns[_low_var(df.loc[events])]
-    lhs = df.columns[_low_var(df.loc[~events])]
-    inter = lhs.intersection(rhs).tolist()
-    if inter:
-        warning_text = (
-            "Column(s) %s have very low variance when conditioned on \
-death event or not. This may harm convergence. This could be a form of 'complete separation'. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ "
-            % (inter)
+    deaths_only = df.columns[_low_var(df.loc[events])]
+    censors_only = df.columns[_low_var(df.loc[~events])]
+    problem_columns = censors_only.union(deaths_only).tolist()
+    if problem_columns:
+        warning_text = """Column(s) {cols} have very low variance when conditioned on
+death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
+>>> events = df[event_observed_col].astype(bool)
+>>> df.loc[events, {cols}].var()
+>>> df.loc[~events, {cols}].var()
+
+See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ """.format(
+            cols=problem_columns[0]
         )
         warnings.warn(warning_text, ConvergenceWarning)
 
@@ -929,6 +894,9 @@ def check_complete_separation(df, events, durations):
 
 
 def check_nans_or_infs(df_or_array):
+    if hasattr(df_or_array, "dtype") and df_or_array.dtype.kind not in "biuf":
+        raise ValueError("Values must be a subtype of number: so no strings, timedeltas, datetimes, objects, etc.")
+
     nulls = pd.isnull(df_or_array)
     if hasattr(nulls, "values"):
         if nulls.values.any():
@@ -938,7 +906,7 @@ def check_nans_or_infs(df_or_array):
             raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     # isinf check is done after isnull check since np.isinf doesn't work on None values
     if isinstance(df_or_array, (pd.Series, pd.DataFrame)):
-        infs = df_or_array == np.Inf
+        infs = df_or_array.values == np.Inf
     else:
         infs = np.isinf(df_or_array)
     if hasattr(infs, "values"):
@@ -1350,6 +1318,10 @@ def format_p_value(decimals):
 
 def format_floats(decimals):
     return lambda f: "{:4.{prec}f}".format(f, prec=decimals)
+
+
+def dataframe_interpolate_at_times(df, times):
+    return df.reindex(df.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
 
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")

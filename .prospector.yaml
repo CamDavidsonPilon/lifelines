@@ -33,7 +33,7 @@ pep8:
 mccabe:
   options:
     # max-complexity default = 10
-    max-complexity: 22
+    max-complexity: 23
 
 pyroma:
   run: true
@@ -43,3 +43,4 @@ pep257:
 
 ignore-paths:
   - build
+  - benchmarks

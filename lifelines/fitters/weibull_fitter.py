@@ -9,13 +9,12 @@ from scipy import stats
 from numpy.linalg import solve, norm, inv
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
+    _to_array,
     inv_normal_cdf,
     check_nans_or_infs,
     ConvergenceError,
     string_justify,
-    significance_code,
     ConvergenceWarning,
-    significance_codes_as_text,
     format_p_value,
     format_floats,
 )
@@ -153,14 +152,12 @@ class WeibullFitter(UnivariateFitter):
             self.durations, self.event_observed, show_progress=show_progress
         )
         self._log_likelihood = -_negative_log_likelihood((self.lambda_, self.rho_), self.durations, self.event_observed)
-        self.variance_matrix_ = -inv(self._hessian_)
-        self.survival_function_ = pd.DataFrame(
-            self.survival_function_at_times(self.timeline), columns=[self._label], index=self.timeline
-        )
-        self.hazard_ = pd.DataFrame(self.hazard_at_times(self.timeline), columns=[self._label], index=self.timeline)
-        self.cumulative_hazard_ = pd.DataFrame(
-            self.cumulative_hazard_at_times(self.timeline), columns=[self._label], index=self.timeline
-        )
+        self.variance_matrix_ = inv(self._hessian_)
+
+        self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
+        self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
+        self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
+
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
         self.median_ = 1.0 / self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
 
@@ -175,16 +172,16 @@ class WeibullFitter(UnivariateFitter):
         return self
 
     def _estimation_method(self, t):
-        return np.exp(-(self.lambda_ * t) ** self.rho_)
+        return self.survival_function_at_times(t)
 
     def hazard_at_times(self, times):
-        return self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1)
+        return pd.Series(self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1), index=_to_array(times))
 
     def survival_function_at_times(self, times):
-        return np.exp(-self.cumulative_hazard_at_times(times))
+        return pd.Series(np.exp(-self.cumulative_hazard_at_times(times)), index=_to_array(times))
 
     def cumulative_hazard_at_times(self, times):
-        return (self.lambda_ * times) ** self.rho_
+        return pd.Series((self.lambda_ * times) ** self.rho_, index=_to_array(times))
 
     def _newton_rhaphson(self, T, E, precision=1e-5, show_progress=False):  # pylint: disable=too-many-locals
         from lifelines.utils import _smart_search
@@ -242,16 +239,19 @@ class WeibullFitter(UnivariateFitter):
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
-        var_lambda_, var_rho_ = inv(self._hessian_).diagonal()
+        var_lambda_, var_rho_ = self.variance_matrix_.diagonal()
 
-        def _dH_d_lambda(lambda_, rho, T):
-            return rho / lambda_ * (lambda_ * T) ** rho
+        def _d_cumulative_hazard_d_lambda(lambda_, rho_, T):
+            return rho_ / lambda_ * (lambda_ * T) ** rho_
 
-        def _dH_d_rho(lambda_, rho, T):
-            return np.log(lambda_ * T) * (lambda_ * T) ** rho
+        def _d_cumulative_hazard_d_rho(lambda_, rho_, T):
+            return np.log(lambda_ * T) * (lambda_ * T) ** rho_
 
         def sensitivity_analysis(lambda_, rho, var_lambda_, var_rho_, T):
-            return var_lambda_ * _dH_d_lambda(lambda_, rho, T) ** 2 + var_rho_ * _dH_d_rho(lambda_, rho, T) ** 2
+            return (
+                var_lambda_ * _d_cumulative_hazard_d_lambda(lambda_, rho, T) ** 2
+                + var_rho_ * _d_cumulative_hazard_d_rho(lambda_, rho, T) ** 2
+            )
 
         std_cumulative_hazard = np.sqrt(
             sensitivity_analysis(self.lambda_, self.rho_, var_lambda_, var_rho_, self.timeline)
@@ -266,7 +266,7 @@ class WeibullFitter(UnivariateFitter):
         return df
 
     def _compute_standard_errors(self):
-        var_lambda_, var_rho_ = inv(self._hessian_).diagonal()
+        var_lambda_, var_rho_ = self.variance_matrix_.diagonal()
         return pd.DataFrame([[np.sqrt(var_lambda_), np.sqrt(var_rho_)]], index=["se"], columns=["lambda_", "rho_"])
 
     def _compute_confidence_bounds_of_parameters(self):
@@ -279,7 +279,7 @@ class WeibullFitter(UnivariateFitter):
         )
 
     def _compute_z_values(self):
-        return np.asarray([self.lambda_, self.rho_]) / self._compute_standard_errors().loc["se"]
+        return np.asarray([self.lambda_ - 1, self.rho_ - 1]) / self._compute_standard_errors().loc["se"]
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -302,7 +302,9 @@ class WeibullFitter(UnivariateFitter):
         df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
         df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
-        df["log(p)"] = np.log(df["p"])
+        with np.warnings.catch_warnings():
+            np.warnings.filterwarnings("ignore")
+            df["-log2(p)"] = -np.log2(df["p"])
         return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -323,6 +325,7 @@ class WeibullFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        print("{} = {}".format(justify("hypothesis"), "lambda != 1, rho != 1"))
 
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
@@ -331,7 +334,4 @@ class WeibullFitter(UnivariateFitter):
         print("---")
 
         df = self.summary
-        df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
-        print("---")
-        print(significance_codes_as_text(), end="\n\n")

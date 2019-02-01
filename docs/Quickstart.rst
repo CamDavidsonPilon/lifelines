@@ -188,18 +188,16 @@ The input of the ``fit`` method's API in a regression is different. All the data
     number of subjects = 200
       number of events = 189
         log-likelihood = -807.62
-      time fit was run = 2019-01-01 23:15:47 UTC
+      time fit was run = 2019-01-27 23:11:22 UTC
 
     ---
-          coef  exp(coef)  se(coef)    z      p  log(p)  lower 0.95  upper 0.95
-    var1  0.22       1.25      0.07 2.99 <0.005   -5.89        0.08        0.37  *
-    var2  0.05       1.05      0.08 0.61   0.54   -0.62       -0.11        0.21
-    var3  0.22       1.24      0.08 2.88 <0.005   -5.53        0.07        0.37  *
+          coef  exp(coef)  se(coef)    z      p  -log2(p)  lower 0.95  upper 0.95
+    var1  0.22       1.25      0.07 2.99 <0.005      8.49        0.08        0.37
+    var2  0.05       1.05      0.08 0.61   0.54      0.89       -0.11        0.21
+    var3  0.22       1.24      0.08 2.88 <0.005      7.97        0.07        0.37
     ---
-    Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
-
     Concordance = 0.58
-    Likelihood ratio test = 15.54 on 3 df, log(p)=-6.56
+    Likelihood ratio test = 15.54 on 3 df, -log2(p)=9.47
     """
 
     cph.plot()

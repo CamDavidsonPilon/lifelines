@@ -19,7 +19,7 @@ methods like linear regression.
 
 There are two popular techniques in survival regression: Cox's
 model and Aalen's additive model. Both models attempt to represent the
-hazard rate :math:`\lambda(t | x)` as a function of :math:`t` and some covariates :math:`x`. We explore these models next. 
+hazard rate :math:`h(t | x)` as a function of :math:`t` and some covariates :math:`x`. We explore these models next. 
 
 
 Cox's proportional hazard model
@@ -28,13 +28,15 @@ Cox's proportional hazard model
 lifelines has an implementation of the Cox proportional hazards regression model (implemented in
 R as ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
-.. math::  \underbrace{\lambda(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
+.. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
 Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease the baseline hazard.
 
 The dataset for regression
 ###########################
-The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. Optionally, there could be a column denoting the event status of each observation (1 if event occured, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial. 
+The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. There may be a column denoting the event status of each observation (1 if event occured, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial. 
+
+.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. _lifelines_ will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
 
 An example dataset is called the Rossi recidivism dataset, available in lifelines as ``datasets.load_rossi``.
 
@@ -55,7 +57,7 @@ An example dataset is called the Rossi recidivism dataset, available in lifeline
 The dataframe ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occured, and the other columns represent variables we wish to regress against. 
 
 
-If you need to first "clean" your dataset (encode categorical variables, add interation terms, etc.), that should happen *before* using lifelines. Libraries like Pandas and Patsy help with that. 
+If you need to first clean or transform your dataset (encode categorical variables, add interation terms, etc.), that should happen *before* using lifelines. Libraries like Pandas and Patsy help with that. 
 
 
 Running the regression
@@ -78,27 +80,26 @@ The implementation of the Cox model in lifelines is called ``CoxPHFitter``. Like
     cph.print_summary()  # access the results using cph.summary
 
     """
-          duration col = week
-             event col = arrest
+    <lifelines.CoxPHFitter: fitted with 432 observations, 318 censored>
+          duration col = 'week'
+             event col = 'arrest'
     number of subjects = 432
       number of events = 114
-        log-likelihood = -658.748
-      time fit was run = 2018-10-22 20:47:44 UTC
+        log-likelihood = -658.75
+      time fit was run = 2019-01-27 23:10:15 UTC
 
     ---
-            coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-    fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043   *
-    age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143  **
-    race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
-    wexp -0.1498     0.8609    0.2122 -0.7058 0.4803     -0.5657      0.2662
-    mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
-    paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
-    prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
+          coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
+    fin  -0.38       0.68      0.19 -1.98   0.05      4.40       -0.75       -0.00
+    age  -0.06       0.94      0.02 -2.61   0.01      6.79       -0.10       -0.01
+    race  0.31       1.37      0.31  1.02   0.31      1.70       -0.29        0.92
+    wexp -0.15       0.86      0.21 -0.71   0.48      1.06       -0.57        0.27
+    mar  -0.43       0.65      0.38 -1.14   0.26      1.97       -1.18        0.31
+    paro -0.08       0.92      0.20 -0.43   0.66      0.59       -0.47        0.30
+    prio  0.09       1.10      0.03  3.19 <0.005      9.48        0.04        0.15
     ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    Concordance = 0.640
-    Likelihood ratio test = 33.266 on 7 df, p=0.00002
+    Concordance = 0.64
+    Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
     """
 
 To access the coefficients and the baseline hazard directly, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively.
@@ -268,27 +269,26 @@ To specify variables to be used in stratification, we define them in the call to
     cph.print_summary()  # access the results using cph.summary
 
     """
-          duration col = week
-             event col = arrest
+    <lifelines.CoxPHFitter: fitted with 432 observations, 318 censored>
+          duration col = 'week'
+             event col = 'arrest'
                 strata = ['race']
     number of subjects = 432
       number of events = 114
-        log-likelihood = -620.564
-      time fit was run = 2018-10-23 02:45:52 UTC
+        log-likelihood = -620.56
+      time fit was run = 2019-01-27 23:08:35 UTC
 
     ---
-            coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-    fin  -0.3788     0.6847    0.1913 -1.9799 0.0477     -0.7537     -0.0038   *
-    age  -0.0576     0.9440    0.0220 -2.6198 0.0088     -0.1008     -0.0145  **
-    wexp -0.1428     0.8670    0.2128 -0.6708 0.5023     -0.5598      0.2743
-    mar  -0.4388     0.6448    0.3821 -1.1484 0.2508     -1.1878      0.3101
-    paro -0.0858     0.9178    0.1958 -0.4380 0.6614     -0.4695      0.2980
-    prio  0.0922     1.0966    0.0287  3.2102 0.0013      0.0359      0.1485  **
+          coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
+    fin  -0.38       0.68      0.19 -1.98   0.05      4.39       -0.75       -0.00
+    age  -0.06       0.94      0.02 -2.62   0.01      6.83       -0.10       -0.01
+    wexp -0.14       0.87      0.21 -0.67   0.50      0.99       -0.56        0.27
+    mar  -0.44       0.64      0.38 -1.15   0.25      2.00       -1.19        0.31
+    paro -0.09       0.92      0.20 -0.44   0.66      0.60       -0.47        0.30
+    prio  0.09       1.10      0.03  3.21 <0.005      9.56        0.04        0.15
     ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    Concordance = 0.638
-    Likelihood ratio test = 109.634 on 6 df, p=0.00000
+    Concordance = 0.64
+    Likelihood ratio test = 109.63 on 6 df, -log2(p)=68.48
     """
 
     cph.baseline_cumulative_hazard_.shape
@@ -368,7 +368,7 @@ additive. Specifically:
 
 
 .. math:: 
-    \lambda(t|x)  = b_0(t) + b_1(t) x_1 + ... + b_N(t) x_N
+    h(t|x)  = b_0(t) + b_1(t) x_1 + ... + b_N(t) x_N
 
 
 Inference typically does not estimate the individual
@@ -544,7 +544,7 @@ Often an individual will have a covariate change over time. An example of this i
 
 We can incorporate changes over time into our survival analysis by using a modification of the Cox model above. The general mathematical description is:
 
-.. math::  \lambda(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i (x_i(t) - \overline{x_i}) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
+.. math::  h(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i (x_i(t) - \overline{x_i}) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
 Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this.
 

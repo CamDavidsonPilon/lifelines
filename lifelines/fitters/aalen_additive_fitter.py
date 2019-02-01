@@ -24,7 +24,6 @@ from lifelines.utils import (
     string_justify,
     _to_list,
     format_floats,
-    # significance_codes_as_text,
     format_p_value,
     survival_table_from_events,
     StatisticalWarning,
@@ -67,6 +66,7 @@ class AalenAdditiveFitter(BaseFitter):
     """
 
     def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.0, smoothing_penalizer=0.0):
+        super(AalenAdditiveFitter, self).__init__(alpha=alpha)
         self.fit_intercept = fit_intercept
         self.alpha = alpha
         self.coef_penalizer = coef_penalizer
@@ -530,6 +530,12 @@ It's important to know that the naive variance estimates of the coefficients are
         if self.weights_col:
             print("{} = '{}'".format(justify("weights col"), self.weights_col))
 
+        if self.coef_penalizer > 0:
+            print("{} = '{}'".format(justify("coef penalizer"), self.coef_penalizer))
+
+        if self.smoothing_penalizer > 0:
+            print("{} = '{}'".format(justify("smoothing penalizer"), self.smoothing_penalizer))
+
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
@@ -541,11 +547,8 @@ It's important to know that the naive variance estimates of the coefficients are
         print("---")
 
         df = self.summary
-        # Significance codes as last column
-        # df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
         # Significance code explanation
         print("---")
-        # print(significance_codes_as_text(), end="\n\n")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))

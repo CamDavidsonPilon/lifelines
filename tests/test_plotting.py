@@ -23,6 +23,11 @@ from lifelines.datasets import (
 from lifelines.generate_datasets import cumulative_integral
 
 
+@pytest.fixture()
+def waltons():
+    return load_waltons()[["T", "E"]].iloc[:50]
+
+
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting:
     @pytest.fixture
@@ -149,26 +154,22 @@ class TestPlotting:
         self.plt.show(block=block)
         return
 
-    def test_plot_lifetimes_calendar(self, block):
-        t = np.linspace(0, 20, 1000)
-        hz, coef, covrt = generate_hazard_rates(1, 5, t)
-        N = 20
+    def test_plot_lifetimes_calendar(self, block, waltons):
+        T, E = waltons["T"], waltons["E"]
         current = 10
-        birthtimes = current * np.random.uniform(size=(N,))
-        T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
-        ax = plot_lifetimes(T, event_observed=C, entry=birthtimes)
+        birthtimes = current * np.random.uniform(size=(T.shape[0],))
+        ax = plot_lifetimes(T, event_observed=E, entry=birthtimes)
         assert ax is not None
         self.plt.title("test_plot_lifetimes_calendar")
         self.plt.show(block=block)
 
-    def test_plot_lifetimes_left_truncation(self, block):
-        t = np.linspace(0, 20, 1000)
-        hz, coef, covrt = generate_hazard_rates(1, 5, t)
+    def test_plot_lifetimes_left_truncation(self, block, waltons):
+        T, E = waltons["T"], waltons["E"]
         N = 20
         current = 10
-        birthtimes = current * np.random.uniform(size=(N,))
-        T, C = generate_random_lifetimes(hz, t, size=N, censor=current - birthtimes)
-        ax = plot_lifetimes(T, event_observed=C, entry=birthtimes, left_truncated=True)
+
+        birthtimes = current * np.random.uniform(size=(T.shape[0],))
+        ax = plot_lifetimes(T, event_observed=E, entry=birthtimes, left_truncated=True)
         assert ax is not None
         self.plt.title("test_plot_lifetimes_left_truncation")
         self.plt.show(block=block)
@@ -189,12 +190,9 @@ class TestPlotting:
         self.plt.title("test_MACS_data_with_plot_lifetimes")
         self.plt.show(block=block)
 
-    def test_plot_lifetimes_relative(self, block):
-        t = np.linspace(0, 20, 1000)
-        hz, coef, covrt = generate_hazard_rates(1, 5, t)
-        N = 20
-        T, C = generate_random_lifetimes(hz, t, size=N, censor=True)
-        ax = plot_lifetimes(T, event_observed=C)
+    def test_plot_lifetimes_relative(self, block, waltons):
+        T, E = waltons["T"], waltons["E"]
+        ax = plot_lifetimes(T, event_observed=E)
         assert ax is not None
         self.plt.title("test_plot_lifetimes_relative")
         self.plt.show(block=block)

@@ -7,14 +7,13 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils import (
-    group_survival_table_from_events,
-    significance_code,
-    significance_codes_as_text,
-    _to_list,
-    string_justify,
     _to_array,
+    _to_list,
+    group_survival_table_from_events,
+    string_justify,
     format_p_value,
     format_floats,
+    dataframe_interpolate_at_times,
 )
 
 from lifelines import KaplanMeierFitter
@@ -145,7 +144,92 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     )
 
 
-def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, alpha=0.95, t_0=-1, **kwargs):
+def survival_difference_at_fixed_point_in_time_test(
+    point_in_time, durations_A, durations_B, event_observed_A=None, event_observed_B=None, **kwargs
+):
+    """
+    
+    Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other. 
+    For example, analysts may be interested in 5-year survival. Statistically comparing the naive Kaplan-Meier points at a specific time
+    actually has reduced power (see [1]). By transforming the Kaplan-Meier curve, we can recover more power. This function uses 
+    the log(-log) transformation. 
+
+
+    Parameters
+    ----------
+    point_in_time: float,
+        the point in time to analyze the survival curves at. 
+
+    durations_A: iterable
+        a (n,) list-like of event durations (birth to death,...) for the first population.
+
+    durations_B: iterable
+        a (n,) list-like of event durations (birth to death,...) for the second population.
+
+    event_observed_A: iterable, optional
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population. 
+        Default assumes all observed.
+
+    event_observed_B: iterable, optional
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population. 
+        Default assumes all observed.
+
+    kwargs: 
+        add keywords and meta-data to the experiment summary
+
+
+    Returns
+    -------
+
+    results : StatisticalResult
+      a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
+
+    Examples
+    --------
+    >>> T1 = [1, 4, 10, 12, 12, 3, 5.4]
+    >>> E1 = [1, 0, 1,  0,  1,  1, 1]
+    >>>
+    >>> T2 = [4, 5, 7, 11, 14, 20, 8, 8]
+    >>> E2 = [1, 1, 1, 1,  1,  1,  1, 1]
+    >>>
+    >>> from lifelines.statistics import survival_difference_at_fixed_point_in_time_test
+    >>> results = survival_difference_at_fixed_point_in_time_test(12, T1, T2, event_observed_A=E1, event_observed_B=E2)
+    >>>
+    >>> results.print_summary()
+    >>> print(results.p_value)        # 0.893
+    >>> print(results.test_statistic) # 0.017
+
+    Notes
+    -----
+    Other transformations are possible, but Klein et al. [1] showed that the log(-log(c)) transform has the most desirable
+    statistical properties. 
+
+    [1] Klein, J. P., Logan, B. , Harhoff, M. and Andersen, P. K. (2007), Analyzing survival curves at a fixed point in time. Statist. Med., 26: 4505-4519. doi:10.1002/sim.2864
+    
+    """
+
+    kmfA = KaplanMeierFitter().fit(durations_A, event_observed=event_observed_A)
+    kmfB = KaplanMeierFitter().fit(durations_B, event_observed=event_observed_B)
+
+    sA_t = kmfA.predict(point_in_time)
+    sB_t = kmfB.predict(point_in_time)
+
+    # this is doing a prediction/interpolation between the kmf's index.
+    sigma_sqA = dataframe_interpolate_at_times(kmfA._cumulative_sq_, point_in_time)
+    sigma_sqB = dataframe_interpolate_at_times(kmfB._cumulative_sq_, point_in_time)
+
+    log = np.log
+    clog = lambda s: log(-log(s))
+
+    X = (clog(sA_t) - clog(sB_t)) ** 2 / (sigma_sqA / log(sA_t) ** 2 + sigma_sqB / log(sB_t) ** 2)
+    p_value = chisq_test(X, 1)
+
+    return StatisticalResult(
+        p_value, X, null_distribution="chi squared", degrees_of_freedom=1, point_in_time=point_in_time, **kwargs
+    )
+
+
+def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs):
     """
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -184,9 +268,6 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
 
     t_0: float, optional (default=-1)
         the final time period under observation, -1 for all time.
-
-    alpha: float, optional (default=0.95)
-        the confidence level
 
     kwargs: 
         add keywords and meta-data to the experiment summary
@@ -232,19 +313,15 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
     event_observed = np.r_[event_observed_A, event_observed_B]
-    return multivariate_logrank_test(event_times, groups, event_observed, alpha=alpha, t_0=t_0, **kwargs)
+    return multivariate_logrank_test(event_times, groups, event_observed, t_0=t_0, **kwargs)
 
 
 def pairwise_logrank_test(
-    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, bonferroni=True, **kwargs
+    event_durations, groups, event_observed=None, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
 
     """
     Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
-    We have to be careful here: if there are n groups, then there are n*(n-1)/2 pairs -- so many pairs increase
-    the chance that here will exist a significantly different pair purely by chance. For this reason, we use the
-    Bonferroni correction (rewight the alpha value higher to accomidate the multiple tests).
-
 
     Parameters
     ----------
@@ -260,12 +337,6 @@ def pairwise_logrank_test(
 
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
-
-    alpha: float, optional (default=0.95)
-        the confidence level
-
-    bonferroni: boolean, optional (default=True)
-        If True, uses the Bonferroni correction to compare the M=n(n-1)/2 pairs, i.e alpha = alpha/M.
 
     kwargs: 
         add keywords and meta-data to the experiment summary.
@@ -302,10 +373,6 @@ def pairwise_logrank_test(
 
     n_unique_groups = unique_groups.shape[0]
 
-    if bonferroni:
-        m = 0.5 * n_unique_groups * (n_unique_groups - 1)
-        alpha = 1 - (1 - alpha) / m
-
     result = StatisticalResult([], [], [])
 
     for i1, i2 in combinations(np.arange(n_unique_groups), 2):
@@ -316,9 +383,7 @@ def pairwise_logrank_test(
             event_durations.loc[ix2],
             event_observed.loc[ix1],
             event_observed.loc[ix2],
-            alpha=alpha,
             t_0=t_0,
-            use_bonferroni=bonferroni,
             name=[(g1, g2)],
             **kwargs
         )
@@ -327,7 +392,7 @@ def pairwise_logrank_test(
 
 
 def multivariate_logrank_test(
-    event_durations, groups, event_observed=None, alpha=0.95, t_0=-1, **kwargs
+    event_durations, groups, event_observed=None, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
 
     """
@@ -353,9 +418,6 @@ def multivariate_logrank_test(
 
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
-
-    alpha: float, optional (default=0.95)
-        the confidence level
 
     kwargs: 
         add keywords and meta-data to the experiment summary.
@@ -394,9 +456,6 @@ def multivariate_logrank_test(
     pairwise_logrank_test
     logrank_test
     """
-    if not (0 < alpha <= 1.0):
-        raise ValueError("alpha parameter must be between 0 and 1.")
-
     event_durations, groups = np.asarray(event_durations), np.asarray(groups)
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
@@ -437,10 +496,10 @@ def multivariate_logrank_test(
     U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1])).dot(Z_j.iloc[:-1])  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
-    _, p_value = chisq_test(U, n_groups - 1, alpha)
+    p_value = chisq_test(U, n_groups - 1)
 
     return StatisticalResult(
-        p_value, U, t_0=t_0, alpha=alpha, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
+        p_value, U, t_0=t_0, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
     )
 
 
@@ -530,8 +589,7 @@ class StatisticalResult(object):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
         df = self.summary
-        df["log(p)"] = np.log(df["p"])
-        df[""] = [significance_code(p) for p in df["p"]]
+        df["-log2(p)"] = -np.log2(df["p"])
 
         s = self.__repr__()
         s += "\n" + meta_data + "\n"
@@ -542,8 +600,6 @@ class StatisticalResult(object):
             formatters={"p": format_p_value(decimals)},
         )
 
-        s += "\n---"
-        s += "\n" + significance_codes_as_text()
         return s
 
     def _stringify_meta_data(self, dictionary):
@@ -564,18 +620,14 @@ class StatisticalResult(object):
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
 
 
-def chisq_test(U, degrees_freedom, alpha):
+def chisq_test(U, degrees_freedom):
     p_value = stats.chi2.sf(U, degrees_freedom)
-    if p_value < 1 - alpha:
-        return True, p_value
-    return None, p_value
+    return p_value
 
 
-def two_sided_z_test(Z, alpha):
+def two_sided_z_test(Z):
     p_value = 1 - np.max(stats.norm.cdf(Z), 1 - stats.norm.cdf(Z))
-    if p_value < 1 - alpha / 2.0:
-        return True, p_value
-    return None, p_value
+    return p_value
 
 
 class TimeTransformers:
@@ -650,7 +702,7 @@ def proportional_hazard_test(
         for transform_name, transform in TimeTransformers():
             times = transform(durations, events, weights)[events.values]
             T = compute_statistic(times, scaled_resids)
-            p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
+            p_values = _to_array([chisq_test(t, 1) for t in T])
             result += StatisticalResult(
                 p_values,
                 T,
@@ -671,7 +723,7 @@ def proportional_hazard_test(
 
         T = compute_statistic(times, scaled_resids)
 
-        p_values = _to_array([chisq_test(t, 1, 1.0)[1] for t in T])
+        p_values = _to_array([chisq_test(t, 1) for t in T])
         result = StatisticalResult(
             p_values,
             T,

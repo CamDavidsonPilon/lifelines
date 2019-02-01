@@ -4,8 +4,6 @@ from __future__ import division
 
 from collections import Counter, Iterable
 import os
-from sys import version_info
-import warnings
 import pickle
 from itertools import combinations
 
@@ -20,7 +18,6 @@ import pytest
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
-from numpy.linalg.linalg import LinAlgError
 
 from lifelines.compat import PY2, PY3
 from lifelines.utils import (
@@ -31,6 +28,8 @@ from lifelines.utils import (
     to_long_format,
     normalize,
     to_episodic_format,
+    ConvergenceError,
+    StatisticalWarning,
 )
 
 from lifelines.fitters import BaseFitter
@@ -45,6 +44,7 @@ from lifelines import (
     CoxTimeVaryingFitter,
     AalenAdditiveFitter,
     AalenJohansenFitter,
+    LogNormalFitter,
 )
 
 from lifelines.datasets import (
@@ -60,8 +60,6 @@ from lifelines.datasets import (
     load_multicenter_aids_cohort_study,
 )
 from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
-
-PYTHON_VER = (version_info.major, version_info.minor)
 
 
 @pytest.fixture
@@ -93,7 +91,14 @@ def data_pred1():
 
 @pytest.fixture
 def univariate_fitters():
-    return [KaplanMeierFitter, NelsonAalenFitter, BreslowFlemingHarringtonFitter, ExponentialFitter, WeibullFitter]
+    return [
+        KaplanMeierFitter,
+        NelsonAalenFitter,
+        BreslowFlemingHarringtonFitter,
+        ExponentialFitter,
+        WeibullFitter,
+        LogNormalFitter,
+    ]
 
 
 @pytest.fixture
@@ -189,6 +194,15 @@ class TestUnivariateFitters:
             fitter.fit(T)
             assert hasattr(fitter, "plot")
 
+    def test_univariate_fitters_fail_if_given_timedelta(self, univariate_fitters):
+        x = pd.Series(pd.to_datetime("2015-01-01"))
+        T = x - x
+        for fitter in univariate_fitters:
+            with pytest.raises(ValueError, match="timedelta"):
+                print(T.dtype)
+                print(T)
+                fitter().fit(T)
+
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(
         self, positive_sample_lifetimes, univariate_fitters
     ):
@@ -255,6 +269,12 @@ class TestUnivariateFitters:
             fitter.fit(positive_sample_lifetimes[0], ci_labels=expected)
             npt.assert_array_equal(fitter.confidence_interval_.columns, expected)
 
+    def test_ci_is_not_all_nan(self, positive_sample_lifetimes, univariate_fitters):
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(positive_sample_lifetimes[0])
+            assert not np.all(pd.isnull(fitter.confidence_interval_))
+
     def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
         for f in univariate_fitters:
@@ -306,7 +326,6 @@ class TestUnivariateFitters:
 
             result = f1.divide(f2)
             assert result.shape[0] == (np.unique(np.concatenate((f1.timeline, f2.timeline))).shape[0])
-
             npt.assert_array_almost_equal(np.log(f1.divide(f1)).sum().values, 0.0)
 
     def test_divide_function_with_labelled_data(self, positive_sample_lifetimes, univariate_fitters):
@@ -328,7 +347,7 @@ class TestUnivariateFitters:
                 fitter(alpha=95)
 
     def test_typeerror_is_thrown_if_there_is_nans_in_the_duration_col(self, univariate_fitters):
-        T = np.array([1.0, 2.0, 4.0, None, 8.0])
+        T = np.array([1.0, 2.0, 4.0, np.nan, 8.0])
         for fitter in univariate_fitters:
             with pytest.raises(TypeError):
                 fitter().fit(T)
@@ -350,6 +369,99 @@ class TestUnivariateFitters:
             unpickled = pickle.loads(pickle.dumps(fitter))
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
+
+
+class TestLogNormal:
+    @pytest.fixture()
+    def lnf(self):
+        return LogNormalFitter()
+
+    def test_fit(self, lnf):
+        T = np.exp(np.random.randn(10000))
+
+        lnf.fit(T)
+        assert abs(lnf.mu_) < 0.1
+        assert abs(lnf.sigma_ - 1) < 0.1
+
+    def test_lognormal_model_does_not_except_negative_or_zero_values(self, lnf):
+        T = [0, 1, 2, 4, 5]
+        with pytest.raises(ValueError):
+            lnf.fit(T)
+
+        T[0] = -1
+        with pytest.raises(ValueError):
+            lnf.fit(T)
+
+    def test_cumulative_hazard_doesnt_fail(self, lnf):
+        T = np.exp(np.random.randn(100))
+        lnf.fit(T)
+        results = lnf.cumulative_hazard_at_times([1, 2, 3])
+        assert results.shape[0] == 3
+
+        results = lnf.cumulative_hazard_at_times(pd.Series([1, 2, 3]))
+        assert results.shape[0] == 3
+
+        results = lnf.cumulative_hazard_at_times(1)
+        assert results.shape[0] == 1
+
+    def test_lnf_inference(self, lnf):
+        N = 250000
+        mu = 3 * np.random.randn()
+        sigma = np.random.uniform(0.1, 3.0)
+
+        X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
+        E = X <= C
+        T = np.minimum(X, C)
+
+        lnf.fit(T, E)
+
+        assert abs(mu - lnf.mu_) < 0.05
+        assert abs(sigma - lnf.sigma_) < 0.05
+
+    def test_lnf_inference_with_large_sigma(self, lnf):
+        N = 250000
+        mu = 3 * np.random.randn()
+        sigma = 12
+
+        X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
+        E = X <= C
+        T = np.minimum(X, C)
+
+        lnf.fit(T, E)
+
+        assert abs(mu / lnf.mu_ - 1) < 0.05
+        assert abs(sigma / lnf.sigma_ - 1) < 0.05
+
+    def test_lnf_inference_with_small_sigma(self, lnf):
+        N = 250000
+        mu = 3 * np.random.randn()
+        print(mu)
+        sigma = 0.04
+
+        X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
+        E = X <= C
+        T = np.minimum(X, C)
+
+        lnf.fit(T, E)
+
+        assert abs(mu / lnf.mu_ - 1) < 0.05
+        assert abs(sigma / lnf.sigma_ - 1) < 0.05
+
+    @pytest.mark.xfail()
+    def test_lnf_inference_with_really_small_sigma(self, lnf):
+        N = 250000
+        mu = 3 * np.random.randn()
+        print(mu)
+        sigma = 0.02
+
+        X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
+        E = X <= C
+        T = np.minimum(X, C)
+
+        lnf.fit(T, E)
+
+        assert abs(mu / lnf.mu_ - 1) < 0.01
+        assert abs(sigma / lnf.sigma_ - 1) < 0.01
 
 
 class TestWeibullFitter:
@@ -573,8 +685,7 @@ class TestKaplanMeierFitter:
         n = 100
         T = np.random.binomial(40, 0.5, n)
         E = np.random.binomial(1, 0.9, n)
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with pytest.warns(StatisticalWarning) as w:
             kmf = KaplanMeierFitter().fit(T, E, weights=np.random.random(n))
             assert True
 
@@ -583,8 +694,7 @@ class TestKaplanMeierFitter:
         df["t"] = [0.6, 0.4, 0.8, 0.9]
         df["y"] = [0, 1, 1, 0]
         df["w"] = [1.5, 2, 0.8, 0.9]
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with pytest.warns(StatisticalWarning) as w:
             kmf = KaplanMeierFitter().fit(durations=df["t"], event_observed=df["y"], weights=df["w"])
             a = list(kmf.survival_function_.KM_estimate)
             assert a == [1.0, 0.6153846153846154, 0.6153846153846154, 0.32579185520362, 0.32579185520362]
@@ -847,7 +957,7 @@ class TestRegressionFitters:
                 "t": [1.0, 2.0, 5.0],
                 "bool_": [True, True, False],
                 "int_": [1, -1, 0],
-                "uint8_": pd.Series([1, -1, 2], dtype="uint8"),
+                "uint8_": pd.Series([1, 3, 2], dtype="uint8"),
                 "string_": ["test", "a", "2.5"],
                 "float_": [1.2, -0.5, 0.0],
                 "categorya_": pd.Series([1, 2, 3], dtype="category"),
@@ -878,7 +988,7 @@ class TestRegressionFitters:
             assert hasattr(fitter, "score_")
             first_score_ = fitter.score_
 
-            fitter.fit(rossi.head(20), duration_col="week", event_col="arrest")
+            fitter.fit(rossi.head(50), duration_col="week", event_col="arrest")
             assert first_score_ != fitter.score_
 
     def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, regression_models, rossi):
@@ -1116,7 +1226,7 @@ class TestCoxPHFitter:
     def test_summary(self, rossi, cph):
         cph.fit(rossi, duration_col="week", event_col="arrest")
         summary = cph.summary
-        expected_columns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95"]
+        expected_columns = ["coef", "exp(coef)", "se(coef)", "z", "p", "lower 0.95", "upper 0.95", "-log2(p)"]
         assert all([col in summary.columns for col in expected_columns])
 
     def test_print_summary_with_decimals(self, rossi, cph):
@@ -1169,18 +1279,17 @@ number of subjects = 432
 
 ---
         coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043   *
-age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143  **
+fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043
+age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143
 race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
 wexp -0.1498     0.8609    0.2122 -0.7058 0.4803     -0.5657      0.2662
 mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
 paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
-prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476  **
+prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476
 ---
-Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
 
 Concordance = 0.640
-Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
+Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 """
                 )
                 .strip()
@@ -1333,7 +1442,6 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         X = pd.Series([1, 2, 3, 4, 5])
         result = cph.predict_survival_function(X)
 
-    @pytest.mark.xfail
     def test_cox_ph_prediction_monotonicity(self, data_pred2):
         # Concordance wise, all prediction methods should be monotonic versions
         # of one-another, unless numerical factors screw it up.
@@ -1347,10 +1455,11 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         # Base comparison is partial_hazards
         ci_ph = concordance_index(t, -cf.predict_partial_hazard(X).values, e)
 
-        ci_med = concordance_index(t, cf.predict_median(X).ravel(), e)
-        assert ci_ph == ci_med
+        ci_med = concordance_index(t, cf.predict_median(X).squeeze(), e)
+        # pretty close.
+        assert abs(ci_ph - ci_med) < 0.001
 
-        ci_exp = concordance_index(t, cf.predict_expectation(X).ravel(), e)
+        ci_exp = concordance_index(t, cf.predict_expectation(X).squeeze(), e)
         assert ci_ph == ci_exp
 
     def test_crossval_for_cox_ph_with_normalizing_times(self, data_pred2, data_pred1):
@@ -1794,10 +1903,13 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
 
         regression_dataset["weights"] = 0.5
         cph = CoxPHFitter()
-        cph.fit(regression_dataset, "T", "E", weights_col="weights")
 
-        with_weights = cph._compute_likelihood_ratio_test()
-        assert with_weights[0] != without_weights[0]
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
+
+            cph.fit(regression_dataset, "T", "E", weights_col="weights")
+
+            with_weights = cph._compute_likelihood_ratio_test()
+            assert with_weights[0] != without_weights[0]
 
     def test_log_likelihood_test_against_R_with_weights(self, rossi):
         """
@@ -1820,9 +1932,10 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         df["E"] = True
 
         cph = CoxPHFitter()
-        cph.fit(df, "T", "E", show_progress=True, weights_col="w")
-        expected = 0.05
-        assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
+            cph.fit(df, "T", "E", show_progress=True, weights_col="w")
+            expected = 0.05
+            assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
 
     def test_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -1842,17 +1955,18 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         df["var3"] = [0.75] * 5
 
         cph = CoxPHFitter()
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
-        cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
+            cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
 
-        expected_coef = pd.Series({"var1": 7.680, "var2": -0.915})
-        assert_series_equal(cph.hazards_.T["coef"], expected_coef, check_less_precise=2, check_names=False)
+            expected_coef = pd.Series({"var1": 7.680, "var2": -0.915})
+            assert_series_equal(cph.hazards_.T["coef"], expected_coef, check_less_precise=2, check_names=False)
 
-        expected_std = pd.Series({"var1": 6.641, "var2": 1.650})
-        assert_series_equal(cph.summary["se(coef)"], expected_std, check_less_precise=2, check_names=False)
+            expected_std = pd.Series({"var1": 6.641, "var2": 1.650})
+            assert_series_equal(cph.summary["se(coef)"], expected_std, check_less_precise=2, check_names=False)
 
-        expected_ll = -1.142397
-        assert abs(cph._log_likelihood - expected_ll) < 0.001
+            expected_ll = -1.142397
+            assert abs(cph._log_likelihood - expected_ll) < 0.001
 
     def test_less_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -1873,13 +1987,14 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         df["var3"] = [1.75] + [0.75] * 4
 
         cph = CoxPHFitter()
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
-        cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
-        expected = pd.Series({"var1": 7.995, "var2": -1.154})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+            cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
+            expected = pd.Series({"var1": 7.995, "var2": -1.154})
+            assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
 
-        expected = pd.Series({"var1": 6.690, "var2": 1.614})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+            expected = pd.Series({"var1": 6.690, "var2": 1.614})
+            assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
 
     def test_non_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -1889,13 +2004,14 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         df = regression_dataset
 
         cph = CoxPHFitter()
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
-        cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
-        expected = pd.Series({"var1": 0.3268, "var2": 0.0775})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+            cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
+            expected = pd.Series({"var1": 0.3268, "var2": 0.0775})
+            assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
 
-        expected = pd.Series({"var1": 0.0697, "var2": 0.0861})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+            expected = pd.Series({"var1": 0.0697, "var2": 0.0861})
+            assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
 
     def test_summary_output_using_non_trivial_but_integer_weights(self, rossi):
 
@@ -1931,8 +2047,7 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
 
         cox = CoxPHFitter()
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with pytest.warns(None) as w:
             cox.fit(rossi, "week", "arrest", weights_col="weights", robust=True)
             assert len(w) == 0
 
@@ -2238,60 +2353,50 @@ Likelihood ratio test = 33.27 on 7 df, log(p)=-10.65
         cox = CoxPHFitter()
         rossi["constant"] = 1.0
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
+        with pytest.warns(ConvergenceWarning, match="variance") as w:
+            with pytest.raises(ConvergenceError):
                 cox.fit(rossi, "week", "arrest")
-            except (LinAlgError, ValueError):
-                pass
 
-            w = list(filter(lambda w_: issubclass(w_.category, ConvergenceWarning), w))
-            assert "variance" in str(w[0].message)
-
-    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, rossi):
-        # check for a warning if we have complete seperation
+    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_separation(self, rossi):
+        # check for a warning if we have complete separation
         cox = CoxPHFitter()
         ix = rossi["arrest"] == 1
         rossi.loc[ix, "paro"] = 1
         rossi.loc[~ix, "paro"] = 0
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
-                cox.fit(rossi, "week", "arrest")
-            except LinAlgError:
-                pass
-            assert issubclass(w[-1].category, ConvergenceWarning)
-            assert "complete separation" in str(w[-1].message)
+        with pytest.warns(ConvergenceWarning) as w:
+            cox.fit(rossi, "week", "arrest")
+            assert "complete separation" in str(w[0].message)
+            assert "non-unique" in str(w[1].message)
 
-    def test_warning_is_raised_if_complete_seperation_is_present(self, cph):
-        # check for a warning if we have complete seperation
+    def test_warning_is_raised_if_complete_separation_is_present(self, cph):
+        # check for a warning if we have complete separation
 
         df = pd.DataFrame.from_records(
             [(-5, 1), (-4, 2), (-3, 3), (-2, 4), (-1, 5), (1, 6), (2, 7), (3, 8), (4, 9)], columns=["x", "T"]
         )
         df["E"] = np.random.binomial(1, 0.9, df.shape[0])
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with pytest.warns(ConvergenceWarning, match="complete separation") as w:
             cph.fit(df, "T", "E")
-            assert issubclass(w[0].category, ConvergenceWarning)
-            assert "complete separation" in str(w[0].message)
 
-    @pytest.mark.xfail
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
-        # this is known as complete seperation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
+        # this is known as complete separation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
         cp = CoxPHFitter()
         ix = rossi["arrest"] == 1
         rossi.loc[ix, "paro"] = 1
-        cp.fit(rossi, "week", "arrest", show_progress=True)
-        assert cp.summary.loc["paro", "exp(coef)"] < 100
+        with pytest.warns(ConvergenceWarning) as w:
+            cp.fit(rossi, "week", "arrest", show_progress=True)
+            assert cp.summary.loc["paro", "exp(coef)"] > 100
+            events = rossi["arrest"].astype(bool)
+            rossi.loc[events, ["paro"]].var()
+            assert "paro have very low variance" in w[0].message.args[0]
+            assert "norm(delta)" in w[1].message.args[0]
 
-    @pytest.mark.xfail
     def test_what_happens_with_colinear_inputs(self, rossi, cph):
-        rossi["duped"] = rossi["paro"] + rossi["prio"]
-        cph.fit(rossi, "week", "arrest", show_progress=True)
-        assert cph.summary.loc["duped", "se(coef)"] < 100
+        with pytest.raises(ConvergenceError):
+            rossi["duped"] = rossi["paro"] + rossi["prio"]
+            cph.fit(rossi, "week", "arrest", show_progress=True)
 
     def test_durations_of_zero_are_okay(self, rossi, cph):
         rossi.loc[range(10), "week"] = 0
@@ -2457,7 +2562,7 @@ class TestAalenAdditiveFitter:
         assert abs((T_pred.values > T).mean() - 0.5) < 0.05
 
     def test_dataframe_input_with_nonstandard_index(self):
-        aaf = AalenAdditiveFitter(coef_penalizer=0.1)
+        aaf = AalenAdditiveFitter(coef_penalizer=2.0)
         df = pd.DataFrame(
             [(16, True, True), (1, True, True), (4, False, True)],
             columns=["duration", "done_feeding", "white"],
@@ -2502,7 +2607,8 @@ class TestAalenAdditiveFitter:
         a$coefficient
         """
         regression_dataset["E"] = 1
-        aaf.fit(regression_dataset, "T", "E", weights_col="var3")
+        with pytest.warns(StatisticalWarning, match="weights are not integers"):
+            aaf.fit(regression_dataset, "T", "E", weights_col="var3")
         actual = aaf.hazards_
         npt.assert_allclose(actual.iloc[:3]["var1"].tolist(), [1.301523e-02, -4.925302e-04, 2.304792e-02], rtol=1e-06)
         npt.assert_allclose(
@@ -2599,8 +2705,8 @@ class TestCoxTimeVaryingFitter:
             ]
         )
 
-        with warnings.catch_warnings(record=True):
-            with pytest.raises(ValueError):
+        with pytest.warns(ConvergenceWarning) as w:
+            with pytest.raises(ConvergenceError):
                 ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
     def test_fitter_will_raise_an_error_if_immediate_death_present(self, ctv):
@@ -2612,29 +2718,19 @@ class TestCoxTimeVaryingFitter:
     def test_fitter_will_raise_a_warning_if_instaneous_observation_present(self, ctv):
         df = pd.DataFrame.from_records(
             [
-                {"id": 1, "start": 0, "stop": 0, "var": 1.0, "event": 0},
+                {"id": 1, "start": 0, "stop": 0, "var": 1.0, "event": 0},  # note that start = stop here.
                 {"id": 1, "start": 0, "stop": 10, "var": 1.0, "event": 1},
                 {"id": 2, "start": 0, "stop": 10, "var": 2.0, "event": 1},
             ]
         )
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
-                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
-            except (LinAlgError, ValueError):
-                pass
-            assert issubclass(w[-1].category, RuntimeWarning)
-            assert "safely dropped" in str(w[0].message)
+        with pytest.warns(RuntimeWarning, match="safely dropped") as w:
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
         df = df.loc[~((df["start"] == df["stop"]) & (df["start"] == 0))]
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
-                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
-            except (LinAlgError, ValueError):
-                pass
+        with pytest.warns(None) as w:
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
             assert len(w) == 0
 
     def test_fitter_will_error_if_degenerate_time(self, ctv):
@@ -2725,30 +2821,18 @@ class TestCoxTimeVaryingFitter:
     def test_warning_is_raised_if_df_has_a_near_constant_column(self, ctv, dfcv):
         dfcv["constant"] = 1.0
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
+        with pytest.warns(ConvergenceWarning, match="variance") as w:
+            with pytest.raises(ConvergenceError):
                 ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
-            except (LinAlgError, ValueError):
-                pass
-            print(w)
-            assert issubclass(w[0].category, ConvergenceWarning)
-            assert "variance" in str(w[0].message)
 
-    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_seperation(self, ctv, dfcv):
-        # check for a warning if we have complete seperation
+    def test_warning_is_raised_if_df_has_a_near_constant_column_in_one_separation(self, ctv, dfcv):
+        # check for a warning if we have complete separation
         ix = dfcv["event"]
         dfcv.loc[ix, "var3"] = 1
         dfcv.loc[~ix, "var3"] = 0
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
-                ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
-            except (LinAlgError, ValueError):
-                pass
-            assert issubclass(w[0].category, ConvergenceWarning)
-            assert "complete separation" in str(w[0].message)
+        with pytest.warns(ConvergenceWarning, match="complete separation") as w:
+            ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
     def test_summary_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
@@ -2770,7 +2854,7 @@ class TestCoxTimeVaryingFitter:
                 "e": [1, 1, 1],
                 "bool_": [True, True, False],
                 "int_": [1, -1, 0],
-                "uint8_": pd.Series([1, -1, 0], dtype="uint8"),
+                "uint8_": pd.Series([1, 3, 0], dtype="uint8"),
                 "string_": ["test", "a", "2.5"],
                 "float_": [1.2, -0.5, 0.0],
                 "categorya_": pd.Series([1, 2, 3], dtype="category"),
@@ -2906,9 +2990,9 @@ class TestCoxTimeVaryingFitter:
 
     def test_likelihood_ratio_test_against_R(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event")
-        test_stat, deg_of_freedom, log_p_value = ctv._compute_likelihood_ratio_test()
+        test_stat, deg_of_freedom, neg_log2_p_value = ctv._compute_likelihood_ratio_test()
         assert abs(test_stat - 15.1) < 0.1
-        assert abs(np.exp(log_p_value) - 0.00448) < 0.001
+        assert abs(2 ** (-neg_log2_p_value) - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
@@ -2947,14 +3031,13 @@ number of subjects = 103
 
 ---
               coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
-age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540  *
-year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082  *
-surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825  .
+age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540
+year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082
+surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825
 transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
 ---
-Signif. codes:  0 '***' 0.0001 '**' 0.001 '*' 0.001 '.' 0.05 ' ' 1
 
-Likelihood ratio test = 15.11 on 4 df, log(p)=-5.41
+Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
 """
                 )
                 .strip()

@@ -7,6 +7,7 @@ import pytest
 
 from lifelines import statistics as stats
 from lifelines import CoxPHFitter
+from lifelines.utils import StatisticalWarning
 from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset
 
 
@@ -181,11 +182,11 @@ def test_pairwise_allows_dataframes_and_gives_correct_counts():
 
 def test_log_rank_returns_None_if_equal_arrays():
     T = np.random.exponential(5, size=200)
-    result = stats.logrank_test(T, T, alpha=0.95)
+    result = stats.logrank_test(T, T)
     assert result.p_value > 0.05
 
     C = np.random.binomial(1, 0.8, size=200)
-    result = stats.logrank_test(T, T, C, C, alpha=0.95)
+    result = stats.logrank_test(T, T, C, C)
     assert result.p_value > 0.05
 
 
@@ -195,12 +196,12 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
     T2 = np.random.exponential(5, size=N)
     C1 = np.random.binomial(1, 0.9, size=N)
     C2 = np.random.binomial(1, 0.9, size=N)
-    result = stats.logrank_test(T1, T2, C1, C2, alpha=0.95)
+    result = stats.logrank_test(T1, T2, C1, C2)
 
     T = np.r_[T1, T2]
     C = np.r_[C1, C2]
     G = np.array([1] * 200 + [2] * 200)
-    result_m = stats.multivariate_logrank_test(T, G, C, alpha=0.95)
+    result_m = stats.multivariate_logrank_test(T, G, C)
     assert result.p_value == result_m.p_value
 
 
@@ -222,13 +223,6 @@ def test_StatisticalResult_can_be_added():
     assert sr.summary.shape[0] == 4
     assert sr.summary.index.tolist() == ["1", "2", "3", "4"]
     assert "kw3" in sr._kwargs
-
-
-def test_valueerror_is_raised_if_alpha_out_of_bounds():
-    data1 = np.random.exponential(5, size=(20, 1))
-    data2 = np.random.exponential(1, size=(20, 1))
-    with pytest.raises(ValueError):
-        stats.logrank_test(data1, data2, alpha=95)
 
 
 def test_proportional_hazard_test():
@@ -283,11 +277,13 @@ def test_proportional_hazard_test_with_weights():
     )
     df["E"] = True
 
-    cph = CoxPHFitter()
-    cph.fit(df, "T", "E", weights_col="w")
+    with pytest.warns(StatisticalWarning, match="weights are not integers"):
 
-    results = stats.proportional_hazard_test(cph, df)
-    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.1083698, rtol=1e-3)
+        cph = CoxPHFitter()
+        cph.fit(df, "T", "E", weights_col="w")
+
+        results = stats.proportional_hazard_test(cph, df)
+        npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.1083698, rtol=1e-3)
 
 
 def test_proportional_hazard_test_with_weights_and_strata():
@@ -317,7 +313,7 @@ def test_proportional_hazard_test_with_weights_and_strata():
     df["E"] = True
 
     cph = CoxPHFitter()
-    cph.fit(df, "T", "E", weights_col="w", strata="s")
+    cph.fit(df, "T", "E", weights_col="w", strata="s", robust=True)
 
     results = stats.proportional_hazard_test(cph, df, time_transform="identity")
     cph.print_summary()
@@ -408,7 +404,7 @@ def test_proportional_hazard_test_with_kmf_with_some_censorship_and_weights():
     )
 
     cph = CoxPHFitter()
-    cph.fit(df, "T", "E", weights_col="w")
-
-    results = stats.proportional_hazard_test(cph, df)
-    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.916, rtol=1e-2)
+    with pytest.warns(StatisticalWarning, match="weights are not integers"):
+        cph.fit(df, "T", "E", weights_col="w")
+        results = stats.proportional_hazard_test(cph, df)
+        npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.916, rtol=1e-2)

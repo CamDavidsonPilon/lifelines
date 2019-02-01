@@ -382,8 +382,6 @@ we rule that the series have different generators.
     ---
     test_statistic      p
           260.4695 0.0000  ***
-    ---
-    Signif. codes: 0 '***' 0.0001 '**' 0.001 '*' 0.01 '.' 0.05 ' ' 1
     
 Lets compare the different *types* of regimes present in the dataset:
 
@@ -405,6 +403,8 @@ Lets compare the different *types* of regimes present in the dataset:
 
 .. image:: images/lifelines_intro_all_regimes.png
 
+
+There are alternative (and sometimes better) tests of survival curves, and we explain more here: `Statistically compare two populations`_
 
 --------------
 
@@ -449,68 +449,17 @@ The function ``datetimes_to_durations`` is very flexible, and has many
 keywords to tinker with.
 
 
-Fitting to a Weibull model
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Another very popular model for survival data is the Weibull model. In contrast the the Kaplan Meier estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Kaplan Meier estimator has no parameters to fit to). Mathematically, the survival function looks like:
-
-
- ..math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
-
-* A priori*, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In fact, we actually model and estimate the hazard rate:
-
-
- ..math::  S(t) = -(\lambda t)^\rho,   \lambda >0, \rho > 0,
-
-In lifelines, estimation is available using the ``WeibullFitter`` class:
-
-.. code:: python
-
-    from lifelines import WeibullFitter
-
-    T = data['duration']
-    E = data['observed']
-
-    wf = WeibullFitter()
-    wf.fit(T, E)
-
-    print(wf.lambda_, wf.rho_)
-    wf.print_summary()
-
-    wf.plot()
-
-
-
-Other parametric models: Exponential
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are three parametric models of the same data.
-
-.. code:: python
-
-    from lifelines import WeibullFitter
-    from lifelines import ExponentialFitter
-
-    T = data['duration']
-    E = data['observed']
-
-    wf = WeibullFitter().fit(T, E, label='WeibullFitter')
-    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
-
-    ax = wf.plot()
-    ax = exf.plot(ax=ax)
-
 
 Estimating hazard rates using Nelson-Aalen
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The survival curve is a great way to summarize and visualize the
-lifetime data, however it is not the only way. If we are curious about the hazard function :math:`\lambda(t)` of a
+lifetime data, however it is not the only way. If we are curious about the hazard function :math:`\h(t)` of a
 population, we unfortunately cannot transform the Kaplan Meier estimate
 -- statistics doesn't work quite that well. Fortunately, there is a
 proper estimator of the *cumulative* hazard function:
 
-.. math::  \Lambda(t) =  \int_0^t \lambda(z) \;dz
+.. math::  H(t) =  \int_0^t \lambda(z) \;dz
 
 
 
@@ -518,7 +467,7 @@ The estimator for this quantity is called the Nelson Aalen estimator:
 
 
 
-.. math:: \hat{\Lambda}(t) = \sum_{t_i \le t} \frac{d_i}{n_i}
+.. math:: \hat{H}(t) = \sum_{t_i \le t} \frac{d_i}{n_i}
 
 where :math:`d_i` is the number of deaths at time :math:`t_i` and
 :math:`n_i` is the number of susceptible individuals.
@@ -563,7 +512,7 @@ a DataFrame:
 The cumulative hazard has less immediate understanding than the survival
 curve, but the hazard curve is the basis of more advanced techniques in
 survival analysis. Recall that we are estimating *cumulative hazard
-curve*, :math:`\Lambda(t)`. (Why? The sum of estimates is much more
+curve*, :math:`H(t)`. (Why? The sum of estimates is much more
 stable than the point-wise estimates.) Thus we know the *rate of change*
 of this curve is an estimate of the hazard function.
 
@@ -647,6 +596,89 @@ here. (My advice: stick with the cumulative hazard function.)
 
 
 .. image:: images/lifelines_intro_naf_smooth_multi_2.png
+
+
+Fitting to a Weibull model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Another very popular model for survival data is the Weibull model. In contrast the the Nelson-Aalen estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Nelson-Aalen estimator has no parameters to fit to). Mathematically, the survival function looks like:
+
+
+ ..math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
+
+* A priori*, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In fact, we actually model and estimate the cumulative hazard rate instead of the survival function (this is different than the Kaplan-Meier estimator):
+
+ ..math::  H(t) = (\lambda t)^\rho,  \lambda >0, \rho > 0,
+
+In lifelines, estimation is available using the ``WeibullFitter`` class. The ``plot`` method will plot the cumulative hazard. 
+
+.. code:: python
+
+    from lifelines import WeibullFitter
+    from lifelines.datasets import load_waltons
+
+    data = load_waltons()
+
+    T = data['T']
+    E = data['E']
+
+    wf = WeibullFitter()
+    wf.fit(T, E)
+
+    wf.print_summary()
+
+    wf.plot()
+
+
+.. parsed-literal::
+
+    <lifelines.WeibullFitter: fitted with 163 observations, 7 censored>
+    number of subjects = 163
+      number of events = 156
+        log-likelihood = -672.062
+            hypothesis = lambda != 1, rho != 1
+
+    ---
+             coef  se(coef)  lower 0.95  upper 0.95      p  -log2(p)
+    lambda_  0.02      0.00        0.02        0.02 <0.005       inf
+    rho_     3.45      0.24        2.97        3.93 <0.005     76.83
+
+.. image:: images/survival_weibull.png
+
+
+
+Other parametric models: Exponential & Log-Normal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are the three parametric models, and the Nelson-Aalen nonparametric model, of the same data.
+
+.. code:: python
+
+    from lifelines import WeibullFitter
+    from lifelines import ExponentialFitter
+    from lifelines import LogNormalFitter
+    from lifelines import NelsonAalenFitter
+
+    from lifelines.datasets import load_waltons
+    data = load_waltons()
+
+
+    T = data['T']
+    E = data['E']
+
+    wf = WeibullFitter().fit(T, E, label='WeibullFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
+    naf = NelsonAalenFitter().fit(T, E, label='NelsonAalenFitter')
+
+    ax = wf.plot()
+    ax = exf.plot(ax=ax)
+    ax = lnf.plot(ax=ax)
+    ax = naf.plot(ax=ax)
+    plt.title("Cumulative hazard rate estimates\n of Walton's data")
+
+
+.. image:: images/waltons_cumulative_hazard.png
 
 
 

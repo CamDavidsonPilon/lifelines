@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import numpy as np
+import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines import NelsonAalenFitter
-from lifelines.utils import median_survival_times
+from lifelines.utils import median_survival_times, _to_array
 
 
 class BreslowFlemingHarringtonFitter(UnivariateFitter):
@@ -93,3 +94,18 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         # plotting functions
         self.plot_survival_function = self.plot
         return self
+
+    def survival_function_at_times(self, times):
+        """
+        Return a Pandas series of the predicted survival value at specific times
+
+        Parameters
+        -----------
+        times: iterable or float
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        return pd.Series(self.predict(times), index=_to_array(times))

@@ -10,9 +10,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from numpy import dot, exp
 from numpy.linalg import norm, inv
-from scipy.linalg import solve as spsolve
+from scipy.linalg import solve as spsolve, LinAlgError
 
 # for some summations, bottleneck is faster than numpy sums. Let's use them intelligently.
 try:
@@ -28,9 +27,7 @@ from lifelines import CoxPHFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (
     inv_normal_cdf,
-    significance_code,
     normalize,
-    significance_codes_as_text,
     pass_for_numeric_dtypes_or_raise,
     check_low_var,
     # check_for_overlapping_intervals,
@@ -258,18 +255,18 @@ class CoxTimeVaryingFitter(BaseFitter):
         """
         df = pd.DataFrame(index=self.hazards_.columns)
         df["coef"] = self.hazards_.loc["coef"].values
-        df["exp(coef)"] = exp(self.hazards_.loc["coef"].values)
+        df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
         df["se(coef)"] = self.standard_errors_.loc["se"].values
         df["z"] = self._compute_z_values()
         df["p"] = self._compute_p_values()
-        df["log(p)"] = np.log(df["p"])
+        df["-log2(p)"] = -np.log2(df["p"])
         df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
         df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
         return df
 
     def _newton_rhaphson(
         self, df, events, start, stop, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
-    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
+    ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -336,11 +333,19 @@ class CoxTimeVaryingFitter(BaseFitter):
                     raise ConvergenceError(
                         """hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-"""
+""",
+                        e,
                     )
                 else:
                     # something else?
                     raise e
+            except LinAlgError as e:
+                raise ConvergenceError(
+                    """Convergence halted due to matrix inversion problems. Suspicion is high colinearity. Please see the following tips in the lifelines documentation:
+https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+""",
+                    e,
+                )
 
             delta = step_size * inv_h_dot_g_T
 
@@ -393,7 +398,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
-        if not completed:
+        elif show_progress and not completed:
+            print("Convergence failed. See any warning messages.")
+
+        # report to the user problems that we detect.
+        if completed and norm_delta > 0.1:
+            warnings.warn(
+                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity or complete separation in the dataset?"
+                % norm_delta,
+                ConvergenceWarning,
+            )
+        elif not completed:
             warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
         return beta
@@ -426,9 +441,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             stops_events_at_t = stop[ix]
             events_at_t = events[ix]
 
-            phi_i = weights_at_t * exp(dot(X_at_t, beta))
+            phi_i = weights_at_t * np.exp(np.dot(X_at_t, beta))
             phi_x_i = phi_i * X_at_t
-            phi_x_x_i = dot(X_at_t.T, phi_x_i)
+            phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = array_sum_to_scalar(phi_i)
@@ -464,7 +479,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
                 tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
-                tie_phi_x_x = dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
+                tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
@@ -483,7 +498,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
-            log_lik = log_lik + dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
         return hessian, gradient.reshape(1, d), log_lik
@@ -545,7 +560,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         same as the training dataset.
 
         """
-        return exp(self.predict_log_partial_hazard(X))
+        return np.exp(self.predict_log_partial_hazard(X))
 
     def print_summary(self, decimals=2, **kwargs):
         """
@@ -573,6 +588,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if self.strata:
             print("{} = {}".format(justify("strata"), self.strata))
 
+        if self.penalizer > 0:
+            print("{} = {}".format(justify("penalizer"), self.penalizer))
+
         print("{} = {}".format(justify("number of subjects"), self._n_unique))
         print("{} = {}".format(justify("number of periods"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
@@ -587,14 +605,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         df = self.summary
         # Significance codes last
-        df[""] = [significance_code(p) for p in df["p"]]
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
         # Significance code explanation
         print("---")
-        print(significance_codes_as_text(), end="\n\n")
         print(
-            "Likelihood ratio test = {:.{prec}f} on {} df, log(p)={:.{prec}f}".format(
+            "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
             )
         )
@@ -620,10 +636,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         test_stat = 2 * (ll_alt - ll_null)
         degrees_freedom = self.hazards_.shape[1]
-        _, p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom, alpha=0.0)
-        return test_stat, degrees_freedom, np.log(p_value)
+        p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
+        return test_stat, degrees_freedom, -np.log2(p_value)
 
-    def plot(self, columns=None, display_significance_code=True, **errorbar_kwargs):
+    def plot(self, columns=None, **errorbar_kwargs):
         """
         Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
@@ -631,8 +647,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ----------
         columns : list, optional
             specifiy a subset of the columns to plot
-        display_significance_code: bool, optional (default: True)
-            display asteriks beside statistically significant variables
         errorbar_kwargs:
             pass in additional plotting commands to matplotlib errorbar command
 
@@ -659,7 +673,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             columns = self.hazards_.columns
 
         yaxis_locations = list(range(len(columns)))
-        summary = self.summary.loc[columns]
         symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
         hazards = self.hazards_[columns].values[0].copy()
 
@@ -670,10 +683,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
         ax.set_ylim(best_ylim)
 
-        if display_significance_code:
-            tick_labels = [c + significance_code(p).strip() for (c, p) in summary["p"][order].iteritems()]
-        else:
-            tick_labels = columns[order]
+        tick_labels = [columns[i] for i in order]
 
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
@@ -706,7 +716,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return baseline_hazard_.cumsum()
 
     def _compute_baseline_survival(self):
-        survival_df = exp(-self.baseline_cumulative_hazard_)
+        survival_df = np.exp(-self.baseline_cumulative_hazard_)
         survival_df.columns = ["baseline survival"]
         return survival_df
 
