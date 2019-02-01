@@ -155,7 +155,7 @@ def time_varying_coefficients(d, timelines, constant=False, independent=0, randg
     try:
         a = np.arange(d)
         random.shuffle(a)
-        independent_variables = a[:independent]
+        independent = a[:independent]
     except IndexError:
         pass
 
@@ -164,7 +164,7 @@ def time_varying_coefficients(d, timelines, constant=False, independent=0, randg
     data_generators = []
     for i in range(d):
         f = FUNCS[random.randint(0, n_funcs)] if not constant else constant_
-        if i in independent_variables:
+        if i in independent:
             beta = 0
         else:
             beta = randgen((1 - constant) * 0.5 / d)

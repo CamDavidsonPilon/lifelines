@@ -683,7 +683,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
         ax.set_ylim(best_ylim)
 
-        tick_labels = columns[order]
+        tick_labels = [columns[i] for i in order]
 
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
