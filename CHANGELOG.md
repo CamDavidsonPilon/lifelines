@@ -3,7 +3,8 @@
 ### 0.18.1
  - bug fixes in `LogNormalFitter` variance estimates
  - improve convergence of `LogNormalFitter`. We now model the log of sigma internally, but still expose sigma externally. 
- - use the `autograd` lib to help with gradients
+ - use the `autograd` lib to help with gradients.
+ - New `LogLogisticFitter` univariate fitter available. 
 
 ### 0.18.0
  - `LogNormalFitter` is a new univariate fitter you can use.

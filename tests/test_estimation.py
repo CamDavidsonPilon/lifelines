@@ -45,6 +45,7 @@ from lifelines import (
     AalenAdditiveFitter,
     AalenJohansenFitter,
     LogNormalFitter,
+    LogLogisticFitter,
 )
 
 from lifelines.datasets import (
@@ -98,6 +99,7 @@ def univariate_fitters():
         ExponentialFitter,
         WeibullFitter,
         LogNormalFitter,
+        LogLogisticFitter,
     ]
 
 
@@ -470,6 +472,88 @@ class TestLogNormal:
 
         assert abs(mu / lnf.mu_ - 1) < 0.05
         assert abs(sigma / lnf.sigma_ - 1) < 0.05
+
+
+class TestLogLogisticFitter:
+    @pytest.fixture()
+    def llf(self):
+        return LogLogisticFitter()
+
+    def test_loglogistic_model_does_not_except_negative_or_zero_values(self, llf):
+
+        T = [0, 1, 2, 4, 5]
+        with pytest.raises(ValueError):
+            llf.fit(T)
+
+        T[0] = -1
+        with pytest.raises(ValueError):
+            llf.fit(T)
+
+    def test_llf_simple_inference(self, llf):
+        from scipy.stats import fisk
+
+        T = fisk.rvs(1, scale=1, size=60000)
+        llf.fit(T)
+        assert abs(llf.alpha_ - 1) < 0.05
+        assert abs(llf.beta_ - 1) < 0.05
+
+    def test_llf_less_simple_inference(self, llf):
+        from scipy.stats import fisk
+
+        scale = 0.3
+        c = 5.4
+        T = fisk.rvs(c, scale=scale, size=60000)
+        llf.fit(T)
+        assert abs(llf.alpha_ - scale) < 0.05
+        assert abs(llf.beta_ - c) < 0.05
+
+    def test_llf_less_simple_inference_with_censorship(self, llf):
+        from scipy.stats import fisk
+
+        scale = 0.3
+        c = 5.4
+        T = fisk.rvs(c, scale=scale, size=120000)
+        C = fisk.rvs(c, scale=scale, size=120000)
+        E = T < C
+        T = np.minimum(T, C)
+        assert 1 > E.mean() > 0
+
+        llf.fit(T, E)
+        assert abs(llf.alpha_ - scale) < 0.05
+        assert abs(llf.beta_ - c) < 0.05
+
+    def test_llf_large_values(self, llf):
+        from scipy.stats import fisk
+
+        scale = 20
+        c = 50
+        T = fisk.rvs(c, scale=scale, size=100000)
+        C = fisk.rvs(c, scale=scale, size=100000)
+        E = T < C
+        T = np.minimum(T, C)
+
+        assert 1 > E.mean() > 0
+
+        llf.fit(T, E)
+        assert abs(llf.alpha_ / scale - 1) < 0.05
+        assert abs(llf.beta_ / c - 1) < 0.05
+
+    @pytest.mark.xfail()
+    def test_llf_small_values(self, llf):
+        from scipy.stats import fisk
+
+        scale = 0.05
+        c = 0.05
+        T = fisk.rvs(c, scale=scale, size=100000)
+        C = fisk.rvs(c, scale=scale, size=100000)
+        E = T < C
+        T = np.minimum(T, C)
+
+        assert 1 > E.mean() > 0
+
+        llf.fit(T, E)
+        assert abs(llf.alpha_ - scale) < 0.02
+        assert abs(llf.beta_ - c) < 0.02
 
 
 class TestWeibullFitter:
