@@ -537,8 +537,8 @@ In lifelines, estimation is available using the ``WeibullFitter`` class. The ``p
 
 
 
-Other parametric models: Exponential & Log-Normal
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Other parametric models: Exponential, Log-Logistic & Log-Normal
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are the three parametric models, and the Nelson-Aalen nonparametric model, of the same data.
 
@@ -547,6 +547,7 @@ Similarly, there are other parametric models in lifelines. Generally, which para
     from lifelines import WeibullFitter
     from lifelines import ExponentialFitter
     from lifelines import LogNormalFitter
+    from lifelines import LogLogisticFitter
     from lifelines import NelsonAalenFitter
 
     from lifelines.datasets import load_waltons
@@ -560,11 +561,13 @@ Similarly, there are other parametric models in lifelines. Generally, which para
     exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
     lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
     naf = NelsonAalenFitter().fit(T, E, label='NelsonAalenFitter')
+    llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
 
-    ax = wf.plot()
-    ax = exf.plot(ax=ax)
-    ax = lnf.plot(ax=ax)
-    ax = naf.plot(ax=ax)
+    ax = wf.plot(ci_show=False)
+    ax = exf.plot(ax=ax, ci_show=False)
+    ax = lnf.plot(ax=ax, ci_show=False)
+    ax = naf.plot(ax=ax, ci_show=False)
+    ax = llf.plot(ax=ax, ci_show=False)
     plt.title("Cumulative hazard rate estimates\n of Walton's data")
 
 

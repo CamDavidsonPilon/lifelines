@@ -11,6 +11,7 @@ from lifelines.fitters.cox_time_varying_fitter import CoxTimeVaryingFitter
 from lifelines.fitters.aalen_additive_fitter import AalenAdditiveFitter
 from lifelines.fitters.aalen_johansen_fitter import AalenJohansenFitter
 from lifelines.fitters.log_normal_fitter import LogNormalFitter
+from lifelines.fitters.log_logistic_fitter import LogLogisticFitter
 
 from lifelines.version import __version__
 
@@ -25,4 +26,5 @@ __all__ = [
     "CoxTimeVaryingFitter",
     "AalenJohansenFitter",
     "LogNormalFitter",
+    "LogLogisticFitter",
 ]

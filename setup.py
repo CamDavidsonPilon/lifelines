@@ -35,6 +35,13 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Topic :: Scientific/Engineering",
     ],
-    install_requires=["numpy>=1.6.0", "scipy>=1.0", "pandas>=0.18", "matplotlib>=2.0,<3.0", "bottleneck>=1.0"],
+    install_requires=[
+        "numpy>=1.6.0",
+        "scipy>=1.0",
+        "pandas>=0.18",
+        "matplotlib>=2.0,<3.0",
+        "bottleneck>=1.0",
+        "autograd>=1.2",
+    ],
     package_data={"lifelines": ["../README.md", "../README.txt", "../LICENSE", "../MANIFEST.in", "datasets/*"]},
 )

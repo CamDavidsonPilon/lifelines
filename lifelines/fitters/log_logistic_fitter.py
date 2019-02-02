@@ -3,7 +3,7 @@ from __future__ import print_function, division
 import warnings
 import numpy as np
 import pandas as pd
-import autograd.numpy as autograd_np
+import autograd.numpy as anp
 from autograd import hessian, value_and_grad
 from scipy.optimize import minimize
 
@@ -21,48 +21,49 @@ from lifelines.utils import (
 )
 
 
-def _negative_log_likelihood(lambda_rho, T, E):
+def _negative_log_likelihood(params, T, E):
     n = T.shape[0]
-    lambda_, rho = lambda_rho
-    neg_ll = (
-        -autograd_np.log(rho * lambda_) * E.sum()
-        - (rho - 1) * (E * autograd_np.log(lambda_ * T)).sum()
-        + ((lambda_ * T) ** rho).sum()
-    )
-    return neg_ll / n
+    alpha_, beta_ = params
+    ll = (
+        E
+        * (
+            anp.log(beta_)
+            - anp.log(alpha_)
+            + (beta_ - 1) * anp.log(T)
+            - (beta_ - 1) * anp.log(alpha_)
+            - anp.log1p((T / alpha_) ** beta_)
+        )
+    ).sum() + -1 * anp.log1p((T / alpha_) ** beta_).sum()
+    return -ll / n
 
 
-class WeibullFitter(UnivariateFitter):
+class LogLogisticFitter(UnivariateFitter):
 
     r"""
-    This class implements a Weibull model for univariate data. The model has parameterized
+    This class implements a Log-Logistic model for univariate data. The model has parameterized
     form:
 
-    .. math::  S(t) = exp(-(\lambda t)^\rho),   \lambda > 0, \rho > 0,
-
-    which implies the cumulative hazard rate is
-
-    .. math:: H(t) = (\lambda t)^\rho,
+    .. math::  S(t) = (1 + (t/\alpha)^{\beta})^{-1},   \alpha > 0, \beta > 0,
 
     and the hazard rate is:
 
-    .. math::  h(t) = \rho \lambda(\lambda t)^{\rho-1}
+    .. math::  h(t) = (\beta/\alpha)(t / \alpha) ^ {\beta-1} / (1 + (t/\alpha)^{\beta})
 
     After calling the `.fit` method, you have access to properties like:
-    ``cumulative_hazard_``, ``survival_function_``, ``lambda_`` and ``rho_``.
+    ``cumulative_hazard_``, ``plot``, ``survival_function_``, ``alpha_`` and ``beta_``.
 
     A summary of the fit is available with the method 'print_summary()'
     
     Examples
     --------
 
-    >>> from lifelines import WeibullFitter 
+    >>> from lifelines import LogLogisticFitter 
     >>> from lifelines.datasets import load_waltons
     >>> waltons = load_waltons()
-    >>> wbf = WeibullFitter()
-    >>> wbf.fit(waltons['T'], waltons['E'])
-    >>> wbf.plot()
-    >>> print(wbf.lambda_)
+    >>> llf = WeibullFitter()
+    >>> llf.fit(waltons['T'], waltons['E'])
+    >>> llf.plot()
+    >>> print(llf.alpha_)
 
     """
 
@@ -71,7 +72,7 @@ class WeibullFitter(UnivariateFitter):
         durations,
         event_observed=None,
         timeline=None,
-        label="Weibull_estimate",
+        label="LogLogistic_estimate",
         alpha=None,
         ci_labels=None,
         show_progress=False,
@@ -99,8 +100,8 @@ class WeibullFitter(UnivariateFitter):
 
         Returns
         -------
-          self : WeibullFitter
-            self with new properties like ``cumulative_hazard_``, ``survival_function_``, ``lambda_``, and ``rho_``.
+          self : LogLogisticFitter
+            self with new properties like ``cumulative_hazard_``, ``survival_function_``, ``alpha_``, and ``beta_``.
 
         """
 
@@ -128,7 +129,7 @@ class WeibullFitter(UnivariateFitter):
         alpha = alpha if alpha is not None else self.alpha
 
         # estimation
-        (self.lambda_, self.rho_), self._log_likelihood, self._hessian_ = self._fit_model(
+        (self.alpha_, self.beta_), self._log_likelihood, self._hessian_ = self._fit_model(
             self.durations, self.event_observed, show_progress=show_progress
         )
         self.variance_matrix_ = inv(self._hessian_)
@@ -140,7 +141,7 @@ class WeibullFitter(UnivariateFitter):
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
 
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
-        self.median_ = 1.0 / self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
+        self.median_ = self.alpha_
 
         # estimation methods
         self._estimate_name = "cumulative_hazard_"
@@ -156,14 +157,16 @@ class WeibullFitter(UnivariateFitter):
         return self.survival_function_at_times(t)
 
     def hazard_at_times(self, times):
-        return pd.Series(self.lambda_ * self.rho_ * (self.lambda_ * times) ** (self.rho_ - 1), index=_to_array(times))
+        a, b = self.alpha_, self.beta_
+
+        return pd.Series((b / a) * (times / a) ** (b - 1) / (1 + (times / a) ** b), index=_to_array(times))
 
     def survival_function_at_times(self, times):
         return pd.Series(np.exp(-self.cumulative_hazard_at_times(times)), index=_to_array(times))
 
     def cumulative_hazard_at_times(self, times):
-        lambda_, rho_ = self.lambda_, self.rho_
-        return pd.Series((lambda_ * times) ** rho_, index=_to_array(times))
+        alpha_, beta_ = self.alpha_, self.beta_
+        return pd.Series(np.log((times / alpha_) ** beta_ + 1), index=_to_array(times))
 
     def _fit_model(self, T, E, show_progress=True):
 
@@ -192,16 +195,16 @@ class WeibullFitter(UnivariateFitter):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
 
-        def _d_cumulative_hazard_d_lambda(lambda_, rho_, T):
-            return rho_ / lambda_ * (lambda_ * T) ** rho_
+        def _d_cumulative_hazard_d_alpha_(alpha_, beta_, T):
+            return -beta_ / alpha_ / ((alpha_ / T) ** beta_ + 1)
 
-        def _d_cumulative_hazard_d_rho(lambda_, rho_, T):
-            return np.log(lambda_ * T) * (lambda_ * T) ** rho_
+        def _d_cumulative_hazard_d_beta_(alpha_, beta_, T):
+            return np.log(T / alpha_) / ((alpha_ / T) ** beta_ + 1)
 
         gradient_at_mle = np.stack(
             [
-                _d_cumulative_hazard_d_lambda(self.lambda_, self.rho_, self.timeline),
-                _d_cumulative_hazard_d_rho(self.lambda_, self.rho_, self.timeline),
+                _d_cumulative_hazard_d_alpha_(self.alpha_, self.beta_, self.timeline),
+                _d_cumulative_hazard_d_beta_(self.alpha_, self.beta_, self.timeline),
             ]
         ).T
 
@@ -218,20 +221,20 @@ class WeibullFitter(UnivariateFitter):
         return df
 
     def _compute_standard_errors(self):
-        var_lambda_, var_rho_ = self.variance_matrix_.diagonal()
-        return pd.DataFrame([[np.sqrt(var_lambda_), np.sqrt(var_rho_)]], index=["se"], columns=["lambda_", "rho_"])
+        var_alpha_, var_beta_ = self.variance_matrix_.diagonal()
+        return pd.DataFrame([[np.sqrt(var_alpha_), np.sqrt(var_beta_)]], index=["se"], columns=["alpha_", "beta_"])
 
     def _compute_confidence_bounds_of_parameters(self):
         se = self._compute_standard_errors().loc["se"]
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
         return pd.DataFrame(
-            [np.array([self.lambda_, self.rho_]) + alpha2 * se, np.array([self.lambda_, self.rho_]) - alpha2 * se],
-            columns=["lambda_", "rho_"],
+            [np.array([self.alpha_, self.beta_]) + alpha2 * se, np.array([self.alpha_, self.beta_]) - alpha2 * se],
+            columns=["alpha_", "beta_"],
             index=["upper-bound", "lower-bound"],
         )
 
     def _compute_z_values(self):
-        return np.asarray([self.lambda_ - 1, self.rho_ - 1]) / self._compute_standard_errors().loc["se"]
+        return np.asarray([self.alpha_ - 1, self.beta_ - 1]) / self._compute_standard_errors().loc["se"]
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -248,8 +251,8 @@ class WeibullFitter(UnivariateFitter):
             Contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
         lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
-        df = pd.DataFrame(index=["lambda_", "rho_"])
-        df["coef"] = [self.lambda_, self.rho_]
+        df = pd.DataFrame(index=["alpha_", "beta_"])
+        df["coef"] = [self.alpha_, self.beta_]
         df["se(coef)"] = self._compute_standard_errors().loc["se"]
         df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
         df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
@@ -277,7 +280,7 @@ class WeibullFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        print("{} = {}".format(justify("hypothesis"), "lambda != 1, rho != 1"))
+        print("{} = {}".format(justify("hypothesis"), "alpha != 1, beta != 1"))
 
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
