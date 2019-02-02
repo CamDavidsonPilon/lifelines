@@ -702,13 +702,6 @@ def ridge_regression(X, Y, c1=0.0, c2=0.0, offset=None, ix=None):
     return R[:, -1], R[:, :-1]
 
 
-def _smart_search(minimizing_function, n, *args):
-    from scipy.optimize import fmin_powell
-
-    x = np.ones(n)
-    return fmin_powell(minimizing_function, x, args=args, disp=False)
-
-
 def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     """
     Called to compute the Kaplan Meier and Nelson-Aalen estimates.

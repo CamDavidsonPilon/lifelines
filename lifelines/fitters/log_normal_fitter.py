@@ -105,7 +105,7 @@ class LogNormalFitter(UnivariateFitter):
             np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
 
-        # check for negative or 0 durations - these are not allowed in a weibull model.
+        # check for negative or 0 durations - these are not allowed in a log-normal model.
         if np.any(self.durations <= 0):
             raise ValueError(
                 "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
@@ -168,9 +168,8 @@ class LogNormalFitter(UnivariateFitter):
     def cumulative_hazard_at_times(self, times):
         return pd.Series(-log(1 - norm.cdf((log(times) - self.mu_) / self.sigma_)), index=_to_array(times))
 
-    def _fit_model(self, T, E, initial_values=None, show_progress=False):
-        if initial_values is None:
-            initial_values = np.array([log(T).mean(), np.log(np.log(T).std())])
+    def _fit_model(self, T, E, show_progress=False):
+        initial_values = np.array([log(T).mean(), np.log(np.log(T).std())])
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -185,8 +184,7 @@ class LogNormalFitter(UnivariateFitter):
             )
 
             if results.success:
-                hess = hessian(_negative_log_likelihood)
-                hessian_ = hess(results.x, log(T), E)
+                hessian_ = hessian(_negative_log_likelihood)(results.x, log(T), E)
                 return results.x, -results.fun, hessian_ * T.shape[0]
             print(results)
             raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")

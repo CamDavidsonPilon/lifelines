@@ -415,6 +415,7 @@ class TestLogNormal:
 
         assert abs(mu - lnf.mu_) < 0.05
         assert abs(sigma - lnf.sigma_) < 0.05
+        assert abs(lnf.median_ - np.percentile(X, 50)) < 0.05
 
     def test_lnf_inference_with_large_sigma(self, lnf):
         N = 250000
@@ -458,6 +459,18 @@ class TestLogNormal:
         assert abs(mu / lnf.mu_ - 1) < 0.05
         assert abs(sigma / lnf.sigma_ - 1) < 0.05
 
+    def test_lnf_inference_no_censorship(self, lnf):
+        N = 250000
+        mu = 10 * np.random.randn()
+        sigma = np.random.exponential(10)
+
+        T = np.exp(sigma * np.random.randn(N) + mu)
+
+        lnf.fit(T)
+
+        assert abs(mu / lnf.mu_ - 1) < 0.05
+        assert abs(sigma / lnf.sigma_ - 1) < 0.05
+
 
 class TestWeibullFitter:
     def test_weibull_fit_returns_float_timelines(self):
@@ -480,7 +493,7 @@ class TestWeibullFitter:
 
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
-        N = 4000
+        N = 40000
         T = 5 * np.random.exponential(1, size=N) ** 2
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01

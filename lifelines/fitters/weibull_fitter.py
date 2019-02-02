@@ -22,8 +22,6 @@ from lifelines.utils import (
 
 
 def _negative_log_likelihood(lambda_rho, T, E):
-    if np.any(np.asarray(lambda_rho) < 0):
-        return 1e9
     n = T.shape[0]
     lambda_, rho = lambda_rho
     neg_ll = (
@@ -168,10 +166,8 @@ class WeibullFitter(UnivariateFitter):
         return pd.Series((lambda_ * times) ** rho_, index=_to_array(times))
 
     def _fit_model(self, T, E, show_progress=True):
-        from lifelines.utils import _smart_search
 
-        initial_values = 1.1 * _smart_search(_negative_log_likelihood, 2, T, E)
-        n = T.shape[0]
+        initial_values = np.ones(2)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -180,14 +176,15 @@ class WeibullFitter(UnivariateFitter):
                 value_and_grad(_negative_log_likelihood),
                 initial_values,
                 jac=True,
-                method="CG",
+                method="L-BFGS-B",
                 args=(T, E),
+                bounds=((0.000001, None), (0.000001, None)), # to stay well away from 0.
                 options={"disp": show_progress},
             )
 
             if results.success:
                 hessian_ = hessian(_negative_log_likelihood)(results.x, T, E)
-                return results.x, -results.fun, hessian_ * n
+                return results.x, -results.fun, hessian_ * T.shape[0]
             print(results)
             raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
 
