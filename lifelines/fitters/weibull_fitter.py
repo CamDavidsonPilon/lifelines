@@ -173,7 +173,7 @@ class WeibullFitter(UnivariateFitter):
             warnings.simplefilter("ignore")
 
             results = minimize(
-                value_and_grad(_negative_log_likelihood),
+                value_and_grad(_negative_log_likelihood), # pylint: disable=no-value-for-parameter
                 initial_values,
                 jac=True,
                 method="L-BFGS-B",
@@ -183,7 +183,7 @@ class WeibullFitter(UnivariateFitter):
             )
 
             if results.success:
-                hessian_ = hessian(_negative_log_likelihood)(results.x, T, E)
+                hessian_ = hessian(_negative_log_likelihood)(results.x, T, E) # pylint: disable=no-value-for-parameter
                 return results.x, -results.fun, hessian_ * T.shape[0]
             print(results)
             raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
