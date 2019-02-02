@@ -8,6 +8,7 @@ if __name__ == "__main__":
     import time
 
     from lifelines import LogNormalFitter
+
     np.random.seed(1)
     N = 250000
     mu = 3 * np.random.randn()
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
     E = X <= C
     T = np.minimum(X, C)
-    
+
     lnf = LogNormalFitter()
     start_time = time.time()
     lnf.fit(T, E)

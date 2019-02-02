@@ -185,9 +185,7 @@ class LogNormalFitter(UnivariateFitter):
 
             if results.success:
                 # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(_negative_log_likelihood)(
-                    results.x, log(T), E
-                )  
+                hessian_ = hessian(_negative_log_likelihood)(results.x, log(T), E)
                 return results.x, -results.fun, hessian_ * T.shape[0]
             print(results)
             raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
