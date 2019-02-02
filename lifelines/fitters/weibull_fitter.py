@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import warnings
-import time
 import numpy as np
 import pandas as pd
 import autograd.numpy as autograd_np
-from autograd import hessian, jacobian
-from scipy.optimize import minimize, check_grad
+from autograd import hessian, value_and_grad
+from scipy.optimize import minimize
 
 from scipy import stats
-from numpy.linalg import solve, norm, inv
+from numpy.linalg import inv
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import (
     _to_array,
@@ -17,19 +16,21 @@ from lifelines.utils import (
     check_nans_or_infs,
     ConvergenceError,
     string_justify,
-    ConvergenceWarning,
     format_p_value,
     format_floats,
 )
 
 
-
 def _negative_log_likelihood(lambda_rho, T, E):
     if np.any(np.asarray(lambda_rho) < 0):
-        return 10e9
+        return 1e9
     n = T.shape[0]
     lambda_, rho = lambda_rho
-    neg_ll = -autograd_np.log(rho * lambda_) * E.sum() - (rho - 1) * (E * autograd_np.log(lambda_ * T)).sum() + ((lambda_ * T) ** rho).sum()
+    neg_ll = (
+        -autograd_np.log(rho * lambda_) * E.sum()
+        - (rho - 1) * (E * autograd_np.log(lambda_ * T)).sum()
+        + ((lambda_ * T) ** rho).sum()
+    )
     return neg_ll / n
 
 
@@ -75,7 +76,7 @@ class WeibullFitter(UnivariateFitter):
         label="Weibull_estimate",
         alpha=None,
         ci_labels=None,
-        show_progress=True,
+        show_progress=False,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -129,24 +130,19 @@ class WeibullFitter(UnivariateFitter):
         alpha = alpha if alpha is not None else self.alpha
 
         # estimation
-        (self.lambda_, self.rho_), self._log_likelihood, self._hessian_ = self._newton_rhaphson(
+        (self.lambda_, self.rho_), self._log_likelihood, self._hessian_ = self._fit_model(
             self.durations, self.event_observed, show_progress=show_progress
         )
         self.variance_matrix_ = inv(self._hessian_)
 
-        print("here1")
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
-        print("here2")
 
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
-        print("here3")
 
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
-        print("here4")
 
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
         self.median_ = 1.0 / self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
-        print("here5")
 
         # estimation methods
         self._estimate_name = "cumulative_hazard_"
@@ -167,53 +163,54 @@ class WeibullFitter(UnivariateFitter):
     def survival_function_at_times(self, times):
         return pd.Series(np.exp(-self.cumulative_hazard_at_times(times)), index=_to_array(times))
 
-    @staticmethod
-    def _cumulative_hazard_(params, t):
-        lambda_, rho_ = params
-        return (lambda_ * t) ** rho_
-
     def cumulative_hazard_at_times(self, times):
-        return pd.Series(self._cumulative_hazard_([self.lambda_, self.rho_], times), index=_to_array(times))
+        lambda_, rho_ = self.lambda_, self.rho_
+        return pd.Series((lambda_ * times) ** rho_, index=_to_array(times))
 
-
-    def _newton_rhaphson(self, T, E, show_progress=True):
+    def _fit_model(self, T, E, show_progress=True):
         from lifelines.utils import _smart_search
-        
-        initial_values = np.array([T.mean(), T.mean()])
-        initial_values = _smart_search(_negative_log_likelihood, 2, T, E)
-        print(initial_values)
+
+        initial_values = 1.1 * _smart_search(_negative_log_likelihood, 2, T, E)
         n = T.shape[0]
 
-        jac = jacobian(_negative_log_likelihood)
-        hess =  hessian(_negative_log_likelihood)
-        
-        results = minimize(
-            _negative_log_likelihood,
-            initial_values,
-            jac=jac,
-            hess= hess,
-            method='Newton-CG',
-            args=(T, E),
-            options={'disp': show_progress}
-        )  
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
 
-        if results.success:
-            hessian_ = hess(results.x, T, E)
-            return results.x, -results.fun, hessian_ * n
-        raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
+            results = minimize(
+                value_and_grad(_negative_log_likelihood),
+                initial_values,
+                jac=True,
+                method="CG",
+                args=(T, E),
+                options={"disp": show_progress},
+            )
 
+            if results.success:
+                hessian_ = hessian(_negative_log_likelihood)(results.x, T, E)
+                return results.x, -results.fun, hessian_ * n
+            print(results)
+            raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
 
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
-        import pdb
-        pdb.set_trace()
-        gradient_at_mle = jacobian(self._cumulative_hazard_)(np.array([self.lambda_, self.rho_]), self.timeline)
 
-        print("here")
-        std_cumulative_hazard = np.sqrt(np.einsum('nj,jk,nk->n', gradient_at_mle, self.variance_matrix_, gradient_at_mle))
-        print("here")
+        def _d_cumulative_hazard_d_lambda(lambda_, rho_, T):
+            return rho_ / lambda_ * (lambda_ * T) ** rho_
 
+        def _d_cumulative_hazard_d_rho(lambda_, rho_, T):
+            return np.log(lambda_ * T) * (lambda_ * T) ** rho_
+
+        gradient_at_mle = np.stack(
+            [
+                _d_cumulative_hazard_d_lambda(self.lambda_, self.rho_, self.timeline),
+                _d_cumulative_hazard_d_rho(self.lambda_, self.rho_, self.timeline),
+            ]
+        ).T
+
+        std_cumulative_hazard = np.sqrt(
+            np.einsum("nj,jk,nk->n", gradient_at_mle, self.variance_matrix_, gradient_at_mle)
+        )
 
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]

@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import time
 import numpy as np
 import pandas as pd
 import warnings
 import autograd.numpy as autograd_np
-from autograd import jacobian, hessian, elementwise_grad as egrad
+from autograd import hessian, value_and_grad
 from autograd.scipy.stats import norm as autograd_norm
 from scipy.stats import norm
 from numpy.linalg import inv
@@ -33,12 +32,12 @@ def _negative_log_likelihood(params, log_T, E):
     Z = (log_T - mu) / sigma
     cdf = autograd_norm.cdf(Z, loc=0, scale=1)
     cdf = autograd_np.clip(cdf, 1e-15, 1 - 1e-15)
-    log_sf = autograd_np.log(1-cdf)
+    log_sf = autograd_np.log(1 - cdf)
 
     log_pdf = autograd_norm.logpdf(Z, loc=0, scale=1)
 
     ll = (E * (log_pdf - log_T - autograd_np.log(sigma) - log_sf)).sum() + log_sf.sum()
-    return -ll/n 
+    return -ll / n
 
 
 class LogNormalFitter(UnivariateFitter):
@@ -62,7 +61,14 @@ class LogNormalFitter(UnivariateFitter):
     """
 
     def fit(
-        self, durations, event_observed=None, timeline=None, label="LogNormal_estimate", alpha=0.95, ci_labels=None
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        label="LogNormal_estimate",
+        alpha=0.95,
+        ci_labels=None,
+        show_progress=False,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -113,11 +119,10 @@ class LogNormalFitter(UnivariateFitter):
         self._label = label
 
         (self.mu_, self.log_sigma_), self._log_likelihood, self._hessian_ = self._fit_model(
-            self.durations, self.event_observed
+            self.durations, self.event_observed, show_progress=show_progress
         )
         self.sigma_ = np.exp(self.log_sigma_)
         self.variance_matrix_ = inv(self._hessian_)
-
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(name=self._label)
@@ -160,40 +165,31 @@ class LogNormalFitter(UnivariateFitter):
         """
         return pd.Series(1 - norm.cdf((log(times) - self.mu_) / self.sigma_), index=_to_array(times))
 
-    @staticmethod
-    def _cumulative_hazard_(params, t):
-        mu_, log_sigma_ = params
-        Z = (autograd_np.log(t) - mu_) / autograd_np.exp(log_sigma_)
-        cdf = autograd_norm.cdf(Z, loc=0, scale=1)
-        x = -autograd_np.log(1 - cdf)
-        return x
-
     def cumulative_hazard_at_times(self, times):
-        return pd.Series(self._cumulative_hazard_([self.mu_, self.log_sigma_], times), index=_to_array(times))
+        return pd.Series(-log(1 - norm.cdf((log(times) - self.mu_) / self.sigma_)), index=_to_array(times))
 
-    def _fit_model(self, T, E, initial_values=None):
+    def _fit_model(self, T, E, initial_values=None, show_progress=False):
         if initial_values is None:
             initial_values = np.array([log(T).mean(), np.log(np.log(T).std())])
 
-        n = T.shape[0]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
 
-        jac = jacobian(_negative_log_likelihood)
-        hess =  hessian(_negative_log_likelihood)
-        
-        results = minimize(
-            _negative_log_likelihood,
-            initial_values,
-            jac=jac,
-            hess= hess,
-            method='Newton-CG',
-            args=(log(T), E),
-            options={'disp': False}
-        )  
+            results = minimize(
+                value_and_grad(_negative_log_likelihood),
+                initial_values,
+                jac=True,
+                method="CG",
+                args=(log(T), E),
+                options={"disp": show_progress},
+            )
 
-        if results.success:
-            hessian_ = hess(results.x, log(T), E)
-            return results.x, -results.fun, hessian_ * n
-        raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
+            if results.success:
+                hess = hessian(_negative_log_likelihood)
+                hessian_ = hess(results.x, log(T), E)
+                return results.x, -results.fun, hessian_ * T.shape[0]
+            print(results)
+            raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
 
     @property
     def summary(self):
@@ -247,10 +243,10 @@ class LogNormalFitter(UnivariateFitter):
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
     def _compute_standard_errors(self):
-        var_mu_, var_log_sigma_ = self.variance_matrix_.diagonal()
         grad_h_beta = np.array([0, self.sigma_])
         var_sigma_ = grad_h_beta.dot(self.variance_matrix_).dot(grad_h_beta.T)
 
+        var_mu_, _ = self.variance_matrix_.diagonal()
         return pd.DataFrame([[np.sqrt(var_mu_), np.sqrt(var_sigma_)]], index=["se"], columns=["mu_", "sigma_"])
 
     def _compute_confidence_bounds_of_parameters(self):
@@ -273,11 +269,25 @@ class LogNormalFitter(UnivariateFitter):
     def _bounds(self, alpha, ci_labels):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
-        import pdb
-        pdb.set_trace()
-        gradient_at_mle = jacobian(self._cumulative_hazard_)(np.array([self.mu_, self.log_sigma_]), self.timeline)
 
-        std_cumulative_hazard = np.sqrt(np.einsum('nj,jk,nk->n', gradient_at_mle, self.variance_matrix_, gradient_at_mle))
+        def _d_cumulative_hazard_d_mu(mu_, log_sigma_, log_T):
+            Z = (log_T - mu_) / np.exp(log_sigma_)
+            return -norm.pdf(Z) / norm.sf(Z) / np.exp(log_sigma_)
+
+        def _d_cumulative_hazard_d_log_sigma(mu_, log_sigma_, log_T):
+            Z = (log_T - mu_) / np.exp(log_sigma_)
+            return -Z * norm.pdf(Z) / norm.sf(Z)
+
+        gradient_at_mle = np.stack(
+            [
+                _d_cumulative_hazard_d_mu(self.mu_, self.log_sigma_, log(self.timeline)),
+                _d_cumulative_hazard_d_log_sigma(self.mu_, self.log_sigma_, log(self.timeline)),
+            ]
+        ).T
+
+        std_cumulative_hazard = np.sqrt(
+            np.einsum("nj,jk,nk->n", gradient_at_mle, self.variance_matrix_, gradient_at_mle)
+        )
 
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]

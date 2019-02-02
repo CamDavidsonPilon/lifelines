@@ -3,3 +3,4 @@ scipy>=1.0
 pandas>=0.20.0
 matplotlib>=2.0,<3.0
 bottleneck>=1.0
+autograd>=1.2
