@@ -102,6 +102,15 @@ def univariate_fitters():
         LogLogisticFitter,
     ]
 
+@pytest.fixture
+def parametric_univariate_fitters():
+    return [
+        ExponentialFitter,
+        WeibullFitter,
+        LogNormalFitter,
+        LogLogisticFitter,
+    ]
+
 
 @pytest.fixture
 def data_pred2():
@@ -158,6 +167,15 @@ class TestBaseFitter:
             C.shape[0] - C.sum(),
         )
 
+
+class TestParametricUnivariateFitters:
+    def test_parametric_univarite_fitters_can_print_summary(
+        self, positive_sample_lifetimes, parametric_univariate_fitters
+    ):
+        for fitter in parametric_univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes[0])
+            f.summary
+            f.print_summary()
 
 class TestUnivariateFitters:
     def test_univarite_fitters_with_survival_function_have_conditional_time_to_(

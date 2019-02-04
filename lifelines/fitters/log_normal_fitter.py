@@ -42,83 +42,13 @@ class LogNormalFitter(ParametericUnivariateFitter):
 
     """
 
-    def fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        label="LogNormal_estimate",
-        alpha=0.95,
-        ci_labels=None,
-        show_progress=False,
-    ):  # pylint: disable=too-many-arguments
-        """
-        Parameters
-        ----------
-          durations: iterable
-            an array, or pd.Series, of length n -- duration subject was observed for
-          event_observed: iterable, optional
-            an array, list, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if event_observed==None
-          timeline: iterable, optional
-            return the best estimate at the values in timelines (postively increasing)
-          label: string, optional
-            a string to name the column of the estimate.
-          alpha: float, optional
-            the alpha value in the confidence intervals. Overrides the initializing
-             alpha for this call to fit only.
-          ci_labels: list, optional
-            add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+    _fitted_parameter_names = ["mu_", "sigma_"]
+    _bounds = [(None, None), (ParametericUnivariateFitter._MIN_PARAMETER_VALUE, None)]
 
-        Returns
-        -------
-        self : LogNormalFitter
-          self, with new properties like 'survival_function_', 'sigma_' and 'mu_'.
+    @property
+    def median_(self):
+        return np.exp(self.mu_)
 
-        """
-
-        check_nans_or_infs(durations)
-        if event_observed is not None:
-            check_nans_or_infs(event_observed)
-
-        self.durations = np.asarray(durations, dtype=float)
-        self.event_observed = (
-            np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        )
-
-        # check for negative or 0 durations - these are not allowed in a log-normal model.
-        if np.any(self.durations <= 0):
-            raise ValueError(
-                "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
-            )
-
-        if timeline is not None:
-            self.timeline = np.sort(np.asarray(timeline))
-        else:
-            self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
-
-        self._label = label
-
-        (self.mu_, self.sigma_), self._log_likelihood, self._hessian_ = self._fit_model(
-            self.durations, self.event_observed, show_progress=show_progress
-        )
-        self._fitted_parameters_ = np.array([self.mu_, self.sigma_])
-        self._fitted_parameters_names = ['mu_', 'sigma_']
-        self.variance_matrix_ = inv(self._hessian_)
-
-        self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
-        self.hazard_ = self.hazard_at_times(self.timeline).to_frame(name=self._label)
-        self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(name=self._label)
-        self.median_ = np.exp(self.mu_)
-
-        self.confidence_interval_ = self._bounds(alpha, ci_labels)
-
-        # estimation methods
-        self._predict_label = label
-        self._update_docstrings()
-
-        return self
 
     def _cumulative_hazard(self, params, times):
         mu_, sigma_ = params
@@ -137,62 +67,7 @@ class LogNormalFitter(ParametericUnivariateFitter):
         return pdf / (self._survival_function(params, times) * sigma_ * times)
 
 
-    def _fit_model(self, T, E, show_progress=True):
-
-        initial_values = np.array([0, 1])
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-
-            results = minimize(
-                value_and_grad(self._negative_log_likelihood),  # pylint: disable=no-value-for-parameter
-                initial_values,
-                jac=True,
-                method="L-BFGS-B",
-                args=(T, E),
-                bounds=((None, None), (0.00001, None)),  # to stay well away from 0.
-                options={"disp": show_progress},
-            )
-
-            if results.success:
-                hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E)  # pylint: disable=no-value-for-parameter
-                return results.x, -results.fun, hessian_ * T.shape[0]
-            print(results)
-            raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
-
-    def _compute_z_values(self):
-        return (self._fitted_parameters_ - np.array([0, 1])) / self._compute_standard_errors().loc["se"]
-
-    def print_summary(self, decimals=2, **kwargs):
-        """
-        Print summary statistics describing the fit, the coefficients, and the error bounds.
-
-        Parameters
-        -----------
-        decimals: int, optional (default=2)
-            specify the number of decimal places to show
-        kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
-
-        """
-        justify = string_justify(18)
-        print(self)
-        print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
-        print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
-        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        print("{} = {}".format(justify("hypothesis"), 'mu_ != 0, sigma_ != 1'))
-
-        for k, v in kwargs.items():
-            print("{} = {}\n".format(justify(k), v))
-
-        print(end="\n")
-        print("---")
-
-        df = self.summary
-        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
-
-    def _bounds(self, alpha, ci_labels):
+    def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
         """
         Necesary because of strange problem in 
 
