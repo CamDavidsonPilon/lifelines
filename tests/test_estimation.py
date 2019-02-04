@@ -377,9 +377,9 @@ class TestLogNormal:
         return LogNormalFitter()
 
     def test_fit(self, lnf):
-        T = np.exp(np.random.randn(10000))
-
-        lnf.fit(T)
+        T = np.exp(np.random.randn(100000))
+        E = np.ones_like(T)
+        lnf.fit(T, E)
         assert abs(lnf.mu_) < 0.1
         assert abs(lnf.sigma_ - 1) < 0.1
 

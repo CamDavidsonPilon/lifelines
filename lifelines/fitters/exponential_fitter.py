@@ -6,9 +6,10 @@ from scipy import stats
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.utils import _to_array, inv_normal_cdf, check_nans_or_infs, string_justify, format_p_value, format_floats
+from lifelines.fitters import ParametericUnivariateFitter
 
 
-class ExponentialFitter(UnivariateFitter):
+class ExponentialFitter(ParametericUnivariateFitter):
     r"""
     This class implements an Exponential model for univariate data. The model has parameterized
     form:
@@ -35,7 +36,7 @@ class ExponentialFitter(UnivariateFitter):
     """
 
     def fit(
-        self, durations, event_observed=None, timeline=None, label="Exponential_estimate", alpha=None, ci_labels=None
+        self, durations, event_observed=None, timeline=None, label="Exponential_estimate", alpha=None, ci_labels=None, show_progress=False
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -79,13 +80,16 @@ class ExponentialFitter(UnivariateFitter):
 
         self._label = label
 
-        # estimation
-        D = self.event_observed.sum()
-        T = self.durations.sum()
 
-        self.lambda_ = D / T
-        self._lambda_variance_ = self.lambda_ / T
-        self._log_likelihood = np.log(self.lambda_) * D - self.lambda_ * T
+        # estimation
+        self.lambda_, self._log_likelihood, self._hessian_ = self._fit_model(
+            self.durations, self.event_observed, show_progress=show_progress
+        )
+        self._fitted_parameters_ = np.array([self.lambda_])
+        self._fitted_parameters_names_ = ["lambda_"]
+        
+        self.variance_matrix_ = 1. / self._hessian_
+
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(self._label)
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
@@ -94,120 +98,19 @@ class ExponentialFitter(UnivariateFitter):
         self.median_ = 1.0 / self.lambda_ * (np.log(2))
 
         # estimation methods
-        self._estimate_name = "cumulative_hazard_"
         self._predict_label = label
         self._update_docstrings()
 
-        # plotting
-        self.plot_cumulative_hazards_ = self.plot
-
         return self
 
-    def _estimation_method(self, t):
-        return self.survival_function_at_times(t)
+    def _fit_model(self, T, E, show_progress=True):
+        lambda_ = E.sum() / T.sum()
+        lambda_variance_ = lambda_ / T.sum()
+        log_likelihood = np.log(lambda_) * E.sum() - lambda_ * T.sum()
+        return lambda_, log_likelihood, np.array([[1. / lambda_variance_]])
 
-    def hazard_at_times(self, times):
-        return pd.Series(self.lambda_, index=_to_array(times))
 
-    def survival_function_at_times(self, times):
-        """
-        Return a Pandas series of the predicted survival value at specific times
+    def _cumulative_hazard(self, params , times):
+        lambda_ = params[0]
+        return lambda_ * times
 
-        Parameters
-        -----------
-        times: iterable or float
-
-        Returns
-        --------
-        pd.Series
-
-        """
-        return pd.Series(np.exp(-self.lambda_ * times), index=_to_array(times))
-
-    def cumulative_hazard_at_times(self, times):
-        return pd.Series(self.lambda_ * times, index=_to_array(times))
-
-    def _bounds(self, alpha, ci_labels):
-        alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
-        df = pd.DataFrame(index=self.timeline)
-
-        if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
-        assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
-
-        std = np.sqrt(self._lambda_variance_)
-        cum_hazard = self.cumulative_hazard_
-        error = std * self.timeline[:, None]
-        df[ci_labels[0]] = cum_hazard + alpha2 * error
-        df[ci_labels[1]] = cum_hazard - alpha2 * error
-        return df
-
-    def _compute_standard_errors(self):
-        n = self.durations.shape[0]
-        var_lambda_ = self.lambda_ ** 2 / n
-        return pd.DataFrame([[np.sqrt(var_lambda_)]], index=["se"], columns=["lambda_"])
-
-    def _compute_confidence_bounds_of_parameters(self):
-        se = self._compute_standard_errors().loc["se"]
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
-        return pd.DataFrame(
-            [np.array([self.lambda_]) + alpha2 * se, np.array([self.lambda_]) - alpha2 * se],
-            columns=["lambda_"],
-            index=["upper-bound", "lower-bound"],
-        )
-
-    @property
-    def summary(self):
-        """Summary statistics describing the fit.
-        Set alpha property in the object before calling.
-
-        Returns
-        -------
-        df : DataFrame
-            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
-        lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
-        df = pd.DataFrame(index=["lambda_"])
-        df["coef"] = [self.lambda_]
-        df["se(coef)"] = self._compute_standard_errors().loc["se"]
-        df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
-        df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
-        df["p"] = self._compute_p_values()
-        df["-log2(p)"] = -np.log2(df["p"])
-        return df
-
-    def _compute_z_values(self):
-        return (self.lambda_ - 1) / self._compute_standard_errors().loc["se"]
-
-    def _compute_p_values(self):
-        U = self._compute_z_values() ** 2
-        return stats.chi2.sf(U, 1)
-
-    def print_summary(self, decimals=2, **kwargs):
-        """
-        Print summary statistics describing the fit, the coefficients, and the error bounds.
-
-        Parameters
-        -----------
-        decimals: int, optional (default=2)
-            specify the number of decimal places to show
-        kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
-
-        """
-        # pylint: disable=unnecessary-lambda
-        justify = string_justify(18)
-        print(self)
-        print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
-        print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
-        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        print("{} = {}".format(justify("hypothesis"), "lambda != 1"))
-
-        for k, v in kwargs.items():
-            print("{} = {}\n".format(justify(k), v))
-
-        print(end="\n")
-        print("---")
-
-        df = self.summary
-        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))

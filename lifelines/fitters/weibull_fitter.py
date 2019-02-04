@@ -132,14 +132,9 @@ class WeibullFitter(ParametericUnivariateFitter):
         self.median_ = 1.0 / self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
 
         # estimation methods
-        self._estimate_name = "cumulative_hazard_"
         self._predict_label = label
         self._update_docstrings()
 
-
-        # plotting - Cumulative hazard takes priority.
-        self.plot_cumulative_hazard = self.plot
-    
         return self
 
     def _cumulative_hazard(self, params, times):

@@ -15,7 +15,7 @@ from autograd import make_jvp
 
 
 from lifelines.plotting import plot_estimate
-from lifelines.utils import qth_survival_times, _to_array, dataframe_interpolate_at_times, inv_normal_cdf, string_justify, format_floats, format_p_value
+from lifelines.utils import qth_survival_times, _to_array, dataframe_interpolate_at_times, ConvergenceError, inv_normal_cdf, string_justify, format_floats, format_p_value
 from lifelines.compat import PY2, PY3
 
 
@@ -202,7 +202,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
     """
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
-        self._hazard = egrad(self._cumulative_hazard, argnum=1)
+        self._estimate_name = "cumulative_hazard_"
+        self.plot_cumulative_hazard = self.plot
+        if not hasattr(self, '_hazard'):
+            self._hazard = egrad(self._cumulative_hazard, argnum=1)
 
     def _cumulative_hazard(self, params, times):
         raise NotImplementedError
@@ -212,7 +215,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _negative_log_likelihood(self, params, T, E):
         n = T.shape[0]
-        ll = (E*anp.log(self._hazard(params, T))).sum() + anp.log(self._survival_function(params, T)).sum()
+        ll = (E * anp.log(self._hazard(params, T))).sum() \
+            + anp.log(self._survival_function(params, T)).sum()
         return -ll / n
 
     def _bounds(self, alpha, ci_labels):

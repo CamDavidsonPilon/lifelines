@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import numpy as np
+
 import pandas as pd
 import warnings
-import autograd.numpy as autograd_np
+import autograd.numpy as np
 from autograd import hessian, value_and_grad
-from autograd.scipy.stats import norm as autograd_norm
-from scipy.stats import norm
+from autograd.scipy.stats import norm 
 from numpy.linalg import inv
-from scipy import stats
-from numpy import log
 from scipy.optimize import minimize
 
-from lifelines.fitters import UnivariateFitter
+from lifelines.fitters import ParametericUnivariateFitter
 from lifelines.utils import (
     _to_array,
     check_nans_or_infs,
@@ -24,23 +21,8 @@ from lifelines.utils import (
 )
 
 
-def _negative_log_likelihood(params, log_T, E):
-    n = log_T.shape[0]
-    mu, log_sigma = params
-    sigma = autograd_np.exp(log_sigma)
 
-    Z = (log_T - mu) / sigma
-    cdf = autograd_norm.cdf(Z, loc=0, scale=1)
-    cdf = autograd_np.clip(cdf, 1e-15, 1 - 1e-15)
-    log_sf = autograd_np.log(1 - cdf)
-
-    log_pdf = autograd_norm.logpdf(Z, loc=0, scale=1)
-
-    ll = (E * (log_pdf - log_T - autograd_np.log(sigma) - log_sf)).sum() + log_sf.sum()
-    return -ll / n
-
-
-class LogNormalFitter(UnivariateFitter):
+class LogNormalFitter(ParametericUnivariateFitter):
     r"""
     This class implements an Log Normal model for univariate data. The model has parameterized
     form:
@@ -118,99 +100,68 @@ class LogNormalFitter(UnivariateFitter):
 
         self._label = label
 
-        (self.mu_, self.log_sigma_), self._log_likelihood, self._hessian_ = self._fit_model(
+        (self.mu_, self.sigma_), self._log_likelihood, self._hessian_ = self._fit_model(
             self.durations, self.event_observed, show_progress=show_progress
         )
-        self.sigma_ = np.exp(self.log_sigma_)
+        self._fitted_parameters_ = np.array([self.mu_, self.sigma_])
+        self._fitted_parameters_names = ['mu_', 'sigma_']
         self.variance_matrix_ = inv(self._hessian_)
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(name=self._label)
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(name=self._label)
         self.median_ = np.exp(self.mu_)
+
         self.confidence_interval_ = self._bounds(alpha, ci_labels)
 
         # estimation methods
-        self._estimate_name = "cumulative_hazard_"
         self._predict_label = label
         self._update_docstrings()
 
-        # plotting - Cumulative hazard takes priority.
-        self.plot_cumulative_hazard = self.plot
-
         return self
 
-    def _estimation_method(self, t):
-        return self.survival_function_at_times(t)
+    def _cumulative_hazard(self, params, times):
+        mu_, sigma_ = params
+        Z = (np.log(times) - mu_) / sigma_
+        cdf = norm.cdf(Z, loc=0, scale=1)
+        cdf = np.clip(cdf, 0., 1 - 1e-14)
+        return -np.log(1 - cdf)
 
-    def hazard_at_times(self, times):
-        return pd.Series(
-            norm.pdf((log(times) - self.mu_) / self.sigma_)
-            / (self.sigma_ * times * self.survival_function_at_times(times)),
-            index=_to_array(times),
-        )
+    def _hazard(self, params, times):
+        mu_, sigma_ = params
+        Z = (np.log(times) - mu_) / sigma_
 
-    def survival_function_at_times(self, times):
-        """
-        Return a Pandas series of the predicted survival value at specific times
+        pdf = norm.pdf(Z, loc=0, scale=1)
+        pdf = np.clip(pdf, 1e-14, np.inf)
 
-        Parameters
-        -----------
-        times: iterable or float
+        return pdf / (self._survival_function(params, times) * sigma_ * times)
 
-        Returns
-        --------
-        pd.Series
 
-        """
-        return pd.Series(1 - norm.cdf((log(times) - self.mu_) / self.sigma_), index=_to_array(times))
+    def _fit_model(self, T, E, show_progress=True):
 
-    def cumulative_hazard_at_times(self, times):
-        return pd.Series(-log(1 - norm.cdf((log(times) - self.mu_) / self.sigma_)), index=_to_array(times))
-
-    def _fit_model(self, T, E, show_progress=False):
-        initial_values = np.array([log(T).mean(), np.log(np.log(T).std())])
+        initial_values = np.array([0, 1])
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
             results = minimize(
-                value_and_grad(_negative_log_likelihood),  # pylint: disable=no-value-for-parameter
+                value_and_grad(self._negative_log_likelihood),  # pylint: disable=no-value-for-parameter
                 initial_values,
                 jac=True,
-                method="CG",
-                args=(log(T), E),
+                method="L-BFGS-B",
+                args=(T, E),
+                bounds=((None, None), (0.00001, None)),  # to stay well away from 0.
                 options={"disp": show_progress},
             )
 
             if results.success:
-                # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(_negative_log_likelihood)(results.x, log(T), E)
+                hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E)  # pylint: disable=no-value-for-parameter
                 return results.x, -results.fun, hessian_ * T.shape[0]
             print(results)
             raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
 
-    @property
-    def summary(self):
-        """Summary statistics describing the fit.
-        Set alpha property in the object before calling.
-
-        Returns
-        -------
-        df : pd.DataFrame
-            Contains columns coef, exp(coef), se(coef), z, p, lower, upper
-        """
-        lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
-        df = pd.DataFrame(index=["mu_", "sigma_"])
-        df["coef"] = [self.mu_, self.sigma_]
-        df["se(coef)"] = self._compute_standard_errors().loc["se"]
-        df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
-        df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
-        df["p"] = self._compute_p_values()
-        with np.warnings.catch_warnings():
-            np.warnings.filterwarnings("ignore")
-            df["-log2(p)"] = -np.log2(df["p"])
-        return df
+    def _compute_z_values(self):
+        return (self._fitted_parameters_ - np.array([0, 1])) / self._compute_standard_errors().loc["se"]
 
     def print_summary(self, decimals=2, **kwargs):
         """
@@ -230,7 +181,7 @@ class LogNormalFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        print("{} = {}".format(justify("hypothesis"), "mu != 0, sigma != 1"))
+        print("{} = {}".format(justify("hypothesis"), 'mu_ != 0, sigma_ != 1'))
 
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
@@ -241,46 +192,31 @@ class LogNormalFitter(UnivariateFitter):
         df = self.summary
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
-    def _compute_standard_errors(self):
-        grad_h_beta = np.array([0, self.sigma_])
-        var_sigma_ = grad_h_beta.dot(self.variance_matrix_).dot(grad_h_beta.T)
-
-        var_mu_, _ = self.variance_matrix_.diagonal()
-        return pd.DataFrame([[np.sqrt(var_mu_), np.sqrt(var_sigma_)]], index=["se"], columns=["mu_", "sigma_"])
-
-    def _compute_confidence_bounds_of_parameters(self):
-        se = self._compute_standard_errors().loc["se"]
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
-        return pd.DataFrame(
-            [np.array([self.mu_, self.sigma_]) + alpha2 * se, np.array([self.mu_, self.sigma_]) - alpha2 * se],
-            columns=["mu_", "sigma_"],
-            index=["upper-bound", "lower-bound"],
-        )
-
-    def _compute_z_values(self):
-        # Note that we compare sigma (the scale parameter) to the standard value of 1.
-        return np.asarray([self.mu_, self.sigma_ - 1]) / self._compute_standard_errors().loc["se"]
-
-    def _compute_p_values(self):
-        U = self._compute_z_values() ** 2
-        return stats.chi2.sf(U, 1)
-
     def _bounds(self, alpha, ci_labels):
+        """
+        Necesary because of strange problem in 
+
+        > make_jvp(norm.cdf)([1])(np.array([0,0]))
+
+        """
+        from scipy.stats import norm
+        import numpy as np
+
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
 
-        def _d_cumulative_hazard_d_mu(mu_, log_sigma_, log_T):
-            Z = (log_T - mu_) / np.exp(log_sigma_)
-            return -norm.pdf(Z) / norm.sf(Z) / np.exp(log_sigma_)
+        def _d_cumulative_hazard_d_mu(mu_, sigma_, log_T):
+            Z = (log_T - mu_) / sigma_
+            return -norm.pdf(Z) / norm.sf(Z) / sigma_
 
-        def _d_cumulative_hazard_d_log_sigma(mu_, log_sigma_, log_T):
-            Z = (log_T - mu_) / np.exp(log_sigma_)
-            return -Z * norm.pdf(Z) / norm.sf(Z)
+        def _d_cumulative_hazard_d_sigma(mu_, sigma_, log_T):
+            Z = (log_T - mu_) / sigma_
+            return -Z * norm.pdf(Z) / norm.sf(Z) / sigma_
 
         gradient_at_mle = np.stack(
             [
-                _d_cumulative_hazard_d_mu(self.mu_, self.log_sigma_, log(self.timeline)),
-                _d_cumulative_hazard_d_log_sigma(self.mu_, self.log_sigma_, log(self.timeline)),
+                _d_cumulative_hazard_d_mu(self.mu_, self.sigma_, np.log(self.timeline)),
+                _d_cumulative_hazard_d_sigma(self.mu_, self.sigma_, np.log(self.timeline)),
             ]
         ).T
 
