@@ -24,13 +24,13 @@ the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built-in ``subtract``
 
     kmf1.subtract(kmf2)
 
-will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, lifelines comes with a statistics library. See below. 
+will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, lifelines comes with a statistics library. See below.
 
 
 Logrank test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival curves cross, the logrank test will give an inaccurate assessment of differences. 
+.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival curves cross, the logrank test will give an inaccurate assessment of differences.
 
 
 The ``lifelines.statistics.logrank_test`` function compares whether the "death" generation process of the two populations are equal:
@@ -95,8 +95,8 @@ Survival differences at a point in time
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other.  For example, analysts may be interested in 5-year survival. Statistically comparing the naive Kaplan-Meier points at a specific time
-actually has reduced power. By transforming the Kaplan-Meier curve, we can recover more power. The function ``statistics.survival_difference_at_fixed_point_in_time_test`` uses 
-the log(-log) transformation implicitly and compares the survival-ness of populations at a specific point in time. 
+actually has reduced power. By transforming the Kaplan-Meier curve, we can recover more power. The function ``statistics.survival_difference_at_fixed_point_in_time_test`` uses
+the log(-log) transformation implicitly and compares the survival-ness of populations at a specific point in time.
 
 
 
@@ -105,7 +105,7 @@ the log(-log) transformation implicitly and compares the survival-ness of popula
     from lifelines.statistics import survival_difference_at_fixed_point_in_time_test
 
 
-    results = survival_difference_at_fixed_point_in_time_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
+    results = survival_difference_at_fixed_point_in_time_test(point_in_time, T1, T2, event_observed_A=E1, event_observed_B=E2)
     results.print_summary()
 
 
@@ -187,7 +187,7 @@ Standard
 
 .. code-block:: python
 
-    
+
     kmf = KaplanMeierFitter()
     kmf.fit(T, E, label="kmf.plot()")
     kmf.plot()
@@ -248,9 +248,9 @@ Displaying multiple at-risk counts below plots
 The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add At-Risk counts at the bottom of your figures. For example:
 
 .. code-block:: python
-    
+
     from lifelines import KaplanMeierFitter
-    
+
     ix = waltons['group'] == 'control'
 
     ax = plt.subplot(111)
