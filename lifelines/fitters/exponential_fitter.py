@@ -35,7 +35,7 @@ class ExponentialFitter(ParametericUnivariateFitter):
 
     """
 
-    _fitted_parameter_names = ['lambda_']
+    _fitted_parameter_names = ["lambda_"]
 
     @property
     def median_(self):
@@ -45,10 +45,8 @@ class ExponentialFitter(ParametericUnivariateFitter):
         lambda_ = E.sum() / T.sum()
         lambda_variance_ = lambda_ / T.sum()
         log_likelihood = np.log(lambda_) * E.sum() - lambda_ * T.sum()
-        return [lambda_], log_likelihood, np.array([[1. / lambda_variance_]])
+        return [lambda_], log_likelihood, np.array([[1.0 / lambda_variance_]])
 
-
-    def _cumulative_hazard(self, params , times):
+    def _cumulative_hazard(self, params, times):
         lambda_ = params[0]
         return lambda_ * times
-

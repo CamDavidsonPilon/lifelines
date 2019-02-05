@@ -5,7 +5,7 @@ import pandas as pd
 import warnings
 import autograd.numpy as np
 from autograd import hessian, value_and_grad
-from autograd.scipy.stats import norm 
+from autograd.scipy.stats import norm
 from numpy.linalg import inv
 from scipy.optimize import minimize
 
@@ -19,7 +19,6 @@ from lifelines.utils import (
     inv_normal_cdf,
     format_p_value,
 )
-
 
 
 class LogNormalFitter(ParametericUnivariateFitter):
@@ -49,12 +48,11 @@ class LogNormalFitter(ParametericUnivariateFitter):
     def median_(self):
         return np.exp(self.mu_)
 
-
     def _cumulative_hazard(self, params, times):
         mu_, sigma_ = params
         Z = (np.log(times) - mu_) / sigma_
         cdf = norm.cdf(Z, loc=0, scale=1)
-        cdf = np.clip(cdf, 0., 1 - 1e-14)
+        cdf = np.clip(cdf, 0.0, 1 - 1e-14)
         return -np.log(1 - cdf)
 
     def _hazard(self, params, times):
@@ -65,7 +63,6 @@ class LogNormalFitter(ParametericUnivariateFitter):
         pdf = np.clip(pdf, 1e-14, np.inf)
 
         return pdf / (self._survival_function(params, times) * sigma_ * times)
-
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
         """

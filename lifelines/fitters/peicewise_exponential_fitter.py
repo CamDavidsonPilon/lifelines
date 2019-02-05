@@ -6,8 +6,6 @@ from lifelines.fitters import ParametericUnivariateFitter
 
 
 class PiecewiseExponentialFitter(ParametericUnivariateFitter):
-
-
     def __init__(self, breakpoints, *args, **kwargs):
         breakpoints = np.sort(breakpoints)
         if breakpoints[-1] < np.inf:
@@ -20,14 +18,14 @@ class PiecewiseExponentialFitter(ParametericUnivariateFitter):
         n_breakpoints = len(self.breakpoints)
 
         self._fitted_parameter_names = ["lambda_%d_" % i for i in range(n_breakpoints)]
-        
+
         super(PieceWiseExponential, self).__init__(*args, **kwargs)
 
     def _cumulative_hazard(self, params, times):
         n = times.shape[0]
         times = times.reshape((n, 1))
-        
+
         bp = self.breakpoints
-        M = np.minimum(np.tile(bp, (n, 1)),  times)
-        M = np.hstack([M[:,[0]], np.diff(M, axis=1)])
+        M = np.minimum(np.tile(bp, (n, 1)), times)
+        M = np.hstack([M[:, [0]], np.diff(M, axis=1)])
         return np.dot(M, params)

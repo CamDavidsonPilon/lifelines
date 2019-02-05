@@ -62,5 +62,3 @@ class WeibullFitter(ParametericUnivariateFitter):
     @property
     def median_(self):
         return 1.0 / self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
-
-

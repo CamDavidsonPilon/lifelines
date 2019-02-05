@@ -17,6 +17,7 @@ from lifelines.utils import (
     format_floats,
 )
 
+
 class LogLogisticFitter(ParametericUnivariateFitter):
 
     r"""
@@ -52,8 +53,6 @@ class LogLogisticFitter(ParametericUnivariateFitter):
     def median_(self):
         return self.alpha_
 
-
     def _cumulative_hazard(self, params, times):
         alpha_, beta_ = params
         return np.log((times / alpha_) ** beta_ + 1)
-

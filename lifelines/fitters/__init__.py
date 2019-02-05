@@ -16,8 +16,18 @@ from numpy.linalg import inv
 
 
 from lifelines.plotting import plot_estimate
-from lifelines.utils import qth_survival_times, _to_array, dataframe_interpolate_at_times, ConvergenceError, \
-                            inv_normal_cdf, string_justify, format_floats, format_p_value, coalesce, check_nans_or_infs
+from lifelines.utils import (
+    qth_survival_times,
+    _to_array,
+    dataframe_interpolate_at_times,
+    ConvergenceError,
+    inv_normal_cdf,
+    string_justify,
+    format_floats,
+    format_p_value,
+    coalesce,
+    check_nans_or_infs,
+)
 
 from lifelines.compat import PY2, PY3
 
@@ -206,19 +216,18 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     _MIN_PARAMETER_VALUE = 0.000001
     _BOUNDS_AND_INITIAL_VALUES = {
-        (None, None): 0.0, 
-        (_MIN_PARAMETER_VALUE, None): 1.0, 
-        (None, -_MIN_PARAMETER_VALUE): -1.0
+        (None, None): 0.0,
+        (_MIN_PARAMETER_VALUE, None): 1.0,
+        (None, -_MIN_PARAMETER_VALUE): -1.0,
     }
-
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
         self._estimate_name = "cumulative_hazard_"
         self.plot_cumulative_hazard = self.plot
-        if not hasattr(self, '_hazard'):
+        if not hasattr(self, "_hazard"):
             self._hazard = egrad(self._cumulative_hazard, argnum=1)
-        if not hasattr(self, '_bounds'):
+        if not hasattr(self, "_bounds"):
             self._bounds = [(self._MIN_PARAMETER_VALUE, None)] * len(self._fitted_parameter_names)
 
         self._initial_values = np.array([self._BOUNDS_AND_INITIAL_VALUES[bound] for bound in self._bounds])
@@ -231,8 +240,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _negative_log_likelihood(self, params, T, E):
         n = T.shape[0]
-        ll = (E * anp.log(self._hazard(params, T))).sum() \
-            + anp.log(self._survival_function(params, T)).sum()
+        ll = (E * anp.log(self._hazard(params, T))).sum() + anp.log(self._survival_function(params, T)).sum()
         return -ll / n
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
@@ -241,9 +249,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         gradient_of_cum_hazard_at_mle = make_jvp(self._cumulative_hazard)(self._fitted_parameters_, self.timeline)
 
-        gradient_at_times = np.vstack([
-            gradient_of_cum_hazard_at_mle(basis)[1] for basis in np.eye(len(self._fitted_parameters_))
-        ])
+        gradient_at_times = np.vstack(
+            [gradient_of_cum_hazard_at_mle(basis)[1] for basis in np.eye(len(self._fitted_parameters_))]
+        )
 
         std_cumulative_hazard = np.sqrt(
             np.einsum("nj,jk,nk->n", gradient_at_times.T, self.variance_matrix_, gradient_at_times.T)
@@ -273,7 +281,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
             )
 
             if results.success:
-                hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E)  # pylint: disable=no-value-for-parameter
+                hessian_ = hessian(self._negative_log_likelihood)(
+                    results.x, T, E
+                )  # pylint: disable=no-value-for-parameter
                 return results.x, -results.fun, hessian_ * T.shape[0]
             print(results)
             raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
@@ -295,8 +305,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self.survival_function_at_times(t)
 
     def _compute_standard_errors(self):
-        return pd.DataFrame([np.sqrt(self.variance_matrix_.diagonal())], index=["se"], columns=self._fitted_parameter_names)
-    
+        return pd.DataFrame(
+            [np.sqrt(self.variance_matrix_.diagonal())], index=["se"], columns=self._fitted_parameter_names
+        )
+
     def _compute_confidence_bounds_of_parameters(self):
         se = self._compute_standard_errors().loc["se"]
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
@@ -351,7 +363,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        print("{} = {}".format(justify("hypothesis"), ", ".join("%s != %d" % (name, iv) for (name, iv) in zip(self._fitted_parameter_names, self._initial_values))))
+        print(
+            "{} = {}".format(
+                justify("hypothesis"),
+                ", ".join(
+                    "%s != %d" % (name, iv) for (name, iv) in zip(self._fitted_parameter_names, self._initial_values)
+                ),
+            )
+        )
 
         for k, v in kwargs.items():
             print("{} = {}\n".format(justify(k), v))
@@ -362,16 +381,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df = self.summary
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
-
     def fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        label=None,
-        alpha=None,
-        ci_labels=None,
-        show_progress=False,
+        self, durations, event_observed=None, timeline=None, label=None, alpha=None, ci_labels=None, show_progress=False
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -401,7 +412,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         """
         label = coalesce(label, type(self).__name__.strip("Fitter") + "_estimate")
-        
+
         check_nans_or_infs(durations)
         if event_observed is not None:
             check_nans_or_infs(event_observed)
@@ -432,15 +443,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
-        
+
         self.variance_matrix_ = inv(self._hessian_)
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
-       
+
         self.confidence_interval_ = self._compute_confidence_bounds_of_cumulative_hazard(alpha, ci_labels)
-        
 
         # estimation methods
         self._predict_label = label
