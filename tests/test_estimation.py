@@ -377,7 +377,7 @@ class TestUnivariateFitters:
             with pytest.raises(TypeError):
                 fitter().fit(T, E)
 
-    @pytest.mark.skipif(PY2, reason="requires python3 or higher")
+    @pytest.mark.xfail()
     def test_pickle_serialization(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
@@ -388,6 +388,16 @@ class TestUnivariateFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
+    def test_dill_serialization(self, positive_sample_lifetimes, univariate_fitters):
+        from dill import dumps, loads
+        T = positive_sample_lifetimes[0]
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(T)
+
+            unpickled = loads(dumps(fitter))
+            dif = (fitter.durations - unpickled.durations).sum()
+            assert dif == 0
 
 class TestLogNormal:
     @pytest.fixture()

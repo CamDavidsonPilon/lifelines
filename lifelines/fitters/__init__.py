@@ -4,6 +4,7 @@ import collections
 from functools import wraps
 import sys
 import warnings
+from textwrap import dedent
 
 import numpy as np
 import autograd.numpy as anp
@@ -12,7 +13,7 @@ from scipy.optimize import minimize
 from scipy import stats
 import pandas as pd
 from autograd import make_jvp
-from numpy.linalg import inv
+from numpy.linalg import inv, pinv
 
 
 from lifelines.plotting import plot_estimate
@@ -27,6 +28,7 @@ from lifelines.utils import (
     format_p_value,
     coalesce,
     check_nans_or_infs,
+    StatisticalWarning
 )
 
 from lifelines.compat import PY2, PY3
@@ -298,7 +300,17 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 # pylint: disable=no-value-for-parameter
                 hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E)
                 return results.x, -results.fun, hessian_ * T.shape[0]
-            raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
+            print(results)
+            raise ConvergenceError(dedent("""\
+                Fitting did not converge. 
+
+                1. Are two parameters in the model colinear / exchangeable? (Change model)
+                2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
+                3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
+
+                This could be a problem with your data:
+                1. Are there any extreme values? (Try modelling them or dropping them to see if it helps convergence)
+            """))
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -447,18 +459,36 @@ class ParametericUnivariateFitter(UnivariateFitter):
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
 
-        self.variance_matrix_ = inv(self._hessian_)
+        try:
+            self.variance_matrix_ = inv(self._hessian_)
+        except np.linalg.LinAlgError:
+            self.variance_matrix_ = pinv(self._hessian_)
+            warning_text = (
+                dedent("""\
+                
+                The hessian was not invertable. This could be a model problem: 
+
+                1. Are two parameters in the model colinear / exchangeable? 
+                2. Is the cumulative hazard always non-negative and always non-decreasing?
+                3. Are there cusps/ in the cumulative hazard? 
+
+                We will instead approximate it using the psuedo-inverse. 
+
+                It's advisable to not trust the variances reported, and to be suspicious of the
+                fitted parameters too. Perform plots of the cumulative hazard to help understand
+                the latter's bias.
+                """
+            ))
+            warnings.warn(warning_text, StatisticalWarning)
+
+        self._predict_label = label
+        self._update_docstrings()
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
 
         self.confidence_interval_ = self._compute_confidence_bounds_of_cumulative_hazard(alpha, ci_labels)
-
-        # estimation methods
-        self._predict_label = label
-        self._update_docstrings()
-
         return self
 
     @_must_call_fit_first
