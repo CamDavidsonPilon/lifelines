@@ -2,10 +2,9 @@
 from __future__ import print_function
 
 import pandas as pd
-import warnings
 import autograd.numpy as np
-from autograd import hessian, value_and_grad
 from autograd.scipy.stats import norm
+from scipy.stats import norm as sp_norm
 
 from lifelines.fitters import ParametericUnivariateFitter
 from lifelines.utils import inv_normal_cdf
@@ -45,15 +44,6 @@ class LogNormalFitter(ParametericUnivariateFitter):
         cdf = np.clip(cdf, 0.0, 1 - 1e-14)
         return -np.log(1 - cdf)
 
-    def _hazard(self, params, times):
-        mu_, sigma_ = params
-        Z = (np.log(times) - mu_) / sigma_
-
-        pdf = norm.pdf(Z, loc=0, scale=1)
-        pdf = np.clip(pdf, 1e-14, np.inf)
-
-        return pdf / (self._survival_function(params, times) * sigma_ * times)
-
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
         """
         Necesary because of strange problem in 
@@ -61,19 +51,16 @@ class LogNormalFitter(ParametericUnivariateFitter):
         > make_jvp(norm.cdf)([1])(np.array([0,0]))
 
         """
-        from scipy.stats import norm
-        import numpy as np
-
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
 
         def _d_cumulative_hazard_d_mu(mu_, sigma_, log_T):
             Z = (log_T - mu_) / sigma_
-            return -norm.pdf(Z) / norm.sf(Z) / sigma_
+            return -sp_norm.pdf(Z) / sp_norm.sf(Z) / sigma_
 
         def _d_cumulative_hazard_d_sigma(mu_, sigma_, log_T):
             Z = (log_T - mu_) / sigma_
-            return -Z * norm.pdf(Z) / norm.sf(Z) / sigma_
+            return -Z * sp_norm.pdf(Z) / sp_norm.sf(Z) / sigma_
 
         gradient_at_mle = np.stack(
             [

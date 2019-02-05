@@ -221,6 +221,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self._estimate_name = "cumulative_hazard_"
         self.plot_cumulative_hazard = self.plot
         if not hasattr(self, "_hazard"):
+            # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
             self._hazard = egrad(self._cumulative_hazard, argnum=1)
         if not hasattr(self, "_bounds"):
             self._bounds = [(self._MIN_PARAMETER_VALUE, None)] * len(self._fitted_parameter_names)
@@ -294,24 +295,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
             )
 
             if results.success:
-                hessian_ = hessian(self._negative_log_likelihood)(
-                    results.x, T, E
-                )  # pylint: disable=no-value-for-parameter
+                # pylint: disable=no-value-for-parameter
+                hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E)
                 return results.x, -results.fun, hessian_ * T.shape[0]
             raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
-
-    def survival_function_at_times(self, times):
-        return pd.Series(self._survival_function(self._fitted_parameters_, times), index=_to_array(times))
-
-    def cumulative_hazard_at_times(self, times):
-        return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=_to_array(times))
-
-    def hazard_at_times(self, times):
-        return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times))
 
     def _estimation_method(self, t):
         return self.survival_function_at_times(t)
@@ -329,6 +320,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
             columns=self._fitted_parameter_names,
             index=["upper-bound", "lower-bound"],
         )
+
+    def _compute_z_values(self):
+        return (self._fitted_parameters_ - self._initial_values) / self._compute_standard_errors().loc["se"]
 
     @property
     @_must_call_fit_first
@@ -352,9 +346,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             np.warnings.filterwarnings("ignore")
             df["-log2(p)"] = -np.log2(df["p"])
         return df
-
-    def _compute_z_values(self):
-        return (self._fitted_parameters_ - self._initial_values) / self._compute_standard_errors().loc["se"]
 
     @_must_call_fit_first
     def print_summary(self, decimals=2, **kwargs):
@@ -423,7 +414,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        label = coalesce(label, type(self).__name__.strip("Fitter") + "_estimate")
+        label = coalesce(label, type(self).__name__.replace("Fitter", "") + "_estimate")
 
         check_nans_or_infs(durations)
         if event_observed is not None:
@@ -469,3 +460,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self._update_docstrings()
 
         return self
+
+    @_must_call_fit_first
+    def survival_function_at_times(self, times):
+        return pd.Series(self._survival_function(self._fitted_parameters_, times), index=_to_array(times))
+
+    @_must_call_fit_first
+    def cumulative_hazard_at_times(self, times):
+        return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=_to_array(times))
+
+    @_must_call_fit_first
+    def hazard_at_times(self, times):
+        return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times))

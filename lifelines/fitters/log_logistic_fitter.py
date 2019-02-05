@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import autograd.numpy as np
-from autograd import hessian, value_and_grad
-from scipy.optimize import minimize
 
-from scipy import stats
-from numpy.linalg import inv
 from lifelines.fitters import ParametericUnivariateFitter
 
 
