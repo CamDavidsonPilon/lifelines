@@ -28,7 +28,7 @@ from lifelines.utils import (
     format_p_value,
     coalesce,
     check_nans_or_infs,
-    StatisticalWarning
+    StatisticalWarning,
 )
 
 from lifelines.compat import PY2, PY3
@@ -301,7 +301,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E)
                 return results.x, -results.fun, hessian_ * T.shape[0]
             print(results)
-            raise ConvergenceError(dedent("""\
+            raise ConvergenceError(
+                dedent(
+                    """\
                 Fitting did not converge. 
 
                 1. Are two parameters in the model colinear / exchangeable? (Change model)
@@ -310,7 +312,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
                 This could be a problem with your data:
                 1. Are there any extreme values? (Try modelling them or dropping them to see if it helps convergence)
-            """))
+            """
+                )
+            )
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -463,8 +467,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self.variance_matrix_ = inv(self._hessian_)
         except np.linalg.LinAlgError:
             self.variance_matrix_ = pinv(self._hessian_)
-            warning_text = (
-                dedent("""\
+            warning_text = dedent(
+                """\
                 
                 The hessian was not invertable. This could be a model problem: 
 
@@ -478,7 +482,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
                 the latter's bias.
                 """
-            ))
+            )
             warnings.warn(warning_text, StatisticalWarning)
 
         self._predict_label = label

@@ -92,7 +92,6 @@ def data_pred1():
 
 
 class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
-
     def __init__(self, **kwargs):
         super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
 
@@ -110,15 +109,10 @@ def univariate_fitters():
         PiecewiseExponentialFitterTesting,
     ]
 
+
 @pytest.fixture
 def parametric_univariate_fitters():
-    return [
-        ExponentialFitter,
-        WeibullFitter,
-        LogNormalFitter,
-        LogLogisticFitter,
-        PiecewiseExponentialFitterTesting,
-    ]
+    return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
 
 
 @pytest.fixture
@@ -185,6 +179,7 @@ class TestParametricUnivariateFitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             f.summary
             f.print_summary()
+
 
 class TestUnivariateFitters:
     def test_univarite_fitters_with_survival_function_have_conditional_time_to_(
@@ -399,6 +394,7 @@ class TestUnivariateFitters:
 
     def test_dill_serialization(self, positive_sample_lifetimes, univariate_fitters):
         from dill import dumps, loads
+
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
             fitter = f()
@@ -407,6 +403,7 @@ class TestUnivariateFitters:
             unpickled = loads(dumps(fitter))
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
+
 
 class TestLogNormal:
     @pytest.fixture()
