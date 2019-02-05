@@ -215,11 +215,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
     """
 
     _MIN_PARAMETER_VALUE = 0.000001
-    _BOUNDS_AND_INITIAL_VALUES = {
-        (None, None): 0.0,
-        (_MIN_PARAMETER_VALUE, None): 1.0,
-        (None, -_MIN_PARAMETER_VALUE): -1.0,
-    }
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
@@ -229,8 +224,22 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self._hazard = egrad(self._cumulative_hazard, argnum=1)
         if not hasattr(self, "_bounds"):
             self._bounds = [(self._MIN_PARAMETER_VALUE, None)] * len(self._fitted_parameter_names)
+        if not hasattr(self, "_initial_values"):
+            self._initial_values = np.array(list(self._initial_values_from_bounds()))
 
-        self._initial_values = np.array([self._BOUNDS_AND_INITIAL_VALUES[bound] for bound in self._bounds])
+        if "alpha" in self._fitted_parameter_names:
+            raise NameError("'alpha' is a reserved word for _fitted_parameter_names. Try 'alpha_' instead.")
+
+    def _initial_values_from_bounds(self):
+        for (lb, ub) in self._bounds:
+            if lb is None and ub is None:
+                yield 0.0
+            elif lb is None:
+                yield ub - 1.0
+            elif ub is None:
+                yield lb + 1.0
+            else:
+                yield (ub - lb) / 2
 
     def _cumulative_hazard(self, params, times):
         raise NotImplementedError
@@ -240,7 +249,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _negative_log_likelihood(self, params, T, E):
         n = T.shape[0]
-        ll = (E * anp.log(self._hazard(params, T))).sum() + anp.log(self._survival_function(params, T)).sum()
+
+        hz = self._hazard(params, T)
+        hz = anp.clip(hz, 1e-18, np.inf)
+
+        ll = (E * anp.log(hz)).sum() - self._cumulative_hazard(params, T).sum()
         return -ll / n
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
@@ -276,7 +289,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 jac=True,
                 method="L-BFGS-B",
                 args=(T, E),
-                bounds=self._bounds,  # to stay well away from 0.
+                bounds=self._bounds,
                 options={"disp": show_progress},
             )
 
@@ -285,7 +298,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
                     results.x, T, E
                 )  # pylint: disable=no-value-for-parameter
                 return results.x, -results.fun, hessian_ * T.shape[0]
-            print(results)
             raise ConvergenceError("Did not converge. This is a lifelines problem, not yours;")
 
     def _compute_p_values(self):

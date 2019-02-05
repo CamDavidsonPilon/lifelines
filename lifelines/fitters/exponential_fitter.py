@@ -5,7 +5,6 @@ import pandas as pd
 from scipy import stats
 
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import _to_array, inv_normal_cdf, check_nans_or_infs, string_justify, format_p_value, format_floats
 from lifelines.fitters import ParametericUnivariateFitter
 
 

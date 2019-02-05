@@ -6,19 +6,9 @@ import warnings
 import autograd.numpy as np
 from autograd import hessian, value_and_grad
 from autograd.scipy.stats import norm
-from numpy.linalg import inv
-from scipy.optimize import minimize
 
 from lifelines.fitters import ParametericUnivariateFitter
-from lifelines.utils import (
-    _to_array,
-    check_nans_or_infs,
-    string_justify,
-    format_floats,
-    ConvergenceError,
-    inv_normal_cdf,
-    format_p_value,
-)
+from lifelines.utils import inv_normal_cdf
 
 
 class LogNormalFitter(ParametericUnivariateFitter):

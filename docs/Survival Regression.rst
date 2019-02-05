@@ -25,7 +25,7 @@ hazard rate :math:`h(t | x)` as a function of :math:`t` and some covariates :mat
 Cox's proportional hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-lifelines has an implementation of the Cox proportional hazards regression model (implemented in
+*lifelines* has an implementation of the Cox proportional hazards regression model (implemented in
 R as ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
 .. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
@@ -36,9 +36,9 @@ The dataset for regression
 ###########################
 The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. There may be a column denoting the event status of each observation (1 if event occured, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial. 
 
-.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. _lifelines_ will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
+.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
 
-An example dataset is called the Rossi recidivism dataset, available in lifelines as ``datasets.load_rossi``.
+An example dataset is called the Rossi recidivism dataset, available in *lifelines* as ``datasets.load_rossi``.
 
 .. code:: python
 
@@ -57,14 +57,14 @@ An example dataset is called the Rossi recidivism dataset, available in lifeline
 The dataframe ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occured, and the other columns represent variables we wish to regress against. 
 
 
-If you need to first clean or transform your dataset (encode categorical variables, add interation terms, etc.), that should happen *before* using lifelines. Libraries like Pandas and Patsy help with that. 
+If you need to first clean or transform your dataset (encode categorical variables, add interation terms, etc.), that should happen *before* using *lifelines*. Libraries like Pandas and Patsy help with that. 
 
 
 Running the regression
 ########################
 
 
-The implementation of the Cox model in lifelines is called ``CoxPHFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats.
+The implementation of the Cox model in *lifelines* is called ``CoxPHFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats.
 
 
 .. code:: python
@@ -546,7 +546,7 @@ We can incorporate changes over time into our survival analysis by using a modif
 
 .. math::  h(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i (x_i(t) - \overline{x_i}) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in lifelines as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this.
+Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in *lifelines* as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this.
 
 Dataset creation for time-varying regression
 #############################################
@@ -615,7 +615,7 @@ Lifelines requires that the dataset be in what is called the *long* format. This
 
 In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. For example, subject ID 2 had variable ``z=0`` up to and including the end of time period 5 (we can think that measurements happen at end of the time period), after which it was set to 1. Since ``event`` is 1 in that row, we conclude that the subject died at time 8,
 
-This desired dataset can be built up from smaller datasets. To do this we can use some helper functions provided in lifelines. Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations alive, and a censorsed flag, and possibly static covariates. Ex:
+This desired dataset can be built up from smaller datasets. To do this we can use some helper functions provided in *lifelines*. Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations alive, and a censorsed flag, and possibly static covariates. Ex:
 
 .. raw:: html
 
@@ -910,7 +910,7 @@ of AUC, another common loss function, and is interpreted similarly:
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-A fitted model's concordance-index is present in the ``print_summary()``, but also available under the ``score_`` property. Generally, the measure is implemented in lifelines under ``lifelines.utils.concordance_index`` and accepts the actual times (along with any censorships) and the predicted times.
+A fitted model's concordance-index is present in the ``print_summary()``, but also available under the ``score_`` property. Generally, the measure is implemented in *lifelines* under ``lifelines.utils.concordance_index`` and accepts the actual times (along with any censorships) and the predicted times.
 
 .. code:: python
 

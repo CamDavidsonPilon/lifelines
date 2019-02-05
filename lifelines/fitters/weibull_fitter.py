@@ -1,22 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import warnings
-import numpy as np
-import pandas as pd
-import autograd.numpy as autograd_np
-from autograd import elementwise_grad as egrad
+import autograd.numpy as np
 
-from scipy import stats
-from numpy.linalg import inv
 from lifelines.fitters import ParametericUnivariateFitter
-from lifelines.utils import (
-    _to_array,
-    check_nans_or_infs,
-    ConvergenceError,
-    string_justify,
-    format_p_value,
-    format_floats,
-)
 
 
 class WeibullFitter(ParametericUnivariateFitter):

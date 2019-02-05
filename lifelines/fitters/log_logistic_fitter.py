@@ -7,15 +7,6 @@ from scipy.optimize import minimize
 from scipy import stats
 from numpy.linalg import inv
 from lifelines.fitters import ParametericUnivariateFitter
-from lifelines.utils import (
-    _to_array,
-    inv_normal_cdf,
-    check_nans_or_infs,
-    ConvergenceError,
-    string_justify,
-    format_p_value,
-    format_floats,
-)
 
 
 class LogLogisticFitter(ParametericUnivariateFitter):
