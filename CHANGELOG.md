@@ -1,5 +1,13 @@
 ### Changelogs
 
+### 0.18.2
+ - New univariate fitter `PiecewiseExponentialFitter` for creating a stepwise hazard model. See docs online.
+ - Ability to create novel parametric univariate models using the new `ParametericUnivariateFitter` super class. See docs online for how to do this. 
+ - Unfortunately, parametric univariate fitters are not serializable with `pickle`. The library `dill` is still useable. 
+ - Complete overhaul of all internals for parametric univariate fitters. Moved them all (most) to use `autograd`.
+ - `LogNormalFitter` no longer models `log_sigma`.
+
+
 ### 0.18.1
  - bug fixes in `LogNormalFitter` variance estimates
  - improve convergence of `LogNormalFitter`. We now model the log of sigma internally, but still expose sigma externally. 

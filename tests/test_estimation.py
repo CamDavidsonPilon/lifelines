@@ -46,6 +46,7 @@ from lifelines import (
     AalenJohansenFitter,
     LogNormalFitter,
     LogLogisticFitter,
+    PiecewiseExponentialFitter,
 )
 
 from lifelines.datasets import (
@@ -90,6 +91,12 @@ def data_pred1():
     return data_pred1
 
 
+class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
+
+    def __init__(self, **kwargs):
+        super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
+
+
 @pytest.fixture
 def univariate_fitters():
     return [
@@ -100,6 +107,7 @@ def univariate_fitters():
         WeibullFitter,
         LogNormalFitter,
         LogLogisticFitter,
+        PiecewiseExponentialFitterTesting,
     ]
 
 @pytest.fixture
@@ -109,6 +117,7 @@ def parametric_univariate_fitters():
         WeibullFitter,
         LogNormalFitter,
         LogLogisticFitter,
+        PiecewiseExponentialFitterTesting,
     ]
 
 

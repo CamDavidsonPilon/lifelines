@@ -48,6 +48,7 @@ class StatisticalWarning(RuntimeWarning):
     pass
 
 
+
 def qth_survival_times(q, survival_functions, cdf=False):
     """
     Find the times when one or more survival functions reach the qth percentile.
