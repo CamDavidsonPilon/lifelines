@@ -80,7 +80,7 @@ From the ``lifelines`` library, we'll need the
     from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
 
-..  note:: Other ways to estimate the survival function in lifelines are discussed below. 
+..  note:: Other ways to estimate the survival function in *lifelines* are discussed below. 
 
 For this estimation, we need the duration each leader was/has been in
 office, and whether or not they were observed to have left office
@@ -488,6 +488,10 @@ here. (My advice: stick with the cumulative hazard function.)
 .. image:: images/lifelines_intro_naf_smooth_multi_2.png
 
 
+Estimating hazard rates using Parametric models
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
 Fitting to a Weibull model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -496,7 +500,7 @@ Another very popular model for survival data is the Weibull model. In contrast t
 
 .. math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
 
-* A priori*, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. In fact, we actually model and estimate the cumulative hazard rate instead of the survival function (this is different than the Kaplan-Meier estimator):
+A priori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. We model and estimate the cumulative hazard rate instead of the survival function (this is different than the Kaplan-Meier estimator):
 
 .. math::  H(t) = (\lambda t)^\rho,  \lambda >0, \rho > 0,
 
@@ -540,7 +544,7 @@ In lifelines, estimation is available using the ``WeibullFitter`` class. The ``p
 Other parametric models: Exponential, Log-Logistic & Log-Normal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Similarly, there are other parametric models in lifelines. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are the three parametric models, and the Nelson-Aalen nonparametric model, of the same data.
+Similarly, there are other parametric models in *lifelines*. Generally, which parametric model to choose is determined by either knowledge of the distribution of durations, or some sort of model goodness-of-fit. Below are the built-in parametric models, and the Nelson-Aalen nonparametric model, of the same data.
 
 .. code:: python
 
@@ -549,31 +553,33 @@ Similarly, there are other parametric models in lifelines. Generally, which para
     from lifelines import LogNormalFitter
     from lifelines import LogLogisticFitter
     from lifelines import NelsonAalenFitter
+    from lifelines import PiecewiseExponentialFitter
 
     from lifelines.datasets import load_waltons
     data = load_waltons()
 
+    fig, axes = plt.subplots(2, 3, figsize=(9, 5))
 
     T = data['T']
     E = data['E']
 
-    wf = WeibullFitter().fit(T, E, label='WeibullFitter')
+    wbf = WeibullFitter().fit(T, E, label='WeibullFitter')
     exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
     lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
     naf = NelsonAalenFitter().fit(T, E, label='NelsonAalenFitter')
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
+    pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
 
-    ax = wf.plot(ci_show=False)
-    ax = exf.plot(ax=ax, ci_show=False)
-    ax = lnf.plot(ax=ax, ci_show=False)
-    ax = naf.plot(ax=ax, ci_show=False)
-    ax = llf.plot(ax=ax, ci_show=False)
-    plt.title("Cumulative hazard rate estimates\n of Walton's data")
-
+    wbf.plot(ax=axes[0][0])
+    exf.plot(ax=axes[0][1])
+    lnf.plot(ax=axes[0][2])
+    naf.plot(ax=axes[1][0])
+    llf.plot(ax=axes[1][1])
+    pwf.plot(ax=axes[1][2])
 
 .. image:: images/waltons_cumulative_hazard.png
 
-
+*lifelines* can also be used to define your own parametic model. There is a tutorial on this available, see `Piecewise Exponential Models and Creating Custom Models`_.
 
 Other types of censorship
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -628,3 +634,7 @@ Both ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional argument f
  .. note:: Nothing changes in the duration array: it still measures time from "birth" to time left study (either by death or censorship). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
 
  .. note:: Other types of censorship, like interval-censorship, are not implemented in *lifelines* yet.
+
+.. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html
+
+

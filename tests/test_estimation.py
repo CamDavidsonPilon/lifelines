@@ -46,6 +46,7 @@ from lifelines import (
     AalenJohansenFitter,
     LogNormalFitter,
     LogLogisticFitter,
+    PiecewiseExponentialFitter,
 )
 
 from lifelines.datasets import (
@@ -90,6 +91,11 @@ def data_pred1():
     return data_pred1
 
 
+class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
+    def __init__(self, **kwargs):
+        super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
+
+
 @pytest.fixture
 def univariate_fitters():
     return [
@@ -100,7 +106,13 @@ def univariate_fitters():
         WeibullFitter,
         LogNormalFitter,
         LogLogisticFitter,
+        PiecewiseExponentialFitterTesting,
     ]
+
+
+@pytest.fixture
+def parametric_univariate_fitters():
+    return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
 
 
 @pytest.fixture
@@ -157,6 +169,16 @@ class TestBaseFitter:
             C.shape[0],
             C.shape[0] - C.sum(),
         )
+
+
+class TestParametricUnivariateFitters:
+    def test_parametric_univarite_fitters_can_print_summary(
+        self, positive_sample_lifetimes, parametric_univariate_fitters
+    ):
+        for fitter in parametric_univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes[0])
+            f.summary
+            f.print_summary()
 
 
 class TestUnivariateFitters:
@@ -359,7 +381,7 @@ class TestUnivariateFitters:
             with pytest.raises(TypeError):
                 fitter().fit(T, E)
 
-    @pytest.mark.skipif(PY2, reason="requires python3 or higher")
+    @pytest.mark.xfail()
     def test_pickle_serialization(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
@@ -370,6 +392,18 @@ class TestUnivariateFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
+    def test_dill_serialization(self, positive_sample_lifetimes, univariate_fitters):
+        from dill import dumps, loads
+
+        T = positive_sample_lifetimes[0]
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(T)
+
+            unpickled = loads(dumps(fitter))
+            dif = (fitter.durations - unpickled.durations).sum()
+            assert dif == 0
+
 
 class TestLogNormal:
     @pytest.fixture()
@@ -377,9 +411,9 @@ class TestLogNormal:
         return LogNormalFitter()
 
     def test_fit(self, lnf):
-        T = np.exp(np.random.randn(10000))
-
-        lnf.fit(T)
+        T = np.exp(np.random.randn(100000))
+        E = np.ones_like(T)
+        lnf.fit(T, E)
         assert abs(lnf.mu_) < 0.1
         assert abs(lnf.sigma_ - 1) < 0.1
 

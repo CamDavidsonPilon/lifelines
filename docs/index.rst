@@ -34,6 +34,7 @@ Contents:
   Survival Regression
   jupyter_notebooks/Proportional hazard assumption.ipynb
   jupyter_notebooks/Cox residuals.ipynb
+  jupyter_notebooks/Piecewise Exponential Models and Creating Custom Models.ipynb
   Examples
 
 
@@ -47,11 +48,11 @@ Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and o
     pip install lifelines
 
 
-Source code and Issue Tracker
+Source Code and Issue Tracker
 ------------------------------
 
-Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_
-Please report bugs, issues and feature extensions there. We also have `Gitter channel <https://gitter.im/python-lifelines/Lobby>`_ open to discuss lifelines:
+Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_.
+Please report bugs, issues and feature extensions there. We also have `Gitter channel <https://gitter.im/python-lifelines/Lobby>`_ avaiable to discuss survival analysis and *lifelines*:
 
 Citing lifelines
 ------------------------------
