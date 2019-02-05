@@ -27,7 +27,7 @@ def _must_call_fit_first(func):
     def error_wrapper(*args, **kwargs):
         self = args[0]
         try:
-            self._estimate_name
+            self._predict_label
         except AttributeError:
             raise RuntimeError("Must call `fit` first!")
         return func(*args, **kwargs)
@@ -306,8 +306,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
             index=["upper-bound", "lower-bound"],
         )
 
-    @_must_call_fit_first
     @property
+    @_must_call_fit_first
     def summary(self):
         """Summary statistics describing the fit.
         Set alpha property in the object before calling.

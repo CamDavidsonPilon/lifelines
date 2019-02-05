@@ -12,6 +12,7 @@ from lifelines.fitters.aalen_additive_fitter import AalenAdditiveFitter
 from lifelines.fitters.aalen_johansen_fitter import AalenJohansenFitter
 from lifelines.fitters.log_normal_fitter import LogNormalFitter
 from lifelines.fitters.log_logistic_fitter import LogLogisticFitter
+from lifelines.fitters.piecewise_exponential_fitter import PiecewiseExponentialFitter
 
 from lifelines.version import __version__
 
