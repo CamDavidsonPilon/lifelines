@@ -252,11 +252,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _negative_log_likelihood(self, params, T, E):
         n = T.shape[0]
-
-        hz = self._hazard(params, T)
+        hz = self._hazard(params, T[E])
         hz = anp.clip(hz, 1e-18, np.inf)
 
-        ll = (E * anp.log(hz)).sum() - self._cumulative_hazard(params, T).sum()
+        ll = (anp.log(hz)).sum() - self._cumulative_hazard(params, T).sum()
         return -ll / n
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
@@ -457,7 +456,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
-            self.durations, self.event_observed, show_progress=show_progress
+            self.durations, self.event_observed.astype(bool), show_progress=show_progress
         )
 
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
