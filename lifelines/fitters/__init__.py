@@ -9,10 +9,10 @@ from textwrap import dedent
 import numpy as np
 import autograd.numpy as anp
 from autograd import hessian, value_and_grad, elementwise_grad as egrad
+from autograd.differential_operators import make_jvp_reversemode
 from scipy.optimize import minimize
 from scipy import stats
 import pandas as pd
-from autograd import make_jvp
 from numpy.linalg import inv, pinv
 
 
@@ -262,7 +262,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
 
-        gradient_of_cum_hazard_at_mle = make_jvp(self._cumulative_hazard)(self._fitted_parameters_, self.timeline)
+        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(self._cumulative_hazard)(self._fitted_parameters_, self.timeline)
 
         gradient_at_times = np.vstack(
             [gradient_of_cum_hazard_at_mle(basis)[1] for basis in np.eye(len(self._fitted_parameters_))]
