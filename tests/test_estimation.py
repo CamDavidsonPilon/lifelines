@@ -472,7 +472,7 @@ class TestLogNormal:
 
         assert abs(mu - lnf.mu_) < 0.05
         assert abs(sigma - lnf.sigma_) < 0.05
-        assert abs(lnf.median_ - np.percentile(X, 50)) < 0.05
+        assert abs(lnf.median_/np.percentile(X, 50) - 1) < 0.05
 
     def test_lnf_inference_with_large_sigma(self, lnf):
         N = 250000
