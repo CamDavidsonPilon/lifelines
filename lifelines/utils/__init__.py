@@ -420,7 +420,7 @@ def l2_log_loss(event_times, predicted_event_times, event_observed=None):
     return np.power(np.log(event_times[ix]) - np.log(predicted_event_times[ix]), 2).mean()
 
 
-def concordance_index(event_times, predicted_scores, event_observed=None):
+def concordance_index(event_times, predicted_scores, event_observed=None,ALL=False):
     """
     Calculates the concordance index (C-index) between two series
     of event times. The first is the real survival times from
@@ -478,7 +478,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
 
     return _concordance_index(event_times,
                               predicted_scores,
-                              event_observed)
+                              event_observed,ALL)
 
 
 def coalesce(*args):
@@ -839,7 +839,7 @@ class _BTree(object):
         return (rank, count)
 
 
-def _concordance_index(event_times, predicted_event_times, event_observed):
+def _concordance_index(event_times, predicted_event_times, event_observed,ALL):
     """Find the concordance index in n * log(n) time.
 
     Assumes the data has been verified by lifelines.utils.concordance_index first.
@@ -950,7 +950,11 @@ def _concordance_index(event_times, predicted_event_times, event_observed):
     if num_pairs == 0:
         raise ZeroDivisionError("No admissable pairs in the dataset.")
 
-    return (num_correct + num_tied / 2) / num_pairs
+    cindex=(num_correct + num_tied / 2) / num_pairs
+    if ALL:
+        return pd.Series({'cindex':cindex,'concordant':(num_correct + num_tied / 2) ,'total': num_pairs,'discodrant': num_pairs-(num_correct + num_tied / 2) })
+    else:
+        return cindex
 
 
 def _naive_concordance_index(event_times, predicted_event_times, event_observed):
@@ -1314,3 +1318,16 @@ class StepSizer():
     def next(self):
         return self.step_size
 
+def concordance(df,strata=None,verbose=False):
+    """
+    :param df: 3 columns [pred, time,event] for cindex calculation and when strata is provided one column for the strata
+    :param strata:
+    :param verbose:
+    :return:
+    """
+    if strata is not None:
+        counts = df.groupby(strata).apply(lambda x: concordance_index(x.time.values, -x.pred.values, x.event.values, True))
+        if verbose:print(counts.iloc[:,1:])
+        counts=counts.sum()
+        return counts.concordant / counts.total
+    return concordance_index(df.time.values,-df.pred.values,df.event.values)
