@@ -4,7 +4,8 @@ import collections
 from functools import wraps
 import sys
 import warnings
-#pylint: disable=wrong-import-position
+
+# pylint: disable=wrong-import-position
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 from textwrap import dedent
@@ -238,13 +239,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
         if "alpha" in self._fitted_parameter_names:
             raise NameError("'alpha' in _fitted_parameter_names is a lifelines reserved word. Try 'alpha_' instead.")
 
-    def _check_cumulative_hazard_is_monotone_and_positive(self):
-        test_times = np.linspace(0.01, 100, 15)
+    def _check_cumulative_hazard_is_monotone_and_positive(self, durations):
         class_name = self.__class__.__name__
 
-        cumulative_hazard = self._cumulative_hazard(self._initial_values, test_times)
+        cumulative_hazard = self._cumulative_hazard(self._initial_values, durations)
         if not np.all(cumulative_hazard > 0):
-            raise StatisticalWarning(dedent(
+            warnings.warn(
+                dedent(
                     """\
                 Cumulative hazard is not strictly positive. For example, try:
                 
@@ -253,11 +254,17 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 >>> fitter._cumulative_hazard(fitter._initial_values, test_times)
 
                 This may harm convergence, or return nonsensical results.
-            """.format(class_name)))
+            """.format(
+                        class_name
+                    )
+                ),
+                StatisticalWarning,
+            )
 
-        derivative_of_cumulative_hazard = self._hazard(self._initial_values, test_times)
+        derivative_of_cumulative_hazard = self._hazard(self._initial_values, durations)
         if not np.all(derivative_of_cumulative_hazard >= 0):
-            raise StatisticalWarning(dedent(
+            warnings.warn(
+                dedent(
                     """\
                 Cumulative hazard is not strictly non-decreasing. For example, try:
                 
@@ -266,7 +273,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 >>> fitter._hazard(fitter._initial_values, test_times)
 
                 This may harm convergence, or return nonsensical results.
-            """.format(class_name)))
+            """.format(
+                        class_name
+                    )
+                ),
+                StatisticalWarning,
+            )
 
     def _initial_values_from_bounds(self):
         for (lb, ub) in self._bounds:
@@ -472,15 +484,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
         if event_observed is not None:
             check_nans_or_infs(event_observed)
 
-        self._check_cumulative_hazard_is_monotone_and_positive()
-
-
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
             raise ValueError(
                 "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
             )
+
+        self._check_cumulative_hazard_is_monotone_and_positive(self.durations)
 
         self.event_observed = (
             np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
