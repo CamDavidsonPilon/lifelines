@@ -32,6 +32,7 @@ from lifelines.utils import (
     coalesce,
     check_nans_or_infs,
     StatisticalWarning,
+    StatError,
     median_survival_times,
 )
 
@@ -235,7 +236,37 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self._initial_values = np.array(list(self._initial_values_from_bounds()))
 
         if "alpha" in self._fitted_parameter_names:
-            raise NameError("'alpha' is a reserved word for _fitted_parameter_names. Try 'alpha_' instead.")
+            raise NameError("'alpha' in _fitted_parameter_names is a lifelines reserved word. Try 'alpha_' instead.")
+
+    def _check_cumulative_hazard_is_monotone_and_positive(self):
+        test_times = np.linspace(0.01, 100, 15)
+        class_name = self.__class__.__name__
+
+        cumulative_hazard = self._cumulative_hazard(self._initial_values, test_times)
+        if not np.all(cumulative_hazard > 0):
+            raise StatisticalWarning(dedent(
+                    """\
+                Cumulative hazard is not strictly positive. For example, try:
+                
+                >>> test_times = np.linspace(0.01, 100, 15)
+                >>> fitter = {0}()
+                >>> fitter._cumulative_hazard(fitter._initial_values, test_times)
+
+                This may harm convergence, or return nonsensical results.
+            """.format(class_name)))
+
+        derivative_of_cumulative_hazard = self._hazard(self._initial_values, test_times)
+        if not np.all(derivative_of_cumulative_hazard >= 0):
+            raise StatisticalWarning(dedent(
+                    """\
+                Cumulative hazard is not strictly non-decreasing. For example, try:
+                
+                >>> test_times = np.linspace(0.01, 100, 15)
+                >>> fitter = {0}()
+                >>> fitter._hazard(fitter._initial_values, test_times)
+
+                This may harm convergence, or return nonsensical results.
+            """.format(class_name)))
 
     def _initial_values_from_bounds(self):
         for (lb, ub) in self._bounds:
@@ -435,11 +466,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        label = coalesce(label, type(self).__name__.replace("Fitter", "") + "_estimate")
+        label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
 
         check_nans_or_infs(durations)
         if event_observed is not None:
             check_nans_or_infs(event_observed)
+
+        self._check_cumulative_hazard_is_monotone_and_positive()
+
 
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.
