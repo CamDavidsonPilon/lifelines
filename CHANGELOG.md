@@ -1,6 +1,6 @@
 ### Changelogs
 
-### 0.18.3 (dev)
+### 0.18.3 
  - Some performance improvements to parametric univariate models.
  - Suppressing some irrelevant NumPy and autograd warnings, so lifeline warnings are more noticeable. 
  - Improved some warning and error messages. 

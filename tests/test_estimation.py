@@ -32,7 +32,7 @@ from lifelines.utils import (
     StatisticalWarning,
 )
 
-from lifelines.fitters import BaseFitter
+from lifelines.fitters import BaseFitter, ParametericUnivariateFitter
 
 from lifelines import (
     WeibullFitter,
@@ -179,6 +179,27 @@ class TestParametricUnivariateFitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             f.summary
             f.print_summary()
+
+    def test_warnings_for_problematic_cumulative_hazards(self):
+        class NegativeFitter(ParametericUnivariateFitter):
+
+            _fitted_parameter_names = ["a"]
+
+            def _cumulative_hazard(self, params, times):
+                return params[0] * (times - 0.4)
+
+        class DecreasingFitter(ParametericUnivariateFitter):
+
+            _fitted_parameter_names = ["a"]
+
+            def _cumulative_hazard(self, params, times):
+                return params[0] * 1 / times
+
+        with pytest.warns(StatisticalWarning, match="positive") as w:
+            NegativeFitter().fit([0.01, 0.5, 10.0, 20.0])
+
+        with pytest.warns(StatisticalWarning, match="non-decreasing") as w:
+            DecreasingFitter().fit([0.01, 0.5, 10.0, 20])
 
 
 class TestUnivariateFitters:
@@ -451,7 +472,7 @@ class TestLogNormal:
 
         assert abs(mu - lnf.mu_) < 0.05
         assert abs(sigma - lnf.sigma_) < 0.05
-        assert abs(lnf.median_ - np.percentile(X, 50)) < 0.05
+        assert abs(lnf.median_/np.percentile(X, 50) - 1) < 0.05
 
     def test_lnf_inference_with_large_sigma(self, lnf):
         N = 250000
