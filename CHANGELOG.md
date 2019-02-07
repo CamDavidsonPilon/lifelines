@@ -1,5 +1,10 @@
 ### Changelogs
 
+### 0.18.3 (dev)
+ - Some performance improvements to parametric univariate models.
+ - Suppressing some irrelevant NumPy and autograd warnings, so lifeline warnings are more noticeable. 
+ - Improved some warning and error messages. 
+
 ### 0.18.2
  - New univariate fitter `PiecewiseExponentialFitter` for creating a stepwise hazard model. See docs online.
  - Ability to create novel parametric univariate models using the new `ParametericUnivariateFitter` super class. See docs online for how to do this. 

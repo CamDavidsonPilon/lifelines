@@ -162,7 +162,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         events, start, stop = df.pop("event").astype(bool), df.pop("start"), df.pop("stop")
         weights = df.pop("__weights").astype(float)
 
-        self._check_values(df, events, start, stop)
+        self._check_values(df, events, start, stop, self.event_col)
         df = df.astype(float)
 
         self._norm_mean = df.mean(0)
@@ -195,11 +195,11 @@ class CoxTimeVaryingFitter(BaseFitter):
         return self
 
     @staticmethod
-    def _check_values(df, events, start, stop):
+    def _check_values(df, events, start, stop, event_col):
         # check_for_overlapping_intervals(df) # this is currenty too slow for production.
         check_nans_or_infs(df)
         check_low_var(df)
-        check_complete_separation_low_variance(df, events)
+        check_complete_separation_low_variance(df, events, event_col)
         pass_for_numeric_dtypes_or_raise(df)
         check_for_immediate_deaths(events, start, stop)
         check_for_instantaneous_events(start, stop)
@@ -253,16 +253,17 @@ class CoxTimeVaryingFitter(BaseFitter):
         df: DataFrame 
             contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
-        df = pd.DataFrame(index=self.hazards_.columns)
-        df["coef"] = self.hazards_.loc["coef"].values
-        df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
-        df["se(coef)"] = self.standard_errors_.loc["se"].values
-        df["z"] = self._compute_z_values()
-        df["p"] = self._compute_p_values()
-        df["-log2(p)"] = -np.log2(df["p"])
-        df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
-        df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
-        return df
+        with np.errstate(invalid="ignore", divide="ignore"):
+            df = pd.DataFrame(index=self.hazards_.columns)
+            df["coef"] = self.hazards_.loc["coef"].values
+            df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
+            df["se(coef)"] = self.standard_errors_.loc["se"].values
+            df["z"] = self._compute_z_values()
+            df["p"] = self._compute_p_values()
+            df["-log2(p)"] = -np.log2(df["p"])
+            df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
+            df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
+            return df
 
     def _newton_rhaphson(
         self, df, events, start, stop, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
@@ -637,7 +638,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         test_stat = 2 * (ll_alt - ll_null)
         degrees_freedom = self.hazards_.shape[1]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
-        return test_stat, degrees_freedom, -np.log2(p_value)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return test_stat, degrees_freedom, -np.log2(p_value)
 
     def plot(self, columns=None, **errorbar_kwargs):
         """

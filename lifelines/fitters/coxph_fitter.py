@@ -329,7 +329,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
-        self._check_values(df, T, E)
+        self._check_values(df, T, E, self.event_col)
 
         X = df.astype(float)
         T = T.astype(float)
@@ -338,13 +338,13 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         return X, T, E, W, original_index, _clusters
 
     @staticmethod
-    def _check_values(X, T, E):
+    def _check_values(X, T, E, event_col):
         pass_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
         check_nans_or_infs(X)
         check_low_var(X)
-        check_complete_separation(X, E, T)
+        check_complete_separation(X, E, T, event_col)
 
     def _newton_rhaphson(
         self,
@@ -1118,16 +1118,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         df : DataFrame
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
 
-        df = pd.DataFrame(index=self.hazards_.columns)
-        df["coef"] = self.hazards_.loc["coef"].values
-        df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
-        df["se(coef)"] = self.standard_errors_.loc["se"].values
-        df["z"] = self._compute_z_values()
-        df["p"] = self._compute_p_values()
-        df["-log2(p)"] = -np.log2(df["p"])
-        df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
-        df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
-        return df
+        with np.errstate(invalid="ignore", divide="ignore"):
+            df = pd.DataFrame(index=self.hazards_.columns)
+            df["coef"] = self.hazards_.loc["coef"].values
+            df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
+            df["se(coef)"] = self.standard_errors_.loc["se"].values
+            df["z"] = self._compute_z_values()
+            df["p"] = self._compute_p_values()
+            df["-log2(p)"] = -np.log2(df["p"])
+            df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
+            df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
+            return df
 
     def print_summary(self, decimals=2, **kwargs):
         """
@@ -1202,8 +1203,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[1]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
-        with np.warnings.catch_warnings():
-            np.warnings.filterwarnings("ignore")
+        with np.errstate(invalid="ignore", divide="ignore"):
             return test_stat, degrees_freedom, -np.log2(p_value)
 
     def predict_partial_hazard(self, X):

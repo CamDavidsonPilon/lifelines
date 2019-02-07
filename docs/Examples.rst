@@ -5,7 +5,7 @@
 More Examples and Recipes
 ==================================
 
-This section goes through some examples and recipes to help you use lifelines.
+This section goes through some examples and recipes to help you use *lifelines*.
 
 
 Statistically compare two populations
@@ -24,7 +24,7 @@ the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built-in ``subtract``
 
     kmf1.subtract(kmf2)
 
-will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, lifelines comes with a statistics library. See below.
+will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, *lifelines* comes with a statistics library. See below.
 
 
 Logrank test
@@ -270,10 +270,10 @@ will display
 .. image:: /images/add_at_risk.png
 
 
-Transforming survival-table data into lifelines format
+Transforming survival-table data into *lifelines* format
 ######################################################
 
-Some lifelines classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into lifelines format.
+Some *lifelines* classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into *lifelines* format.
 
 **Example:** Suppose you have a csv file with data that looks like this:
 
@@ -632,24 +632,27 @@ Suppose you wish to measure the hazard ratio between two populations under the C
 
 Problems with convergence in the Cox Proportional Hazard Model
 ################################################################
-Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there is sometimes a problem with convergence. Here are some common symptoms and possible resolutions:
+Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there are sometimes problems with convergence. Here are some common symptoms and resolutions:
 
- 0. First diagnostic: look for ``ConvergenceWarning`` in the output. Most often problems in convergence are the result of problems in the dataset. Lifelines has diagnostic checks it runs against the dataset before fitting and warnings are outputted to the user.
+1. First check: look for ``ConvergenceWarning`` in the output. Most often problems in convergence are the result of problems in the dataset. *lifelines* has checks it runs against the dataset before fitting and warnings are outputted to the user.
 
- 1. ``delta contains nan value(s). Convergence halted.``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
+2. ``delta contains nan value(s).``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
 
- 2. ``LinAlgError: Singular matrix``: This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset.
+3. ``Convergence halted due to matrix inversion problems``: This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset. An common cause of this is dummifying categorical variables but not dropping a column.
 
- 3. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is equally as large. __Or__ there are nan's in the results. This can be seen using the ``summary`` method on a fitted ``CoxPHFitter`` object.
+4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are `nan`'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
 
-    1. Look for a ``ConvergenceWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models).
-    2. The data is completely separable, which means that there exists a covariate the completely determines whether an event occurred or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Look for a ``ConvergenceWarning`` after the ``fit`` call.
-    3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarly using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
-    4. Another problem may be a co-linear relationship in your dataset. See point 2. above.
+   1. Look for a ``ConvergenceWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models).
 
- 4. If adding a very small ``penalizer`` significantly changes the results (``CoxPHFitter(penalizer=0.0001)``), then this probably means that the step size in the iterative algorithm is too large. Try decreasing it (``.fit(..., step_size=0.50)`` or smaller), and returning the ``penalizer`` term to 0.
+   2. The data is completely separable, which means that there exists a covariate the completely determines whether an event occurred or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Look for a ``ConvergenceWarning`` after the ``fit`` call.
 
- 5. If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).size()``.
+   3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarly using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
+
+   4. Another problem may be a co-linear relationship in your dataset. See point 3. above.
+
+5. If adding a very small ``penalizer`` significantly changes the results (``CoxPHFitter(penalizer=0.0001)``), then this probably means that the step size in the iterative algorithm is too large. Try decreasing it (``.fit(..., step_size=0.50)`` or smaller), and returning the ``penalizer`` term to 0.
+
+6. If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).size()``.
 
 Adding weights to observations in a Cox model
 ##############################################

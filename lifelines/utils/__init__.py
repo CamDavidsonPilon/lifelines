@@ -841,7 +841,7 @@ if convergence fails.%s"
         warnings.warn(warning_text, ConvergenceWarning)
 
 
-def check_complete_separation_low_variance(df, events):
+def check_complete_separation_low_variance(df, events, event_col):
     # import pdb
     # pdb.set_trace()
     events = events.astype(bool)
@@ -851,12 +851,13 @@ def check_complete_separation_low_variance(df, events):
     if problem_columns:
         warning_text = """Column(s) {cols} have very low variance when conditioned on
 death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
->>> events = df[event_observed_col].astype(bool)
->>> df.loc[events, {cols}].var()
->>> df.loc[~events, {cols}].var()
+>>> events = df['{event_col}'].astype(bool)
+>>> df.loc[events, '{cols}'].var()
+>>> df.loc[~events, '{cols}'].var()
 
+Too low variance here means that the column {cols} completely determines whether a subject dies or not. 
 See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ """.format(
-            cols=problem_columns[0]
+            cols=problem_columns[0], event_col=event_col
         )
         warnings.warn(warning_text, ConvergenceWarning)
 
@@ -872,17 +873,18 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
         durations = durations.sample(n=500, random_state=0).copy()
 
     for col, series in df.iteritems():
-        if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
-            warning_text = (
-                "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ "
-                % (col)
-            )
-            warnings.warn(warning_text, ConvergenceWarning)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
+                warning_text = (
+                    "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
+    See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ "
+                    % (col)
+                )
+                warnings.warn(warning_text, ConvergenceWarning)
 
 
-def check_complete_separation(df, events, durations):
-    check_complete_separation_low_variance(df, events)
+def check_complete_separation(df, events, durations, event_col):
+    check_complete_separation_low_variance(df, events, event_col)
     check_complete_separation_close_to_perfect_correlation(df, durations)
 
 
@@ -1274,7 +1276,7 @@ class StepSizer:
 
         # recent monotonically decreasing is good though
         if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
-            self.step_size = min(self.step_size * SCALE, 0.95)
+            self.step_size = min(self.step_size * SCALE, 1.0)
 
         return self
 

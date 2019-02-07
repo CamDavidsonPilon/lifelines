@@ -4,6 +4,9 @@ import collections
 from functools import wraps
 import sys
 import warnings
+#pylint: disable=wrong-import-position
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 from textwrap import dedent
 
 import numpy as np
@@ -29,6 +32,7 @@ from lifelines.utils import (
     coalesce,
     check_nans_or_infs,
     StatisticalWarning,
+    median_survival_times,
 )
 
 from lifelines.compat import PY2, PY3
@@ -262,7 +266,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
 
-        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(self._cumulative_hazard)(self._fitted_parameters_, self.timeline)
+        # pylint: disable=no-value-for-parameter
+        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(self._cumulative_hazard)(
+            self._fitted_parameters_, self.timeline
+        )
 
         gradient_at_times = np.vstack(
             [gradient_of_cum_hazard_at_mle(basis)[1] for basis in np.eye(len(self._fitted_parameters_))]
@@ -357,8 +364,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
         df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
-        with np.warnings.catch_warnings():
-            np.warnings.filterwarnings("ignore")
+        with np.errstate(invalid="ignore", divide="ignore"):
             df["-log2(p)"] = -np.log2(df["p"])
         return df
 
@@ -505,3 +511,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
     @_must_call_fit_first
     def hazard_at_times(self, times):
         return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times))
+
+    @property
+    @_must_call_fit_first
+    def median_(self):
+        return median_survival_times(self.survival_function_)

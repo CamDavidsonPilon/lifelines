@@ -5,7 +5,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines import NelsonAalenFitter
-from lifelines.utils import median_survival_times, _to_array
+from lifelines.utils import _to_array
 
 
 class BreslowFlemingHarringtonFitter(UnivariateFitter):
@@ -83,7 +83,6 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         # estimation
         self.survival_function_ = np.exp(-naf.cumulative_hazard_)
         self.confidence_interval_ = np.exp(-naf.confidence_interval_)
-        self.median_ = median_survival_times(self.survival_function_)
 
         # estimation methods
         self._estimation_method = "survival_function_"

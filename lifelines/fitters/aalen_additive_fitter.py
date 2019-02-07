@@ -242,6 +242,8 @@ class AalenAdditiveFitter(BaseFitter):
 
             total_observed_exits += exits.sum()
 
+        if show_progress:
+            print("Convergence completed.")
         return hazards_, variance_hazards_, last_iteration
 
     def _preprocess_dataframe(self, df):

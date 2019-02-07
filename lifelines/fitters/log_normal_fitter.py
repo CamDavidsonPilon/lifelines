@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-import pandas as pd
 import autograd.numpy as np
 from autograd.scipy.stats import norm
-from scipy.stats import norm as sp_norm
 
 from lifelines.fitters import ParametericUnivariateFitter
-from lifelines.utils import inv_normal_cdf
 
 
 class LogNormalFitter(ParametericUnivariateFitter):
@@ -43,4 +40,3 @@ class LogNormalFitter(ParametericUnivariateFitter):
         cdf = norm.cdf(Z, loc=0, scale=1)
         cdf = np.clip(cdf, 0.0, 1 - 1e-14)
         return -np.log(1 - cdf)
-
