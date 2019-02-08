@@ -35,6 +35,7 @@ Contents:
   jupyter_notebooks/Proportional hazard assumption.ipynb
   jupyter_notebooks/Cox residuals.ipynb
   jupyter_notebooks/Piecewise Exponential Models and Creating Custom Models.ipynb
+  jupyter_notebooks/Modelling time-lagged conversion rates.ipynb
   Examples
 
 
