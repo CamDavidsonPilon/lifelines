@@ -24,10 +24,11 @@ class AalenJohansenFitter(UnivariateFitter):
     slightly. This will be done automatically and generates a warning.
     """
 
-    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.95):
+    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.95, calculate_variance=True):
         UnivariateFitter.__init__(self, alpha=alpha)
         self._jitter_level = jitter_level
         self._seed = seed  # Seed is for the jittering process
+        self._calc_var = calculate_variance  # Optionally skips calculating variance to save time on bootstraps
 
     def fit(
             self,
@@ -122,9 +123,10 @@ class AalenJohansenFitter(UnivariateFitter):
         self.event_table = aj[
             ["removed", "observed", self.label_cmprisk, "censored", "entrance", "at_risk"]
         ]  # Event table
-        self.variance, self.confidence_interval_ = self._bounds(
-            aj["lagged_overall_survival"], alpha=alpha, ci_labels=ci_labels
-        )
+        if self._calc_var:
+            self.variance, self.confidence_interval_ = self._bounds(
+                aj["lagged_overall_survival"], alpha=alpha, ci_labels=ci_labels
+            )
         return self
 
     def _jitter(self, durations, event, jitter_level, seed=None):
