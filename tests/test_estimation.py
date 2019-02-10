@@ -3293,9 +3293,24 @@ class TestAalenJohansenFitter:
         npt.assert_equal(np.any(np.not_equal(d, e)), True)
 
     def test_tied_input_data(self, fitter):
+        # Based on new setup of ties, this counts as a valid tie
         d = [1, 2, 2, 4, 5, 6]
         fitter.fit(durations=d, event_observed=[0, 1, 2, 1, 2, 0], event_of_interest=2)
         npt.assert_equal(np.any(np.not_equal([0] + d, fitter.event_table.index)), True)
+
+    def test_updated_input_ties(self, fitter):
+        # Based on the new setup of ties, should not detect any ties as existing
+        d = [1, 2, 2, 4, 5, 6]
+        fitter.fit(durations=d, event_observed=[0, 1, 1, 1, 2, 0], event_of_interest=1)
+        print(fitter.event_table.index)
+        npt.assert_equal(np.asarray([0, 1, 2, 4, 5, 6]), np.asarray(fitter.event_table.index))
+
+    def test_updated_censor_ties(self, fitter):
+        # Based on the new setup of ties, should not detect any ties as existing
+        d = [1, 2, 2, 4, 5, 6]
+        fitter.fit(durations=d, event_observed=[0, 0, 1, 1, 2, 0], event_of_interest=1)
+        print(fitter.event_table.index)
+        npt.assert_equal(np.asarray([0, 1, 2, 4, 5, 6]), np.asarray(fitter.event_table.index))
 
     def test_event_table_is_correct(self, fitter, duration, event_observed):
         fitter.fit(duration, event_observed, event_of_interest=2)

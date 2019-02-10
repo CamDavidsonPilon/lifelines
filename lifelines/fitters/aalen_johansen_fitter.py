@@ -69,16 +69,9 @@ class AalenJohansenFitter(UnivariateFitter):
           self, with new properties like 'cumulative_incidence_'.
         """
         # Checking for tied event times
-        if np.sum(pd.Series(durations).duplicated()) > 0:
-            # Seeing if there is a large amount of ties in the data (>20%)
-            if np.sum(pd.Series(durations).duplicated()) / len(durations) > 0.2:
-                warnings.warn(
-                    """It looks like there are many tied events in your data set. The Aalen-Johansen
-                              estimator should only be used when there are no/few tied events""",
-                    Warning,
-                )
-                # I am unaware of a recommended cut-off, but 20% would be suggestive of issues
-            # Raise warning if duplicated times, then randomly jitter times
+        ties = self._check_for_duplicates(durations=durations, events=event_observed)
+
+        if ties:
             warnings.warn(
                 """Tied event times were detected. The Aalen-Johansen estimator cannot handle tied event times.
                 To resolve ties, data is randomly jittered.""",
@@ -152,7 +145,7 @@ class AalenJohansenFitter(UnivariateFitter):
         durations_jitter = event_time.align(durations)[0].fillna(durations)
 
         # Recursive call if event times are still tied after jitter
-        if np.sum(event_time.duplicated()) > 0:
+        if self._check_for_duplicates(durations=durations_jitter, events=event):
             return self._jitter(durations=durations_jitter, event=event, jitter_level=jitter_level, seed=seed)
         return durations_jitter
 
@@ -204,3 +197,26 @@ class AalenJohansenFitter(UnivariateFitter):
         df[ci_labels[0]] = np.exp(-np.exp(df["F_transformed"] + zalpha * df["se_transformed"]))
         df[ci_labels[1]] = np.exp(-np.exp(df["F_transformed"] - zalpha * df["se_transformed"]))
         return df["variance"], df[ci_labels]
+
+    @staticmethod
+    def _check_for_duplicates(durations, events):
+        """Checks for duplicated event times in the data set. This is narrowed to detecting duplicated event times
+        where the events are of different types
+        """
+        # Setting up DataFrame to detect duplicates
+        df = pd.DataFrame()
+        df['t'] = durations
+        df['e'] = events
+
+        # Finding duplicated event times
+        dup_times = pd.Series(df['t'].loc[df['e'] != 0]).duplicated(keep=False)
+
+        # Finding duplicated events and event times
+        dup_events = df.loc[df['e'] != 0, ['t', 'e']].duplicated(keep=False)
+
+        # Detect duplicated times with different event types
+        ties = np.sum(dup_times & (~dup_events))
+        if ties > 0:
+            return True
+        else:
+            return False
