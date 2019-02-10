@@ -111,7 +111,7 @@ def univariate_fitters():
 
 
 @pytest.fixture
-def parametric_univariate_fitters():
+def known_parametric_univariate_fitters():
     return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
 
 
@@ -173,12 +173,13 @@ class TestBaseFitter:
 
 class TestParametricUnivariateFitters:
     def test_parametric_univarite_fitters_can_print_summary(
-        self, positive_sample_lifetimes, parametric_univariate_fitters
+        self, positive_sample_lifetimes, known_parametric_univariate_fitters
     ):
-        for fitter in parametric_univariate_fitters:
+        for fitter in known_parametric_univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             f.summary
             f.print_summary()
+
 
     def test_warnings_for_problematic_cumulative_hazards(self):
         class NegativeFitter(ParametericUnivariateFitter):
@@ -203,6 +204,15 @@ class TestParametricUnivariateFitters:
 
 
 class TestUnivariateFitters:
+
+    def test_univarite_fitters_accept_late_entries(
+        self, positive_sample_lifetimes, univariate_fitters
+    ):
+        entries = 0.1 * positive_sample_lifetimes[0]
+        for fitter in univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes[0], entry=entries)
+            assert f.entry is not None
+
     def test_univarite_fitters_with_survival_function_have_conditional_time_to_(
         self, positive_sample_lifetimes, univariate_fitters
     ):
@@ -593,11 +603,11 @@ class TestLogLogisticFitter:
         assert abs(llf.alpha_ / scale - 1) < 0.05
         assert abs(llf.beta_ / c - 1) < 0.05
 
-    @pytest.mark.xfail()
+    @pytest.mark.xfail
     def test_llf_small_values(self, llf):
         from scipy.stats import fisk
 
-        scale = 0.05
+        scale = 0.02
         c = 0.05
         T = fisk.rvs(c, scale=scale, size=100000)
         C = fisk.rvs(c, scale=scale, size=100000)
@@ -612,6 +622,26 @@ class TestLogLogisticFitter:
 
 
 class TestWeibullFitter:
+
+    def test_weibull_with_delayed_entries(self):
+        # note the the independence of entry and final time is really important
+        # (also called non-informative)
+        # for example, the following doesn't work
+        # D = np.random.rand(15000) * T
+
+        wf = WeibullFitter()
+        T = np.random.exponential(10, 15000)
+        D = np.random.exponential(10, 15000)
+
+        keep = T > D
+        T = T[keep]
+        D = D[keep]
+
+        wf = WeibullFitter().fit(T, entry=D)
+
+        assert np.abs(wf.lambda_ - 0.1) < 0.01
+
+
     def test_weibull_fit_returns_float_timelines(self):
         wf = WeibullFitter()
         T = np.linspace(0.1, 10)

@@ -4,10 +4,10 @@ from __future__ import print_function
 import autograd.numpy as np
 from autograd.scipy.stats import norm
 
-from lifelines.fitters import ParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametericUnivariateFitter
 
 
-class LogNormalFitter(ParametericUnivariateFitter):
+class LogNormalFitter(KnownModelParametericUnivariateFitter):
     r"""
     This class implements an Log Normal model for univariate data. The model has parameterized
     form:
@@ -28,7 +28,7 @@ class LogNormalFitter(ParametericUnivariateFitter):
     """
 
     _fitted_parameter_names = ["mu_", "sigma_"]
-    _bounds = [(None, None), (ParametericUnivariateFitter._MIN_PARAMETER_VALUE, None)]
+    _bounds = [(None, None), (0, None)]
 
     @property
     def median_(self):

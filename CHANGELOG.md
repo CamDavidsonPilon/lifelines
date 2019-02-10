@@ -1,5 +1,10 @@
 ### Changelogs
 
+### 0.18.4
+ - fixed confidence intervals in cumulative hazards for parametric univarite models. They were previously 
+   serverly depressed. 
+ - adding left-truncation support to parametric univarite models with the `entry` kwarg in `.fit`
+
 ### 0.18.3 
  - Some performance improvements to parametric univariate models.
  - Suppressing some irrelevant NumPy and autograd warnings, so lifeline warnings are more noticeable. 
