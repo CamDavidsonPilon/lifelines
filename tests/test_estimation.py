@@ -172,6 +172,38 @@ class TestBaseFitter:
 
 
 class TestParametricUnivariateFitters:
+    def test_confidence_interval_is_expected(self):
+
+        from autograd.scipy.special import logit
+        from autograd.scipy.stats import norm
+
+        N = 20
+        U = np.random.rand(N)
+        T = -(logit(-np.log(U) / 0.5) - np.random.exponential(2, N) - 7.00) / 0.50
+
+        E = ~np.isnan(T)
+        T[np.isnan(T)] = 50
+
+        class UpperAsymptoteFitter(ParametericUnivariateFitter):
+
+            _fitted_parameter_names = ["c_", "mu_"]
+
+            _bounds = ((0, None), (None, None))
+
+            def _cumulative_hazard(self, params, times):
+                c, mu_ = params
+                return c * norm.cdf((times - mu_) / 6.3, loc=0, scale=1)
+
+        uaf = UpperAsymptoteFitter().fit(T, E, ci_labels=("u", "l"))
+        upper = uaf.confidence_interval_.iloc[-1]["u"]
+        lower = uaf.confidence_interval_.iloc[-1]["l"]
+        coef, std = uaf.summary.loc["c_", ["coef", "se(coef)"]]
+
+        assert (upper - lower) > 0
+        assert abs(upper - lower) > 0.5
+        assert coef - std > lower
+        assert coef + std < upper
+
     def test_parametric_univarite_fitters_can_print_summary(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
     ):
@@ -179,7 +211,6 @@ class TestParametricUnivariateFitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             f.summary
             f.print_summary()
-
 
     def test_warnings_for_problematic_cumulative_hazards(self):
         class NegativeFitter(ParametericUnivariateFitter):
@@ -204,10 +235,7 @@ class TestParametricUnivariateFitters:
 
 
 class TestUnivariateFitters:
-
-    def test_univarite_fitters_accept_late_entries(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_univarite_fitters_accept_late_entries(self, positive_sample_lifetimes, univariate_fitters):
         entries = 0.1 * positive_sample_lifetimes[0]
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0], entry=entries)
@@ -622,7 +650,6 @@ class TestLogLogisticFitter:
 
 
 class TestWeibullFitter:
-
     def test_weibull_with_delayed_entries(self):
         # note the the independence of entry and final time is really important
         # (also called non-informative)
@@ -640,7 +667,6 @@ class TestWeibullFitter:
         wf = WeibullFitter().fit(T, entry=D)
 
         assert np.abs(wf.lambda_ - 0.1) < 0.01
-
 
     def test_weibull_fit_returns_float_timelines(self):
         wf = WeibullFitter()

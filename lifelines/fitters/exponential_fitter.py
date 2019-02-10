@@ -36,8 +36,8 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
     def median_(self):
         return 1.0 / self.lambda_ * (np.log(2))
 
-    def _fit_model(self, T, E, entries, show_progress=False):
-        T = T - entries
+    def _fit_model(self, T, E, entry, show_progress=False):
+        T = T - entry
         lambda_ = E.sum() / T.sum()
         lambda_variance_ = lambda_ / T.sum()
         log_likelihood = np.log(lambda_) * E.sum() - lambda_ * T.sum()

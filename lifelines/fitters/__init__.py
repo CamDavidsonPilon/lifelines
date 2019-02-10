@@ -221,6 +221,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     Without overriding anything, assumes all parameters must be greater than 0.
 
     """
+
     _KNOWN_MODEL = False
     _MIN_PARAMETER_VALUE = 1e-09
 
@@ -241,8 +242,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
         if "alpha" in self._fitted_parameter_names:
             raise NameError("'alpha' in _fitted_parameter_names is a lifelines reserved word. Try 'alpha_' instead.")
 
-        if (len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]):
-            raise ValueError("_bounds must be the same shape as _fitted_parameters_names must be the same shape as _initial_values")
+        if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
+            raise ValueError(
+                "_bounds must be the same shape as _fitted_parameters_names must be the same shape as _initial_values"
+            )
 
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
         class_name = self.__class__.__name__
@@ -316,7 +319,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         hz = self._hazard(params, T[E])
         hz = anp.clip(hz, 1e-18, np.inf)
 
-        ll = (anp.log(hz)).sum() - self._cumulative_hazard(params, T).sum() + self._cumulative_hazard(params, entry).sum()
+        ll = (
+            (anp.log(hz)).sum()
+            - self._cumulative_hazard(params, T).sum()
+            + self._cumulative_hazard(params, entry).sum()
+        )
         return -ll / n
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
@@ -345,7 +352,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _fit_model(self, T, E, entry, show_progress=True):
 
-        non_zero_entries = entry[entry>0]
+        non_zero_entries = entry[entry > 0]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
@@ -463,8 +470,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
     def fit(
-        self, durations, event_observed=None, timeline=None, label=None, alpha=None, ci_labels=None, show_progress=False,
-        entry=None
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -516,10 +530,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
 
-        self.entry = (
-            np.asarray(entry) if entry is not None else np.zeros_like(self.durations)
-        )
-
+        self.entry = np.asarray(entry) if entry is not None else np.zeros_like(self.durations)
 
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline))
@@ -536,7 +547,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         if not self._KNOWN_MODEL:
             self._check_cumulative_hazard_is_monotone_and_positive(self.durations, self._fitted_parameters_)
-
 
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
