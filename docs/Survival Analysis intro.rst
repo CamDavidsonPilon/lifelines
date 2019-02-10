@@ -3,7 +3,7 @@
 -------------------------------------
 
 
-Introduction to Survival Analysis
+Introduction to survival analysis
 '''''''''''''''''''''''''''''''''
 
 Applications
@@ -21,11 +21,11 @@ The analysis can be further applied to not just traditional *births and
 deaths*, but any duration. Medical professionals might be interested in
 the *time between childbirths*, where a birth in this case is the event
 of having a child, and a death is becoming pregnant again! (obviously,
-we are loose with our definitions of *birth and death*)! Another example
+we are loose with our definitions of *birth and death*) Another example
 is users subscribing to a service: a birth is a user who joins the
 service, and a death is when the user leaves the service.
 
-Censorship
+Censoring
 ----------
 
 
@@ -42,10 +42,10 @@ due to some external circumstances. All the information we have on
 these individuals are their current lifetime durations (which is
 naturally *less* than their actual lifetimes).
 
-.. note:: There is also left-censorship, where an individuals birth event is not seen.
+.. note:: There is also left-censoring, where an individuals birth event is not seen.
 
 A common mistake data analysts make is choosing to ignore the
-right-censored individuals. We shall see why this is a mistake next:
+right-censored individuals. We will see why this is a mistake next.
 
 Consider a case where the population is actually made up of two
 subpopulations, :math:`A` and :math:`B`. Population :math:`A` has a very
@@ -86,7 +86,7 @@ that we would be serverly underestimating the true average lifespan.
     print("Observed lifetimes at time %d:\n" % (CURRENT_TIME), observed_lifetimes)
 
 
-.. image:: images/survival_analysis_intro_censorship.png
+.. image:: images/survival_analysis_intro_censoring.png
 
 
 .. parsed-literal::
@@ -110,13 +110,13 @@ information at :math:`t=10`).
     ax.set_xlim(0,25)
 
 
-.. image:: images/survival_analysis_intro_censorship_revealed.png
+.. image:: images/survival_analysis_intro_censoring_revealed.png
 
 
 Survival analysis was originally developed to solve this type of
 problem, that is, to deal with estimation when our data is
 right-censored. Even in the case where all events have been
-observed, i.e. no censorship, survival analysis is still a very useful tool
+observed, i.e. no censoring, survival analysis is still a very useful tool
 to understand durations.
 
 The observations need not always start at zero, either. This was done
@@ -168,29 +168,23 @@ defines the hazard function at time :math:`t`, :math:`h(t)`:
 
 .. math:: h(t) =  \lim_{\delta t \rightarrow 0 } \; \frac{Pr( t \le T \le t + \delta t | T > t)}{\delta t}
 
-It can be shown with quite elementary probability that this is equal to:
+It can be shown that this is equal to:
 
 .. math:: h(t) = \frac{-S'(t)}{S(t)}
 
-and solving this differential equation (yes, it is a differential
-equation), we get:
+and solving this differential equation (cool, it is a differential
+equation!), we get:
 
 .. math:: S(t) = \exp\left( -\int_0^t h(z) \mathrm{d}z \right)
 
 What I love about the above equation is that it defines **all** survival
-functions, and because the hazard function is arbitrary (i.e. there is
-no parametric form), the entire function is non-parametric (this allows
-for very flexible curves). Notice that we can now speak either about the
+functions. Notice that we can now speak either about the
 survival function, :math:`S(t)`, or the hazard function,
 :math:`h(t)`, and we can convert back and forth quite easily. It
-also gives us another, albeit less useful, expression for :math:`T`:
+also gives us another, albeit not as useful, expression for :math:`T`.
 Upon differentiation and some algebra, we recover:
 
-.. math:: f_T(t) = h(t)\exp\left( -\int_0^t h(z) \mathrm{d}z \right)
+.. math:: f_T(t) = h(t)\exp\left( -\int_0^t h(z) \mathrm{d}z \right) = h(t) S(t)
 
 Of course, we do not observe the true survival curve of a population. We
-must use the observed data to estimate it. We also want to continue to
-be non-parametric, that is not assume anything about how the
-survival curve looks. The *best* method to recreate the survival
-function non-parametrically from the data is known as the Kaplan-Meier
-estimate, which brings us to :doc:`estimation using lifelines</Intro to lifelines>`.
+must use the observed data to estimate it. There are many ways to estimate the survival function and the hazard rate, which brings us to :doc:`estimation using lifelines</Intro to lifelines>`.

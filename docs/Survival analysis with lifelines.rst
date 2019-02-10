@@ -2,7 +2,7 @@
 
 -------------------------------------
 
-Survival analysis with lifelines
+Survival analysis with *lifelines*
 =====================================
 
 In the previous :doc:`section</Survival Analysis intro>`,
@@ -10,14 +10,14 @@ we introduced the use of survival analysis, the need, and the
 mathematical objects on which it relies. In this article, we will work
 with real data and the *lifelines* library to estimate these mathematical objects.
 
-Estimating the Survival function using Kaplan-Meier
+Estimating the survival function using Kaplan-Meier
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 For this example, we will be investigating the lifetimes of political
 leaders around the world. A political leader, in this case, is defined by a single individual's
 time in office who controls the ruling regime. This political leader could be an elected president,
 unelected dictator, monarch, etc. The birth event is the start of the individual's tenure, and the death
-event is the retirement of the individual. Censorship can occur if they are a) still in offices at the time
+event is the retirement of the individual. Censoring can occur if they are a) still in offices at the time
 of dataset compilation (2008), or b) die while in power (this includes assassinations).
 
 For example, the Bush regime began in 2000 and officially ended in 2008
@@ -28,9 +28,9 @@ not* observed -- JFK died before his official retirement.
 
 (This is an example that has gladly redefined the birth and death
 events, and in fact completely flips the idea upside down by using deaths
-as the censorship event. This is also an example where the current time
-is not the only cause of censorship; there are the alternative events (e.g., death in office) that can
-be the cause of censorship.
+as the censoring event. This is also an example where the current time
+is not the only cause of censoring; there are the alternative events (e.g., death in office) that can
+be the cause of censoring.
 
 To estimate the survival function, we first will use the `Kaplan-Meier
 Estimate <http://en.wikipedia.org/wiki/Kaplan%E2%80%93Meier_estimator>`__,
@@ -96,7 +96,7 @@ fit/predict API)
 
   KaplanMeierFitter.fit(durations, event_observed=None,
                         timeline=None, entry=None, label='KM_estimate',
-                        alpha=None, left_censorship=False, ci_labels=None)
+                        alpha=None, left_censoring=False, ci_labels=None)
 
   Parameters:
     duration: an array, or pd.Series, of length n -- duration subject was observed for
@@ -109,7 +109,7 @@ fit/predict API)
     label: a string to name the column of the estimate.
     alpha: the alpha value in the confidence intervals. Overrides the initializing
        alpha for this call to fit only.
-    left_censorship: True if durations and event_observed refer to left censorship events. Default False
+    left_censoring: True if durations and event_observed refer to left censoring events. Default False
     ci_labels: add custom column names to the generated confidence intervals
           as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
 
@@ -344,10 +344,10 @@ Estimating hazard rates using Nelson-Aalen
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The survival curve is a great way to summarize and visualize the
-lifetime data, however it is not the only way. If we are curious about the hazard function :math:`\h(t)` of a
+survival dataset, however it is not the only way. If we are curious about the hazard function :math:`h(t)` of a
 population, we unfortunately cannot transform the Kaplan Meier estimate
 -- statistics doesn't work quite that well. Fortunately, there is a
-proper estimator of the *cumulative* hazard function:
+proper non-parametric estimator of the *cumulative* hazard function:
 
 .. math::  H(t) =  \int_0^t \lambda(z) \;dz
 
@@ -488,7 +488,7 @@ here. (My advice: stick with the cumulative hazard function.)
 .. image:: images/lifelines_intro_naf_smooth_multi_2.png
 
 
-Estimating hazard rates using Parametric models
+Estimating cumulative hazards using parametric models
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 
@@ -581,13 +581,13 @@ Similarly, there are other parametric models in *lifelines*. Generally, which pa
 
 *lifelines* can also be used to define your own parametic model. There is a tutorial on this available, see `Piecewise Exponential Models and Creating Custom Models`_.
 
-Other types of censorship
+Other types of censoring
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Left Censored Data
+Left censored data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We've mainly been focusing on *right-censorship*, which describes cases where we do not observe the death event.
+We've mainly been focusing on *right-censoring*, which describes cases where we do not observe the death event.
 This situation is the most common one. Alternatively, there are situations where we do not observe the *birth* event
 occurring. Consider the case where a doctor sees a delayed onset of symptoms of an underlying disease. The doctor
 is unsure *when* the disease was contracted (birth), but knows it was before the discovery.
@@ -595,7 +595,7 @@ is unsure *when* the disease was contracted (birth), but knows it was before the
 Another situation where we have left-censored data is when measurements have only an upper bound, that is, the measurements
 instruments could only detect the measurement was *less* than some upper bound.
 
-*lifelines* has support for left-censored datasets in the ``KaplanMeierFitter`` class, by adding the keyword ``left_censorship=True`` (default ``False``) to the call to ``fit``.
+*lifelines* has support for left-censored datasets in the ``KaplanMeierFitter`` class, by adding the keyword ``left_censoring=True`` (default ``False``) to the call to ``fit``.
 
 .. code:: python
 
@@ -607,7 +607,7 @@ instruments could only detect the measurement was *less* than some upper bound.
     E = lcd_dataset[ix]['E'] #boolean array, True if observed.
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, E, left_censorship=True)
+    kmf.fit(T, E, left_censoring=True)
 
 Instead of producing a survival function, left-censored data is more interested in the cumulative density function
 of time to birth. This is available as the ``cumulative_density_`` property after fitting the data.
@@ -620,20 +620,20 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 
 .. image:: images/lifelines_intro_lcd.png
 
-Left Truncated Data
+Left truncated data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
- .. note:: Not to be confused with left-censorship, which is also supported in ``KaplanMeierFitter``.
+ .. note:: Not to be confused with left-censoring, which is also supported in ``KaplanMeierFitter``.
 
 Another form of bias that is introduced into a dataset is called left-truncation. Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. Some theoretical indiviuals who would have entered into your study (i.e. went to prison) have already died. 
 
 Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited indivduals previously diagnosed with AIDS, possibly years before. 
 
-Both ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between "birth" (or "exposure") to entering the study.  
+All univatiate fitters, like ``KaplanMeierFitter`` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between "birth" (or "exposure") to entering the study.  
 
- .. note:: Nothing changes in the duration array: it still measures time from "birth" to time left study (either by death or censorship). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
+ .. note:: Nothing changes in the duration array: it still measures time from "birth" to time exited study (either by death or censoring). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
 
- .. note:: Other types of censorship, like interval-censorship, are not implemented in *lifelines* yet.
+ .. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
 
 .. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html
 

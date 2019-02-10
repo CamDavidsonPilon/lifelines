@@ -8,7 +8,7 @@
 -------------------------------------
 
 
-Lifelines
+*lifelines*
 =====================================
 
 *lifelines* is a implementation of survival analysis in Python. What
@@ -17,9 +17,8 @@ implementations?
 
 -  built on top of Pandas
 -  internal plotting methods
--  simple and intuitive API (*designed for humans*)
--  only does survival analysis (No unnecessary features or second-class
-   implementations)
+-  simple and intuitive API
+-  only focus is survival analysis
 
 
 Contents:
@@ -42,23 +41,22 @@ Contents:
 Installation
 ------------------------------
 
-Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and optionally Matplotlib. Install using:
 
 .. code-block:: console
 
     pip install lifelines
 
 
-Source Code and Issue Tracker
+Source code and issue tracker
 ------------------------------
 
 Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_.
 Please report bugs, issues and feature extensions there. We also have `Gitter channel <https://gitter.im/python-lifelines/Lobby>`_ avaiable to discuss survival analysis and *lifelines*:
 
-Citing lifelines
+Citing *lifelines*
 ------------------------------
 
-The following link will bring you to a page where you can find the latest citation for lifelines:
+The following link will bring you to a page where you can find the latest citation for *lifelines*:
 
 `Citation for lifelines <http://doi.org/10.5281/zenodo.1252342>`_
 

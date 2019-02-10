@@ -115,14 +115,17 @@ but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` 
 
 .. note:: Similar to `Scikit-Learn <http://scikit-learn.org>`_, all statistically estimated quantities append an underscore to the property name.
 
-Getting Data in The Right Format
+.. note:: Much more comprehensive docs are available in `Survival analysis with lifelines`_.
+
+
+Getting data in the right format
 --------------------------------
 
 Often you'll have data that looks like:
 
 *start_time*, *end_time*
 
-Lifelines has some utility functions to transform this dataset into duration and censorship vectors:
+*lifelines* has some utility functions to transform this dataset into duration and censoring vectors:
 
 .. code:: python
 
@@ -133,7 +136,7 @@ Lifelines has some utility functions to transform this dataset into duration and
     T, E = datetimes_to_durations(start_times, end_times, freq='h')
 
 
-Alternatively, perhaps you are interested in viewing the survival table given some durations and censorship vectors.
+Alternatively, perhaps you are interested in viewing the survival table given some durations and censoring vectors.
 
 
 .. code:: python
@@ -154,7 +157,7 @@ Alternatively, perhaps you are interested in viewing the survival table given so
     """
 
 
-Survival Regression
+Survival regression
 -------------------
 
 .. note:: Much more comprehensive docs are available in `Survival Regression`_.
@@ -170,7 +173,7 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
     regression_dataset.head()
 
 
-The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorships and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``.
+The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorings and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``.
 
 .. code:: python
 

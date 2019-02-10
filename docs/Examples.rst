@@ -2,7 +2,7 @@
 
 -------------------------------------
 
-More Examples and Recipes
+More examples and recipes
 ==================================
 
 This section goes through some examples and recipes to help you use *lifelines*.
@@ -140,7 +140,7 @@ From these results, Aalen's Additive model with a penalizer of 10 is best model 
 Plotting multiple figures on a plot
 ##############################################
 
-When `.plot` is called, an `axis` object is returned which can be passed into future calls of `.plot`:
+When ``.plot`` is called, an ``axis`` object is returned which can be passed into future calls of ``.plot``:
 
 .. code-block:: python
 
@@ -151,7 +151,7 @@ When `.plot` is called, an `axis` object is returned which can be passed into fu
     ax = kmf.plot(ax=ax)
 
 
-If you have a pandas `DataFrame` with columns "group", "T", and "E", then something like the following would work:
+If you have a pandas DataFrame with columns "group", "T", and "E", then something like the following would work:
 
 .. code-block:: python
 
@@ -278,7 +278,7 @@ Some *lifelines* classes are designed for lists or arrays that represent one ind
 **Example:** Suppose you have a csv file with data that looks like this:
 
 =========================   ==================    ============
-time (months, days, ...)      observed deaths       censored
+time                        observed deaths       censored
 =========================   ==================    ============
 0                               7                    0
 1                               1                    1
@@ -294,7 +294,8 @@ time (months, days, ...)      observed deaths       censored
     import pandas as pd
     from lifelines.utils import survival_events_from_table
 
-    df = pd.read_csv('file.csv', columns = ['observed deaths', 'censored'])
+    df = pd.read_csv('file.csv', columns = ['time', observed deaths', 'censored'])
+    df = df.set_index('time')
 
     T, E = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
 
@@ -305,7 +306,7 @@ time (months, days, ...)      observed deaths       censored
 Transforming observational data into survival-table format
 ##########################################################
 
-Perhaps you are interested in viewing the survival table given some durations and censorship vectors.
+Perhaps you are interested in viewing the survival table given some durations and censoring vectors.
 
 
 .. code:: python
@@ -367,7 +368,7 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
 
 What you would like is to have a predictable and full index from 40 to 75. (Notice that
 in the above index, the last two time points are not adjacent --  the cause is observing no lifetimes
-existing for times 72 or 73). This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a `timeline` argument:
+existing for times 72 or 73). This is especially useful for comparing multiple survival functions at specific time points. To do this, all fitter methods accept a ``timeline`` argument:
 
 .. code-block:: python
 
@@ -412,7 +413,7 @@ existing for times 72 or 73). This is especially useful for comparing multiple s
     74         0.00
 
 
-Lifelines will intelligently forward-fill the estimates to unseen time points.
+*lifelines* will intelligently forward-fill the estimates to unseen time points.
 
 
 Example SQL query to get survival data from a table
@@ -431,8 +432,8 @@ Below is a way to get an example dataset from a relational database (this may va
 Explanation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each row is an `id`, a duration, and a boolean indicating whether the event occurred or not. Recall that we denote a
-"True" if the event *did* occur, that is, `ended_at` is filled in (we observed the `ended_at`). Ex:
+Each row is an ``id``, a duration, and a boolean indicating whether the event occurred or not. Recall that we denote a
+"True" if the event *did* occur, that is, ``ended_at`` is filled in (we observed the ``ended_at``). Ex:
 
 ==================   ============   ============
 id                   T                      E
@@ -630,7 +631,7 @@ Suppose you wish to measure the hazard ratio between two populations under the C
     power = power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio)
     # 0.4957
 
-Problems with convergence in the Cox Proportional Hazard Model
+Problems with convergence in the Cox proportional hazard model
 ################################################################
 Since the estimation of the coefficients in the Cox proportional hazard model is done using the Newton-Raphson algorithm, there are sometimes problems with convergence. Here are some common symptoms and resolutions:
 
@@ -640,7 +641,7 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
 3. ``Convergence halted due to matrix inversion problems``: This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset. An common cause of this is dummifying categorical variables but not dropping a column.
 
-4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are `nan`'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
+4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are ``nan``'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
 
    1. Look for a ``ConvergenceWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models).
 
@@ -671,7 +672,7 @@ There are two common uses for weights in a model. The first is as a data size re
                                  .reset_index()
 
 
-The original dataset has 432 rows, while the grouped dataset has 387 rows plus an additional `weights` column. ``CoxPHFitter`` has an additional parameter to specify which column is the weight column.
+The original dataset has 432 rows, while the grouped dataset has 387 rows plus an additional ``weights`` column. ``CoxPHFitter`` has an additional parameter to specify which column is the weight column.
 
 .. code-block:: python
 
@@ -681,7 +682,7 @@ The original dataset has 432 rows, while the grouped dataset has 387 rows plus a
     cph.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
 
 
-The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the `CoxTimeVaryingFitter`.
+The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the ``CoxTimeVaryingFitter``.
 
 
 The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artifical under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error.
@@ -697,7 +698,7 @@ There are cases when your dataset contains correlated subjects, which breaks the
 1. If a subject appears more than once in the dataset (common when subjects can have the event more than once)
 2. If using a matching technique, like prospensity-score matching, there is a correlation between pairs.
 
-In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in `CoxPHFitter.fit` that allows you to specify the column in the dataframe that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
+In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in ``CoxPHFitter.fit`` that allows you to specify the column in the dataframe that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
 
 .. code-block:: python
 
@@ -735,4 +736,4 @@ In both cases, the reported standard errors from a unadjusted Cox model will be 
     cph = CoxPHFitter()
     cph.fit(rossi, 'week', 'arrest', cluster_col='id')
 
-Specifying ``cluster_col`` will handle correlations, and invoke the robust sandwich estimator for standard errors (the same as setting `robust=True`).
+Specifying ``cluster_col`` will handle correlations, and invoke the robust sandwich estimator for standard errors (the same as setting ``robust=True``).

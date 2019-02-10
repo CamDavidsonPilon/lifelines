@@ -2,11 +2,11 @@
 
 -------------------------------------
 
-Survival Regression
+Survival regression
 =====================================
 
 Often we have additional data aside from the duration, and if
-applicable any censorships that occurred. In the previous section's regime dataset, we have
+applicable any censorings that occurred. In the previous section's regime dataset, we have
 the type of government the political leader was part of, the country
 they were head of, and the year they were elected. Can we use this data
 in survival analysis?
@@ -108,7 +108,7 @@ To access the coefficients and the baseline hazard directly, you can use ``cph.h
 Convergence
 ###########################################
 
-Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
+Fitting the Cox model to the data involves using gradient descent. *lifelines* takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
 
 After fitting, the value of the maximum log-likelihood this available using ``cph._log_likelihood``. Similarly, the score and Hessian matrix are available under ``_score_`` and ``_hessian_`` respectively.
 
@@ -294,7 +294,7 @@ To specify variables to be used in stratification, we define them in the call to
     cph.baseline_cumulative_hazard_.shape
     # (49, 2)
 
-Weights & Robust Errors
+Weights & robust errors
 ########################
 
 Observations can come with weights, as well. These weights may be integer values representing some commonly occuring observation, or they may be float values representing some sampling weights (ex: inverse probability weights). In the ``CoxPHFitter.fit`` method, an kwarg is present for specifying which column in the dataframe should be used as weights, ex: ``CoxPHFitter(df, 'T', 'E', weights_col='weights')``.
@@ -320,7 +320,7 @@ When using sampling weights, it's correct to also change the standard error calc
 
 See more examples in _`Adding weights to observations in a Cox model`. 
 
-Clusters & Correlations
+Clusters & correlations
 ##########################
 
 Another property your dataset may have is groups of related subjects. This could be caused by:
@@ -355,7 +355,7 @@ Residuals
 
 After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modelling questions. See `Assessing Cox model fit using residuals`_.
 
-Aalen's Additive model
+Aalen's additive model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: This implementation is still experimental.
@@ -470,7 +470,6 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
     aaf.cumulative_hazards_.head()
 
 
-.. raw:: html
 .. table::
 
     +--------+-----------------------------+-------------------------+---------------------------+----------------------------+-----------------------+-------------------+------------------+---------------------------+--------------------------+----------+
@@ -535,7 +534,7 @@ Prime Minister Stephen Harper.
 
 
 
-Cox's Time Varying Proportional Hazard model
+Cox's time varying proportional hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: This implementation is still experimental.
@@ -551,101 +550,39 @@ Note the time-varying :math:`x_i(t)` to denote that covariates can change over t
 Dataset creation for time-varying regression
 #############################################
 
-Lifelines requires that the dataset be in what is called the *long* format. This looks like one row per state change, including an ID, the left (exclusive) time point, and right (inclusive) time point. For example, the following dataset tracks three unique subjects.
+*lifelines* requires that the dataset be in what is called the *long* format. This looks like one row per state change, including an ID, the left (exclusive) time point, and right (inclusive) time point. For example, the following dataset tracks three unique subjects.
 
-.. raw:: html
+.. table::
 
-    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
-      <table border="1" class="dataframe">
-        <thead>
-          <tr style="text-align: right;">
-            <th style="padding:8px;">id</th>
-            <th style="padding:8px;">start</th>
-            <th style="padding:8px;">stop</th>
-            <th style="padding:8px;">group</th>
-            <th style="padding:8px;">z</th>
-            <th style="padding:8px;">event</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">8</td>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">False</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">2</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">5</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">False</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">2</td>
-            <td style="padding: 8px;">5</td>
-            <td style="padding: 8px;">8</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">True</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">3</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">3</td>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">False</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">3</td>
-            <td style="padding: 8px;">3</td>
-            <td style="padding: 8px;">12</td>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">True</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>5 rows × 6 columns</p>
-    </div>
+    +--+-----+----+-----+-+-----+
+    |id|start|stop|group|z|event|
+    +==+=====+====+=====+=+=====+
+    | 1|    0|   8|    1|0|False|
+    +--+-----+----+-----+-+-----+
+    | 2|    0|   5|    0|0|False|
+    +--+-----+----+-----+-+-----+
+    | 2|    5|   8|    0|1|True |
+    +--+-----+----+-----+-+-----+
+    | 3|    0|   3|    1|0|False|
+    +--+-----+----+-----+-+-----+
+    | 3|    3|  12|    1|1|True |
+    +--+-----+----+-----+-+-----+
+
 
 In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. For example, subject ID 2 had variable ``z=0`` up to and including the end of time period 5 (we can think that measurements happen at end of the time period), after which it was set to 1. Since ``event`` is 1 in that row, we conclude that the subject died at time 8,
 
 This desired dataset can be built up from smaller datasets. To do this we can use some helper functions provided in *lifelines*. Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations alive, and a censorsed flag, and possibly static covariates. Ex:
 
-.. raw:: html
+.. table::
 
-    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
-      <table border="1" class="dataframe">
-        <thead>
-          <tr style="text-align: right;">
-            <th style="padding:8px;">id</th>
-            <th style="padding:8px;">duration</th>
-            <th style="padding:8px;">event</th>
-            <th style="padding:8px;">var1</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">10</td>
-            <td style="padding: 8px;">True</td>
-            <td style="padding: 8px;">0.1</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">2</td>
-            <td style="padding: 8px;">12</td>
-            <td style="padding: 8px;">False</td>
-            <td style="padding: 8px;">0.5</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>2 rows × 4 columns</p>
-    </div>
+    +--+--------+-----+----+
+    |id|duration|event|var1|
+    +==+========+=====+====+
+    | 1|      10|True | 0.1|
+    +--+--------+-----+----+
+    | 2|      12|False| 0.5|
+    +--+--------+-----+----+
+
 
 We will perform a light transform to this dataset to modify it into the "long" format.
 
@@ -658,81 +595,34 @@ We will perform a light transform to this dataset to modify it into the "long" f
 The new dataset looks like:
 
 
-.. raw:: html
+.. table::
 
-    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
-      <table border="1" class="dataframe">
-        <thead>
-          <tr style="text-align: right;">
-            <th style="padding:8px;">id</th>
-            <th style="padding:8px;">start</th>
-            <th style="padding:8px;">stop</th>
-            <th style="padding:8px;">var1</th>
-            <th style="padding:8px;">event</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">10</td>
-            <td style="padding: 8px;">0.1</td>
-            <td style="padding: 8px;">True</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">2</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">12</td>
-            <td style="padding: 8px;">0.5</td>
-            <td style="padding: 8px;">False</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>2 rows × 5 columns</p>
-    </div>
-
+    +--+-----+----+----+-----+
+    |id|start|stop|var1|event|
+    +==+=====+====+====+=====+
+    | 1|    0|  10| 0.1|True |
+    +--+-----+----+----+-----+
+    | 2|    0|  12| 0.5|False|
+    +--+-----+----+----+-----+
 
 
 You'll also have secondary dataset that references future measurements. This could come in two "types". The first is when you have a variable that changes over time (ex: administering varying medication over time, or taking a tempature over time). The second types is an event-based dataset: an event happens at some time in the future (ex: an organ transplant occurs, or an intervention). We will address this second type later. The first type of dataset may look something like:
 
 Example:
 
-.. raw:: html
+.. table::
 
-    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
-      <table border="1" class="dataframe">
-        <thead>
-          <tr style="text-align: right;">
-            <th style="padding:8px;">id</th>
-            <th style="padding:8px;">time</th>
-            <th style="padding:8px;">var2</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">1.4</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">4</td>
-            <td style="padding: 8px;">1.2</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">8</td>
-            <td style="padding: 8px;">1.5</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">2</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">1.6</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>4 rows × 3 columns</p>
-    </div>
+    +--+----+----+
+    |id|time|var2|
+    +==+====+====+
+    | 1|   0| 1.4|
+    +--+----+----+
+    | 1|   4| 1.2|
+    +--+----+----+
+    | 1|   8| 1.5|
+    +--+----+----+
+    | 2|   0| 1.6|
+    +--+----+----+
 
 where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at the end of time 4 and at the end of time 8. We can use ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
 
@@ -744,57 +634,19 @@ where ``time`` is the duration from the entry event. Here we see subject 1 had a
       df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="event")
 
 
-.. raw:: html
+.. table::
 
-    <div style="max-height:1000px;max-width:1500px;overflow:auto;">
-      <table border="1" class="dataframe">
-        <thead>
-          <tr style="text-align: right;">
-            <th style="padding: 8px;">id</th>
-            <th style="padding: 8px;">start</th>
-            <th style="padding: 8px;">stop</th>
-            <th style="padding: 8px;">var1</th>
-            <th style="padding: 8px;">var2</th>
-            <th style="padding: 8px;">event</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">4</td>
-            <td style="padding: 8px;">0.1</td>
-            <td style="padding: 8px;">1.4</td>
-            <td style="padding: 8px;">False</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">4</td>
-            <td style="padding: 8px;">8</td>
-            <td style="padding: 8px;">0.1</td>
-            <td style="padding: 8px;">1.2</td>
-            <td style="padding: 8px;">False</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">1</td>
-            <td style="padding: 8px;">8</td>
-            <td style="padding: 8px;">10</td>
-            <td style="padding: 8px;">0.1</td>
-            <td style="padding: 8px;">1.5</td>
-            <td style="padding: 8px;">True</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px;">2</td>
-            <td style="padding: 8px;">0</td>
-            <td style="padding: 8px;">12</td>
-            <td style="padding: 8px;">0.5</td>
-            <td style="padding: 8px;">1.6</td>
-            <td style="padding: 8px;">False</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>4 rows × 6 columns</p>
-    </div>
+    +--+-----+----+----+----+-----+
+    |id|start|stop|var1|var2|event|
+    +==+=====+====+====+====+=====+
+    | 1|    0|   4| 0.1| 1.4|False|
+    +--+-----+----+----+----+-----+
+    | 1|    4|   8| 0.1| 1.2|False|
+    +--+-----+----+----+----+-----+
+    | 1|    8|  10| 0.1| 1.5|True |
+    +--+-----+----+----+----+-----+
+    | 2|    0|  12| 0.5| 1.6|False|
+    +--+-----+----+----+----+-----+
 
 From the above output, we can see that subject 1 changed state twice over the observation period, finally expiring at the end of time 10. Subject 2 was a censored case, and we lost track of them after time 12.
 
@@ -869,7 +721,7 @@ Fitting the model
 
 Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. The method is similar to ``CoxPHFitter``, expect we need to tell the ``fit`` about the additional time columns.
 
-Fitting the Cox model to the data involves using gradient descent. Lifelines takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
+Fitting the Cox model to the data involves using gradient descent. *lifelines* takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
 
 
 .. code:: python
@@ -889,7 +741,7 @@ Unlike the other regression models, prediction in a time-varying setting is not 
 
 
 
-Model Selection in Survival Regression
+Model selection in survival regression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Model selection based on residuals
@@ -901,7 +753,7 @@ The sections `Testing the Proportional Hazard Assumptions`_ and `Assessing Cox m
 Model selection based on predictive power
 ################################################
 
-If censorship is present, it's not appropriate to use a loss function like mean-squared-error or
+If censoring is present, it's not appropriate to use a loss function like mean-squared-error or
 mean-absolute-loss. Instead, one measure is the concordance-index, also known as the c-index. This measure
 evaluates the accuracy of the ordering of predicted time. It is infact a generalization
 of AUC, another common loss function, and is interpreted similarly:
@@ -910,7 +762,7 @@ of AUC, another common loss function, and is interpreted similarly:
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-A fitted model's concordance-index is present in the ``print_summary()``, but also available under the ``score_`` property. Generally, the measure is implemented in *lifelines* under ``lifelines.utils.concordance_index`` and accepts the actual times (along with any censorships) and the predicted times.
+A fitted model's concordance-index is present in the ``print_summary()``, but also available under the ``score_`` property. Generally, the measure is implemented in *lifelines* under ``lifelines.utils.concordance_index`` and accepts the actual times (along with any censorings) and the predicted times.
 
 .. code:: python
 
@@ -933,10 +785,10 @@ A fitted model's concordance-index is present in the ``print_summary()``, but al
     print(concordance_index(rossi['week'], -cph.predict_partial_hazard(rossi).values, rossi['arrest']))
 
 
-However, there are other, arguably better, methods to measure the fit of a model. Included in `print_summary` is the log-likelihood, which can be used in an `AIC calculation <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, and the `log-likelihood ratio statistic <https://en.wikipedia.org/wiki/Likelihood-ratio_test>`_. Generally, I personally loved this article by Frank Harrell, `"Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements" <http://www.fharrell.com/post/addvalue/>`_.
+However, there are other, arguably better, methods to measure the fit of a model. Included in ``print_summary`` is the log-likelihood, which can be used in an `AIC calculation <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, and the `log-likelihood ratio statistic <https://en.wikipedia.org/wiki/Likelihood-ratio_test>`_. Generally, I personally loved this article by Frank Harrell, `"Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements" <http://www.fharrell.com/post/addvalue/>`_.
 
 
-Lifelines has an implementation of k-fold cross validation under ``lifelines.utils.k_fold_cross_validation``. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus `k` (the number of folds to perform, default 5). On each fold, it splits the data
+*lifelines* has an implementation of k-fold cross validation under ``lifelines.utils.k_fold_cross_validation``. This function accepts an instance of a regression fitter (either ``CoxPHFitter`` of ``AalenAdditiveFitter``), a dataset, plus ``k`` (the number of folds to perform, default 5). On each fold, it splits the data
 into a training set and a testing set fits itself on the training set and evaluates itself on the testing set (using the concordance measure).
 
 .. code:: python
