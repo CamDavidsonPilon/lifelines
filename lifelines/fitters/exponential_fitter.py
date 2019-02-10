@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import numpy as np
-from lifelines.fitters import ParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametericUnivariateFitter
 
 
-class ExponentialFitter(ParametericUnivariateFitter):
+class ExponentialFitter(KnownModelParametericUnivariateFitter):
     r"""
     This class implements an Exponential model for univariate data. The model has parameterized
     form:
@@ -36,7 +36,8 @@ class ExponentialFitter(ParametericUnivariateFitter):
     def median_(self):
         return 1.0 / self.lambda_ * (np.log(2))
 
-    def _fit_model(self, T, E, show_progress=False):
+    def _fit_model(self, T, E, entry, show_progress=False):
+        T = T - entry
         lambda_ = E.sum() / T.sum()
         lambda_variance_ = lambda_ / T.sum()
         log_likelihood = np.log(lambda_) * E.sum() - lambda_ * T.sum()

@@ -222,7 +222,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     """
 
-    _MIN_PARAMETER_VALUE = 0.000001
+    _KNOWN_MODEL = False
+    _MIN_PARAMETER_VALUE = 1e-09
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
@@ -232,49 +233,54 @@ class ParametericUnivariateFitter(UnivariateFitter):
             # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
             self._hazard = egrad(self._cumulative_hazard, argnum=1)
         if not hasattr(self, "_bounds"):
-            self._bounds = [(self._MIN_PARAMETER_VALUE, None)] * len(self._fitted_parameter_names)
+            self._bounds = [(0, None)] * len(self._fitted_parameter_names)
+        self._bounds = list(self._buffer_bounds(self._bounds))
+
         if not hasattr(self, "_initial_values"):
             self._initial_values = np.array(list(self._initial_values_from_bounds()))
 
         if "alpha" in self._fitted_parameter_names:
             raise NameError("'alpha' in _fitted_parameter_names is a lifelines reserved word. Try 'alpha_' instead.")
 
-    def _check_cumulative_hazard_is_monotone_and_positive(self, durations):
+        if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
+            raise ValueError(
+                "_bounds must be the same shape as _fitted_parameters_names must be the same shape as _initial_values"
+            )
+
+    def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
         class_name = self.__class__.__name__
 
-        cumulative_hazard = self._cumulative_hazard(self._initial_values, durations)
+        cumulative_hazard = self._cumulative_hazard(values, durations)
         if not np.all(cumulative_hazard > 0):
             warnings.warn(
                 dedent(
                     """\
                 Cumulative hazard is not strictly positive. For example, try:
                 
-                >>> test_times = np.linspace(0.01, 100, 15)
                 >>> fitter = {0}()
-                >>> fitter._cumulative_hazard(fitter._initial_values, test_times)
+                >>> fitter._cumulative_hazard(np.{1}, np.sort(durations))
 
                 This may harm convergence, or return nonsensical results.
             """.format(
-                        class_name
+                        class_name, values.__repr__()
                     )
                 ),
                 StatisticalWarning,
             )
 
-        derivative_of_cumulative_hazard = self._hazard(self._initial_values, durations)
+        derivative_of_cumulative_hazard = self._hazard(values, durations)
         if not np.all(derivative_of_cumulative_hazard >= 0):
             warnings.warn(
                 dedent(
                     """\
                 Cumulative hazard is not strictly non-decreasing. For example, try:
                 
-                >>> test_times = np.linspace(0.01, 100, 15)
                 >>> fitter = {0}()
-                >>> fitter._hazard(fitter._initial_values, test_times)
+                >>> fitter._hazard({1}, np.sort(durations))
 
                 This may harm convergence, or return nonsensical results.
             """.format(
-                        class_name
+                        class_name, values.__repr__()
                     )
                 ),
                 StatisticalWarning,
@@ -291,18 +297,33 @@ class ParametericUnivariateFitter(UnivariateFitter):
             else:
                 yield (ub - lb) / 2
 
+    def _buffer_bounds(self, bounds):
+        for (lb, ub) in bounds:
+            if lb is None and ub is None:
+                yield (None, None)
+            elif lb is None:
+                yield (None, self._MIN_PARAMETER_VALUE)
+            elif ub is None:
+                yield (self._MIN_PARAMETER_VALUE, None)
+            else:
+                yield (lb + self._MIN_PARAMETER_VALUE, ub - self._MIN_PARAMETER_VALUE)
+
     def _cumulative_hazard(self, params, times):
         raise NotImplementedError
 
     def _survival_function(self, params, times):
         return anp.exp(-self._cumulative_hazard(params, times))
 
-    def _negative_log_likelihood(self, params, T, E):
+    def _negative_log_likelihood(self, params, T, E, entry):
         n = T.shape[0]
         hz = self._hazard(params, T[E])
         hz = anp.clip(hz, 1e-18, np.inf)
 
-        ll = (anp.log(hz)).sum() - self._cumulative_hazard(params, T).sum()
+        ll = (
+            (anp.log(hz)).sum()
+            - self._cumulative_hazard(params, T).sum()
+            + self._cumulative_hazard(params, entry).sum()
+        )
         return -ll / n
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
@@ -315,7 +336,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         )
 
         gradient_at_times = np.vstack(
-            [gradient_of_cum_hazard_at_mle(basis)[1] for basis in np.eye(len(self._fitted_parameters_))]
+            [gradient_of_cum_hazard_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_))]
         )
 
         std_cumulative_hazard = np.sqrt(
@@ -325,13 +346,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
-
         df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
         df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
         return df
 
-    def _fit_model(self, T, E, show_progress=True):
+    def _fit_model(self, T, E, entry, show_progress=True):
 
+        non_zero_entries = entry[entry > 0]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
@@ -340,14 +361,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 self._initial_values,
                 jac=True,
                 method="L-BFGS-B",
-                args=(T, E),
+                args=(T, E, non_zero_entries),
                 bounds=self._bounds,
                 options={"disp": show_progress},
             )
 
             if results.success:
                 # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E)
+                hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, non_zero_entries)
                 return results.x, -results.fun, hessian_ * T.shape[0]
             print(results)
             raise ConvergenceError(
@@ -449,7 +470,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
 
     def fit(
-        self, durations, event_observed=None, timeline=None, label=None, alpha=None, ci_labels=None, show_progress=False
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -471,6 +500,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
               as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
         show_progress: boolean, optional
             since this is an iterative fitting algorithm, switching this to True will display some iteration details.
+        entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
+             useful for left-truncated (not left-censored) observations. If None, all members of the population
+             entered study when they were "born": time zero.
 
         Returns
         -------
@@ -491,11 +523,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
             )
 
-        self._check_cumulative_hazard_is_monotone_and_positive(self.durations)
+        if not self._KNOWN_MODEL:
+            self._check_cumulative_hazard_is_monotone_and_positive(self.durations, self._initial_values)
 
         self.event_observed = (
             np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
         )
+
+        self.entry = np.asarray(entry) if entry is not None else np.zeros_like(self.durations)
 
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline))
@@ -507,8 +542,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
-            self.durations, self.event_observed.astype(bool), show_progress=show_progress
+            self.durations, self.event_observed.astype(bool), self.entry, show_progress=show_progress
         )
+
+        if not self._KNOWN_MODEL:
+            self._check_cumulative_hazard_is_monotone_and_positive(self.durations, self._fitted_parameters_)
 
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
@@ -561,3 +599,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
     @_must_call_fit_first
     def median_(self):
         return median_survival_times(self.survival_function_)
+
+
+class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
+
+    _KNOWN_MODEL = True

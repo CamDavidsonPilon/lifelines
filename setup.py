@@ -16,7 +16,7 @@ with open("README.md") as f:
 setup(
     name="lifelines",
     version=__version__,
-    author="Cameron Davidson-Pilon, Jonas Kalderstam",
+    author="Cameron Davidson-Pilon",
     author_email="cam.davidson.pilon@gmail.com",
     description="Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression",
     license="MIT",

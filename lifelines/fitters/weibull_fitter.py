@@ -2,10 +2,10 @@
 from __future__ import print_function, division
 import autograd.numpy as np
 
-from lifelines.fitters import ParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametericUnivariateFitter
 
 
-class WeibullFitter(ParametericUnivariateFitter):
+class WeibullFitter(KnownModelParametericUnivariateFitter):
 
     r"""
     This class implements a Weibull model for univariate data. The model has parameterized
