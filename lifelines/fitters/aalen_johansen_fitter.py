@@ -30,16 +30,16 @@ class AalenJohansenFitter(UnivariateFitter):
         self._seed = seed  # Seed is for the jittering process
 
     def fit(
-        self,
-        durations,
-        event_observed,
-        event_of_interest,
-        timeline=None,
-        entry=None,
-        label="AJ_estimate",
-        alpha=None,
-        ci_labels=None,
-        weights=None,
+            self,
+            durations,
+            event_observed,
+            event_of_interest,
+            timeline=None,
+            entry=None,
+            label="AJ_estimate",
+            alpha=None,
+            ci_labels=None,
+            weights=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters
@@ -184,17 +184,16 @@ class AalenJohansenFitter(UnivariateFitter):
         for _, r in df.iterrows():
             sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
-            sf["part1"] = ((F_t - sf["Ft"]) ** 2) * (
-                sf["observed"] / (sf["at_risk"] * (sf["at_risk"] - sf["observed"]))
-            )
-            sf["part2"] = (
-                ((sf["lagS"]) ** 2)
-                * sf[self.label_cmprisk]
-                * ((sf["at_risk"] - sf[self.label_cmprisk]))
-                / (sf["at_risk"] ** 3)
-            )
-            sf["part3"] = (F_t - sf["Ft"]) * sf["lagS"] * (sf[self.label_cmprisk] / (sf["at_risk"] ** 2))
-            variance = (np.sum(sf["part1"])) + (np.sum(sf["part2"])) - 2 * (np.sum(sf["part3"]))
+            variance = np.sum((F_t - sf["Ft"]) ** 2 *
+                              sf["observed"]
+                              / sf["at_risk"]
+                              / (sf["at_risk"] - sf["observed"])
+                              ) + np.sum(sf["lagS"] ** 2 / sf['at_risk']
+                                         * sf[self.label_cmprisk] / sf['at_risk']
+                                         * (sf["at_risk"] - sf[self.label_cmprisk]) / sf["at_risk"]
+                                         ) - 2 * np.sum((F_t - sf["Ft"]) / sf['at_risk'] *
+                                                        sf["lagS"] *
+                                                        sf[self.label_cmprisk] / sf["at_risk"])
             all_vars.append(variance)
         df["variance"] = all_vars
 
