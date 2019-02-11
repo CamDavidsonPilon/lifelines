@@ -172,6 +172,7 @@ class TestBaseFitter:
 
 
 class TestParametricUnivariateFitters:
+
     def test_confidence_interval_is_expected(self):
 
         from autograd.scipy.special import logit
@@ -211,6 +212,26 @@ class TestParametricUnivariateFitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             f.summary
             f.print_summary()
+
+    def test_parametric_univarite_fitters_has_plotting_methods(
+        self, positive_sample_lifetimes, known_parametric_univariate_fitters
+    ):
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes[0])
+            assert f.plot() is not None
+            assert f.plot_cumulative_hazard() is not None
+            assert f.plot_survival_function() is not None
+            assert f.plot_hazard() is not None
+
+    def test_parametric_univarite_fitters_has_confidence_intervals(
+        self, positive_sample_lifetimes, known_parametric_univariate_fitters
+    ):
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes[0])
+            assert f.confidence_interval_ is not None
+            assert f.confidence_interval_survival_function_ is not None
+            assert f.confidence_interval_hazard_ is not None
+
 
     def test_warnings_for_problematic_cumulative_hazards(self):
         class NegativeFitter(ParametericUnivariateFitter):

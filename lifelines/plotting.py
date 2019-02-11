@@ -256,6 +256,11 @@ def set_kwargs_drawstyle(kwargs):
     kwargs["drawstyle"] = kwargs.get("drawstyle", "steps-post")
 
 
+def set_kwargs_label(kwargs, cls):
+    kwargs["label"] = kwargs.get("label", cls._label)
+
+
+
 def create_dataframe_slicer(iloc, loc):
     user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
     user_submitted_slice = slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
@@ -304,9 +309,10 @@ def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     return ax
 
 
-def plot_estimate(
+def _plot_estimate(
     cls,
     estimate=None,
+    confidence_intervals=None,
     loc=None,
     iloc=None,
     show_censors=False,
@@ -328,10 +334,6 @@ def plot_estimate(
 
     Parameters
     -----------
-    cls:
-
-    estimate:
-        default: None
     show_censors: bool
         place markers at censorship events. Default: False
     censor_styles: bool
@@ -366,7 +368,7 @@ def plot_estimate(
         a pyplot axis object
     """
     plot_estimate_config = PlotEstimateConfig(
-        cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs
+        cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs
     )
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc)
@@ -378,7 +380,8 @@ def plot_estimate(
         v = cls.predict(times)
         plot_estimate_config.ax.plot(times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
 
-    dataframe_slicer(plot_estimate_config.estimate_).plot(**plot_estimate_config.kwargs)
+    dataframe_slicer(plot_estimate_config.estimate_).rename(columns=lambda _: plot_estimate_config.kwargs.pop('label'))\
+                                                    .plot(**plot_estimate_config.kwargs)
 
     # plot confidence intervals
     if ci_show:
@@ -425,15 +428,15 @@ def plot_estimate(
 
 
 class PlotEstimateConfig:
-    def __init__(self, cls, estimate, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs):
+    def __init__(self, cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs):
 
         self.censor_styles = coalesce(censor_styles, {})
 
         set_kwargs_ax(kwargs)
         set_kwargs_color(kwargs)
         set_kwargs_drawstyle(kwargs)
+        set_kwargs_label(kwargs, cls)
 
-        self.estimate = coalesce(estimate, cls._estimate_name)
         self.loc = loc
         self.iloc = iloc
         self.show_censors = show_censors
@@ -444,17 +447,9 @@ class PlotEstimateConfig:
 
         if (self.loc is not None) and (self.iloc is not None):
             raise ValueError("Cannot set both loc and iloc in call to .plot().")
-
-        if self.estimate == "hazard_":
-            if bandwidth is None:
-                raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard.")
-            self.estimate_ = cls.smoothed_hazard_(bandwidth)
-            self.confidence_interval_ = cls.smoothed_hazard_confidence_intervals_(
-                bandwidth, hazard_=self.estimate_.values[:, 0]
-            )
         else:
-            self.estimate_ = getattr(cls, self.estimate)
-            self.confidence_interval_ = getattr(cls, "confidence_interval_")
+            self.estimate_ = estimate
+            self.confidence_interval_ = confidence_intervals
 
 
 def fill_between_steps(x, y1, y2=0, h_align="left", ax=None, **kwargs):

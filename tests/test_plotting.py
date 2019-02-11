@@ -6,7 +6,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from lifelines import NelsonAalenFitter, KaplanMeierFitter, CoxPHFitter, CoxTimeVaryingFitter, AalenAdditiveFitter
+from lifelines import NelsonAalenFitter, KaplanMeierFitter, CoxPHFitter, CoxTimeVaryingFitter, AalenAdditiveFitter, WeibullFitter
 
 
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
@@ -222,6 +222,28 @@ class TestPlotting:
         naf.fit(data1)
         naf.plot_hazard(bandwidth=5.0, iloc=slice(0, 1700))
         self.plt.title("test_naf_plot_cumulative_hazard_bandwith_1")
+        self.plt.show(block=block)
+        return
+
+    def test_weibull_plotting(self, block):
+        T = np.random.exponential(5, size=(2000, 1)) ** 2
+        wf = WeibullFitter().fit(T)
+        wf.plot_hazard()
+        self.plt.title("test_weibull_plotting:hazard")
+        self.plt.show(block=block)
+
+        wf.plot_cumulative_hazard()
+        self.plt.title("test_weibull_plotting:cumulative_hazard")
+        self.plt.show(block=block)
+        return
+
+    def test_label_can_be_changed_on_univariate_fitters(self, block):
+        T = np.random.exponential(5, size=(2000, 1)) ** 2
+        wf = WeibullFitter().fit(T)
+        ax = wf.plot_hazard(label="abc")
+
+        wf.plot_cumulative_hazard(ax=ax, label="123")
+        self.plt.title("test_label_can_be_changed_on_univariate_fitters")
         self.plt.show(block=block)
         return
 
