@@ -197,16 +197,25 @@ class AalenJohansenFitter(UnivariateFitter):
         for _, r in df.iterrows():
             sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
-            variance = np.sum((F_t - sf["Ft"]) ** 2 *
-                              sf["observed"]
-                              / sf["at_risk"]
-                              / (sf["at_risk"] - sf["observed"])
-                              ) + np.sum(sf["lagS"] ** 2 / sf['at_risk']
-                                         * sf[self.label_cmprisk] / sf['at_risk']
-                                         * (sf["at_risk"] - sf[self.label_cmprisk]) / sf["at_risk"]
-                                         ) - 2 * np.sum((F_t - sf["Ft"]) / sf['at_risk'] *
-                                                        sf["lagS"] *
-                                                        sf[self.label_cmprisk] / sf["at_risk"])
+            first_term = np.sum((F_t - sf["Ft"]) ** 2 *
+                                sf["observed"] /
+                                sf["at_risk"] /
+                                (sf["at_risk"] - sf["observed"])
+                                )
+            second_term = np.sum(sf["lagS"] ** 2 /
+                                 sf['at_risk'] *
+                                 sf[self.label_cmprisk] /
+                                 sf['at_risk'] *
+                                 (sf["at_risk"] - sf[self.label_cmprisk]) /
+                                 sf["at_risk"]
+                                 )
+            third_term = np.sum((F_t - sf["Ft"]) /
+                                sf['at_risk'] *
+                                sf["lagS"] *
+                                sf[self.label_cmprisk] /
+                                sf["at_risk"]
+                                )
+            variance = first_term + second_term - 2 * third_term
             all_vars.append(variance)
         df["variance"] = all_vars
 
