@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
+from lifelines.plotting import _plot_estimate
 from lifelines.utils import (
     _preprocess_inputs,
     _additive_estimate,
@@ -130,13 +131,16 @@ class NelsonAalenFitter(UnivariateFitter):
 
         return self
 
-    def plot_hazard(self, *args, **kwargs):
+    def plot_hazard(self, **kwargs):
         if 'bandwidth' not in kwargs:
             raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard, e.g. `plot_hazard(bandwidth=1.0)`")
         bandwidth = kwargs.pop('bandwidth')
         estimate = self.smoothed_hazard_(bandwidth)
         confidence_intervals = self.smoothed_hazard_confidence_intervals_(bandwidth, estimate.values[:, 0])
-        return self.plot(estimate, confidence_intervals, **kwargs)
+        return _plot_estimate(estimate, confidence_intervals, **kwargs)
+
+    def plot_cumulative_hazard(self, **kwargs):
+        return self.plot(**kwargs)
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         alpha2 = inv_normal_cdf(1 - (1 - alpha) / 2)

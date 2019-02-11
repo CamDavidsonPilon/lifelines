@@ -243,7 +243,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
         self._estimate_name = "cumulative_hazard_"
-        self.plot_cumulative_hazard = self.plot
         if not hasattr(self, "_hazard"):
             # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
             self._hazard = egrad(self._cumulative_hazard, argnum=1)

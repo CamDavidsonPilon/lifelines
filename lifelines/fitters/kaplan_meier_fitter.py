@@ -137,6 +137,9 @@ class KaplanMeierFitter(UnivariateFitter):
     def plot_loglogs(self, *args, **kwargs):
         return plot_loglogs(self, *args, **kwargs)
 
+    def plot_survival_function(self, **kwargs):
+        return self.plot(**kwargs)
+
     def survival_function_at_times(self, times):
         """
         Return a Pandas series of the predicted survival value at specific times
