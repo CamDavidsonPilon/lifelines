@@ -15,6 +15,7 @@ from lifelines import (
     WeibullFitter,
 )
 
+from tests.test_estimation import known_parametric_univariate_fitters
 
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes
@@ -46,6 +47,15 @@ class TestPlotting:
         from matplotlib import pyplot as plt
 
         self.plt = plt
+
+    def test_parametric_univarite_fitters_has_plotting_methods(self, known_parametric_univariate_fitters):
+        positive_sample_lifetimes = np.arange(100)
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes[0])
+            assert f.plot() is not None
+            assert f.plot_cumulative_hazard() is not None
+            assert f.plot_survival_function() is not None
+            assert f.plot_hazard() is not None
 
     def test_negative_times_still_plots(self, block, kmf):
         n = 40

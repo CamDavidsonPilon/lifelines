@@ -212,16 +212,6 @@ class TestParametricUnivariateFitters:
             f.summary
             f.print_summary()
 
-    def test_parametric_univarite_fitters_has_plotting_methods(
-        self, positive_sample_lifetimes, known_parametric_univariate_fitters
-    ):
-        for fitter in known_parametric_univariate_fitters:
-            f = fitter().fit(positive_sample_lifetimes[0])
-            assert f.plot() is not None
-            assert f.plot_cumulative_hazard() is not None
-            assert f.plot_survival_function() is not None
-            assert f.plot_hazard() is not None
-
     def test_parametric_univarite_fitters_has_confidence_intervals(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
     ):
