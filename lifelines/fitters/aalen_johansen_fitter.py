@@ -14,32 +14,51 @@ class AalenJohansenFitter(UnivariateFitter):
     """Class for fitting the Aalen-Johansen estimate for the cumulative incidence function in a competing risks framework.
     Treating competing risks as censoring can result in over-estimated cumulative density functions. Using the Kaplan
     Meier estimator with competing risks as censored is akin to estimating the cumulative density if all competing risks
-    had been prevented. If you are interested in learning more, I (Paul Zivich) recommend the following open-access
+    had been prevented. If you are interested in learning more, we recommend the following open-access
     paper; Edwards JK, Hester LL, Gokhale M, Lesko CR. Methodologic Issues When Estimating Risks in
     Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
 
-    AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None)
-
     Aalen-Johansen cannot deal with tied times. We can get around this by randomy jittering the event times
     slightly. This will be done automatically and generates a warning.
+
+    AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None, calculate_variance=True)
+
+    Parameters
+    ----------
+    alpha: float, option (default=0.95)
+        The alpha value associated with the confidence intervals.
+
+    jitter_level: float, option (default=0.00001)
+        If tied event times are detected, event times are randomly changed by this factor.
+
+    seed: int, option (default=None)
+        To produce replicate results with tied event times, the numpy.random.seed can be specified in the function.
+
+    calculate_variance: bool, option (default=True)
+        By default, AalenJohansenFitter calculates the variance and corresponding confidence intervals. Due to how the
+        variance is calculated, the variance must be calculated for each event time individually. This is
+        computationally intensive. For some procedures, like bootstrapping, the variance is not necessary. To reduce
+        computation time during these procedures, `calculate_variance` can be set to `False` to skip the variance
+        calculation.
     """
 
-    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.95):
+    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.95, calculate_variance=True):
         UnivariateFitter.__init__(self, alpha=alpha)
         self._jitter_level = jitter_level
         self._seed = seed  # Seed is for the jittering process
+        self._calc_var = calculate_variance  # Optionally skips calculating variance to save time on bootstraps
 
     def fit(
-        self,
-        durations,
-        event_observed,
-        event_of_interest,
-        timeline=None,
-        entry=None,
-        label="AJ_estimate",
-        alpha=None,
-        ci_labels=None,
-        weights=None,
+            self,
+            durations,
+            event_observed,
+            event_of_interest,
+            timeline=None,
+            entry=None,
+            label="AJ_estimate",
+            alpha=None,
+            ci_labels=None,
+            weights=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters
@@ -69,16 +88,9 @@ class AalenJohansenFitter(UnivariateFitter):
           self, with new properties like 'cumulative_incidence_'.
         """
         # Checking for tied event times
-        if np.sum(pd.Series(durations).duplicated()) > 0:
-            # Seeing if there is a large amount of ties in the data (>20%)
-            if np.sum(pd.Series(durations).duplicated()) / len(durations) > 0.2:
-                warnings.warn(
-                    """It looks like there are many tied events in your data set. The Aalen-Johansen
-                              estimator should only be used when there are no/few tied events""",
-                    Warning,
-                )
-                # I am unaware of a recommended cut-off, but 20% would be suggestive of issues
-            # Raise warning if duplicated times, then randomly jitter times
+        ties = self._check_for_duplicates(durations=durations, events=event_observed)
+
+        if ties:
             warnings.warn(
                 """Tied event times were detected. The Aalen-Johansen estimator cannot handle tied event times.
                 To resolve ties, data is randomly jittered.""",
@@ -129,9 +141,10 @@ class AalenJohansenFitter(UnivariateFitter):
         self.event_table = aj[
             ["removed", "observed", self.label_cmprisk, "censored", "entrance", "at_risk"]
         ]  # Event table
-        self.variance, self.confidence_interval_ = self._bounds(
-            aj["lagged_overall_survival"], alpha=alpha, ci_labels=ci_labels
-        )
+        if self._calc_var:
+            self.variance, self.confidence_interval_ = self._bounds(
+                aj["lagged_overall_survival"], alpha=alpha, ci_labels=ci_labels
+            )
         return self
 
     def _jitter(self, durations, event, jitter_level, seed=None):
@@ -152,7 +165,7 @@ class AalenJohansenFitter(UnivariateFitter):
         durations_jitter = event_time.align(durations)[0].fillna(durations)
 
         # Recursive call if event times are still tied after jitter
-        if np.sum(event_time.duplicated()) > 0:
+        if self._check_for_duplicates(durations=durations_jitter, events=event):
             return self._jitter(durations=durations_jitter, event=event, jitter_level=jitter_level, seed=seed)
         return durations_jitter
 
@@ -184,17 +197,25 @@ class AalenJohansenFitter(UnivariateFitter):
         for _, r in df.iterrows():
             sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
-            sf["part1"] = ((F_t - sf["Ft"]) ** 2) * (
-                sf["observed"] / (sf["at_risk"] * (sf["at_risk"] - sf["observed"]))
-            )
-            sf["part2"] = (
-                ((sf["lagS"]) ** 2)
-                * sf[self.label_cmprisk]
-                * ((sf["at_risk"] - sf[self.label_cmprisk]))
-                / (sf["at_risk"] ** 3)
-            )
-            sf["part3"] = (F_t - sf["Ft"]) * sf["lagS"] * (sf[self.label_cmprisk] / (sf["at_risk"] ** 2))
-            variance = (np.sum(sf["part1"])) + (np.sum(sf["part2"])) - 2 * (np.sum(sf["part3"]))
+            first_term = np.sum((F_t - sf["Ft"]) ** 2 *
+                                sf["observed"] /
+                                sf["at_risk"] /
+                                (sf["at_risk"] - sf["observed"])
+                                )
+            second_term = np.sum(sf["lagS"] ** 2 /
+                                 sf['at_risk'] *
+                                 sf[self.label_cmprisk] /
+                                 sf['at_risk'] *
+                                 (sf["at_risk"] - sf[self.label_cmprisk]) /
+                                 sf["at_risk"]
+                                 )
+            third_term = np.sum((F_t - sf["Ft"]) /
+                                sf['at_risk'] *
+                                sf["lagS"] *
+                                sf[self.label_cmprisk] /
+                                sf["at_risk"]
+                                )
+            variance = first_term + second_term - 2 * third_term
             all_vars.append(variance)
         df["variance"] = all_vars
 
@@ -205,3 +226,23 @@ class AalenJohansenFitter(UnivariateFitter):
         df[ci_labels[0]] = np.exp(-np.exp(df["F_transformed"] + zalpha * df["se_transformed"]))
         df[ci_labels[1]] = np.exp(-np.exp(df["F_transformed"] - zalpha * df["se_transformed"]))
         return df["variance"], df[ci_labels]
+
+    @staticmethod
+    def _check_for_duplicates(durations, events):
+        """Checks for duplicated event times in the data set. This is narrowed to detecting duplicated event times
+        where the events are of different types
+        """
+        # Setting up DataFrame to detect duplicates
+        df = pd.DataFrame()
+        df['t'] = durations
+        df['e'] = events
+
+        # Finding duplicated event times
+        dup_times = pd.Series(df['t'].loc[df['e'] != 0]).duplicated(keep=False)
+
+        # Finding duplicated events and event times
+        dup_events = df.loc[df['e'] != 0, ['t', 'e']].duplicated(keep=False)
+
+        # Detect duplicated times with different event types
+        ties = np.any(dup_times & (~dup_events))
+        return ties > 0
