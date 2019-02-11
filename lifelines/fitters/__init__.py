@@ -94,11 +94,10 @@ class UnivariateFitter(BaseFitter):
             self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
     @_must_call_fit_first
-    def plot(self, *args, **kwargs):
-        return _plot_estimate(self,
-                estimate=getattr(self, self._estimate_name),
-                confidence_intervals=self.confidence_interval_,
-                **kwargs)
+    def plot(self, **kwargs):
+        return _plot_estimate(
+            self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
+        )
 
     @_must_call_fit_first
     def subtract(self, other):
@@ -207,15 +206,15 @@ class UnivariateFitter(BaseFitter):
         )
 
     @_must_call_fit_first
-    def hazard_at_times(self, times):
+    def hazard_at_times(self, times, label=None):
         raise NotImplementedError
 
     @_must_call_fit_first
-    def survival_function_at_times(self, times):
+    def survival_function_at_times(self, times, label=None):
         raise NotImplementedError
 
     @_must_call_fit_first
-    def cumulative_hazard_at_times(self, times):
+    def cumulative_hazard_at_times(self, times, label=None):
         raise NotImplementedError
 
     @_must_call_fit_first
@@ -365,9 +364,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
 
         # pylint: disable=no-value-for-parameter
-        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(transform)(
-            self._fitted_parameters_, self.timeline
-        )
+        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(transform)(self._fitted_parameters_, self.timeline)
 
         gradient_at_times = np.vstack(
             [gradient_of_cum_hazard_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_))]
@@ -638,7 +635,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def median_(self):
         return median_survival_times(self.survival_function_)
 
-
     @property
     @_must_call_fit_first
     def confidence_interval_(self):
@@ -649,18 +645,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def confidence_interval_cumulative_hazard_(self):
         return self.confidence_interval_
 
-
     @property
     @_must_call_fit_first
     def confidence_interval_hazard_(self):
         return self._compute_confidence_bounds_of_transform(self._hazard, self.alpha, self._ci_labels)
 
-
     @property
     @_must_call_fit_first
     def confidence_interval_survival_function_(self):
         return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
-
 
     @_must_call_fit_first
     def plot_cumulative_hazard(self, **kwargs):
@@ -668,18 +661,18 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     @_must_call_fit_first
     def plot_survival_function(self, **kwargs):
-        return _plot_estimate(self,
-                estimate=getattr(self, 'survival_function_'),
-                confidence_intervals=self.confidence_interval_survival_function_,
-                **kwargs)
+        return _plot_estimate(
+            self,
+            estimate=getattr(self, "survival_function_"),
+            confidence_intervals=self.confidence_interval_survival_function_,
+            **kwargs
+        )
 
     @_must_call_fit_first
     def plot_hazard(self, **kwargs):
-        return _plot_estimate(self,
-                estimate=getattr(self, 'hazard_'),
-                confidence_intervals=self.confidence_interval_hazard_,
-                **kwargs)
-
+        return _plot_estimate(
+            self, estimate=getattr(self, "hazard_"), confidence_intervals=self.confidence_interval_hazard_, **kwargs
+        )
 
 
 class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):

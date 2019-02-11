@@ -49,16 +49,16 @@ class AalenJohansenFitter(UnivariateFitter):
         self._calc_var = calculate_variance  # Optionally skips calculating variance to save time on bootstraps
 
     def fit(
-            self,
-            durations,
-            event_observed,
-            event_of_interest,
-            timeline=None,
-            entry=None,
-            label="AJ_estimate",
-            alpha=None,
-            ci_labels=None,
-            weights=None,
+        self,
+        durations,
+        event_observed,
+        event_of_interest,
+        timeline=None,
+        entry=None,
+        label="AJ_estimate",
+        alpha=None,
+        ci_labels=None,
+        weights=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters
@@ -197,24 +197,18 @@ class AalenJohansenFitter(UnivariateFitter):
         for _, r in df.iterrows():
             sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
-            first_term = np.sum((F_t - sf["Ft"]) ** 2 *
-                                sf["observed"] /
-                                sf["at_risk"] /
-                                (sf["at_risk"] - sf["observed"])
-                                )
-            second_term = np.sum(sf["lagS"] ** 2 /
-                                 sf['at_risk'] *
-                                 sf[self.label_cmprisk] /
-                                 sf['at_risk'] *
-                                 (sf["at_risk"] - sf[self.label_cmprisk]) /
-                                 sf["at_risk"]
-                                 )
-            third_term = np.sum((F_t - sf["Ft"]) /
-                                sf['at_risk'] *
-                                sf["lagS"] *
-                                sf[self.label_cmprisk] /
-                                sf["at_risk"]
-                                )
+            first_term = np.sum(
+                (F_t - sf["Ft"]) ** 2 * sf["observed"] / sf["at_risk"] / (sf["at_risk"] - sf["observed"])
+            )
+            second_term = np.sum(
+                sf["lagS"] ** 2
+                / sf["at_risk"]
+                * sf[self.label_cmprisk]
+                / sf["at_risk"]
+                * (sf["at_risk"] - sf[self.label_cmprisk])
+                / sf["at_risk"]
+            )
+            third_term = np.sum((F_t - sf["Ft"]) / sf["at_risk"] * sf["lagS"] * sf[self.label_cmprisk] / sf["at_risk"])
             variance = first_term + second_term - 2 * third_term
             all_vars.append(variance)
         df["variance"] = all_vars
@@ -234,14 +228,14 @@ class AalenJohansenFitter(UnivariateFitter):
         """
         # Setting up DataFrame to detect duplicates
         df = pd.DataFrame()
-        df['t'] = durations
-        df['e'] = events
+        df["t"] = durations
+        df["e"] = events
 
         # Finding duplicated event times
-        dup_times = pd.Series(df['t'].loc[df['e'] != 0]).duplicated(keep=False)
+        dup_times = pd.Series(df["t"].loc[df["e"] != 0]).duplicated(keep=False)
 
         # Finding duplicated events and event times
-        dup_events = df.loc[df['e'] != 0, ['t', 'e']].duplicated(keep=False)
+        dup_events = df.loc[df["e"] != 0, ["t", "e"]].duplicated(keep=False)
 
         # Detect duplicated times with different event types
         ties = np.any(dup_times & (~dup_events))

@@ -260,7 +260,6 @@ def set_kwargs_label(kwargs, cls):
     kwargs["label"] = kwargs.get("label", cls._label)
 
 
-
 def create_dataframe_slicer(iloc, loc):
     user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
     user_submitted_slice = slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
@@ -323,7 +322,6 @@ def _plot_estimate(
     ci_show=True,
     at_risk_counts=False,
     invert_y_axis=False,
-    bandwidth=None,
     **kwargs
 ):
 
@@ -358,9 +356,6 @@ def _plot_estimate(
           will plot the first 10 time points.
     invert_y_axis: bool
         boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs.
-    bandwidth: float
-        specify the bandwidth of the kernel smoother for the
-               smoothed-hazard rate. Only used when called 'plot_hazard'.
 
     Returns
     -------
@@ -368,7 +363,7 @@ def _plot_estimate(
         a pyplot axis object
     """
     plot_estimate_config = PlotEstimateConfig(
-        cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs
+        cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, **kwargs
     )
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc)
@@ -380,8 +375,9 @@ def _plot_estimate(
         v = cls.predict(times)
         plot_estimate_config.ax.plot(times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
 
-    dataframe_slicer(plot_estimate_config.estimate_).rename(columns=lambda _: plot_estimate_config.kwargs.pop('label'))\
-                                                    .plot(**plot_estimate_config.kwargs)
+    dataframe_slicer(plot_estimate_config.estimate_).rename(
+        columns=lambda _: plot_estimate_config.kwargs.pop("label")
+    ).plot(**plot_estimate_config.kwargs)
 
     # plot confidence intervals
     if ci_show:
@@ -428,7 +424,7 @@ def _plot_estimate(
 
 
 class PlotEstimateConfig:
-    def __init__(self, cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, bandwidth, **kwargs):
+    def __init__(self, cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, **kwargs):
 
         self.censor_styles = coalesce(censor_styles, {})
 

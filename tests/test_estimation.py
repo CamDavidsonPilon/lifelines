@@ -172,7 +172,6 @@ class TestBaseFitter:
 
 
 class TestParametricUnivariateFitters:
-
     def test_confidence_interval_is_expected(self):
 
         from autograd.scipy.special import logit
@@ -231,7 +230,6 @@ class TestParametricUnivariateFitters:
             assert f.confidence_interval_ is not None
             assert f.confidence_interval_survival_function_ is not None
             assert f.confidence_interval_hazard_ is not None
-
 
     def test_warnings_for_problematic_cumulative_hazards(self):
         class NegativeFitter(ParametericUnivariateFitter):

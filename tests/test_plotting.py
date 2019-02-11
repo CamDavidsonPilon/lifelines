@@ -6,7 +6,14 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from lifelines import NelsonAalenFitter, KaplanMeierFitter, CoxPHFitter, CoxTimeVaryingFitter, AalenAdditiveFitter, WeibullFitter
+from lifelines import (
+    NelsonAalenFitter,
+    KaplanMeierFitter,
+    CoxPHFitter,
+    CoxTimeVaryingFitter,
+    AalenAdditiveFitter,
+    WeibullFitter,
+)
 
 
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates

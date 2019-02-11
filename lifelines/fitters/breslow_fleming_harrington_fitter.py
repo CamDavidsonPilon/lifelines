@@ -5,7 +5,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines import NelsonAalenFitter
-from lifelines.utils import _to_array
+from lifelines.utils import _to_array, coalesce
 
 
 class BreslowFlemingHarringtonFitter(UnivariateFitter):
@@ -94,7 +94,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         self.plot_survival_function = self.plot
         return self
 
-    def survival_function_at_times(self, times):
+    def survival_function_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted survival value at specific times
 
@@ -107,4 +107,5 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         pd.Series
 
         """
-        return pd.Series(self.predict(times), index=_to_array(times))
+        label = coalesce(label, self._label)
+        return pd.Series(self.predict(times), index=_to_array(times), name=label)
