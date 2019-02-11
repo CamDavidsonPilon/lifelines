@@ -15,6 +15,7 @@ from lifelines.utils import (
     median_survival_times,
     check_nans_or_infs,
     StatisticalWarning,
+    coalesce,
 )
 from lifelines.plotting import plot_loglogs
 
@@ -137,7 +138,10 @@ class KaplanMeierFitter(UnivariateFitter):
     def plot_loglogs(self, *args, **kwargs):
         return plot_loglogs(self, *args, **kwargs)
 
-    def survival_function_at_times(self, times):
+    def plot_survival_function(self, **kwargs):
+        return self.plot(**kwargs)
+
+    def survival_function_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted survival value at specific times
 
@@ -150,7 +154,8 @@ class KaplanMeierFitter(UnivariateFitter):
         pd.Series
 
         """
-        return pd.Series(self.predict(times), index=_to_array(times))
+        label = coalesce(label, self._label)
+        return pd.Series(self.predict(times), index=_to_array(times), name=label)
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.

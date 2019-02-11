@@ -20,7 +20,7 @@ import pandas as pd
 from numpy.linalg import inv, pinv
 
 
-from lifelines.plotting import plot_estimate
+from lifelines.plotting import _plot_estimate
 from lifelines.utils import (
     qth_survival_times,
     _to_array,
@@ -84,18 +84,20 @@ class UnivariateFitter(BaseFitter):
                 self._estimate_name, self.__class__.__name__
             )
             self.__class__.predict.__func__.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-            self.__class__.plot.__func__.__doc__ = plot_estimate.__doc__.format(
+            self.__class__.plot.__func__.__doc__ = _plot_estimate.__doc__.format(
                 self.__class__.__name__, self._estimate_name
             )
         elif PY3:
             self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
             self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
             self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-            self.__class__.plot.__doc__ = plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
+            self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
     @_must_call_fit_first
-    def plot(self, *args, **kwargs):
-        return plot_estimate(self, *args, **kwargs)
+    def plot(self, **kwargs):
+        return _plot_estimate(
+            self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
+        )
 
     @_must_call_fit_first
     def subtract(self, other):
@@ -204,16 +206,28 @@ class UnivariateFitter(BaseFitter):
         )
 
     @_must_call_fit_first
-    def hazard_at_times(self, times):
+    def hazard_at_times(self, times, label=None):
         raise NotImplementedError
 
     @_must_call_fit_first
-    def survival_function_at_times(self, times):
+    def survival_function_at_times(self, times, label=None):
         raise NotImplementedError
 
     @_must_call_fit_first
-    def cumulative_hazard_at_times(self, times):
+    def cumulative_hazard_at_times(self, times, label=None):
         raise NotImplementedError
+
+    @_must_call_fit_first
+    def plot_cumulative_hazard(self, **kwargs):
+        raise NotImplementedError()
+
+    @_must_call_fit_first
+    def plot_survival_function(self, **kwargs):
+        raise NotImplementedError()
+
+    @_must_call_fit_first
+    def plot_hazard(self, **kwargs):
+        raise NotImplementedError()
 
 
 class ParametericUnivariateFitter(UnivariateFitter):
@@ -228,7 +242,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
         self._estimate_name = "cumulative_hazard_"
-        self.plot_cumulative_hazard = self.plot
         if not hasattr(self, "_hazard"):
             # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
             self._hazard = egrad(self._cumulative_hazard, argnum=1)
@@ -302,9 +315,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
             if lb is None and ub is None:
                 yield (None, None)
             elif lb is None:
-                yield (None, self._MIN_PARAMETER_VALUE)
+                yield (None, ub - self._MIN_PARAMETER_VALUE)
             elif ub is None:
-                yield (self._MIN_PARAMETER_VALUE, None)
+                yield (lb + self._MIN_PARAMETER_VALUE, None)
             else:
                 yield (lb + self._MIN_PARAMETER_VALUE, ub - self._MIN_PARAMETER_VALUE)
 
@@ -327,13 +340,31 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return -ll / n
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
+        return self._compute_confidence_bounds_of_transform(self._cumulative_hazard, alpha, ci_labels)
+
+    def _compute_confidence_bounds_of_transform(self, transform, alpha, ci_labels):
+        """
+        This computes the confidence intervals of a transform of the parameters. Ex: take
+        the fitted parameters, a function/transform and the variance matrix and give me
+        back confidence intervals of the transform.
+
+        Parameters
+        -----------
+        transform: function
+            must a function of two parameters:
+                ``params``, an iterable that stores the parameters
+                ``times``, a numpy vector representing some timeline
+            the function must use autograd imports (scipy and numpy)
+        alpha: float
+            confidence level
+        ci_labels: tuple
+
+        """
         alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
         df = pd.DataFrame(index=self.timeline)
 
         # pylint: disable=no-value-for-parameter
-        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(self._cumulative_hazard)(
-            self._fitted_parameters_, self.timeline
-        )
+        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(transform)(self._fitted_parameters_, self.timeline)
 
         gradient_at_times = np.vstack(
             [gradient_of_cum_hazard_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_))]
@@ -346,8 +377,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
         if ci_labels is None:
             ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
-        df[ci_labels[0]] = self.cumulative_hazard_at_times(self.timeline) + alpha2 * std_cumulative_hazard
-        df[ci_labels[1]] = self.cumulative_hazard_at_times(self.timeline) - alpha2 * std_cumulative_hazard
+
+        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) + alpha2 * std_cumulative_hazard
+        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - alpha2 * std_cumulative_hazard
         return df
 
     def _fit_model(self, T, E, entry, show_progress=True):
@@ -538,7 +570,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
 
         self._label = label
-        alpha = alpha if alpha is not None else self.alpha
+        self._ci_labels = ci_labels
+        self.alpha = coalesce(alpha, self.alpha)
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
@@ -576,29 +609,70 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self._predict_label = label
         self._update_docstrings()
 
-        self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame(name=self._label)
-        self.hazard_ = self.hazard_at_times(self.timeline).to_frame(self._label)
-        self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame(self._label)
+        self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame()
+        self.hazard_ = self.hazard_at_times(self.timeline).to_frame()
+        self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame()
 
-        self.confidence_interval_ = self._compute_confidence_bounds_of_cumulative_hazard(alpha, ci_labels)
         return self
 
     @_must_call_fit_first
-    def survival_function_at_times(self, times):
-        return pd.Series(self._survival_function(self._fitted_parameters_, times), index=_to_array(times))
+    def survival_function_at_times(self, times, label=None):
+        label = coalesce(label, self._label)
+        return pd.Series(self._survival_function(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @_must_call_fit_first
-    def cumulative_hazard_at_times(self, times):
-        return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=_to_array(times))
+    def cumulative_hazard_at_times(self, times, label=None):
+        label = coalesce(label, self._label)
+        return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @_must_call_fit_first
-    def hazard_at_times(self, times):
-        return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times))
+    def hazard_at_times(self, times, label=None):
+        label = coalesce(label, self._label)
+        return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @property
     @_must_call_fit_first
     def median_(self):
         return median_survival_times(self.survival_function_)
+
+    @property
+    @_must_call_fit_first
+    def confidence_interval_(self):
+        return self._compute_confidence_bounds_of_cumulative_hazard(self.alpha, self._ci_labels)
+
+    @property
+    @_must_call_fit_first
+    def confidence_interval_cumulative_hazard_(self):
+        return self.confidence_interval_
+
+    @property
+    @_must_call_fit_first
+    def confidence_interval_hazard_(self):
+        return self._compute_confidence_bounds_of_transform(self._hazard, self.alpha, self._ci_labels)
+
+    @property
+    @_must_call_fit_first
+    def confidence_interval_survival_function_(self):
+        return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
+
+    @_must_call_fit_first
+    def plot_cumulative_hazard(self, **kwargs):
+        return self.plot(**kwargs)
+
+    @_must_call_fit_first
+    def plot_survival_function(self, **kwargs):
+        return _plot_estimate(
+            self,
+            estimate=getattr(self, "survival_function_"),
+            confidence_intervals=self.confidence_interval_survival_function_,
+            **kwargs
+        )
+
+    @_must_call_fit_first
+    def plot_hazard(self, **kwargs):
+        return _plot_estimate(
+            self, estimate=getattr(self, "hazard_"), confidence_intervals=self.confidence_interval_hazard_, **kwargs
+        )
 
 
 class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):

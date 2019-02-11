@@ -570,16 +570,44 @@ Similarly, there are other parametric models in *lifelines*. Generally, which pa
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
     pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
 
-    wbf.plot(ax=axes[0][0])
-    exf.plot(ax=axes[0][1])
-    lnf.plot(ax=axes[0][2])
-    naf.plot(ax=axes[1][0])
-    llf.plot(ax=axes[1][1])
-    pwf.plot(ax=axes[1][2])
+    wbf.plot_cumulative_hazard(ax=axes[0][0])
+    exf.plot_cumulative_hazard(ax=axes[0][1])
+    lnf.plot_cumulative_hazard(ax=axes[0][2])
+    naf.plot_cumulative_hazard(ax=axes[1][0])
+    llf.plot_cumulative_hazard(ax=axes[1][1])
+    pwf.plot_cumulative_hazard(ax=axes[1][2])
 
 .. image:: images/waltons_cumulative_hazard.png
 
 *lifelines* can also be used to define your own parametic model. There is a tutorial on this available, see `Piecewise Exponential Models and Creating Custom Models`_.
+
+Parametric models can also be used to create and plot the survival function, too. Below we compare the parametic models versus the non-parametric Kaplan-Meier estimate:
+
+.. code:: python
+
+    from lifelines import KaplanMeierFitter
+
+    fig, axes = plt.subplots(2, 3, figsize=(9, 5))
+
+    T = data['T']
+    E = data['E']
+
+    kmf = KaplanMeierFitter().fit(T, E, label='KaplanMeierFitter')
+    wbf = WeibullFitter().fit(T, E, label='WeibullFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
+    llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
+    pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
+
+    wbf.plot_survival_function(ax=axes[0][0])
+    exf.plot_survival_function(ax=axes[0][1])
+    lnf.plot_survival_function(ax=axes[0][2])
+    kmf.plot_survival_function(ax=axes[1][0])
+    llf.plot_survival_function(ax=axes[1][1])
+    pwf.plot_survival_function(ax=axes[1][2])
+
+.. image:: images/waltons_survival_function.png
+
 
 Other types of censoring
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

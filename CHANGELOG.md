@@ -1,5 +1,12 @@
 ### Changelogs
 
+### 0.18.5
+ - added new plotting methods to parametric univariate models: `plot_survival_function`, `plot_hazard` and `plot_cumulative_hazard`. The last one is an alias for `plot`.
+ - added new properties to parametric univarite models: `confidence_interval_survival_function_`, `confidence_interval_hazard_`, `confidence_interval_cumulative_hazard_`. The last one is an alias for `confidence_interval_`.
+ - Fixed some overflow issues with `AalenJohansenFitter`'s variance calculations when using large datasets.
+ - Fixed an edgecase in `AalenJohansenFitter` that causing some datasets with to be jittered too often.
+ - Add a new kwarg to  `AalenJohansenFitter`, `calculate_variance` that can be used to turn off variance calculations since this can take a long time for large datasets. Thanks @pzivich!
+
 ### 0.18.4
  - fixed confidence intervals in cumulative hazards for parametric univarite models. They were previously 
    serverly depressed. 
