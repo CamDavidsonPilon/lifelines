@@ -3302,14 +3302,12 @@ class TestAalenJohansenFitter:
         # Based on the new setup of ties, should not detect any ties as existing
         d = [1, 2, 2, 4, 5, 6]
         fitter.fit(durations=d, event_observed=[0, 1, 1, 1, 2, 0], event_of_interest=1)
-        print(fitter.event_table.index)
         npt.assert_equal(np.asarray([0, 1, 2, 4, 5, 6]), np.asarray(fitter.event_table.index))
 
     def test_updated_censor_ties(self, fitter):
         # Based on the new setup of ties, should not detect any ties as existing
         d = [1, 2, 2, 4, 5, 6]
         fitter.fit(durations=d, event_observed=[0, 0, 1, 1, 2, 0], event_of_interest=1)
-        print(fitter.event_table.index)
         npt.assert_equal(np.asarray([0, 1, 2, 4, 5, 6]), np.asarray(fitter.event_table.index))
 
     def test_event_table_is_correct(self, fitter, duration, event_observed):

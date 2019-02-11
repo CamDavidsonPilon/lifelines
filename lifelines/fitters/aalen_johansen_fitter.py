@@ -14,14 +14,32 @@ class AalenJohansenFitter(UnivariateFitter):
     """Class for fitting the Aalen-Johansen estimate for the cumulative incidence function in a competing risks framework.
     Treating competing risks as censoring can result in over-estimated cumulative density functions. Using the Kaplan
     Meier estimator with competing risks as censored is akin to estimating the cumulative density if all competing risks
-    had been prevented. If you are interested in learning more, I (Paul Zivich) recommend the following open-access
+    had been prevented. If you are interested in learning more, we recommend the following open-access
     paper; Edwards JK, Hester LL, Gokhale M, Lesko CR. Methodologic Issues When Estimating Risks in
     Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
 
-    AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None)
-
     Aalen-Johansen cannot deal with tied times. We can get around this by randomy jittering the event times
     slightly. This will be done automatically and generates a warning.
+
+    AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None, calculate_variance=True)
+
+    Parameters
+    ----------
+    alpha: float, option (default=0.95)
+        The alpha value associated with the confidence intervals.
+
+    jitter_level: float, option (default=0.00001)
+        If tied event times are detected, event times are randomly changed by this factor.
+
+    seed: int, option (default=None)
+        To produce replicate results with tied event times, the numpy.random.seed can be specified in the function.
+
+    calculate_variance: bool, option (default=True)
+        By default, AalenJohansenFitter calculates the variance and corresponding confidence intervals. Due to how the
+        variance is calculated, the variance must be calculated for each event time individually. This is
+        computationally intensive. For some procedures, like bootstrapping, the variance is not necessary. To reduce
+        computation time during these procedures, `calculate_variance` can be set to `False` to skip the variance
+        calculation.
     """
 
     def __init__(self, jitter_level=0.0001, seed=None, alpha=0.95, calculate_variance=True):
@@ -217,8 +235,5 @@ class AalenJohansenFitter(UnivariateFitter):
         dup_events = df.loc[df['e'] != 0, ['t', 'e']].duplicated(keep=False)
 
         # Detect duplicated times with different event types
-        ties = np.sum(dup_times & (~dup_events))
-        if ties > 0:
-            return True
-        else:
-            return False
+        ties = np.any(dup_times & (~dup_events))
+        return ties > 0
