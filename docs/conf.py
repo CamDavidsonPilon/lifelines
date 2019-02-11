@@ -60,7 +60,7 @@ copyright = "2014, Cam Davidson-Pilon"
 #
 # The short X.Y version.
 
-version = "0.18.4"
+version = "0.18.5"
 # The full version, including dev info
 release = version
 
