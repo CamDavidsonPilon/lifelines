@@ -30,7 +30,7 @@ Censoring
 
 
 At the time you want to make inferences about durations, it is possible, likely
-true, that not all the death events have occured yet. For example, a
+true, that not all the death events have occurred yet. For example, a
 medical professional will not wait 50 years for each individual in the
 study to pass away before investigating -- he or she is interested in
 the effectiveness of improving lifetimes after only a few years, or months possibly.
@@ -51,7 +51,7 @@ Consider a case where the population is actually made up of two
 subpopulations, :math:`A` and :math:`B`. Population :math:`A` has a very
 small lifespan, say 2 months on average, and population :math:`B`
 enjoys a much larger lifespan, say 12 months on average. We may
-not know this distinction before hand. At :math:`t=10`, we
+not know this distinction beforehand. At :math:`t=10`, we
 wish to investigate the average lifespan for everyone. 
 
 In the figure below, the red lines denote the lifespan of individuals where the death event
@@ -59,7 +59,7 @@ has been observed, and the blue lines denote the lifespan of the
 right-censored individuals (deaths have not been observed). If we are
 asked to estimate the average lifetime of our population, and we naively
 decided to *not* included the right-censored individuals, it is clear
-that we would be serverly underestimating the true average lifespan.
+that we would be severely underestimating the true average lifespan.
 
 .. code:: python
 
@@ -125,7 +125,7 @@ a customer entering a store is a birth: a customer can enter at
 any time, and not necessarily at time zero. In survival analysis, durations
 are relative: individuals may start at different times.
 (We actually only need the *duration* of the observation, and not
-the necessarily the start and end time.)
+necessarily the start and end time.)
 
 We next introduce the two fundamental objects in survival analysis, the
 *survival function* and the *hazard function*.
@@ -144,7 +144,7 @@ a webpage (an infinite time if they never do). The survival function -
 
 .. math::  S(t) = Pr( T > t)
 
-In plain English: the survival function defines the probability the death event has not occured yet at time
+In plain English: the survival function defines the probability the death event has not occurred yet at time
 :math:`t`, or equivalently, the probability of surviving past time
 :math:`t`. Note the following properties of the survival function:
 
