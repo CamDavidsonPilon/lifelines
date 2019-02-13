@@ -74,12 +74,15 @@ def qth_survival_times(q, survival_functions, cdf=False):
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
     q = pd.Series(q)
+    
     if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError("q must be between 0 and 1")
 
+
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
-        return survival_functions.apply(lambda s: qth_survival_time(q[0], s, cdf=cdf)).iloc[0]
+        q = q[0]
+        return survival_functions.apply(lambda s: qth_survival_time(q, s, cdf=cdf)).iloc[0]
     else:
         survival_times = pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
 
@@ -112,7 +115,7 @@ def qth_survival_time(q, survival_function, cdf=False):
     --------
     qth_survival_times, median_survival_times
     """
-    if isinstance(survival_function, pd.DataFrame):
+    if type(survival_function) is pd.DataFrame:
         if survival_function.shape[1] > 1:
             raise ValueError(
                 "Expecting a dataframe (or series) with a single column. Provide that or use utils.qth_survival_times."
@@ -123,11 +126,11 @@ def qth_survival_time(q, survival_function, cdf=False):
     if cdf:
         if survival_function.iloc[0] > q:
             return np.inf
-        v = (survival_function <= q).idxmin(0)
+        v = survival_function.index[survival_function.searchsorted(q)]
     else:
         if survival_function.iloc[-1] > q:
             return np.inf
-        v = (survival_function <= q).idxmax(0)
+        v = survival_function.index[(-survival_function).searchsorted(-q)]
     return v
 
 
@@ -1316,7 +1319,7 @@ def format_floats(decimals):
 
 
 def dataframe_interpolate_at_times(df, times):
-    return df.reindex(df.index.union(_to_array(times))).interpolate("index").loc[times].squeeze()
+    return df.reindex(df.index.union(_to_array(times))).interpolate(method="index").loc[times].squeeze()
 
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")

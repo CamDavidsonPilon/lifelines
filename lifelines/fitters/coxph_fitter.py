@@ -50,8 +50,8 @@ from lifelines.utils import (
     string_justify,
     format_p_value,
     format_floats,
+    dataframe_interpolate_at_times,
 )
-
 
 class BatchVsSingle:
     @staticmethod
@@ -1318,6 +1318,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     left_index=True,
                 )
         else:
+
             c_0 = self.baseline_cumulative_hazard_
             v = self.predict_partial_hazard(X)
             col = _get_index(v)
@@ -1325,7 +1326,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         if times is not None:
             # non-linear interpolations can push the survival curves above 1 and below 0.
-            return cumulative_hazard_.reindex(cumulative_hazard_.index.union(times)).interpolate("index").loc[times]
+            return dataframe_interpolate_at_times(cumulative_hazard_, times)
         return cumulative_hazard_
 
     def predict_survival_function(self, X, times=None):
@@ -1379,6 +1380,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         subjects = _get_index(X)
         return qth_survival_times(p, self.predict_survival_function(X)[subjects]).T
+
+
 
     def predict_median(self, X):
         """
