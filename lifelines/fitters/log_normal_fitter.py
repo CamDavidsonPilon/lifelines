@@ -39,4 +39,4 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
         Z = (np.log(times) - mu_) / sigma_
         cdf = norm.cdf(Z, loc=0, scale=1)
         cdf = np.clip(cdf, 0.0, 1 - 1e-14)
-        return -np.log(1 - cdf)
+        return -np.log1p(-cdf)

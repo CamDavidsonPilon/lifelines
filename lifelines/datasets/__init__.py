@@ -182,18 +182,19 @@ def load_larynx(**kwargs):
 
 def load_lung(**kwargs):
     """
+    Survival in patients with advanced lung cancer from the North Central Cancer Treatment Group. Performance scores rate how well the patient can perform usual daily activities.
+    
+    Loprinzi CL. Laurie JA. Wieand HS. Krook JE. Novotny PJ. Kugler JW. Bartel J. Law M. Bateman M. Klatt NE. et al. Prospective evaluation of prognostic variables from patient-completed questionnaires. North Central Cancer Treatment Group. Journal of Clinical Oncology. 12(3):601-7, 1994.
+
+
     Size: (288,10)
     Example:
-        inst            3
-        time          306
-        status          2
-        age            74
-        sex             1
-        ph.ecog         1
-        ph.karno       90
-        pat.karno     100
-        meal.cal     1175
-        wt.loss       NaN
+       inst  time  status  age  sex  ph.ecog  ph.karno  pat.karno  meal.cal  wt.loss
+    0   3.0   306       2   74    1      1.0      90.0      100.0    1175.0      NaN
+    1   3.0   455       2   68    1      0.0      90.0       90.0    1225.0     15.0
+    2   3.0  1010       1   56    1      0.0      90.0       90.0       NaN     15.0
+    3   5.0   210       2   57    1      1.0      90.0       60.0    1150.0     11.0
+    4   1.0   883       2   60    1      0.0     100.0       90.0       NaN      0.0
 
     """
     return load_dataset("lung.csv", **kwargs)

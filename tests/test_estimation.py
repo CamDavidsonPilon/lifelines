@@ -2688,6 +2688,14 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         with pytest.raises(TypeError):
             cph.fit(rossi, duration_col="week", event_col="arrest")
 
+    def test_check_assumptions_fails_for_nonunique_index(self, cph, rossi):
+
+        cph.fit(rossi, 'week', 'arrest')
+
+        rossi.index = np.ones(rossi.shape[0])
+        with pytest.raises(IndexError):
+            cph.check_assumptions(rossi)
+
 
 class TestAalenAdditiveFitter:
     @pytest.fixture()

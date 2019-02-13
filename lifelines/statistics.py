@@ -644,10 +644,6 @@ class TimeTransformers:
     def get(self, key_or_callable):
         return self.TIME_TRANSFOMERS.get(key_or_callable, key_or_callable)
 
-    def __iter__(self):
-        for key, item in self.TIME_TRANSFOMERS.items():
-            yield key, item
-
 
 def proportional_hazard_test(
     fitted_cox_model, training_df, time_transform="rank", precomputed_residuals=None, **kwargs
@@ -662,9 +658,9 @@ def proportional_hazard_test(
         but later CoxTimeVaryingFitter, too.
     training_df: DataFrame
         the DataFrame used in the call to the Cox model's ``fit``. 
-    time_transform: vectorized function or string, optional (default='rank')
+    time_transform: vectorized function, list, or string, optional (default='rank')
         {'all', 'km', 'rank', 'identity', 'log'} 
-        One of the strings above, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms. 
+        One of the strings above, a list of strings, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms. 
     precomputed_residuals: DataFrame, optional
         specify the residuals, if already computed. 
     kwargs: 
@@ -697,10 +693,15 @@ def proportional_hazard_test(
         return T
 
     if time_transform == "all":
+        time_transform = list(TimeTransformers.TIME_TRANSFOMERS.keys())
+
+
+    if isinstance(time_transform, list):
 
         result = StatisticalResult([], [], [])
 
-        for transform_name, transform in TimeTransformers():
+        # yuck
+        for transform_name, transform in ((_, TimeTransformers().get(_)) for _ in time_transform):
             times = transform(durations, events, weights)[events.values]
             T = compute_statistic(times, scaled_resids)
             p_values = _to_array([chisq_test(t, 1) for t in T])
