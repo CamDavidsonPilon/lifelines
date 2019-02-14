@@ -23,7 +23,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
     Parameters
     ----------
     alpha: float
-        The alpha value associated with the confidence intervals.
+      The alpha value associated with the confidence intervals.
 
     """
 
@@ -56,13 +56,12 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
             the alpha value in the confidence intervals. Overrides the initializing
            alpha for this call to fit only.
         ci_labels: iterable
-            add custom column names to the generated confidence intervals
-              as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
 
 
         Returns
         -------
-          self, with new properties like 'survival_function_'.
+          self, with new properties like ``survival_function_``.
 
         """
         self._label = label

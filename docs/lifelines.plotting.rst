@@ -1,8 +1,8 @@
-lifelines.datasets
+lifelines.plotting
 ==================
 
 
-.. automodule:: lifelines.datasets
+.. automodule:: lifelines.plotting
     :members:
     :undoc-members:
     :show-inheritance:

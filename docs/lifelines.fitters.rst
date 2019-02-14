@@ -1,8 +1,6 @@
-lifelines.fitters package
-=========================
+lifelines.fitters
+=================
 
-Submodules
-----------
 
 lifelines.fitters.aalen\_additive\_fitter module
 ------------------------------------------------
@@ -60,10 +58,34 @@ lifelines.fitters.kaplan\_meier\_fitter module
     :undoc-members:
     :show-inheritance:
 
+lifelines.fitters.log\_logistic\_fitter module
+----------------------------------------------
+
+.. automodule:: lifelines.fitters.log_logistic_fitter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lifelines.fitters.log\_normal\_fitter module
+--------------------------------------------
+
+.. automodule:: lifelines.fitters.log_normal_fitter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lifelines.fitters.nelson\_aalen\_fitter module
 ----------------------------------------------
 
 .. automodule:: lifelines.fitters.nelson_aalen_fitter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lifelines.fitters.piecewise\_exponential\_fitter module
+-------------------------------------------------------
+
+.. automodule:: lifelines.fitters.piecewise_exponential_fitter
     :members:
     :undoc-members:
     :show-inheritance:
@@ -76,9 +98,6 @@ lifelines.fitters.weibull\_fitter module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
 
 .. automodule:: lifelines.fitters
     :members:

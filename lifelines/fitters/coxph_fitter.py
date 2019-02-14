@@ -5,6 +5,7 @@ from __future__ import division
 import time
 from datetime import datetime
 import warnings
+from textwrap import dedent
 import numpy as np
 import pandas as pd
 
@@ -49,7 +50,10 @@ from lifelines.utils import (
     string_justify,
     format_p_value,
     format_floats,
+    dataframe_interpolate_at_times,
 )
+
+__all__ = ["CoxPHFitter"]
 
 
 class BatchVsSingle:
@@ -1317,6 +1321,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     left_index=True,
                 )
         else:
+
             c_0 = self.baseline_cumulative_hazard_
             v = self.predict_partial_hazard(X)
             col = _get_index(v)
@@ -1324,7 +1329,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         if times is not None:
             # non-linear interpolations can push the survival curves above 1 and below 0.
-            return cumulative_hazard_.reindex(cumulative_hazard_.index.union(times)).interpolate("index").loc[times]
+            return dataframe_interpolate_at_times(cumulative_hazard_, times)
         return cumulative_hazard_
 
     def predict_survival_function(self, X, times=None):
@@ -1451,7 +1456,6 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             ind_hazards.groupby("event_at")[0].sum().sort_index(ascending=False).cumsum()
         )
         ind_hazards_summed_over_durations.name = "hazards"
-
         event_table = survival_table_from_events(durations, event_observed, weights=weights)
         event_table = event_table.join(ind_hazards_summed_over_durations)
         baseline_hazard = pd.DataFrame(event_table["observed"] / event_table["hazards"], columns=[name]).fillna(0)
@@ -1605,7 +1609,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return axes
 
     def check_assumptions(
-        self, training_df, advice=True, show_plots=True, p_value_threshold=0.05, plot_n_bootstraps=10
+        self, training_df, advice=True, show_plots=False, p_value_threshold=0.05, plot_n_bootstraps=10
     ):
         """
         Use this function to test the proportional hazards assumption. See iterative usage example at 
@@ -1620,11 +1624,13 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         advice: boolean, optional
             display advice as output to the user's screen
         show_plots: boolean, optional
-            display plots of the scaled schoenfeld residuals and loess curves. This is an eyeball test for violations
+            display plots of the scaled schoenfeld residuals and loess curves. This is an eyeball test for violations.
+            This will slow down the function significantly. 
         p_value_threshold: float, optional
             the threshold to use to alert the user of violations. See note below. 
         plot_n_bootstraps:
-            in the plots displayed, also display plot_n_bootstraps bootstrapped loess curves. 
+            in the plots displayed, also display plot_n_bootstraps bootstrapped loess curves. This will slow down
+            the function significantly. 
     
         
         Examples
@@ -1643,8 +1649,12 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         -------
         The ``p_value_threshold`` is arbitrarily set at 0.05. Under the null, some covariates
         will be below the threshold (i.e. by chance). This is compounded when there are many covariates. 
+        
+        Similarly, when there are lots of observations, even minor deviances from the proportional hazard 
+        assumption will be flagged. 
+
         With that in mind, it's best to use a combination of statistical tests and eyeball tests to 
-        determine violations. 
+        determine the most serious violations. 
 
         
         References
@@ -1653,15 +1663,21 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
+
+        if not training_df.index.is_unique:
+            raise IndexError(
+                "`training_df` index should be unique for this exercise. Please make it unique or use `.reset_index(drop=True)` to force a unique index"
+            )
+
         residuals = self.compute_residuals(training_df, kind="scaled_schoenfeld")
         test_results = proportional_hazard_test(
-            self, training_df, time_transform="all", precomputed_residuals=residuals
+            self, training_df, time_transform=["rank", "km"], precomputed_residuals=residuals
         )
 
-        results_and_duration = residuals.join(training_df[self.duration_col])
+        residuals_and_duration = residuals.join(training_df[self.duration_col])
 
         counter = 0
-        n = results_and_duration.shape[0]
+        n = residuals_and_duration.shape[0]
 
         for variable in self.hazards_.columns:
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
@@ -1671,13 +1687,31 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             counter += 1
 
             if counter == 1:
-                print()
+                if advice:
+                    print(
+                        dedent(
+                            """
+                    The ``p_value_threshold`` is set at %.3f. Even under the null hypothesis of no violations, some covariates
+                    will be below the threshold (i.e. by chance). This is compounded when there are many covariates. 
+
+                    Similarly, when there are lots of observations, even minor deviances from the proportional hazard 
+                    assumption will be flagged. 
+
+                    With that in mind, it's best to use a combination of statistical tests and eyeball tests to 
+                    determine the most serious violations. 
+
+                    """
+                            % p_value_threshold
+                        )
+                    )
+
                 test_results.print_summary()
                 print()
 
+            print()
             print(
-                "%d. Variable '%s' failed the non-proportional test with threshold value %0.2f (p=%.4f.)"
-                % (counter, variable, p_value_threshold, minumum_observed_p_value)
+                "%d. Variable '%s' failed the non-proportional test: p-value is %s."
+                % (counter, variable, format_p_value(4)(minumum_observed_p_value))
             )
 
             if advice:
@@ -1689,18 +1723,18 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 # This should capture dichotomous / low cardinality values.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
-                        "   Advice: with so few unique values (only {0}), you can try `strata=['{1}']` in the call in `.fit`. See documentation here: https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html".format(
+                        "   Advice: with so few unique values (only {0}), you can try `strata=['{1}']` in the call in `.fit`. See documentation in link [A] and [B] below.".format(
                             n_uniques, variable
                         )
                     )
                 else:
                     print(
-                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}']` in the call in `.fit`. See more documentation here: https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html""".format(
+                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}']` in the call in `.fit`. See documentation in link [A] and [B] below.""".format(
                             var=variable
                         )
                     )
                     print(
-                        """   Advice: try adding an interaction term with your time variable. See more documentation here: https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html""".format(
+                        """   Advice: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
                             var=variable
                         )
                     )
@@ -1717,8 +1751,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
                     ax = fig.add_subplot(2, 2, i)
 
-                    y = results_and_duration[variable]
+                    y = residuals_and_duration[variable]
                     tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
+
                     ax.scatter(tt, y, alpha=0.75)
 
                     y_lowess = lowess(tt.values, y.values)
@@ -1740,6 +1775,18 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
                 plt.tight_layout()
                 plt.subplots_adjust(top=0.90)
+
+        if advice and counter > 0:
+            print(
+                dedent(
+                    """
+                ---
+                [A]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
+                [B]  https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#checking-the-proportional-hazards-assumption
+                [C]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-2:-introduce-time-varying-covariates
+            """
+                )
+            )
 
         if counter == 0:
             print("Proportional hazard assumption looks okay.")

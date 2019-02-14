@@ -564,7 +564,7 @@ class TestLogNormal:
         assert abs(sigma / lnf.sigma_ - 1) < 0.05
 
     def test_lnf_inference_no_censorship(self, lnf):
-        N = 250000
+        N = 800000
         mu = 10 * np.random.randn()
         sigma = np.random.exponential(10)
 
@@ -2687,6 +2687,14 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         rossi["var4"] = np.nan
         with pytest.raises(TypeError):
             cph.fit(rossi, duration_col="week", event_col="arrest")
+
+    def test_check_assumptions_fails_for_nonunique_index(self, cph, rossi):
+
+        cph.fit(rossi, "week", "arrest")
+
+        rossi.index = np.ones(rossi.shape[0])
+        with pytest.raises(IndexError):
+            cph.check_assumptions(rossi)
 
 
 class TestAalenAdditiveFitter:

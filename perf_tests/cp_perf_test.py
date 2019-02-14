@@ -12,9 +12,11 @@ if __name__ == "__main__":
 
     df = load_rossi()
     df = pd.concat([df] * 20)
+    # df = df.reset_index()
     # df['week'] = np.random.exponential(1, size=df.shape[0])
     cp = CoxPHFitter()
-    start_time = time.time()
     cp.fit(df, duration_col="week", event_col="arrest", batch_mode=True)
+    start_time = time.time()
+    print(cp.predict_median(df))
     print("--- %s seconds ---" % (time.time() - start_time))
     cp.print_summary(4)

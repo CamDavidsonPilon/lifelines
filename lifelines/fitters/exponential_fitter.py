@@ -9,20 +9,18 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
     This class implements an Exponential model for univariate data. The model has parameterized
     form:
 
-    .. math::  S(t) = exp(-(\lambda*t)),   \lambda >0
+    .. math::  S(t) = \exp(-\lambda t),   \lambda >0
 
     which implies the cumulative hazard rate is
 
-    .. math::  H(t) = \lambda*t
+    .. math::  H(t) = \lambda t
 
     and the hazard rate is:
 
     .. math::  h(t) = \lambda
 
-    After calling the `.fit` method, you have access to properties like:
-     'survival_function_', 'lambda_', 'cumulative_hazard_'
-
-    A summary of the fit is available with the method 'print_summary()'
+    After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``lambda_``, ``cumulative_hazard_``
+    A summary of the fit is available with the method ``print_summary()``
 
     Notes
     -----

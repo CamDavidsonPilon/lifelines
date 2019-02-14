@@ -46,13 +46,14 @@ from lifelines.utils import (
     coalesce,
 )
 
+__all__ = ["CoxTimeVaryingFitter"]
+
 
 class CoxTimeVaryingFitter(BaseFitter):
-
-    """
+    r"""
     This class implements fitting Cox's time-varying proportional hazard model:
 
-        .. math::  h(t|x(t)) = h_0(t)*exp(x(t)'*beta)
+        .. math::  h(t|x(t)) = h_0(t)*\exp(x(t)'*beta)
 
     Parameters
     ----------

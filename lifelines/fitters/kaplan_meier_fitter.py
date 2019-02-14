@@ -75,7 +75,7 @@ class KaplanMeierFitter(UnivariateFitter):
         Returns
         -------
         self: KaplanMeierFitter
-          self with new properties like 'survival_function_'.
+          self with new properties like ``survival_function_``.
 
         """
 

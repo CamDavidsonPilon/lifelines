@@ -25,8 +25,12 @@ class NelsonAalenFitter(UnivariateFitter):
 
     NelsonAalenFitter(alpha=0.95, nelson_aalen_smoothing=True)
 
-    alpha: The alpha value associated with the confidence intervals.
-    nelson_aalen_smoothing: If the event times are naturally discrete (like discrete years, minutes, etc.)
+    Parameters
+    ----------
+    alpha: float, optional
+        The alpha value associated with the confidence intervals.
+    nelson_aalen_smoothing: bool, optional
+        If the event times are naturally discrete (like discrete years, minutes, etc.)
       then it is advisable to turn this parameter to False. See [1], pg.84.
 
     Notes
@@ -79,8 +83,7 @@ class NelsonAalenFitter(UnivariateFitter):
             the alpha value in the confidence intervals. Overrides the initializing
            alpha for this call to fit only.
         ci_labels: iterable
-            add custom column names to the generated confidence intervals
-              as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
         weights: n array, or pd.Series, of length n
             if providing a weighted dataset. For example, instead
             of providing every subject as a single element of `durations` and `event_observed`, one could
@@ -88,7 +91,7 @@ class NelsonAalenFitter(UnivariateFitter):
 
         Returns
         -------
-          self, with new properties like 'cumulative_hazard_'.
+          self, with new properties like ``cumulative_hazard_``.
 
         """
 
@@ -211,7 +214,7 @@ class NelsonAalenFitter(UnivariateFitter):
           bandwidth: float
             the bandwith to use in the Epanechnikov kernel. > 0
           hazard_: numpy array
-            a computed (n,) numpy array of estimated hazard rates. If none, uses naf.smoothed_hazard_
+            a computed (n,) numpy array of estimated hazard rates. If none, uses ``smoothed_hazard_``
         """
         if hazard_ is None:
             hazard_ = self.smoothed_hazard_(bandwidth).values[:, 0]

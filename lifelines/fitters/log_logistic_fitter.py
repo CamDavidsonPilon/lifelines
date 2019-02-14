@@ -11,15 +11,17 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
     This class implements a Log-Logistic model for univariate data. The model has parameterized
     form:
 
-    .. math::  S(t) = (1 + (t/\alpha)^{\beta})^{-1},   \alpha > 0, \beta > 0,
+    .. math::  S(t) = \left(1 + \left(\frac{t}{\alpha}\right)^{\beta}\right)^{-1},   \alpha > 0, \beta > 0,
 
     and the hazard rate is:
 
-    .. math::  h(t) = (\beta/\alpha)(t / \alpha) ^ {\beta-1} / (1 + (t/\alpha)^{\beta})
+    .. math::  h(t) = \frac{\left(\frac{\beta}{\alpha}\right)\left(\frac{t}{\alpha}\right) ^ {\beta-1}}{\left(1 + \left(\frac{t}{\alpha}\right)^{\beta}\right)}
 
-    After calling the `.fit` method, you have access to properties like:
-    ``cumulative_hazard_``, ``plot``, ``survival_function_``, ``alpha_`` and ``beta_``.
+    and the cumulative hazard is:
 
+    .. math:: H(t) = \log\left(\left(\frac{t}{\alpha}\right) ^ {\beta} + 1\right)
+
+    After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``plot``, ``survival_function_``, ``alpha_`` and ``beta_``.
     A summary of the fit is available with the method 'print_summary()'
     
     Examples
@@ -42,4 +44,4 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
 
     def _cumulative_hazard(self, params, times):
         alpha_, beta_ = params
-        return np.log((times / alpha_) ** beta_ + 1)
+        return np.log1p((times / alpha_) ** beta_)

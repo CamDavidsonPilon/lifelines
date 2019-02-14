@@ -40,6 +40,9 @@ from lifelines.utils import (
 from lifelines.compat import PY2, PY3
 
 
+__all__ = []
+
+
 def _must_call_fit_first(func):
     @wraps(func)
     def error_wrapper(*args, **kwargs):
@@ -165,7 +168,7 @@ class UnivariateFitter(BaseFitter):
     @_must_call_fit_first
     def conditional_time_to_event_(self):
         """
-        Return a DataFrame, with index equal to survival_function_, that estimates the median
+        Return a DataFrame, with index equal to ``survival_function_``, that estimates the median
         duration remaining until the death event, given survival up until time t. For example, if an
         individual exists until age 1, their expected life remaining *given they lived to time 1*
         might be 9 years.
@@ -173,7 +176,7 @@ class UnivariateFitter(BaseFitter):
         Returns
         -------
         conditional_time_to_: DataFrame 
-            with index equal to survival_function_
+            with index equal to ``survival_function_``
 
         """
         return self._conditional_time_to_event_()
@@ -445,13 +448,17 @@ class ParametericUnivariateFitter(UnivariateFitter):
     @property
     @_must_call_fit_first
     def summary(self):
-        """Summary statistics describing the fit.
-        Set alpha property in the object before calling.
+        """
+        Summary statistics describing the fit.
 
         Returns
         -------
         df : pd.DataFrame
             Contains columns coef, exp(coef), se(coef), z, p, lower, upper
+
+        See Also
+        --------
+        ``print_summary``
         """
         lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
         df = pd.DataFrame(index=self._fitted_parameter_names)
@@ -518,8 +525,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         durations: an array, or pd.Series
           length n, duration subject was observed for
         event_observed: numpy array or pd.Series, optional
-          length n, True if the the death was observed, False if the event
-           was lost (right-censored). Defaults all True if event_observed==None
+          length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
         timeline: list, optional
             return the estimate at the values in timeline (postively increasing)
         label: string, optional
@@ -528,13 +534,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
             the alpha value in the confidence intervals. Overrides the initializing
            alpha for this call to fit only.
         ci_labels: list, optional
-            add custom column names to the generated confidence intervals
-              as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
         show_progress: boolean, optional
             since this is an iterative fitting algorithm, switching this to True will display some iteration details.
-        entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated (not left-censored) observations. If None, all members of the population
-             entered study when they were "born": time zero.
+        entry: an array, or pd.Series, of length n 
+            relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
+            entered study when they were "born": time zero.
 
         Returns
         -------
@@ -617,42 +622,103 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     @_must_call_fit_first
     def survival_function_at_times(self, times, label=None):
+        """
+        Return a Pandas series of the predicted survival value at specific times.
+
+        Parameters
+        -----------
+        times: iterable or float
+          values to return the survival function at.
+        label: string, optional
+          Rename the series returned. Useful for plotting. 
+
+        Returns
+        --------
+        pd.Series
+
+        """
         label = coalesce(label, self._label)
         return pd.Series(self._survival_function(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @_must_call_fit_first
     def cumulative_hazard_at_times(self, times, label=None):
+        """
+        Return a Pandas series of the predicted cumulative hazard value at specific times.
+
+        Parameters
+        -----------
+        times: iterable or float
+          values to return the cumulative hazard at.
+        label: string, optional
+          Rename the series returned. Useful for plotting. 
+
+        Returns
+        --------
+        pd.Series
+
+        """
         label = coalesce(label, self._label)
         return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @_must_call_fit_first
     def hazard_at_times(self, times, label=None):
+        """
+        Return a Pandas series of the predicted hazard at specific times.
+
+        Parameters
+        -----------
+        times: iterable or float
+          values to return the hazard at.
+        label: string, optional
+          Rename the series returned. Useful for plotting. 
+
+        Returns
+        --------
+        pd.Series
+
+        """
         label = coalesce(label, self._label)
         return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @property
     @_must_call_fit_first
     def median_(self):
+        """ 
+        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a 
+        robust summary statistic for the population, if it exists. 
+        """
         return median_survival_times(self.survival_function_)
 
     @property
     @_must_call_fit_first
     def confidence_interval_(self):
+        """
+        The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_cumulative_hazard_``.
+        """
         return self._compute_confidence_bounds_of_cumulative_hazard(self.alpha, self._ci_labels)
 
     @property
     @_must_call_fit_first
     def confidence_interval_cumulative_hazard_(self):
+        """
+        The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_``.
+        """
         return self.confidence_interval_
 
     @property
     @_must_call_fit_first
     def confidence_interval_hazard_(self):
+        """
+        The confidence interval of the hazard.
+        """
         return self._compute_confidence_bounds_of_transform(self._hazard, self.alpha, self._ci_labels)
 
     @property
     @_must_call_fit_first
     def confidence_interval_survival_function_(self):
+        """
+        The confidence interval of the survival function.
+        """
         return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
 
     @_must_call_fit_first

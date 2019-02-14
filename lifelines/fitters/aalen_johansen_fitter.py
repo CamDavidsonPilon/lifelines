@@ -14,14 +14,11 @@ class AalenJohansenFitter(UnivariateFitter):
     """Class for fitting the Aalen-Johansen estimate for the cumulative incidence function in a competing risks framework.
     Treating competing risks as censoring can result in over-estimated cumulative density functions. Using the Kaplan
     Meier estimator with competing risks as censored is akin to estimating the cumulative density if all competing risks
-    had been prevented. If you are interested in learning more, we recommend the following open-access
-    paper; Edwards JK, Hester LL, Gokhale M, Lesko CR. Methodologic Issues When Estimating Risks in
-    Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
+    had been prevented.
 
     Aalen-Johansen cannot deal with tied times. We can get around this by randomy jittering the event times
     slightly. This will be done automatically and generates a warning.
 
-    AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None, calculate_variance=True)
 
     Parameters
     ----------
@@ -40,6 +37,17 @@ class AalenJohansenFitter(UnivariateFitter):
         computationally intensive. For some procedures, like bootstrapping, the variance is not necessary. To reduce
         computation time during these procedures, `calculate_variance` can be set to `False` to skip the variance
         calculation.
+
+    Example
+    -------
+    >>> AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None, calculate_variance=True)
+
+
+    References
+    ----------
+    If you are interested in learning more, we recommend the following open-access
+    paper; Edwards JK, Hester LL, Gokhale M, Lesko CR. Methodologic Issues When Estimating Risks in
+    Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
     """
 
     def __init__(self, jitter_level=0.0001, seed=None, alpha=0.95, calculate_variance=True):
@@ -85,7 +93,7 @@ class AalenJohansenFitter(UnivariateFitter):
         Returns
         -------
         self : AalenJohansenFitter
-          self, with new properties like 'cumulative_incidence_'.
+          self, with new properties like ``cumulative_incidence_``.
         """
         # Checking for tied event times
         ties = self._check_for_duplicates(durations=durations, events=event_observed)
