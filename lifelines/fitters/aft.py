@@ -1,13 +1,14 @@
 from autograd import numpy as np
 from autograd import value_and_grad, elementwise_grad as egrad, jacobian, hessian
 from scipy.optimize import minimize
+from lifelines.datasets import load_regression_dataset
 
 df = load_regression_dataset()
 
 
 def _cumulative_hazard(beta, X, T):
-    rho_ = 2
-    lambda_ = np.exp(-np.dot(X, beta))
+    rho_ =  2.9800
+    lambda_ = np.exp(np.dot(X, beta))
     return (lambda_ * T) ** rho_
 
 
@@ -30,6 +31,11 @@ df['intercept'] = 1
 T = df.pop('T').values
 E = df.pop('E').values
 X = df.values
+
+_SLICE = {
+    ''
+
+}
 
 init_values = np.zeros(3 + 1)  # one for intercept, one for shape
 

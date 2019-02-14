@@ -744,3 +744,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 
     _KNOWN_MODEL = True
+
+
+class ParametericRegressionFitter(BaseFitter):
+    pass
