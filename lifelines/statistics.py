@@ -695,7 +695,6 @@ def proportional_hazard_test(
     if time_transform == "all":
         time_transform = list(TimeTransformers.TIME_TRANSFOMERS.keys())
 
-
     if isinstance(time_transform, list):
 
         result = StatisticalResult([], [], [])

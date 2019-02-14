@@ -1,36 +1,5 @@
-lifelines.utils package
-=======================
-
-Submodules
-----------
-
-lifelines.utils.btree module
-----------------------------
-
-.. automodule:: lifelines.utils.btree
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lifelines.utils.concordance module
-----------------------------------
-
-.. automodule:: lifelines.utils.concordance
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-lifelines.utils.lowess module
------------------------------
-
-.. automodule:: lifelines.utils.lowess
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
+lifelines.utils
+===============
 
 .. automodule:: lifelines.utils
     :members:

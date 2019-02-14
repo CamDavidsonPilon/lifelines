@@ -1,23 +1,26 @@
 ### Changelogs
 
-### 0.18.5
+#### 0.18.6
+ - some improvements to the output of `check_assumptions`. `show_plots` is turned to `False` by default now.
+
+#### 0.18.5
  - added new plotting methods to parametric univariate models: `plot_survival_function`, `plot_hazard` and `plot_cumulative_hazard`. The last one is an alias for `plot`.
  - added new properties to parametric univarite models: `confidence_interval_survival_function_`, `confidence_interval_hazard_`, `confidence_interval_cumulative_hazard_`. The last one is an alias for `confidence_interval_`.
  - Fixed some overflow issues with `AalenJohansenFitter`'s variance calculations when using large datasets.
  - Fixed an edgecase in `AalenJohansenFitter` that causing some datasets with to be jittered too often.
  - Add a new kwarg to  `AalenJohansenFitter`, `calculate_variance` that can be used to turn off variance calculations since this can take a long time for large datasets. Thanks @pzivich!
 
-### 0.18.4
+#### 0.18.4
  - fixed confidence intervals in cumulative hazards for parametric univarite models. They were previously 
    serverly depressed. 
  - adding left-truncation support to parametric univarite models with the `entry` kwarg in `.fit`
 
-### 0.18.3 
+#### 0.18.3 
  - Some performance improvements to parametric univariate models.
  - Suppressing some irrelevant NumPy and autograd warnings, so lifeline warnings are more noticeable. 
  - Improved some warning and error messages. 
 
-### 0.18.2
+#### 0.18.2
  - New univariate fitter `PiecewiseExponentialFitter` for creating a stepwise hazard model. See docs online.
  - Ability to create novel parametric univariate models using the new `ParametericUnivariateFitter` super class. See docs online for how to do this. 
  - Unfortunately, parametric univariate fitters are not serializable with `pickle`. The library `dill` is still useable. 
@@ -25,13 +28,13 @@
  - `LogNormalFitter` no longer models `log_sigma`.
 
 
-### 0.18.1
+#### 0.18.1
  - bug fixes in `LogNormalFitter` variance estimates
  - improve convergence of `LogNormalFitter`. We now model the log of sigma internally, but still expose sigma externally. 
  - use the `autograd` lib to help with gradients.
  - New `LogLogisticFitter` univariate fitter available. 
 
-### 0.18.0
+#### 0.18.0
  - `LogNormalFitter` is a new univariate fitter you can use.
  - `WeibullFitter` now correctly returns the confidence intervals (previously returned only NaNs)
  - `WeibullFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
@@ -45,7 +48,7 @@
  - new warning message when Cox models detects possible non-unique solutions to maximum likelihood. 
  - Generally: clean up lifelines exception handling. Ex: catch `LinAlgError: Matrix is singular.` and report back to the user advice. 
 
-### 0.17.5
+#### 0.17.5
  - more bugs in `plot_covariate_groups` fixed when using non-numeric strata.
 
 #### 0.17.4

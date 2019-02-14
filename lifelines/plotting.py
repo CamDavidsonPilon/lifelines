@@ -4,6 +4,8 @@ import warnings
 import numpy as np
 from lifelines.utils import coalesce
 
+__all__ = ["add_at_risk_counts", "plot_lifetimes"]
+
 
 def is_latex_enabled():
     """
@@ -73,43 +75,41 @@ def add_at_risk_counts(*fitters, **kwargs):
     """
     Add counts showing how many individuals were at risk at each time point in
     survival/hazard plots.
-
-    Arguments:
+    
+    Parameters
+    ----------
+    fitters:
       One or several fitters, for example KaplanMeierFitter,
       NelsonAalenFitter, etc...
 
-    Keyword arguments (all optional):
-      ax: The axes to add the labels to. Default is the current axes.
-      fig: The figure of the axes. Default is the current figure.
-      labels: The labels to use for the fitters. Default is whatever was
-              specified in the fitters' fit-function. Giving 'None' will
-              hide fitter labels.
 
-    Returns:
+    Returns
+    --------
       ax: The axes which was used.
 
-    Examples:
-        # First train some fitters and plot them
-        fig = plt.figure()
-        ax = plt.subplot(111)
-
-        f1 = KaplanMeierFitter()
-        f1.fit(data)
-        f1.plot(ax=ax)
-
-        f2 = KaplanMeierFitter()
-        f2.fit(data)
-        f2.plot(ax=ax)
-
-        # There are equivalent
-        add_at_risk_counts(f1, f2)
-        add_at_risk_counts(f1, f2, ax=ax, fig=fig)
-
-        # This overrides the labels
-        add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
-
-        # This hides the labels
-        add_at_risk_counts(f1, f2, labels=None)
+    Examples
+    --------
+    >>> # First train some fitters and plot them
+    >>> fig = plt.figure()
+    >>> ax = plt.subplot(111)
+    >>>
+    >>> f1 = KaplanMeierFitter()
+    >>> f1.fit(data)
+    >>> f1.plot(ax=ax)
+    >>>
+    >>> f2 = KaplanMeierFitter()
+    >>> f2.fit(data)
+    >>> f2.plot(ax=ax)
+    >>>
+    >>> # There are equivalent
+    >>> add_at_risk_counts(f1, f2)
+    >>> add_at_risk_counts(f1, f2, ax=ax, fig=fig)
+    >>>
+    >>> # This overrides the labels
+    >>> add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
+    >>>
+    >>> # This hides the labels
+    >>> add_at_risk_counts(f1, f2, labels=None)
     """
     from matplotlib import pyplot as plt
 
@@ -181,12 +181,12 @@ def plot_lifetimes(
     **kwargs
 ):
     """
-    Retuns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#censorship
+    Retuns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#Censoring
     
     Parameters
     -----------
     durations: (n,) numpy array or pd.Series
-       duration subject was observed for.
+      duration subject was observed for.
     event_observed: (n,) numpy array or pd.Series
       array of booleans: True if event observed, else False.
     entry: (n,) numpy array or pd.Series 

@@ -12,18 +12,15 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
     This class implements an Log Normal model for univariate data. The model has parameterized
     form:
 
-    .. math::  S(t) = 1 - \Phi((log(t) - \mu)/\sigma),   \sigma >0
+    .. math::  S(t) = 1 - \Phi((\log(t) - \mu)/\sigma),   \sigma >0
 
     where :math:`\Phi` is the CDF of a standard normal random variable. 
     This implies the cumulative hazard rate is
 
-    .. math::  H(t) = -log(1 - \Phi((log(t) - \mu)/\sigma))
+    .. math::  H(t) = -\log(1 - \Phi((\log(t) - \mu)/\sigma))
 
-
-    After calling the `.fit` method, you have access to properties like:
-     'survival_function_', 'mu_', 'sigma_'
-
-    A summary of the fit is available with the method 'print_summary()'
+    After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``mu_``, ``sigma_``.
+    A summary of the fit is available with the method ``print_summary()``
 
     """
 

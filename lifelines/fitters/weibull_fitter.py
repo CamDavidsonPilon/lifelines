@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import autograd.numpy as np
 
@@ -11,7 +11,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     This class implements a Weibull model for univariate data. The model has parameterized
     form:
 
-    .. math::  S(t) = exp(-(\lambda t)^\rho),   \lambda > 0, \rho > 0,
+    .. math::  S(t) = \exp(-(\lambda t)^\rho),   \lambda > 0, \rho > 0,
 
     which implies the cumulative hazard rate is
 
@@ -21,10 +21,8 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
 
     .. math::  h(t) = \rho \lambda(\lambda t)^{\rho-1}
 
-    After calling the `.fit` method, you have access to properties like:
-    ``cumulative_hazard_``, ``survival_function_``, ``lambda_`` and ``rho_``.
-
-    A summary of the fit is available with the method 'print_summary()'
+    After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``, ``lambda_`` and ``rho_``.
+    A summary of the fit is available with the method ``print_summary()``.
     
     Examples
     --------

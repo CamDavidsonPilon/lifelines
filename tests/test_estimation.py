@@ -2690,7 +2690,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
     def test_check_assumptions_fails_for_nonunique_index(self, cph, rossi):
 
-        cph.fit(rossi, 'week', 'arrest')
+        cph.fit(rossi, "week", "arrest")
 
         rossi.index = np.ones(rossi.shape[0])
         with pytest.raises(IndexError):

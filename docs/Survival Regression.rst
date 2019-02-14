@@ -782,7 +782,7 @@ A fitted model's concordance-index is present in the ``print_summary()``, but al
 
     # method three
     from lifelines.utils import concordance_index
-    print(concordance_index(rossi['week'], -cph.predict_partial_hazard(rossi).values, rossi['arrest']))
+    concordance_index(rossi['week'], -cph.predict_partial_hazard(rossi), rossi['arrest'])
 
 
 However, there are other, arguably better, methods to measure the fit of a model. Included in ``print_summary`` is the log-likelihood, which can be used in an `AIC calculation <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, and the `log-likelihood ratio statistic <https://en.wikipedia.org/wiki/Likelihood-ratio_test>`_. Generally, I personally loved this article by Frank Harrell, `"Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements" <http://www.fharrell.com/post/addvalue/>`_.

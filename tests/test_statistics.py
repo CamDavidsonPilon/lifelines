@@ -409,6 +409,7 @@ def test_proportional_hazard_test_with_kmf_with_some_censorship_and_weights():
         results = stats.proportional_hazard_test(cph, df)
         npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.916, rtol=1e-2)
 
+
 def test_proportional_hazard_test_with_all():
 
     df = pd.DataFrame(
@@ -424,12 +425,13 @@ def test_proportional_hazard_test_with_all():
     results = stats.proportional_hazard_test(cph, df, time_transform="all")
     assert results.summary.shape[0] == 1 * 4
 
+
 def test_proportional_hazard_test_with_list():
 
     df = pd.DataFrame(
         {
             "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
-            "var2": [1, 0, 1 , 0, 1],
+            "var2": [1, 0, 1, 0, 1],
             "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
             "E": [1, 1, 1, 0, 1],
         }

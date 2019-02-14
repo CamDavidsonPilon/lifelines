@@ -36,6 +36,9 @@ Contents:
   jupyter_notebooks/Piecewise Exponential Models and Creating Custom Models.ipynb
   jupyter_notebooks/Modelling time-lagged conversion rates.ipynb
   Examples
+  References
+  Changelog
+
 
 
 Installation

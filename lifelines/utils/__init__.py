@@ -18,6 +18,7 @@ __all__ = [
     "qth_survival_time",
     "median_survival_times",
     "survival_table_from_events",
+    "group_survival_table_from_events",
     "datetimes_to_durations",
     "concordance_index",
     "k_fold_cross_validation",
@@ -34,7 +35,6 @@ class StatError(Exception):
 
 class ConvergenceError(ValueError):
     # inherits from ValueError for backwards compatilibity reasons
-
     def __init__(self, msg, original_exception=""):
         super(ConvergenceError, self).__init__(msg + (": %s" % original_exception))
         self.original_exception = original_exception
@@ -64,7 +64,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
     Returns
     -------
-      v: float, or DataFrame
+    float, or DataFrame
          if d==1, returns a float, np.inf if infinity.
          if d > 1, an DataFrame containing the first times the value was crossed.
 
@@ -74,17 +74,18 @@ def qth_survival_times(q, survival_functions, cdf=False):
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
     q = pd.Series(q)
-    
+
     if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError("q must be between 0 and 1")
-
 
     survival_functions = pd.DataFrame(survival_functions)
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         q = q[0]
         return survival_functions.apply(lambda s: qth_survival_time(q, s, cdf=cdf)).iloc[0]
     else:
-        survival_times = pd.DataFrame({_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}).T
+        survival_times = pd.DataFrame(
+            {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s, cdf=cdf)) for _q in q}
+        ).T
 
         #  Typically, one would expect that the output should equal the "height" of q.
         #  An issue can arise if the Series q contains duplicate values. We solve
@@ -109,13 +110,13 @@ def qth_survival_time(q, survival_function, cdf=False):
 
     Returns
     -------
-      v: float
+    float
 
     See Also
     --------
     qth_survival_times, median_survival_times
     """
-    if type(survival_function) is pd.DataFrame:
+    if type(survival_function) is pd.DataFrame:  # pylint: disable=unidiomatic-typecheck
         if survival_function.shape[1] > 1:
             raise ValueError(
                 "Expecting a dataframe (or series) with a single column. Provide that or use utils.qth_survival_times."
@@ -280,13 +281,13 @@ def survival_table_from_events(
 
     Returns
     -------
-    output: DataFrame
-        Pandas DataFrame with index as the unique times or intervals in event_times. The columns named
-        'removed' refers to the number of individuals who were removed from the population
-        by the end of the period. The column 'observed' refers to the number of removed
-        individuals who were observed to have died (i.e. not censored.) The column
-        'censored' is defined as 'removed' - 'observed' (the number of individuals who
-         left the population due to event_observed)
+    DataFrame
+      Pandas DataFrame with index as the unique times or intervals in event_times. The columns named
+      'removed' refers to the number of individuals who were removed from the population
+      by the end of the period. The column 'observed' refers to the number of removed
+      individuals who were observed to have died (i.e. not censored.) The column
+      'censored' is defined as 'removed' - 'observed' (the number of individuals who
+      left the population due to event_observed)
 
     Example
     -------
@@ -451,6 +452,17 @@ def datetimes_to_durations(
         array of floats representing the durations with time units given by freq.
     C: numpy array
         boolean array of event observations: 1 if death observed, 0 else.
+    
+    Examples
+    --------
+    >>> from lifelines.utils import datetimes_to_durations
+    >>> 
+    >>> start_dates = ['2015-01-01', '2015-04-01', '2014-04-05']
+    >>> end_dates = ['2016-02-02', None, '2014-05-06']
+    >>>
+    >>> T, E = datetimes_to_durations(start_dates, end_dates, freq="D")
+    >>> T # array([ 397., 1414.,   31.])
+    >>> E # array([ True, False,  True])
 
     """
     fill_date = pd.to_datetime(fill_date)
@@ -551,43 +563,43 @@ def k_fold_cross_validation(
     Parameters
     ----------
     fitters: model
-        one or several objects which possess a method:
-        fit(self, data, duration_col, event_col)
-        Note that the last two arguments will be given as keyword arguments,
-        and that event_col is optional. The objects must also have
-        the "predictor" method defined below.
+      one or several objects which possess a method:
+      fit(self, data, duration_col, event_col)
+      Note that the last two arguments will be given as keyword arguments,
+      and that event_col is optional. The objects must also have
+      the "predictor" method defined below.
     df: DataFrame
-        a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
-        other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
-        refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
+      a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
+      other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
+      refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
     duration_col: (n,) array
-        the column in dataframe that contains the subjects lifetimes.
+      the column in dataframe that contains the subjects lifetimes.
     event_col: (n,) array
-        the column in dataframe that contains the subject's death observation. If left
-        as None, assumes all individuals are non-censored.
+      the column in dataframe that contains the subject's death observation. If left
+      as None, assumes all individuals are non-censored.
     k: int
-        the number of folds to perform. n/k data will be withheld for testing on.
+      the number of folds to perform. n/k data will be withheld for testing on.
     evaluation_measure: function
-        a function that accepts either (event_times, predicted_event_times),
-        or (event_times, predicted_event_times, event_observed)
-        and returns something (could be anything).
-        Default: statistics.concordance_index: (C-index)
-        between two series of event times
+      a function that accepts either (event_times, predicted_event_times),
+      or (event_times, predicted_event_times, event_observed)
+      and returns something (could be anything).
+      Default: statistics.concordance_index: (C-index)
+      between two series of event times
     predictor: string
-       a string that matches a prediction method on the fitter instances.
-       For example, "predict_expectation" or "predict_percentile".
-       Default is "predict_expectation"
-       The interface for the method is:
-           predict(self, data, **optional_kwargs)
+      a string that matches a prediction method on the fitter instances.
+      For example, "predict_expectation" or "predict_percentile".
+      Default is "predict_expectation"
+      The interface for the method is:
+          predict(self, data, **optional_kwargs)
     fitter_kwargs: 
-        keyword args to pass into fitter.fit method
+      keyword args to pass into fitter.fit method
     predictor_kwargs: 
-        keyword args to pass into predictor-method.
+      keyword args to pass into predictor-method.
 
     Returns
     -------
     results: list
-        (k,1) list of scores for each fold. The scores can be anything.
+      (k,1) list of scores for each fold. The scores can be anything.
     """
     # Make sure fitters is a list
     try:

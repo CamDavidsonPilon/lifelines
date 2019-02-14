@@ -53,6 +53,9 @@ from lifelines.utils import (
     dataframe_interpolate_at_times,
 )
 
+__all__ = ["CoxPHFitter"]
+
+
 class BatchVsSingle:
     @staticmethod
     def decide(batch_mode, T):
@@ -1381,8 +1384,6 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         subjects = _get_index(X)
         return qth_survival_times(p, self.predict_survival_function(X)[subjects]).T
 
-
-
     def predict_median(self, X):
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
@@ -1664,7 +1665,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
 
         if not training_df.index.is_unique:
-            raise IndexError("`training_df` index should be unique for this exercise. Please make it unique or use `.reset_index(drop=True)` to force a unique index")
+            raise IndexError(
+                "`training_df` index should be unique for this exercise. Please make it unique or use `.reset_index(drop=True)` to force a unique index"
+            )
 
         residuals = self.compute_residuals(training_df, kind="scaled_schoenfeld")
         test_results = proportional_hazard_test(
@@ -1676,7 +1679,6 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         counter = 0
         n = residuals_and_duration.shape[0]
 
-
         for variable in self.hazards_.columns:
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if minumum_observed_p_value > p_value_threshold:
@@ -1686,7 +1688,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
             if counter == 1:
                 if advice:
-                    print(dedent("""
+                    print(
+                        dedent(
+                            """
                     The ``p_value_threshold`` is set at %.3f. Even under the null hypothesis of no violations, some covariates
                     will be below the threshold (i.e. by chance). This is compounded when there are many covariates. 
 
@@ -1696,8 +1700,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     With that in mind, it's best to use a combination of statistical tests and eyeball tests to 
                     determine the most serious violations. 
 
-                    """ % p_value_threshold))
-                
+                    """
+                            % p_value_threshold
+                        )
+                    )
+
                 test_results.print_summary()
                 print()
 
@@ -1770,12 +1777,16 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 plt.subplots_adjust(top=0.90)
 
         if advice and counter > 0:
-            print(dedent("""
+            print(
+                dedent(
+                    """
                 ---
                 [A]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
                 [B]  https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#checking-the-proportional-hazards-assumption
                 [C]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-2:-introduce-time-varying-covariates
-            """))
+            """
+                )
+            )
 
         if counter == 0:
             print("Proportional hazard assumption looks okay.")

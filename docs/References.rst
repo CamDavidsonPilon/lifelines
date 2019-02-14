@@ -1,5 +1,5 @@
-lifelines modules
-=================
+*lifelines* reference
+======================
 
 .. toctree::
 
