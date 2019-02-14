@@ -1,7 +1,8 @@
-### Changelogs
+### Changelog
 
 #### 0.18.6
- - some improvements to the output of `check_assumptions`. `show_plots` is turned to `False` by default now.
+ - some improvements to the output of `check_assumptions`. `show_plots` is turned to `False` by default now. It only shows `rank` and `km` p-values now.
+ - some performance improvements to `qth_survival_time`.
 
 #### 0.18.5
  - added new plotting methods to parametric univariate models: `plot_survival_function`, `plot_hazard` and `plot_cumulative_hazard`. The last one is an alias for `plot`.

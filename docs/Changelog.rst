@@ -1,11 +1,13 @@
 Changelog
-~~~~~~~~~~
+~~~~~~~~~
 
 0.18.6
 ^^^^^^
 
 -  some improvements to the output of ``check_assumptions``.
-   ``show_plots`` is turned to ``False`` by default now.
+   ``show_plots`` is turned to ``False`` by default now. It only shows
+   ``rank`` and ``km`` p-values now.
+-  some performance improvements to ``qth_survival_time``.
 
 .. _section-1:
 
