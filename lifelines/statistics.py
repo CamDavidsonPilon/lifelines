@@ -18,6 +18,17 @@ from lifelines.utils import (
 
 from lifelines import KaplanMeierFitter
 
+__all__ = [
+    "StatisticalResult",
+    "logrank_test",
+    "multivariate_logrank_test",
+    "pairwise_logrank_test",
+    "survival_difference_at_fixed_point_in_time_test",
+    "proportional_hazard_test",
+    "power_under_cph",
+    "sample_size_necessary_under_cph",
+]
+
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
     """
@@ -67,7 +78,7 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     >>> # (421, 421)
 
     Reference
-    -----
+    ---------
     https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
 
     See Also
@@ -182,7 +193,7 @@ def survival_difference_at_fixed_point_in_time_test(
     -------
 
     StatisticalResult
-      a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
+      a StatisticalResult object with properties ``p_value``, ``summary``, ``test_statistic``, ``print_summary``
 
     Examples
     --------
@@ -247,8 +258,8 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
 
     This implicitly uses the log-rank weights.
 
-    Important
-    ----------
+    Note
+    -----
 
     The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival 
     curves cross, the logrank test will give an inaccurate assessment of differences. 
@@ -282,7 +293,7 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     -------
 
     StatisticalResult
-      a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
+      a StatisticalResult object with properties ``p_value``, ``summary``, ``test_statistic``, ``print_summary``
 
     Examples
     --------
@@ -326,8 +337,8 @@ def pairwise_logrank_test(
     event_durations, groups, event_observed=None, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
 
-    """
-    Perform the logrank test pairwise for all n>2 unique groups (use the more appropriate logrank_test for n=2).
+    r"""
+    Perform the logrank test pairwise for all :math:`n \ge 2` unique groups.
 
     Parameters
     ----------
@@ -512,8 +523,7 @@ def multivariate_logrank_test(
 
 class StatisticalResult(object):
     """
-    This class holds the result of statistical tests, like logrank and proportional hazard tests, with a nice
-    printer wrapper to display the results. 
+    This class holds the result of statistical tests with a nice printer wrapper to display the results. 
 
     Note
     -----
@@ -678,7 +688,7 @@ def proportional_hazard_test(
 
     Notes
     ------
-    R uses the defalt `km`, we use `rank`, as this performs well versus other transforms. See 
+    R uses the default `km`, we use `rank`, as this performs well versus other transforms. See 
     http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
 
     """
