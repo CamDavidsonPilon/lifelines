@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     df = load_rossi()
     df = pd.concat([df] * 20)
-    #df = df.reset_index()
+    # df = df.reset_index()
     # df['week'] = np.random.exponential(1, size=df.shape[0])
     cp = CoxPHFitter()
     cp.fit(df, duration_col="week", event_col="arrest", batch_mode=True)

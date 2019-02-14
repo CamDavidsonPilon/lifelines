@@ -564,7 +564,7 @@ class TestLogNormal:
         assert abs(sigma / lnf.sigma_ - 1) < 0.05
 
     def test_lnf_inference_no_censorship(self, lnf):
-        N = 250000
+        N = 800000
         mu = 10 * np.random.randn()
         sigma = np.random.exponential(10)
 
