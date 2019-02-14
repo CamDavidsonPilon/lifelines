@@ -194,7 +194,7 @@ probabilities of survival at those points:
     ax = kmf.plot(ax=ax)
     print("Median survival time of non-democratic:", kmf.median_)
 
-    plt.ylim(0,1)
+    plt.ylim(0, 1)
     plt.title("Lifespans of different global regimes");
 
 .. parsed-literal::
@@ -254,15 +254,19 @@ Lets compare the different *types* of regimes present in the dataset:
 
     regime_types = data['regime'].unique()
 
-    for i,regime_type in enumerate(regime_types):
-        ax = plt.subplot(2, 3, i+1)
+    for i, regime_type in enumerate(regime_types):
+        ax = plt.subplot(2, 3, i + 1)
+        
         ix = data['regime'] == regime_type
-        kmf.fit( T[ix], E[ix], label=regime_type)
+        kmf.fit(T[ix], E[ix], label=regime_type)
         kmf.plot(ax=ax, legend=False)
+        
         plt.title(regime_type)
         plt.xlim(0, 50)
+        
         if i==0:
             plt.ylabel('Frac. in power after $n$ years')
+    
     plt.tight_layout()
 
 
@@ -391,8 +395,10 @@ years:
 
     naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     ax = naf.plot(loc=slice(0, 20))
+    
     naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     naf.plot(ax=ax, loc=slice(0, 20))
+    
     plt.title("Cumulative hazard function of different global regimes");
 
 
@@ -402,8 +408,7 @@ years:
 Looking at the rates of change, I would say that both political
 philosophies have a constant hazard, albeit democratic regimes have a
 much *higher* constant hazard. So why did the combination of both
-regimes have a *decreasing* hazard? This is the effect of *frailty*, a
-topic we will discuss later.
+regimes have a *decreasing* hazard? This is the effect of *frailty*.
 
 Smoothing the hazard curve
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -428,12 +433,15 @@ intervals, similar to the traditional ``plot`` functionality.
 
 .. code:: python
 
-    b = 3.
+    bandwidth = 3.
+    
     naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
-    ax = naf.plot_hazard(bandwidth=b)
+    ax = naf.plot_hazard(bandwidth=bandwidth)
+    
     naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
-    naf.plot_hazard(ax=ax, bandwidth=b)
-    plt.title("Hazard function of different global regimes | bandwidth=%.1f"%b);
+    naf.plot_hazard(ax=ax, bandwidth=bandwidth)
+    
+    plt.title("Hazard function of different global regimes | bandwidth=%.1f" % bandwidth);
     plt.ylim(0, 0.4)
     plt.xlim(0, 25);
 
@@ -450,12 +458,15 @@ here. (My advice: stick with the cumulative hazard function.)
 
 .. code:: python
 
-    b = 8.
+    bandwidth = 8.0
+    
     naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
-    ax = naf.plot_hazard(bandwidth=b)
+    ax = naf.plot_hazard(bandwidth=bandwidth)
+    
     naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
-    naf.plot_hazard(ax=ax, bandwidth=b)
-    plt.title("Hazard function of different global regimes | bandwidth=%.1f"%b);
+    naf.plot_hazard(ax=ax, bandwidth=bandwidth)
+    
+    plt.title("Hazard function of different global regimes | bandwidth=%.1f" % bandwidth);
 
 
 
@@ -638,5 +649,6 @@ All univatiate fitters, like ``KaplanMeierFitter`` and any parametric models, ha
  .. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
 
 .. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html
+.. _Statistically compare two populations: Examples.html#statistically-compare-two-populations
 
 

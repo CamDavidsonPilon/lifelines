@@ -92,7 +92,7 @@ that we would be severely underestimating the true average lifespan.
 .. parsed-literal::
 
     Observed lifetimes at time 10:
-    [  10.   1.1   8.   10.  3.43   0.63   6.28   1.03   2.37   6.17  10.
+    [10.   1.1   8.   10.  3.43   0.63   6.28   1.03   2.37   6.17  10.
        0.21   2.71   1.25  10.   3.4  0.62   1.94   0.22   7.43   6.16  10.
        9.41  10.  10.]
 
@@ -107,7 +107,7 @@ information at :math:`t=10`).
 
     ax = plot_lifetimes(actual_lifetimes, event_observed=death_observed)
     ax.vlines(10, 0, 30, lw=2, linestyles='--')
-    ax.set_xlim(0,25)
+    ax.set_xlim(0, 25)
 
 
 .. image:: images/survival_analysis_intro_censoring_revealed.png
