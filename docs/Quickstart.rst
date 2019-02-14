@@ -25,7 +25,6 @@ Kaplan-Meier and Nelson-Aalen
 .. note:: For readers looking for an introduction to survival analysis, it's recommended to start at :ref:`Introduction to Survival Analysis`
 
 
-
 Let's start by importing some data. We need the durations that individuals are observed for, and whether they "died" or not. 
 
 
@@ -115,15 +114,18 @@ but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` 
 
 .. note:: Similar to `Scikit-Learn <http://scikit-learn.org>`_, all statistically estimated quantities append an underscore to the property name.
 
-.. note:: Much more comprehensive docs are available in `Survival analysis with lifelines`_.
+.. note:: More detailed docs about estimating the survivial function and cumulative hazard are available in `Survival analysis with lifelines`_.
 
 
 Getting data in the right format
 --------------------------------
 
-Often you'll have data that looks like:
+Often you'll have data that looks like:::
 
-*start_time*, *end_time*
+    *start_time1*, *end_time1*
+    *start_time2*, *end_time2*
+    *start_time3*, None
+    *start_time4*, *end_time4*
 
 *lifelines* has some utility functions to transform this dataset into duration and censoring vectors:
 
@@ -131,12 +133,12 @@ Often you'll have data that looks like:
 
     from lifelines.utils import datetimes_to_durations
 
-    # start_times is a vector of datetime objects
-    # end_times is a vector of (possibly missing) datetime objects.
+    # start_times is a vector or list of datetime objects or datetime strings
+    # end_times is a vector or list of (possibly missing) datetime objects or datetime strings
     T, E = datetimes_to_durations(start_times, end_times, freq='h')
 
 
-Alternatively, perhaps you are interested in viewing the survival table given some durations and censoring vectors.
+Perhaps you are interested in viewing the survival table given some durations and censoring vectors.
 
 
 .. code:: python
@@ -159,9 +161,6 @@ Alternatively, perhaps you are interested in viewing the survival table given so
 
 Survival regression
 -------------------
-
-.. note:: Much more comprehensive docs are available in `Survival Regression`_.
-
 
 While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter`` and ``CoxPHFitter``.
 
@@ -236,4 +235,8 @@ Like the above estimators, there is also a built-in plotting method:
 .. image:: images/quickstart_aaf.png
 
 
+.. note:: More detailed documentation and tutorials are available in `Survival Regression`_.
+
+
 .. _Survival Regression: Survival%20Regression.html
+.. _Survival analysis with lifelines: Survival%20analysis%20with%20lifelines.html
