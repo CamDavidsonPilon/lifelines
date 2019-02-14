@@ -14,7 +14,7 @@ Statistically compare two populations
 Often researchers want to compare survival-ness between different populations. Here are some techniques to do that:
 
 Subtraction and division between survival curves
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you are interested in taking the difference between two survival curves, simply trying to
 subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
@@ -271,7 +271,7 @@ will display
 
 
 Transforming survival-table data into *lifelines* format
-######################################################
+#########################################################
 
 Some *lifelines* classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into *lifelines* format.
 

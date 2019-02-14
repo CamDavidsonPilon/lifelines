@@ -66,9 +66,9 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     >>> n_exp, n_con = sample_size_necessary_under_cph(desired_power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio)
     >>> # (421, 421)
 
-    Notes
+    Reference
     -----
-    `Reference <https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf>`_.
+    https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
 
     See Also
     --------
@@ -120,7 +120,7 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     Returns
     -------
 
-    power : float
+    float
         power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
 
 
@@ -181,7 +181,7 @@ def survival_difference_at_fixed_point_in_time_test(
     Returns
     -------
 
-    results : StatisticalResult
+    StatisticalResult
       a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
 
     Examples
@@ -203,6 +203,9 @@ def survival_difference_at_fixed_point_in_time_test(
     -----
     Other transformations are possible, but Klein et al. [1] showed that the log(-log(c)) transform has the most desirable
     statistical properties. 
+
+    References
+    -----------
 
     [1] Klein, J. P., Logan, B. , Harhoff, M. and Andersen, P. K. (2007), Analyzing survival curves at a fixed point in time. Statist. Med., 26: 4505-4519. doi:10.1002/sim.2864
     
@@ -230,15 +233,17 @@ def survival_difference_at_fixed_point_in_time_test(
 
 
 def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs):
-    """
+    r"""
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
-    The test-statistic is chi-squared under the null hypothesis. Let h_i(t) be the hazard ratio of 
-    group i at time t:
+    The test-statistic is chi-squared under the null hypothesis. Let :math:`h_i(t)` be the hazard ratio of 
+    group :math:`i` at time :math:`t`, then:
 
-     - H_0: h_1(t) = h_2(t)
-     - H_A: h_1(t) = k * h_2(t), k <> 1
-
+    .. math::  
+        \begin{align}
+         & H_0: h_1(t) = h_2(t) \\
+         & H_A: h_1(t) = c h_2(t), \;\; c \ne 1
+        \end{align}
 
     This implicitly uses the log-rank weights.
 
@@ -276,7 +281,7 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     Returns
     -------
 
-    results : StatisticalResult
+    StatisticalResult
       a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
 
     Examples
@@ -303,6 +308,7 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     --------
     multivariate_logrank_test
     pairwise_logrank_test
+    survival_difference_at_fixed_point_in_time_test
     """
     event_times_A, event_times_B = (np.array(durations_A), np.array(durations_B))
     if event_observed_A is None:
@@ -345,7 +351,7 @@ def pairwise_logrank_test(
     Returns
     -------
 
-    results : StatisticalResult
+    StatisticalResult
         a StatisticalResult object that contains all the pairwise comparisons (try ``StatisticalResult.summary`` or ``StatisticalResult.print_summarty``)
 
 
@@ -394,14 +400,15 @@ def pairwise_logrank_test(
 def multivariate_logrank_test(
     event_durations, groups, event_observed=None, t_0=-1, **kwargs
 ):  # pylint: disable=too-many-locals
-
-    """
+    r"""
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
     be equal when n=2):
 
-
-     - H_0: h_1(t) = h_2(t) = h_3(t) = ... = h_n(t)
-     - H_A: there exist atleast one group that differs from the other.
+    .. math::  
+        \begin{align}
+         & H_0: h_1(t) = h_2(t) = h_3(t) = ... = h_n(t) \\
+         & H_A: \text{there exist atleast one group that differs from the other.}
+        \end{align}
 
 
     Parameters
@@ -426,8 +433,8 @@ def multivariate_logrank_test(
     Returns
     -------
 
-    results : StatisticalResult
-       a StatisticalResult object with properties 'p_value', 'summary', 'test_statistic', 'print_summary'
+    StatisticalResult
+       a StatisticalResult object with properties ``p_value``, ``summary``, ``test_statistic``, ``print_summary``
 
     Examples
     --------
@@ -567,8 +574,7 @@ class StatisticalResult(object):
         
         Returns
         -------
-
-        summary: DataFrame
+        DataFrame
             a DataFrame containing the test statistics and the p-value
 
         """
