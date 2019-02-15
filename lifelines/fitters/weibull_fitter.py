@@ -8,21 +8,28 @@ from lifelines.fitters import KnownModelParametericUnivariateFitter
 class WeibullFitter(KnownModelParametericUnivariateFitter):
 
     r"""
+
     This class implements a Weibull model for univariate data. The model has parameterized
     form:
 
-    .. math::  S(t) = \exp(-(\lambda t)^\rho),   \lambda > 0, \rho > 0,
+    .. math::  S(t) = \exp(-(t/\lambda)^\rho),   \lambda > 0, \rho > 0,
 
     which implies the cumulative hazard rate is
 
-    .. math:: H(t) = (\lambda t)^\rho,
+    .. math:: H(t) = (t/\lambda)^\rho,
 
     and the hazard rate is:
 
-    .. math::  h(t) = \rho \lambda(\lambda t)^{\rho-1}
+    .. math::  h(t) = \frac{\rho}{\lambda}(t/\lambda )^{\rho-1}
 
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``, ``lambda_`` and ``rho_``.
     A summary of the fit is available with the method ``print_summary()``.
+
+
+    Important
+    ----------
+    The parameterization of this model changed in lifelines 0.19.0. Previously, the cumulative hazard looked like
+    :math:`(\lambda t)^\rho`. The parameterization is now the recipricol of :math:`\lambda`.
     
     Examples
     --------
@@ -41,8 +48,8 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
 
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params
-        return (lambda_ * times) ** rho_
+        return (times / lambda_) ** rho_
 
     @property
     def median_(self):
-        return 1.0 / self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
+        return self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)

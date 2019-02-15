@@ -404,22 +404,37 @@ class ParametericUnivariateFitter(UnivariateFitter):
             if results.success:
                 # pylint: disable=no-value-for-parameter
                 hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, non_zero_entries)
-                return results.x, -results.fun, hessian_ * T.shape[0]
+                return results.x, -results.fun, T.shape[0] * hessian_
             print(results)
-            raise ConvergenceError(
-                dedent(
-                    """\
-                Fitting did not converge. 
-
-                1. Are two parameters in the model colinear / exchangeable? (Change model)
-                2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
-                3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
-
-                This could be a problem with your data:
-                1. Are there any extreme values? (Try modelling them or dropping them to see if it helps convergence)
-            """
+            if self._KNOWN_MODEL:
+                raise ConvergenceError(
+                    dedent(
+                        """\
+                    Fitting did not converge. This is mostly a lifelines problem, but a few things you can check:
+                    1. Are there any extreme values in the durations column?
+                      - Try scaling your durations to a more reasonable values closer to 1 (multipling or dividing by some 10^n).
+                      - Try dropping them to see if the model converges.
+                """
+                    )
                 )
-            )
+
+            else:
+                raise ConvergenceError(
+                    dedent(
+                        """\
+                    Fitting did not converge.
+
+                    1. Are two parameters in the model colinear / exchangeable? (Change model)
+                    2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
+                    3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
+
+                    This could be a problem with your data:
+                    1. Are there any extreme values in the durations column?
+                        - Try scaling your durations to a more reasonable value closer to 1 (multipling or dividing by a large constant).
+                        - Try dropping them to see if the model converges.
+                    """
+                    )
+                )
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
