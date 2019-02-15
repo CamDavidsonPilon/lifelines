@@ -612,7 +612,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Significance code explanation
         print("---")
         print(
-            "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
             )
         )

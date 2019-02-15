@@ -1,5 +1,12 @@
 ### Changelog
 
+#### 0.19.0
+ - **Important**: we changed the `.hazards_` and `.standard_errors_` on Cox models to be pandas Series (instead of Dataframes). This felt like a more natural representation of them. You may need to update your code to reflect this. See notes here: https://github.com/CamDavidsonPilon/lifelines/issues/636
+ - **Important**: we changed the `.confidence_intervals_` on Cox models to be transposed. This felt like a more natural representation of them. You may need to update your code to reflect this. See notes here: https://github.com/CamDavidsonPilon/lifelines/issues/636
+ - fixed a bug in the `_log_likelihood_` property of `ParametericUnivariateFitter` models. It was showing the "average" log-likelihood (i.e. scaled by 1/n) instead of the total. It now displays the total.
+ - In model `print_summary`s, correct a label erroring. Instead of "Likelihood test", it should have read "Log-likelihood test". 
+ - 
+
 #### 0.18.6
  - some improvements to the output of `check_assumptions`. `show_plots` is turned to `False` by default now. It only shows `rank` and `km` p-values now.
  - some performance improvements to `qth_survival_time`.

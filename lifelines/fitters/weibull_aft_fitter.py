@@ -6,6 +6,7 @@ from lifelines.datasets import load_regression_dataset
 import pandas as pd
 from datetime import datetime
 from lifelines.fitters import BaseFitter
+from lifelines import WeibullFitter
 
 from scipy import stats
 from lifelines.utils import (_get_index, qth_survival_times, concordance_index, StatisticalWarning, inv_normal_cdf, format_floats, format_p_value, string_justify,
@@ -14,6 +15,9 @@ from lifelines.utils import (_get_index, qth_survival_times, concordance_index, 
     check_complete_separation,
     check_nans_or_infs,
 )
+
+from lifelines.statistics import chisq_test
+
 
 class WeibullAFTFitter(BaseFitter):
     r"""
@@ -71,7 +75,6 @@ class WeibullAFTFitter(BaseFitter):
         df,
         duration_col,
         event_col=None,
-        entry=None,
         ancillary_df=None, # (or None, or True, or False - same as None)
         show_progress=False
     ):
@@ -85,7 +88,6 @@ class WeibullAFTFitter(BaseFitter):
         self._n_examples = df.shape[0]
 
 
-
         df = df.copy()
 
         T = df.pop(duration_col).astype(float)
@@ -96,16 +98,16 @@ class WeibullAFTFitter(BaseFitter):
         self.event_observed = E.copy()
 
         if isinstance(ancillary_df, pd.DataFrame):
-            assert ancillary_df.shape[0] == df.shape[0], 'ancillary_df must be the same shape as df'
+            assert ancillary_df.shape[0] == df.shape[0], 'ancillary_df must be the same shape[0] as df'
             ancillary_df = ancillary_df.copy()
             ancillary_df = ancillary_df.drop([duration_col, event_col], axis=1, errors='ignore')
+            self._check_values(ancillary_df, T, E, self.event_col)
         elif (ancillary_df is None) or (ancillary_df == False):
             ancillary_df = pd.DataFrame(index=df.index)
         elif ancillary_df == True:
             ancillary_df = df.copy()
 
         self._check_values(df, T, E, self.event_col)
-        self._check_values(ancillary_df, T, E, self.event_col)
 
         assert ('_intercept' not in ancillary_df) and ('_intercept' not in df)
 
@@ -129,14 +131,7 @@ class WeibullAFTFitter(BaseFitter):
             self.variance_matrix_ = pinv(self._hessian_)
             warning_text = dedent(
                 """\
-
-                The hessian was not invertable. This could be a model problem:
-
-                1. Are two parameters in the model colinear / exchangeable?
-                2. Is the cumulative hazard always non-negative and always non-decreasing?
-                3. Are there cusps/ in the cumulative hazard?
-
-                We will instead approximate it using the psuedo-inverse.
+                The hessian was not invertable. We will instead approximate it using the psuedo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
@@ -175,18 +170,12 @@ class WeibullAFTFitter(BaseFitter):
         if results.success:
             # pylint: disable=no-value-for-parameter
             hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, *Xs)
-            return results.x, -results.fun, hessian_ * T.shape[0]
+            return results.x, -self._n_examples * results.fun, self._n_examples * hessian_
         print(results)
         raise ConvergenceError(
             dedent(
                 """\
-            Fitting did not converge.
-
-            1. Are two parameters in the model colinear / exchangeable? (Change model)
-            2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
-            3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
-
-            This could be a problem with your data:
+            Fitting did not converge. This could be a problem with your data:
             1. Are there any extreme values? (Try modelling them or dropping them to see if it helps convergence)
         """
             )
@@ -224,6 +213,23 @@ class WeibullAFTFitter(BaseFitter):
             index=self.params_.index,
             columns=["lower-bound", "upper-bound"],
         )
+
+    def _compute_likelihood_ratio_test(self):
+        """
+        This function computes the likelihood ratio test for the Weibull model. We
+        compare the existing model (with all the covariates) to the trivial model
+        of no covariates.
+
+        """
+        ll_null = WeibullFitter().fit(self.durations, self.event_observed)._log_likelihood
+        ll_alt = self._log_likelihood
+
+        test_stat = 2 * ll_alt - 2 * ll_null
+        degrees_freedom = self.params_.shape[0] - 2 # diff in number of parameters between models
+        p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return test_stat, degrees_freedom, -np.log2(p_value)
+
 
     @property
     def summary(self):
@@ -290,11 +296,11 @@ class WeibullAFTFitter(BaseFitter):
         # Significance code explanation
         print("---")
         #print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
-        #print(
-        #    "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-        #        *self._compute_likelihood_ratio_test(), prec=decimals
-        #    )
-        #)
+        print(
+            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+                *self._compute_likelihood_ratio_test(), prec=decimals
+            )
+        )
 
     def predict_survival_function(self, X, times=None, ancillary_X=None):
         """
@@ -305,6 +311,10 @@ class WeibullAFTFitter(BaseFitter):
         ----------
 
         X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        ancillary_X: numpy array or DataFrame, optional
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
@@ -330,6 +340,10 @@ class WeibullAFTFitter(BaseFitter):
         Parameters
         ----------
         X:  numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        ancillary_X: numpy array or DataFrame, optional
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
@@ -359,6 +373,10 @@ class WeibullAFTFitter(BaseFitter):
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        ancillary_X: numpy array or DataFrame, optional
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
 
         Returns
         -------
@@ -380,6 +398,10 @@ class WeibullAFTFitter(BaseFitter):
         ----------
 
         X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        ancillary_X: numpy array or DataFrame, optional
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
@@ -424,4 +446,6 @@ class WeibullAFTFitter(BaseFitter):
 
 df = load_regression_dataset()
 
-wf = WeibullAFTFitter().fit(df, 'T', 'E', ancillary_df=None)
+wf = WeibullFitter().fit(df['T'], df['E'])
+
+aft = WeibullAFTFitter().fit(df, 'T', 'E', ancillary_df=df)

@@ -139,7 +139,7 @@ class CoxPHFitter(BaseFitter):
         batch_mode=None,
     ):
         """
-        Fit the Cox Propertional Hazard model to a dataset.
+        Fit the Cox proportional hazard model to a dataset.
 
         Parameters
         ----------
@@ -170,7 +170,7 @@ class CoxPHFitter(BaseFitter):
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
-        initial_beta: numpy array, optional
+        initial_beta: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
@@ -277,7 +277,7 @@ class CoxPHFitter(BaseFitter):
             step_size=step_size,
         )
 
-        self.hazards_ = pd.Series(hazards_[:, 0], index=X.columns, name="coef") / self._norm_std
+        self.hazards_ = pd.Series(hazards_, index=X.columns, name="coef") / self._norm_std
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
@@ -375,7 +375,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T: (n) Pandas Series representing observed durations.
         E: (n) Pandas Series representing death events.
         weights: (n) an iterable representing weights per observation.
-        initial_beta: (1,d) numpy array of initial starting point for
+        initial_beta: (d,) numpy array of initial starting point for
                       NR algorithm. Default 0.
         step_size: float, optional
             > 0.001 to determine a starting step size in NR algorithm.
@@ -398,10 +398,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # make sure betas are correct size.
         if initial_beta is not None:
-            assert initial_beta.shape == (d, 1)
+            assert initial_beta.shape == (d,)
             beta = initial_beta
         else:
-            beta = np.zeros((d, 1))
+            beta = np.zeros((d,))
 
         step_sizer = StepSizer(step_size)
         step_size = step_sizer.next()
@@ -439,6 +439,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 h.flat[:: d + 1] -= self.penalizer
 
             # reusing a piece to make g * inv(h) * g.T faster later
+            print(h)
+            print(g)
             try:
                 inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
             except ValueError as e:
@@ -532,7 +534,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return beta
 
     def _get_efron_values_single(self, X, T, E, weights, beta):
-        # TODO: push the beta.reshape up one level.
         """
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
@@ -572,14 +573,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         n, d = X.shape
         hessian = np.zeros((d, d))
-        gradient = np.zeros((1, d))
+        gradient = np.zeros((d,))
         log_lik = 0
-        beta = beta.reshape(d)
 
         # Init risk and tie sums to zero
-        x_death_sum = np.zeros((1, d))
+        x_death_sum = np.zeros((d,))
         risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x, tie_phi_x = np.zeros((d, )), np.zeros((d,))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         # Init number of ties and weights
@@ -592,14 +592,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             # Doing it like this to preserve shape
             ti = T[i]
             ei = E[i]
-            xi = X[i : i + 1]
+            xi = X[i]
             score = scores[i]
             w = weights[i]
 
             # Calculate phi values
             phi_i = score
             phi_x_i = phi_i * xi
-            phi_x_x_i = np.dot(xi.T, phi_x_i)
+            phi_x_x_i = np.outer(xi, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + phi_i
@@ -647,15 +647,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
-            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
             # reset tie values
             tied_death_counts = 0
             weight_count = 0.0
-            x_death_sum = np.zeros((1, d))
+            x_death_sum = np.zeros((d,))
             tie_phi = 0
-            tie_phi_x = np.zeros((1, d))
+            tie_phi_x = np.zeros((d,))
             tie_phi_x_x = np.zeros((d, d))
 
         return hessian, gradient, log_lik
@@ -717,13 +717,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         _, d = X.shape
         hessian = np.zeros((d, d))
-        gradient = np.zeros((1, d))
+        gradient = np.zeros((d,))
         log_lik = 0
-        weights = weights[:, None]
+        #weights = weights[:, None]
 
         # Init risk and tie sums to zero
         risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         unique_death_times = np.unique(T)
@@ -739,7 +739,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             X_at_t = X[ix]
             weights_at_t = weights[ix]
 
-            phi_i = scores[ix]
+            phi_i = scores[ix][:, None]
             phi_x_i = phi_i * X_at_t
             phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
@@ -759,7 +759,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths)
+            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths[:, None] * xi_deaths)
 
             weight_count = array_sum_to_scalar(weights_deaths)
             weighted_average = weight_count / tied_death_counts
@@ -795,14 +795,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 a1 = risk_phi_x_x * denom
 
             summand = numer * denom[:, None]
-
             # This is a batch outer product.
             # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
             # which would be: np.einsum("Bi, Bj->Bij", t, t)
             a2 = summand.T.dot(summand)
-
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
-            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
         return hessian, gradient, log_lik
@@ -1192,7 +1190,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print("---")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
         print(
-            "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
             )
         )

@@ -1504,7 +1504,7 @@ prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476
 ---
 
 Concordance = 0.640
-Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
+Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 """
                 )
                 .strip()
@@ -1577,14 +1577,14 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         E = E.astype(bool)
 
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        beta = np.array([[0]])
+        beta = np.array([0])
 
         l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(u[0] - -2.51) < 0.05
         assert np.abs(l[0][0] - 77.13) < 0.05
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0326) < 0.05
 
         l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
@@ -1592,7 +1592,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         assert np.abs(l[0][0] - 72.83) < 0.05
         assert np.abs(u[0] - -0.069) < 0.05
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0325) < 0.01
 
         l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
@@ -1600,14 +1600,14 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         assert np.abs(l[0][0] - 72.70) < 0.01
         assert np.abs(u[0] - -0.000061) < 0.01
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0335) < 0.01
 
     def test_efron_newtons_method(self, data_nus, cph):
         cph._batch_mode = False
         newton = cph._newton_rhaphson
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
-        assert np.abs(newton(X, T, E, W)[0][0] - -0.0335) < 0.0001
+        assert np.abs(newton(X, T, E, W)[0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus, cph):
         cph.fit(data_nus, duration_col="t", event_col="E")

@@ -404,7 +404,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             if results.success:
                 # pylint: disable=no-value-for-parameter
                 hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, non_zero_entries)
-                return results.x, -results.fun, T.shape[0] * hessian_
+                return results.x, -results.fun * T.shape[0], T.shape[0] * hessian_
             print(results)
             if self._KNOWN_MODEL:
                 raise ConvergenceError(
