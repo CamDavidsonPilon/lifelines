@@ -277,7 +277,7 @@ class CoxPHFitter(BaseFitter):
             step_size=step_size,
         )
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=X.columns, index=["coef"]) / self._norm_std
+        self.hazards_ = pd.Series(hazards_[:, 0], index=X.columns, name="coef") / self._norm_std
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
@@ -871,7 +871,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(
             self.variance_matrix_
         )
-        scaled_schoenfeld_resids.columns = self.hazards_.columns
+
+        scaled_schoenfeld_resids.columns = self.hazards_.index
         return scaled_schoenfeld_resids
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
@@ -894,7 +895,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T.values, E.values, weights.values)
 
         # schoenfeld residuals are only defined for subjects with a non-zero event.
-        df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.columns, index=index[E])
+        df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.index, index=index[E])
         return df
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
@@ -918,7 +919,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
-        scores = weights[:, None] * np.exp(np.dot(X, self.hazards_.T))
+        #import pdb
+        #pdb.set_trace()
+        scores = weights * np.exp(np.dot(X, self.hazards_))
 
         diff_against = []
 
@@ -994,7 +997,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         scaled_variance_matrix = self.variance_matrix_ * np.tile(self._norm_std.values, (d, 1)).T
 
         delta_betas = score_residuals.dot(scaled_variance_matrix)
-        delta_betas.columns = self.hazards_.columns
+        delta_betas.columns = self.hazards_.index
 
         return delta_betas
 
@@ -1013,7 +1016,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         else:
             score_residuals = self._compute_score_within_strata(X.values, T, E.values, weights.values)
 
-        return pd.DataFrame(score_residuals, columns=self.hazards_.columns, index=index)
+        return pd.DataFrame(score_residuals, columns=self.hazards_.index, index=index)
 
     def _compute_score_within_strata(self, X, _T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
@@ -1027,7 +1030,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # we already unnormalized the betas in `fit`, so we need normalize them again since X is
         # normalized.
-        beta = self.hazards_.values[0] * self._norm_std
+        beta = self.hazards_.values * self._norm_std
 
         E = E.astype(int)
         score_residuals = np.zeros((n, d))
@@ -1083,9 +1086,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.r_[hazards - alpha2 * se, hazards + alpha2 * se],
-            index=["lower-bound", "upper-bound"],
-            columns=self.hazards_.columns,
+            np.c_[hazards - alpha2 * se, hazards + alpha2 * se],
+            columns=["lower-bound", "upper-bound"],
+            index=self.hazards_.index,
         )
 
     def _compute_standard_errors(self, X, T, E, weights):
@@ -1093,7 +1096,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             se = np.sqrt(self._compute_sandwich_estimator(X, T, E, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
+        return pd.Series(se, name="se", index=self.hazards_.index)
 
     def _compute_sandwich_estimator(self, X, T, E, weights):
         delta_betas = self._compute_delta_beta(X, T, E, weights)
@@ -1106,7 +1109,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return sandwich_estimator.values
 
     def _compute_z_values(self):
-        return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
+        return self.hazards_ / self.standard_errors_
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -1123,15 +1126,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
 
         with np.errstate(invalid="ignore", divide="ignore"):
-            df = pd.DataFrame(index=self.hazards_.columns)
-            df["coef"] = self.hazards_.loc["coef"].values
-            df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
-            df["se(coef)"] = self.standard_errors_.loc["se"].values
+            df = pd.DataFrame(index=self.hazards_.index)
+            df["coef"] = self.hazards_
+            df["exp(coef)"] = np.exp(self.hazards_)
+            df["se(coef)"] = self.standard_errors_
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
-            df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
+            df["lower %.2f" % self.alpha] = self.confidence_intervals_["lower-bound"]
+            df["upper %.2f" % self.alpha] = self.confidence_intervals_["upper-bound"]
             return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -1205,7 +1208,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ll_alt = self._log_likelihood
 
         test_stat = 2 * ll_alt - 2 * ll_null
-        degrees_freedom = self.hazards_.shape[1]
+        degrees_freedom = self.hazards_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         with np.errstate(invalid="ignore", divide="ignore"):
             return test_stat, degrees_freedom, -np.log2(p_value)
@@ -1259,7 +1262,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         same as the training dataset.
         """
 
-        hazard_names = self.hazards_.columns
+        hazard_names = self.hazards_.index
         if isinstance(X, pd.DataFrame):
             order = hazard_names
             X = X[order]
@@ -1278,7 +1281,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         index = _get_index(X)
 
         X = normalize(X, self._norm_mean.values, 1)
-        return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
+        return pd.DataFrame(np.dot(X, self.hazards_), index=index)
 
     def predict_cumulative_hazard(self, X, times=None):
         """
@@ -1533,11 +1536,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
 
         if columns is None:
-            columns = self.hazards_.columns
+            columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
         symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
-        hazards = self.hazards_[columns].values[0].copy()
+        hazards = self.hazards_.loc[columns].values[0].copy()
 
         order = np.argsort(hazards)
 
@@ -1576,7 +1579,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        if covariate not in self.hazards_.columns:
+        if covariate not in self.hazards_.index:
             raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
         if self.strata is None:
@@ -1679,7 +1682,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         counter = 0
         n = residuals_and_duration.shape[0]
 
-        for variable in self.hazards_.columns:
+        for variable in self.hazards_.index:
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if minumum_observed_p_value > p_value_threshold:
                 continue

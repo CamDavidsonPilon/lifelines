@@ -38,7 +38,7 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
 
     @property
     def median_(self):
-        return 1.0 / self.lambda_ * (np.log(2))
+        return np.log(2) / self.lambda_ 
 
     def _fit_model(self, T, E, entry, show_progress=False):
         T = T - entry

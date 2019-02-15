@@ -564,7 +564,7 @@ class TestLogNormal:
         assert abs(sigma / lnf.sigma_ - 1) < 0.05
 
     def test_lnf_inference_no_censorship(self, lnf):
-        N = 800000
+        N = 1000000
         mu = 10 * np.random.randn()
         sigma = np.random.exponential(10)
 
@@ -666,8 +666,8 @@ class TestWeibullFitter:
         # D = np.random.rand(15000) * T
 
         wf = WeibullFitter()
-        T = np.random.exponential(10, 15000)
-        D = np.random.exponential(10, 15000)
+        T = np.random.exponential(10, 150000)
+        D = np.random.exponential(10, 150000)
 
         keep = T > D
         T = T[keep]
@@ -675,7 +675,7 @@ class TestWeibullFitter:
 
         wf = WeibullFitter().fit(T, entry=D)
 
-        assert np.abs(wf.lambda_ - 0.1) < 0.01
+        assert np.abs(wf.lambda_/10. - 1) < 0.01
 
     def test_weibull_fit_returns_float_timelines(self):
         wf = WeibullFitter()
@@ -697,12 +697,13 @@ class TestWeibullFitter:
 
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
-        N = 40000
+        N = 400000
         T = 5 * np.random.exponential(1, size=N) ** 2
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01
-        assert abs(wf.lambda_ - 0.2) < 0.01
+        assert abs(wf.lambda_/5 - 1) < 0.01
         assert abs(wf.median_ - 5 * np.log(2) ** 2) < 0.1  # worse convergence
+        assert abs(wf.median_ - np.median(T)) < 0.1
 
     def test_exponential_data_produces_correct_inference_with_censorship(self):
         wf = WeibullFitter()
@@ -712,15 +713,15 @@ class TestWeibullFitter:
         T_ = factor * np.random.exponential(1, size=N)
         wf.fit(np.minimum(T, T_), (T < T_))
         assert abs(wf.rho_ - 1.0) < 0.05
-        assert abs(wf.lambda_ - 1.0 / factor) < 0.05
-        assert abs(wf.median_ - 5 * np.log(2)) < 0.1
+        assert abs(wf.lambda_ - factor) < 0.05
+        assert abs(wf.median_ - factor * np.log(2)) < 0.1
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):
         wf = WeibullFitter()
         rho = 5
         lambda_ = 1.0 / 2
         for N in [10, 50, 500, 5000, 50000]:
-            T = np.random.weibull(rho, size=N) / lambda_
+            T = np.random.weibull(rho, size=N) * lambda_
             wf.fit(T)
             assert abs(1 - wf.rho_ / rho) < 5 / np.sqrt(N)
             assert abs(1 - wf.lambda_ / lambda_) < 5 / np.sqrt(N)
@@ -732,7 +733,7 @@ class TestExponentialFitter:
         E = np.array([1, 0, 0, 0], dtype=float)
         enf = ExponentialFitter()
         enf.fit(T, E)
-        assert abs(enf.lambda_ - (E.sum() / T.sum())) < 10e-6
+        assert abs(enf.lambda_ - (T.sum() / E.sum())) < 10e-6
 
 
 class TestKaplanMeierFitter:
@@ -1144,11 +1145,13 @@ class TestRegressionFitters:
 
         for fitter in regression_models:
             # we drop indexs since aaf will have a different "time" index.
-            hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_.reset_index(drop=True)
-            hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").hazards_.reset_index(
-                drop=True
-            )
-            assert_frame_equal(hazards, hazards_norm)
+            hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_
+            hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").hazards_
+            try:
+                assert_series_equal(hazards, hazards_norm)
+            except AssertionError:
+                assert_frame_equal(hazards.reset_index(drop=True), hazards_norm.reset_index(drop=True))
+
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)
@@ -1370,7 +1373,7 @@ class TestCoxPHFitter:
 
         cph.fit(regression_dataset, "T", "E")
 
-        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.hazards_.values[0]
+        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.hazards_.values
         npt.assert_allclose(results.iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=5)
         npt.assert_allclose(results.iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=5)
         npt.assert_allclose(
@@ -1608,7 +1611,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
     def test_fit_method(self, data_nus, cph):
         cph.fit(data_nus, duration_col="t", event_col="E")
-        assert np.abs(cph.hazards_.iloc[0][0] - -0.0335) < 0.0001
+        assert np.abs(cph.hazards_.iloc[0] - -0.0335) < 0.0001
 
     def test_using_dataframes_vs_numpy_arrays(self, data_pred2, cph):
         cph.fit(data_pred2, "t", "E")
@@ -1753,7 +1756,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             data=rossi)
         cat(round(r$coefficients, 8), sep=", ")
         """
-        expected = np.array([[-0.3794222, -0.0574377, 0.3138998, -0.1497957, -0.4337039, -0.0848711, 0.0914971]])
+        expected = np.array([-0.3794222, -0.0574377, 0.3138998, -0.1497957, -0.4337039, -0.0848711, 0.0914971])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest", show_progress=True, batch_mode=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=6)
@@ -1772,7 +1775,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             data=rossi)
         cat(round(r$coefficients, 4), sep=", ")
         """
-        expected = np.array([[-0.3788, -0.0576, -0.1427, -0.4388, -0.0858, 0.0922]])
+        expected = np.array([-0.3788, -0.0576, -0.1427, -0.4388, -0.0858, 0.0922])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest", strata=["race"], show_progress=True, batch_mode=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
@@ -1782,7 +1785,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         rossi_["weights"] = 1.0
         rossi_ = rossi_.groupby(rossi.columns.tolist())["weights"].sum().reset_index()
 
-        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849, 0.0915]])
+        expected = np.array([-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849, 0.0915])
         cf = CoxPHFitter()
         cf.fit(rossi_, duration_col="week", event_col="arrest", weights_col="weights")
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
@@ -1815,7 +1818,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 7.680, "var2": -0.915})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
         expected_cov = np.array([[33.079106, -5.964652], [-5.964652, 2.040642]])
         npt.assert_array_almost_equal(w * cph.variance_matrix_, expected_cov, decimal=1)
@@ -2004,7 +2007,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 1.431, "var2": -1.277})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
         expected_cov = np.array([[3.5439245, -0.3549099], [-0.3549099, 0.4499553]])
         npt.assert_array_almost_equal(
@@ -2041,7 +2044,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": -5.16231, "var2": 1.71924})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=1, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=1, check_names=False)
 
         expected = pd.Series({"var1": 9.97730, "var2": 2.45648})
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
@@ -2073,7 +2076,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": -8.360533, "var2": 1.781126})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=3, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=3, check_names=False)
 
         expected = pd.Series({"var1": 12.303338, "var2": 2.395670})
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=3, check_names=False)
@@ -2102,7 +2105,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, show_progress=True)
         expected = pd.Series({"var1": 7.680, "var2": -0.915})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
         expected = pd.Series({"var1": 2.097, "var2": 0.827})
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
@@ -2172,7 +2175,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
 
             expected_coef = pd.Series({"var1": 7.680, "var2": -0.915})
-            assert_series_equal(cph.hazards_.T["coef"], expected_coef, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.hazards_, expected_coef, check_less_precise=2, check_names=False)
 
             expected_std = pd.Series({"var1": 6.641, "var2": 1.650})
             assert_series_equal(cph.summary["se(coef)"], expected_std, check_less_precise=2, check_names=False)
@@ -2203,7 +2206,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
             expected = pd.Series({"var1": 7.995, "var2": -1.154})
-            assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
             expected = pd.Series({"var1": 6.690, "var2": 1.614})
             assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
@@ -2220,7 +2223,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
             expected = pd.Series({"var1": 0.3268, "var2": 0.0775})
-            assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
             expected = pd.Series({"var1": 0.0697, "var2": 0.0861})
             assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
@@ -2252,7 +2255,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cf2 = CoxPHFitter()
         cf2.fit(rossi, duration_col="week", event_col="arrest")
 
-        assert_frame_equal(cf2.standard_errors_ ** 2, w * cf1.standard_errors_ ** 2, check_like=True)
+        assert_series_equal(cf2.standard_errors_ ** 2, w * cf1.standard_errors_ ** 2)
 
     def test_adding_non_integer_weights_is_fine_if_robust_is_on(self, rossi):
         rossi["weights"] = np.random.exponential(1, rossi.shape[0])
@@ -2317,7 +2320,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
                     paro, mar, wexp) + prio, data = rossi)
         """
-        expected = np.array([[-0.3355, -0.0590, 0.1002]])
+        expected = np.array([-0.3355, -0.0590, 0.1002])
         cf = CoxPHFitter()
         cf.fit(
             rossi, duration_col="week", event_col="arrest", strata=["race", "paro", "mar", "wexp"], show_progress=True
@@ -2331,7 +2334,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         # mod.allison <- coxph(Surv(week, arrest) ~ ridge(fin, age, race, wexp, mar, paro, prio,
         #                                                 theta=1.0, scale=TRUE), data=rossi)
         # cat(round(mod.allison$coefficients, 4), sep=", ")
-        expected = np.array([[-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909]])
+        expected = np.array([-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909])
         cf = CoxPHFitter(penalizer=1.0)
         cf.fit(rossi, duration_col="week", event_col="arrest")
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
@@ -2344,7 +2347,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         # coefs
         actual_coefs = cf.hazards_.values
-        expected_coefs = np.array([[0.1596, 0.2484, 0.6567]])
+        expected_coefs = np.array([0.1596, 0.2484, 0.6567])
         npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=3)
 
     def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
@@ -2355,7 +2358,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         # standard errors
         actual_se = cf._compute_standard_errors(None, None, None, None).values
-        expected_se = np.array([[0.0143, 0.4623, 0.3561, 0.4222]])
+        expected_se = np.array([0.0143, 0.4623, 0.3561, 0.4222])
         npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 
     def test_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
@@ -2373,7 +2376,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cp = CoxPHFitter()
         expected = ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
         cp.fit(rossi, event_col="week", duration_col="arrest")
-        assert list(cp.hazards_.columns) == expected
+        assert list(cp.hazards_.index.tolist()) == expected
 
     def test_strata_removes_variable_from_summary_output(self, rossi):
         cp = CoxPHFitter()
@@ -2630,7 +2633,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         df = regression_dataset
         cph.fit(df, "T", "E", robust=True)
         expected = pd.Series({"var1": 0.0879, "var2": 0.0847, "var3": 0.0655})
-        assert_series_equal(cph.standard_errors_.loc["se"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.standard_errors_, expected, check_less_precise=2, check_names=False)
 
     def test_robust_errors_with_strata_against_R(self, rossi, cph):
         """

@@ -179,7 +179,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             step_size=step_size,
         )
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
+        self.hazards_ = pd.Series(hazards_[:, 0], index=df.columns, name="coef") / self._norm_std
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
@@ -227,7 +227,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
 
     def _compute_z_values(self):
-        return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
+        return self.hazards_ / self.standard_errors_
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -238,9 +238,9 @@ class CoxTimeVaryingFitter(BaseFitter):
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.r_[hazards - alpha2 * se, hazards + alpha2 * se],
-            index=["lower-bound", "upper-bound"],
-            columns=self.hazards_.columns,
+            np.c_[hazards - alpha2 * se, hazards + alpha2 * se],
+            columns=["lower-bound", "upper-bound"],
+            index=self.hazards_.index,
         )
 
     @property
@@ -255,15 +255,15 @@ class CoxTimeVaryingFitter(BaseFitter):
             contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
         with np.errstate(invalid="ignore", divide="ignore"):
-            df = pd.DataFrame(index=self.hazards_.columns)
-            df["coef"] = self.hazards_.loc["coef"].values
-            df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
-            df["se(coef)"] = self.standard_errors_.loc["se"].values
+            df = pd.DataFrame(index=self.hazards_.index)
+            df["coef"] = self.hazards_
+            df["exp(coef)"] = np.exp(self.hazards_)
+            df["se(coef)"] = self.standard_errors_
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
-            df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
+            df["lower %.2f" % self.alpha] = self.confidence_intervals_["lower-bound"]
+            df["upper %.2f" % self.alpha] = self.confidence_intervals_["upper-bound"]
             return df
 
     def _newton_rhaphson(
@@ -530,14 +530,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         same as the training dataset.
         """
         if isinstance(X, pd.DataFrame):
-            order = self.hazards_.columns
+            order = self.hazards_.index
             X = X[order]
             pass_for_numeric_dtypes_or_raise(X)
 
         X = X.astype(float)
         index = _get_index(X)
         X = normalize(X, self._norm_mean.values, 1)
-        return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
+        return pd.DataFrame(np.dot(X, self.hazards_), index=index)
 
     def predict_partial_hazard(self, X):
         r"""
@@ -637,7 +637,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ll_alt = self._log_likelihood
 
         test_stat = 2 * (ll_alt - ll_null)
-        degrees_freedom = self.hazards_.shape[1]
+        degrees_freedom = self.hazards_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         with np.errstate(invalid="ignore", divide="ignore"):
             return test_stat, degrees_freedom, -np.log2(p_value)
@@ -673,7 +673,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
 
         if columns is None:
-            columns = self.hazards_.columns
+            columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
         symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
@@ -764,4 +764,4 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             se = np.sqrt(self._compute_sandwich_estimator(X, events, start, stop, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
+        return pd.Series(se, index=self.hazards_.index, name="se")
