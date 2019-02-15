@@ -21,15 +21,15 @@ class WeibullAFTFitter(BaseFitter):
     form, with :math:`\lambda = \exp\left(\beta_0 + \beta_1x_1 + ... + \beta_n x_n \right)`,
     and optionally, `\rho = \exp\left(\alpha_0 + \alpha_1 y_1 + ... + \alpha_m y_m \right)`,
 
-    .. math::  S(t) = exp(-(\lambda t)^\rho),
+    .. math::  S(t) = exp(-(t / \lambda)^\rho),
 
     which implies the cumulative hazard rate is
 
-    .. math:: H(t) = (\lambda t)^\rho,
+    .. math:: H(t) = (t / \lambda)^\rho,
 
     and the hazard rate is:
 
-    .. math::  h(t) = \rho \lambda(\lambda t)^{\rho-1}
+    .. math::  h(t) = \frac{\rho}{\lambda}(t/\lambda)^{\rho-1}
 
     After calling the `.fit` method, you have access to properties like:
     ``params_``, ``print_summary()``.
@@ -64,7 +64,7 @@ class WeibullAFTFitter(BaseFitter):
         rho_params = params[self._LOOKUP_SLICE['rho_']]
         rho_ =  np.exp(np.dot(Xs[1], rho_params))
 
-        return (lambda_ * T) ** rho_
+        return (T / lambda_) ** rho_
 
     def fit(
         self,
@@ -107,9 +107,9 @@ class WeibullAFTFitter(BaseFitter):
         self._check_values(df, T, E, self.event_col)
         self._check_values(ancillary_df, T, E, self.event_col)
 
-        assert ('baseline' not in ancillary_df) and ('baseline' not in df)
+        assert ('_intercept' not in ancillary_df) and ('_intercept' not in df)
 
-        ancillary_df['baseline'], df['baseline'] = 1.0, 1.0
+        ancillary_df['_intercept'], df['_intercept'] = 1.0, 1.0
 
         self._LOOKUP_SLICE = self._create_slicer(
             len(df.columns),
@@ -398,16 +398,16 @@ class WeibullAFTFitter(BaseFitter):
         if ancillary_X is None:
             ancillary_X = np.ones((X.shape[0],1))
         elif isinstance(ancillary_X, pd.DataFrame):
-            ancillary_X['baseline'] = 1.0
+            ancillary_X['_intercept'] = 1.0
             ancillary_X = ancillary_X[wf.params.loc['rho_'].index]
         else:
-            assert ancillary_X.shape[1] == (wf.params.loc['rho_'].shape[0] + 1) # 1 for baseline
+            assert ancillary_X.shape[1] == (wf.params.loc['rho_'].shape[0] + 1) # 1 for _intercept
 
         if isinstance(X, pd.DataFrame):
-            X['baseline'] = 1.0
+            X['_intercept'] = 1.0
             X = X[wf.params.loc['lambda_'].index]
         else:
-            assert X.shape[1] == (wf.params.loc['lambda_'].shape[0] + 1) # 1 for baseline
+            assert X.shape[1] == (wf.params.loc['lambda_'].shape[0] + 1) # 1 for _intercept
 
 
         cols = _get_index(X)
