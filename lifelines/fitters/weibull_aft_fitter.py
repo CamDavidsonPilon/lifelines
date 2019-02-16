@@ -1,21 +1,31 @@
+import warnings
+from textwrap import dedent
+from datetime import datetime
 
 from autograd import numpy as np
-from autograd import value_and_grad, elementwise_grad as egrad, jacobian, hessian
+from autograd import value_and_grad, elementwise_grad as egrad, hessian
 from scipy.optimize import minimize
-from lifelines.datasets import load_regression_dataset
+from scipy import stats
 import pandas as pd
-from datetime import datetime
+
 from lifelines.fitters import BaseFitter
 from lifelines import WeibullFitter
-
-from scipy import stats
-from lifelines.utils import (_get_index, qth_survival_times, concordance_index, StatisticalWarning, inv_normal_cdf, format_floats, format_p_value, string_justify,
+from lifelines.utils import (
+    _get_index,
+    qth_survival_times,
+    concordance_index,
+    StatisticalWarning,
+    inv_normal_cdf,
+    format_floats,
+    format_p_value,
+    string_justify,
     pass_for_numeric_dtypes_or_raise,
     check_low_var,
     check_complete_separation,
     check_nans_or_infs,
+    normalize,
+    ConvergenceError,
 )
-
 from lifelines.statistics import chisq_test
 
 
@@ -25,28 +35,26 @@ class WeibullAFTFitter(BaseFitter):
     form, with :math:`\lambda = \exp\left(\beta_0 + \beta_1x_1 + ... + \beta_n x_n \right)`,
     and optionally, `\rho = \exp\left(\alpha_0 + \alpha_1 y_1 + ... + \alpha_m y_m \right)`,
 
-    .. math::  S(t) = exp(-(t / \lambda)^\rho),
+    .. math::  S(t; x) = \exp(-(t / \lambda(x))^\rho(y)),
 
     which implies the cumulative hazard rate is
 
-    .. math:: H(t) = (t / \lambda)^\rho,
+    .. math:: H(t) = \left(\frac{t}{\lambda(x)}\right)^\rho(y),
 
     and the hazard rate is:
 
     .. math::  h(t) = \frac{\rho}{\lambda}(t/\lambda)^{\rho-1}
 
     After calling the `.fit` method, you have access to properties like:
-    ``params_``, ``print_summary()``.
-
-    A summary of the fit is available with the method 'print_summary()'
+    ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.
     """
 
-    def __init__(self, fit_intercept=True, alpha=0.95, penalizer=0.0):
+    def __init__(self, alpha=0.95, penalizer=0.0, l1_ratio=0.0):
         super(WeibullAFTFitter, self).__init__(alpha=alpha)
-        self._fitted_parameter_names = ['lambda_', 'rho_']
-        self._hazard = egrad(self._cumulative_hazard, argnum=1) # diff w.r.t. time
+        self._fitted_parameter_names = ["lambda_", "rho_"]
+        self._hazard = egrad(self._cumulative_hazard, argnum=1)  # diff w.r.t. time
         self.penalizer = penalizer
-
+        self.l1_ratio = l1_ratio
 
     def _negative_log_likelihood(self, params, T, E, *Xs):
         n = T.shape[0]
@@ -54,19 +62,21 @@ class WeibullAFTFitter(BaseFitter):
         hz = self._hazard(params, T, *Xs)
         hz = np.clip(hz, 1e-18, np.inf)
 
-        ll = (
-            (E * np.log(hz)).sum()
-            - self._cumulative_hazard(params, T, *Xs).sum()
-        )
-        return -ll / n + self.penalizer * (params**2).sum()
+        ll = (E * np.log(hz)).sum() - self._cumulative_hazard(params, T, *Xs).sum()
+        if self.penalizer > 0:
+            penalty = self.l1_ratio * np.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
+        else:
+            penalty = 0
 
+        ll = ll / n
+        return -ll + self.penalizer * penalty
 
     def _cumulative_hazard(self, params, T, *Xs):
-        lambda_params = params[self._LOOKUP_SLICE['lambda_']]
-        lambda_ =  np.exp(np.dot(Xs[0], lambda_params))
+        lambda_params = params[self._LOOKUP_SLICE["lambda_"]]
+        lambda_ = np.exp(np.dot(Xs[0], lambda_params))
 
-        rho_params = params[self._LOOKUP_SLICE['rho_']]
-        rho_ =  np.exp(np.dot(Xs[1], rho_params))
+        rho_params = params[self._LOOKUP_SLICE["rho_"]]
+        rho_ = np.exp(np.dot(Xs[1], rho_params))
 
         return (T / lambda_) ** rho_
 
@@ -75,8 +85,8 @@ class WeibullAFTFitter(BaseFitter):
         df,
         duration_col,
         event_col=None,
-        ancillary_df=None, # (or None, or True, or False - same as None)
-        show_progress=False
+        ancillary_df=None,  # (or None, or True, or False - same as None)
+        show_progress=False,
     ):
 
         if duration_col is None:
@@ -87,48 +97,61 @@ class WeibullAFTFitter(BaseFitter):
         self.event_col = event_col
         self._n_examples = df.shape[0]
 
-
         df = df.copy()
 
         T = df.pop(duration_col).astype(float)
         E = df.pop(event_col).astype(bool)
 
-
         self.durations = T.copy()
         self.event_observed = E.copy()
 
         if isinstance(ancillary_df, pd.DataFrame):
-            assert ancillary_df.shape[0] == df.shape[0], 'ancillary_df must be the same shape[0] as df'
+            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
             ancillary_df = ancillary_df.copy()
-            ancillary_df = ancillary_df.drop([duration_col, event_col], axis=1, errors='ignore')
+            ancillary_df = ancillary_df.drop([duration_col, event_col], axis=1, errors="ignore")
             self._check_values(ancillary_df, T, E, self.event_col)
-        elif (ancillary_df is None) or (ancillary_df == False):
+        elif (ancillary_df is None) or (ancillary_df is False):
             ancillary_df = pd.DataFrame(index=df.index)
-        elif ancillary_df == True:
+        elif ancillary_df is True:
             ancillary_df = df.copy()
 
         self._check_values(df, T, E, self.event_col)
 
-        assert ('_intercept' not in ancillary_df) and ('_intercept' not in df)
+        assert ("_intercept" not in ancillary_df) and ("_intercept" not in df)
 
-        ancillary_df['_intercept'], df['_intercept'] = 1.0, 1.0
+        ancillary_df["_intercept"], df["_intercept"] = 1.0, 1.0
 
-        self._LOOKUP_SLICE = self._create_slicer(
-            len(df.columns),
-            len(ancillary_df.columns)
+        self._LOOKUP_SLICE = self._create_slicer(len(df.columns), len(ancillary_df.columns))
+
+        self._norm_std = df.std(0)
+        # if we included an intercept, we need to fix not divide by zero.
+        self._norm_std["_intercept"] = 1.0
+
+        self._norm_std_ancillary = ancillary_df.std(0)
+        # if we included an intercept, we need to fix not divide by zero.
+        self._norm_std_ancillary["_intercept"] = 1.0
+        _std = np.append(self._norm_std, self._norm_std_ancillary)
+
+        _params, self._log_likelihood, self._hessian_ = self._fit_model(
+            T.values,
+            E.values,
+            normalize(df, 0, self._norm_std).values,
+            normalize(ancillary_df, 0, self._norm_std_ancillary).values,
+            show_progress=show_progress,
+        )
+        _params = _params / _std
+        self.params_ = pd.Series(
+            _params,
+            index=pd.MultiIndex.from_tuples(
+                [("lambda_", c) for c in df.columns] + [("rho_", c) for c in ancillary_df.columns]
+            ),
+            name="coef",
         )
 
-        _params, self._log_likelihood, self._hessian_ = self._fit_model(T.values, E.values, df.values, ancillary_df.values, show_progress=show_progress)
-
-        self.params_ = pd.Series(_params, index=pd.MultiIndex.from_tuples(
-            [('lamba_', c) for c in df.columns] +
-            [('rho_', c) for c in ancillary_df.columns]
-        ), name='coef')
-
         try:
-            self.variance_matrix_ = inv(self._hessian_)
+            self.variance_matrix_ = np.linalg.inv(self._hessian_)
         except np.linalg.LinAlgError:
-            self.variance_matrix_ = pinv(self._hessian_)
+            self.variance_matrix_ = np.linalg.pinv(self._hessian_)
             warning_text = dedent(
                 """\
                 The hessian was not invertable. We will instead approximate it using the psuedo-inverse.
@@ -139,6 +162,8 @@ class WeibullAFTFitter(BaseFitter):
                 """
             )
             warnings.warn(warning_text, StatisticalWarning)
+
+        self.variance_matrix_ = self.variance_matrix_ / np.outer(_std, _std)
 
         self.standard_errors_ = self._compute_standard_errors()
         self.confidence_intervals_ = self._compute_confidence_intervals()
@@ -155,17 +180,19 @@ class WeibullAFTFitter(BaseFitter):
         check_complete_separation(X, E, T, event_col)
 
     def _fit_model(self, T, E, *Xs, show_progress=False):
-
         n_params = sum([X.shape[1] for X in Xs])
         init_values = np.zeros((n_params,))
 
         results = minimize(
             value_and_grad(self._negative_log_likelihood),
             init_values,
+            method=None if self.l1_ratio <= 0.0 else "L-BFGS-B",
             jac=True,
             args=(T, E, *Xs),
             options={"disp": show_progress},
         )
+        if show_progress:
+            print(results)
 
         if results.success:
             # pylint: disable=no-value-for-parameter
@@ -180,7 +207,6 @@ class WeibullAFTFitter(BaseFitter):
         """
             )
         )
-
 
     def _create_slicer(self, *sizes):
 
@@ -225,11 +251,10 @@ class WeibullAFTFitter(BaseFitter):
         ll_alt = self._log_likelihood
 
         test_stat = 2 * ll_alt - 2 * ll_null
-        degrees_freedom = self.params_.shape[0] - 2 # diff in number of parameters between models
+        degrees_freedom = self.params_.shape[0] - 2  # diff in number of parameters between models
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         with np.errstate(invalid="ignore", divide="ignore"):
             return test_stat, degrees_freedom, -np.log2(p_value)
-
 
     @property
     def summary(self):
@@ -252,7 +277,6 @@ class WeibullAFTFitter(BaseFitter):
             df["lower %.2f" % self.alpha] = self.confidence_intervals_["lower-bound"]
             df["upper %.2f" % self.alpha] = self.confidence_intervals_["upper-bound"]
             return df
-
 
     def print_summary(self, decimals=2, **kwargs):
         """
@@ -277,6 +301,7 @@ class WeibullAFTFitter(BaseFitter):
         print("{} = '{}'".format(justify("event col"), self.event_col))
         if self.penalizer > 0:
             print("{} = {}".format(justify("penalizer"), self.penalizer))
+            print("{} = {}".format(justify("l1_ratio"), self.l1_ratio))
 
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
@@ -295,7 +320,7 @@ class WeibullAFTFitter(BaseFitter):
 
         # Significance code explanation
         print("---")
-        #print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+        # print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
         print(
             "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
@@ -333,6 +358,7 @@ class WeibullAFTFitter(BaseFitter):
 
     def predict_percentile(self, X, p=0.5, ancillary_X=None):
         """
+        # TODO: this can be faster as a closed form expression exists
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
@@ -415,37 +441,43 @@ class WeibullAFTFitter(BaseFitter):
         cumulative_hazard_ : DataFrame
             the cumulative hazard of individuals over the timeline
         """
-        timeline = np.linspace(0, 25)
+        timeline = np.linspace(0, 25) 
 
         if ancillary_X is None:
-            ancillary_X = np.ones((X.shape[0],1))
+            ancillary_X = np.ones((X.shape[0], 1))
         elif isinstance(ancillary_X, pd.DataFrame):
-            ancillary_X['_intercept'] = 1.0
-            ancillary_X = ancillary_X[wf.params.loc['rho_'].index]
+            ancillary_X["_intercept"] = 1.0
+            ancillary_X = ancillary_X[self.params_.loc["rho_"].index]
         else:
-            assert ancillary_X.shape[1] == (wf.params.loc['rho_'].shape[0] + 1) # 1 for _intercept
+            assert ancillary_X.shape[1] == (self.params_.loc["rho_"].shape[0] + 1)  # 1 for _intercept
 
         if isinstance(X, pd.DataFrame):
-            X['_intercept'] = 1.0
-            X = X[wf.params.loc['lambda_'].index]
+            X["_intercept"] = 1.0
+            X = X[self.params_.loc["lambda_"].index]
         else:
-            assert X.shape[1] == (wf.params.loc['lambda_'].shape[0] + 1) # 1 for _intercept
-
+            assert X.shape[1] == (self.params_.loc["lambda_"].shape[0] + 1)  # 1 for _intercept
 
         cols = _get_index(X)
+        X = normalize(X, 0, self._norm_std)
+        ancillary_X = normalize(ancillary_X, 0, self._norm_std_ancillary)
 
-        lambda_params = self.params[self._LOOKUP_SLICE['lambda_']]
-        lambda_ =  np.exp(np.dot(X, lambda_params))
+        lambda_params = self.params_[self._LOOKUP_SLICE["lambda_"]]
+        lambda_ = np.exp(np.dot(X, lambda_params))
 
-        rho_params = self.params[self._LOOKUP_SLICE['rho_']]
-        rho_ =  np.exp(np.dot(ancillary_X, rho_params))
+        rho_params = self.params_[self._LOOKUP_SLICE["rho_"]]
+        rho_ = np.exp(np.dot(ancillary_X, rho_params))
 
-        return pd.DataFrame(np.outer(timeline, lambda_) ** rho_, columns=cols, index=timeline)
+        return pd.DataFrame(np.outer(timeline, 1 / lambda_) ** rho_, columns=cols, index=timeline)
 
 
+from lifelines.datasets import load_regression_dataset, load_rossi
 
-df = load_regression_dataset()
 
-wf = WeibullFitter().fit(df['T'], df['E'])
+df = load_rossi()
 
-aft = WeibullAFTFitter().fit(df, 'T', 'E', ancillary_df=df)
+#df["var1"] = 1000 * df["var1"]
+
+aft = WeibullAFTFitter(penalizer=0.0).fit(df, "week", "arrest", ancillary_df=False)
+aft.print_summary(5)
+
+concordance_index(df['week'], aft.predict_median(df), df['arrest'])

@@ -675,7 +675,7 @@ class TestWeibullFitter:
 
         wf = WeibullFitter().fit(T, entry=D)
 
-        assert np.abs(wf.lambda_/10. - 1) < 0.01
+        assert np.abs(wf.lambda_ / 10.0 - 1) < 0.01
 
     def test_weibull_fit_returns_float_timelines(self):
         wf = WeibullFitter()
@@ -701,7 +701,7 @@ class TestWeibullFitter:
         T = 5 * np.random.exponential(1, size=N) ** 2
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01
-        assert abs(wf.lambda_/5 - 1) < 0.01
+        assert abs(wf.lambda_ / 5 - 1) < 0.01
         assert abs(wf.median_ - 5 * np.log(2) ** 2) < 0.1  # worse convergence
         assert abs(wf.median_ - np.median(T)) < 0.1
 
@@ -1151,7 +1151,6 @@ class TestRegressionFitters:
                 assert_series_equal(hazards, hazards_norm)
             except AssertionError:
                 assert_frame_equal(hazards.reset_index(drop=True), hazards_norm.reset_index(drop=True))
-
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)

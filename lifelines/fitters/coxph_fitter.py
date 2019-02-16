@@ -579,7 +579,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init risk and tie sums to zero
         x_death_sum = np.zeros((d,))
         risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((d, )), np.zeros((d,))
+        risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         # Init number of ties and weights
@@ -719,7 +719,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         hessian = np.zeros((d, d))
         gradient = np.zeros((d,))
         log_lik = 0
-        #weights = weights[:, None]
+        # weights = weights[:, None]
 
         # Init risk and tie sums to zero
         risk_phi, tie_phi = 0, 0
@@ -917,8 +917,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
-        #import pdb
-        #pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
         scores = weights * np.exp(np.dot(X, self.hazards_))
 
         diff_against = []
