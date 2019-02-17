@@ -294,6 +294,15 @@ class TestUnivariateFitters:
             with pytest.raises(ValueError, match="timedelta"):
                 fitter().fit(T)
 
+    def test_univariate_fitters_okay_if_given_boolean_col_with_object_dtype(self, univariate_fitters):
+        df = pd.DataFrame({"T": [1, 2, 3, 4, 5], "E": [True, True, True, True, None]})
+        assert df["E"].dtype == object
+        df = df.dropna()
+        assert df["E"].dtype == object
+
+        for fitter in univariate_fitters:
+            fitter().fit(df["T"], df["E"])
+
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(
         self, positive_sample_lifetimes, univariate_fitters
     ):
@@ -1104,12 +1113,11 @@ class TestRegressionFitters:
             WeibullAFTFitter(),
         ]
 
-
     def test_dill_serialization(self, rossi, regression_models):
         from dill import dumps, loads
 
         for fitter in regression_models:
-            fitter.fit(rossi, 'week', 'arrest')
+            fitter.fit(rossi, "week", "arrest")
 
             unpickled = loads(dumps(fitter))
             dif = (fitter.durations - unpickled.durations).sum()
@@ -1123,6 +1131,19 @@ class TestRegressionFitters:
             output = stringio()
             f = fitter.fit(rossi, "week", "arrest")
             dump(f, output)
+
+    def test_fit_will_accept_object_dtype_as_event_col(self, regression_models):
+        # issue #638
+        df = pd.DataFrame({"T": np.arange(1, 11), "E": [True] * 9 + [None]})
+
+        assert df["E"].dtype == object
+        df = df.dropna()
+        assert df["E"].dtype == object
+
+        for fitter in regression_models:
+            if getattr(fitter, "strata", False):
+                continue
+            fitter.fit(df, "T", "E")
 
     def test_fit_methods_require_duration_col(self, rossi, regression_models):
         for fitter in regression_models:
@@ -1160,7 +1181,7 @@ class TestRegressionFitters:
 
         for fitter in regression_models:
             # we drop indexes since aaf will have a different "time" index.
-            try: 
+            try:
                 hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_
                 hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").hazards_
             except AttributeError:
@@ -1171,7 +1192,11 @@ class TestRegressionFitters:
                 assert_frame_equal(hazards.reset_index(drop=True), hazards_norm.reset_index(drop=True))
             else:
                 if isinstance(hazards.index, pd.MultiIndex):
-                    assert_series_equal(hazards.drop(index='_intercept', level=1), hazards_norm.drop(index='_intercept', level=1), check_less_precise=True)
+                    assert_series_equal(
+                        hazards.drop(index="_intercept", level=1),
+                        hazards_norm.drop(index="_intercept", level=1),
+                        check_less_precise=True,
+                    )
                 else:
                     assert_series_equal(hazards, hazards_norm)
 
@@ -1203,7 +1228,7 @@ class TestRegressionFitters:
         )
 
         for fitter in regression_models:
-            if getattr(fitter, 'strata', False):
+            if getattr(fitter, "strata", False):
                 continue
             for subset in [["t", "categorya_"], ["t", "categoryb_"], ["t", "string_"]]:
                 with pytest.raises(TypeError):

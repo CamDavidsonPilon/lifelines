@@ -789,6 +789,13 @@ def _get_index(X):
     return index
 
 
+def pass_for_numeric_dtypes_or_raise_array(series_or_array):
+    try:
+        series_or_array = pd.to_numeric(series_or_array)
+    except:
+        raise ValueError("Values must be a subtype of number: so no strings, timedeltas, datetimes, objects, etc.")
+
+
 def pass_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"
@@ -857,8 +864,7 @@ if convergence fails.%s"
 
 
 def check_complete_separation_low_variance(df, events, event_col):
-    # import pdb
-    # pdb.set_trace()
+
     events = events.astype(bool)
     deaths_only = df.columns[_low_var(df.loc[events])]
     censors_only = df.columns[_low_var(df.loc[~events])]
@@ -903,8 +909,6 @@ def check_complete_separation(df, events, durations, event_col):
 
 
 def check_nans_or_infs(df_or_array):
-    if hasattr(df_or_array, "dtype") and df_or_array.dtype.kind not in "biuf":
-        raise ValueError("Values must be a subtype of number: so no strings, timedeltas, datetimes, objects, etc.")
 
     nulls = pd.isnull(df_or_array)
     if hasattr(nulls, "values"):
@@ -918,6 +922,7 @@ def check_nans_or_infs(df_or_array):
         infs = df_or_array.values == np.Inf
     else:
         infs = np.isinf(df_or_array)
+
     if hasattr(infs, "values"):
         if infs.values.any():
             raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")

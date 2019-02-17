@@ -32,6 +32,7 @@ from lifelines.utils import (
     format_p_value,
     coalesce,
     check_nans_or_infs,
+    pass_for_numeric_dtypes_or_raise_array,
     StatisticalWarning,
     StatError,
     median_survival_times,
@@ -565,8 +566,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
         label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
 
         check_nans_or_infs(durations)
+        pass_for_numeric_dtypes_or_raise_array(durations)
         if event_observed is not None:
             check_nans_or_infs(event_observed)
+            pass_for_numeric_dtypes_or_raise_array(event_observed)
 
         self.durations = np.asarray(durations, dtype=float)
         # check for negative or 0 durations - these are not allowed in a weibull model.

@@ -14,6 +14,7 @@ from lifelines.utils import (
     inv_normal_cdf,
     median_survival_times,
     check_nans_or_infs,
+    pass_for_numeric_dtypes_or_raise_array,
     StatisticalWarning,
     coalesce,
 )
@@ -79,9 +80,9 @@ class KaplanMeierFitter(UnivariateFitter):
 
         """
 
-        check_nans_or_infs(durations)
+        self._check_values(durations)
         if event_observed is not None:
-            check_nans_or_infs(event_observed)
+            self._check_values(event_observed)
 
         if weights is not None:
             if (weights.astype(int) != weights).any():
@@ -134,6 +135,10 @@ class KaplanMeierFitter(UnivariateFitter):
         # plotting functions
         setattr(self, "plot_" + estimate_name, self.plot)
         return self
+
+    def _check_values(self, array):
+        check_nans_or_infs(array)
+        pass_for_numeric_dtypes_or_raise_array(array)
 
     def plot_loglogs(self, *args, **kwargs):
         return plot_loglogs(self, *args, **kwargs)

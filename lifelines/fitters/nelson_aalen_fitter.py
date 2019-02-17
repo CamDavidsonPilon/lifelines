@@ -14,6 +14,7 @@ from lifelines.utils import (
     epanechnikov_kernel,
     inv_normal_cdf,
     check_nans_or_infs,
+    pass_for_numeric_dtypes_or_raise_array,
     StatisticalWarning,
 )
 
@@ -96,8 +97,10 @@ class NelsonAalenFitter(UnivariateFitter):
         """
 
         check_nans_or_infs(durations)
+        pass_for_numeric_dtypes_or_raise_array(durations)
         if event_observed is not None:
             check_nans_or_infs(event_observed)
+            pass_for_numeric_dtypes_or_raise_array(event_observed)
 
         if weights is not None:
             if (weights.astype(int) != weights).any():
