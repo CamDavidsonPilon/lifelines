@@ -6,6 +6,7 @@ from autograd import numpy as np
 from autograd import value_and_grad, elementwise_grad as egrad, hessian
 from scipy.optimize import minimize
 from scipy import stats
+from scipy.special import gamma
 import pandas as pd
 
 from lifelines.fitters import BaseFitter
@@ -100,22 +101,34 @@ class WeibullAFTFitter(BaseFitter):
         df = df.copy()
 
         T = df.pop(duration_col).astype(float)
-        E = df.pop(event_col).astype(bool)
-
+        E = (
+            df.pop(self.event_col).astype(bool)
+            if (self.event_col is not None)
+            else pd.Series(np.ones(self._n_examples), index=df.index, name="E")
+        )
         self.durations = T.copy()
         self.event_observed = E.copy()
 
+        if np.any(self.durations <= 0):
+            raise ValueError(
+                "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
+            )
+
+        self._check_values(df, T, E, self.event_col)
+
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
+            self._fit_ancillary = True
             ancillary_df = ancillary_df.copy()
             ancillary_df = ancillary_df.drop([duration_col, event_col], axis=1, errors="ignore")
             self._check_values(ancillary_df, T, E, self.event_col)
         elif (ancillary_df is None) or (ancillary_df is False):
+            self._fit_ancillary = False
             ancillary_df = pd.DataFrame(index=df.index)
         elif ancillary_df is True:
+            self._fit_ancillary = True
             ancillary_df = df.copy()
 
-        self._check_values(df, T, E, self.event_col)
 
         assert ("_intercept" not in ancillary_df) and ("_intercept" not in df)
 
@@ -167,6 +180,7 @@ class WeibullAFTFitter(BaseFitter):
 
         self.standard_errors_ = self._compute_standard_errors()
         self.confidence_intervals_ = self._compute_confidence_intervals()
+        self._predicted_median = self.predict_median(df, ancillary_df)
 
         return self
 
@@ -320,7 +334,7 @@ class WeibullAFTFitter(BaseFitter):
 
         # Significance code explanation
         print("---")
-        # print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+        print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
         print(
             "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
@@ -356,7 +370,7 @@ class WeibullAFTFitter(BaseFitter):
         """
         return np.exp(-self.predict_cumulative_hazard(X, times=times, ancillary_X=ancillary_X))
 
-    def predict_percentile(self, X, p=0.5, ancillary_X=None):
+    def predict_percentile(self, X, ancillary_X=None, p=0.5):
         """
         # TODO: this can be faster as a closed form expression exists
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
@@ -385,8 +399,60 @@ class WeibullAFTFitter(BaseFitter):
         predict_median
 
         """
+        if ancillary_X is None:
+            ancillary_X = pd.DataFrame(np.ones((X.shape[0], 1)), columns=['_intercept'])
+        elif isinstance(ancillary_X, pd.DataFrame):
+            ancillary_X = ancillary_X.copy()
+            ancillary_X["_intercept"] = 1.0
+            ancillary_X = ancillary_X[self.params_.loc["rho_"].index]
+        else:
+            assert ancillary_X.shape[1] == (self.params_.loc["rho_"].shape[0] + 1)  # 1 for _intercept
+
+        if isinstance(X, pd.DataFrame):
+            X = X.copy()
+            X["_intercept"] = 1.0
+            X = X[self.params_.loc["lambda_"].index]
+        else:
+            assert X.shape[1] == (self.params_.loc["lambda_"].shape[0] + 1)  # 1 for _intercept
+
+        lambda_params = self.params_[self._LOOKUP_SLICE["lambda_"]]
+        lambda_ = np.exp(np.dot(X, lambda_params))
+
+        rho_params = self.params_[self._LOOKUP_SLICE["rho_"]]
+        rho_ = np.exp(np.dot(ancillary_X, rho_params))
         subjects = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X, ancillary_X=ancillary_X)[subjects]).T
+
+
+        return pd.DataFrame(lambda_ * np.power(-np.log(p), 1 / rho_), index=subjects)
+
+
+    def predict_expectation(self, X, ancillary_X=None):
+
+        if ancillary_X is None:
+            ancillary_X = pd.DataFrame(np.ones((X.shape[0], 1)), columns=['_intercept'])
+        elif isinstance(ancillary_X, pd.DataFrame):
+            ancillary_X = ancillary_X.copy()
+            ancillary_X["_intercept"] = 1.0
+            ancillary_X = ancillary_X[self.params_.loc["rho_"].index]
+        else:
+            assert ancillary_X.shape[1] == (self.params_.loc["rho_"].shape[0] + 1)  # 1 for _intercept
+
+        if isinstance(X, pd.DataFrame):
+            X = X.copy()
+            X["_intercept"] = 1.0
+            X = X[self.params_.loc["lambda_"].index]
+        else:
+            assert X.shape[1] == (self.params_.loc["lambda_"].shape[0] + 1)  # 1 for _intercept
+
+        lambda_params = self.params_[self._LOOKUP_SLICE["lambda_"]]
+        lambda_ = np.exp(np.dot(X, lambda_params))
+
+        rho_params = self.params_[self._LOOKUP_SLICE["rho_"]]
+        rho_ = np.exp(np.dot(ancillary_X, rho_params))
+        subjects = _get_index(X)
+        return pd.DataFrame((lambda_ * gamma(1 + 1/rho_)), index=subjects)
+
+
 
     def predict_median(self, X, ancillary_X=None):
         """
@@ -416,7 +482,7 @@ class WeibullAFTFitter(BaseFitter):
         predict_percentile
 
         """
-        return self.predict_percentile(X, 0.5, ancillary_X=ancillary_X)
+        return self.predict_percentile(X, p=0.5, ancillary_X=ancillary_X)
 
     def predict_cumulative_hazard(self, X, ancillary_X=None, times=None):
         """
@@ -441,43 +507,67 @@ class WeibullAFTFitter(BaseFitter):
         cumulative_hazard_ : DataFrame
             the cumulative hazard of individuals over the timeline
         """
-        timeline = np.linspace(0, 25) 
+        if times is None:
+            times = np.unique(self.durations)
 
         if ancillary_X is None:
-            ancillary_X = np.ones((X.shape[0], 1))
+            ancillary_X = pd.DataFrame(np.ones((X.shape[0], 1)), columns=['_intercept'])
         elif isinstance(ancillary_X, pd.DataFrame):
+            assert '_intercept' not in ancillary_X
+            ancillary_X = ancillary_X.copy()
             ancillary_X["_intercept"] = 1.0
             ancillary_X = ancillary_X[self.params_.loc["rho_"].index]
         else:
             assert ancillary_X.shape[1] == (self.params_.loc["rho_"].shape[0] + 1)  # 1 for _intercept
 
+
         if isinstance(X, pd.DataFrame):
+            X = X.copy()
             X["_intercept"] = 1.0
             X = X[self.params_.loc["lambda_"].index]
         else:
             assert X.shape[1] == (self.params_.loc["lambda_"].shape[0] + 1)  # 1 for _intercept
-
-        cols = _get_index(X)
-        X = normalize(X, 0, self._norm_std)
-        ancillary_X = normalize(ancillary_X, 0, self._norm_std_ancillary)
 
         lambda_params = self.params_[self._LOOKUP_SLICE["lambda_"]]
         lambda_ = np.exp(np.dot(X, lambda_params))
 
         rho_params = self.params_[self._LOOKUP_SLICE["rho_"]]
         rho_ = np.exp(np.dot(ancillary_X, rho_params))
+        cols = _get_index(X)
+        return pd.DataFrame(np.outer(times, 1 / lambda_) ** rho_, columns=cols, index=times)
 
-        return pd.DataFrame(np.outer(timeline, 1 / lambda_) ** rho_, columns=cols, index=timeline)
+
+    @property
+    def score_(self):
+        """
+        The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the AUC
+        to survival data, including censorships.
+
+        For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
+        onto the training dataset.
+
+        """
+        # pylint: disable=access-member-before-definition
+        if hasattr(self, "_predicted_median"):
+            self._concordance_score_ = concordance_index(
+                self.durations, self._predicted_median, self.event_observed
+            )
+            del self._predicted_median
+            return self._concordance_score_
+        return self._concordance_score_
+
 
 
 from lifelines.datasets import load_regression_dataset, load_rossi
 
-
-df = load_rossi()
+ 
+df = load_regression_dataset()
 
 #df["var1"] = 1000 * df["var1"]
 
-aft = WeibullAFTFitter(penalizer=0.0).fit(df, "week", "arrest", ancillary_df=False)
-aft.print_summary(5)
+aft = WeibullAFTFitter(penalizer=0).fit(df, "T", "E", ancillary_df=False)
+#aft.predict_percentile(df, df)
+aft.print_summary()
 
-concordance_index(df['week'], aft.predict_median(df), df['arrest'])
+#print(concordance_index(df['week'], -aft.predict_cumulative_hazard(df, df, times=[52]), df['arrest']))
+#print(concordance_index(df['week'], aft.predict_percentile(df, p=0.9, ancillary_X=df), df['arrest']))

@@ -13,10 +13,12 @@ from lifelines.fitters.aalen_johansen_fitter import AalenJohansenFitter
 from lifelines.fitters.log_normal_fitter import LogNormalFitter
 from lifelines.fitters.log_logistic_fitter import LogLogisticFitter
 from lifelines.fitters.piecewise_exponential_fitter import PiecewiseExponentialFitter
+from lifelines.fitters.weibull_aft_fitter import WeibullAFTFitter
 
 from lifelines.version import __version__
 
 __all__ = [
+    "__version__",
     "KaplanMeierFitter",
     "NelsonAalenFitter",
     "AalenAdditiveFitter",
@@ -28,4 +30,5 @@ __all__ = [
     "AalenJohansenFitter",
     "LogNormalFitter",
     "LogLogisticFitter",
+    "WeibullAFTFitter",
 ]

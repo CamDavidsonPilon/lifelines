@@ -864,8 +864,7 @@ def check_complete_separation_low_variance(df, events, event_col):
     censors_only = df.columns[_low_var(df.loc[~events])]
     problem_columns = censors_only.union(deaths_only).tolist()
     if problem_columns:
-        warning_text = """Column(s) {cols} have very low variance when conditioned on
-death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
+        warning_text = """Column {cols} have very low variance when conditioned on death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
 >>> events = df['{event_col}'].astype(bool)
 >>> df.loc[events, '{cols}'].var()
 >>> df.loc[~events, '{cols}'].var()

@@ -439,8 +439,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 h.flat[:: d + 1] -= self.penalizer
 
             # reusing a piece to make g * inv(h) * g.T faster later
-            print(h)
-            print(g)
             try:
                 inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
             except ValueError as e:
@@ -1799,7 +1797,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         to survival data, including censorships.
 
         For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
-        onto the training dataset. It's analgous to the R^2 in linear models.
+        onto the training dataset. 
 
         """
         # pylint: disable=access-member-before-definition
