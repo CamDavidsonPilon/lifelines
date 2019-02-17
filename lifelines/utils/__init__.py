@@ -564,12 +564,12 @@ def k_fold_cross_validation(
     ----------
     fitters: model
       one or several objects which possess a method:
-      fit(self, data, duration_col, event_col)
+        `fit(self, data, duration_col, event_col)`
       Note that the last two arguments will be given as keyword arguments,
       and that event_col is optional. The objects must also have
       the "predictor" method defined below.
     df: DataFrame
-      a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
+      a Pandas dataframe with necessary columns `duration_col` and (optional) `event_col`, plus
       other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
       refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
     duration_col: (n,) array

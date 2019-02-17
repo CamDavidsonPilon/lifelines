@@ -13,7 +13,6 @@ from lifelines.fitters import BaseFitter
 from lifelines import WeibullFitter
 from lifelines.utils import (
     _get_index,
-    qth_survival_times,
     concordance_index,
     StatisticalWarning,
     inv_normal_cdf,
@@ -48,6 +47,14 @@ class WeibullAFTFitter(BaseFitter):
 
     After calling the `.fit` method, you have access to properties like:
     ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.
+
+
+    Parameters
+    -----------
+
+    fit_intercept: boolean, optional (default=True)
+        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable. 
+
     """
 
     def __init__(self, alpha=0.95, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):
@@ -82,15 +89,75 @@ class WeibullAFTFitter(BaseFitter):
 
         return (T / lambda_) ** rho_
 
-    def fit(
-        self,
-        df,
-        duration_col,
-        event_col=None,
-        ancillary_df=None,  # (or None, or True, or False - same as None)
-        show_progress=False,
-    ):
+    def fit(self, df, duration_col=None, event_col=None, ancillary_df=None, show_progress=False):
+        """
+        Fit the Weibull accelerated failure time model to a dataset.
 
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights, strata).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        duration_col: string
+            the name of the column in dataframe that contains the subjects'
+            lifetimes.
+
+        event_col: string, optional
+            the  name of thecolumn in dataframe that contains the subjects' death
+            observation. If left as None, assume all individuals are uncensored.
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+    
+        ancillary_df: None, boolean, or DataFrame, optional (default=None)
+            Choose to model the ancillary parameters. 
+            If None or False, explicity do not fit the ancillary parameters using any covariates.
+            If True, model the ancillary parameters with the same covariates as ``df``.
+            If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.  
+
+        Returns
+        -------
+        self: CoxPHFitter
+            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+
+
+        Examples
+        --------
+        >>> from lifelines import WeibullAFTFitter
+        >>>
+        >>> df = pd.DataFrame({
+        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>> })
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit(df, 'T', 'E')
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+
+
+        >>> from lifelines import WeibullAFTFitter
+        >>>
+        >>> df = pd.DataFrame({
+        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        >>>     'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>> })
+        >>>
+        >>> aft = CoxPHFitter()
+        >>> aft.fit(df, 'T', 'E', ancillary_df=df)
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+
+        """
         if duration_col is None:
             raise TypeError("duration_col cannot be None.")
 
@@ -119,26 +186,30 @@ class WeibullAFTFitter(BaseFitter):
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            self._fit_ancillary = True
-            ancillary_df = ancillary_df.copy()
-            ancillary_df = ancillary_df.drop([duration_col, event_col], axis=1, errors="ignore")
+            ancillary_df = ancillary_df.copy().drop([duration_col, event_col], axis=1, errors="ignore")
             self._check_values(ancillary_df, T, E, self.event_col)
+
+            if self.fit_intercept:
+                assert "_intercept" not in ancillary_df
+                ancillary_df["_intercept"] = 1.0
+
         elif (ancillary_df is None) or (ancillary_df is False):
-            self._fit_ancillary = False
             ancillary_df = pd.DataFrame(index=df.index)
+            ancillary_df["_intercept"] = 1.0
         elif ancillary_df is True:
-            self._fit_ancillary = True
             ancillary_df = df.copy()
+            if self.fit_intercept:
+                ancillary_df["_intercept"] = 1.0
 
         if self.fit_intercept:
-            assert ("_intercept" not in ancillary_df) and ("_intercept" not in df)
-            ancillary_df["_intercept"], df["_intercept"] = 1.0, 1.0
+            assert "_intercept" not in df
+            df["_intercept"] = 1.0
 
         self._LOOKUP_SLICE = self._create_slicer(len(df.columns), len(ancillary_df.columns))
 
         self._norm_std = df.std(0)
         self._norm_std_ancillary = ancillary_df.std(0)
-        
+
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
             self._norm_std["_intercept"] = 1.0
@@ -581,4 +652,3 @@ class WeibullAFTFitter(BaseFitter):
             del self._predicted_median
             return self._concordance_score_
         return self._concordance_score_
-

@@ -97,24 +97,6 @@ class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
         super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
 
 
-@pytest.fixture
-def univariate_fitters():
-    return [
-        KaplanMeierFitter,
-        NelsonAalenFitter,
-        BreslowFlemingHarringtonFitter,
-        ExponentialFitter,
-        WeibullFitter,
-        LogNormalFitter,
-        LogLogisticFitter,
-        PiecewiseExponentialFitterTesting,
-    ]
-
-
-@pytest.fixture
-def known_parametric_univariate_fitters():
-    return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
-
 
 @pytest.fixture
 def data_pred2():
@@ -173,6 +155,12 @@ class TestBaseFitter:
 
 
 class TestParametricUnivariateFitters:
+
+    @pytest.fixture
+    def known_parametric_univariate_fitters(self):
+        return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
+
+
     def test_confidence_interval_is_expected(self):
 
         from autograd.scipy.special import logit
@@ -245,6 +233,20 @@ class TestParametricUnivariateFitters:
 
 
 class TestUnivariateFitters:
+
+    @pytest.fixture
+    def univariate_fitters(self):
+        return [
+            KaplanMeierFitter,
+            NelsonAalenFitter,
+            BreslowFlemingHarringtonFitter,
+            ExponentialFitter,
+            WeibullFitter,
+            LogNormalFitter,
+            LogLogisticFitter,
+            PiecewiseExponentialFitterTesting,
+        ]
+
     def test_univarite_fitters_accept_late_entries(self, positive_sample_lifetimes, univariate_fitters):
         entries = 0.1 * positive_sample_lifetimes[0]
         for fitter in univariate_fitters:
@@ -1266,6 +1268,28 @@ class TestRegressionFitters:
         for fitter in regression_models:
             with pytest.raises(TypeError):
                 fitter().fit("week", "arrest")
+
+
+class TestWeibullAFTFitter:
+
+    @pytest.fixture
+    def aft(self):
+        return WeibullAFTFitter()
+
+
+    def test_fitted_coefs_match_with_flexsurv_has(self, aft, regression_dataset)
+        pass
+
+    def test_fitted_se_match_with_flexsurv_has(self, aft, regression_dataset)
+        pass
+
+    def test_fitted_log_likelihood_match_with_flexsurv_has(self, aft, regression_dataset)
+        pass
+
+    def test_fitted_log_likelihood_ratio_test_match_with_flexsurv_has(self, aft, regression_dataset)
+        pass
+
+
 
 
 class TestCoxPHFitter:
