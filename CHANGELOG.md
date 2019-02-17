@@ -1,11 +1,20 @@
 ### Changelog
 
 #### 0.19.0
+
+##### New features
+ - New regression model `WeibullAFTFitter` for fitting accelerated failure time models. Docs have been added to our [documentation](https://lifelines.readthedocs.io/) about how to use `WeibullAFTFitter` (spoiler: it's API is similar to the other regression models) and how to interpret the output. 
+
+
+##### API changes
  - **Important**: we changed the `.hazards_` and `.standard_errors_` on Cox models to be pandas Series (instead of Dataframes). This felt like a more natural representation of them. You may need to update your code to reflect this. See notes here: https://github.com/CamDavidsonPilon/lifelines/issues/636
  - **Important**: we changed the `.confidence_intervals_` on Cox models to be transposed. This felt like a more natural representation of them. You may need to update your code to reflect this. See notes here: https://github.com/CamDavidsonPilon/lifelines/issues/636
+ - **Important**: we changed the parameterization of the `WeibullFitter` from `\lambda * t` to `t / \lambda`. This was for a few reasons: 1) it is a more common parameterization in literature, 2) it helps in convergence.
+ 
+##### Bug Fixes
  - fixed a bug in the `_log_likelihood_` property of `ParametericUnivariateFitter` models. It was showing the "average" log-likelihood (i.e. scaled by 1/n) instead of the total. It now displays the total.
  - In model `print_summary`s, correct a label erroring. Instead of "Likelihood test", it should have read "Log-likelihood test". 
- - 
+ - Fixed a bug that was too frequently rejecting the dtype of `event` columns. 
 
 #### 0.18.6
  - some improvements to the output of `check_assumptions`. `show_plots` is turned to `False` by default now. It only shows `rank` and `km` p-values now.

@@ -12,11 +12,11 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     This class implements a Weibull model for univariate data. The model has parameterized
     form:
 
-    .. math::  S(t) = \exp(-(t/\lambda)^\rho),   \lambda > 0, \rho > 0,
+    .. math::  S(t) = \exp\left(\left(\frac{-t}{\lambda}\right)^\rho\right),   \lambda > 0, \rho > 0,
 
     which implies the cumulative hazard rate is
 
-    .. math:: H(t) = (t/\lambda)^\rho,
+    .. math:: H(t) = \left(\frac{t}{\lambda}\right)^\rho,
 
     and the hazard rate is:
 
@@ -52,4 +52,4 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
 
     @property
     def median_(self):
-        return self.lambda_ * (np.log(2)) ** (1.0 / self.rho_)
+        return self.lambda_ * (np.log(2) ** (1.0 / self.rho_))
