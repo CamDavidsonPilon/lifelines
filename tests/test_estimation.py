@@ -138,6 +138,10 @@ def rossi():
 def regression_dataset():
     return load_regression_dataset()
 
+@pytest.fixture
+def known_parametric_univariate_fitters():
+    return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
+
 
 class TestBaseFitter:
     def test_repr_without_fitter(self):
@@ -155,10 +159,6 @@ class TestBaseFitter:
 
 
 class TestParametricUnivariateFitters:
-
-    @pytest.fixture
-    def known_parametric_univariate_fitters(self):
-        return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
 
 
     def test_confidence_interval_is_expected(self):
@@ -192,6 +192,23 @@ class TestParametricUnivariateFitters:
         assert abs(upper - lower) > 0.5
         assert coef - std > lower
         assert coef + std < upper
+
+
+    def test_models_can_handle_really_large_duration_values(self, known_parametric_univariate_fitters):
+        T1 = np.random.exponential(1e12, size=1000)
+        T2 = np.random.exponential(1e12, size=1000)
+        E = T1 < T2
+        T = np.minimum(T1, T2)
+        for fitter in known_parametric_univariate_fitters:
+            fitter().fit(T, E)
+
+    def test_models_can_handle_really_small_duration_values(self, known_parametric_univariate_fitters):
+        T1 = np.random.exponential(1e-12, size=1000)
+        T2 = np.random.exponential(1e-12, size=1000)
+        E = T1 < T2
+        T = np.minimum(T1, T2)
+        for fitter in known_parametric_univariate_fitters:
+            fitter().fit(T, E)
 
     def test_parametric_univarite_fitters_can_print_summary(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
@@ -1277,17 +1294,54 @@ class TestWeibullAFTFitter:
         return WeibullAFTFitter()
 
 
-    def test_fitted_coefs_match_with_flexsurv_has(self, aft, regression_dataset)
-        pass
+    def test_fitted_coefs_match_with_flexsurv_has(self, aft, rossi):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
+        r$coef
+        """
+        aft.fit(rossi, 'week', 'arrest')
 
-    def test_fitted_se_match_with_flexsurv_has(self, aft, regression_dataset)
-        pass
+        npt.assert_allclose(aft.summary.loc[('lambda_','fin'), 'coef'],   0.27230591, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[('lambda_','age'), 'coef'],   0.04072758, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[('lambda_','race'), 'coef'], -0.22480808, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[('lambda_','wexp'), 'coef'],  0.10664712, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[('lambda_','mar'), 'coef'],   0.31095531, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[('lambda_','paro'), 'coef'],  0.05883352, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[('lambda_','prio'), 'coef'], -0.06580211, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[('lambda_', '_intercept'), 'coef'], 3.98968559, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[('rho_', '_intercept'), 'coef'], 0.33911900, rtol=1e-4)
+    
 
-    def test_fitted_log_likelihood_match_with_flexsurv_has(self, aft, regression_dataset)
-        pass
+    def test_fitted_se_match_with_flexsurv_has(self, aft, rossi):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
+        diag(sqrt(vcov(r)))
+        """
+        aft.fit(rossi, 'week', 'arrest')
 
-    def test_fitted_log_likelihood_ratio_test_match_with_flexsurv_has(self, aft, regression_dataset)
-        pass
+        npt.assert_allclose(aft.summary.loc[('lambda_','fin'),  'se(coef)'],   0.13796834, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[('lambda_','age'),  'se(coef)'],   0.01599442, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[('lambda_','race'), 'se(coef)'],   0.22015347, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[('lambda_','wexp'), 'se(coef)'],   0.15154541, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[('lambda_','mar'),  'se(coef)'],   0.27326405, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[('lambda_','paro'), 'se(coef)'],   0.13963680, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[('lambda_','prio'), 'se(coef)'],   0.02093981, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[('lambda_', '_intercept'), 'se(coef)'], 0.41904636, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[('rho_', '_intercept'), 'se(coef)'], 0.08900064, rtol=1e-3)
+    
+
+    def test_fitted_log_likelihood_match_with_flexsurv_has(self, aft, rossi):
+        # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
+        aft.fit(rossi, 'week', 'arrest')
+        npt.assert_allclose(aft._log_likelihood, -679.9166)
+
+
+    def test_fitted_log_likelihood_ratio_test_match_with_flexsurv_has(self, aft, rossi):
+        # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
+        aft.fit(rossi, 'week', 'arrest')
+        npt.assert_allclose(aft._compute_likelihood_ratio_test()[0], 33.42, rtol=0.01)
 
 
 
