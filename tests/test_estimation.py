@@ -3245,6 +3245,7 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(ctv.summary["p"].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
 
     def test_error_is_raised_if_using_non_numeric_data(self, ctv):
+        ctv = CoxTimeVaryingFitter(penalizer=1.0)
         df = pd.DataFrame.from_dict(
             {
                 "id": [1, 2, 3],

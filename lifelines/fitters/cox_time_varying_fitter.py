@@ -179,7 +179,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             step_size=step_size,
         )
 
-        self.hazards_ = pd.Series(hazards_[:, 0], index=df.columns, name="coef") / self._norm_std
+        self.hazards_ = pd.Series(hazards_, index=df.columns, name="coef") / self._norm_std
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
@@ -291,7 +291,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         _, d = df.shape
 
         # make sure betas are correct size.
-        beta = np.zeros((d, 1))
+        beta = np.zeros((d,))
 
         i = 0
         converging = True
@@ -309,8 +309,8 @@ class CoxTimeVaryingFitter(BaseFitter):
                     df.values, events.values, start.values, stop.values, weights.values, beta
                 )
             else:
-                g = np.zeros_like(beta).T
-                h = np.zeros((beta.shape[0], beta.shape[0]))
+                g = np.zeros_like(beta)
+                h = np.zeros((d, d))
                 ll = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(
                     df, events, start, stop, weights, self._get_gradients, beta
@@ -321,12 +321,12 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
-                g -= self.penalizer * beta.T
+                g -= self.penalizer * beta
                 h.flat[:: d + 1] -= self.penalizer
 
             try:
                 # reusing a piece to make g * inv(h) * g.T faster later
-                inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+                inv_h_dot_g_T = spsolve(-h, g, sym_pos=True)
             except ValueError as e:
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
@@ -419,7 +419,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Returns
         -------
         hessian: (d, d) numpy array,
-        gradient: (1, d) numpy array
+        gradient: (d,) numpy array
         log_likelihood: float
         """
 
@@ -427,7 +427,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
         log_lik = 0
-        weights = weights[:, None]
+        # weights = weights[:, None]
         unique_death_times = np.unique(stop[events])
 
         for t in unique_death_times:
@@ -441,7 +441,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             events_at_t = events[ix]
 
             phi_i = weights_at_t * np.exp(np.dot(X_at_t, beta))
-            phi_x_i = phi_i * X_at_t
+            phi_x_i = phi_i[:, None] * X_at_t
             phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
@@ -455,11 +455,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tied_death_counts = array_sum_to_scalar(deaths.astype(int))  # should always at least 1
 
             xi_deaths = X_at_t[deaths]
-            weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths)
+            x_death_sum = matrix_axis_0_sum_to_array(weights_at_t[deaths, None] * xi_deaths)
 
-            weight_count = array_sum_to_scalar(weights_deaths)
+            weight_count = array_sum_to_scalar(weights_at_t[deaths])
             weighted_average = weight_count / tied_death_counts
 
             #
@@ -478,7 +477,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
                 tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
-                tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
+                tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths, None] * xi_deaths)
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
@@ -497,10 +496,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
-            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
-        return hessian, gradient.reshape(1, d), log_lik
+        return hessian, gradient, log_lik
 
     def predict_log_partial_hazard(self, X):
         r"""

@@ -430,7 +430,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if self.strata is None:
                 h, g, ll = get_gradients(X.values, T.values, E.values, weights.values, beta)
             else:
-                g = np.zeros_like(beta).T
+                g = np.zeros_like(beta)
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, get_gradients, beta):
@@ -440,12 +440,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
-                g -= self.penalizer * beta.T
+                g -= self.penalizer * beta
                 h.flat[:: d + 1] -= self.penalizer
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
-                inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+                inv_h_dot_g_T = spsolve(-h, g, sym_pos=True)
             except ValueError as e:
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
