@@ -114,7 +114,7 @@ class KaplanMeierFitter(UnivariateFitter):
             if net_population.iloc[: int(n / 2)].min() == 0:
                 ix = net_population.iloc[: int(n / 2)].idxmin()
                 raise StatError(
-                    """There are too few early truncation times and too many events. S(t)==0 for all t>%.1f. Recommend BreslowFlemingHarringtonFitter."""
+                    """There are too few early truncation times and too many events. S(t)==0 for all t>%g. Recommend BreslowFlemingHarringtonFitter."""
                     % ix
                 )
 

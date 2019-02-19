@@ -677,8 +677,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
-        symmetric_errors = z * self.standard_errors_[columns].squeeze().values.copy()
-        hazards = self.hazards_[columns].values[0].copy()
+        symmetric_errors = z * self.standard_errors_[columns].to_frame().squeeze(axis=1).values.copy()
+        hazards = self.hazards_[columns].values.copy()
 
         order = np.argsort(hazards)
 

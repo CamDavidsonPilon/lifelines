@@ -8,9 +8,3 @@ Reference library for *lifelines*
     lifelines.statistics
     lifelines.plotting
     lifelines.datasets
-
-
-.. automodule:: lifelines
-    :members:
-    :undoc-members:
-    :show-inheritance:

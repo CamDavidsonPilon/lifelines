@@ -1413,6 +1413,10 @@ class TestCoxPHFitter:
     def cph(self):
         return CoxPHFitter()
 
+    def test_check_assumptions(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest")
+        cph.check_assumptions(rossi)
+
     def test_cph_doesnt_modify_original_dataframe(self, cph):
         df = pd.DataFrame(
             {

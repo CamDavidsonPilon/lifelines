@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import warnings
 
+# pylint: disable=wrong-import-position
+warnings.simplefilter(action="ignore", category=FutureWarning)
+
 from textwrap import dedent
 from datetime import datetime
 
@@ -11,6 +14,7 @@ from scipy import stats
 from scipy.special import gamma
 import pandas as pd
 
+from lifelines.plotting import set_kwargs_ax
 from lifelines.fitters import BaseFitter
 from lifelines import WeibullFitter
 from lifelines.utils import (
@@ -647,3 +651,72 @@ class WeibullAFTFitter(BaseFitter):
             del self._predicted_median
             return self._concordance_score_
         return self._concordance_score_
+
+    def plot(self, columns=None, parameter=None, **errorbar_kwargs):
+        """
+        Produces a visual representation of the coefficients, including their standard errors and magnitudes.
+
+        Parameters
+        ----------
+        columns : list, optional
+            specify a subset of the columns to plot
+        errorbar_kwargs:
+            pass in additional plotting commands to matplotlib errorbar command
+
+        Returns
+        -------
+        ax: matplotlib axis
+            the matplotlib axis that be edited.
+
+        """
+        from matplotlib import pyplot as plt
+
+        set_kwargs_ax(errorbar_kwargs)
+        ax = errorbar_kwargs.pop("ax")
+        errorbar_kwargs.setdefault("c", "k")
+        errorbar_kwargs.setdefault("fmt", "s")
+        errorbar_kwargs.setdefault("markerfacecolor", "white")
+        errorbar_kwargs.setdefault("markeredgewidth", 1.25)
+        errorbar_kwargs.setdefault("elinewidth", 1.25)
+        errorbar_kwargs.setdefault("capsize", 3)
+
+        z = inv_normal_cdf(1 - self.alpha / 2)
+
+        params_ = self.params_.copy()
+        standard_errors_ = self.standard_errors_.copy()
+
+        if columns is not None:
+            params_ = params_.loc[:, columns]
+            standard_errors_ = standard_errors_.loc[:, columns]
+        if parameter is not None:
+            params_ = params_.loc[parameter]
+            standard_errors_ = standard_errors_.loc[parameter]
+
+        columns = params_.index
+
+        hazards = params_.loc[columns].to_frame(name="coefs")
+        hazards["se"] = z * standard_errors_.loc[columns]
+
+        if isinstance(hazards.index, pd.MultiIndex):
+            hazards = hazards.groupby(level=0, group_keys=False).apply(
+                lambda x: x.sort_values(by="coefs", ascending=True)
+            )
+        else:
+            hazards = hazards.sort_values(by="coefs", ascending=True)
+
+        yaxis_locations = list(range(len(columns)))
+
+        ax.errorbar(hazards["coefs"], yaxis_locations, xerr=hazards["se"], **errorbar_kwargs)
+        best_ylim = ax.get_ylim()
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.set_ylim(best_ylim)
+
+        if isinstance(columns[0], tuple):
+            tick_labels = ["%s - %s" % i for i in hazards.index]
+        else:
+            tick_labels = [i for i in hazards.index]
+
+        plt.yticks(yaxis_locations, tick_labels)
+        plt.xlabel("log(accelerated failure rate) (%g%% CI)" % ((1 - self.alpha) * 100))
+
+        return ax

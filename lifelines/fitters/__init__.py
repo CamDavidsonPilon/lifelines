@@ -482,8 +482,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df = pd.DataFrame(index=self._fitted_parameter_names)
         df["coef"] = self._fitted_parameters_
         df["se(coef)"] = self._compute_standard_errors().loc["se"]
-        df["lower %.g" % ci] = lower_upper_bounds.loc["lower-bound"]
-        df["upper %.g" % ci] = lower_upper_bounds.loc["upper-bound"]
+        df["lower %g" % ci] = lower_upper_bounds.loc["lower-bound"]
+        df["upper %g" % ci] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
         with np.errstate(invalid="ignore", divide="ignore"):
             df["-log2(p)"] = -np.log2(df["p"])

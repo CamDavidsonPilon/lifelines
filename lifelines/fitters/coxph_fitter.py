@@ -1535,8 +1535,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
-        symmetric_errors = z * self.standard_errors_[columns].squeeze().values.copy()
-        hazards = self.hazards_.loc[columns].values[0].copy()
+        symmetric_errors = z * self.standard_errors_[columns].to_frame().squeeze(axis=1).values.copy()
+        hazards = self.hazards_.loc[columns].values.copy()
 
         order = np.argsort(hazards)
 
@@ -1690,7 +1690,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     print(
                         dedent(
                             """
-                    The ``p_value_threshold`` is set at %.3f. Even under the null hypothesis of no violations, some covariates
+                    The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates
                     will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
 
                     Similarly, when there are lots of observations, even minor deviances from the proportional hazard
