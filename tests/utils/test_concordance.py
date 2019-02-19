@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
+import pytest
 import numpy as np
 import pandas as pd
 
@@ -9,7 +9,7 @@ from lifelines.datasets import load_rossi
 
 from lifelines.utils.concordance import concordance_index
 from lifelines.utils.concordance import concordance_index as fast_cindex
-from lifelines.utils.concordance import _naive_concordance_index as slow_cindex
+from lifelines.utils.concordance import naive_concordance_index as slow_cindex
 
 
 def test_concordance_index_returns_same_after_shifting():
@@ -28,6 +28,17 @@ def test_both_concordance_index_function_deal_with_ties_the_same_way():
     predicted_times = np.array([1, 2, 3])
     obs = np.ones(3)
     assert fast_cindex(actual_times, predicted_times, obs) == slow_cindex(actual_times, predicted_times, obs) == 1.0
+
+
+def test_both_concordance_index_with_only_censoring_fails_gracefully():
+    actual_times = np.array([1, 2, 3])
+    predicted_times = np.array([1, 2, 3])
+    obs = np.zeros(3)
+    with pytest.raises(ZeroDivisionError, match="admissable pairs"):
+        fast_cindex(actual_times, predicted_times, obs)
+
+    with pytest.raises(ZeroDivisionError, match="admissable pairs"):
+        slow_cindex(actual_times, predicted_times, obs)
 
 
 def test_concordance_index_function_exits():

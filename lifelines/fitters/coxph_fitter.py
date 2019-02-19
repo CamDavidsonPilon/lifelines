@@ -1818,8 +1818,6 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     num_correct += _num_correct
                     num_tied += _num_tied
                     num_pairs += _num_pairs
-                    print(_num_correct, _num_tied, _num_pairs)
-                    print(_concordance_ratio(_num_correct, _num_tied, _num_pairs))
             else:
                 df = self._predicted_partial_hazards_
                 num_correct, num_tied, num_pairs = _concordance_summary_statistics(

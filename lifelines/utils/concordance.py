@@ -121,6 +121,9 @@ def _concordance_summary_statistics(
     # are comparable all the observations that died at the same time or previously). However, we do
     # NOT add them to the pool at the end, because they are NOT comparable with any observations
     # that leave the study afterward--whether or not those observations get censored.
+    if np.logical_not(event_observed).all():
+        return (0, 0, 0)
+
     died_mask = event_observed.astype(bool)
     # TODO: is event_times already sorted? That would be nice...
     died_truth = event_times[died_mask]
@@ -192,14 +195,15 @@ def _handle_pairs(truth, pred, first_ix, times_to_compare):
     return (pairs, correct, tied, next_ix)
 
 
-def _naive_concordance_index(event_times, predicted_event_times, event_observed):
+def _naive_concordance_summary_statistics(event_times, predicted_event_times, event_observed):
     """
     Fallback, simpler method to compute concordance.
 
     Assumes the data has been verified by lifelines.utils.concordance_index first.
     """
-    paircount = 0.0
-    csum = 0.0
+    num_pairs = 0.0
+    num_correct = 0.0
+    num_tied = 0.0
 
     for a, time_a in enumerate(event_times):
         pred_a = predicted_event_times[a]
@@ -211,12 +215,18 @@ def _naive_concordance_index(event_times, predicted_event_times, event_observed)
             event_b = event_observed[b]
 
             if _valid_comparison(time_a, time_b, event_a, event_b):
-                paircount += 1.0
-                csum += _concordance_value(time_a, time_b, pred_a, pred_b, event_a, event_b)
+                num_pairs += 1.0
+                crct, ties = _concordance_value(time_a, time_b, pred_a, pred_b, event_a, event_b)
+                num_correct += crct
+                num_tied += ties
 
-    if paircount == 0:
-        raise ZeroDivisionError("No admissable pairs in the dataset.")
-    return csum / paircount
+    return (num_correct, num_tied, num_pairs)
+
+
+def naive_concordance_index(event_times, predicted_event_times, event_observed):
+    return _concordance_ratio(
+        *_naive_concordance_summary_statistics(event_times, predicted_event_times, event_observed)
+    )
 
 
 def _valid_comparison(time_a, time_b, event_a, event_b):
@@ -236,8 +246,8 @@ def _valid_comparison(time_a, time_b, event_a, event_b):
 def _concordance_value(time_a, time_b, pred_a, pred_b, event_a, event_b):
     if pred_a == pred_b:
         # Same as random
-        return 0.5
+        return (0, 1)
     if pred_a < pred_b:
-        return (time_a < time_b) or (time_a == time_b and event_a and not event_b)
+        return (time_a < time_b) or (time_a == time_b and event_a and not event_b), 0
     # pred_a > pred_b
-    return (time_a > time_b) or (time_a == time_b and not event_a and event_b)
+    return (time_a > time_b) or (time_a == time_b and not event_a and event_b), 0
