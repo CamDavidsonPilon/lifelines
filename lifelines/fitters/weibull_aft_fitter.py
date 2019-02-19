@@ -243,7 +243,9 @@ class WeibullAFTFitter(BaseFitter):
         if not self.fit_intercept:
             check_low_var(X)
 
-    def _fit_model(self, T, E, *Xs, show_progress=False):
+    def _fit_model(self, T, E, *Xs, **kwargs):
+        # TODO: move this to function kwarg when I remove py2
+        show_progress = kwargs.pop("show_progress", False)
         n_params = sum([X.shape[1] for X in Xs])
         init_values = np.zeros((n_params,))
 

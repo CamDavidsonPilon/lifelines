@@ -723,7 +723,7 @@ def proportional_hazard_test(
             result += StatisticalResult(
                 p_values,
                 T,
-                name=[(c, transform_name) for c in fitted_cox_model.hazards_.columns],
+                name=[(c, transform_name) for c in fitted_cox_model.hazards_],
                 test_name="proportional_hazard_test",
                 null_distribution="chi squared",
                 degrees_of_freedom=1,
@@ -744,7 +744,7 @@ def proportional_hazard_test(
         result = StatisticalResult(
             p_values,
             T,
-            name=fitted_cox_model.hazards_.columns.tolist(),
+            name=fitted_cox_model.hazards_.index.tolist(),
             test_name="proportional_hazard_test",
             time_transform=time_transform,
             null_distribution="chi squared",

@@ -612,8 +612,8 @@ class TestLogNormal:
 
         lnf.fit(T)
 
-        assert abs(mu / lnf.mu_ - 1) < 0.05
-        assert abs(sigma / lnf.sigma_ - 1) < 0.05
+        assert abs(mu / lnf.mu_ - 1) < 0.1
+        assert abs(sigma / lnf.sigma_ - 1) < 0.1
 
 
 class TestLogLogisticFitter:
