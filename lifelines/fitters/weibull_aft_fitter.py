@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import warnings
 from textwrap import dedent
 from datetime import datetime
@@ -51,16 +52,24 @@ class WeibullAFTFitter(BaseFitter):
 
     Parameters
     -----------
+    alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
 
     fit_intercept: boolean, optional (default=True)
-        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable. 
+        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
 
+    penalizer: float, optional (default=0.0)
+        the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
+
+    l1_ratio: float, optional (default=0.0)
+        how much of the penalizer should be attributed to an l1 penality (otherwise an l2 penalty). The penalty function looks like
+        ``penalizer * l1_ratio * ||w||_1 + 0.5 * penalizer * (1 - l1_ratio) * ||w||^2_2``
     """
 
-    def __init__(self, alpha=0.95, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):
+    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):
         super(WeibullAFTFitter, self).__init__(alpha=alpha)
         self._fitted_parameter_names = ["lambda_", "rho_"]
-        self._hazard = egrad(self._cumulative_hazard, argnum=1)  # diff w.r.t. time
+        self._hazard = egrad(self._cumulative_hazard, argnum=1)  # pylint: disable=unexpected-keyword-arg
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
         self.fit_intercept = fit_intercept
@@ -113,16 +122,16 @@ class WeibullAFTFitter(BaseFitter):
         show_progress: boolean, optional (default=False)
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
-    
+
         ancillary_df: None, boolean, or DataFrame, optional (default=None)
-            Choose to model the ancillary parameters. 
+            Choose to model the ancillary parameters.
             If None or False, explicity do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
-            If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.  
+            If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
 
         Returns
         -------
-        self: CoxPHFitter
+        self: WeibullAFTFitter
             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
@@ -141,18 +150,8 @@ class WeibullAFTFitter(BaseFitter):
         >>> aft.fit(df, 'T', 'E')
         >>> aft.print_summary()
         >>> aft.predict_median(df)
-
-
-        >>> from lifelines import WeibullAFTFitter
         >>>
-        >>> df = pd.DataFrame({
-        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-        >>>     'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>> })
-        >>>
-        >>> aft = CoxPHFitter()
+        >>> aft = WeibullAFTFitter()
         >>> aft.fit(df, 'T', 'E', ancillary_df=df)
         >>> aft.print_summary()
         >>> aft.predict_median(df)
@@ -186,87 +185,62 @@ class WeibullAFTFitter(BaseFitter):
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
+
             ancillary_df = ancillary_df.copy().drop([duration_col, event_col], axis=1, errors="ignore")
             self._check_values(ancillary_df, T, E, self.event_col)
 
-            if self.fit_intercept:
-                assert "_intercept" not in ancillary_df
-                ancillary_df["_intercept"] = 1.0
-
         elif (ancillary_df is None) or (ancillary_df is False):
             ancillary_df = pd.DataFrame(index=df.index)
-            ancillary_df["_intercept"] = 1.0
         elif ancillary_df is True:
             ancillary_df = df.copy()
-            if self.fit_intercept:
-                ancillary_df["_intercept"] = 1.0
 
         if self.fit_intercept:
+            assert "_intercept" not in ancillary_df
             assert "_intercept" not in df
+            ancillary_df["_intercept"] = 1.0
             df["_intercept"] = 1.0
 
         self._LOOKUP_SLICE = self._create_slicer(len(df.columns), len(ancillary_df.columns))
 
-        self._norm_std = df.std(0)
-        self._norm_std_ancillary = ancillary_df.std(0)
-
+        _norm_std, _norm_std_ancillary = df.std(0), ancillary_df.std(0)
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
-            self._norm_std["_intercept"] = 1.0
-            self._norm_std_ancillary["_intercept"] = 1.0
+            _norm_std["_intercept"] = 1.0
+            _norm_std_ancillary["_intercept"] = 1.0
         else:
-            self._norm_std[self._norm_std < 1e-8] = 1.0
-            self._norm_std_ancillary[self._norm_std_ancillary < 1e-8] = 1.0
+            _norm_std[_norm_std < 1e-8] = 1.0
+            _norm_std_ancillary[_norm_std_ancillary < 1e-8] = 1.0
 
-        _std = np.append(self._norm_std, self._norm_std_ancillary)
+        _index = pd.MultiIndex.from_tuples(
+            [("lambda_", c) for c in df.columns] + [("rho_", c) for c in ancillary_df.columns]
+        )
+
+        self._norm_std = pd.Series(np.append(_norm_std, _norm_std_ancillary), index=_index)
 
         _params, self._log_likelihood, self._hessian_ = self._fit_model(
             T.values,
             E.values,
-            normalize(df, 0, self._norm_std).values,
-            normalize(ancillary_df, 0, self._norm_std_ancillary).values,
+            normalize(df, 0, _norm_std).values,
+            normalize(ancillary_df, 0, _norm_std_ancillary).values,
             show_progress=show_progress,
         )
-        _params = _params / _std
-        self.params_ = pd.Series(
-            _params,
-            index=pd.MultiIndex.from_tuples(
-                [("lambda_", c) for c in df.columns] + [("rho_", c) for c in ancillary_df.columns]
-            ),
-            name="coef",
-        )
+        self.params_ = _params / self._norm_std
 
-        try:
-            self.variance_matrix_ = np.linalg.inv(self._hessian_)
-        except np.linalg.LinAlgError:
-            self.variance_matrix_ = np.linalg.pinv(self._hessian_)
-            warning_text = dedent(
-                """\
-                The hessian was not invertable. We will instead approximate it using the psuedo-inverse.
-
-                It's advisable to not trust the variances reported, and to be suspicious of the
-                fitted parameters too. Perform plots of the cumulative hazard to help understand
-                the latter's bias.
-                """
-            )
-            warnings.warn(warning_text, StatisticalWarning)
-
-        self.variance_matrix_ = self.variance_matrix_ / np.outer(_std, _std)
-
+        self.variance_matrix_ = self._compute_variance_matrix()
         self.standard_errors_ = self._compute_standard_errors()
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._predicted_median = self.predict_median(df, ancillary_df)
 
         return self
 
-    @staticmethod
-    def _check_values(X, T, E, event_col):
+    def _check_values(self, X, T, E, event_col):
         pass_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
         check_nans_or_infs(X)
-        check_low_var(X)
         check_complete_separation(X, E, T, event_col)
+        if not self.fit_intercept:
+            check_low_var(X)
 
     def _fit_model(self, T, E, *Xs, show_progress=False):
         n_params = sum([X.shape[1] for X in Xs])
@@ -308,6 +282,24 @@ class WeibullAFTFitter(BaseFitter):
 
         return lookup
 
+    def _compute_variance_matrix(self):
+        try:
+            unit_scaled_variance_matrix_ = np.linalg.inv(self._hessian_)
+        except np.linalg.LinAlgError:
+            unit_scaled_variance_matrix_ = np.linalg.pinv(self._hessian_)
+            warning_text = dedent(
+                """\
+                The hessian was not invertable. We will instead approximate it using the psuedo-inverse.
+
+                It's advisable to not trust the variances reported, and to be suspicious of the
+                fitted parameters too. Perform plots of the cumulative hazard to help understand
+                the latter's bias.
+                """
+            )
+            warnings.warn(warning_text, StatisticalWarning)
+
+        return unit_scaled_variance_matrix_ / np.outer(self._norm_std, self._norm_std)
+
     def _compute_z_values(self):
         return self.params_ / self.standard_errors_
 
@@ -320,13 +312,11 @@ class WeibullAFTFitter(BaseFitter):
         return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         params = self.params_.values
         return pd.DataFrame(
-            np.c_[params - alpha2 * se, params + alpha2 * se],
-            index=self.params_.index,
-            columns=["lower-bound", "upper-bound"],
+            np.c_[params - z * se, params + z * se], index=self.params_.index, columns=["lower-bound", "upper-bound"]
         )
 
     def _compute_likelihood_ratio_test(self):
@@ -348,13 +338,12 @@ class WeibullAFTFitter(BaseFitter):
     @property
     def summary(self):
         """Summary statistics describing the fit.
-        Set alpha property in the object before calling.
 
         Returns
         -------
         df : DataFrame
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
-
+        ci = 1 - self.alpha
         with np.errstate(invalid="ignore", divide="ignore"):
             df = pd.DataFrame(index=self.params_.index)
             df["coef"] = self.params_
@@ -363,8 +352,8 @@ class WeibullAFTFitter(BaseFitter):
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %.2f" % self.alpha] = self.confidence_intervals_["lower-bound"]
-            df["upper %.2f" % self.alpha] = self.confidence_intervals_["upper-bound"]
+            df["lower %g" % ci] = self.confidence_intervals_["lower-bound"]
+            df["upper %g" % ci] = self.confidence_intervals_["upper-bound"]
             return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -529,6 +518,7 @@ class WeibullAFTFitter(BaseFitter):
         predict_median
         """
         X = X.copy()
+
         if ancillary_X is None:
             ancillary_X = pd.DataFrame(np.ones((X.shape[0], 1)), columns=["_intercept"])
         elif isinstance(ancillary_X, pd.DataFrame):

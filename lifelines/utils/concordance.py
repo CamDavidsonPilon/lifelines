@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function, division
 import numpy as np
 from lifelines.utils.btree import _BTree
@@ -30,7 +31,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
       a value between 0 and 1.
 
     References
-    -----
+    -----------
     Harrell FE, Lee KL, Mark DB. Multivariable prognostic models: issues in
     developing models, evaluating assumptions and adequacy, and measuring and
     reducing errors. Statistics in Medicine 1996;15(4):361-87.
@@ -68,10 +69,20 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
         if event_observed.shape != event_times.shape:
             raise ValueError("Observed events must be 1-dimensional of same length as event times")
 
-    return _concordance_index(event_times, predicted_scores, event_observed)
+    num_correct, num_tied, num_pairs = _concordance_summary_statistics(event_times, predicted_scores, event_observed)
+
+    return _concordance_ratio(num_correct, num_tied, num_pairs)
 
 
-def _concordance_index(event_times, predicted_event_times, event_observed):  # pylint: disable=too-many-locals
+def _concordance_ratio(num_correct, num_tied, num_pairs):
+    if num_pairs == 0:
+        raise ZeroDivisionError("No admissable pairs in the dataset.")
+    return (num_correct + num_tied / 2) / num_pairs
+
+
+def _concordance_summary_statistics(
+    event_times, predicted_event_times, event_observed
+):  # pylint: disable=too-many-locals
     """Find the concordance index in n * log(n) time.
 
     Assumes the data has been verified by lifelines.utils.concordance_index first.
@@ -110,7 +121,6 @@ def _concordance_index(event_times, predicted_event_times, event_observed):  # p
     # are comparable all the observations that died at the same time or previously). However, we do
     # NOT add them to the pool at the end, because they are NOT comparable with any observations
     # that leave the study afterward--whether or not those observations get censored.
-
     died_mask = event_observed.astype(bool)
     # TODO: is event_times already sorted? That would be nice...
     died_truth = event_times[died_mask]
@@ -154,22 +164,20 @@ def _concordance_index(event_times, predicted_event_times, event_observed):  # p
         num_correct += correct
         num_tied += tied
 
-    if num_pairs == 0:
-        raise ZeroDivisionError("No admissable pairs in the dataset.")
-
-    return (num_correct + num_tied / 2) / num_pairs
+    return (num_correct, num_tied, num_pairs)
 
 
 def _handle_pairs(truth, pred, first_ix, times_to_compare):
     """
-        Handle all pairs that exited at the same time as truth[first_ix].
+    Handle all pairs that exited at the same time as truth[first_ix].
 
-        Returns:
-          (pairs, correct, tied, next_ix)
-          new_pairs: The number of new comparisons performed
-          new_correct: The number of comparisons correctly predicted
-          next_ix: The next index that needs to be handled
-        """
+    Returns
+    -------
+      (pairs, correct, tied, next_ix)
+      new_pairs: The number of new comparisons performed
+      new_correct: The number of comparisons correctly predicted
+      next_ix: The next index that needs to be handled
+    """
     next_ix = first_ix
     while next_ix < len(truth) and truth[next_ix] == truth[first_ix]:
         next_ix += 1

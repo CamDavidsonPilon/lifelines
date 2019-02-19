@@ -14,7 +14,6 @@ from lifelines.utils import (
     epanechnikov_kernel,
     inv_normal_cdf,
     check_nans_or_infs,
-    pass_for_numeric_dtypes_or_raise_array,
     StatisticalWarning,
 )
 
@@ -24,11 +23,11 @@ class NelsonAalenFitter(UnivariateFitter):
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard.
 
-    NelsonAalenFitter(alpha=0.95, nelson_aalen_smoothing=True)
+    NelsonAalenFitter(alpha=0.05, nelson_aalen_smoothing=True)
 
     Parameters
     ----------
-    alpha: float, optional
+    alpha: float, optional (default=0.05)
         The alpha value associated with the confidence intervals.
     nelson_aalen_smoothing: bool, optional
         If the event times are naturally discrete (like discrete years, minutes, etc.)
@@ -40,7 +39,7 @@ class NelsonAalenFitter(UnivariateFitter):
 
     """
 
-    def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
+    def __init__(self, alpha=0.05, nelson_aalen_smoothing=True):
         super(NelsonAalenFitter, self).__init__(alpha=alpha)
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
@@ -72,9 +71,9 @@ class NelsonAalenFitter(UnivariateFitter):
           duration subject was observed for
         timeline: iterable
             return the best estimate at the values in timelines (postively increasing)
-        event_observed: an array, or pd.Series, of length n 
+        event_observed: an array, or pd.Series, of length n
             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
-        entry: an array, or pd.Series, of length n 
+        entry: an array, or pd.Series, of length n
            relative time when a subject entered the study. This is
            useful for left-truncated observations, i.e the birth event was not observed.
            If None, defaults to all 0 (all birth events observed.)
@@ -84,7 +83,7 @@ class NelsonAalenFitter(UnivariateFitter):
             the alpha value in the confidence intervals. Overrides the initializing
            alpha for this call to fit only.
         ci_labels: iterable
-            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
         weights: n array, or pd.Series, of length n
             if providing a weighted dataset. For example, instead
             of providing every subject as a single element of `durations` and `event_observed`, one could
@@ -97,10 +96,8 @@ class NelsonAalenFitter(UnivariateFitter):
         """
 
         check_nans_or_infs(durations)
-        pass_for_numeric_dtypes_or_raise_array(durations)
         if event_observed is not None:
             check_nans_or_infs(event_observed)
-            pass_for_numeric_dtypes_or_raise_array(event_observed)
 
         if weights is not None:
             if (weights.astype(int) != weights).any():
@@ -148,20 +145,20 @@ class NelsonAalenFitter(UnivariateFitter):
         return _plot_estimate(self, estimate, confidence_intervals, **kwargs)
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
-        alpha2 = inv_normal_cdf(1 - (1 - alpha) / 2)
+        z = inv_normal_cdf(1 - alpha / 2)
         df = pd.DataFrame(index=self.timeline)
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+            ci_labels = ["%s_upper_%g" % (self._label, 1 - alpha), "%s_lower_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
         self.ci_labels = ci_labels
 
         cum_hazard_ = self.cumulative_hazard_.values
         df[ci_labels[0]] = cum_hazard_ * np.exp(
-            alpha2 * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
+            z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
         )
         df[ci_labels[1]] = cum_hazard_ * np.exp(
-            -alpha2 * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
+            -z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
         )
         return df
 
@@ -223,7 +220,7 @@ class NelsonAalenFitter(UnivariateFitter):
             hazard_ = self.smoothed_hazard_(bandwidth).values[:, 0]
 
         timeline = self.timeline
-        alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         self._cumulative_sq.iloc[0] = 0
         var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
         C = var_hazard_.values != 0.0  # only consider the points with jumps
@@ -235,8 +232,8 @@ class NelsonAalenFitter(UnivariateFitter):
             )
         )
         values = {
-            self.ci_labels[0]: hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
-            self.ci_labels[1]: hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_),
+            self.ci_labels[0]: hazard_ * np.exp(z * std_hazard_ / hazard_),
+            self.ci_labels[1]: hazard_ * np.exp(-z * std_hazard_ / hazard_),
         }
         return pd.DataFrame(values, index=timeline)
 

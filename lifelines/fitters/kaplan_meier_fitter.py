@@ -14,7 +14,6 @@ from lifelines.utils import (
     inv_normal_cdf,
     median_survival_times,
     check_nans_or_infs,
-    pass_for_numeric_dtypes_or_raise_array,
     StatisticalWarning,
     coalesce,
 )
@@ -28,12 +27,12 @@ class KaplanMeierFitter(UnivariateFitter):
 
     Parameters
     ----------
-    alpha: float, option (default=0.95)
+    alpha: float, option (default=0.05)
         The alpha value associated with the confidence intervals.
 
     Examples
     --------
-    >>> from lifelines import KaplanMeierFitter 
+    >>> from lifelines import KaplanMeierFitter
     >>> from lifelines.datasets import load_waltons
     >>> waltons = load_waltons()
     >>> kmf = KaplanMeierFitter()
@@ -68,7 +67,7 @@ class KaplanMeierFitter(UnivariateFitter):
              alpha for this call to fit only.
           left_censorship: True if durations and event_observed refer to left censorship events. Default False
           ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
           weights: n array, or pd.Series, of length n, if providing a weighted dataset. For example, instead
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
@@ -138,7 +137,6 @@ class KaplanMeierFitter(UnivariateFitter):
 
     def _check_values(self, array):
         check_nans_or_infs(array)
-        pass_for_numeric_dtypes_or_raise_array(array)
 
     def plot_loglogs(self, *args, **kwargs):
         return plot_loglogs(self, *args, **kwargs)
@@ -165,17 +163,16 @@ class KaplanMeierFitter(UnivariateFitter):
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.
         # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
-
-        alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
+        z = inv_normal_cdf(1 - alpha / 2)
         df = pd.DataFrame(index=self.timeline)
         v = np.log(self.__estimate.values)
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+            ci_labels = ["%s_upper_%g" % (self._label, 1 - alpha), "%s_lower_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v))
-        df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) - alpha2 * np.sqrt(cumulative_sq_) / v))
+        df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) + z * np.sqrt(cumulative_sq_) / v))
+        df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) - z * np.sqrt(cumulative_sq_) / v))
         return df
 
     def _additive_f(self, population, deaths):

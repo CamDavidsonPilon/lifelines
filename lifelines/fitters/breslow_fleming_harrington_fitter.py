@@ -18,11 +18,11 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
     Mathematically, the NAF estimator is the negative logarithm of the BFH estimator.
 
-    BreslowFlemingHarringtonFitter(alpha=0.95)
+    BreslowFlemingHarringtonFitter(alpha=0.05)
 
     Parameters
     ----------
-    alpha: float
+    alpha: float, optional (default=0.05)
       The alpha value associated with the confidence intervals.
 
     """
@@ -42,17 +42,17 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         ----------
         durations: an array, or pd.Series, of length n
             duration subject was observed for
-        timeline: 
+        timeline:
             return the best estimate at the values in timelines (postively increasing)
-        event_observed: an array, or pd.Series, of length n 
+        event_observed: an array, or pd.Series, of length n
             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
-        entry: an array, or pd.Series, of length n 
+        entry: an array, or pd.Series, of length n
            relative time when a subject entered the study. This is
            useful for left-truncated observations, i.e the birth event was not observed.
            If None, defaults to all 0 (all birth events observed.)
         label: string
             a string to name the column of the estimate.
-        alpha: float
+        alpha: float, optional (default=0.05)
             the alpha value in the confidence intervals. Overrides the initializing
            alpha for this call to fit only.
         ci_labels: iterable
@@ -65,9 +65,9 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
         """
         self._label = label
-        alpha = alpha if alpha is not None else self.alpha
+        alpha = coalesce(alpha, self.alpha)
 
-        naf = NelsonAalenFitter(alpha)
+        naf = NelsonAalenFitter(alpha=alpha)
         naf.fit(
             durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels
         )

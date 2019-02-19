@@ -22,7 +22,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
     Parameters
     ----------
-    alpha: float, option (default=0.95)
+    alpha: float, option (default=0.05)
         The alpha value associated with the confidence intervals.
 
     jitter_level: float, option (default=0.00001)
@@ -40,7 +40,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
     Example
     -------
-    >>> AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None, calculate_variance=True)
+    >>> AalenJohansenFitter(alpha=0.05, jitter_level=0.00001, calculate_variance=True)
 
 
     References
@@ -50,7 +50,7 @@ class AalenJohansenFitter(UnivariateFitter):
     Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
     """
 
-    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.95, calculate_variance=True):
+    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.05, calculate_variance=True):
         UnivariateFitter.__init__(self, alpha=alpha)
         self._jitter_level = jitter_level
         self._seed = seed  # Seed is for the jittering process
@@ -85,7 +85,7 @@ class AalenJohansenFitter(UnivariateFitter):
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
           weights: n array, or pd.Series, of length n, if providing a weighted dataset. For example, instead
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
@@ -224,7 +224,7 @@ class AalenJohansenFitter(UnivariateFitter):
         # Calculating Confidence Intervals
         df["F_transformed"] = np.log(-np.log(df["Ft"]))
         df["se_transformed"] = np.sqrt(df["variance"]) / (df["Ft"] * np.absolute(np.log(df["Ft"])))
-        zalpha = inv_normal_cdf((1.0 + alpha) / 2.0)
+        zalpha = inv_normal_cdf(1 - alpha / 2)
         df[ci_labels[0]] = np.exp(-np.exp(df["F_transformed"] + zalpha * df["se_transformed"]))
         df[ci_labels[1]] = np.exp(-np.exp(df["F_transformed"] - zalpha * df["se_transformed"]))
         return df["variance"], df[ci_labels]

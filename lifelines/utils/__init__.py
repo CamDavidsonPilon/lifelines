@@ -18,7 +18,7 @@ __all__ = [
     "qth_survival_time",
     "median_survival_times",
     "survival_table_from_events",
-    "group_survival_table_from_events",
+    "survival_table_from_events",
     "datetimes_to_durations",
     "concordance_index",
     "k_fold_cross_validation",
@@ -452,11 +452,11 @@ def datetimes_to_durations(
         array of floats representing the durations with time units given by freq.
     C: numpy array
         boolean array of event observations: 1 if death observed, 0 else.
-    
+
     Examples
     --------
     >>> from lifelines.utils import datetimes_to_durations
-    >>> 
+    >>>
     >>> start_dates = ['2015-01-01', '2015-04-01', '2014-04-05']
     >>> end_dates = ['2016-02-02', None, '2014-05-06']
     >>>
@@ -591,9 +591,9 @@ def k_fold_cross_validation(
       Default is "predict_expectation"
       The interface for the method is:
           predict(self, data, **optional_kwargs)
-    fitter_kwargs: 
+    fitter_kwargs:
       keyword args to pass into fitter.fit method
-    predictor_kwargs: 
+    predictor_kwargs:
       keyword args to pass into predictor-method.
 
     Returns
@@ -759,7 +759,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     """
 
     n = len(durations)
-    durations = np.asarray(durations).reshape((n,))
+    durations = np.asarray(pd.to_numeric(durations)).reshape((n,))
 
     # set to all observed if event_observed is none
     if event_observed is None:
@@ -793,7 +793,7 @@ def pass_for_numeric_dtypes_or_raise_array(series_or_array):
     try:
         series_or_array = pd.to_numeric(series_or_array)
     except:
-        raise ValueError("Values must be a subtype of number: so no strings, timedeltas, datetimes, objects, etc.")
+        raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 
 
 def pass_for_numeric_dtypes_or_raise(df):
@@ -868,15 +868,16 @@ def check_complete_separation_low_variance(df, events, event_col):
     events = events.astype(bool)
     deaths_only = df.columns[_low_var(df.loc[events])]
     censors_only = df.columns[_low_var(df.loc[~events])]
-    problem_columns = censors_only.union(deaths_only).tolist()
+    total = df.columns[_low_var(df)]
+    problem_columns = censors_only.union(deaths_only).difference(total).tolist()
     if problem_columns:
         warning_text = """Column {cols} have very low variance when conditioned on death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
 >>> events = df['{event_col}'].astype(bool)
 >>> df.loc[events, '{cols}'].var()
 >>> df.loc[~events, '{cols}'].var()
 
-Too low variance here means that the column {cols} completely determines whether a subject dies or not. 
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ """.format(
+Too low variance here means that the column {cols} completely determines whether a subject dies or not.
+See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression """.format(
             cols=problem_columns[0], event_col=event_col
         )
         warnings.warn(warning_text, ConvergenceWarning)
@@ -919,7 +920,7 @@ def check_nans_or_infs(df_or_array):
             raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     # isinf check is done after isnull check since np.isinf doesn't work on None values
     if isinstance(df_or_array, (pd.Series, pd.DataFrame)):
-        infs = df_or_array.values == np.Inf
+        infs = df_or_array == np.Inf
     else:
         infs = np.isinf(df_or_array)
 
@@ -933,11 +934,11 @@ def check_nans_or_infs(df_or_array):
 
 def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
     """
-    This function takes a "flat" dataset (that is, non-time-varying), and converts it into a time-varying dataset 
-    with static variables. 
-    
-    Useful if your dataset has variables that do not satisfy the proportional hazard assumption, and you need to create a 
-    time-varying dataset to include interaction terms with time. 
+    This function takes a "flat" dataset (that is, non-time-varying), and converts it into a time-varying dataset
+    with static variables.
+
+    Useful if your dataset has variables that do not satisfy the proportional hazard assumption, and you need to create a
+    time-varying dataset to include interaction terms with time.
 
 
     Parameters
@@ -949,12 +950,12 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
     event_col: string
         string representing the column in df that represents whether the subject experienced the event or not.
     id_col: string, optional
-        Specify the column that represents an id, else lifelines creates an autoincrementing one. 
+        Specify the column that represents an id, else lifelines creates an autoincrementing one.
     time_gaps: float or int
-        Specify a desired time_gap. For example, if time_gap is 2 and a subject lives for 10.5 units of time, 
+        Specify a desired time_gap. For example, if time_gap is 2 and a subject lives for 10.5 units of time,
         then the final long form will have 5 + 1 rows for that subject: (0, 2], (2, 4], (4, 6], (6, 8], (8, 10], (10, 10.5]
         Smaller time_gaps will produce larger dataframes, and larger time_gaps will produce smaller dataframes. In the limit,
-        the long dataframe will be identical to the original dataframe. 
+        the long dataframe will be identical to the original dataframe.
 
     Returns
     --------
@@ -1045,7 +1046,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
 def to_long_format(df, duration_col):
     """
     This function converts a survival analysis dataframe to a lifelines "long" format. The lifelines "long"
-    format is used in a common next function, ``add_covariate_to_timeline``. 
+    format is used in a common next function, ``add_covariate_to_timeline``.
 
     Parameters
     ----------

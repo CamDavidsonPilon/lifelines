@@ -57,14 +57,14 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     Parameters
     ----------
-    alpha: float, optional
+    alpha: float, optional (default=0.05)
        the level in the confidence intervals.
     penalizer: float, optional
         the coefficient of an l2 penalizer in the regression
 
     """
 
-    def __init__(self, alpha=0.95, penalizer=0.0, strata=None):
+    def __init__(self, alpha=0.05, penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         if penalizer < 0:
@@ -234,24 +234,21 @@ class CoxTimeVaryingFitter(BaseFitter):
         return stats.chi2.sf(U, 1)
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.c_[hazards - alpha2 * se, hazards + alpha2 * se],
-            columns=["lower-bound", "upper-bound"],
-            index=self.hazards_.index,
+            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
         )
 
     @property
     def summary(self):
         """
         Summary statistics describing the fit.
-        Set alpha property in the object before calling.
 
         Returns
         -------
-        df: DataFrame 
+        df: DataFrame
             contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
         with np.errstate(invalid="ignore", divide="ignore"):
@@ -262,8 +259,8 @@ class CoxTimeVaryingFitter(BaseFitter):
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %.2f" % self.alpha] = self.confidence_intervals_["lower-bound"]
-            df["upper %.2f" % self.alpha] = self.confidence_intervals_["upper-bound"]
+            df["lower %g" % (1 - self.alpha)] = self.confidence_intervals_["lower-bound"]
+            df["upper %g" % (1 - self.alpha)] = self.confidence_intervals_["upper-bound"]
             return df
 
     def _newton_rhaphson(
@@ -274,12 +271,12 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         Parameters
         ----------
-        df: DataFrame 
+        df: DataFrame
         stop_times_events: DataFrame
              meta information about the subjects history
-        show_progress: boolean, optional (default: True) 
+        show_progress: boolean, optional (default: True)
             to show verbous output of convergence
-        step_size: float 
+        step_size: float
             > 0 to determine a starting step size in NR algorithm.
         precision: float
             the convergence halts if the norm of delta between
@@ -573,8 +570,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         decimals: int, optional (default=2)
             specify the number of decimal places to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
 
         """
 
@@ -670,13 +667,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         errorbar_kwargs.setdefault("elinewidth", 1.25)
         errorbar_kwargs.setdefault("capsize", 3)
 
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
 
         if columns is None:
             columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
-        symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
+        symmetric_errors = z * self.standard_errors_[columns].squeeze().values.copy()
         hazards = self.hazards_[columns].values[0].copy()
 
         order = np.argsort(hazards)
@@ -689,7 +686,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         tick_labels = [columns[i] for i in order]
 
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
+        plt.xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
 

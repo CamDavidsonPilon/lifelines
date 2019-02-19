@@ -53,7 +53,7 @@ class AalenAdditiveFitter(BaseFitter):
     fit_intercept: bool, optional (default: True)
       If False, do not attach an intercept (column of ones) to the covariate matrix. The
       intercept, :math:`b_0(t)` acts as a baseline hazard.
-    alpha: float
+    alpha: float, optional (default=0.05)
       the level in the confidence intervals.
     coef_penalizer: float, optional (default: 0)
       Attach a L2 penalizer to the size of the coeffcients during regression. This improves
@@ -65,7 +65,7 @@ class AalenAdditiveFitter(BaseFitter):
 
     """
 
-    def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.0, smoothing_penalizer=0.0):
+    def __init__(self, fit_intercept=True, alpha=0.05, coef_penalizer=0.0, smoothing_penalizer=0.0):
         super(AalenAdditiveFitter, self).__init__(alpha=alpha)
         self.fit_intercept = fit_intercept
         self.alpha = alpha
@@ -386,12 +386,12 @@ It's important to know that the naive variance estimates of the coefficients are
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         std_error = np.sqrt(self.cumulative_variance_)
         return pd.concat(
             {
-                "lower-bound": self.cumulative_hazards_ - alpha2 * std_error,
-                "upper-bound": self.cumulative_hazards_ + alpha2 * std_error,
+                "lower-bound": self.cumulative_hazards_ - z * std_error,
+                "upper-bound": self.cumulative_hazards_ + z * std_error,
             }
         )
 
@@ -497,7 +497,6 @@ It's important to know that the naive variance estimates of the coefficients are
     @property
     def summary(self):
         """Summary statistics describing the fit.
-        Set alpha property in the object before calling.
 
         Returns
         -------

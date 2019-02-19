@@ -28,6 +28,7 @@ from lifelines.fitters import BaseFitter
 from lifelines.plotting import set_kwargs_ax
 from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers
 from lifelines.utils.lowess import lowess
+from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio
 from lifelines.utils import (
     _get_index,
     _to_list,
@@ -35,7 +36,6 @@ from lifelines.utils import (
     survival_table_from_events,
     inv_normal_cdf,
     normalize,
-    concordance_index,
     qth_survival_times,
     coalesce,
     pass_for_numeric_dtypes_or_raise,
@@ -66,7 +66,7 @@ class BatchVsSingle:
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
-            and (0.553591 + -1.001e-05 * n_total + 1.296786 * frac_dups + 0.000214 * n_total * frac_dups < 1)
+            and (0.713869 + -0.000028 * n_total + 0.684229 * frac_dups + 0.000201 * n_total * frac_dups < 1)
         ):
             return "batch"
         return "single"
@@ -82,7 +82,7 @@ class CoxPHFitter(BaseFitter):
     Parameters
     ----------
 
-      alpha: float, optional (default=0.95)
+      alpha: float, optional (default=0.05)
         the level in the confidence intervals.
 
       tie_method: string, optional
@@ -111,7 +111,7 @@ class CoxPHFitter(BaseFitter):
     >>> cph.print_summary()
     """
 
-    def __init__(self, alpha=0.95, tie_method="Efron", penalizer=0.0, strata=None):
+    def __init__(self, alpha=0.05, tie_method="Efron", penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         if penalizer < 0:
@@ -288,8 +288,13 @@ class CoxPHFitter(BaseFitter):
         self.baseline_hazard_ = self._compute_baseline_hazards(X, T, E, weights)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
-        self._predicted_partial_hazards_ = self.predict_partial_hazard(X).values
 
+        self._predicted_partial_hazards_ = (
+            self.predict_partial_hazard(X)
+            .rename(columns={0: "P"})
+            .assign(T=self.durations.values, E=self.event_observed.values)
+            .set_index(X.index)
+        )
         return self
 
     def _preprocess_dataframe(self, df):
@@ -845,14 +850,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
         r"""
-        Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0. 
+        Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0.
         For tests of proportionality, we want to test if \beta_i(t) is \beta_i (constant) or not.
 
-        Let V_k be the contribution to the information matrix at time t_k. A main result from Grambsch and Therneau is that 
+        Let V_k be the contribution to the information matrix at time t_k. A main result from Grambsch and Therneau is that
 
         \beta(t) = E[s_k*V_k^{-1} + \hat{beta}]
 
-        so define s_k^* = s_k*V_k^{-1} + \hat{beta} as the scaled schoenfeld residuals. 
+        so define s_k^* = s_k*V_k^{-1} + \hat{beta} as the scaled schoenfeld residuals.
 
         We can approximate V_k with Hessian/d, so the inverse of Hessian/d is (d * variance_matrix_)
 
@@ -915,8 +920,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
-        # import pdb
-        # pdb.set_trace()
+
         scores = weights * np.exp(np.dot(X, self.hazards_))
 
         diff_against = []
@@ -984,7 +988,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_delta_beta(self, X, T, E, weights, index=None):
         """
-        approximate change in betas as a result of excluding ith row. Good for finding outliers / specific 
+        approximate change in betas as a result of excluding ith row. Good for finding outliers / specific
         subjects that influence the model disproportinately. Good advice: don't drop these outliers, model them.
         """
         score_residuals = self._compute_score(X, T, E, weights, index=index)
@@ -1078,13 +1082,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return resids
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.c_[hazards - alpha2 * se, hazards + alpha2 * se],
-            columns=["lower-bound", "upper-bound"],
-            index=self.hazards_.index,
+            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
         )
 
     def _compute_standard_errors(self, X, T, E, weights):
@@ -1120,7 +1122,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         -------
         df : DataFrame
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
-
+        ci = 1 - self.alpha
         with np.errstate(invalid="ignore", divide="ignore"):
             df = pd.DataFrame(index=self.hazards_.index)
             df["coef"] = self.hazards_
@@ -1129,8 +1131,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %.2f" % self.alpha] = self.confidence_intervals_["lower-bound"]
-            df["upper %.2f" % self.alpha] = self.confidence_intervals_["upper-bound"]
+            df["lower %g" % ci] = self.confidence_intervals_["lower-bound"]
+            df["upper %g" % ci] = self.confidence_intervals_["upper-bound"]
             return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -1141,11 +1143,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
-        alpha: float or iterable
-            specify confidence intervals to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
 
         """
 
@@ -1269,7 +1269,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             X = X[order]
             pass_for_numeric_dtypes_or_raise(X)
         elif isinstance(X, pd.Series):
-            assert len(hazard_names) == 1, "Series not the correct arugment"
+            assert len(hazard_names) == 1, "Series not the correct argument"
             X = pd.DataFrame(X)
             pass_for_numeric_dtypes_or_raise(X)
 
@@ -1488,7 +1488,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>> from lifelines import CoxPHFitter, KaplanMeierFitter
         >>> rossi = load_rossi()
         >>> kmf = KaplanMeierFitter()
-        >>> kmf.fit(rossi['week'], rossi['arrest']) 
+        >>> kmf.fit(rossi['week'], rossi['arrest'])
         >>> rossi2 = rossi[['week', 'arrest']].copy()
         >>> rossi2['var1'] = np.random.randn(432)
         >>> cph = CoxPHFitter()
@@ -1529,13 +1529,13 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         errorbar_kwargs.setdefault("elinewidth", 1.25)
         errorbar_kwargs.setdefault("capsize", 3)
 
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
 
         if columns is None:
             columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
-        symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
+        symmetric_errors = z * self.standard_errors_[columns].squeeze().values.copy()
         hazards = self.hazards_.loc[columns].values[0].copy()
 
         order = np.argsort(hazards)
@@ -1548,7 +1548,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         tick_labels = [columns[i] for i in order]
 
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
+        plt.xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
 
@@ -1611,10 +1611,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self, training_df, advice=True, show_plots=False, p_value_threshold=0.05, plot_n_bootstraps=10
     ):
         """
-        Use this function to test the proportional hazards assumption. See iterative usage example at 
+        Use this function to test the proportional hazards assumption. See iterative usage example at
         https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
 
-        
+
         Parameters
         -----------
 
@@ -1624,14 +1624,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             display advice as output to the user's screen
         show_plots: boolean, optional
             display plots of the scaled schoenfeld residuals and loess curves. This is an eyeball test for violations.
-            This will slow down the function significantly. 
+            This will slow down the function significantly.
         p_value_threshold: float, optional
-            the threshold to use to alert the user of violations. See note below. 
+            the threshold to use to alert the user of violations. See note below.
         plot_n_bootstraps:
             in the plots displayed, also display plot_n_bootstraps bootstrapped loess curves. This will slow down
-            the function significantly. 
-    
-        
+            the function significantly.
+
+
         Examples
         ----------
 
@@ -1647,15 +1647,15 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         Notes
         -------
         The ``p_value_threshold`` is arbitrarily set at 0.05. Under the null, some covariates
-        will be below the threshold (i.e. by chance). This is compounded when there are many covariates. 
-        
-        Similarly, when there are lots of observations, even minor deviances from the proportional hazard 
-        assumption will be flagged. 
+        will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
 
-        With that in mind, it's best to use a combination of statistical tests and eyeball tests to 
-        determine the most serious violations. 
+        Similarly, when there are lots of observations, even minor deviances from the proportional hazard
+        assumption will be flagged.
 
-        
+        With that in mind, it's best to use a combination of statistical tests and eyeball tests to
+        determine the most serious violations.
+
+
         References
         -----------
         section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
@@ -1691,13 +1691,13 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                         dedent(
                             """
                     The ``p_value_threshold`` is set at %.3f. Even under the null hypothesis of no violations, some covariates
-                    will be below the threshold (i.e. by chance). This is compounded when there are many covariates. 
+                    will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
 
-                    Similarly, when there are lots of observations, even minor deviances from the proportional hazard 
-                    assumption will be flagged. 
+                    Similarly, when there are lots of observations, even minor deviances from the proportional hazard
+                    assumption will be flagged.
 
-                    With that in mind, it's best to use a combination of statistical tests and eyeball tests to 
-                    determine the most serious violations. 
+                    With that in mind, it's best to use a combination of statistical tests and eyeball tests to
+                    determine the most serious violations.
 
                     """
                             % p_value_threshold
@@ -1797,14 +1797,36 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         to survival data, including censorships.
 
         For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
-        onto the training dataset. 
+        onto the training dataset.
+
+        References
+        ----------
+        https://stats.stackexchange.com/questions/133817/stratified-concordance-index-survivalsurvconcordance
 
         """
         # pylint: disable=access-member-before-definition
         if hasattr(self, "_predicted_partial_hazards_"):
-            self._concordance_score_ = concordance_index(
-                self.durations, -self._predicted_partial_hazards_, self.event_observed
-            )
+            if self.strata:
+                # https://stats.stackexchange.com/questions/133817/stratified-concordance-index-survivalsurvconcordance
+                num_correct, num_tied, num_pairs = 0, 0, 0
+                for _, _df in self._predicted_partial_hazards_.groupby(self.strata):
+                    if _df.shape[0] == 1:
+                        continue
+                    _num_correct, _num_tied, _num_pairs = _concordance_summary_statistics(
+                        _df["T"].values, -_df["P"].values, _df["E"].values
+                    )
+                    num_correct += _num_correct
+                    num_tied += _num_tied
+                    num_pairs += _num_pairs
+                    print(_num_correct, _num_tied, _num_pairs)
+                    print(_concordance_ratio(_num_correct, _num_tied, _num_pairs))
+            else:
+                df = self._predicted_partial_hazards_
+                num_correct, num_tied, num_pairs = _concordance_summary_statistics(
+                    df["T"].values, -df["P"].values, df["E"].values
+                )
+
+            self._concordance_score_ = _concordance_ratio(num_correct, num_tied, num_pairs)
             del self._predicted_partial_hazards_
             return self._concordance_score_
         return self._concordance_score_

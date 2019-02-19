@@ -2,12 +2,13 @@
 from __future__ import print_function
 
 import numpy as np
+import pandas as pd
 
 from lifelines import CoxPHFitter
 from lifelines.datasets import load_rossi
 
 from lifelines.utils.concordance import concordance_index
-from lifelines.utils.concordance import _concordance_index as fast_cindex
+from lifelines.utils.concordance import concordance_index as fast_cindex
 from lifelines.utils.concordance import _naive_concordance_index as slow_cindex
 
 

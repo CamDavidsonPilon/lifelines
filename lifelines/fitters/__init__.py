@@ -6,8 +6,8 @@ import sys
 import warnings
 
 # pylint: disable=wrong-import-position
-
 warnings.simplefilter(action="ignore", category=FutureWarning)
+
 from textwrap import dedent
 
 import numpy as np
@@ -58,7 +58,7 @@ def _must_call_fit_first(func):
 
 
 class BaseFitter(object):
-    def __init__(self, alpha=0.95):
+    def __init__(self, alpha=0.05):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
@@ -176,7 +176,7 @@ class UnivariateFitter(BaseFitter):
 
         Returns
         -------
-        conditional_time_to_: DataFrame 
+        conditional_time_to_: DataFrame
             with index equal to ``survival_function_``
 
         """
@@ -192,7 +192,7 @@ class UnivariateFitter(BaseFitter):
 
         Returns
         -------
-        conditional_time_to_: DataFrame 
+        conditional_time_to_: DataFrame
             with index equal to survival_function_
 
         """
@@ -273,7 +273,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 dedent(
                     """\
                 Cumulative hazard is not strictly positive. For example, try:
-                
+
                 >>> fitter = {0}()
                 >>> fitter._cumulative_hazard(np.{1}, np.sort(durations))
 
@@ -291,7 +291,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 dedent(
                     """\
                 Cumulative hazard is not strictly non-decreasing. For example, try:
-                
+
                 >>> fitter = {0}()
                 >>> fitter._hazard({1}, np.sort(durations))
 
@@ -364,7 +364,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels: tuple
 
         """
-        alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
+        alpha2 = 1 - alpha / 2.0
+        z = inv_normal_cdf(alpha2)
         df = pd.DataFrame(index=self.timeline)
 
         # pylint: disable=no-value-for-parameter
@@ -379,11 +380,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         )
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+            ci_labels = ["%s_upper_%g" % (self._label, 1 - alpha), "%s_lower_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) + alpha2 * std_cumulative_hazard
-        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - alpha2 * std_cumulative_hazard
+        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) + z * std_cumulative_hazard
+        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
         return df
 
     def _fit_model(self, T, E, entry, show_progress=True):
@@ -451,9 +452,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _compute_confidence_bounds_of_parameters(self):
         se = self._compute_standard_errors().loc["se"]
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2.0)
         return pd.DataFrame(
-            [self._fitted_parameters_ + alpha2 * se, self._fitted_parameters_ - alpha2 * se],
+            [self._fitted_parameters_ + z * se, self._fitted_parameters_ - z * se],
             columns=self._fitted_parameter_names,
             index=["upper-bound", "lower-bound"],
         )
@@ -476,12 +477,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
         --------
         ``print_summary``
         """
+        ci = 1 - self.alpha
         lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
         df = pd.DataFrame(index=self._fitted_parameter_names)
         df["coef"] = self._fitted_parameters_
         df["se(coef)"] = self._compute_standard_errors().loc["se"]
-        df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
-        df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
+        df["lower %.g" % ci] = lower_upper_bounds.loc["lower-bound"]
+        df["upper %.g" % ci] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
         with np.errstate(invalid="ignore", divide="ignore"):
             df["-log2(p)"] = -np.log2(df["p"])
@@ -497,8 +499,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         decimals: int, optional (default=2)
             specify the number of decimal places to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
 
         """
         justify = string_justify(18)
@@ -553,7 +555,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
         show_progress: boolean, optional
             since this is an iterative fitting algorithm, switching this to True will display some iteration details.
-        entry: an array, or pd.Series, of length n 
+        entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
 
@@ -566,12 +568,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
         label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
 
         check_nans_or_infs(durations)
-        pass_for_numeric_dtypes_or_raise_array(durations)
         if event_observed is not None:
             check_nans_or_infs(event_observed)
-            pass_for_numeric_dtypes_or_raise_array(event_observed)
 
-        self.durations = np.asarray(durations, dtype=float)
+        self.durations = np.asarray(pd.to_numeric(durations))
         # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
             raise ValueError(
@@ -613,14 +613,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self.variance_matrix_ = pinv(self._hessian_)
             warning_text = dedent(
                 """\
-                
-                The hessian was not invertable. This could be a model problem: 
 
-                1. Are two parameters in the model colinear / exchangeable? 
+                The hessian was not invertable. This could be a model problem:
+
+                1. Are two parameters in the model colinear / exchangeable?
                 2. Is the cumulative hazard always non-negative and always non-decreasing?
-                3. Are there cusps/ in the cumulative hazard? 
+                3. Are there cusps/ in the cumulative hazard?
 
-                We will instead approximate it using the psuedo-inverse. 
+                We will instead approximate it using the psuedo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
@@ -648,7 +648,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         times: iterable or float
           values to return the survival function at.
         label: string, optional
-          Rename the series returned. Useful for plotting. 
+          Rename the series returned. Useful for plotting.
 
         Returns
         --------
@@ -668,7 +668,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         times: iterable or float
           values to return the cumulative hazard at.
         label: string, optional
-          Rename the series returned. Useful for plotting. 
+          Rename the series returned. Useful for plotting.
 
         Returns
         --------
@@ -688,7 +688,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         times: iterable or float
           values to return the hazard at.
         label: string, optional
-          Rename the series returned. Useful for plotting. 
+          Rename the series returned. Useful for plotting.
 
         Returns
         --------
@@ -701,9 +701,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
     @property
     @_must_call_fit_first
     def median_(self):
-        """ 
-        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a 
-        robust summary statistic for the population, if it exists. 
+        """
+        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
+        robust summary statistic for the population, if it exists.
         """
         return median_survival_times(self.survival_function_)
 
