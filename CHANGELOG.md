@@ -5,6 +5,7 @@
 ##### New features
  - New regression model `WeibullAFTFitter` for fitting accelerated failure time models. Docs have been added to our [documentation](https://lifelines.readthedocs.io/) about how to use `WeibullAFTFitter` (spoiler: it's API is similar to the other regression models) and how to interpret the output.
  - `CoxPHFitter` performance improvements (about 10%)
+ - `CoxTimeVaryingFitter` performance improvements (about 10%)
 
 
 ##### API changes
