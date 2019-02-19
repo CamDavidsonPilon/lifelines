@@ -639,7 +639,7 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
 2. ``delta contains nan value(s).``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
 
-3. ``Convergence halted due to matrix inversion problems``: This means that there is a high colinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummifying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by looking at the correlation matrix of your dataset, or using the variance inflation factor (VIF) to find redundant variables.
+3. ``Convergence halted due to matrix inversion problems``: This means that there is high colinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummifying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by looking at the correlation matrix of your dataset, or using the variance inflation factor (VIF) to find redundant variables.
 
 4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are ``nan``'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
 

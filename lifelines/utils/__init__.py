@@ -18,7 +18,7 @@ __all__ = [
     "qth_survival_time",
     "median_survival_times",
     "survival_table_from_events",
-    "survival_table_from_events",
+    "group_survival_table_from_events",
     "datetimes_to_durations",
     "concordance_index",
     "k_fold_cross_validation",
@@ -759,7 +759,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     """
 
     n = len(durations)
-    durations = np.asarray(pd.to_numeric(durations)).reshape((n,))
+    durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations)).reshape((n,))
 
     # set to all observed if event_observed is none
     if event_observed is None:
@@ -791,7 +791,7 @@ def _get_index(X):
 
 def pass_for_numeric_dtypes_or_raise_array(series_or_array):
     try:
-        series_or_array = pd.to_numeric(series_or_array)
+        return pd.to_numeric(series_or_array)
     except:
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 

@@ -571,7 +571,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         if event_observed is not None:
             check_nans_or_infs(event_observed)
 
-        self.durations = np.asarray(pd.to_numeric(durations))
+        self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
         # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
             raise ValueError(
