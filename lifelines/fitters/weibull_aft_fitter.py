@@ -21,7 +21,8 @@ from lifelines.utils import (
     format_floats,
     format_p_value,
     string_justify,
-    pass_for_numeric_dtypes_or_raise,
+    check_for_numeric_dtypes_or_raise,
+    pass_for_numeric_dtypes_or_raise_array,
     check_low_var,
     check_complete_separation,
     check_nans_or_infs,
@@ -168,9 +169,9 @@ class WeibullAFTFitter(BaseFitter):
 
         df = df.copy()
 
-        T = df.pop(duration_col).astype(float)
+        T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
         E = (
-            df.pop(self.event_col).astype(bool)
+            pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col)).astype(bool)
             if (self.event_col is not None)
             else pd.Series(np.ones(self._n_examples), index=df.index, name="E")
         )
@@ -234,14 +235,15 @@ class WeibullAFTFitter(BaseFitter):
 
         return self
 
-    def _check_values(self, X, T, E, event_col):
-        pass_for_numeric_dtypes_or_raise(X)
+    def _check_values(self, df, T, E, event_col):
+        check_for_numeric_dtypes_or_raise(df)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
-        check_nans_or_infs(X)
-        check_complete_separation(X, E, T, event_col)
-        if not self.fit_intercept:
-            check_low_var(X)
+        check_nans_or_infs(df)
+        check_complete_separation(df, E, T, event_col)
+
+        if self.fit_intercept:
+            check_low_var(df)
 
     def _fit_model(self, T, E, *Xs, **kwargs):
         # TODO: move this to function kwarg when I remove py2
@@ -254,7 +256,7 @@ class WeibullAFTFitter(BaseFitter):
             init_values,
             method=None if self.l1_ratio <= 0.0 else "L-BFGS-B",
             jac=True,
-            args=(T, E, *Xs),
+            args=(T, E, Xs[0], Xs[1]),  # TODO: remove py2, (T, E, *Xs)
             options={"disp": show_progress},
         )
         if show_progress:

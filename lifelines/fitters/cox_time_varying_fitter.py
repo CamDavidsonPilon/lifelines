@@ -26,23 +26,24 @@ from lifelines.fitters import BaseFitter
 from lifelines import CoxPHFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (
-    inv_normal_cdf,
-    normalize,
-    pass_for_numeric_dtypes_or_raise,
-    check_low_var,
-    # check_for_overlapping_intervals,
-    check_complete_separation_low_variance,
-    ConvergenceWarning,
-    StepSizer,
     _get_index,
+    _to_list,
+    # check_for_overlapping_intervals,
+    check_for_numeric_dtypes_or_raise,
+    check_low_var,
+    check_complete_separation_low_variance,
     check_for_immediate_deaths,
     check_for_instantaneous_events,
+    pass_for_numeric_dtypes_or_raise_array,
     ConvergenceError,
+    ConvergenceWarning,
+    inv_normal_cdf,
+    normalize,
+    StepSizer,
     check_nans_or_infs,
     string_justify,
     format_p_value,
     format_floats,
-    _to_list,
     coalesce,
 )
 
@@ -160,7 +161,11 @@ class CoxTimeVaryingFitter(BaseFitter):
             df = df.set_index(_to_list(self.strata) + ["id"])  # TODO: needs to be a list
             df = df.sort_index()
 
-        events, start, stop = df.pop("event").astype(bool), df.pop("start"), df.pop("stop")
+        events, start, stop = (
+            pass_for_numeric_dtypes_or_raise_array(df.pop("event")).astype(bool),
+            df.pop("start"),
+            df.pop("stop"),
+        )
         weights = df.pop("__weights").astype(float)
 
         self._check_values(df, events, start, stop, self.event_col)
@@ -201,7 +206,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_nans_or_infs(df)
         check_low_var(df)
         check_complete_separation_low_variance(df, events, event_col)
-        pass_for_numeric_dtypes_or_raise(df)
+        check_for_numeric_dtypes_or_raise(df)
         check_for_immediate_deaths(events, start, stop)
         check_for_instantaneous_events(start, stop)
 
@@ -528,7 +533,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if isinstance(X, pd.DataFrame):
             order = self.hazards_.index
             X = X[order]
-            pass_for_numeric_dtypes_or_raise(X)
+            check_for_numeric_dtypes_or_raise(X)
 
         X = X.astype(float)
         index = _get_index(X)

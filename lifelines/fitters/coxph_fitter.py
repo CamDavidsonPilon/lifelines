@@ -38,7 +38,7 @@ from lifelines.utils import (
     normalize,
     qth_survival_times,
     coalesce,
-    pass_for_numeric_dtypes_or_raise,
+    check_for_numeric_dtypes_or_raise,
     check_low_var,
     check_complete_separation,
     check_nans_or_infs,
@@ -77,7 +77,7 @@ class CoxPHFitter(BaseFitter):
     r"""
     This class implements fitting Cox's proportional hazard model:
 
-    .. math::  h(t|x) = h_0(t) \exp(x \beta)
+    .. math::  h(t|x) = h_0(t) \exp((x - \overline{x}) \beta)
 
     Parameters
     ----------
@@ -348,7 +348,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
     @staticmethod
     def _check_values(X, T, E, event_col):
-        pass_for_numeric_dtypes_or_raise(X)
+        check_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
         check_nans_or_infs(X)
@@ -1262,16 +1262,16 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         if isinstance(X, pd.DataFrame):
             order = hazard_names
             X = X[order]
-            pass_for_numeric_dtypes_or_raise(X)
+            check_for_numeric_dtypes_or_raise(X)
         elif isinstance(X, pd.Series) and ((X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))):
             X = X.to_frame().T
             order = hazard_names
             X = X[order]
-            pass_for_numeric_dtypes_or_raise(X)
+            check_for_numeric_dtypes_or_raise(X)
         elif isinstance(X, pd.Series):
             assert len(hazard_names) == 1, "Series not the correct argument"
             X = pd.DataFrame(X)
-            pass_for_numeric_dtypes_or_raise(X)
+            check_for_numeric_dtypes_or_raise(X)
 
         X = X.astype(float)
         index = _get_index(X)

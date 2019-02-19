@@ -747,13 +747,13 @@ class TestWeibullFitter:
 
     def test_exponential_data_produces_correct_inference_with_censorship(self):
         wf = WeibullFitter()
-        N = 40000
+        N = 80000
         factor = 5
         T = factor * np.random.exponential(1, size=N)
         T_ = factor * np.random.exponential(1, size=N)
         wf.fit(np.minimum(T, T_), (T < T_))
         assert abs(wf.rho_ - 1.0) < 0.05
-        assert abs(wf.lambda_ - factor) < 0.05
+        assert abs(wf.lambda_ / factor - 1) < 0.05
         assert abs(wf.median_ - factor * np.log(2)) < 0.1
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):

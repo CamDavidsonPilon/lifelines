@@ -789,14 +789,27 @@ def _get_index(X):
     return index
 
 
-def pass_for_numeric_dtypes_or_raise_array(series_or_array):
+def pass_for_numeric_dtypes_or_raise_array(x):
+    """
+    Use the utility `to_numeric` to check that x is convertabile to numeric values, and then convert. Any errors
+    are reported back to the user.
+
+    Parameters
+    ----------
+    x: list, array, Series, DataFrame
+
+    Notes
+    ------
+    This actually allows objects like timedeltas (converted to microseconds), and strings as numbers.
+
+    """
     try:
-        return pd.to_numeric(series_or_array)
+        return pd.to_numeric(x)
     except:
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 
 
-def pass_for_numeric_dtypes_or_raise(df):
+def check_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"
     ]

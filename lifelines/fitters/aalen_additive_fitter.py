@@ -16,7 +16,7 @@ from lifelines.utils import (
     epanechnikov_kernel,
     ridge_regression as lr,
     qth_survival_times,
-    pass_for_numeric_dtypes_or_raise,
+    check_for_numeric_dtypes_or_raise,
     concordance_index,
     check_nans_or_infs,
     ConvergenceWarning,
@@ -317,7 +317,7 @@ It's important to know that the naive variance estimates of the coefficients are
         return individual_cumulative_hazards_
 
     def _check_values(self, X, T, E):
-        pass_for_numeric_dtypes_or_raise(X)
+        check_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
         check_nans_or_infs(X)
