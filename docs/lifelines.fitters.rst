@@ -90,6 +90,15 @@ lifelines.fitters.piecewise\_exponential\_fitter module
     :undoc-members:
     :show-inheritance:
 
+
+lifelines.fitters.weibull\_aft\_fitter module
+----------------------------------------
+
+.. automodule:: lifelines.fitters.weibull_aft_fitter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lifelines.fitters.weibull\_fitter module
 ----------------------------------------
 

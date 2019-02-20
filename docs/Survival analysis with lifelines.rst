@@ -2,7 +2,7 @@
 
 -------------------------------------
 
-Survival analysis with *lifelines*
+Estimating univariate models
 =====================================
 
 In the previous :doc:`section</Survival Analysis intro>`,

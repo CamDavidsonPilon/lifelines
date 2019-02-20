@@ -92,8 +92,8 @@ class CoxPHFitter(BaseFitter):
       penalizer: float, optional (default=0.0)
         Attach a L2 penalizer to the size of the coeffcients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
-        For example, this shrinks the absolute value of :math:`\beta_i`. Recommended, even if a small value.
-        The penalty is :math:`1/2  \text{penalizer}  ||beta||^2`.
+        For example, this shrinks the absolute value of :math:`\beta_i`.
+        The penalty is :math:`\frac{1}{2} \text{penalizer} ||\beta||^2`.
 
       strata: list, optional
         specify a list of columns to use in stratification. This is useful if a
@@ -1552,7 +1552,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         return ax
 
-    def plot_covariate_groups(self, covariate, values, **kwargs):
+    def plot_covariate_groups(self, covariate, values, plot_baseline=True, **kwargs):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
         what happens when a covariate is varied over values in a group. This is useful to compare
@@ -1565,8 +1565,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             a string of the covariate in the original dataset that we wish to vary.
         values: iterable
             an iterable of the values we wish the covariate to take on.
+        plot_baseline: bool
+            also display the baseline survival, defined as the survival at the mean of the original dataset.
         kwargs:
-            pass in additional plotting commands
+            pass in additional plotting commands.
 
         Returns
         -------
@@ -1579,14 +1581,15 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
         if self.strata is None:
-            axes = kwargs.get("ax", None) or plt.figure().add_subplot(111)
+            axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
             x_bar = self._norm_mean.to_frame().T
             X = pd.concat([x_bar] * len(values))
             X.index = ["%s=%s" % (covariate, g) for g in values]
             X[covariate] = values
 
-            self.predict_survival_function(X).plot(ax=axes)
-            self.baseline_survival_.plot(ax=axes, ls="--")
+            self.predict_survival_function(X).plot(ax=axes, **kwargs)
+            if plot_baseline:
+                self.baseline_survival_.plot(ax=axes, ls="--", color="k")
 
         else:
             axes = []
@@ -1601,8 +1604,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 X.index = ["%s=%s" % (covariate, g) for g in values]
                 X[covariate] = values
 
-                self.predict_survival_function(X).plot(ax=ax)
-                baseline_survival_.plot(ax=ax, ls="--", label="stratum %s baseline survival" % str(stratum))
+                self.predict_survival_function(X).plot(ax=ax, **kwargs)
+                if plot_baseline:
+                    baseline_survival_.plot(ax=ax, ls="--", label="stratum %s baseline survival" % str(stratum))
                 plt.legend()
                 axes.append(ax)
         return axes

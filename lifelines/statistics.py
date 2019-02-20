@@ -77,8 +77,8 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     >>> n_exp, n_con = sample_size_necessary_under_cph(desired_power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio)
     >>> # (421, 421)
 
-    Reference
-    ---------
+    References
+    -----------
     https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
 
     See Also

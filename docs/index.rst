@@ -8,7 +8,7 @@
 -------------------------------------
 
 
-*lifelines*
+lifelines
 =====================================
 
 *lifelines* is a implementation of survival analysis in Python. What
@@ -22,24 +22,52 @@ implementations?
 
 
 Contents:
-------------------------------
+============
 
 .. toctree::
   :maxdepth: 1
+  :caption: Quickstart & Intro
 
   Quickstart
   Survival Analysis intro
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Univariate Models
+
   Survival analysis with lifelines
-  Survival Regression
-  jupyter_notebooks/Proportional hazard assumption.ipynb
-  jupyter_notebooks/Cox residuals.ipynb
   jupyter_notebooks/Piecewise Exponential Models and Creating Custom Models.ipynb
   jupyter_notebooks/Modelling time-lagged conversion rates.ipynb
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Regression Models
+
+  Survival Regression
+  Time varying survival regression
+  jupyter_notebooks/Proportional hazard assumption.ipynb
+  jupyter_notebooks/Cox residuals.ipynb
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Detailed documentation
+
   Examples
   References
+
+.. toctree::
+  :maxdepth: 1
+  :caption: About lifelines
+
   Changelog
+  Cite lifelines <https://doi.org/10.5281/zenodo.805993>
 
+.. toctree::
+  :maxdepth: 1
+  :caption: Questions? Suggestions?
 
+  Gitter channel <https://gitter.im/python-lifelines/Lobby>
+  Create a GitHub issue <https://github.com/camdavidsonpilon/lifelines/issues>
 
 Installation
 ------------------------------
@@ -61,7 +89,7 @@ Citing *lifelines*
 
 The following link will bring you to a page where you can find the latest citation for *lifelines*:
 
-`Citation for lifelines <http://doi.org/10.5281/zenodo.1252342>`_
+`Citation for lifelines <https://doi.org/10.5281/zenodo.805993>`_
 
 
 Indices and tables

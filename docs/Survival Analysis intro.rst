@@ -52,7 +52,7 @@ subpopulations, :math:`A` and :math:`B`. Population :math:`A` has a very
 small lifespan, say 2 months on average, and population :math:`B`
 enjoys a much larger lifespan, say 12 months on average. We may
 not know this distinction beforehand. At :math:`t=10`, we
-wish to investigate the average lifespan for everyone. 
+wish to investigate the average lifespan for everyone.
 
 In the figure below, the red lines denote the lifespan of individuals where the death event
 has been observed, and the blue lines denote the lifespan of the
@@ -70,7 +70,7 @@ that we would be severely underestimating the true average lifespan.
     N = 25
 
     CURRENT_TIME = 10
-    
+
     actual_lifetimes = np.array([
         exponential(12) if (uniform() < 0.5) else exponential(2) for i in range(N)
     ])
@@ -78,7 +78,7 @@ that we would be severely underestimating the true average lifespan.
     death_observed = actual_lifetimes < CURRENT_TIME
 
     ax = plot_lifetimes(observed_lifetimes, event_observed=death_observed)
-    
+
     ax.set_xlim(0, 25)
     ax.vlines(10, 0, 30, lw=2, linestyles='--')
     ax.set_xlabel("time")
@@ -187,4 +187,4 @@ Upon differentiation and some algebra, we recover:
 .. math:: f_T(t) = h(t)\exp\left( -\int_0^t h(z) \mathrm{d}z \right) = h(t) S(t)
 
 Of course, we do not observe the true survival curve of a population. We
-must use the observed data to estimate it. There are many ways to estimate the survival function and the hazard rate, which brings us to :doc:`estimation using lifelines</Intro to lifelines>`.
+must use the observed data to estimate it. There are many ways to estimate the survival function and the hazard rate, which brings us to :doc:`estimation using lifelines</Survival analysis with lifelines>`.

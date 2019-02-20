@@ -73,19 +73,23 @@ def qth_survival_times(q, survival_functions, cdf=False):
     qth_survival_time, median_survival_times
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
+
     q = pd.Series(q)
 
     if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError("q must be between 0 and 1")
 
     survival_functions = pd.DataFrame(survival_functions)
+
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         q = q[0]
+        # If you add print statements to `qth_survival_time`, you'll see it's called
+        # once too many times. This is expected Pandas behaviour
+        # https://stackoverflow.com/questions/21635915/why-does-pandas-apply-calculate-twice
         return survival_functions.apply(lambda s: qth_survival_time(q, s, cdf=cdf)).iloc[0]
     else:
-        survival_times = pd.DataFrame(
-            {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s, cdf=cdf)) for _q in q}
-        ).T
+        d = {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s, cdf=cdf)) for _q in q}
+        survival_times = pd.DataFrame(d).T
 
         #  Typically, one would expect that the output should equal the "height" of q.
         #  An issue can arise if the Series q contains duplicate values. We solve
@@ -123,15 +127,14 @@ def qth_survival_time(q, survival_function, cdf=False):
             )
 
         survival_function = survival_function.T.squeeze()
-
     if cdf:
         if survival_function.iloc[0] > q:
             return np.inf
-        v = survival_function.index[survival_function.searchsorted(q)]
+        v = survival_function.index[survival_function.searchsorted([q])[0]]
     else:
         if survival_function.iloc[-1] > q:
             return np.inf
-        v = survival_function.index[(-survival_function).searchsorted(-q)]
+        v = survival_function.index[(-survival_function).searchsorted([-q])[0]]
     return v
 
 
@@ -563,8 +566,7 @@ def k_fold_cross_validation(
     Parameters
     ----------
     fitters: model
-      one or several objects which possess a method:
-        `fit(self, data, duration_col, event_col)`
+      one or several objects which possess a method: ``fit(self, data, duration_col, event_col)``
       Note that the last two arguments will be given as keyword arguments,
       and that event_col is optional. The objects must also have
       the "predictor" method defined below.
@@ -587,10 +589,9 @@ def k_fold_cross_validation(
       between two series of event times
     predictor: string
       a string that matches a prediction method on the fitter instances.
-      For example, "predict_expectation" or "predict_percentile".
+      For example, ``predict_expectation`` or ``predict_percentile``.
       Default is "predict_expectation"
-      The interface for the method is:
-          predict(self, data, **optional_kwargs)
+      The interface for the method is: ``predict(self, data, **optional_kwargs)``
     fitter_kwargs:
       keyword args to pass into fitter.fit method
     predictor_kwargs:

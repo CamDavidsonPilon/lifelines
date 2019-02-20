@@ -12,9 +12,6 @@ pylint:
   disable:
     - line-too-long
     - protected-access
-    - invalid-unary-operand-type
-    - assignment-from-no-return
-    - no-value-for-parameter
     # remove if python2.7 support is dropped
     - useless-object-inheritance
     - old-style-class
