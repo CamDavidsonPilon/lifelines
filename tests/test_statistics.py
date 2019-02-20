@@ -175,10 +175,9 @@ def test_pairwise_allows_dataframes_and_gives_correct_counts():
     df = pd.DataFrame(np.empty((N, 3)), columns=["T", "C", "group"])
     df["T"] = np.random.exponential(1, size=N)
     df["C"] = np.random.binomial(1, 0.6, size=N)
-    df["group"] = np.random.binomial(N_groups, 0.5, size=N)
+    df["group"] = np.tile(np.arange(N_groups), 20)
     R = stats.pairwise_logrank_test(df["T"], df["group"], event_observed=df["C"])
-    R.print_summary()
-    assert R.summary.shape[0] == N_groups * (N_groups + 1) / 2
+    assert R.summary.shape[0] == N_groups * (N_groups - 1) / 2
 
 
 def test_log_rank_returns_None_if_equal_arrays():
