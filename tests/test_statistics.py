@@ -177,6 +177,7 @@ def test_pairwise_allows_dataframes_and_gives_correct_counts():
     df["C"] = np.random.binomial(1, 0.6, size=N)
     df["group"] = np.random.binomial(N_groups, 0.5, size=N)
     R = stats.pairwise_logrank_test(df["T"], df["group"], event_observed=df["C"])
+    R.print_summary()
     assert R.summary.shape[0] == N_groups * (N_groups + 1) / 2
 
 
