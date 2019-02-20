@@ -45,7 +45,7 @@ class WeibullAFTFitter(BaseFitter):
     form, with :math:`\lambda = \exp\left(\beta_0 + \beta_1x_1 + ... + \beta_n x_n \right)`,
     and optionally, `\rho = \exp\left(\alpha_0 + \alpha_1 y_1 + ... + \alpha_m y_m \right)`,
 
-    .. math::  S(t; x, y) = \exp\left(\left(\frac{-t}{\lambda(x)}\right)^{\rho(y)}\right),
+    .. math::  S(t; x, y) = \exp\left(-\left(\frac{t}{\lambda(x)}\right)^{\rho(y)}\right),
 
     which implies the cumulative hazard rate is
 

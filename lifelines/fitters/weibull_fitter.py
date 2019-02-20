@@ -12,7 +12,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     This class implements a Weibull model for univariate data. The model has parameterized
     form:
 
-    .. math::  S(t) = \exp\left(\left(\frac{-t}{\lambda}\right)^\rho\right),   \lambda > 0, \rho > 0,
+    .. math::  S(t) = \exp\left(-\left(\frac{t}{\lambda}\right)^\rho\right),   \lambda > 0, \rho > 0,
 
     which implies the cumulative hazard rate is
 
@@ -30,11 +30,11 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     ----------
     The parameterization of this model changed in lifelines 0.19.0. Previously, the cumulative hazard looked like
     :math:`(\lambda t)^\rho`. The parameterization is now the recipricol of :math:`\lambda`.
-    
+
     Examples
     --------
 
-    >>> from lifelines import WeibullFitter 
+    >>> from lifelines import WeibullFitter
     >>> from lifelines.datasets import load_waltons
     >>> waltons = load_waltons()
     >>> wbf = WeibullFitter()
