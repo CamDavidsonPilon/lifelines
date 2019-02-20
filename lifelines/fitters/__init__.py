@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import division
+
 import collections
 from functools import wraps
 import sys
@@ -250,7 +252,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
             self._hazard = egrad(self._cumulative_hazard, argnum=1)
         if not hasattr(self, "_bounds"):
-            self._bounds = [(0, None)] * len(self._fitted_parameter_names)
+            self._bounds = [(0.0, None)] * len(self._fitted_parameter_names)
         self._bounds = list(self._buffer_bounds(self._bounds))
 
         if not hasattr(self, "_initial_values"):
@@ -312,7 +314,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             elif ub is None:
                 yield lb + 1.0
             else:
-                yield (ub - lb) / 2
+                yield (ub - lb) / 2.0
 
     def _buffer_bounds(self, bounds):
         for (lb, ub) in bounds:
@@ -369,10 +371,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
 
         # pylint: disable=no-value-for-parameter
-        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(transform)(self._fitted_parameters_, self.timeline)
+        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(transform)(
+            self._fitted_parameters_, self.timeline.astype(float)
+        )
 
         gradient_at_times = np.vstack(
-            [gradient_of_cum_hazard_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_))]
+            [gradient_of_cum_hazard_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_), dtype=float)]
         )
 
         std_cumulative_hazard = np.sqrt(
@@ -588,7 +592,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.entry = np.asarray(entry) if entry is not None else np.zeros_like(self.durations)
 
         if timeline is not None:
-            self.timeline = np.sort(np.asarray(timeline))
+            self.timeline = np.sort(np.asarray(timeline).astype(float))
         else:
             self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
 

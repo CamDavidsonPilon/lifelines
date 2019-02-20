@@ -6,8 +6,6 @@ python:
    - "3.5"
    - "3.6"
 env:
-- export PANDAS_VERSION=0.18.1
-- export PANDAS_VERSION=0.19.2
 - export PANDAS_VERSION=0.20.3
 - export PANDAS_VERSION=0.21.1
 - export PANDAS_VERSION=0.22.0
