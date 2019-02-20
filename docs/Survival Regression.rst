@@ -546,14 +546,18 @@ More generally, we can model the :math:`\lambda` as a function of covariates pro
 
 .. math::
     S_A(t) = S_B(\lambda(x) t)\\
-    \lambda(x) = \exp\left(b_0 + \sum_{i=1}^n b_i x_i \right)
+    \lambda(x) = \exp-\left(b_0 + \sum_{i=1}^n b_i x_i \right)
 
-This model can accelerate or decelerate failure times depending on subjects' covariates. Another nice feature of this is the ease of interpretation of the coefficients: a unit increase in :math:`x_i` means the average/median survival time changes by a factor of :math:`\exp(b_i)`.
+This model can accelerate or decelerate failure times depending on subjects' covariates. Another nice feature of this is the ease of interpretation of the coefficients: a unit increase in :math:`x_i` means the average/median survival time changes by a factor of :math:`\exp(-b_i)`.
+
+
+.. note:: Note the negative sign. That's important for interpretation understanding a variables influence on survival time. Suppose :math:`b_i` was positive, then :math:`\exp(-b_i)` is less than 1, which will decelerate the event time, that is, it will be a *protective effect*. Likewise, a negative :math:`b_i` will hasten the event time. This is opposite of how the sign influences event times in the Cox model! This is standard survival analysis convention.
+
 
 Next, we pick a parametric form for the survival function, :math:`S(t)`. The most common is the Weibull form. So if we assume the relationship above, and a Weibull form, our hazard function is quite easy to write down:
 
 .. math::
-    H(t; x) = \left( \lambda(x) t \right)^\rho,
+    H(t; x) = \left( \frac{t}{\lambda(x)} \right)^\rho,
 
 
 We call these accelerated failure time models, shortened often to just AFT models. Using *lifelines*, we can fit this model (and the unknown :math:`\rho` parameter too).

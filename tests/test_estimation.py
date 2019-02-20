@@ -404,7 +404,7 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0])
-            assert not (pd.isnull(fitter.confidence_interval_)).all()
+            assert not (pd.isnull(fitter.confidence_interval_)).all().all()
 
     def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
@@ -707,8 +707,8 @@ class TestWeibullFitter:
         # D = np.random.rand(15000) * T
 
         wf = WeibullFitter()
-        T = np.random.exponential(10, 150000)
-        D = np.random.exponential(10, 150000)
+        T = np.random.exponential(10, 250000)
+        D = np.random.exponential(10, 250000)
 
         keep = T > D
         T = T[keep]
