@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+from __future__ import division
 import warnings
 
 # pylint: disable=wrong-import-position
@@ -32,6 +34,7 @@ from lifelines.utils import (
     check_nans_or_infs,
     normalize,
     ConvergenceError,
+    coalesce,
 )
 from lifelines.statistics import chisq_test
 
@@ -42,11 +45,11 @@ class WeibullAFTFitter(BaseFitter):
     form, with :math:`\lambda = \exp\left(\beta_0 + \beta_1x_1 + ... + \beta_n x_n \right)`,
     and optionally, `\rho = \exp\left(\alpha_0 + \alpha_1 y_1 + ... + \alpha_m y_m \right)`,
 
-    .. math::  S(t; x) = \exp(-(t / \lambda(x))^\rho(y)),
+    .. math::  S(t; x) = \exp(-(\lambda(x) t )^\rho(y)),
 
     which implies the cumulative hazard rate is
 
-    .. math:: H(t) = \left(\frac{t}{\lambda(x)}\right)^\rho(y),
+    .. math:: H(t) = \left(\lambda(x) t \right)^\rho(y),
 
     and the hazard rate is:
 
@@ -104,7 +107,7 @@ class WeibullAFTFitter(BaseFitter):
 
         return (T / lambda_) ** rho_
 
-    def fit(self, df, duration_col=None, event_col=None, ancillary_df=None, show_progress=False):
+    def fit(self, df, duration_col=None, event_col=None, ancillary_df=None, show_progress=False, timeline=None):
         """
         Fit the Weibull accelerated failure time model to a dataset.
 
@@ -134,6 +137,9 @@ class WeibullAFTFitter(BaseFitter):
             If None or False, explicity do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+
+        timeline: array, optional
+            Specify a timeline that will be used for plotting and prediction
 
         Returns
         -------
@@ -170,6 +176,7 @@ class WeibullAFTFitter(BaseFitter):
         self.duration_col = duration_col
         self.event_col = event_col
         self._n_examples = df.shape[0]
+        self.timeline = timeline
 
         df = df.copy()
 
@@ -196,12 +203,11 @@ class WeibullAFTFitter(BaseFitter):
             self._check_values(ancillary_df, T, E, self.event_col)
 
         elif (ancillary_df is None) or (ancillary_df is False):
-            ancillary_df = pd.DataFrame(index=df.index)
+            ancillary_df = pd.DataFrame(np.ones((df.shape[0],)), index=df.index, columns=["_intercept"])
         elif ancillary_df is True:
             ancillary_df = df.copy()
 
         if self.fit_intercept:
-            assert "_intercept" not in ancillary_df
             assert "_intercept" not in df
             ancillary_df["_intercept"] = 1.0
             df["_intercept"] = 1.0
@@ -209,6 +215,7 @@ class WeibullAFTFitter(BaseFitter):
         self._LOOKUP_SLICE = self._create_slicer(len(df.columns), len(ancillary_df.columns))
 
         _norm_std, _norm_std_ancillary = df.std(0), ancillary_df.std(0)
+        self._norm_mean, self._norm_mean_ancillary = df.mean(0), ancillary_df.mean(0)
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
             _norm_std["_intercept"] = 1.0
@@ -583,7 +590,7 @@ class WeibullAFTFitter(BaseFitter):
         """
         return self.predict_percentile(X, p=0.5, ancillary_X=ancillary_X)
 
-    def predict_cumulative_hazard(self, X, ancillary_X=None, times=None):
+    def predict_cumulative_hazard(self, X, times=None, ancillary_X=None):
         """
         Parameters
         ----------
@@ -592,14 +599,14 @@ class WeibullAFTFitter(BaseFitter):
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
         times: iterable, optional
             an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
+        ancillary_X: numpy array or DataFrame, optional
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
 
         Returns
         -------
@@ -607,8 +614,8 @@ class WeibullAFTFitter(BaseFitter):
             the cumulative hazard of individuals over the timeline
         """
         X = X.copy()
-        if times is None:
-            times = np.unique(self.durations)
+
+        times = coalesce(times, self.timeline, np.unique(self.durations))
 
         if ancillary_X is None:
             ancillary_X = pd.DataFrame(np.ones((X.shape[0], 1)), columns=["_intercept"])
@@ -623,6 +630,7 @@ class WeibullAFTFitter(BaseFitter):
         if isinstance(X, pd.DataFrame):
             if self.fit_intercept:
                 X["_intercept"] = 1.0
+
             X = X[self.params_.loc["lambda_"].index]
         else:
             assert X.shape[1] == (self.params_.loc["lambda_"].shape[0] + 1)  # 1 for _intercept
@@ -712,11 +720,63 @@ class WeibullAFTFitter(BaseFitter):
         ax.set_ylim(best_ylim)
 
         if isinstance(columns[0], tuple):
-            tick_labels = ["%s - %s" % i for i in hazards.index]
+            tick_labels = ["%s: %s" % (c, p) for (p, c) in hazards.index]
         else:
             tick_labels = [i for i in hazards.index]
 
         plt.yticks(yaxis_locations, tick_labels)
         plt.xlabel("log(accelerated failure rate) (%g%% CI)" % ((1 - self.alpha) * 100))
 
+        return ax
+
+    def plot_covariate_groups(self, covariate, values, plot_baseline=True, **kwargs):
+        """
+        Produces a visual representation comparing the baseline survival curve of the model versus
+        what happens when a covariate is varied over values in a group. This is useful to compare
+        subjects' survival as we vary a single covariate, all else being held equal. The baseline survival
+        curve is equal to the predicted survival curve at all average values in the original dataset.
+
+        Parameters
+        ----------
+        covariate: string
+            a string of the covariate in the original dataset that we wish to vary.
+        values: iterable
+            an iterable of the values we wish the covariate to take on.
+        plot_baseline: bool
+            also display the baseline survival, defined as the survival at the mean of the original dataset.
+        kwargs:
+            pass in additional plotting commands
+
+        Returns
+        -------
+        ax: matplotlib axis, or list of axis'
+            the matplotlib axis that be edited.
+        """
+        from matplotlib import pyplot as plt
+
+        original_columns = self.params_.index.get_level_values(1)
+        if covariate not in original_columns:
+            raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
+
+        ax = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
+
+        x_bar = self._norm_mean.to_frame().T
+        X = pd.concat([x_bar] * len(values))
+        X.index = ["%s=%s" % (covariate, g) for g in values]
+        X[covariate] = values
+
+        x_bar_anc = self._norm_mean_ancillary.to_frame().T
+        ancillary_X = pd.concat([x_bar_anc] * len(values))
+        ancillary_X.index = ["%s=%s" % (covariate, g) for g in values]
+        ancillary_X[covariate] = values
+
+        if self.fit_intercept:
+            X["_intercept"] = 1.0
+            ancillary_X["_intercept"] = 1.0
+
+        self.predict_survival_function(X, ancillary_X=ancillary_X).plot(ax=ax, **kwargs)
+        if plot_baseline:
+            self.predict_survival_function(x_bar, ancillary_X=x_bar_anc).rename(columns={0: "baseline survival"}).plot(
+                ax=ax, ls="--", color="k"
+            )
         return ax

@@ -2,10 +2,10 @@ init:
 ifeq ($(TRAVIS), true)
 		pip install -r reqs/travis-requirements.txt
 		pip list --local
+		pip install pandas==${PANDAS_VERSION}
 else
 		pip install -r reqs/dev-requirements.txt
 		pre-commit install
-		pip install pandas==${PANDAS_VERSION}
 endif
 
 test:
