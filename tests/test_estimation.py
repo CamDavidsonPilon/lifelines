@@ -1224,8 +1224,8 @@ class TestRegressionFitters:
             else:
                 if isinstance(hazards.index, pd.MultiIndex):
                     assert_series_equal(
-                        hazards.drop(index="_intercept", level=1),
-                        hazards_norm.drop(index="_intercept", level=1),
+                        hazards.drop("_intercept", axis=0, level=1),
+                        hazards_norm.drop("_intercept", axis=0, level=1),
                         check_less_precise=True,
                     )
                 else:
