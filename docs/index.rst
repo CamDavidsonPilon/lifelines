@@ -60,7 +60,7 @@ Contents:
   :caption: About lifelines
 
   Changelog
-  Cite lifelines <https://doi.org/10.5281/zenodo.805993>
+  Citing lifelines <https://doi.org/10.5281/zenodo.805993>
 
 .. toctree::
   :maxdepth: 1

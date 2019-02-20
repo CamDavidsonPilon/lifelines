@@ -19,7 +19,8 @@
  - Fixed a bug in the `_log_likelihood_` property of `ParametericUnivariateFitter` models. It was showing the "average" log-likelihood (i.e. scaled by 1/n) instead of the total. It now displays the total.
  - In model `print_summary`s, correct a label erroring. Instead of "Likelihood test", it should have read "Log-likelihood test".
  - Fixed a bug that was too frequently rejecting the dtype of `event` columns.
- - Fixed a calculation bug in the concordance index for stratified Cox models.
+ - Fixed a calculation bug in the concordance index for stratified Cox models. Thanks @airanmehr!
+ - Fixed some Pandas <0.24 bugs.
 
 #### 0.18.6
  - some improvements to the output of `check_assumptions`. `show_plots` is turned to `False` by default now. It only shows `rank` and `km` p-values now.

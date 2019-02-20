@@ -565,7 +565,7 @@ We call these accelerated failure time models, shortened often to just AFT model
 The Weibull AFT model
 ######################
 
-The API for the Weibull AFT model is similar to the other regression models in *lifelines*:
+The API for the Weibull AFT model is similar to the other regression models in *lifelines*. After fitting, the coefficients can be accessed using ``.params_`` or ``.summary``, or alternatively printed using ``.print_summary()``
 
 .. code:: python
 
@@ -730,6 +730,45 @@ Given a new subject, we ask questions about their future survival? When are they
     aft.predict_median(X, ancillary_X=X)
     aft.predict_percentile(X, ancillary_X=X)
     aft.predict_expectation(X, ancillary_X=X)
+
+
+There are two tunable parameters that can be used to to acheive a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to ``WeibullAFTFitter``. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_.
+
+.. code:: python
+
+
+    aft_with_elastic_penalty = WeibullAFTFitter(penalizer=4.0, l1_ratio=1.0)
+    aft_with_elastic_penalty.fit(rossi, 'week', 'arrest')
+    aft_with_elastic_penalty.predict_median(rossi)
+
+    aft_with_elastic_penalty.print_summary()
+
+    """
+    <lifelines.WeibullAFTFitter: fitted with 432 observations, 318 censored>
+          duration col = 'week'
+             event col = 'arrest'
+             penalizer = 4.0
+              l1_ratio = 1.0
+    number of subjects = 432
+      number of events = 114
+        log-likelihood = -2710.95
+      time fit was run = 2019-02-20 19:53:29 UTC
+
+    ---
+                        coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
+    lambda_ fin         0.00       1.00      0.08  0.00   1.00      0.00       -0.15        0.15
+            age         0.13       1.14      0.01 12.27 <0.005    112.47        0.11        0.15
+            race        0.55       1.73      0.09  5.80 <0.005     27.16        0.36        0.73
+            wexp        0.00       1.00      0.09  0.00   1.00      0.00       -0.17        0.17
+            mar         0.00       1.00      0.14  0.01   0.99      0.01       -0.27        0.28
+            paro        0.00       1.00      0.08  0.01   0.99      0.01       -0.16        0.16
+            prio        0.00       1.00      0.01  0.00   1.00      0.00       -0.03        0.03
+            _intercept  0.00       1.00      0.19  0.00   1.00      0.00       -0.38        0.38
+    rho_    _intercept -0.00       1.00       nan   nan    nan       nan         nan         nan
+    ---
+    Concordance = 0.60
+    Log-likelihood ratio test = -4028.65 on 7 df, -log2(p)=-0.00
+    """
 
 
 Model selection in survival regression

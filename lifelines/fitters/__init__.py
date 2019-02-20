@@ -565,7 +565,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         Returns
         -------
-          self : WeibullFitter
+          self
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """

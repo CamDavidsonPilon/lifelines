@@ -1414,7 +1414,24 @@ class TestCoxPHFitter:
     def cph(self):
         return CoxPHFitter()
 
+    def test_that_adding_strata_will_change_c_index(self, cph, rossi):
+        """
+        df = read.csv('~/code/lifelines/lifelines/datasets/rossi.csv')
+        r <- coxph(Surv(week, arrest) ~ fin + age + race + mar + paro + prio + strata(wexp), data=df)
+        survConcordance(Surv(week, arrest) ~predict(r) + strata(wexp), df)
+        """
+
+        cph.fit(rossi, "week", "arrest")
+        c_index_no_strata = cph.score_
+
+        cph.fit(rossi, "week", "arrest", strata=["wexp"])
+        c_index_with_strata = cph.score_
+
+        assert c_index_with_strata != c_index_no_strata
+        npt.assert_allclose(c_index_with_strata, 0.6124492)
+
     def test_check_assumptions(self, cph, rossi):
+        # TODO make this better
         cph.fit(rossi, "week", "arrest")
         cph.check_assumptions(rossi)
 
