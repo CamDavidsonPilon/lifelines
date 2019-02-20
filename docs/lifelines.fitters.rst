@@ -92,7 +92,7 @@ lifelines.fitters.piecewise\_exponential\_fitter module
 
 
 lifelines.fitters.weibull\_aft\_fitter module
-----------------------------------------
+----------------------------------------------
 
 .. automodule:: lifelines.fitters.weibull_aft_fitter
     :members:

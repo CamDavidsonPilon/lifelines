@@ -538,26 +538,26 @@ Accelerated failure time models
 Suppose we have two populations, A and B, with different survival functions, :math:`S_A(t)` and :math:`S_B(t)`, and they are related by some *accelerated failure rate*, :math:`\lambda`:
 
 .. math::
-    S_A(t) = S_B(\lambda t)
+    S_A(t) = S_B\left(\frac{t}{\lambda}\right)
 
-This can be interpreted as slowing down or speeding up moving along the survival function. A classic example of this is that dogs age at 7 times the rate of humans, i.e. :math:`\lambda = 7`. This model has some other nice properties: the average survival time of population B is :math:`\lambda` times the average survival time of population A. Likewise with the median survival time.
+This can be interpreted as slowing down or speeding up moving along the survival function. A classic example of this is that dogs age at 7 times the rate of humans, i.e. :math:`\lambda = \frac{1}{7}`. This model has some other nice properties: the average survival time of population B is :math:`{\lambda}` times the average survival time of population A. Likewise with the *median* survival time.
 
-More generally, we can model the :math:`\lambda` as a function of covariates provided, that is:
-
-.. math::
-    S_A(t) = S_B(\lambda(x) t)\\
-    \lambda(x) = \exp-\left(b_0 + \sum_{i=1}^n b_i x_i \right)
-
-This model can accelerate or decelerate failure times depending on subjects' covariates. Another nice feature of this is the ease of interpretation of the coefficients: a unit increase in :math:`x_i` means the average/median survival time changes by a factor of :math:`\exp(-b_i)`.
-
-
-.. note:: Note the negative sign. That's important for interpretation understanding a variables influence on survival time. Suppose :math:`b_i` was positive, then :math:`\exp(-b_i)` is less than 1, which will decelerate the event time, that is, it will be a *protective effect*. Likewise, a negative :math:`b_i` will hasten the event time. This is opposite of how the sign influences event times in the Cox model! This is standard survival analysis convention.
-
-
-Next, we pick a parametric form for the survival function, :math:`S(t)`. The most common is the Weibull form. So if we assume the relationship above, and a Weibull form, our hazard function is quite easy to write down:
+More generally, we can model the :math:`\lambda` as a function of covariates available, that is:
 
 .. math::
-    H(t; x) = \left( \frac{t}{\lambda(x)} \right)^\rho,
+    S_A(t) = S_B\left(\frac{t}{\lambda(x)}\right)\\
+    \lambda(x) = \exp\left(b_0 + \sum_{i=1}^n b_i x_i \right)
+
+This model can accelerate or decelerate failure times depending on subjects' covariates. Another nice feature of this is the ease of interpretation of the coefficients: a unit increase in :math:`x_i` means the average/median survival time changes by a factor of :math:`\exp(b_i)`.
+
+
+.. note:: An important note on interpretation: Suppose :math:`b_i` was positive, then the factor :math:`\exp(b_i)` is greater than 1, which will decelerate the event time since we divide time by the factor <=> increase mean/median survival. Hence, it will be a *protective effect*. Likewise, a negative :math:`b_i` will hasten the event time <=> reduce the mean/median survival time. This interpretation is *opposite* of how the sign influences event times in the Cox model! This is standard survival analysis convention.
+
+
+Next, we pick a parametric form for the survival function, :math:`S(t)`. The most common is the Weibull form. So if we assume the relationship above and a Weibull form, our hazard function is quite easy to write down:
+
+.. math::
+    H(t; x) = \left( \frac{t}{\lambda(x)} \right)^\rho
 
 
 We call these accelerated failure time models, shortened often to just AFT models. Using *lifelines*, we can fit this model (and the unknown :math:`\rho` parameter too).
@@ -577,7 +577,7 @@ The API for the Weibull AFT model is similar to the other regression models in *
     aft = WeibullAFTFitter()
     aft.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
-    aft.print_summary()  # access the results using aft.summary
+    aft.print_summary(3)  # access the results using aft.summary
 
     """
     <lifelines.WeibullAFTFitter: fitted with 432 observations, 318 censored>
@@ -585,38 +585,50 @@ The API for the Weibull AFT model is similar to the other regression models in *
              event col = 'arrest'
     number of subjects = 432
       number of events = 114
-        log-likelihood = -679.92
-      time fit was run = 2019-02-20 02:02:02 UTC
+        log-likelihood = -679.917
+      time fit was run = 2019-02-20 17:47:19 UTC
 
     ---
-                        coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
-    lambda_ fin         0.27       1.31      0.14  1.97   0.05      4.37        0.00        0.54
-            age         0.04       1.04      0.02  2.54   0.01      6.51        0.01        0.07
-            race       -0.22       0.80      0.22 -1.02   0.31      1.70       -0.66        0.21
-            wexp        0.11       1.11      0.15  0.70   0.48      1.05       -0.19        0.40
-            mar         0.31       1.37      0.27  1.14   0.25      1.97       -0.22        0.85
-            paro        0.06       1.06      0.14  0.42   0.67      0.57       -0.21        0.33
-            prio       -0.07       0.94      0.02 -3.14 <0.005      9.22       -0.11       -0.02
-            _intercept  3.99      54.06      0.42  9.52 <0.005     68.98        3.17        4.81
-    rho_    _intercept  0.34       1.40      0.09  3.81 <0.005     12.81        0.16        0.51
+                         coef  exp(coef)  se(coef)      z       p  -log2(p)  lower 0.95  upper 0.95
+    lambda_ fin         0.272      1.313     0.138  1.973   0.049     4.365       0.002       0.543
+            age         0.041      1.042     0.016  2.544   0.011     6.512       0.009       0.072
+            race       -0.225      0.799     0.220 -1.021   0.307     1.703      -0.656       0.207
+            wexp        0.107      1.112     0.152  0.703   0.482     1.053      -0.190       0.404
+            mar         0.311      1.365     0.273  1.139   0.255     1.973      -0.224       0.847
+            paro        0.059      1.061     0.140  0.421   0.674     0.570      -0.215       0.333
+            prio       -0.066      0.936     0.021 -3.143   0.002     9.224      -0.107      -0.025
+            _intercept  3.990     54.062     0.419  9.521 <0.0005    68.979       3.169       4.812
+    rho_    _intercept  0.339      1.404     0.089  3.809 <0.0005    12.808       0.165       0.514
     ---
-    Concordance = 0.64
-    Log-likelihood ratio test = 33.42 on 7 df, -log2(p)=15.46
+    Concordance = 0.640
+    Log-likelihood ratio test = 33.416 on 7 df, -log2(p)=15.462
     """
 
+From above, we can see that ``prio``, which is the number of previous incarcerations, has a large negative coefficient. This means that each addition incarcerations changes a subject's mean/median survival time by :math:`\exp(-0.066) = 0.936`, approximately a 7% decrease in mean/median survival time. What is the mean/median survival time?
 
+
+.. code::python
+    print(aft.median_survival_time_)
+    print(aft.mean_survival_time_)
+
+    # 100.325
+    # 118.67
+
+What does the ``rho_    _intercept`` row mean in the above table? Internally, we model the log of the ``rho_`` parameter, so the value of :math:`\rho` is the exponential of the value, so in case above it's :math:`\hat{\rho} = \exp0.339 = 1.404`. This brings us to the next point - modelling :math:`\rho` with covariates as well:
 
 
 Modelling ancillary parameters
 #################################
 
-In the above model, we left the parameter ``rho_`` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogenity in the ``rho_`` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model ``rho_``, we use the ``ancillary_df`` keyword argument in the call to ``fit``. There are four valid options:
+In the above model, we left the parameter :math:`\rho` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogenity in the :math:`\rho` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model :math:`\rho`, we use the ``ancillary_df`` keyword argument in the call to ``fit``. There are four valid options:
 
 1. ``False`` or ``None``: explicity do not model the ``rho_`` parameter (except for its intercept).
 2. a Pandas DataFrame. This option will use the columns in the Pandas DataFrame as the covariates in the regression for ``rho_``. This DataFrame could be a equal to, or a subset of, the original dataset using for modelling ``lambda_``, or it could be a totally different dataset.
 3. ``True``. Passing in ``True`` will internally reuse the dataset that is being used to model ``lambda_``.
 
 .. code:: python
+
+    aft = WeibullAFTFitter()
 
     aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=False)
     # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=None)
@@ -631,7 +643,35 @@ In the above model, we left the parameter ``rho_`` as a single unknown. We can a
     aft.print_summary()
 
     """
-    TODO
+    <lifelines.WeibullAFTFitter: fitted with 432 observations, 318 censored>
+          duration col = 'week'
+             event col = 'arrest'
+    number of subjects = 432
+      number of events = 114
+        log-likelihood = -669.40
+      time fit was run = 2019-02-20 17:42:55 UTC
+
+    ---
+                        coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
+    lambda_ fin         0.24       1.28      0.15  1.60   0.11      3.18       -0.06        0.55
+            age         0.10       1.10      0.03  3.43 <0.005     10.69        0.04        0.16
+            race        0.07       1.07      0.19  0.36   0.72      0.48       -0.30        0.44
+            wexp       -0.34       0.71      0.15 -2.22   0.03      5.26       -0.64       -0.04
+            mar         0.26       1.30      0.30  0.86   0.39      1.35       -0.33        0.85
+            paro        0.09       1.10      0.15  0.61   0.54      0.88       -0.21        0.39
+            prio       -0.08       0.92      0.02 -4.24 <0.005     15.46       -0.12       -0.04
+            _intercept  2.68      14.65      0.60  4.50 <0.005     17.14        1.51        3.85
+    rho_    fin        -0.01       0.99      0.15 -0.09   0.92      0.11       -0.31        0.29
+            age        -0.05       0.95      0.02 -3.10 <0.005      9.01       -0.08       -0.02
+            race       -0.46       0.63      0.25 -1.79   0.07      3.77       -0.95        0.04
+            wexp        0.56       1.74      0.17  3.32 <0.005     10.13        0.23        0.88
+            mar         0.10       1.10      0.27  0.36   0.72      0.47       -0.44        0.63
+            paro        0.02       1.02      0.16  0.12   0.90      0.15       -0.29        0.33
+            prio        0.03       1.03      0.02  1.44   0.15      2.73       -0.01        0.08
+            _intercept  1.48       4.41      0.41  3.60 <0.005     11.62        0.68        2.29
+    ---
+    Concordance = 0.63
+    Log-likelihood ratio test = 54.45 on 14 df, -log2(p)=19.83
     """
 
 Plotting
@@ -678,6 +718,18 @@ Comparing a few of these survival functions side by side:
 
 Prediction
 ###########
+
+Given a new subject, we ask questions about their future survival? When are they likely to experience the event? What does their survival function look like? The ``WeibullAFTFitter`` is able to answer these. If we have modelled the ancillary covariates, we are required to include those as well:
+
+.. code:: python
+
+    X = rossi.loc[:10]
+
+    aft.predict_cumulative_hazard(X, ancillary_X=X)
+    aft.predict_survival_function(X, ancillary_X=X)
+    aft.predict_median(X, ancillary_X=X)
+    aft.predict_percentile(X, ancillary_X=X)
+    aft.predict_expectation(X, ancillary_X=X)
 
 
 Model selection in survival regression

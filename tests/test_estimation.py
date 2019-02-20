@@ -707,8 +707,8 @@ class TestWeibullFitter:
         # D = np.random.rand(15000) * T
 
         wf = WeibullFitter()
-        T = np.random.exponential(10, 250000)
-        D = np.random.exponential(10, 250000)
+        T = np.random.exponential(10, 350000)
+        D = np.random.exponential(10, 350000)
 
         keep = T > D
         T = T[keep]
@@ -738,7 +738,7 @@ class TestWeibullFitter:
 
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
-        N = 400000
+        N = 600000
         T = 5 * np.random.exponential(1, size=N) ** 2
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01

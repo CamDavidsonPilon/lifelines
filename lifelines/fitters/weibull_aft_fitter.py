@@ -660,6 +660,18 @@ class WeibullAFTFitter(BaseFitter):
             return self._concordance_score_
         return self._concordance_score_
 
+    @property
+    def median_survival_time_(self):
+        return self.predict_median(
+            self._norm_mean.to_frame().T, ancillary_X=self._norm_mean_ancillary.to_frame().T
+        ).squeeze()
+
+    @property
+    def mean_survival_time_(self):
+        return self.predict_expectation(
+            self._norm_mean.to_frame().T, ancillary_X=self._norm_mean_ancillary.to_frame().T
+        ).squeeze()
+
     def plot(self, columns=None, parameter=None, **errorbar_kwargs):
         """
         Produces a visual representation of the coefficients, including their standard errors and magnitudes.
