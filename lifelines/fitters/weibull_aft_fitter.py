@@ -45,15 +45,11 @@ class WeibullAFTFitter(BaseFitter):
     form, with :math:`\lambda = \exp\left(\beta_0 + \beta_1x_1 + ... + \beta_n x_n \right)`,
     and optionally, `\rho = \exp\left(\alpha_0 + \alpha_1 y_1 + ... + \alpha_m y_m \right)`,
 
-    .. math::  S(t; x) = \exp(-(\lambda(x) t )^\rho(y)),
+    .. math::  S(t; x, y) = \exp\left(\left(\frac{-t}{\lambda(x)}\right)^{\rho(y)}\right),
 
     which implies the cumulative hazard rate is
 
-    .. math:: H(t) = \left(\lambda(x) t \right)^\rho(y),
-
-    and the hazard rate is:
-
-    .. math::  h(t) = \frac{\rho}{\lambda}(t/\lambda)^{\rho-1}
+    .. math:: H(t) = \left(\frac{t}{\lambda(x)} \right)^{\rho(y)},
 
     After calling the `.fit` method, you have access to properties like:
     ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.
