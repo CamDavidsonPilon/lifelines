@@ -43,7 +43,7 @@ class WeibullAFTFitter(BaseFitter):
     r"""
     This class implements a Weibull model for univariate data. The model has parameterized
     form, with :math:`\lambda = \exp\left(\beta_0 + \beta_1x_1 + ... + \beta_n x_n \right)`,
-    and optionally, `\rho = \exp\left(\alpha_0 + \alpha_1 y_1 + ... + \alpha_m y_m \right)`,
+    and optionally, :math:`\rho = \exp\left(\alpha_0 + \alpha_1 y_1 + ... + \alpha_m y_m \right)`,
 
     .. math::  S(t; x, y) = \exp\left(-\left(\frac{t}{\lambda(x)}\right)^{\rho(y)}\right),
 
