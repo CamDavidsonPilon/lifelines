@@ -41,16 +41,16 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     power : float
         power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
     ratio_of_participants: ratio of participants in experimental group over control group.
-    
+
     p_exp : float
         probability of failure in experimental group over period of study.
-    
-    p_con : float 
+
+    p_con : float
         probability of failure in control group over period of study
-    
-    postulated_hazard_ratio : float 
+
+    postulated_hazard_ratio : float
         the postulated hazard ratio
-    
+
     alpha : float, optional (default=0.05)
         type I error rate
 
@@ -68,7 +68,7 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     Examples
     --------
     >>> from lifelines.statistics import sample_size_necessary_under_cph
-    >>> 
+    >>>
     >>> desired_power = 0.8
     >>> ratio_of_participants = 1.
     >>> p_exp = 0.25
@@ -77,8 +77,8 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     >>> n_exp, n_con = sample_size_necessary_under_cph(desired_power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio)
     >>> # (421, 421)
 
-    Reference
-    ---------
+    References
+    -----------
     https://cran.r-project.org/web/packages/powerSurvEpi/powerSurvEpi.pdf
 
     See Also
@@ -112,26 +112,26 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
 
     n_exp : integer
         size of the experiment group.
-    
+
     n_con : integer
         size of the control group.
-    
+
     p_exp : float
         probability of failure in experimental group over period of study.
-    
+
     p_con : float
         probability of failure in control group over period of study
-    
-    postulated_hazard_ratio : float 
+
+    postulated_hazard_ratio : float
     the postulated hazard ratio
-    
+
     alpha : float, optional (default=0.05)
         type I error rate
 
     Returns
     -------
 
-    float
+    float:
         power to detect the magnitude of the hazard ratio as small as that specified by postulated_hazard_ratio.
 
 
@@ -159,17 +159,17 @@ def survival_difference_at_fixed_point_in_time_test(
     point_in_time, durations_A, durations_B, event_observed_A=None, event_observed_B=None, **kwargs
 ):
     """
-    
-    Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other. 
+
+    Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other.
     For example, analysts may be interested in 5-year survival. Statistically comparing the naive Kaplan-Meier points at a specific time
-    actually has reduced power (see [1]). By transforming the Kaplan-Meier curve, we can recover more power. This function uses 
-    the log(-log) transformation. 
+    actually has reduced power (see [1]). By transforming the Kaplan-Meier curve, we can recover more power. This function uses
+    the log(-log) transformation.
 
 
     Parameters
     ----------
     point_in_time: float,
-        the point in time to analyze the survival curves at. 
+        the point in time to analyze the survival curves at.
 
     durations_A: iterable
         a (n,) list-like of event durations (birth to death,...) for the first population.
@@ -178,14 +178,14 @@ def survival_difference_at_fixed_point_in_time_test(
         a (n,) list-like of event durations (birth to death,...) for the second population.
 
     event_observed_A: iterable, optional
-        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population. 
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population.
         Default assumes all observed.
 
     event_observed_B: iterable, optional
-        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population. 
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population.
         Default assumes all observed.
 
-    kwargs: 
+    kwargs:
         add keywords and meta-data to the experiment summary
 
 
@@ -213,13 +213,13 @@ def survival_difference_at_fixed_point_in_time_test(
     Notes
     -----
     Other transformations are possible, but Klein et al. [1] showed that the log(-log(c)) transform has the most desirable
-    statistical properties. 
+    statistical properties.
 
     References
     -----------
 
     [1] Klein, J. P., Logan, B. , Harhoff, M. and Andersen, P. K. (2007), Analyzing survival curves at a fixed point in time. Statist. Med., 26: 4505-4519. doi:10.1002/sim.2864
-    
+
     """
 
     kmfA = KaplanMeierFitter().fit(durations_A, event_observed=event_observed_A)
@@ -247,10 +247,10 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     r"""
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
-    The test-statistic is chi-squared under the null hypothesis. Let :math:`h_i(t)` be the hazard ratio of 
+    The test-statistic is chi-squared under the null hypothesis. Let :math:`h_i(t)` be the hazard ratio of
     group :math:`i` at time :math:`t`, then:
 
-    .. math::  
+    .. math::
         \begin{align}
          & H_0: h_1(t) = h_2(t) \\
          & H_A: h_1(t) = c h_2(t), \;\; c \ne 1
@@ -261,8 +261,8 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     Note
     -----
 
-    The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival 
-    curves cross, the logrank test will give an inaccurate assessment of differences. 
+    The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival
+    curves cross, the logrank test will give an inaccurate assessment of differences.
 
 
     Parameters
@@ -275,17 +275,17 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
         a (n,) list-like of event durations (birth to death,...) for the second population.
 
     event_observed_A: iterable, optional
-        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population. 
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population.
         Default assumes all observed.
 
     event_observed_B: iterable, optional
-        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population. 
+        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population.
         Default assumes all observed.
 
     t_0: float, optional (default=-1)
         the final time period under observation, -1 for all time.
 
-    kwargs: 
+    kwargs:
         add keywords and meta-data to the experiment summary
 
 
@@ -312,7 +312,7 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
 
     Notes
     -----
-    This is a special case of the function ``multivariate_logrank_test``, which is used internally. 
+    This is a special case of the function ``multivariate_logrank_test``, which is used internally.
     See Survival and Event Analysis, page 108.
 
     See Also
@@ -355,7 +355,7 @@ def pairwise_logrank_test(
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
 
-    kwargs: 
+    kwargs:
         add keywords and meta-data to the experiment summary.
 
 
@@ -415,7 +415,7 @@ def multivariate_logrank_test(
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
     be equal when n=2):
 
-    .. math::  
+    .. math::
         \begin{align}
          & H_0: h_1(t) = h_2(t) = h_3(t) = ... = h_n(t) \\
          & H_A: \text{there exist atleast one group that differs from the other.}
@@ -437,7 +437,7 @@ def multivariate_logrank_test(
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
 
-    kwargs: 
+    kwargs:
         add keywords and meta-data to the experiment summary.
 
 
@@ -523,21 +523,21 @@ def multivariate_logrank_test(
 
 class StatisticalResult(object):
     """
-    This class holds the result of statistical tests with a nice printer wrapper to display the results. 
+    This class holds the result of statistical tests with a nice printer wrapper to display the results.
 
     Note
     -----
-    This class' API changed in version 0.16.0. 
-    
+    This class' API changed in version 0.16.0.
+
     Parameters
     ----------
     p_value: iterable or float
         the p-values of a statistical test(s)
     test_statistic: iterable or float
-        the test statistics of a statistical test(s). Must be the same size as p-values if iterable. 
+        the test statistics of a statistical test(s). Must be the same size as p-values if iterable.
     name: iterable or string
-        if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable. 
-    kwargs: 
+        if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable.
+    kwargs:
         additional information to display in ``print_summary()``.
 
     """
@@ -572,8 +572,8 @@ class StatisticalResult(object):
         decimals: int, optional (default=2)
             specify the number of decimal places to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
 
         """
         print(self._to_string(decimals, **kwargs))
@@ -581,7 +581,7 @@ class StatisticalResult(object):
     @property
     def summary(self):
         """
-        
+
         Returns
         -------
         DataFrame
@@ -665,7 +665,7 @@ def proportional_hazard_test(
     fitted_cox_model, training_df, time_transform="rank", precomputed_residuals=None, **kwargs
 ):
     """
-    Test whether any variable in a Cox model breaks the proportional hazard assumption. 
+    Test whether any variable in a Cox model breaks the proportional hazard assumption.
 
     Parameters
     ----------
@@ -673,13 +673,13 @@ def proportional_hazard_test(
         the fitted Cox model, fitted with `training_df`, you wish to test. Currently only the CoxPHFitter is supported,
         but later CoxTimeVaryingFitter, too.
     training_df: DataFrame
-        the DataFrame used in the call to the Cox model's ``fit``. 
+        the DataFrame used in the call to the Cox model's ``fit``.
     time_transform: vectorized function, list, or string, optional (default='rank')
-        {'all', 'km', 'rank', 'identity', 'log'} 
-        One of the strings above, a list of strings, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms. 
+        {'all', 'km', 'rank', 'identity', 'log'}
+        One of the strings above, a list of strings, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms.
     precomputed_residuals: DataFrame, optional
-        specify the residuals, if already computed. 
-    kwargs: 
+        specify the residuals, if already computed.
+    kwargs:
         additional parameters to add to the StatisticalResult
 
     Returns
@@ -688,7 +688,7 @@ def proportional_hazard_test(
 
     Notes
     ------
-    R uses the default `km`, we use `rank`, as this performs well versus other transforms. See 
+    R uses the default `km`, we use `rank`, as this performs well versus other transforms. See
     http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
 
     """
@@ -723,7 +723,7 @@ def proportional_hazard_test(
             result += StatisticalResult(
                 p_values,
                 T,
-                name=[(c, transform_name) for c in fitted_cox_model.hazards_.columns],
+                name=[(c, transform_name) for c in fitted_cox_model.hazards_.index],
                 test_name="proportional_hazard_test",
                 null_distribution="chi squared",
                 degrees_of_freedom=1,
@@ -744,7 +744,7 @@ def proportional_hazard_test(
         result = StatisticalResult(
             p_values,
             T,
-            name=fitted_cox_model.hazards_.columns.tolist(),
+            name=fitted_cox_model.hazards_.index.tolist(),
             test_name="proportional_hazard_test",
             time_transform=time_transform,
             null_distribution="chi squared",

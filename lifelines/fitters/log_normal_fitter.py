@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
+from __future__ import division
 import autograd.numpy as np
 from autograd.scipy.stats import norm
 
@@ -14,7 +14,7 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
 
     .. math::  S(t) = 1 - \Phi((\log(t) - \mu)/\sigma),   \sigma >0
 
-    where :math:`\Phi` is the CDF of a standard normal random variable. 
+    where :math:`\Phi` is the CDF of a standard normal random variable.
     This implies the cumulative hazard rate is
 
     .. math::  H(t) = -\log(1 - \Phi((\log(t) - \mu)/\sigma))

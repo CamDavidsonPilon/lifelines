@@ -639,13 +639,13 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
 2. ``delta contains nan value(s).``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
 
-3. ``Convergence halted due to matrix inversion problems``: This means that there is a linear combination in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. Try to find the relationship by looking at the correlation matrix of your dataset. An common cause of this is dummifying categorical variables but not dropping a column.
+3. ``Convergence halted due to matrix inversion problems``: This means that there is high colinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummifying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by looking at the correlation matrix of your dataset, or using the variance inflation factor (VIF) to find redundant variables.
 
 4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are ``nan``'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
 
    1. Look for a ``ConvergenceWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models).
 
-   2. The data is completely separable, which means that there exists a covariate the completely determines whether an event occurred or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Look for a ``ConvergenceWarning`` after the ``fit`` call.
+   2. The data is completely separable, which means that there exists a covariate the completely determines whether an event occurred or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Look for a ``ConvergenceWarning`` after the ``fit`` call. See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression
 
    3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarly using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
 

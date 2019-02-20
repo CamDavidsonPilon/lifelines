@@ -27,12 +27,12 @@ class KaplanMeierFitter(UnivariateFitter):
 
     Parameters
     ----------
-    alpha: float, option (default=0.95)
+    alpha: float, option (default=0.05)
         The alpha value associated with the confidence intervals.
 
     Examples
     --------
-    >>> from lifelines import KaplanMeierFitter 
+    >>> from lifelines import KaplanMeierFitter
     >>> from lifelines.datasets import load_waltons
     >>> waltons = load_waltons()
     >>> kmf = KaplanMeierFitter()
@@ -67,7 +67,7 @@ class KaplanMeierFitter(UnivariateFitter):
              alpha for this call to fit only.
           left_censorship: True if durations and event_observed refer to left censorship events. Default False
           ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
           weights: n array, or pd.Series, of length n, if providing a weighted dataset. For example, instead
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
@@ -79,9 +79,9 @@ class KaplanMeierFitter(UnivariateFitter):
 
         """
 
-        check_nans_or_infs(durations)
+        self._check_values(durations)
         if event_observed is not None:
-            check_nans_or_infs(event_observed)
+            self._check_values(event_observed)
 
         if weights is not None:
             if (weights.astype(int) != weights).any():
@@ -114,7 +114,7 @@ class KaplanMeierFitter(UnivariateFitter):
             if net_population.iloc[: int(n / 2)].min() == 0:
                 ix = net_population.iloc[: int(n / 2)].idxmin()
                 raise StatError(
-                    """There are too few early truncation times and too many events. S(t)==0 for all t>%.1f. Recommend BreslowFlemingHarringtonFitter."""
+                    """There are too few early truncation times and too many events. S(t)==0 for all t>%g. Recommend BreslowFlemingHarringtonFitter."""
                     % ix
                 )
 
@@ -134,6 +134,9 @@ class KaplanMeierFitter(UnivariateFitter):
         # plotting functions
         setattr(self, "plot_" + estimate_name, self.plot)
         return self
+
+    def _check_values(self, array):
+        check_nans_or_infs(array)
 
     def plot_loglogs(self, *args, **kwargs):
         return plot_loglogs(self, *args, **kwargs)
@@ -160,17 +163,16 @@ class KaplanMeierFitter(UnivariateFitter):
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.
         # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
-
-        alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
+        z = inv_normal_cdf(1 - alpha / 2)
         df = pd.DataFrame(index=self.timeline)
         v = np.log(self.__estimate.values)
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+            ci_labels = ["%s_upper_%g" % (self._label, 1 - alpha), "%s_lower_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) + alpha2 * np.sqrt(cumulative_sq_) / v))
-        df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) - alpha2 * np.sqrt(cumulative_sq_) / v))
+        df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) + z * np.sqrt(cumulative_sq_) / v))
+        df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) - z * np.sqrt(cumulative_sq_) / v))
         return df
 
     def _additive_f(self, population, deaths):

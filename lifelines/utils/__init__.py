@@ -36,7 +36,7 @@ class StatError(Exception):
 class ConvergenceError(ValueError):
     # inherits from ValueError for backwards compatilibity reasons
     def __init__(self, msg, original_exception=""):
-        super(ConvergenceError, self).__init__(msg + (": %s" % original_exception))
+        super(ConvergenceError, self).__init__(msg + "%s" % original_exception)
         self.original_exception = original_exception
 
 
@@ -73,19 +73,23 @@ def qth_survival_times(q, survival_functions, cdf=False):
     qth_survival_time, median_survival_times
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
+
     q = pd.Series(q)
 
     if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError("q must be between 0 and 1")
 
     survival_functions = pd.DataFrame(survival_functions)
+
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         q = q[0]
+        # If you add print statements to `qth_survival_time`, you'll see it's called
+        # once too many times. This is expected Pandas behaviour
+        # https://stackoverflow.com/questions/21635915/why-does-pandas-apply-calculate-twice
         return survival_functions.apply(lambda s: qth_survival_time(q, s, cdf=cdf)).iloc[0]
     else:
-        survival_times = pd.DataFrame(
-            {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s, cdf=cdf)) for _q in q}
-        ).T
+        d = {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s, cdf=cdf)) for _q in q}
+        survival_times = pd.DataFrame(d).T
 
         #  Typically, one would expect that the output should equal the "height" of q.
         #  An issue can arise if the Series q contains duplicate values. We solve
@@ -123,15 +127,14 @@ def qth_survival_time(q, survival_function, cdf=False):
             )
 
         survival_function = survival_function.T.squeeze()
-
     if cdf:
         if survival_function.iloc[0] > q:
             return np.inf
-        v = survival_function.index[survival_function.searchsorted(q)]
+        v = survival_function.index[survival_function.searchsorted([q])[0]]
     else:
         if survival_function.iloc[-1] > q:
             return np.inf
-        v = survival_function.index[(-survival_function).searchsorted(-q)]
+        v = survival_function.index[(-survival_function).searchsorted([-q])[0]]
     return v
 
 
@@ -452,11 +455,11 @@ def datetimes_to_durations(
         array of floats representing the durations with time units given by freq.
     C: numpy array
         boolean array of event observations: 1 if death observed, 0 else.
-    
+
     Examples
     --------
     >>> from lifelines.utils import datetimes_to_durations
-    >>> 
+    >>>
     >>> start_dates = ['2015-01-01', '2015-04-01', '2014-04-05']
     >>> end_dates = ['2016-02-02', None, '2014-05-06']
     >>>
@@ -563,13 +566,12 @@ def k_fold_cross_validation(
     Parameters
     ----------
     fitters: model
-      one or several objects which possess a method:
-      fit(self, data, duration_col, event_col)
+      one or several objects which possess a method: ``fit(self, data, duration_col, event_col)``
       Note that the last two arguments will be given as keyword arguments,
       and that event_col is optional. The objects must also have
       the "predictor" method defined below.
     df: DataFrame
-      a Pandas dataframe with necessary columns `duration_col` and `event_col`, plus
+      a Pandas dataframe with necessary columns `duration_col` and (optional) `event_col`, plus
       other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
       refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
     duration_col: (n,) array
@@ -587,13 +589,12 @@ def k_fold_cross_validation(
       between two series of event times
     predictor: string
       a string that matches a prediction method on the fitter instances.
-      For example, "predict_expectation" or "predict_percentile".
+      For example, ``predict_expectation`` or ``predict_percentile``.
       Default is "predict_expectation"
-      The interface for the method is:
-          predict(self, data, **optional_kwargs)
-    fitter_kwargs: 
+      The interface for the method is: ``predict(self, data, **optional_kwargs)``
+    fitter_kwargs:
       keyword args to pass into fitter.fit method
-    predictor_kwargs: 
+    predictor_kwargs:
       keyword args to pass into predictor-method.
 
     Returns
@@ -759,7 +760,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     """
 
     n = len(durations)
-    durations = np.asarray(durations).reshape((n,))
+    durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations)).reshape((n,))
 
     # set to all observed if event_observed is none
     if event_observed is None:
@@ -789,7 +790,27 @@ def _get_index(X):
     return index
 
 
-def pass_for_numeric_dtypes_or_raise(df):
+def pass_for_numeric_dtypes_or_raise_array(x):
+    """
+    Use the utility `to_numeric` to check that x is convertabile to numeric values, and then convert. Any errors
+    are reported back to the user.
+
+    Parameters
+    ----------
+    x: list, array, Series, DataFrame
+
+    Notes
+    ------
+    This actually allows objects like timedeltas (converted to microseconds), and strings as numbers.
+
+    """
+    try:
+        return pd.to_numeric(x)
+    except:
+        raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
+
+
+def check_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"
     ]
@@ -857,21 +878,20 @@ if convergence fails.%s"
 
 
 def check_complete_separation_low_variance(df, events, event_col):
-    # import pdb
-    # pdb.set_trace()
+
     events = events.astype(bool)
     deaths_only = df.columns[_low_var(df.loc[events])]
     censors_only = df.columns[_low_var(df.loc[~events])]
-    problem_columns = censors_only.union(deaths_only).tolist()
+    total = df.columns[_low_var(df)]
+    problem_columns = censors_only.union(deaths_only).difference(total).tolist()
     if problem_columns:
-        warning_text = """Column(s) {cols} have very low variance when conditioned on
-death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
+        warning_text = """Column {cols} have very low variance when conditioned on death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
 >>> events = df['{event_col}'].astype(bool)
 >>> df.loc[events, '{cols}'].var()
 >>> df.loc[~events, '{cols}'].var()
 
-Too low variance here means that the column {cols} completely determines whether a subject dies or not. 
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ """.format(
+Too low variance here means that the column {cols} completely determines whether a subject dies or not.
+See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression """.format(
             cols=problem_columns[0], event_col=event_col
         )
         warnings.warn(warning_text, ConvergenceWarning)
@@ -904,8 +924,6 @@ def check_complete_separation(df, events, durations, event_col):
 
 
 def check_nans_or_infs(df_or_array):
-    if hasattr(df_or_array, "dtype") and df_or_array.dtype.kind not in "biuf":
-        raise ValueError("Values must be a subtype of number: so no strings, timedeltas, datetimes, objects, etc.")
 
     nulls = pd.isnull(df_or_array)
     if hasattr(nulls, "values"):
@@ -919,6 +937,7 @@ def check_nans_or_infs(df_or_array):
         infs = df_or_array.values == np.Inf
     else:
         infs = np.isinf(df_or_array)
+
     if hasattr(infs, "values"):
         if infs.values.any():
             raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
@@ -929,11 +948,11 @@ def check_nans_or_infs(df_or_array):
 
 def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
     """
-    This function takes a "flat" dataset (that is, non-time-varying), and converts it into a time-varying dataset 
-    with static variables. 
-    
-    Useful if your dataset has variables that do not satisfy the proportional hazard assumption, and you need to create a 
-    time-varying dataset to include interaction terms with time. 
+    This function takes a "flat" dataset (that is, non-time-varying), and converts it into a time-varying dataset
+    with static variables.
+
+    Useful if your dataset has variables that do not satisfy the proportional hazard assumption, and you need to create a
+    time-varying dataset to include interaction terms with time.
 
 
     Parameters
@@ -945,12 +964,12 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
     event_col: string
         string representing the column in df that represents whether the subject experienced the event or not.
     id_col: string, optional
-        Specify the column that represents an id, else lifelines creates an autoincrementing one. 
+        Specify the column that represents an id, else lifelines creates an autoincrementing one.
     time_gaps: float or int
-        Specify a desired time_gap. For example, if time_gap is 2 and a subject lives for 10.5 units of time, 
+        Specify a desired time_gap. For example, if time_gap is 2 and a subject lives for 10.5 units of time,
         then the final long form will have 5 + 1 rows for that subject: (0, 2], (2, 4], (4, 6], (6, 8], (8, 10], (10, 10.5]
         Smaller time_gaps will produce larger dataframes, and larger time_gaps will produce smaller dataframes. In the limit,
-        the long dataframe will be identical to the original dataframe. 
+        the long dataframe will be identical to the original dataframe.
 
     Returns
     --------
@@ -1041,7 +1060,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
 def to_long_format(df, duration_col):
     """
     This function converts a survival analysis dataframe to a lifelines "long" format. The lifelines "long"
-    format is used in a common next function, ``add_covariate_to_timeline``. 
+    format is used in a common next function, ``add_covariate_to_timeline``.
 
     Parameters
     ----------

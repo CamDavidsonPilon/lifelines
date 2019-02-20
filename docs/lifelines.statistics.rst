@@ -1,5 +1,5 @@
 lifelines.statistics
-==================
+======================
 
 
 .. automodule:: lifelines.statistics

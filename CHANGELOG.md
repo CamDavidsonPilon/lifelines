@@ -1,5 +1,27 @@
 ### Changelog
 
+#### 0.19.0
+
+##### New features
+ - New regression model `WeibullAFTFitter` for fitting accelerated failure time models. Docs have been added to our [documentation](https://lifelines.readthedocs.io/) about how to use `WeibullAFTFitter` (spoiler: it's API is similar to the other regression models) and how to interpret the output.
+ - `CoxPHFitter` performance improvements (about 10%)
+ - `CoxTimeVaryingFitter` performance improvements (about 10%)
+
+
+##### API changes
+ - **Important**: we changed the `.hazards_` and `.standard_errors_` on Cox models to be pandas Series (instead of Dataframes). This felt like a more natural representation of them. You may need to update your code to reflect this. See notes here: https://github.com/CamDavidsonPilon/lifelines/issues/636
+ - **Important**: we changed the `.confidence_intervals_` on Cox models to be transposed. This felt like a more natural representation of them. You may need to update your code to reflect this. See notes here: https://github.com/CamDavidsonPilon/lifelines/issues/636
+ - **Important**: we changed the parameterization of the `WeibullFitter` and `ExponentialFitter` from `\lambda * t` to `t / \lambda`. This was for a few reasons: 1) it is a more common parameterization in literature, 2) it helps in convergence.
+ - **Important**: in models where we add an intercept (currently only `AalenAdditiveModel`), the name of the added column has been changed from `baseline` to `_intercept`
+ - **Important**: the meaning of `alpha` in all fitters has changed to be the standard interpretation of alpha in confidence intervals. That means that the _default_ for alpha is set to 0.05 in the latest lifelines, instead of 0.95 in previous versions.
+
+##### Bug Fixes
+ - Fixed a bug in the `_log_likelihood_` property of `ParametericUnivariateFitter` models. It was showing the "average" log-likelihood (i.e. scaled by 1/n) instead of the total. It now displays the total.
+ - In model `print_summary`s, correct a label erroring. Instead of "Likelihood test", it should have read "Log-likelihood test".
+ - Fixed a bug that was too frequently rejecting the dtype of `event` columns.
+ - Fixed a calculation bug in the concordance index for stratified Cox models. Thanks @airanmehr!
+ - Fixed some Pandas <0.24 bugs.
+
 #### 0.18.6
  - some improvements to the output of `check_assumptions`. `show_plots` is turned to `False` by default now. It only shows `rank` and `km` p-values now.
  - some performance improvements to `qth_survival_time`.
@@ -12,28 +34,28 @@
  - Add a new kwarg to  `AalenJohansenFitter`, `calculate_variance` that can be used to turn off variance calculations since this can take a long time for large datasets. Thanks @pzivich!
 
 #### 0.18.4
- - fixed confidence intervals in cumulative hazards for parametric univarite models. They were previously 
-   serverly depressed. 
+ - fixed confidence intervals in cumulative hazards for parametric univarite models. They were previously
+   serverly depressed.
  - adding left-truncation support to parametric univarite models with the `entry` kwarg in `.fit`
 
-#### 0.18.3 
+#### 0.18.3
  - Some performance improvements to parametric univariate models.
- - Suppressing some irrelevant NumPy and autograd warnings, so lifeline warnings are more noticeable. 
- - Improved some warning and error messages. 
+ - Suppressing some irrelevant NumPy and autograd warnings, so lifeline warnings are more noticeable.
+ - Improved some warning and error messages.
 
 #### 0.18.2
  - New univariate fitter `PiecewiseExponentialFitter` for creating a stepwise hazard model. See docs online.
- - Ability to create novel parametric univariate models using the new `ParametericUnivariateFitter` super class. See docs online for how to do this. 
- - Unfortunately, parametric univariate fitters are not serializable with `pickle`. The library `dill` is still useable. 
+ - Ability to create novel parametric univariate models using the new `ParametericUnivariateFitter` super class. See docs online for how to do this.
+ - Unfortunately, parametric univariate fitters are not serializable with `pickle`. The library `dill` is still useable.
  - Complete overhaul of all internals for parametric univariate fitters. Moved them all (most) to use `autograd`.
  - `LogNormalFitter` no longer models `log_sigma`.
 
 
 #### 0.18.1
  - bug fixes in `LogNormalFitter` variance estimates
- - improve convergence of `LogNormalFitter`. We now model the log of sigma internally, but still expose sigma externally. 
+ - improve convergence of `LogNormalFitter`. We now model the log of sigma internally, but still expose sigma externally.
  - use the `autograd` lib to help with gradients.
- - New `LogLogisticFitter` univariate fitter available. 
+ - New `LogLogisticFitter` univariate fitter available.
 
 #### 0.18.0
  - `LogNormalFitter` is a new univariate fitter you can use.
@@ -42,33 +64,33 @@
  - `ExponentialFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
  - `ExponentialFitter.plot` now displays the cumulative hazard, instead of the survival function. This is to make it easier to compare to `WeibullFitter` and `LogNormalFitter`
  - Univariate fitters' `cumulative_hazard_at_times`, `hazard_at_times`, `survival_function_at_times` return pandas Series now (use to be numpy arrays)
- - remove `alpha` keyword from all statistical functions. This was never being used. 
- - Gone are astericks and dots in `print_summary` functions that represent signficance thresholds. 
+ - remove `alpha` keyword from all statistical functions. This was never being used.
+ - Gone are astericks and dots in `print_summary` functions that represent signficance thresholds.
  - In models' `summary` (including `print_summary`), the `log(p)` term has changed to `-log2(p)`. This is known as the s-value. See https://lesslikely.com/statistics/s-values/
  - introduce new statistical tests between univariate datasets: `survival_difference_at_fixed_point_in_time_test`,...
- - new warning message when Cox models detects possible non-unique solutions to maximum likelihood. 
- - Generally: clean up lifelines exception handling. Ex: catch `LinAlgError: Matrix is singular.` and report back to the user advice. 
+ - new warning message when Cox models detects possible non-unique solutions to maximum likelihood.
+ - Generally: clean up lifelines exception handling. Ex: catch `LinAlgError: Matrix is singular.` and report back to the user advice.
 
 #### 0.17.5
  - more bugs in `plot_covariate_groups` fixed when using non-numeric strata.
 
 #### 0.17.4
- - Fix bug in `plot_covariate_groups` that wasn't allowing for strata to be used. 
+ - Fix bug in `plot_covariate_groups` that wasn't allowing for strata to be used.
  - change name of `multicenter_aids_cohort_study` to `load_multicenter_aids_cohort_study`
  - `groups` is now called `values` in `CoxPHFitter.plot_covariate_groups`
 
 #### 0.17.3
- - Fix in `compute_residuals` when using `schoenfeld` and the minumum duration has only censored subjects. 
+ - Fix in `compute_residuals` when using `schoenfeld` and the minumum duration has only censored subjects.
 
 #### 0.17.2
  - Another round of serious performance improvements for the Cox models. Up to 2x faster for CoxPHFitter and CoxTimeVaryingFitter. This was mostly the result of using NumPy's `einsum` to simplify a previous `for` loop. The downside is the code is more esoteric now. I've added comments as necessary though 🤞
 
 #### 0.17.1
  - adding bottleneck as a dependency. This library is highly-recommended by Pandas, and in lifelines we see some nice performance improvements with it too. (~15% for `CoxPHFitter`)
- - There was a small bug in `CoxPHFitter` when using `batch_mode` that was causing coefficients to deviate from their MLE value. This bug eluded tests, which means that it's discrepancy was less than 0.0001 difference. It's fixed now, and even more accurate tests are added. 
+ - There was a small bug in `CoxPHFitter` when using `batch_mode` that was causing coefficients to deviate from their MLE value. This bug eluded tests, which means that it's discrepancy was less than 0.0001 difference. It's fixed now, and even more accurate tests are added.
  - Faster `CoxPHFitter._compute_likelihood_ratio_test()`
  - Fixes a Pandas performance warning in `CoxTimeVaryingFitter`.
- - Performances improvements to `CoxTimeVaryingFitter`. 
+ - Performances improvements to `CoxTimeVaryingFitter`.
 
 #### 0.17.0
  - corrected behaviour in `CoxPHFitter` where `score_` was not being refreshed on every new `fit`.
@@ -79,11 +101,11 @@
    - new `print_summary`
    - `weights_col` is added
    - `nn_cumulative_hazard` is removed (may add back)
- - some plotting improvemnts to `plotting.plot_lifetimes` 
+ - some plotting improvemnts to `plotting.plot_lifetimes`
 
 
 #### 0.16.3
- - More `CoxPHFitter` performance improvements. Up to a 40% reduction vs 0.16.2 for some datasets. 
+ - More `CoxPHFitter` performance improvements. Up to a 40% reduction vs 0.16.2 for some datasets.
 
 #### 0.16.2
  - Fixed `CoxTimeVaryingFitter` to allow more than one variable to be stratafied
@@ -93,20 +115,20 @@
  - Fixed py2 division error in `concordance` method.
 
 #### 0.16.0
- - Drop Python 3.4 support. 
+ - Drop Python 3.4 support.
  - introduction of residual calculations in `CoxPHFitter.compute_residuals`. Residuals include "schoenfeld", "score", "delta_beta", "deviance", "martingale", and "scaled_schoenfeld".
  - removes `estimation` namespace for fitters. Should be using `from lifelines import xFitter` now. Thanks @usmanatron
  - removes `predict_log_hazard_relative_to_mean` from Cox model. Thanks @usmanatron
- - `StatisticalResult` has be generalized to allow for multiple results (ex: from pairwise comparisons). This means a slightly changed API that is mostly backwards compatible. See doc string for how to use it. 
+ - `StatisticalResult` has be generalized to allow for multiple results (ex: from pairwise comparisons). This means a slightly changed API that is mostly backwards compatible. See doc string for how to use it.
  - `statistics.pairwise_logrank_test` now returns a `StatisticalResult` object instead of a nasty NxN DataFrame 💗
  - Display log(p-values) as well as p-values in `print_summary`. Also, p-values below thesholds will be truncated. The orignal p-values are still recoverable using `.summary`.
- - Floats `print_summary` is now displayed to 2 decimal points. This can be changed using the `decimal` kwarg. 
- - removed `standardized` from `Cox` model plotting. It was confusing. 
+ - Floats `print_summary` is now displayed to 2 decimal points. This can be changed using the `decimal` kwarg.
+ - removed `standardized` from `Cox` model plotting. It was confusing.
  - visual improvements to Cox models `.plot`
  - `print_summary` methods accepts kwargs to also be displayed.
- - `CoxPHFitter` has a new human-readable method, `check_assumptions`, to check the assumptions of your Cox proportional hazard model. 
- - A new helper util to "expand" static datasets into long-form: `lifelines.utils.to_episodic_format`. 
- - `CoxTimeVaryingFitter` now accepts `strata`. 
+ - `CoxPHFitter` has a new human-readable method, `check_assumptions`, to check the assumptions of your Cox proportional hazard model.
+ - A new helper util to "expand" static datasets into long-form: `lifelines.utils.to_episodic_format`.
+ - `CoxTimeVaryingFitter` now accepts `strata`.
 
 #### 0.15.4
  - bug fix for the Cox model likelihood ratio test when using non-trivial weights.

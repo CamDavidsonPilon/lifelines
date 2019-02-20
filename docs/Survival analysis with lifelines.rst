@@ -2,7 +2,7 @@
 
 -------------------------------------
 
-Survival analysis with *lifelines*
+Estimating univariate models
 =====================================
 
 In the previous :doc:`section</Survival Analysis intro>`,
@@ -80,7 +80,7 @@ From the ``lifelines`` library, we'll need the
     from lifelines import KaplanMeierFitter
     kmf = KaplanMeierFitter()
 
-..  note:: Other ways to estimate the survival function in *lifelines* are discussed below. 
+..  note:: Other ways to estimate the survival function in *lifelines* are discussed below.
 
 For this estimation, we need the duration each leader was/has been in
 office, and whether or not they were observed to have left office
@@ -163,7 +163,7 @@ an ``axis`` object, that can be used for plotting further estimates:
     ax = plt.subplot(111)
 
     dem = (data["democracy"] == "Democracy")
-    
+
     kmf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     kmf.plot(ax=ax)
     kmf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
@@ -256,17 +256,17 @@ Lets compare the different *types* of regimes present in the dataset:
 
     for i, regime_type in enumerate(regime_types):
         ax = plt.subplot(2, 3, i + 1)
-        
+
         ix = data['regime'] == regime_type
         kmf.fit(T[ix], E[ix], label=regime_type)
         kmf.plot(ax=ax, legend=False)
-        
+
         plt.title(regime_type)
         plt.xlim(0, 50)
-        
+
         if i==0:
             plt.ylabel('Frac. in power after $n$ years')
-    
+
     plt.tight_layout()
 
 
@@ -395,10 +395,10 @@ years:
 
     naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     ax = naf.plot(loc=slice(0, 20))
-    
+
     naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     naf.plot(ax=ax, loc=slice(0, 20))
-    
+
     plt.title("Cumulative hazard function of different global regimes");
 
 
@@ -434,13 +434,13 @@ intervals, similar to the traditional ``plot`` functionality.
 .. code:: python
 
     bandwidth = 3.
-    
+
     naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     ax = naf.plot_hazard(bandwidth=bandwidth)
-    
+
     naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=bandwidth)
-    
+
     plt.title("Hazard function of different global regimes | bandwidth=%.1f" % bandwidth);
     plt.ylim(0, 0.4)
     plt.xlim(0, 25);
@@ -459,13 +459,13 @@ here. (My advice: stick with the cumulative hazard function.)
 .. code:: python
 
     bandwidth = 8.0
-    
+
     naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
     ax = naf.plot_hazard(bandwidth=bandwidth)
-    
+
     naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     naf.plot_hazard(ax=ax, bandwidth=bandwidth)
-    
+
     plt.title("Hazard function of different global regimes | bandwidth=%.1f" % bandwidth);
 
 
@@ -480,16 +480,19 @@ Estimating cumulative hazards using parametric models
 Fitting to a Weibull model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another very popular model for survival data is the Weibull model. In contrast the the Nelson-Aalen estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Nelson-Aalen estimator has no parameters to fit to). Mathematically, the survival function looks like:
+ .. note:: The parameterization of the Weibull and Exponential model changed in *lifelines 0.19.0*, released in Feb. 2019.
 
 
-.. math::  S(t) = \exp\left(-(\lambda t)^\rho\right),   \lambda >0, \rho > 0,
+Another very popular model for survival data is the Weibull model. In contrast the the Nelson-Aalen estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Nelson-Aalen estimator has no parameters to fit to). The survival function looks like:
+
+
+.. math::  S(t) = \exp\left(\left(\frac{-t}{\lambda}\right)^\rho\right),   \lambda >0, \rho > 0,
 
 A priori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use the data on hand to estimate these parameters. We model and estimate the cumulative hazard rate instead of the survival function (this is different than the Kaplan-Meier estimator):
 
-.. math::  H(t) = (\lambda t)^\rho,  \lambda >0, \rho > 0,
+.. math::  H(t) = \left(\frac{t}{\lambda}\right)^\rho
 
-In lifelines, estimation is available using the ``WeibullFitter`` class. The ``plot`` method will plot the cumulative hazard. 
+In lifelines, estimation is available using the ``WeibullFitter`` class. The ``plot`` method will plot the cumulative hazard.
 
 .. code:: python
 
@@ -501,11 +504,9 @@ In lifelines, estimation is available using the ``WeibullFitter`` class. The ``p
     T = data['T']
     E = data['E']
 
-    wf = WeibullFitter()
-    wf.fit(T, E)
+    wf = WeibullFitter().fit(T, E)
 
     wf.print_summary()
-
     wf.plot()
 
 
@@ -638,11 +639,11 @@ Left truncated data
 
  .. note:: Not to be confused with left-censoring, which is also supported in ``KaplanMeierFitter``.
 
-Another form of bias that is introduced into a dataset is called left-truncation. Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. Some theoretical indiviuals who would have entered into your study (i.e. went to prison) have already died. 
+Another form of bias that is introduced into a dataset is called left-truncation. Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. Some theoretical indiviuals who would have entered into your study (i.e. went to prison) have already died.
 
-Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited indivduals previously diagnosed with AIDS, possibly years before. 
+Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited indivduals previously diagnosed with AIDS, possibly years before.
 
-All univatiate fitters, like ``KaplanMeierFitter`` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between "birth" (or "exposure") to entering the study.  
+All univatiate fitters, like ``KaplanMeierFitter`` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between "birth" (or "exposure") to entering the study.
 
  .. note:: Nothing changes in the duration array: it still measures time from "birth" to time exited study (either by death or censoring). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
 
@@ -650,5 +651,3 @@ All univatiate fitters, like ``KaplanMeierFitter`` and any parametric models, ha
 
 .. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html
 .. _Statistically compare two populations: Examples.html#statistically-compare-two-populations
-
-

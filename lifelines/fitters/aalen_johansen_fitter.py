@@ -22,7 +22,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
     Parameters
     ----------
-    alpha: float, option (default=0.95)
+    alpha: float, option (default=0.05)
         The alpha value associated with the confidence intervals.
 
     jitter_level: float, option (default=0.00001)
@@ -40,7 +40,12 @@ class AalenJohansenFitter(UnivariateFitter):
 
     Example
     -------
-    >>> AalenJohansenFitter(alpha=0.95, jitter_level=0.00001, seed=None, calculate_variance=True)
+    >>> from lifelines.datasets import load_waltons
+    >>> T, E = load_waltons()['T'], load_waltons()['E']
+    >>> ajf = AalenJohansenFitter(calculate_variance=True)
+    >>> ajf.fit(T, E)
+    >>> ajf.cumulative_density_
+    >>> ajf.plot()
 
 
     References
@@ -50,7 +55,7 @@ class AalenJohansenFitter(UnivariateFitter):
     Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
     """
 
-    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.95, calculate_variance=True):
+    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.05, calculate_variance=True):
         UnivariateFitter.__init__(self, alpha=alpha)
         self._jitter_level = jitter_level
         self._seed = seed  # Seed is for the jittering process
@@ -85,7 +90,7 @@ class AalenJohansenFitter(UnivariateFitter):
           alpha: the alpha value in the confidence intervals. Overrides the initializing
              alpha for this call to fit only.
           ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
           weights: n array, or pd.Series, of length n, if providing a weighted dataset. For example, instead
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
@@ -193,11 +198,12 @@ class AalenJohansenFitter(UnivariateFitter):
         There is also an alternative method (Aalen) but this is not currently implemented
         """
         # Preparing environment
+        ci = 1 - alpha
         df = self.event_table.copy()
         df["Ft"] = self.cumulative_density_
         df["lagS"] = lagged_survival.fillna(1)
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._predict_label, alpha), "%s_lower_%.2f" % (self._predict_label, alpha)]
+            ci_labels = ["%s_upper_%g" % (self._predict_label, ci), "%s_lower_%g" % (self._predict_label, ci)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         # Have to loop through each time independently. Don't think there is a faster way
@@ -224,7 +230,7 @@ class AalenJohansenFitter(UnivariateFitter):
         # Calculating Confidence Intervals
         df["F_transformed"] = np.log(-np.log(df["Ft"]))
         df["se_transformed"] = np.sqrt(df["variance"]) / (df["Ft"] * np.absolute(np.log(df["Ft"])))
-        zalpha = inv_normal_cdf((1.0 + alpha) / 2.0)
+        zalpha = inv_normal_cdf(1 - alpha / 2)
         df[ci_labels[0]] = np.exp(-np.exp(df["F_transformed"] + zalpha * df["se_transformed"]))
         df[ci_labels[1]] = np.exp(-np.exp(df["F_transformed"] - zalpha * df["se_transformed"]))
         return df["variance"], df[ci_labels]

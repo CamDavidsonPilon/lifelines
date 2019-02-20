@@ -10,3 +10,4 @@ prospector[with_pyroma]
 pre-commit
 black;python_version > '3.5'
 dill
+statsmodels

@@ -23,14 +23,14 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
 
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``plot``, ``survival_function_``, ``alpha_`` and ``beta_``.
     A summary of the fit is available with the method 'print_summary()'
-    
+
     Examples
     --------
 
-    >>> from lifelines import LogLogisticFitter 
+    >>> from lifelines import LogLogisticFitter
     >>> from lifelines.datasets import load_waltons
     >>> waltons = load_waltons()
-    >>> llf = WeibullFitter()
+    >>> llf = LogLogisticFitter()
     >>> llf.fit(waltons['T'], waltons['E'])
     >>> llf.plot()
     >>> print(llf.alpha_)

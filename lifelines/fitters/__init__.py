@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import division
+
 import collections
 from functools import wraps
 import sys
 import warnings
 
 # pylint: disable=wrong-import-position
-
 warnings.simplefilter(action="ignore", category=FutureWarning)
+
 from textwrap import dedent
 
 import numpy as np
@@ -32,6 +34,7 @@ from lifelines.utils import (
     format_p_value,
     coalesce,
     check_nans_or_infs,
+    pass_for_numeric_dtypes_or_raise_array,
     StatisticalWarning,
     StatError,
     median_survival_times,
@@ -57,7 +60,7 @@ def _must_call_fit_first(func):
 
 
 class BaseFitter(object):
-    def __init__(self, alpha=0.95):
+    def __init__(self, alpha=0.05):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
@@ -175,7 +178,7 @@ class UnivariateFitter(BaseFitter):
 
         Returns
         -------
-        conditional_time_to_: DataFrame 
+        conditional_time_to_: DataFrame
             with index equal to ``survival_function_``
 
         """
@@ -191,7 +194,7 @@ class UnivariateFitter(BaseFitter):
 
         Returns
         -------
-        conditional_time_to_: DataFrame 
+        conditional_time_to_: DataFrame
             with index equal to survival_function_
 
         """
@@ -249,7 +252,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
             self._hazard = egrad(self._cumulative_hazard, argnum=1)
         if not hasattr(self, "_bounds"):
-            self._bounds = [(0, None)] * len(self._fitted_parameter_names)
+            self._bounds = [(0.0, None)] * len(self._fitted_parameter_names)
         self._bounds = list(self._buffer_bounds(self._bounds))
 
         if not hasattr(self, "_initial_values"):
@@ -272,7 +275,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 dedent(
                     """\
                 Cumulative hazard is not strictly positive. For example, try:
-                
+
                 >>> fitter = {0}()
                 >>> fitter._cumulative_hazard(np.{1}, np.sort(durations))
 
@@ -290,7 +293,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 dedent(
                     """\
                 Cumulative hazard is not strictly non-decreasing. For example, try:
-                
+
                 >>> fitter = {0}()
                 >>> fitter._hazard({1}, np.sort(durations))
 
@@ -311,7 +314,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             elif ub is None:
                 yield lb + 1.0
             else:
-                yield (ub - lb) / 2
+                yield (ub - lb) / 2.0
 
     def _buffer_bounds(self, bounds):
         for (lb, ub) in bounds:
@@ -363,14 +366,17 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels: tuple
 
         """
-        alpha2 = inv_normal_cdf((1.0 + alpha) / 2.0)
+        alpha2 = 1 - alpha / 2.0
+        z = inv_normal_cdf(alpha2)
         df = pd.DataFrame(index=self.timeline)
 
         # pylint: disable=no-value-for-parameter
-        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(transform)(self._fitted_parameters_, self.timeline)
+        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(transform)(
+            self._fitted_parameters_, self.timeline.astype(float)
+        )
 
         gradient_at_times = np.vstack(
-            [gradient_of_cum_hazard_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_))]
+            [gradient_of_cum_hazard_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_), dtype=float)]
         )
 
         std_cumulative_hazard = np.sqrt(
@@ -378,11 +384,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         )
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+            ci_labels = ["%s_upper_%g" % (self._label, 1 - alpha), "%s_lower_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) + alpha2 * std_cumulative_hazard
-        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - alpha2 * std_cumulative_hazard
+        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) + z * std_cumulative_hazard
+        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
         return df
 
     def _fit_model(self, T, E, entry, show_progress=True):
@@ -404,22 +410,37 @@ class ParametericUnivariateFitter(UnivariateFitter):
             if results.success:
                 # pylint: disable=no-value-for-parameter
                 hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, non_zero_entries)
-                return results.x, -results.fun, hessian_ * T.shape[0]
+                return results.x, -results.fun * T.shape[0], T.shape[0] * hessian_
             print(results)
-            raise ConvergenceError(
-                dedent(
-                    """\
-                Fitting did not converge. 
-
-                1. Are two parameters in the model colinear / exchangeable? (Change model)
-                2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
-                3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
-
-                This could be a problem with your data:
-                1. Are there any extreme values? (Try modelling them or dropping them to see if it helps convergence)
-            """
+            if self._KNOWN_MODEL:
+                raise ConvergenceError(
+                    dedent(
+                        """\
+                    Fitting did not converge. This is mostly a lifelines problem, but a few things you can check:
+                    1. Are there any extreme values in the durations column?
+                      - Try scaling your durations to a more reasonable values closer to 1 (multipling or dividing by some 10^n).
+                      - Try dropping them to see if the model converges.
+                """
+                    )
                 )
-            )
+
+            else:
+                raise ConvergenceError(
+                    dedent(
+                        """\
+                    Fitting did not converge.
+
+                    1. Are two parameters in the model colinear / exchangeable? (Change model)
+                    2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
+                    3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
+
+                    This could be a problem with your data:
+                    1. Are there any extreme values in the durations column?
+                        - Try scaling your durations to a more reasonable value closer to 1 (multipling or dividing by a large constant).
+                        - Try dropping them to see if the model converges.
+                    """
+                    )
+                )
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -435,9 +456,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _compute_confidence_bounds_of_parameters(self):
         se = self._compute_standard_errors().loc["se"]
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2.0)
         return pd.DataFrame(
-            [self._fitted_parameters_ + alpha2 * se, self._fitted_parameters_ - alpha2 * se],
+            [self._fitted_parameters_ + z * se, self._fitted_parameters_ - z * se],
             columns=self._fitted_parameter_names,
             index=["upper-bound", "lower-bound"],
         )
@@ -460,12 +481,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
         --------
         ``print_summary``
         """
+        ci = 1 - self.alpha
         lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
         df = pd.DataFrame(index=self._fitted_parameter_names)
         df["coef"] = self._fitted_parameters_
         df["se(coef)"] = self._compute_standard_errors().loc["se"]
-        df["lower %.2f" % self.alpha] = lower_upper_bounds.loc["lower-bound"]
-        df["upper %.2f" % self.alpha] = lower_upper_bounds.loc["upper-bound"]
+        df["lower %g" % ci] = lower_upper_bounds.loc["lower-bound"]
+        df["upper %g" % ci] = lower_upper_bounds.loc["upper-bound"]
         df["p"] = self._compute_p_values()
         with np.errstate(invalid="ignore", divide="ignore"):
             df["-log2(p)"] = -np.log2(df["p"])
@@ -481,8 +503,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         decimals: int, optional (default=2)
             specify the number of decimal places to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
 
         """
         justify = string_justify(18)
@@ -537,13 +559,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
             add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
         show_progress: boolean, optional
             since this is an iterative fitting algorithm, switching this to True will display some iteration details.
-        entry: an array, or pd.Series, of length n 
+        entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
 
         Returns
         -------
-          self : WeibullFitter
+          self
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
@@ -553,7 +575,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         if event_observed is not None:
             check_nans_or_infs(event_observed)
 
-        self.durations = np.asarray(durations, dtype=float)
+        self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
         # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
             raise ValueError(
@@ -570,7 +592,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.entry = np.asarray(entry) if entry is not None else np.zeros_like(self.durations)
 
         if timeline is not None:
-            self.timeline = np.sort(np.asarray(timeline))
+            self.timeline = np.sort(np.asarray(timeline).astype(float))
         else:
             self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
 
@@ -595,14 +617,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self.variance_matrix_ = pinv(self._hessian_)
             warning_text = dedent(
                 """\
-                
-                The hessian was not invertable. This could be a model problem: 
 
-                1. Are two parameters in the model colinear / exchangeable? 
+                The hessian was not invertable. This could be a model problem:
+
+                1. Are two parameters in the model colinear / exchangeable?
                 2. Is the cumulative hazard always non-negative and always non-decreasing?
-                3. Are there cusps/ in the cumulative hazard? 
+                3. Are there cusps/ in the cumulative hazard?
 
-                We will instead approximate it using the psuedo-inverse. 
+                We will instead approximate it using the psuedo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
@@ -630,7 +652,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         times: iterable or float
           values to return the survival function at.
         label: string, optional
-          Rename the series returned. Useful for plotting. 
+          Rename the series returned. Useful for plotting.
 
         Returns
         --------
@@ -650,7 +672,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         times: iterable or float
           values to return the cumulative hazard at.
         label: string, optional
-          Rename the series returned. Useful for plotting. 
+          Rename the series returned. Useful for plotting.
 
         Returns
         --------
@@ -670,7 +692,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         times: iterable or float
           values to return the hazard at.
         label: string, optional
-          Rename the series returned. Useful for plotting. 
+          Rename the series returned. Useful for plotting.
 
         Returns
         --------
@@ -683,9 +705,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
     @property
     @_must_call_fit_first
     def median_(self):
-        """ 
-        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a 
-        robust summary statistic for the population, if it exists. 
+        """
+        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
+        robust summary statistic for the population, if it exists.
         """
         return median_survival_times(self.survival_function_)
 
@@ -744,3 +766,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 
     _KNOWN_MODEL = True
+
+
+class ParametericRegressionFitter(BaseFitter):
+    pass

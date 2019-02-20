@@ -2,6 +2,12 @@
 from __future__ import print_function
 from __future__ import division
 
+import warnings
+
+# pylint: disable=wrong-import-position
+warnings.simplefilter(action="ignore", category=FutureWarning)
+warnings.simplefilter(action="ignore", category=DeprecationWarning)
+
 from collections import Counter, Iterable
 import os
 import pickle
@@ -47,6 +53,7 @@ from lifelines import (
     LogNormalFitter,
     LogLogisticFitter,
     PiecewiseExponentialFitter,
+    WeibullAFTFitter,
 )
 
 from lifelines.datasets import (
@@ -97,25 +104,6 @@ class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
 
 
 @pytest.fixture
-def univariate_fitters():
-    return [
-        KaplanMeierFitter,
-        NelsonAalenFitter,
-        BreslowFlemingHarringtonFitter,
-        ExponentialFitter,
-        WeibullFitter,
-        LogNormalFitter,
-        LogLogisticFitter,
-        PiecewiseExponentialFitterTesting,
-    ]
-
-
-@pytest.fixture
-def known_parametric_univariate_fitters():
-    return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
-
-
-@pytest.fixture
 def data_pred2():
     N = 150
     data_pred2 = pd.DataFrame()
@@ -154,6 +142,11 @@ def rossi():
 @pytest.fixture
 def regression_dataset():
     return load_regression_dataset()
+
+
+@pytest.fixture
+def known_parametric_univariate_fitters():
+    return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
 
 
 class TestBaseFitter:
@@ -204,6 +197,22 @@ class TestParametricUnivariateFitters:
         assert coef - std > lower
         assert coef + std < upper
 
+    def test_models_can_handle_really_large_duration_values(self, known_parametric_univariate_fitters):
+        T1 = np.random.exponential(1e12, size=1000)
+        T2 = np.random.exponential(1e12, size=1000)
+        E = T1 < T2
+        T = np.minimum(T1, T2)
+        for fitter in known_parametric_univariate_fitters:
+            fitter().fit(T, E)
+
+    def test_models_can_handle_really_small_duration_values(self, known_parametric_univariate_fitters):
+        T1 = np.random.exponential(1e-12, size=1000)
+        T2 = np.random.exponential(1e-12, size=1000)
+        E = T1 < T2
+        T = np.minimum(T1, T2)
+        for fitter in known_parametric_univariate_fitters:
+            fitter().fit(T, E)
+
     def test_parametric_univarite_fitters_can_print_summary(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
     ):
@@ -244,6 +253,23 @@ class TestParametricUnivariateFitters:
 
 
 class TestUnivariateFitters:
+    @pytest.fixture
+    def univariate_fitters(self):
+        return [
+            KaplanMeierFitter,
+            NelsonAalenFitter,
+            BreslowFlemingHarringtonFitter,
+            ExponentialFitter,
+            WeibullFitter,
+            LogNormalFitter,
+            LogLogisticFitter,
+            PiecewiseExponentialFitterTesting,
+        ]
+
+    def test_default_alpha_is_005(self, univariate_fitters):
+        for f in univariate_fitters:
+            assert f().alpha == 0.05
+
     def test_univarite_fitters_accept_late_entries(self, positive_sample_lifetimes, univariate_fitters):
         entries = 0.1 * positive_sample_lifetimes[0]
         for fitter in univariate_fitters:
@@ -269,15 +295,15 @@ class TestUnivariateFitters:
     def test_univariate_fitters_allows_one_to_change_alpha_at_fit_time(
         self, positive_sample_lifetimes, univariate_fitters
     ):
-        alpha = 0.9
-        alpha_fit = 0.95
+        alpha = 0.1
+        alpha_fit = 0.05
         for f in univariate_fitters:
             fitter = f(alpha=alpha)
             fitter.fit(positive_sample_lifetimes[0], alpha=alpha_fit)
-            assert str(alpha_fit) in fitter.confidence_interval_.columns[0]
+            assert str(1 - alpha_fit) in fitter.confidence_interval_.columns[0]
 
             fitter.fit(positive_sample_lifetimes[0])
-            assert str(alpha) in fitter.confidence_interval_.columns[0]
+            assert str(1 - alpha) in fitter.confidence_interval_.columns[0]
 
     def test_univariate_fitters_have_a_plot_method(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
@@ -286,12 +312,27 @@ class TestUnivariateFitters:
             fitter.fit(T)
             assert hasattr(fitter, "plot")
 
-    def test_univariate_fitters_fail_if_given_timedelta(self, univariate_fitters):
-        x = pd.Series(pd.to_datetime("2015-01-01"))
-        T = x - x
+    @pytest.mark.xfail
+    def test_univariate_fitters_ok_if_given_timedelta(self, univariate_fitters):
+        t = pd.Series(
+            [pd.to_datetime("2015-01-01 12:00"), pd.to_datetime("2015-01-02"), pd.to_datetime("2015-01-02 12:00")]
+        )
+        T = pd.to_datetime("2015-01-03") - t
         for fitter in univariate_fitters:
-            with pytest.raises(ValueError, match="timedelta"):
-                fitter().fit(T)
+            f = fitter().fit(T)
+            try:
+                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
+            except:
+                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
+
+    def test_univariate_fitters_okay_if_given_boolean_col_with_object_dtype(self, univariate_fitters):
+        df = pd.DataFrame({"T": [1, 2, 3, 4, 5], "E": [True, True, True, True, None]})
+        assert df["E"].dtype == object
+        df = df.dropna()
+        assert df["E"].dtype == object
+
+        for fitter in univariate_fitters:
+            fitter().fit(df["T"], df["E"])
 
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(
         self, positive_sample_lifetimes, univariate_fitters
@@ -363,7 +404,7 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0])
-            assert not np.all(pd.isnull(fitter.confidence_interval_))
+            assert not (pd.isnull(fitter.confidence_interval_)).all().all()
 
     def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
@@ -564,7 +605,7 @@ class TestLogNormal:
         assert abs(sigma / lnf.sigma_ - 1) < 0.05
 
     def test_lnf_inference_no_censorship(self, lnf):
-        N = 800000
+        N = 1000000
         mu = 10 * np.random.randn()
         sigma = np.random.exponential(10)
 
@@ -572,8 +613,8 @@ class TestLogNormal:
 
         lnf.fit(T)
 
-        assert abs(mu / lnf.mu_ - 1) < 0.05
-        assert abs(sigma / lnf.sigma_ - 1) < 0.05
+        assert abs(mu / lnf.mu_ - 1) < 0.1
+        assert abs(sigma / lnf.sigma_ - 1) < 0.1
 
 
 class TestLogLogisticFitter:
@@ -666,8 +707,8 @@ class TestWeibullFitter:
         # D = np.random.rand(15000) * T
 
         wf = WeibullFitter()
-        T = np.random.exponential(10, 15000)
-        D = np.random.exponential(10, 15000)
+        T = np.random.exponential(10, 350000)
+        D = np.random.exponential(10, 350000)
 
         keep = T > D
         T = T[keep]
@@ -675,7 +716,7 @@ class TestWeibullFitter:
 
         wf = WeibullFitter().fit(T, entry=D)
 
-        assert np.abs(wf.lambda_ - 0.1) < 0.01
+        assert np.abs(wf.lambda_ / 10.0 - 1) < 0.01
 
     def test_weibull_fit_returns_float_timelines(self):
         wf = WeibullFitter()
@@ -697,30 +738,31 @@ class TestWeibullFitter:
 
     def test_exponential_data_produces_correct_inference_no_censorship(self):
         wf = WeibullFitter()
-        N = 40000
+        N = 600000
         T = 5 * np.random.exponential(1, size=N) ** 2
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01
-        assert abs(wf.lambda_ - 0.2) < 0.01
+        assert abs(wf.lambda_ / 5 - 1) < 0.01
         assert abs(wf.median_ - 5 * np.log(2) ** 2) < 0.1  # worse convergence
+        assert abs(wf.median_ - np.median(T)) < 0.1
 
     def test_exponential_data_produces_correct_inference_with_censorship(self):
         wf = WeibullFitter()
-        N = 40000
+        N = 80000
         factor = 5
         T = factor * np.random.exponential(1, size=N)
         T_ = factor * np.random.exponential(1, size=N)
         wf.fit(np.minimum(T, T_), (T < T_))
         assert abs(wf.rho_ - 1.0) < 0.05
-        assert abs(wf.lambda_ - 1.0 / factor) < 0.05
-        assert abs(wf.median_ - 5 * np.log(2)) < 0.1
+        assert abs(wf.lambda_ / factor - 1) < 0.05
+        assert abs(wf.median_ - factor * np.log(2)) < 0.1
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):
         wf = WeibullFitter()
         rho = 5
         lambda_ = 1.0 / 2
         for N in [10, 50, 500, 5000, 50000]:
-            T = np.random.weibull(rho, size=N) / lambda_
+            T = np.random.weibull(rho, size=N) * lambda_
             wf.fit(T)
             assert abs(1 - wf.rho_ / rho) < 5 / np.sqrt(N)
             assert abs(1 - wf.lambda_ / lambda_) < 5 / np.sqrt(N)
@@ -732,7 +774,7 @@ class TestExponentialFitter:
         E = np.array([1, 0, 0, 0], dtype=float)
         enf = ExponentialFitter()
         enf.fit(T, E)
-        assert abs(enf.lambda_ - (E.sum() / T.sum())) < 10e-6
+        assert abs(enf.lambda_ - (T.sum() / E.sum())) < 10e-6
 
 
 class TestKaplanMeierFitter:
@@ -1096,10 +1138,23 @@ class TestRegressionFitters:
     def regression_models(self):
         return [
             CoxPHFitter(),
-            AalenAdditiveFitter(coef_penalizer=0.1),
+            CoxPHFitter(penalizer=1.0),
+            AalenAdditiveFitter(coef_penalizer=1.0, smoothing_penalizer=1.0),
             CoxPHFitter(strata=["race", "paro", "mar", "wexp"]),
+            WeibullAFTFitter(),
         ]
 
+    def test_dill_serialization(self, rossi, regression_models):
+        from dill import dumps, loads
+
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+
+            unpickled = loads(dumps(fitter))
+            dif = (fitter.durations - unpickled.durations).sum()
+            assert dif == 0
+
+    @pytest.mark.xfail()
     def test_pickle(self, rossi, regression_models):
         from pickle import dump
 
@@ -1107,6 +1162,19 @@ class TestRegressionFitters:
             output = stringio()
             f = fitter.fit(rossi, "week", "arrest")
             dump(f, output)
+
+    def test_fit_will_accept_object_dtype_as_event_col(self, regression_models):
+        # issue #638
+        df = pd.DataFrame({"T": np.arange(1, 11), "E": [True] * 9 + [None]})
+
+        assert df["E"].dtype == object
+        df = df.dropna()
+        assert df["E"].dtype == object
+
+        for fitter in regression_models:
+            if getattr(fitter, "strata", False):
+                continue
+            fitter.fit(df, "T", "E")
 
     def test_fit_methods_require_duration_col(self, rossi, regression_models):
         for fitter in regression_models:
@@ -1137,18 +1205,31 @@ class TestRegressionFitters:
             for fitter1, fitter2 in combinations(fitted_regression_models, 2):
                 assert isinstance(getattr(fitter1, fit_method)(rossi), type(getattr(fitter2, fit_method)(rossi)))
 
-    def test_duration_vector_can_be_normalized(self, regression_models, rossi):
+    def test_duration_vector_can_be_normalized_up_to_an_intercept(self, regression_models, rossi):
         t = rossi["week"]
         normalized_rossi = rossi.copy()
-        normalized_rossi["week"] = (normalized_rossi["week"] - t.mean()) / t.std()
+        normalized_rossi["week"] = (normalized_rossi["week"]) / t.std()
 
         for fitter in regression_models:
-            # we drop indexs since aaf will have a different "time" index.
-            hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_.reset_index(drop=True)
-            hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").hazards_.reset_index(
-                drop=True
-            )
-            assert_frame_equal(hazards, hazards_norm)
+            # we drop indexes since aaf will have a different "time" index.
+            try:
+                hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_
+                hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").hazards_
+            except AttributeError:
+                hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").params_
+                hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").params_
+
+            if isinstance(hazards, pd.DataFrame):
+                assert_frame_equal(hazards.reset_index(drop=True), hazards_norm.reset_index(drop=True))
+            else:
+                if isinstance(hazards.index, pd.MultiIndex):
+                    assert_series_equal(
+                        hazards.drop("_intercept", axis=0, level=1),
+                        hazards_norm.drop("_intercept", axis=0, level=1),
+                        check_less_precise=True,
+                    )
+                else:
+                    assert_series_equal(hazards, hazards_norm)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)
@@ -1177,7 +1258,9 @@ class TestRegressionFitters:
             }
         )
 
-        for fitter in [CoxPHFitter(), AalenAdditiveFitter(coef_penalizer=0.01)]:
+        for fitter in regression_models:
+            if getattr(fitter, "strata", False):
+                continue
             for subset in [["t", "categorya_"], ["t", "categoryb_"], ["t", "string_"]]:
                 with pytest.raises(TypeError):
                     fitter.fit(df[subset], duration_col="t")
@@ -1216,10 +1299,141 @@ class TestRegressionFitters:
                 fitter().fit("week", "arrest")
 
 
+class TestWeibullAFTFitter:
+    @pytest.fixture
+    def aft(self):
+        return WeibullAFTFitter()
+
+    def test_fitted_coefs_match_with_flexsurv_has(self, aft, rossi):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
+        r$coef
+        """
+        aft.fit(rossi, "week", "arrest")
+
+        npt.assert_allclose(aft.summary.loc[("lambda_", "fin"), "coef"], 0.27230591, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "age"), "coef"], 0.04072758, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "race"), "coef"], -0.22480808, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "wexp"), "coef"], 0.10664712, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "coef"], 0.31095531, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], 0.05883352, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.06580211, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 3.98968559, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 0.33911900, rtol=1e-4)
+
+    def test_fitted_se_match_with_flexsurv_has(self, aft, rossi):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
+        diag(sqrt(vcov(r)))
+        """
+        aft.fit(rossi, "week", "arrest")
+
+        npt.assert_allclose(aft.summary.loc[("lambda_", "fin"), "se(coef)"], 0.13796834, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "age"), "se(coef)"], 0.01599442, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "race"), "se(coef)"], 0.22015347, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "wexp"), "se(coef)"], 0.15154541, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "se(coef)"], 0.27326405, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "se(coef)"], 0.13963680, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "se(coef)"], 0.02093981, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.41904636, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.08900064, rtol=1e-3)
+
+    def test_fitted_log_likelihood_match_with_flexsurv_has(self, aft, rossi):
+        # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
+        aft.fit(rossi, "week", "arrest")
+        npt.assert_allclose(aft._log_likelihood, -679.9166)
+
+    def test_fitted_log_likelihood_ratio_test_match_with_flexsurv_has(self, aft, rossi):
+        # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
+        aft.fit(rossi, "week", "arrest")
+        npt.assert_allclose(aft._compute_likelihood_ratio_test()[0], 33.42, rtol=0.01)
+
+    def test_coefs_with_fitted_ancillary_params(self, aft, rossi):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio + shape(prio) + shape(age), data=df, dist='weibull')
+        r$coef
+        """
+        aft.fit(rossi, "week", "arrest", ancillary_df=rossi[["prio", "age"]])
+
+        npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], 0.088364095, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.074052141, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 2.756355922, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 1.163429253, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("rho_", "prio"), "coef"], 0.008982523, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("rho_", "age"), "coef"], -0.037069994, rtol=1e-4)
+
+    def test_ancillary_True_is_same_as_full_df(self, rossi):
+
+        aft1 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=True)
+        aft2 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=rossi)
+
+        assert_frame_equal(aft1.summary, aft2.summary)
+
+    def test_ancillary_None_is_same_as_False(self, rossi):
+
+        aft1 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=None)
+        aft2 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=False)
+
+        assert_frame_equal(aft1.summary, aft2.summary)
+
+    def test_fit_intercept(self, rossi):
+        aft_without_intercept = WeibullAFTFitter(fit_intercept=True)
+        aft_without_intercept.fit(rossi, "week", "arrest", ancillary_df=rossi)
+
+        rossi["_intercept"] = 1.0
+        aft_with_intercept = WeibullAFTFitter(fit_intercept=False)
+        aft_with_intercept.fit(rossi, "week", "arrest", ancillary_df=rossi)
+
+        assert_frame_equal(aft_with_intercept.summary, aft_without_intercept.summary)
+
+    def test_passing_in_additional_ancillary_df_in_predict_methods_if_fitted_with_one(self, rossi):
+
+        aft = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=True)
+        aft.predict_median(rossi, ancillary_X=rossi)
+        aft.predict_percentile(rossi, ancillary_X=rossi)
+        aft.predict_cumulative_hazard(rossi, ancillary_X=rossi)
+        aft.predict_survival_function(rossi, ancillary_X=rossi)
+
+        with pytest.raises(ValueError):
+            aft.predict_survival_function(rossi)
+
+    def test_passing_in_additional_ancillary_df_in_predict_methods_okay_if_not_fitted_with_one(self, rossi):
+
+        aft = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=False)
+        aft.predict_median(rossi, ancillary_X=rossi)
+        aft.predict_percentile(rossi, ancillary_X=rossi)
+        aft.predict_cumulative_hazard(rossi, ancillary_X=rossi)
+        aft.predict_survival_function(rossi, ancillary_X=rossi)
+
+
 class TestCoxPHFitter:
     @pytest.fixture
     def cph(self):
         return CoxPHFitter()
+
+    def test_that_adding_strata_will_change_c_index(self, cph, rossi):
+        """
+        df = read.csv('~/code/lifelines/lifelines/datasets/rossi.csv')
+        r <- coxph(Surv(week, arrest) ~ fin + age + race + mar + paro + prio + strata(wexp), data=df)
+        survConcordance(Surv(week, arrest) ~predict(r) + strata(wexp), df)
+        """
+
+        cph.fit(rossi, "week", "arrest")
+        c_index_no_strata = cph.score_
+
+        cph.fit(rossi, "week", "arrest", strata=["wexp"])
+        c_index_with_strata = cph.score_
+
+        assert c_index_with_strata != c_index_no_strata
+        npt.assert_allclose(c_index_with_strata, 0.6124492)
+
+    def test_check_assumptions(self, cph, rossi):
+        # TODO make this better
+        cph.fit(rossi, "week", "arrest")
+        cph.check_assumptions(rossi)
 
     def test_cph_doesnt_modify_original_dataframe(self, cph):
         df = pd.DataFrame(
@@ -1370,7 +1584,7 @@ class TestCoxPHFitter:
 
         cph.fit(regression_dataset, "T", "E")
 
-        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.hazards_.values[0]
+        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.hazards_.values
         npt.assert_allclose(results.iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=5)
         npt.assert_allclose(results.iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=5)
         npt.assert_allclose(
@@ -1501,7 +1715,7 @@ prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476
 ---
 
 Concordance = 0.640
-Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
+Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 """
                 )
                 .strip()
@@ -1532,14 +1746,14 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         E = E.astype(bool)
 
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        beta = np.array([[0]])
+        beta = np.array([0])
 
         l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(u[0] - -2.51) < 0.05
         assert np.abs(l[0][0] - 77.13) < 0.05
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0326) < 0.05
 
         l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
@@ -1547,7 +1761,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         assert np.abs(l[0][0] - 72.83) < 0.05
         assert np.abs(u[0] - -0.069) < 0.05
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0325) < 0.01
 
         l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
@@ -1555,7 +1769,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         assert np.abs(l[0][0] - 72.70) < 0.01
         assert np.abs(u[0] - -0.000061) < 0.01
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0335) < 0.01
 
     def test_batch_efron_computed_by_hand_examples(self, data_nus, cph):
@@ -1574,14 +1788,14 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         E = E.astype(bool)
 
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        beta = np.array([[0]])
+        beta = np.array([0])
 
         l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
         l = -l
 
         assert np.abs(u[0] - -2.51) < 0.05
         assert np.abs(l[0][0] - 77.13) < 0.05
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0326) < 0.05
 
         l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
@@ -1589,7 +1803,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         assert np.abs(l[0][0] - 72.83) < 0.05
         assert np.abs(u[0] - -0.069) < 0.05
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0325) < 0.01
 
         l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
@@ -1597,18 +1811,18 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         assert np.abs(l[0][0] - 72.70) < 0.01
         assert np.abs(u[0] - -0.000061) < 0.01
-        beta = beta + u / l
+        beta = beta + u / l[0]
         assert np.abs(beta - -0.0335) < 0.01
 
     def test_efron_newtons_method(self, data_nus, cph):
         cph._batch_mode = False
         newton = cph._newton_rhaphson
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
-        assert np.abs(newton(X, T, E, W)[0][0] - -0.0335) < 0.0001
+        assert np.abs(newton(X, T, E, W)[0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus, cph):
         cph.fit(data_nus, duration_col="t", event_col="E")
-        assert np.abs(cph.hazards_.iloc[0][0] - -0.0335) < 0.0001
+        assert np.abs(cph.hazards_.iloc[0] - -0.0335) < 0.0001
 
     def test_using_dataframes_vs_numpy_arrays(self, data_pred2, cph):
         cph.fit(data_pred2, "t", "E")
@@ -1753,7 +1967,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             data=rossi)
         cat(round(r$coefficients, 8), sep=", ")
         """
-        expected = np.array([[-0.3794222, -0.0574377, 0.3138998, -0.1497957, -0.4337039, -0.0848711, 0.0914971]])
+        expected = np.array([-0.3794222, -0.0574377, 0.3138998, -0.1497957, -0.4337039, -0.0848711, 0.0914971])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest", show_progress=True, batch_mode=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=6)
@@ -1772,7 +1986,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             data=rossi)
         cat(round(r$coefficients, 4), sep=", ")
         """
-        expected = np.array([[-0.3788, -0.0576, -0.1427, -0.4388, -0.0858, 0.0922]])
+        expected = np.array([-0.3788, -0.0576, -0.1427, -0.4388, -0.0858, 0.0922])
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest", strata=["race"], show_progress=True, batch_mode=True)
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
@@ -1782,7 +1996,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         rossi_["weights"] = 1.0
         rossi_ = rossi_.groupby(rossi.columns.tolist())["weights"].sum().reset_index()
 
-        expected = np.array([[-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849, 0.0915]])
+        expected = np.array([-0.3794, -0.0574, 0.3139, -0.1498, -0.4337, -0.0849, 0.0915])
         cf = CoxPHFitter()
         cf.fit(rossi_, duration_col="week", event_col="arrest", weights_col="weights")
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
@@ -1815,7 +2029,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 7.680, "var2": -0.915})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
         expected_cov = np.array([[33.079106, -5.964652], [-5.964652, 2.040642]])
         npt.assert_array_almost_equal(w * cph.variance_matrix_, expected_cov, decimal=1)
@@ -2004,7 +2218,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 1.431, "var2": -1.277})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
         expected_cov = np.array([[3.5439245, -0.3549099], [-0.3549099, 0.4499553]])
         npt.assert_array_almost_equal(
@@ -2041,7 +2255,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": -5.16231, "var2": 1.71924})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=1, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=1, check_names=False)
 
         expected = pd.Series({"var1": 9.97730, "var2": 2.45648})
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
@@ -2073,7 +2287,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": -8.360533, "var2": 1.781126})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=3, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=3, check_names=False)
 
         expected = pd.Series({"var1": 12.303338, "var2": 2.395670})
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=3, check_names=False)
@@ -2102,7 +2316,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, show_progress=True)
         expected = pd.Series({"var1": 7.680, "var2": -0.915})
-        assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
         expected = pd.Series({"var1": 2.097, "var2": 0.827})
         assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
@@ -2172,7 +2386,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
 
             expected_coef = pd.Series({"var1": 7.680, "var2": -0.915})
-            assert_series_equal(cph.hazards_.T["coef"], expected_coef, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.hazards_, expected_coef, check_less_precise=2, check_names=False)
 
             expected_std = pd.Series({"var1": 6.641, "var2": 1.650})
             assert_series_equal(cph.summary["se(coef)"], expected_std, check_less_precise=2, check_names=False)
@@ -2203,7 +2417,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
             expected = pd.Series({"var1": 7.995, "var2": -1.154})
-            assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
             expected = pd.Series({"var1": 6.690, "var2": 1.614})
             assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
@@ -2220,7 +2434,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
             expected = pd.Series({"var1": 0.3268, "var2": 0.0775})
-            assert_series_equal(cph.hazards_.T["coef"], expected, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.hazards_, expected, check_less_precise=2, check_names=False)
 
             expected = pd.Series({"var1": 0.0697, "var2": 0.0861})
             assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
@@ -2252,7 +2466,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cf2 = CoxPHFitter()
         cf2.fit(rossi, duration_col="week", event_col="arrest")
 
-        assert_frame_equal(cf2.standard_errors_ ** 2, w * cf1.standard_errors_ ** 2, check_like=True)
+        assert_series_equal(cf2.standard_errors_ ** 2, w * cf1.standard_errors_ ** 2)
 
     def test_adding_non_integer_weights_is_fine_if_robust_is_on(self, rossi):
         rossi["weights"] = np.random.exponential(1, rossi.shape[0])
@@ -2317,7 +2531,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         r = coxph(formula = Surv(week, arrest) ~ fin + age + strata(race,
                     paro, mar, wexp) + prio, data = rossi)
         """
-        expected = np.array([[-0.3355, -0.0590, 0.1002]])
+        expected = np.array([-0.3355, -0.0590, 0.1002])
         cf = CoxPHFitter()
         cf.fit(
             rossi, duration_col="week", event_col="arrest", strata=["race", "paro", "mar", "wexp"], show_progress=True
@@ -2331,7 +2545,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         # mod.allison <- coxph(Surv(week, arrest) ~ ridge(fin, age, race, wexp, mar, paro, prio,
         #                                                 theta=1.0, scale=TRUE), data=rossi)
         # cat(round(mod.allison$coefficients, 4), sep=", ")
-        expected = np.array([[-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909]])
+        expected = np.array([-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909])
         cf = CoxPHFitter(penalizer=1.0)
         cf.fit(rossi, duration_col="week", event_col="arrest")
         npt.assert_array_almost_equal(cf.hazards_.values, expected, decimal=4)
@@ -2344,7 +2558,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         # coefs
         actual_coefs = cf.hazards_.values
-        expected_coefs = np.array([[0.1596, 0.2484, 0.6567]])
+        expected_coefs = np.array([0.1596, 0.2484, 0.6567])
         npt.assert_array_almost_equal(actual_coefs, expected_coefs, decimal=3)
 
     def test_se_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
@@ -2355,7 +2569,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         # standard errors
         actual_se = cf._compute_standard_errors(None, None, None, None).values
-        expected_se = np.array([[0.0143, 0.4623, 0.3561, 0.4222]])
+        expected_se = np.array([0.0143, 0.4623, 0.3561, 0.4222])
         npt.assert_array_almost_equal(actual_se, expected_se, decimal=3)
 
     def test_p_value_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
@@ -2373,7 +2587,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cp = CoxPHFitter()
         expected = ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
         cp.fit(rossi, event_col="week", duration_col="arrest")
-        assert list(cp.hazards_.columns) == expected
+        assert list(cp.hazards_.index.tolist()) == expected
 
     def test_strata_removes_variable_from_summary_output(self, rossi):
         cp = CoxPHFitter()
@@ -2630,7 +2844,7 @@ Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         df = regression_dataset
         cph.fit(df, "T", "E", robust=True)
         expected = pd.Series({"var1": 0.0879, "var2": 0.0847, "var3": 0.0655})
-        assert_series_equal(cph.standard_errors_.loc["se"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.standard_errors_, expected, check_less_precise=2, check_names=False)
 
     def test_robust_errors_with_strata_against_R(self, rossi, cph):
         """
@@ -2728,7 +2942,7 @@ class TestAalenAdditiveFitter:
         aaf = AalenAdditiveFitter()
         expected = ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
         aaf.fit(rossi, event_col="arrest", duration_col="week")
-        assert list(aaf.cumulative_hazards_.columns.drop("baseline")) == expected
+        assert list(aaf.cumulative_hazards_.columns.drop("_intercept")) == expected
 
         aaf = AalenAdditiveFitter(fit_intercept=False)
         expected = ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
@@ -2818,7 +3032,7 @@ class TestAalenAdditiveFitter:
         actual = aaf.hazards_
         npt.assert_allclose(actual.loc[:2, "fin"].tolist(), [-0.004628582, -0.005842295], rtol=1e-06)
         npt.assert_allclose(actual.loc[:2, "prio"].tolist(), [-1.268344e-03, 1.119377e-04], rtol=1e-06)
-        npt.assert_allclose(actual.loc[:2, "baseline"].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
+        npt.assert_allclose(actual.loc[:2, "_intercept"].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
 
     def test_aalen_additive_fitter_versus_R_with_weights(self, aaf, regression_dataset):
         """
@@ -2832,7 +3046,7 @@ class TestAalenAdditiveFitter:
         actual = aaf.hazards_
         npt.assert_allclose(actual.iloc[:3]["var1"].tolist(), [1.301523e-02, -4.925302e-04, 2.304792e-02], rtol=1e-06)
         npt.assert_allclose(
-            actual.iloc[:3]["baseline"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06
+            actual.iloc[:3]["_intercept"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06
         )
 
     def test_cumulative_hazards_versus_R(self, aaf, regression_dataset):
@@ -2846,7 +3060,7 @@ class TestAalenAdditiveFitter:
 
         aaf.fit(regression_dataset, "T", "E")
         actual = aaf.cumulative_hazards_.iloc[-1]
-        npt.assert_allclose(actual["baseline"], 2.1675130235, rtol=1e-06)
+        npt.assert_allclose(actual["_intercept"], 2.1675130235, rtol=1e-06)
         npt.assert_allclose(actual["var1"], 0.6820086125, rtol=1e-06)
         npt.assert_allclose(actual["var2"], -0.0776583514, rtol=1e-06)
         npt.assert_allclose(actual["var3"], 0.5515174017, rtol=1e-06)
@@ -3053,6 +3267,7 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(ctv.summary["p"].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
 
     def test_error_is_raised_if_using_non_numeric_data(self, ctv):
+        ctv = CoxTimeVaryingFitter(penalizer=1.0)
         df = pd.DataFrame.from_dict(
             {
                 "id": [1, 2, 3],

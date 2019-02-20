@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from __future__ import division
 import warnings
 from datetime import datetime
 import time
@@ -16,7 +17,7 @@ from lifelines.utils import (
     epanechnikov_kernel,
     ridge_regression as lr,
     qth_survival_times,
-    pass_for_numeric_dtypes_or_raise,
+    check_for_numeric_dtypes_or_raise,
     concordance_index,
     check_nans_or_infs,
     ConvergenceWarning,
@@ -53,7 +54,7 @@ class AalenAdditiveFitter(BaseFitter):
     fit_intercept: bool, optional (default: True)
       If False, do not attach an intercept (column of ones) to the covariate matrix. The
       intercept, :math:`b_0(t)` acts as a baseline hazard.
-    alpha: float
+    alpha: float, optional (default=0.05)
       the level in the confidence intervals.
     coef_penalizer: float, optional (default: 0)
       Attach a L2 penalizer to the size of the coeffcients during regression. This improves
@@ -65,7 +66,7 @@ class AalenAdditiveFitter(BaseFitter):
 
     """
 
-    def __init__(self, fit_intercept=True, alpha=0.95, coef_penalizer=0.0, smoothing_penalizer=0.0):
+    def __init__(self, fit_intercept=True, alpha=0.05, coef_penalizer=0.0, smoothing_penalizer=0.0):
         super(AalenAdditiveFitter, self).__init__(alpha=alpha)
         self.fit_intercept = fit_intercept
         self.alpha = alpha
@@ -154,9 +155,9 @@ class AalenAdditiveFitter(BaseFitter):
 
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
-            self._norm_std["baseline"] = 1.0
+            self._norm_std["_intercept"] = 1.0
         else:
-            # a baseline was provided
+            # a _intercept was provided
             self._norm_std[self._norm_std < 1e-8] = 1.0
 
         self.hazards_, self.cumulative_hazards_, self.cumulative_variance_ = self._fit_model(
@@ -276,9 +277,9 @@ It's important to know that the naive variance estimates of the coefficients are
 
         if self.fit_intercept:
             assert (
-                "baseline" not in df.columns
-            ), "baseline is an internal lifelines column, please rename your column first."
-            df["baseline"] = 1.0
+                "_intercept" not in df.columns
+            ), "_intercept is an internal lifelines column, please rename your column first."
+            df["_intercept"] = 1.0
 
         X = df.astype(float)
         T = T.astype(float)
@@ -302,7 +303,7 @@ It's important to know that the naive variance estimates of the coefficients are
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):
             order = self.cumulative_hazards_.columns
-            order = order.drop("baseline") if self.fit_intercept else order
+            order = order.drop("_intercept") if self.fit_intercept else order
             X_ = X[order].values
         else:
             X_ = X
@@ -317,7 +318,7 @@ It's important to know that the naive variance estimates of the coefficients are
         return individual_cumulative_hazards_
 
     def _check_values(self, X, T, E):
-        pass_for_numeric_dtypes_or_raise(X)
+        check_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
         check_nans_or_infs(X)
@@ -386,12 +387,12 @@ It's important to know that the naive variance estimates of the coefficients are
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         std_error = np.sqrt(self.cumulative_variance_)
         return pd.concat(
             {
-                "lower-bound": self.cumulative_hazards_ - alpha2 * std_error,
-                "upper-bound": self.cumulative_hazards_ + alpha2 * std_error,
+                "lower-bound": self.cumulative_hazards_ - z * std_error,
+                "upper-bound": self.cumulative_hazards_ + z * std_error,
             }
         )
 
@@ -497,7 +498,6 @@ It's important to know that the naive variance estimates of the coefficients are
     @property
     def summary(self):
         """Summary statistics describing the fit.
-        Set alpha property in the object before calling.
 
         Returns
         -------

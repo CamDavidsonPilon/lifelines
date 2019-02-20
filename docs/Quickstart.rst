@@ -19,13 +19,13 @@ Install via ``pip``:
     pip install lifelines
 
 
-Kaplan-Meier and Nelson-Aalen
------------------------------
+Kaplan-Meier Nelson-Aalen, and parametric models
+---------------------------------------------------
 
 .. note:: For readers looking for an introduction to survival analysis, it's recommended to start at :ref:`Introduction to Survival Analysis`
 
 
-Let's start by importing some data. We need the durations that individuals are observed for, and whether they "died" or not. 
+Let's start by importing some data. We need the durations that individuals are observed for, and whether they "died" or not.
 
 
 .. code:: python
@@ -46,10 +46,10 @@ Let's start by importing some data. We need the durations that individuals are o
     T = df['T']
     E = df['E']
 
-``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed (alternatively an individual can be censored).
+``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed or not (alternatively an individual can be censored).
 
 
-.. note:: *lifelines* assumes all "deaths" are observed unless otherwise specified. 
+.. note:: *lifelines* assumes all "deaths" are observed unless otherwise specified.
 
 
 .. code:: python
@@ -68,6 +68,29 @@ After calling the ``fit`` method, we have access to new properties like ``surviv
 
 
 .. image:: images/quickstart_kmf.png
+
+
+Instead of the Kaplan-Meier estimator, you may be interested in a parametric model. *lifelines* has builtin parametric models. For example, Weibull, Log-Normal, Log-Logistic, and more.
+
+.. code:: python
+
+    fig, axes = plt.subplots(2, 3, figsize=(9, 5))
+
+    kmf = KaplanMeierFitter().fit(T, E, label='KaplanMeierFitter')
+    wbf = WeibullFitter().fit(T, E, label='WeibullFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
+    llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
+    pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
+
+    wbf.plot_survival_function(ax=axes[0][0])
+    exf.plot_survival_function(ax=axes[0][1])
+    lnf.plot_survival_function(ax=axes[0][2])
+    kmf.plot_survival_function(ax=axes[1][0])
+    llf.plot_survival_function(ax=axes[1][1])
+    pwf.plot_survival_function(ax=axes[1][2])
+
+.. image:: images/waltons_survival_function.png
 
 
 Multiple groups
@@ -127,7 +150,7 @@ Often you'll have data that looks like:::
     *start_time3*, None
     *start_time4*, *end_time4*
 
-*lifelines* has some utility functions to transform this dataset into duration and censoring vectors:
+*lifelines* has some utility functions to transform this dataset into duration and censoring vectors. The most common one is ``datetimes_to_durations``. The docs for it are `here <https://lifelines.readthedocs.io/en/latest/lifelines.utils.html#lifelines.utils.datetimes_to_durations>`_.
 
 .. code:: python
 
@@ -138,7 +161,7 @@ Often you'll have data that looks like:::
     T, E = datetimes_to_durations(start_times, end_times, freq='h')
 
 
-Perhaps you are interested in viewing the survival table given some durations and censoring vectors.
+Perhaps you are interested in viewing the survival table given some durations and censoring vectors. The docs for it are `here <https://lifelines.readthedocs.io/en/latest/lifelines.utils.html#lifelines.utils.survival_table_from_events>`_.
 
 
 .. code:: python
@@ -162,7 +185,7 @@ Perhaps you are interested in viewing the survival table given some durations an
 Survival regression
 -------------------
 
-While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter`` and ``CoxPHFitter``.
+While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they only give us an "average" view of the population. Often we have specific data at the individual level, either continuous or categorical, that we would like to use. For this, we turn to **survival regression**, specifically ``AalenAdditiveFitter``, ``WeibullAFTFitter``, and ``CoxPHFitter``.
 
 .. code:: python
 
@@ -172,7 +195,7 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
     regression_dataset.head()
 
 
-The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorings and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``.
+The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorings and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``. Below we model our regression dataset using the Cox proportional hazard model, full docs `here <https://lifelines.readthedocs.io/en/latest/lifelines.fitters.html#module-lifelines.fitters.coxph_fitter>`_.
 
 .. code:: python
 
@@ -204,10 +227,47 @@ The input of the ``fit`` method's API in a regression is different. All the data
 
     cph.plot()
 
-.. image:: images/coxph_plot_quickstart.png  
+.. image:: images/coxph_plot_quickstart.png
 
 
-If we focus on Aalen's Additive model,
+The same dataset, but with a Weibull Accelerated Failure Time model. This model was two parameters (see docs `here <https://lifelines.readthedocs.io/en/latest/lifelines.fitters.html#module-lifelines.fitters.weibull_aft_fitter>`_), and we can choose to model both using our covariates or just one. Below we model just the scale parameter, ``lambda_``.
+
+.. code:: python
+
+    from lifelines import WeibullAFTFitter
+
+    wft = WeibullAFTFitter()
+    wft.fit(regression_dataset, 'T', event_col='E', ancillary_df=regression_dataset)
+    wft.print_summary()
+
+    """
+    <lifelines.WeibullAFTFitter: fitted with 200 observations, 11 censored>
+          duration col = 'T'
+             event col = 'E'
+    number of subjects = 200
+      number of events = 189
+        log-likelihood = -504.48
+      time fit was run = 2019-02-19 22:07:57 UTC
+
+    ---
+                        coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
+    lambda_ var1       -0.08       0.92      0.02 -3.45 <0.005     10.78       -0.13       -0.04
+            var2       -0.02       0.98      0.03 -0.56   0.57      0.80       -0.07        0.04
+            var3       -0.08       0.92      0.02 -3.33 <0.005     10.15       -0.13       -0.03
+            _intercept  2.53      12.57      0.05 51.12 <0.005       inf        2.43        2.63
+    rho_    _intercept  1.09       2.98      0.05 20.12 <0.005    296.66        0.99        1.20
+    ---
+    Concordance = 0.58
+    Log-likelihood ratio test = 19.73 on 3 df, -log2(p)=12.34
+    """
+
+    wft.plot()
+
+.. image:: images/waft_plot_quickstart.png
+
+
+
+If we focus on Aalen's Additive model, which has time-varying hazards:
 
 .. code:: python
 
@@ -217,7 +277,7 @@ If we focus on Aalen's Additive model,
     aaf.fit(regression_dataset, 'T', event_col='E')
 
 
-Like ``CoxPHFitter``, after fitting you'll have access to properties like ``cumulative_hazards_`` and methods like ``plot``, ``predict_cumulative_hazards``, and ``predict_survival_function``. The latter two methods require an additional argument of individual covariates:
+Along with ``CoxPHFitter`` and ``WeibullAFTFitter``, after fitting you'll have access to properties like ``cumulative_hazards_`` and methods like ``plot``, ``predict_cumulative_hazards``, and ``predict_survival_function``. The latter two methods require an additional argument of individual covariates:
 
 .. code:: python
 

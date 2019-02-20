@@ -1,6 +1,61 @@
 Changelog
 ~~~~~~~~~
 
+0.19.0
+^^^^^^
+
+New features
+''''''''''''
+
+-  New regression model ``WeibullAFTFitter`` for fitting accelerated
+   failure time models. Docs have been added to our
+   `documentation <https://lifelines.readthedocs.io/>`__ about how to
+   use ``WeibullAFTFitter`` (spoiler: it’s API is similar to the other
+   regression models) and how to interpret the output.
+-  ``CoxPHFitter`` performance improvements (about 10%)
+-  ``CoxTimeVaryingFitter`` performance improvements (about 10%)
+
+API changes
+'''''''''''
+
+-  **Important**: we changed the ``.hazards_`` and ``.standard_errors_``
+   on Cox models to be pandas Series (instead of Dataframes). This felt
+   like a more natural representation of them. You may need to update
+   your code to reflect this. See notes here:
+   https://github.com/CamDavidsonPilon/lifelines/issues/636
+-  **Important**: we changed the ``.confidence_intervals_`` on Cox
+   models to be transposed. This felt like a more natural representation
+   of them. You may need to update your code to reflect this. See notes
+   here: https://github.com/CamDavidsonPilon/lifelines/issues/636
+-  **Important**: we changed the parameterization of the
+   ``WeibullFitter`` and ``ExponentialFitter`` from ``\lambda * t`` to
+   ``t / \lambda``. This was for a few reasons: 1) it is a more common
+   parameterization in literature, 2) it helps in convergence.
+-  **Important**: in models where we add an intercept (currently only
+   ``AalenAdditiveModel``), the name of the added column has been
+   changed from ``baseline`` to ``_intercept``
+-  **Important**: the meaning of ``alpha`` in all fitters has changed to
+   be the standard interpretation of alpha in confidence intervals. That
+   means that the *default* for alpha is set to 0.05 in the latest
+   lifelines, instead of 0.95 in previous versions.
+
+Bug Fixes
+'''''''''
+
+-  Fixed a bug in the ``_log_likelihood_`` property of
+   ``ParametericUnivariateFitter`` models. It was showing the “average”
+   log-likelihood (i.e. scaled by 1/n) instead of the total. It now
+   displays the total.
+-  In model ``print_summary``\ s, correct a label erroring. Instead of
+   “Likelihood test”, it should have read “Log-likelihood test”.
+-  Fixed a bug that was too frequently rejecting the dtype of ``event``
+   columns.
+-  Fixed a calculation bug in the concordance index for stratified Cox
+   models. Thanks @airanmehr!
+-  Fixed some Pandas <0.24 bugs.
+
+.. _section-1:
+
 0.18.6
 ^^^^^^
 
@@ -9,7 +64,7 @@ Changelog
    ``rank`` and ``km`` p-values now.
 -  some performance improvements to ``qth_survival_time``.
 
-.. _section-1:
+.. _section-2:
 
 0.18.5
 ^^^^^^
@@ -30,7 +85,7 @@ Changelog
    that can be used to turn off variance calculations since this can
    take a long time for large datasets. Thanks @pzivich!
 
-.. _section-2:
+.. _section-3:
 
 0.18.4
 ^^^^^^
@@ -40,7 +95,7 @@ Changelog
 -  adding left-truncation support to parametric univarite models with
    the ``entry`` kwarg in ``.fit``
 
-.. _section-3:
+.. _section-4:
 
 0.18.3
 ^^^^^^
@@ -50,7 +105,7 @@ Changelog
    warnings are more noticeable.
 -  Improved some warning and error messages.
 
-.. _section-4:
+.. _section-5:
 
 0.18.2
 ^^^^^^
@@ -66,7 +121,7 @@ Changelog
    Moved them all (most) to use ``autograd``.
 -  ``LogNormalFitter`` no longer models ``log_sigma``.
 
-.. _section-5:
+.. _section-6:
 
 0.18.1
 ^^^^^^
@@ -77,7 +132,7 @@ Changelog
 -  use the ``autograd`` lib to help with gradients.
 -  New ``LogLogisticFitter`` univariate fitter available.
 
-.. _section-6:
+.. _section-7:
 
 0.18.0
 ^^^^^^
@@ -114,7 +169,7 @@ Changelog
    ``LinAlgError: Matrix is singular.`` and report back to the user
    advice.
 
-.. _section-7:
+.. _section-8:
 
 0.17.5
 ^^^^^^
@@ -122,7 +177,7 @@ Changelog
 -  more bugs in ``plot_covariate_groups`` fixed when using non-numeric
    strata.
 
-.. _section-8:
+.. _section-9:
 
 0.17.4
 ^^^^^^
@@ -134,7 +189,7 @@ Changelog
 -  ``groups`` is now called ``values`` in
    ``CoxPHFitter.plot_covariate_groups``
 
-.. _section-9:
+.. _section-10:
 
 0.17.3
 ^^^^^^
@@ -142,7 +197,7 @@ Changelog
 -  Fix in ``compute_residuals`` when using ``schoenfeld`` and the
    minumum duration has only censored subjects.
 
-.. _section-10:
+.. _section-11:
 
 0.17.2
 ^^^^^^
@@ -153,7 +208,7 @@ Changelog
    ``for`` loop. The downside is the code is more esoteric now. I’ve
    added comments as necessary though 🤞
 
-.. _section-11:
+.. _section-12:
 
 0.17.1
 ^^^^^^
@@ -170,7 +225,7 @@ Changelog
 -  Fixes a Pandas performance warning in ``CoxTimeVaryingFitter``.
 -  Performances improvements to ``CoxTimeVaryingFitter``.
 
-.. _section-12:
+.. _section-13:
 
 0.17.0
 ^^^^^^
@@ -191,7 +246,7 @@ Changelog
 
 -  some plotting improvemnts to ``plotting.plot_lifetimes``
 
-.. _section-13:
+.. _section-14:
 
 0.16.3
 ^^^^^^
@@ -199,7 +254,7 @@ Changelog
 -  More ``CoxPHFitter`` performance improvements. Up to a 40% reduction
    vs 0.16.2 for some datasets.
 
-.. _section-14:
+.. _section-15:
 
 0.16.2
 ^^^^^^
@@ -210,14 +265,14 @@ Changelog
    has lots of duplicate times. See
    https://github.com/CamDavidsonPilon/lifelines/issues/591
 
-.. _section-15:
+.. _section-16:
 
 0.16.1
 ^^^^^^
 
 -  Fixed py2 division error in ``concordance`` method.
 
-.. _section-16:
+.. _section-17:
 
 0.16.0
 ^^^^^^
@@ -253,7 +308,7 @@ Changelog
    ``lifelines.utils.to_episodic_format``.
 -  ``CoxTimeVaryingFitter`` now accepts ``strata``.
 
-.. _section-17:
+.. _section-18:
 
 0.15.4
 ^^^^^^
@@ -261,14 +316,14 @@ Changelog
 -  bug fix for the Cox model likelihood ratio test when using
    non-trivial weights.
 
-.. _section-18:
+.. _section-19:
 
 0.15.3
 ^^^^^^
 
 -  Only allow matplotlib less than 3.0.
 
-.. _section-19:
+.. _section-20:
 
 0.15.2
 ^^^^^^
@@ -279,7 +334,7 @@ Changelog
 -  removed ``entry`` from ``ExponentialFitter`` and ``WeibullFitter`` as
    it was doing nothing.
 
-.. _section-20:
+.. _section-21:
 
 0.15.1
 ^^^^^^
@@ -288,7 +343,7 @@ Changelog
 -  Raise NotImplementedError if the ``robust`` flag is used in
    ``CoxTimeVaryingFitter`` - that’s not ready yet.
 
-.. _section-21:
+.. _section-22:
 
 0.15.0
 ^^^^^^
@@ -359,7 +414,7 @@ Changelog
    When Estimating Risks in Pharmacoepidemiology” for a nice overview of
    the model.
 
-.. _section-22:
+.. _section-23:
 
 0.14.6
 ^^^^^^
@@ -367,7 +422,7 @@ Changelog
 -  fix for n > 2 groups in ``multivariate_logrank_test`` (again).
 -  fix bug for when ``event_observed`` column was not boolean.
 
-.. _section-23:
+.. _section-24:
 
 0.14.5
 ^^^^^^
@@ -375,7 +430,7 @@ Changelog
 -  fix for n > 2 groups in ``multivariate_logrank_test``
 -  fix weights in KaplanMeierFitter when using a pandas Series.
 
-.. _section-24:
+.. _section-25:
 
 0.14.4
 ^^^^^^
@@ -392,7 +447,7 @@ Changelog
 -  New ``delay`` parameter in ``add_covariate_to_timeline``
 -  removed ``two_sided_z_test`` from ``statistics``
 
-.. _section-25:
+.. _section-26:
 
 0.14.3
 ^^^^^^
@@ -404,7 +459,7 @@ Changelog
 -  adds a ``column`` argument to ``CoxTimeVaryingFitter`` and
    ``CoxPHFitter`` ``plot`` method to plot only a subset of columns.
 
-.. _section-26:
+.. _section-27:
 
 0.14.2
 ^^^^^^
@@ -412,7 +467,7 @@ Changelog
 -  some quality of life improvements for working with
    ``CoxTimeVaryingFitter`` including new ``predict_`` methods.
 
-.. _section-27:
+.. _section-28:
 
 0.14.1
 ^^^^^^
@@ -430,7 +485,7 @@ Changelog
    faster completion of ``fit`` for large dataframes, and up to 10%
    faster for small dataframes.
 
-.. _section-28:
+.. _section-29:
 
 0.14.0
 ^^^^^^
@@ -452,7 +507,7 @@ Changelog
    of a ``RuntimeWarning``
 -  New checks for complete separation in the dataset for regressions.
 
-.. _section-29:
+.. _section-30:
 
 0.13.0
 ^^^^^^
@@ -481,7 +536,7 @@ Changelog
    group the same subjects together and give that observation a weight
    equal to the count. Altogether, this means a much faster regression.
 
-.. _section-30:
+.. _section-31:
 
 0.12.0
 ^^^^^^
@@ -498,7 +553,7 @@ Changelog
 -  Additional functionality to ``utils.survival_table_from_events`` to
    bin the index to make the resulting table more readable.
 
-.. _section-31:
+.. _section-32:
 
 0.11.3
 ^^^^^^
@@ -510,7 +565,7 @@ Changelog
    observation or censorship.
 -  More accurate prediction methods parametrics univariate models.
 
-.. _section-32:
+.. _section-33:
 
 0.11.2
 ^^^^^^
@@ -518,14 +573,14 @@ Changelog
 -  Changing liscense to valilla MIT.
 -  Speed up ``NelsonAalenFitter.fit`` considerably.
 
-.. _section-33:
+.. _section-34:
 
 0.11.1
 ^^^^^^
 
 -  Python3 fix for ``CoxPHFitter.plot``.
 
-.. _section-34:
+.. _section-35:
 
 0.11.0
 ^^^^^^
@@ -539,14 +594,14 @@ Changelog
    of a new ``loc`` kwarg. This is to align with Pandas deprecating
    ``ix``
 
-.. _section-35:
+.. _section-36:
 
 0.10.1
 ^^^^^^
 
 -  fix in internal normalization for ``CoxPHFitter`` predict methods.
 
-.. _section-36:
+.. _section-37:
 
 0.10.0
 ^^^^^^
@@ -561,7 +616,7 @@ Changelog
    mimic R’s ``basehaz`` API.
 -  new ``predict_log_partial_hazards`` to ``CoxPHFitter``
 
-.. _section-37:
+.. _section-38:
 
 0.9.4
 ^^^^^
@@ -584,7 +639,7 @@ Changelog
 -  performance improvements in ``CoxPHFitter`` - should see at least a
    10% speed improvement in ``fit``.
 
-.. _section-38:
+.. _section-39:
 
 0.9.2
 ^^^^^
@@ -593,7 +648,7 @@ Changelog
 -  throw an error if no admissable pairs in the c-index calculation.
    Previously a NaN was returned.
 
-.. _section-39:
+.. _section-40:
 
 0.9.1
 ^^^^^
@@ -601,7 +656,7 @@ Changelog
 -  add two summary functions to Weibull and Exponential fitter, solves
    #224
 
-.. _section-40:
+.. _section-41:
 
 0.9.0
 ^^^^^
@@ -617,7 +672,7 @@ Changelog
 -  Default predict method in ``k_fold_cross_validation`` is now
    ``predict_expectation``
 
-.. _section-41:
+.. _section-42:
 
 0.8.1
 ^^^^^
@@ -634,7 +689,7 @@ Changelog
    -  scaling of smooth hazards in NelsonAalenFitter was off by a factor
       of 0.5.
 
-.. _section-42:
+.. _section-43:
 
 0.8.0
 ^^^^^
@@ -653,7 +708,7 @@ Changelog
    ``lifelines.statistics. power_under_cph``.
 -  fixed a bug when using KaplanMeierFitter for left-censored data.
 
-.. _section-43:
+.. _section-44:
 
 0.7.1
 ^^^^^
@@ -672,7 +727,7 @@ Changelog
 -  refactor each fitter into it’s own submodule. For now, the tests are
    still in the same file. This will also *not* break the API.
 
-.. _section-44:
+.. _section-45:
 
 0.7.0
 ^^^^^
@@ -691,7 +746,7 @@ Changelog
    duration remaining until the death event, given survival up until
    time t.
 
-.. _section-45:
+.. _section-46:
 
 0.6.1
 ^^^^^
@@ -703,7 +758,7 @@ Changelog
    your work is to sum up the survival function (for expected values or
    something similar), it’s more difficult to make a mistake.
 
-.. _section-46:
+.. _section-47:
 
 0.6.0
 ^^^^^
@@ -726,7 +781,7 @@ Changelog
 -  In ``KaplanMeierFitter``, ``epsilon`` has been renamed to
    ``precision``.
 
-.. _section-47:
+.. _section-48:
 
 0.5.1
 ^^^^^
@@ -747,7 +802,7 @@ Changelog
    ``lifelines.plotting.add_at_risk_counts``.
 -  Fix bug Epanechnikov kernel.
 
-.. _section-48:
+.. _section-49:
 
 0.5.0
 ^^^^^
@@ -760,7 +815,7 @@ Changelog
 -  add test for summary()
 -  Alternate metrics can be used for ``k_fold_cross_validation``.
 
-.. _section-49:
+.. _section-50:
 
 0.4.4
 ^^^^^
@@ -772,7 +827,7 @@ Changelog
 -  Fixes bug in 1-d input not returning in CoxPHFitter
 -  Lots of new tests.
 
-.. _section-50:
+.. _section-51:
 
 0.4.3
 ^^^^^
@@ -793,7 +848,7 @@ Changelog
 -  Adds option ``include_likelihood`` to CoxPHFitter fit method to save
    the final log-likelihood value.
 
-.. _section-51:
+.. _section-52:
 
 0.4.2
 ^^^^^
@@ -813,7 +868,7 @@ Changelog
    from failing so often (this a stop-gap)
 -  pep8 everything
 
-.. _section-52:
+.. _section-53:
 
 0.4.1.1
 ^^^^^^^
@@ -826,7 +881,7 @@ Changelog
 -  Adding more robust cross validation scheme based on issue #67.
 -  fixing ``regression_dataset`` in ``datasets``.
 
-.. _section-53:
+.. _section-54:
 
 0.4.1
 ^^^^^
@@ -845,7 +900,7 @@ Changelog
 -  Adding a Changelog.
 -  more sanitizing for the statistical tests =)
 
-.. _section-54:
+.. _section-55:
 
 0.4.0
 ^^^^^

@@ -28,6 +28,7 @@ from lifelines.fitters import BaseFitter
 from lifelines.plotting import set_kwargs_ax
 from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers
 from lifelines.utils.lowess import lowess
+from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio
 from lifelines.utils import (
     _get_index,
     _to_list,
@@ -35,11 +36,10 @@ from lifelines.utils import (
     survival_table_from_events,
     inv_normal_cdf,
     normalize,
-    concordance_index,
     qth_survival_times,
-    pass_for_numeric_dtypes_or_raise,
-    check_low_var,
     coalesce,
+    check_for_numeric_dtypes_or_raise,
+    check_low_var,
     check_complete_separation,
     check_nans_or_infs,
     StatError,
@@ -66,7 +66,7 @@ class BatchVsSingle:
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
-            and (0.553591 + -1.001e-05 * n_total + 1.296786 * frac_dups + 0.000214 * n_total * frac_dups < 1)
+            and (0.713869 + -0.000028 * n_total + 0.684229 * frac_dups + 0.000201 * n_total * frac_dups < 1)
         ):
             return "batch"
         return "single"
@@ -77,12 +77,12 @@ class CoxPHFitter(BaseFitter):
     r"""
     This class implements fitting Cox's proportional hazard model:
 
-    .. math::  h(t|x) = h_0(t) \exp(x \beta)
+    .. math::  h(t|x) = h_0(t) \exp((x - \overline{x}) \beta)
 
     Parameters
     ----------
 
-      alpha: float, optional (default=0.95)
+      alpha: float, optional (default=0.05)
         the level in the confidence intervals.
 
       tie_method: string, optional
@@ -92,8 +92,8 @@ class CoxPHFitter(BaseFitter):
       penalizer: float, optional (default=0.0)
         Attach a L2 penalizer to the size of the coeffcients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
-        For example, this shrinks the absolute value of :math:`\beta_i`. Recommended, even if a small value.
-        The penalty is :math:`1/2  \text{penalizer}  ||beta||^2`.
+        For example, this shrinks the absolute value of :math:`\beta_i`.
+        The penalty is :math:`\frac{1}{2} \text{penalizer} ||\beta||^2`.
 
       strata: list, optional
         specify a list of columns to use in stratification. This is useful if a
@@ -111,7 +111,7 @@ class CoxPHFitter(BaseFitter):
     >>> cph.print_summary()
     """
 
-    def __init__(self, alpha=0.95, tie_method="Efron", penalizer=0.0, strata=None):
+    def __init__(self, alpha=0.05, tie_method="Efron", penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         if penalizer < 0:
@@ -139,7 +139,7 @@ class CoxPHFitter(BaseFitter):
         batch_mode=None,
     ):
         """
-        Fit the Cox Propertional Hazard model to a dataset.
+        Fit the Cox proportional hazard model to a dataset.
 
         Parameters
         ----------
@@ -170,7 +170,7 @@ class CoxPHFitter(BaseFitter):
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
-        initial_beta: numpy array, optional
+        initial_beta: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
@@ -277,7 +277,7 @@ class CoxPHFitter(BaseFitter):
             step_size=step_size,
         )
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=X.columns, index=["coef"]) / self._norm_std
+        self.hazards_ = pd.Series(hazards_, index=X.columns, name="coef") / self._norm_std
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
@@ -288,8 +288,13 @@ class CoxPHFitter(BaseFitter):
         self.baseline_hazard_ = self._compute_baseline_hazards(X, T, E, weights)
         self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
-        self._predicted_partial_hazards_ = self.predict_partial_hazard(X).values
 
+        self._predicted_partial_hazards_ = (
+            self.predict_partial_hazard(X)
+            .rename(columns={0: "P"})
+            .assign(T=self.durations.values, E=self.event_observed.values)
+            .set_index(X.index)
+        )
         return self
 
     def _preprocess_dataframe(self, df):
@@ -343,7 +348,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
     @staticmethod
     def _check_values(X, T, E, event_col):
-        pass_for_numeric_dtypes_or_raise(X)
+        check_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
         check_nans_or_infs(X)
@@ -375,7 +380,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T: (n) Pandas Series representing observed durations.
         E: (n) Pandas Series representing death events.
         weights: (n) an iterable representing weights per observation.
-        initial_beta: (1,d) numpy array of initial starting point for
+        initial_beta: (d,) numpy array of initial starting point for
                       NR algorithm. Default 0.
         step_size: float, optional
             > 0.001 to determine a starting step size in NR algorithm.
@@ -398,10 +403,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # make sure betas are correct size.
         if initial_beta is not None:
-            assert initial_beta.shape == (d, 1)
+            assert initial_beta.shape == (d,)
             beta = initial_beta
         else:
-            beta = np.zeros((d, 1))
+            beta = np.zeros((d,))
 
         step_sizer = StepSizer(step_size)
         step_size = step_sizer.next()
@@ -425,7 +430,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if self.strata is None:
                 h, g, ll = get_gradients(X.values, T.values, E.values, weights.values, beta)
             else:
-                g = np.zeros_like(beta).T
+                g = np.zeros_like(beta)
                 h = np.zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, get_gradients, beta):
@@ -435,12 +440,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
-                g -= self.penalizer * beta.T
+                g -= self.penalizer * beta
                 h.flat[:: d + 1] -= self.penalizer
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
-                inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+                inv_h_dot_g_T = spsolve(-h, g, sym_pos=True)
             except ValueError as e:
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
@@ -532,7 +537,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return beta
 
     def _get_efron_values_single(self, X, T, E, weights, beta):
-        # TODO: push the beta.reshape up one level.
         """
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
@@ -572,14 +576,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         n, d = X.shape
         hessian = np.zeros((d, d))
-        gradient = np.zeros((1, d))
+        gradient = np.zeros((d,))
         log_lik = 0
-        beta = beta.reshape(d)
 
         # Init risk and tie sums to zero
-        x_death_sum = np.zeros((1, d))
+        x_death_sum = np.zeros((d,))
         risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         # Init number of ties and weights
@@ -592,14 +595,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             # Doing it like this to preserve shape
             ti = T[i]
             ei = E[i]
-            xi = X[i : i + 1]
+            xi = X[i]
             score = scores[i]
             w = weights[i]
 
             # Calculate phi values
             phi_i = score
             phi_x_i = phi_i * xi
-            phi_x_x_i = np.dot(xi.T, phi_x_i)
+            phi_x_x_i = np.outer(xi, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + phi_i
@@ -647,15 +650,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
-            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
             # reset tie values
             tied_death_counts = 0
             weight_count = 0.0
-            x_death_sum = np.zeros((1, d))
+            x_death_sum = np.zeros((d,))
             tie_phi = 0
-            tie_phi_x = np.zeros((1, d))
+            tie_phi_x = np.zeros((d,))
             tie_phi_x_x = np.zeros((d, d))
 
         return hessian, gradient, log_lik
@@ -717,13 +720,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         _, d = X.shape
         hessian = np.zeros((d, d))
-        gradient = np.zeros((1, d))
+        gradient = np.zeros((d,))
         log_lik = 0
-        weights = weights[:, None]
+        # weights = weights[:, None]
 
         # Init risk and tie sums to zero
         risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
         unique_death_times = np.unique(T)
@@ -739,7 +742,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             X_at_t = X[ix]
             weights_at_t = weights[ix]
 
-            phi_i = scores[ix]
+            phi_i = scores[ix][:, None]
             phi_x_i = phi_i * X_at_t
             phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
@@ -759,7 +762,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths)
+            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths[:, None] * xi_deaths)
 
             weight_count = array_sum_to_scalar(weights_deaths)
             weighted_average = weight_count / tied_death_counts
@@ -795,14 +798,12 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 a1 = risk_phi_x_x * denom
 
             summand = numer * denom[:, None]
-
             # This is a batch outer product.
             # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
             # which would be: np.einsum("Bi, Bj->Bij", t, t)
             a2 = summand.T.dot(summand)
-
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
-            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
         return hessian, gradient, log_lik
@@ -849,14 +850,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
         r"""
-        Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0. 
+        Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0.
         For tests of proportionality, we want to test if \beta_i(t) is \beta_i (constant) or not.
 
-        Let V_k be the contribution to the information matrix at time t_k. A main result from Grambsch and Therneau is that 
+        Let V_k be the contribution to the information matrix at time t_k. A main result from Grambsch and Therneau is that
 
         \beta(t) = E[s_k*V_k^{-1} + \hat{beta}]
 
-        so define s_k^* = s_k*V_k^{-1} + \hat{beta} as the scaled schoenfeld residuals. 
+        so define s_k^* = s_k*V_k^{-1} + \hat{beta} as the scaled schoenfeld residuals.
 
         We can approximate V_k with Hessian/d, so the inverse of Hessian/d is (d * variance_matrix_)
 
@@ -871,7 +872,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(
             self.variance_matrix_
         )
-        scaled_schoenfeld_resids.columns = self.hazards_.columns
+
+        scaled_schoenfeld_resids.columns = self.hazards_.index
         return scaled_schoenfeld_resids
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
@@ -894,7 +896,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T.values, E.values, weights.values)
 
         # schoenfeld residuals are only defined for subjects with a non-zero event.
-        df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.columns, index=index[E])
+        df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.index, index=index[E])
         return df
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
@@ -918,7 +920,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
-        scores = weights[:, None] * np.exp(np.dot(X, self.hazards_.T))
+
+        scores = weights * np.exp(np.dot(X, self.hazards_))
 
         diff_against = []
 
@@ -985,7 +988,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
     def _compute_delta_beta(self, X, T, E, weights, index=None):
         """
-        approximate change in betas as a result of excluding ith row. Good for finding outliers / specific 
+        approximate change in betas as a result of excluding ith row. Good for finding outliers / specific
         subjects that influence the model disproportinately. Good advice: don't drop these outliers, model them.
         """
         score_residuals = self._compute_score(X, T, E, weights, index=index)
@@ -994,7 +997,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         scaled_variance_matrix = self.variance_matrix_ * np.tile(self._norm_std.values, (d, 1)).T
 
         delta_betas = score_residuals.dot(scaled_variance_matrix)
-        delta_betas.columns = self.hazards_.columns
+        delta_betas.columns = self.hazards_.index
 
         return delta_betas
 
@@ -1013,7 +1016,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         else:
             score_residuals = self._compute_score_within_strata(X.values, T, E.values, weights.values)
 
-        return pd.DataFrame(score_residuals, columns=self.hazards_.columns, index=index)
+        return pd.DataFrame(score_residuals, columns=self.hazards_.index, index=index)
 
     def _compute_score_within_strata(self, X, _T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
@@ -1027,7 +1030,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         # we already unnormalized the betas in `fit`, so we need normalize them again since X is
         # normalized.
-        beta = self.hazards_.values[0] * self._norm_std
+        beta = self.hazards_.values * self._norm_std
 
         E = E.astype(int)
         score_residuals = np.zeros((n, d))
@@ -1079,13 +1082,11 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return resids
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.r_[hazards - alpha2 * se, hazards + alpha2 * se],
-            index=["lower-bound", "upper-bound"],
-            columns=self.hazards_.columns,
+            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
         )
 
     def _compute_standard_errors(self, X, T, E, weights):
@@ -1093,7 +1094,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             se = np.sqrt(self._compute_sandwich_estimator(X, T, E, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
+        return pd.Series(se, name="se", index=self.hazards_.index)
 
     def _compute_sandwich_estimator(self, X, T, E, weights):
         delta_betas = self._compute_delta_beta(X, T, E, weights)
@@ -1106,7 +1107,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return sandwich_estimator.values
 
     def _compute_z_values(self):
-        return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
+        return self.hazards_ / self.standard_errors_
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -1121,17 +1122,17 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         -------
         df : DataFrame
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
-
+        ci = 1 - self.alpha
         with np.errstate(invalid="ignore", divide="ignore"):
-            df = pd.DataFrame(index=self.hazards_.columns)
-            df["coef"] = self.hazards_.loc["coef"].values
-            df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
-            df["se(coef)"] = self.standard_errors_.loc["se"].values
+            df = pd.DataFrame(index=self.hazards_.index)
+            df["coef"] = self.hazards_
+            df["exp(coef)"] = np.exp(self.hazards_)
+            df["se(coef)"] = self.standard_errors_
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
-            df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
+            df["lower %g" % ci] = self.confidence_intervals_["lower-bound"]
+            df["upper %g" % ci] = self.confidence_intervals_["upper-bound"]
             return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -1142,11 +1143,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
-        alpha: float or iterable
-            specify confidence intervals to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
 
         """
 
@@ -1189,7 +1188,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         print("---")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
         print(
-            "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
             )
         )
@@ -1205,7 +1204,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ll_alt = self._log_likelihood
 
         test_stat = 2 * ll_alt - 2 * ll_null
-        degrees_freedom = self.hazards_.shape[1]
+        degrees_freedom = self.hazards_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         with np.errstate(invalid="ignore", divide="ignore"):
             return test_stat, degrees_freedom, -np.log2(p_value)
@@ -1259,26 +1258,26 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         same as the training dataset.
         """
 
-        hazard_names = self.hazards_.columns
+        hazard_names = self.hazards_.index
         if isinstance(X, pd.DataFrame):
             order = hazard_names
             X = X[order]
-            pass_for_numeric_dtypes_or_raise(X)
+            check_for_numeric_dtypes_or_raise(X)
         elif isinstance(X, pd.Series) and ((X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))):
             X = X.to_frame().T
             order = hazard_names
             X = X[order]
-            pass_for_numeric_dtypes_or_raise(X)
+            check_for_numeric_dtypes_or_raise(X)
         elif isinstance(X, pd.Series):
-            assert len(hazard_names) == 1, "Series not the correct arugment"
+            assert len(hazard_names) == 1, "Series not the correct argument"
             X = pd.DataFrame(X)
-            pass_for_numeric_dtypes_or_raise(X)
+            check_for_numeric_dtypes_or_raise(X)
 
         X = X.astype(float)
         index = _get_index(X)
 
         X = normalize(X, self._norm_mean.values, 1)
-        return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
+        return pd.DataFrame(np.dot(X, self.hazards_), index=index)
 
     def predict_cumulative_hazard(self, X, times=None):
         """
@@ -1489,7 +1488,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>> from lifelines import CoxPHFitter, KaplanMeierFitter
         >>> rossi = load_rossi()
         >>> kmf = KaplanMeierFitter()
-        >>> kmf.fit(rossi['week'], rossi['arrest']) 
+        >>> kmf.fit(rossi['week'], rossi['arrest'])
         >>> rossi2 = rossi[['week', 'arrest']].copy()
         >>> rossi2['var1'] = np.random.randn(432)
         >>> cph = CoxPHFitter()
@@ -1530,14 +1529,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         errorbar_kwargs.setdefault("elinewidth", 1.25)
         errorbar_kwargs.setdefault("capsize", 3)
 
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
 
         if columns is None:
-            columns = self.hazards_.columns
+            columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
-        symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
-        hazards = self.hazards_[columns].values[0].copy()
+        symmetric_errors = z * self.standard_errors_[columns].to_frame().squeeze(axis=1).values.copy()
+        hazards = self.hazards_.loc[columns].values.copy()
 
         order = np.argsort(hazards)
 
@@ -1549,11 +1548,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         tick_labels = [columns[i] for i in order]
 
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
+        plt.xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
 
-    def plot_covariate_groups(self, covariate, values, **kwargs):
+    def plot_covariate_groups(self, covariate, values, plot_baseline=True, **kwargs):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
         what happens when a covariate is varied over values in a group. This is useful to compare
@@ -1566,8 +1565,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             a string of the covariate in the original dataset that we wish to vary.
         values: iterable
             an iterable of the values we wish the covariate to take on.
+        plot_baseline: bool
+            also display the baseline survival, defined as the survival at the mean of the original dataset.
         kwargs:
-            pass in additional plotting commands
+            pass in additional plotting commands.
 
         Returns
         -------
@@ -1576,18 +1577,19 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         from matplotlib import pyplot as plt
 
-        if covariate not in self.hazards_.columns:
+        if covariate not in self.hazards_.index:
             raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
         if self.strata is None:
-            axes = kwargs.get("ax", None) or plt.figure().add_subplot(111)
+            axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
             x_bar = self._norm_mean.to_frame().T
             X = pd.concat([x_bar] * len(values))
             X.index = ["%s=%s" % (covariate, g) for g in values]
             X[covariate] = values
 
-            self.predict_survival_function(X).plot(ax=axes)
-            self.baseline_survival_.plot(ax=axes, ls="--")
+            self.predict_survival_function(X).plot(ax=axes, **kwargs)
+            if plot_baseline:
+                self.baseline_survival_.plot(ax=axes, ls="--", color="k")
 
         else:
             axes = []
@@ -1602,8 +1604,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 X.index = ["%s=%s" % (covariate, g) for g in values]
                 X[covariate] = values
 
-                self.predict_survival_function(X).plot(ax=ax)
-                baseline_survival_.plot(ax=ax, ls="--", label="stratum %s baseline survival" % str(stratum))
+                self.predict_survival_function(X).plot(ax=ax, **kwargs)
+                if plot_baseline:
+                    baseline_survival_.plot(ax=ax, ls="--", label="stratum %s baseline survival" % str(stratum))
                 plt.legend()
                 axes.append(ax)
         return axes
@@ -1612,10 +1615,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self, training_df, advice=True, show_plots=False, p_value_threshold=0.05, plot_n_bootstraps=10
     ):
         """
-        Use this function to test the proportional hazards assumption. See iterative usage example at 
+        Use this function to test the proportional hazards assumption. See iterative usage example at
         https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
 
-        
+
         Parameters
         -----------
 
@@ -1625,14 +1628,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             display advice as output to the user's screen
         show_plots: boolean, optional
             display plots of the scaled schoenfeld residuals and loess curves. This is an eyeball test for violations.
-            This will slow down the function significantly. 
+            This will slow down the function significantly.
         p_value_threshold: float, optional
-            the threshold to use to alert the user of violations. See note below. 
+            the threshold to use to alert the user of violations. See note below.
         plot_n_bootstraps:
             in the plots displayed, also display plot_n_bootstraps bootstrapped loess curves. This will slow down
-            the function significantly. 
-    
-        
+            the function significantly.
+
+
         Examples
         ----------
 
@@ -1648,15 +1651,15 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         Notes
         -------
         The ``p_value_threshold`` is arbitrarily set at 0.05. Under the null, some covariates
-        will be below the threshold (i.e. by chance). This is compounded when there are many covariates. 
-        
-        Similarly, when there are lots of observations, even minor deviances from the proportional hazard 
-        assumption will be flagged. 
+        will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
 
-        With that in mind, it's best to use a combination of statistical tests and eyeball tests to 
-        determine the most serious violations. 
+        Similarly, when there are lots of observations, even minor deviances from the proportional hazard
+        assumption will be flagged.
 
-        
+        With that in mind, it's best to use a combination of statistical tests and eyeball tests to
+        determine the most serious violations.
+
+
         References
         -----------
         section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
@@ -1679,7 +1682,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         counter = 0
         n = residuals_and_duration.shape[0]
 
-        for variable in self.hazards_.columns:
+        for variable in self.hazards_.index:
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if minumum_observed_p_value > p_value_threshold:
                 continue
@@ -1691,14 +1694,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     print(
                         dedent(
                             """
-                    The ``p_value_threshold`` is set at %.3f. Even under the null hypothesis of no violations, some covariates
-                    will be below the threshold (i.e. by chance). This is compounded when there are many covariates. 
+                    The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates
+                    will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
 
-                    Similarly, when there are lots of observations, even minor deviances from the proportional hazard 
-                    assumption will be flagged. 
+                    Similarly, when there are lots of observations, even minor deviances from the proportional hazard
+                    assumption will be flagged.
 
-                    With that in mind, it's best to use a combination of statistical tests and eyeball tests to 
-                    determine the most serious violations. 
+                    With that in mind, it's best to use a combination of statistical tests and eyeball tests to
+                    determine the most serious violations.
 
                     """
                             % p_value_threshold
@@ -1798,14 +1801,34 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         to survival data, including censorships.
 
         For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
-        onto the training dataset. It's analgous to the R^2 in linear models.
+        onto the training dataset.
+
+        References
+        ----------
+        https://stats.stackexchange.com/questions/133817/stratified-concordance-index-survivalsurvconcordance
 
         """
         # pylint: disable=access-member-before-definition
         if hasattr(self, "_predicted_partial_hazards_"):
-            self._concordance_score_ = concordance_index(
-                self.durations, -self._predicted_partial_hazards_, self.event_observed
-            )
+            if self.strata:
+                # https://stats.stackexchange.com/questions/133817/stratified-concordance-index-survivalsurvconcordance
+                num_correct, num_tied, num_pairs = 0, 0, 0
+                for _, _df in self._predicted_partial_hazards_.groupby(self.strata):
+                    if _df.shape[0] == 1:
+                        continue
+                    _num_correct, _num_tied, _num_pairs = _concordance_summary_statistics(
+                        _df["T"].values, -_df["P"].values, _df["E"].values
+                    )
+                    num_correct += _num_correct
+                    num_tied += _num_tied
+                    num_pairs += _num_pairs
+            else:
+                df = self._predicted_partial_hazards_
+                num_correct, num_tied, num_pairs = _concordance_summary_statistics(
+                    df["T"].values, -df["P"].values, df["E"].values
+                )
+
+            self._concordance_score_ = _concordance_ratio(num_correct, num_tied, num_pairs)
             del self._predicted_partial_hazards_
             return self._concordance_score_
         return self._concordance_score_

@@ -26,23 +26,24 @@ from lifelines.fitters import BaseFitter
 from lifelines import CoxPHFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (
-    inv_normal_cdf,
-    normalize,
-    pass_for_numeric_dtypes_or_raise,
-    check_low_var,
-    # check_for_overlapping_intervals,
-    check_complete_separation_low_variance,
-    ConvergenceWarning,
-    StepSizer,
     _get_index,
+    _to_list,
+    # check_for_overlapping_intervals,
+    check_for_numeric_dtypes_or_raise,
+    check_low_var,
+    check_complete_separation_low_variance,
     check_for_immediate_deaths,
     check_for_instantaneous_events,
+    pass_for_numeric_dtypes_or_raise_array,
     ConvergenceError,
+    ConvergenceWarning,
+    inv_normal_cdf,
+    normalize,
+    StepSizer,
     check_nans_or_infs,
     string_justify,
     format_p_value,
     format_floats,
-    _to_list,
     coalesce,
 )
 
@@ -57,14 +58,14 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     Parameters
     ----------
-    alpha: float, optional
+    alpha: float, optional (default=0.05)
        the level in the confidence intervals.
     penalizer: float, optional
         the coefficient of an l2 penalizer in the regression
 
     """
 
-    def __init__(self, alpha=0.95, penalizer=0.0, strata=None):
+    def __init__(self, alpha=0.05, penalizer=0.0, strata=None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         if penalizer < 0:
@@ -160,7 +161,11 @@ class CoxTimeVaryingFitter(BaseFitter):
             df = df.set_index(_to_list(self.strata) + ["id"])  # TODO: needs to be a list
             df = df.sort_index()
 
-        events, start, stop = df.pop("event").astype(bool), df.pop("start"), df.pop("stop")
+        events, start, stop = (
+            pass_for_numeric_dtypes_or_raise_array(df.pop("event")).astype(bool),
+            df.pop("start"),
+            df.pop("stop"),
+        )
         weights = df.pop("__weights").astype(float)
 
         self._check_values(df, events, start, stop, self.event_col)
@@ -179,7 +184,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             step_size=step_size,
         )
 
-        self.hazards_ = pd.DataFrame(hazards_.T, columns=df.columns, index=["coef"]) / self._norm_std
+        self.hazards_ = pd.Series(hazards_, index=df.columns, name="coef") / self._norm_std
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
@@ -201,7 +206,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_nans_or_infs(df)
         check_low_var(df)
         check_complete_separation_low_variance(df, events, event_col)
-        pass_for_numeric_dtypes_or_raise(df)
+        check_for_numeric_dtypes_or_raise(df)
         check_for_immediate_deaths(events, start, stop)
         check_for_instantaneous_events(start, stop)
 
@@ -227,43 +232,40 @@ class CoxTimeVaryingFitter(BaseFitter):
             yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
 
     def _compute_z_values(self):
-        return self.hazards_.loc["coef"] / self.standard_errors_.loc["se"]
+        return self.hazards_ / self.standard_errors_
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
     def _compute_confidence_intervals(self):
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.r_[hazards - alpha2 * se, hazards + alpha2 * se],
-            index=["lower-bound", "upper-bound"],
-            columns=self.hazards_.columns,
+            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
         )
 
     @property
     def summary(self):
         """
         Summary statistics describing the fit.
-        Set alpha property in the object before calling.
 
         Returns
         -------
-        df: DataFrame 
+        df: DataFrame
             contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
         with np.errstate(invalid="ignore", divide="ignore"):
-            df = pd.DataFrame(index=self.hazards_.columns)
-            df["coef"] = self.hazards_.loc["coef"].values
-            df["exp(coef)"] = np.exp(self.hazards_.loc["coef"].values)
-            df["se(coef)"] = self.standard_errors_.loc["se"].values
+            df = pd.DataFrame(index=self.hazards_.index)
+            df["coef"] = self.hazards_
+            df["exp(coef)"] = np.exp(self.hazards_)
+            df["se(coef)"] = self.standard_errors_
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %.2f" % self.alpha] = self.confidence_intervals_.loc["lower-bound"].values
-            df["upper %.2f" % self.alpha] = self.confidence_intervals_.loc["upper-bound"].values
+            df["lower %g" % (1 - self.alpha)] = self.confidence_intervals_["lower-bound"]
+            df["upper %g" % (1 - self.alpha)] = self.confidence_intervals_["upper-bound"]
             return df
 
     def _newton_rhaphson(
@@ -274,12 +276,12 @@ class CoxTimeVaryingFitter(BaseFitter):
 
         Parameters
         ----------
-        df: DataFrame 
+        df: DataFrame
         stop_times_events: DataFrame
              meta information about the subjects history
-        show_progress: boolean, optional (default: True) 
+        show_progress: boolean, optional (default: True)
             to show verbous output of convergence
-        step_size: float 
+        step_size: float
             > 0 to determine a starting step size in NR algorithm.
         precision: float
             the convergence halts if the norm of delta between
@@ -294,7 +296,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         _, d = df.shape
 
         # make sure betas are correct size.
-        beta = np.zeros((d, 1))
+        beta = np.zeros((d,))
 
         i = 0
         converging = True
@@ -312,8 +314,8 @@ class CoxTimeVaryingFitter(BaseFitter):
                     df.values, events.values, start.values, stop.values, weights.values, beta
                 )
             else:
-                g = np.zeros_like(beta).T
-                h = np.zeros((beta.shape[0], beta.shape[0]))
+                g = np.zeros_like(beta)
+                h = np.zeros((d, d))
                 ll = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(
                     df, events, start, stop, weights, self._get_gradients, beta
@@ -324,12 +326,12 @@ class CoxTimeVaryingFitter(BaseFitter):
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
-                g -= self.penalizer * beta.T
+                g -= self.penalizer * beta
                 h.flat[:: d + 1] -= self.penalizer
 
             try:
                 # reusing a piece to make g * inv(h) * g.T faster later
-                inv_h_dot_g_T = spsolve(-h, g.T, sym_pos=True)
+                inv_h_dot_g_T = spsolve(-h, g, sym_pos=True)
             except ValueError as e:
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
@@ -422,7 +424,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Returns
         -------
         hessian: (d, d) numpy array,
-        gradient: (1, d) numpy array
+        gradient: (d,) numpy array
         log_likelihood: float
         """
 
@@ -430,7 +432,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
         log_lik = 0
-        weights = weights[:, None]
+        # weights = weights[:, None]
         unique_death_times = np.unique(stop[events])
 
         for t in unique_death_times:
@@ -444,7 +446,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             events_at_t = events[ix]
 
             phi_i = weights_at_t * np.exp(np.dot(X_at_t, beta))
-            phi_x_i = phi_i * X_at_t
+            phi_x_i = phi_i[:, None] * X_at_t
             phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
@@ -458,11 +460,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             tied_death_counts = array_sum_to_scalar(deaths.astype(int))  # should always at least 1
 
             xi_deaths = X_at_t[deaths]
-            weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths * xi_deaths)
+            x_death_sum = matrix_axis_0_sum_to_array(weights_at_t[deaths, None] * xi_deaths)
 
-            weight_count = array_sum_to_scalar(weights_deaths)
+            weight_count = array_sum_to_scalar(weights_at_t[deaths])
             weighted_average = weight_count / tied_death_counts
 
             #
@@ -481,7 +482,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
                 tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
-                tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
+                tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths, None] * xi_deaths)
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
@@ -500,10 +501,10 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             a2 = summand.T.dot(summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
-            log_lik = log_lik + np.dot(x_death_sum, beta)[0] + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
-        return hessian, gradient.reshape(1, d), log_lik
+        return hessian, gradient, log_lik
 
     def predict_log_partial_hazard(self, X):
         r"""
@@ -530,14 +531,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         same as the training dataset.
         """
         if isinstance(X, pd.DataFrame):
-            order = self.hazards_.columns
+            order = self.hazards_.index
             X = X[order]
-            pass_for_numeric_dtypes_or_raise(X)
+            check_for_numeric_dtypes_or_raise(X)
 
         X = X.astype(float)
         index = _get_index(X)
         X = normalize(X, self._norm_mean.values, 1)
-        return pd.DataFrame(np.dot(X, self.hazards_.T), index=index)
+        return pd.DataFrame(np.dot(X, self.hazards_), index=index)
 
     def predict_partial_hazard(self, X):
         r"""
@@ -573,8 +574,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         decimals: int, optional (default=2)
             specify the number of decimal places to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing 
-            multiple outputs. 
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
 
         """
 
@@ -612,7 +613,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # Significance code explanation
         print("---")
         print(
-            "Likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
             )
         )
@@ -637,7 +638,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ll_alt = self._log_likelihood
 
         test_stat = 2 * (ll_alt - ll_null)
-        degrees_freedom = self.hazards_.shape[1]
+        degrees_freedom = self.hazards_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         with np.errstate(invalid="ignore", divide="ignore"):
             return test_stat, degrees_freedom, -np.log2(p_value)
@@ -670,14 +671,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         errorbar_kwargs.setdefault("elinewidth", 1.25)
         errorbar_kwargs.setdefault("capsize", 3)
 
-        alpha2 = inv_normal_cdf((1.0 + self.alpha) / 2.0)
+        z = inv_normal_cdf(1 - self.alpha / 2)
 
         if columns is None:
-            columns = self.hazards_.columns
+            columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
-        symmetric_errors = alpha2 * self.standard_errors_[columns].squeeze().values.copy()
-        hazards = self.hazards_[columns].values[0].copy()
+        symmetric_errors = z * self.standard_errors_[columns].to_frame().squeeze(axis=1).values.copy()
+        hazards = self.hazards_[columns].values.copy()
 
         order = np.argsort(hazards)
 
@@ -689,7 +690,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         tick_labels = [columns[i] for i in order]
 
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("log(HR) (%g%% CI)" % (self.alpha * 100))
+        plt.xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
 
@@ -764,4 +765,4 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             se = np.sqrt(self._compute_sandwich_estimator(X, events, start, stop, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.DataFrame(se[None, :], index=["se"], columns=self.hazards_.columns)
+        return pd.Series(se, index=self.hazards_.index, name="se")
