@@ -17,10 +17,10 @@ defvjp(
         x, lambda g: -g * np.exp(norm.logpdf(x, loc, scale) - logsf(x, loc, scale))
     ),
     lambda ans, x, loc=0.0, scale=1.0: unbroadcast_f(
-        loc, lambda g: g * np.exp(logpdf(x, loc, scale) - logsf(x, loc, scale))
+        loc, lambda g: g * np.exp(norm.logpdf(x, loc, scale) - logsf(x, loc, scale))
     ),
     lambda ans, x, loc=0.0, scale=1.0: unbroadcast_f(
-        scale, lambda g: g * np.exp(logpdf(x, loc, scale) - logsf(x, loc, scale)) * (x - loc) / scale
+        scale, lambda g: g * np.exp(norm.logpdf(x, loc, scale) - logsf(x, loc, scale)) * (x - loc) / scale
     ),
 )
 
