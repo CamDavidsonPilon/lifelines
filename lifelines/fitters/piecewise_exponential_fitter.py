@@ -11,17 +11,23 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
     hazard rate:
 
     .. math::  h(t) = \begin{cases}
-                        \lambda_0,  & \text{if $t \le \tau_0$} \\
-                        \lambda_1 & \text{if $\tau_0 < t \le \tau_1$} \\
-                        \lambda_2 & \text{if $\tau_1 < t \le \tau_2$} \\
-                        ... 
+                        1/\lambda_0,  & \text{if $t \le \tau_0$} \\
+                        1/\lambda_1 & \text{if $\tau_0 < t \le \tau_1$} \\
+                        1/\lambda_2 & \text{if $\tau_1 < t \le \tau_2$} \\
+                        ...
                       \end{cases}
 
-    You specify the breakpoints, :math:`\tau_i`, and *lifelines* will find the 
-    optional values for the parameters. 
+    You specify the breakpoints, :math:`\tau_i`, and *lifelines* will find the
+    optional values for the parameters.
 
     After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``plot``, ``cumulative_hazard_``
     A summary of the fit is available with the method ``print_summary()``
+
+    Important
+    ----------
+    The parameterization of this model changed in lifelines 0.19.1. Previously, the cumulative hazard looked like
+    :math:`\lambda_i t`. The parameterization is now the recipricol of :math:`\lambda_i`.
+
 
     """
 
@@ -48,4 +54,4 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
         bp = self.breakpoints
         M = np.minimum(np.tile(bp, (n, 1)), times)
         M = np.hstack([M[:, (0,)], np.diff(M, axis=1)])
-        return np.dot(M, params)
+        return np.dot(M, 1 / params)

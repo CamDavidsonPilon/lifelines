@@ -2,9 +2,27 @@
 from __future__ import print_function
 from __future__ import division
 import autograd.numpy as np
+from scipy.stats import norm as _scipy_norm
 from autograd.scipy.stats import norm
-
+from autograd.extend import primitive, defvjp
+from autograd.numpy.numpy_vjps import unbroadcast_f
 from lifelines.fitters import KnownModelParametericUnivariateFitter
+
+
+logsf = primitive(_scipy_norm.logsf)
+
+defvjp(
+    logsf,
+    lambda ans, x, loc=0.0, scale=1.0: unbroadcast_f(
+        x, lambda g: -g * np.exp(norm.logpdf(x, loc, scale) - logsf(x, loc, scale))
+    ),
+    lambda ans, x, loc=0.0, scale=1.0: unbroadcast_f(
+        loc, lambda g: g * np.exp(norm.logpdf(x, loc, scale) - logsf(x, loc, scale))
+    ),
+    lambda ans, x, loc=0.0, scale=1.0: unbroadcast_f(
+        scale, lambda g: g * np.exp(norm.logpdf(x, loc, scale) - logsf(x, loc, scale)) * (x - loc) / scale
+    ),
+)
 
 
 class LogNormalFitter(KnownModelParametericUnivariateFitter):
@@ -34,6 +52,9 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
     def _cumulative_hazard(self, params, times):
         mu_, sigma_ = params
         Z = (np.log(times) - mu_) / sigma_
-        cdf = norm.cdf(Z, loc=0, scale=1)
-        cdf = np.clip(cdf, 0.0, 1 - 1e-14)
-        return -np.log1p(-cdf)
+        return -logsf(Z)
+
+    def _log_hazard(self, params, times):
+        mu_, sigma_ = params
+        Z = (np.log(times) - mu_) / sigma_
+        return norm.logpdf(Z, loc=0, scale=1) - np.log(sigma_) - np.log(times) - logsf(Z)
