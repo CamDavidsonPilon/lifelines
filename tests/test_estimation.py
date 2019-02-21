@@ -193,7 +193,7 @@ class TestParametricUnivariateFitters:
         coef, std = uaf.summary.loc["c_", ["coef", "se(coef)"]]
 
         assert (upper - lower) > 0
-        assert abs(upper - lower) > 0.5
+        assert abs(upper - lower) > 0.3
         assert coef - std > lower
         assert coef + std < upper
 

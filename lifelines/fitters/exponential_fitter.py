@@ -45,7 +45,7 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
         T = T - entry
         lambda_ = T.sum() / E.sum()
         lambda_variance_ = T.sum() / lambda_
-        log_likelihood = -np.log(lambda_) * E.sum() + lambda_ * T.sum()
+        log_likelihood = -np.log(lambda_) * E.sum() - T.sum() / lambda_
         return [lambda_], log_likelihood, np.array([[1.0 / lambda_variance_]])
 
     def _cumulative_hazard(self, params, times):
