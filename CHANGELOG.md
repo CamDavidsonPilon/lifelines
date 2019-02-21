@@ -1,5 +1,15 @@
 ### Changelog
 
+#### 0.19.1
+
+##### New features
+ - improved stability of `LogNormalFitter`
+ - Matplotlib for Python3 users are not longer forced to use 2.x.
+
+##### API changes
+ - **Important**: we changed the parameterization of the `PiecewiseExponential` to the same as `ExponentialFitter` (from `\lambda * t` to `t / \lambda`).
+
+
 #### 0.19.0
 
 ##### New features

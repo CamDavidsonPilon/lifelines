@@ -333,16 +333,16 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def _survival_function(self, params, times):
         return anp.exp(-self._cumulative_hazard(params, times))
 
+    def _log_hazard(self, params, times):
+        hz = self._hazard(params, times)
+        hz = anp.clip(hz, 1e-18, np.inf)
+        return anp.log(hz)
+
     def _negative_log_likelihood(self, params, T, E, entry):
         n = T.shape[0]
-        hz = self._hazard(params, T[E])
-        hz = anp.clip(hz, 1e-18, np.inf)
+        log_hz = self._log_hazard(params, T[E])
 
-        ll = (
-            (anp.log(hz)).sum()
-            - self._cumulative_hazard(params, T).sum()
-            + self._cumulative_hazard(params, entry).sum()
-        )
+        ll = log_hz.sum() - self._cumulative_hazard(params, T).sum() + self._cumulative_hazard(params, entry).sum()
         return -ll / n
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
