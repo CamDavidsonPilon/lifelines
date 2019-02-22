@@ -785,6 +785,6 @@ class WeibullAFTFitter(BaseFitter):
         self.predict_survival_function(X, ancillary_X=ancillary_X).plot(ax=ax, **kwargs)
         if plot_baseline:
             self.predict_survival_function(x_bar, ancillary_X=x_bar_anc).rename(columns={0: "baseline survival"}).plot(
-                ax=ax, ls="--", color="k"
+                ax=ax, ls=":", color="k"
             )
         return ax

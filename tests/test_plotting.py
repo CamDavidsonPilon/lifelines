@@ -13,6 +13,7 @@ from lifelines import (
     CoxTimeVaryingFitter,
     AalenAdditiveFitter,
     WeibullFitter,
+    WeibullAFTFitter,
 )
 
 from tests.test_estimation import known_parametric_univariate_fitters
@@ -49,9 +50,9 @@ class TestPlotting:
         self.plt = plt
 
     def test_parametric_univarite_fitters_has_plotting_methods(self, known_parametric_univariate_fitters):
-        positive_sample_lifetimes = np.arange(100)
+        positive_sample_lifetimes = np.arange(1, 100)
         for fitter in known_parametric_univariate_fitters:
-            f = fitter().fit(positive_sample_lifetimes[0])
+            f = fitter().fit(positive_sample_lifetimes)
             assert f.plot() is not None
             assert f.plot_cumulative_hazard() is not None
             assert f.plot_survival_function() is not None
@@ -243,8 +244,8 @@ class TestPlotting:
         return
 
     def test_weibull_plotting(self, block):
-        T = np.random.exponential(5, size=(2000, 1)) ** 2
-        wf = WeibullFitter().fit(T)
+        T = 50 * np.random.exponential(1, size=(200, 1)) ** 2
+        wf = WeibullFitter().fit(T, timeline=np.linspace(0, 5, 100))
         wf.plot_hazard()
         self.plt.title("test_weibull_plotting:hazard")
         self.plt.show(block=block)
@@ -256,7 +257,7 @@ class TestPlotting:
 
     def test_label_can_be_changed_on_univariate_fitters(self, block):
         T = np.random.exponential(5, size=(2000, 1)) ** 2
-        wf = WeibullFitter().fit(T)
+        wf = WeibullFitter().fit(T, timeline=np.linspace(0, 5))
         ax = wf.plot_hazard(label="abc")
 
         wf.plot_cumulative_hazard(ax=ax, label="123")
@@ -447,3 +448,30 @@ class TestPlotting:
         self.plt.title("test_aalen_additive_fit_with_censor")
         self.plt.show(block=block)
         return
+
+    def test_weibull_aft_plotting(self, block):
+        df = load_regression_dataset()
+        aft = WeibullAFTFitter()
+        aft.fit(df, "T", "E")
+        aft.plot()
+        self.plt.tight_layout()
+        self.plt.title("test_weibull_aft_plotting")
+        self.plt.show(block=block)
+
+    def test_weibull_aft_plotting_with_subset_of_columns(self, block):
+        df = load_regression_dataset()
+        aft = WeibullAFTFitter()
+        aft.fit(df, "T", "E")
+        aft.plot(columns=["var1", "var2"])
+        self.plt.tight_layout()
+        self.plt.title("test_weibull_aft_plotting_with_subset_of_columns")
+        self.plt.show(block=block)
+
+    def test_weibull_aft_plot_covariate_groups(self, block):
+        df = load_rossi()
+        aft = WeibullAFTFitter()
+        aft.fit(df, "week", "arrest")
+        aft.plot_covariate_groups("age", [10, 50, 80])
+        self.plt.tight_layout()
+        self.plt.title("test_weibull_aft_plot_covariate_groups")
+        self.plt.show(block=block)

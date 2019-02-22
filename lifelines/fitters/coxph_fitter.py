@@ -13,19 +13,10 @@ from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve, LinAlgError
 from scipy.integrate import trapz
 from scipy import stats
-
-
-# for some summations, bottleneck is faster than numpy sums. Let's use them intelligently.
-try:
-    from bottleneck import nansum as array_sum_to_scalar
-except ImportError:
-    from numpy import sum as array_sum_to_scalar
-finally:
-    matrix_axis_0_sum_to_array = lambda m: np.sum(m, 0)
-
+from bottleneck import nansum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter
-from lifelines.plotting import set_kwargs_ax
+from lifelines.plotting import set_kwargs_ax, set_kwargs_drawstyle
 from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers
 from lifelines.utils.lowess import lowess
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio
@@ -54,6 +45,8 @@ from lifelines.utils import (
 )
 
 __all__ = ["CoxPHFitter"]
+
+matrix_axis_0_sum_to_array = lambda m: np.sum(m, 0)
 
 
 class BatchVsSingle:
@@ -1580,6 +1573,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if covariate not in self.hazards_.index:
             raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
+        set_kwargs_drawstyle(kwargs, "steps-post")
+
         if self.strata is None:
             axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
             x_bar = self._norm_mean.to_frame().T
@@ -1589,7 +1584,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
             self.predict_survival_function(X).plot(ax=axes, **kwargs)
             if plot_baseline:
-                self.baseline_survival_.plot(ax=axes, ls="--", color="k")
+                self.baseline_survival_.plot(ax=axes, ls=":", color="k", drawstyle="steps-post")
 
         else:
             axes = []
@@ -1606,7 +1601,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
                 self.predict_survival_function(X).plot(ax=ax, **kwargs)
                 if plot_baseline:
-                    baseline_survival_.plot(ax=ax, ls="--", label="stratum %s baseline survival" % str(stratum))
+                    baseline_survival_.plot(
+                        ax=ax, ls=":", label="stratum %s baseline survival" % str(stratum), drawstyle="steps-post"
+                    )
                 plt.legend()
                 axes.append(ax)
         return axes

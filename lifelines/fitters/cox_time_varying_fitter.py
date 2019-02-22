@@ -13,14 +13,8 @@ from scipy import stats
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve, LinAlgError
 
-# for some summations, bottleneck is faster than numpy sums. Let's use them intelligently.
-try:
-    from bottleneck import nansum as array_sum_to_scalar
-except ImportError:
-    from numpy import sum as array_sum_to_scalar
-finally:
-    matrix_axis_0_sum_to_array = lambda m: np.sum(m, 0)
 
+from bottleneck import nansum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter
 from lifelines import CoxPHFitter
@@ -48,6 +42,8 @@ from lifelines.utils import (
 )
 
 __all__ = ["CoxTimeVaryingFitter"]
+
+matrix_axis_0_sum_to_array = lambda m: np.sum(m, 0)
 
 
 class CoxTimeVaryingFitter(BaseFitter):

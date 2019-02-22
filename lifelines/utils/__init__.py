@@ -805,7 +805,7 @@ def pass_for_numeric_dtypes_or_raise_array(x):
 
     """
     try:
-        return pd.to_numeric(x)
+        return pd.to_numeric(x.squeeze())
     except:
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 

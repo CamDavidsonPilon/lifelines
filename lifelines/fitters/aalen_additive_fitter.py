@@ -30,7 +30,7 @@ from lifelines.utils import (
     StatisticalWarning,
 )
 
-from lifelines.plotting import fill_between_steps, set_kwargs_ax
+from lifelines.plotting import set_kwargs_ax
 
 
 class AalenAdditiveFitter(BaseFitter):
@@ -416,7 +416,7 @@ It's important to know that the naive variance estimates of the coefficients are
 
         def shaded_plot(ax, x, y, y_upper, y_lower, **kwargs):
             base_line, = ax.plot(x, y, drawstyle="steps-post", **kwargs)
-            fill_between_steps(x, y_lower, y2=y_upper, ax=ax, alpha=0.25, color=base_line.get_color(), linewidth=1.0)
+            ax.fill_between(x, y_lower, y2=y_upper, alpha=0.25, color=base_line.get_color(), linewidth=1.0, step="post")
 
         def create_df_slicer(loc, iloc):
             get_method = "loc" if loc is not None else "iloc"
