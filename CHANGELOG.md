@@ -1,6 +1,6 @@
 ### Changelog
 
-#### 0.19.1
+#### 0.19.2
 
 ##### New features
  - `ParametricUnivariateFitters`, like `WeibullFitter`, have smoothed plots when plotting (vs stepped plots)
