@@ -266,6 +266,13 @@ class TestUnivariateFitters:
             PiecewiseExponentialFitterTesting,
         ]
 
+    def test_allow_dataframes(self, univariate_fitters):
+        t_2d = np.random.exponential(5, size=(2000, 1)) ** 2
+        t_df = pd.DataFrame(t_2d)
+        for f in univariate_fitters:
+            f().fit(t_2d)
+            f().fit(t_df)
+
     def test_default_alpha_is_005(self, univariate_fitters):
         for f in univariate_fitters:
             assert f().alpha == 0.05
