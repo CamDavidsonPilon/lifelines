@@ -266,6 +266,13 @@ class TestUnivariateFitters:
             PiecewiseExponentialFitterTesting,
         ]
 
+    def test_allow_dataframes(self, univariate_fitters):
+        t_2d = np.random.exponential(5, size=(2000, 1)) ** 2
+        t_df = pd.DataFrame(t_2d)
+        for f in univariate_fitters:
+            f().fit(t_2d)
+            f().fit(t_df)
+
     def test_default_alpha_is_005(self, univariate_fitters):
         for f in univariate_fitters:
             assert f().alpha == 0.05
@@ -3131,7 +3138,13 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(ctv.summary["se(coef)"].values, [1.542, 1.997], decimal=3)
 
     def test_fitter_will_raise_an_error_if_immediate_death_present(self, ctv):
-        df = pd.DataFrame.from_records([{"id": 1, "start": 0, "stop": 0, "var": 1.0, "event": 1}])
+        df = pd.DataFrame.from_records(
+            [
+                {"id": 1, "start": 0, "stop": 0, "var": 1.0, "event": 1},
+                {"id": 1, "start": 0, "stop": 10, "var": 1.0, "event": 1},
+                {"id": 2, "start": 0, "stop": 10, "var": 1.0, "event": 1},
+            ]
+        )
 
         with pytest.raises(ValueError):
             ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")

@@ -22,7 +22,7 @@ import pandas as pd
 from numpy.linalg import inv, pinv
 
 
-from lifelines.plotting import _plot_estimate
+from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
 from lifelines.utils import (
     qth_survival_times,
     _to_array,
@@ -744,11 +744,20 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
 
     @_must_call_fit_first
+    def plot(self, **kwargs):
+        set_kwargs_drawstyle(kwargs, "default")
+        return _plot_estimate(
+            self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
+        )
+
+    @_must_call_fit_first
     def plot_cumulative_hazard(self, **kwargs):
+        set_kwargs_drawstyle(kwargs, "default")
         return self.plot(**kwargs)
 
     @_must_call_fit_first
     def plot_survival_function(self, **kwargs):
+        set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(
             self,
             estimate=getattr(self, "survival_function_"),
@@ -758,6 +767,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     @_must_call_fit_first
     def plot_hazard(self, **kwargs):
+        set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(
             self, estimate=getattr(self, "hazard_"), confidence_intervals=self.confidence_interval_hazard_, **kwargs
         )

@@ -1,5 +1,14 @@
 ### Changelog
 
+#### 0.19.2
+
+##### New features
+ - `ParametricUnivariateFitters`, like `WeibullFitter`, have smoothed plots when plotting (vs stepped plots)
+
+##### Bug fixes
+ - The `ExponentialFitter` log likelihood _value_ was incorrect - inference was correct however.
+ - Univariate fitters are more flexiable and can allow 2-d and DataFrames as inputs.
+
 #### 0.19.1
 
 ##### New features

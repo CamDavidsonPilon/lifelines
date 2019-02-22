@@ -75,7 +75,7 @@ def add_at_risk_counts(*fitters, **kwargs):
     """
     Add counts showing how many individuals were at risk at each time point in
     survival/hazard plots.
-    
+
     Parameters
     ----------
     fitters:
@@ -182,17 +182,17 @@ def plot_lifetimes(
 ):
     """
     Retuns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#Censoring
-    
+
     Parameters
     -----------
     durations: (n,) numpy array or pd.Series
       duration subject was observed for.
     event_observed: (n,) numpy array or pd.Series
       array of booleans: True if event observed, else False.
-    entry: (n,) numpy array or pd.Series 
+    entry: (n,) numpy array or pd.Series
       offsetting the births away from t=0. This could be from left-truncation, or delayed entry into study.
     left_truncated: boolean
-      if entry is provided, and the data is left-truncated, this will display additional information in the plot to reflect this. 
+      if entry is provided, and the data is left-truncated, this will display additional information in the plot to reflect this.
     sort_by_duration: boolean
       sort by the duration vector
     event_observed_color: str
@@ -252,8 +252,8 @@ def set_kwargs_color(kwargs):
     kwargs["c"] = coalesce(kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color())
 
 
-def set_kwargs_drawstyle(kwargs):
-    kwargs["drawstyle"] = kwargs.get("drawstyle", "steps-post")
+def set_kwargs_drawstyle(kwargs, default="steps-post"):
+    kwargs["drawstyle"] = kwargs.get("drawstyle", default)
 
 
 def set_kwargs_label(kwargs, cls):
@@ -338,7 +338,7 @@ def _plot_estimate(
         If show_censors, this dictionary will be passed into the plot call.
     ci_alpha: bool
         the transparency level of the confidence interval. Default: 0.3
-    ci_force_lines: bool 
+    ci_force_lines: bool
         force the confidence intervals to be line plots (versus default shaded areas). Default: False
     ci_show: bool
         show confidence intervals. Default: True
@@ -359,7 +359,7 @@ def _plot_estimate(
 
     Returns
     -------
-    ax: 
+    ax:
         a pyplot axis object
     """
     plot_estimate_config = PlotEstimateConfig(
@@ -387,7 +387,7 @@ def _plot_estimate(
                 linewidth=1,
                 color=[plot_estimate_config.colour],
                 legend=ci_legend,
-                drawstyle=plot_estimate_config.kwargs.get("drawstyle", "default"),
+                drawstyle=plot_estimate_config.kwargs["drawstyle"],
                 ax=plot_estimate_config.ax,
                 alpha=0.6,
             )
@@ -395,14 +395,14 @@ def _plot_estimate(
             x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
             lower = dataframe_slicer(plot_estimate_config.confidence_interval_.filter(like="lower")).values[:, 0]
             upper = dataframe_slicer(plot_estimate_config.confidence_interval_.filter(like="upper")).values[:, 0]
-            fill_between_steps(
-                x,
-                lower,
-                y2=upper,
-                ax=plot_estimate_config.ax,
-                alpha=ci_alpha,
-                color=plot_estimate_config.colour,
-                linewidth=1.0,
+
+            if plot_estimate_config.kwargs["drawstyle"] == "default":
+                step = None
+            elif plot_estimate_config.kwargs["drawstyle"].startswith("step"):
+                step = plot_estimate_config.kwargs["drawstyle"].replace("steps-", "")
+
+            plot_estimate_config.ax.fill_between(
+                x, lower, upper, alpha=ci_alpha, color=plot_estimate_config.colour, linewidth=1.0, step=step
             )
 
     if at_risk_counts:
@@ -446,50 +446,3 @@ class PlotEstimateConfig:
         else:
             self.estimate_ = estimate
             self.confidence_interval_ = confidence_intervals
-
-
-def fill_between_steps(x, y1, y2=0, h_align="left", ax=None, **kwargs):
-    """ Fills a hole in matplotlib: Fill_between for step plots.
-    https://gist.github.com/thriveth/8352565
-
-    Parameters :
-    ------------
-
-    x : array-like
-        Array/vector of index values. These are assumed to be equally-spaced.
-        If not, the result will probably look weird...
-    y1 : array-like
-        Array/vector of values to be filled under.
-    y2 : array-Like
-        Array/vector or bottom values for filled area. Default is 0.
-
-    **kwargs will be passed to the matplotlib fill_between() function.
-
-    """
-    from matplotlib import pyplot as plt
-
-    # If no Axes opject given, grab the current one:
-    if ax is None:
-        ax = plt.gca()
-    # First, duplicate the x values
-    xx = x.repeat(2)[1:]
-    # Now: the average x binwidth
-    xstep = (x[1:] - x[:-1]).mean()
-    # Now: add one step at end of row.
-    xx = np.append(xx, xx.max() + xstep)
-
-    # Make it possible to change step alignment.
-    if h_align == "mid":
-        xx -= xstep / 2.0
-    elif h_align == "right":
-        xx -= xstep
-
-    # Also, duplicate each y coordinate in both arrays
-    y1 = y1.repeat(2)
-    if isinstance(y2, np.ndarray):
-        y2 = y2.repeat(2)
-
-    # now to the plotting part:
-    ax.fill_between(xx, y1, y2=y2, **kwargs)
-
-    return ax
