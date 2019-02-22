@@ -3138,7 +3138,13 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(ctv.summary["se(coef)"].values, [1.542, 1.997], decimal=3)
 
     def test_fitter_will_raise_an_error_if_immediate_death_present(self, ctv):
-        df = pd.DataFrame.from_records([{"id": 1, "start": 0, "stop": 0, "var": 1.0, "event": 1}])
+        df = pd.DataFrame.from_records(
+            [
+                {"id": 1, "start": 0, "stop": 0, "var": 1.0, "event": 1},
+                {"id": 1, "start": 0, "stop": 10, "var": 1.0, "event": 1},
+                {"id": 2, "start": 0, "stop": 10, "var": 1.0, "event": 1},
+            ]
+        )
 
         with pytest.raises(ValueError):
             ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
