@@ -3,7 +3,7 @@
 -------------------------------------
 
 Survival regression
-=====================================
+#######################
 
 Often we have additional data aside from the duration, and if
 applicable any censorings that occurred. In the previous section's regime dataset, we have
@@ -23,7 +23,7 @@ hazard rate :math:`h(t | x)` as a function of :math:`t` and some covariates :mat
 
 
 The dataset for regression
-###########################
+===========================
 The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. There may be a column denoting the event status of each observation (1 if event occured, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial.
 
 
@@ -50,7 +50,7 @@ If you need to first clean or transform your dataset (encode categorical variabl
 
 
 Cox's proportional hazard model
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=================================
 
 *lifelines* has an implementation of the Cox proportional hazards regression model (implemented in
 R as ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
@@ -61,7 +61,7 @@ Note a few facts about this model: the only time component is in the baseline ha
 
 
 Running the regression
-########################
+-----------------------
 
 
 The implementation of the Cox model in *lifelines* is called ``CoxPHFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats.
@@ -108,7 +108,7 @@ To access the coefficients and the baseline hazard directly, you can use ``cph.h
 
 
 Convergence
-###########################################
+-----------------------
 
 Fitting the Cox model to the data involves using gradient descent. *lifelines* takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence and decrease the number of iterative steps required. If you wish to see the fitting, there is a ``show_progress`` parameter in ``CoxPHFitter.fit`` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
 
@@ -116,7 +116,7 @@ After fitting, the value of the maximum log-likelihood this available using ``cp
 
 
 Goodness of fit
-###########################################
+-----------------------
 
 After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? Interpret the spread as how much "variance" is provided by the baseline hazard versus the partial hazard. The baseline hazard is approximately equal to the Kaplan-Meier curve if none of the variance is explained by the covariates / partial hazard. Deviations from this provide a visual measure of variance explained). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
 
@@ -126,7 +126,7 @@ After fitting, you may want to know how "good" of a fit your model was to the da
 
 
 Prediction
-###########################################
+-----------------------
 
 
 After fitting, you can use use the suite of prediction methods: ``.predict_partial_hazard``, ``.predict_survival_function``, etc.
@@ -205,7 +205,7 @@ From here, you can pick a median or percentile as a best guess as to the subject
 
 
 Plotting the coefficients
-###########################################
+------------------------------
 
 With a fitted model, an alternative way to view the coefficients and their ranges is to use the ``plot`` method.
 
@@ -224,7 +224,7 @@ With a fitted model, an alternative way to view the coefficients and their range
 
 
 Plotting the effect of varying a covariate
-#############################################
+-------------------------------------------
 
 After fitting, we can plot what the survival curves look like as we vary a single covarite while
 holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the ``plot_covariate_groups`` method and give it the covariate of interest, and the values to display.
@@ -244,7 +244,7 @@ holding everything else equal. This is useful to understand the impact of a cova
 
 
 Checking the proportional hazards assumption
-#############################################
+-----------------------------------------------
 
 ``CoxPHFitter`` has a ``check_assumptions`` method that will output violations of the proportional hazard assumption. For a tutorial on how to fix violations, see `Testing the Proportional Hazard Assumptions`_.
 
@@ -253,7 +253,7 @@ Non-proportional hazards is a case of *model misspecification*. Suggestions are 
 
 
 Stratification
-################
+-----------------------------------------------
 
 Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* smaller datasets, defined by the unique values of the stratifing covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``.
 
@@ -297,7 +297,7 @@ To specify variables to be used in stratification, we define them in the call to
     # (49, 2)
 
 Weights & robust errors
-########################
+-----------------------------------------------
 
 Observations can come with weights, as well. These weights may be integer values representing some commonly occuring observation, or they may be float values representing some sampling weights (ex: inverse probability weights). In the ``CoxPHFitter.fit`` method, an kwarg is present for specifying which column in the dataframe should be used as weights, ex: ``CoxPHFitter(df, 'T', 'E', weights_col='weights')``.
 
@@ -323,7 +323,7 @@ When using sampling weights, it's correct to also change the standard error calc
 See more examples in _`Adding weights to observations in a Cox model`.
 
 Clusters & correlations
-##########################
+-----------------------------------------------
 
 Another property your dataset may have is groups of related subjects. This could be caused by:
 
@@ -353,13 +353,13 @@ We call these grouped subjects "clusters", and assume they are designated by som
 For more examples, see _`Correlations between subjects in a Cox model`.
 
 Residuals
-##########################
+-----------------------------------------------
 
 After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modelling questions. See `Assessing Cox model fit using residuals`_.
 
 
 Accelerated failure time models
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+==================================
 
 Suppose we have two populations, A and B, with different survival functions, :math:`S_A(t)` and :math:`S_B(t)`, and they are related by some *accelerated failure rate*, :math:`\lambda`:
 
@@ -389,7 +389,7 @@ Next, we pick a parametric form for the survival function, :math:`S(t)`. The mos
 We call these accelerated failure time models, shortened often to just AFT models. Using *lifelines*, we can fit this model (and the unknown :math:`\rho` parameter too).
 
 The Weibull AFT model
-######################
+-----------------------------------------------
 
 The API for the Weibull AFT model is similar to the other regression models in *lifelines*. After fitting, the coefficients can be accessed using ``.params_`` or ``.summary``, or alternatively printed using ``.print_summary()``
 
@@ -445,7 +445,7 @@ What does the ``rho_    _intercept`` row mean in the above table? Internally, we
 
 
 Modelling ancillary parameters
-#################################
+-----------------------------------------------
 
 In the above model, we left the parameter :math:`\rho` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogenity in the :math:`\rho` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model :math:`\rho`, we use the ``ancillary_df`` keyword argument in the call to ``fit``. There are four valid options:
 
@@ -502,7 +502,7 @@ In the above model, we left the parameter :math:`\rho` as a single unknown. We c
     """
 
 Plotting
-##########
+-----------------------------------------------
 
 The plotting API is the same as in ``CoxPHFitter``. We can view all covarites in a forest plot:
 
@@ -544,7 +544,7 @@ Comparing a few of these survival functions side by side:
 .. image:: images/weibull_aft_two_models_side_by_side.png
 
 Prediction
-###########
+-----------------------------------------------
 
 Given a new subject, we ask questions about their future survival? When are they likely to experience the event? What does their survival function look like? The ``WeibullAFTFitter`` is able to answer these. If we have modelled the ancillary covariates, we are required to include those as well:
 
@@ -599,7 +599,7 @@ There are two tunable parameters that can be used to to acheive a better test sc
 
 
 Aalen's additive model
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=============================
 
 .. warning:: This implementation is still experimental.
 
@@ -776,16 +776,16 @@ Prime Minister Stephen Harper.
 
 
 Model selection in survival regression
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=========================================
 
 Model selection based on residuals
-################################################
+-----------------------------------------------
 
 The sections `Testing the Proportional Hazard Assumptions`_ and `Assessing Cox model fit using residuals`_ may be useful for modelling your data better.
 
 
 Model selection based on predictive power
-################################################
+-----------------------------------------------
 
 If censoring is present, it's not appropriate to use a loss function like mean-squared-error or
 mean-absolute-loss. Instead, one measure is the concordance-index, also known as the c-index. This measure
