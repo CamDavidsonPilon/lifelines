@@ -174,7 +174,7 @@ class CoxPHFitter(BaseFitter):
             See http://courses.washington.edu/b515/l17.pdf.
 
         step_size: float, optional
-            set an initial step size for the fitting algorithm.
+            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
 
         robust: boolean, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
@@ -406,7 +406,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # Method of choice is just efron right now
         if self.tie_method == "Efron":
-            get_gradients = getattr(self, "_get_efron_values_%s" % BatchVsSingle.decide(self._batch_mode, T))
+            decision = BatchVsSingle.decide(self._batch_mode, T)
+            get_gradients = getattr(self, "_get_efron_values_%s" % decision)
+            self._batch_mode = decision == "batch"
         else:
             raise NotImplementedError("Only Efron is available.")
 
@@ -657,7 +659,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         return hessian, gradient, log_lik
 
     @staticmethod
-    def _trivial_log_likelihood(T, E, weights):
+    def _trivial_log_likelihood_batch(T, E, weights):
         # used for log-likelihood test
         log_lik = 0
         unique_death_times = np.unique(T)
@@ -692,6 +694,58 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 factor = np.log(risk_phi)
 
             log_lik = log_lik - weight_count / tied_death_counts * factor
+
+        return log_lik
+
+    @staticmethod
+    def _trivial_log_likelihood_single(T, E, weights):
+        log_lik = 0
+        n = T.shape[0]
+
+        # Init risk and tie sums to zero
+        risk_phi, tie_phi = 0, 0
+        # Init number of ties and weights
+        weight_count = 0.0
+        tied_death_counts = 0
+
+        # Iterate backwards to utilize recursive relationship
+        for i in range(n - 1, -1, -1):
+            # Doing it like this to preserve shape
+            ti = T[i]
+            ei = E[i]
+
+            # Calculate phi values
+            phi_i = w = weights[i]
+
+            # Calculate sums of Risk set
+            risk_phi = risk_phi + phi_i
+
+            # Calculate sums of Ties, if this is an event
+            if ei:
+                tie_phi = tie_phi + phi_i
+
+                # Keep track of count
+                tied_death_counts += 1
+                weight_count += w
+
+            if i > 0 and T[i - 1] == ti:
+                # There are more ties/members of the risk set
+                continue
+            elif tied_death_counts == 0:
+                # Only censored with current time, move on
+                continue
+
+            if tied_death_counts > 1:
+                factor = np.log(risk_phi - np.arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
+            else:
+                factor = np.log(risk_phi)
+
+            log_lik = log_lik - weight_count / tied_death_counts * factor
+
+            # reset tie values
+            tied_death_counts = 0
+            weight_count = 0.0
+            tie_phi = 0
 
         return log_lik
 
@@ -1146,7 +1200,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         justify = string_justify(18)
         print(self)
         print("{} = '{}'".format(justify("duration col"), self.duration_col))
-        print("{} = '{}'".format(justify("event col"), self.event_col))
+        if self.event_col:
+            print("{} = '{}'".format(justify("event col"), self.event_col))
         if self.weights_col:
             print("{} = '{}'".format(justify("weights col"), self.weights_col))
 
@@ -1193,7 +1248,14 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         of no covariates.
 
         """
-        ll_null = self._trivial_log_likelihood(self.durations.values, self.event_observed.values, self.weights.values)
+        if self._batch_mode:
+            ll_null = self._trivial_log_likelihood_batch(
+                self.durations.values, self.event_observed.values, self.weights.values
+            )
+        else:
+            ll_null = self._trivial_log_likelihood_single(
+                self.durations.values, self.event_observed.values, self.weights.values
+            )
         ll_alt = self._log_likelihood
 
         test_stat = 2 * ll_alt - 2 * ll_null

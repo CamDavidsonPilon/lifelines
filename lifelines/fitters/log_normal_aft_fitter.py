@@ -2,24 +2,22 @@
 from __future__ import division
 
 from autograd import numpy as np
-from scipy.special import gamma
 import pandas as pd
 
 from lifelines.utils import _get_index, coalesce
 from lifelines.fitters import ParametericRegressionFitter
+from lifelines.utils.logsf import logsf
 
 
-class WeibullAFTFitter(ParametericRegressionFitter):
+class LogNormalAFTFitter(ParametericRegressionFitter):
     r"""
-    This class implements a Weibull AFT model. The model has parameterized
-    form, with :math:`\lambda(x) = \exp\left(\beta_0 + \beta_1x_1 + ... + \beta_n x_n \right)`,
-    and optionally, :math:`\rho(y) = \exp\left(\alpha_0 + \alpha_1 y_1 + ... + \alpha_m y_m \right)`,
+    This class implements a Log-Normal AFT model. The model has parameterized
+    form, with :math:`\mu(x) = \exp\left(a_0 + a_1x_1 + ... + a_n x_n \right)`,
+    and optionally, :math:`\sigma(y) = \exp\left(b_0 + b_1 y_1 + ... + b_m y_m \right)`,
 
-    .. math::  S(t; x, y) = \exp\left(-\left(\frac{t}{\lambda(x)}\right)^{\rho(y)}\right),
+    The cumulative hazard rate is
 
-    which implies the cumulative hazard rate is
-
-    .. math:: H(t) = \left(\frac{t}{\lambda(x)} \right)^{\rho(y)},
+    .. math:: H(t) = -\log(1 - \Phi((\log(t) - \mu(x))/\sigma(y)))
 
     After calling the `.fit` method, you have access to properties like:
     ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.
@@ -42,18 +40,18 @@ class WeibullAFTFitter(ParametericRegressionFitter):
     """
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):
-        self._ancillary_parameter_name = "rho_"
-        self._primary_parameter_name = "lambda_"
-        super(WeibullAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept)
+        self._primary_parameter_name = "mu_"
+        self._ancillary_parameter_name = "sigma_"
+        super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept)
 
     def _cumulative_hazard(self, params, T, *Xs):
-        lambda_params = params[self._LOOKUP_SLICE["lambda_"]]
-        lambda_ = np.exp(np.dot(Xs[0], lambda_params))
+        mu_params = params[self._LOOKUP_SLICE["mu_"]]
+        mu_ = np.dot(Xs[0], mu_params)
 
-        rho_params = params[self._LOOKUP_SLICE["rho_"]]
-        rho_ = np.exp(np.dot(Xs[1], rho_params))
-
-        return (T / lambda_) ** rho_
+        sigma_params = params[self._LOOKUP_SLICE["sigma_"]]
+        sigma_ = np.exp(np.dot(Xs[1], sigma_params))
+        Z = (np.log(T) - mu_) / sigma_
+        return -logsf(Z)
 
     def predict_percentile(self, X, ancillary_X=None, p=0.5):
         """
@@ -83,9 +81,39 @@ class WeibullAFTFitter(ParametericRegressionFitter):
         predict_median
 
         """
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        # TODO
+        raise NotImplementedError()
 
-        return pd.DataFrame(lambda_ * np.power(-np.log(p), 1 / rho_), index=_get_index(X))
+    def predict_median(self, X, ancillary_X=None):
+        """
+        Returns the median lifetimes for the individuals. If the survival curve of an
+        individual does not cross 0.5, then the result is infinity.
+        http://stats.stackexchange.com/questions/102986/percentile-loss-functions
+
+        Parameters
+        ----------
+        X:  numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        ancillary_X: numpy array or DataFrame, optional
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        p: float, optional (default=0.5)
+            the percentile, must be between 0 and 1.
+
+        Returns
+        -------
+        DataFrame
+
+        See Also
+        --------
+        predict_percentile
+
+        """
+        exp_mu_, _ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        return pd.DataFrame(exp_mu_, index=_get_index(X))
 
     def predict_expectation(self, X, ancillary_X=None):
         """
@@ -113,16 +141,14 @@ class WeibullAFTFitter(ParametericRegressionFitter):
         --------
         predict_median
         """
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(X))
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        return pd.DataFrame(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(X))
 
     def predict_cumulative_hazard(self, X, times=None, ancillary_X=None):
         """
-        Return the cumulative hazard rate of subjects in X at time points.
-
-
         Parameters
         ----------
+
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
@@ -141,7 +167,10 @@ class WeibullAFTFitter(ParametericRegressionFitter):
         cumulative_hazard_ : DataFrame
             the cumulative hazard of individuals over the timeline
         """
-        times = coalesce(times, self.timeline, np.unique(self.durations))
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        import numpy as np
 
-        return pd.DataFrame(np.outer(times, 1 / lambda_) ** rho_, columns=_get_index(X), index=times)
+        times = coalesce(times, self.timeline, np.unique(self.durations))
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        mu_ = np.log(exp_mu_)
+        Z = np.subtract.outer(np.log(times), mu_) / sigma_
+        return pd.DataFrame(-logsf(Z), columns=_get_index(X), index=times)

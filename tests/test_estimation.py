@@ -35,6 +35,7 @@ from lifelines.utils import (
     normalize,
     to_episodic_format,
     ConvergenceError,
+    median_survival_times,
     StatisticalWarning,
 )
 
@@ -54,6 +55,8 @@ from lifelines import (
     LogLogisticFitter,
     PiecewiseExponentialFitter,
     WeibullAFTFitter,
+    LogNormalAFTFitter,
+    LogLogisticAFTFitter,
 )
 
 from lifelines.datasets import (
@@ -1149,6 +1152,8 @@ class TestRegressionFitters:
             AalenAdditiveFitter(coef_penalizer=1.0, smoothing_penalizer=1.0),
             CoxPHFitter(strata=["race", "paro", "mar", "wexp"]),
             WeibullAFTFitter(),
+            LogNormalAFTFitter(),
+            LogLogisticAFTFitter(),
         ]
 
     def test_dill_serialization(self, rossi, regression_models):
@@ -1304,6 +1309,98 @@ class TestRegressionFitters:
         for fitter in regression_models:
             with pytest.raises(TypeError):
                 fitter().fit("week", "arrest")
+
+
+class TestAFTFitters:
+    @pytest.fixture
+    def models(self):
+        return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
+
+    def test_aft_median_behaviour(self, models, rossi):
+        for aft in models:
+            aft.fit(rossi, "week", "arrest")
+
+            subject = aft._norm_mean.to_frame().T
+
+            baseline_survival = aft.predict_median(subject).squeeze()
+
+            subject.loc[0, "prio"] += 1
+            accelerated_survival = aft.predict_median(subject).squeeze()
+            factor = aft.summary.loc[(aft._primary_parameter_name, "prio"), "exp(coef)"]
+            npt.assert_allclose(accelerated_survival, baseline_survival * factor)
+
+    def test_aft_mean_behaviour(self, models, rossi):
+        for aft in models:
+            aft.fit(rossi, "week", "arrest")
+
+            subject = aft._norm_mean.to_frame().T
+
+            baseline_survival = aft.predict_expectation(subject).squeeze()
+
+            subject.loc[0, "prio"] += 1
+            accelerated_survival = aft.predict_expectation(subject).squeeze()
+            factor = aft.summary.loc[(aft._primary_parameter_name, "prio"), "exp(coef)"]
+            npt.assert_allclose(accelerated_survival, baseline_survival * factor)
+
+
+class TestLogNormalAFTFitter:
+    @pytest.fixture
+    def aft(self):
+        return LogNormalAFTFitter()
+
+    def test_coefs_with_fitted_ancillary_params(self, aft, rossi):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio + sdlog(prio) + sdlog(age), data=df, dist='lnorm')
+        r$coef
+        """
+        aft.fit(rossi, "week", "arrest", ancillary_df=rossi[["prio", "age"]])
+
+        npt.assert_allclose(aft.summary.loc[("mu_", "paro"), "coef"], 0.09698076, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("mu_", "prio"), "coef"], -0.10216665, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("mu_", "_intercept"), "coef"], 2.63459946, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("sigma_", "_intercept"), "coef"], -0.47257736, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("sigma_", "prio"), "coef"], -0.04741327, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("sigma_", "age"), "coef"], 0.03769193, rtol=1e-1)
+
+
+class TestLogLogisticAFTFitter:
+    @pytest.fixture
+    def aft(self):
+        return LogLogisticAFTFitter()
+
+    def test_coefs_with_fitted_ancillary_params(self, aft, rossi):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio + shape(prio) + shape(age), data=df, dist='llogis')
+        r$coef
+        """
+        aft.fit(rossi, "week", "arrest", ancillary_df=rossi[["prio", "age"]])
+
+        npt.assert_allclose(aft.summary.loc[("alpha_", "paro"), "coef"], 0.07512732, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("alpha_", "prio"), "coef"], -0.08837948, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("alpha_", "_intercept"), "coef"], 2.75013722, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("beta_", "_intercept"), "coef"], 1.22928200, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("beta_", "prio"), "coef"], 0.02707661, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("beta_", "age"), "coef"], -0.03853006, rtol=1e-1)
+
+    def test_proportional_odds(self, aft, rossi):
+
+        aft.fit(rossi, "week", "arrest")
+
+        subject = aft._norm_mean.to_frame().T
+
+        baseline_survival = aft.predict_survival_function(subject).squeeze()
+
+        subject.loc[0, "prio"] += 1
+        accelerated_survival = aft.predict_survival_function(subject).squeeze()
+
+        factor = aft.summary.loc[("alpha_", "prio"), "exp(coef)"]
+        expon = aft.summary.loc[("beta_", "_intercept"), "exp(coef)"]
+        npt.assert_allclose(
+            baseline_survival / (1 - baseline_survival) * factor ** expon,
+            accelerated_survival / (1 - accelerated_survival),
+        )
 
 
 class TestWeibullAFTFitter:
