@@ -21,6 +21,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.stats import weibull_min, norm, logistic
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
@@ -1315,6 +1316,61 @@ class TestAFTFitters:
     @pytest.fixture
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
+
+    def test_log_likelihood_is_maximized_for_data_generating_model(self):
+
+        N = 50000
+        p = 0.5
+        bX = np.log(0.5)
+        bZ = np.log(4)
+
+        Z = np.random.binomial(1, p, size=N)
+        X = np.random.binomial(1, 0.5, size=N)
+
+        # weibullAFT should have the best fit -> largest ll
+        W = weibull_min.rvs(1, scale=1, loc=0, size=N)
+
+        Y = bX * X + bZ * Z + np.log(W)
+        T = np.exp(Y)
+
+        df = pd.DataFrame({"T": T, "x": X, "z": Z})
+
+        wf = WeibullAFTFitter().fit(df, "T")
+        lnf = LogNormalAFTFitter().fit(df, "T")
+        llf = LogLogisticAFTFitter().fit(df, "T")
+
+        assert wf._log_likelihood > lnf._log_likelihood
+        assert wf._log_likelihood > llf._log_likelihood
+
+        # lognormal should have the best fit -> largest ll
+        W = norm.rvs(scale=1, loc=0, size=N)
+
+        Y = bX * X + bZ * Z + W
+        T = np.exp(Y)
+
+        df = pd.DataFrame({"T": T, "x": X, "z": Z})
+
+        wf = WeibullAFTFitter().fit(df, "T")
+        lnf = LogNormalAFTFitter().fit(df, "T")
+        llf = LogLogisticAFTFitter().fit(df, "T")
+
+        assert lnf._log_likelihood > wf._log_likelihood
+        assert lnf._log_likelihood > llf._log_likelihood
+
+        # loglogistic should have the best fit -> largest ll
+        W = logistic.rvs(scale=1, loc=0, size=N)
+
+        Y = bX * X + bZ * Z + W
+        T = np.exp(Y)
+
+        df = pd.DataFrame({"T": T, "x": X, "z": Z})
+
+        wf = WeibullAFTFitter().fit(df, "T")
+        lnf = LogNormalAFTFitter().fit(df, "T")
+        llf = LogLogisticAFTFitter().fit(df, "T")
+
+        assert llf._log_likelihood > wf._log_likelihood
+        assert llf._log_likelihood > lnf._log_likelihood
 
     def test_aft_median_behaviour(self, models, rossi):
         for aft in models:

@@ -1,5 +1,11 @@
 ### Changelog
 
+#### 0.19.3
+
+##### New features
+ - new AFT models: `LogNormalAFTFitter` and `LogLogisticAFTFitter`.
+ - Performance increase to `print_summary` in the `CoxPHFitter` model.
+
 #### 0.19.2
 
 ##### New features

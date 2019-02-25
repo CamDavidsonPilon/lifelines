@@ -54,7 +54,7 @@ class LogLogisticAFTFitter(ParametericRegressionFitter):
     def predict_percentile(self, X, ancillary_X=None, p=0.5):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
-        individual does not cross 0.5, then the result is infinity.
+        individual does not cross ``p``, then the result is infinity.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
 
         Parameters
@@ -116,9 +116,10 @@ class LogLogisticAFTFitter(ParametericRegressionFitter):
 
     def predict_cumulative_hazard(self, X, times=None, ancillary_X=None):
         """
+        Return the cumulative hazard rate of subjects in X at time points.
+
         Parameters
         ----------
-
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the

@@ -120,7 +120,6 @@ class WeibullAFTFitter(ParametericRegressionFitter):
         """
         Return the cumulative hazard rate of subjects in X at time points.
 
-
         Parameters
         ----------
         X: numpy array or DataFrame
