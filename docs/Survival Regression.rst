@@ -142,7 +142,7 @@ After fitting, you can use use the suite of prediction methods: ``.predict_parti
     cph.predict_median(X)
 
 
-A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their surival function. We are interested to know *What is the new survival function, given I know the subject has lived past time s, where s < t?* Mathmematically:
+A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their survival function. We are interested to know *What is the new survival function, given I know the subject has lived past time s, where s < t?* Mathematically:
 
 .. math::
 
@@ -391,7 +391,7 @@ We call these accelerated failure time models, shortened often to just AFT model
 The Weibull AFT model
 -----------------------------------------------
 
-The API for the Weibull AFT model is similar to the other regression models in *lifelines*. After fitting, the coefficients can be accessed using ``.params_`` or ``.summary``, or alternatively printed using ``.print_summary()``
+The API for the Weibull AFT model is similar to the other regression models in *lifelines*. After fitting, the coefficients can be accessed using ``.params_`` or ``.summary``, or alternatively printed using ``.print_summary()``.
 
 .. code:: python
 
@@ -434,6 +434,7 @@ From above, we can see that ``prio``, which is the number of previous incarcerat
 
 
 .. code:: python
+
     print(aft.median_survival_time_)
     print(aft.mean_survival_time_)
 
@@ -500,6 +501,8 @@ In the above model, we left the parameter :math:`\rho` as a single unknown. We c
     Concordance = 0.63
     Log-likelihood ratio test = 54.45 on 14 df, -log2(p)=19.83
     """
+
+
 
 Plotting
 -----------------------------------------------
@@ -596,6 +599,54 @@ There are two tunable parameters that can be used to to acheive a better test sc
     Concordance = 0.60
     Log-likelihood ratio test = -4028.65 on 7 df, -log2(p)=-0.00
     """
+
+
+The Log-Normal and Log-Logistic AFT model
+-----------------------------------------------
+
+There are also the ``LogNormalAFTFitter`` and ``LogLogisticAFTFitter`` models, which instead of assuming that the survival time distribution is Weibull, we assume it is Log-Normal or Log-Logistic, respectively. They have identical APIs to the ``WeibullAFTFitter``, but the parameter names are different.
+
+
+.. code::python
+
+    from lifelines import LogLogisticAFTFitter
+    from lifelines import LogNormalAFTFitter
+
+    llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest')
+    lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest')
+
+
+Model selection for AFT models
+-----------------------------------------------
+
+Often, you don't know *a priori* which AFT model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihoood. We can look at the log-likelihood for each fitted model and select the largest one.
+
+.. code::python
+
+    from lifelines import LogLogisticAFTFitter, WeibullAFTFitter, LogNormalAFTFitter
+    from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest')
+    lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest')
+    wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
+
+    print(llf._log_likelihood)  # -679.938
+    print(lnf._log_likelihood)  # -683.234
+    print(wf._log_likelihood)   # -679.916, slightly the best model.
+
+
+    # with some heterogenity in the ancillary parameters
+    ancillary_df = rossi[['prio']]
+    llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
+    lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
+    wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
+
+    print(llf._log_likelihood) # -678.94, slightly the best model.
+    print(lnf._log_likelihood) # -680.39
+    print(wf._log_likelihood)  # -679.60
+
 
 
 Aalen's additive model

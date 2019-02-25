@@ -103,12 +103,6 @@ Below we fit our data with the ``KaplanMeierFitter``:
     kmf.fit(T, event_observed=E)
 
 
-
-.. parsed-literal::
-
-   <lifelines.KaplanMeierFitter: fitted with 1808 observations, 340 censored>
-
-
 After calling the ``fit`` method, the ``KaplanMeierFitter`` has a property
 called ``survival_function_`` (again, we follow the styling of
 scikit-learn, and append an underscore to all properties that were computational estimated).
@@ -197,13 +191,10 @@ probabilities of survival at those points:
     plt.ylim(0, 1)
     plt.title("Lifespans of different global regimes");
 
-.. parsed-literal::
-
-    Median survival time of democratic: Democratic Regimes    3
-    dtype: float64
-    Median survival time of non-democratic: Non-democratic Regimes    6
-    dtype: float64
-
+    """
+    Median survival time of democratic: 3
+    Median survival time of non-democratic: 6
+    """
 
 .. image:: images/lifelines_intro_multi_kmf_fitter_2.png
 
@@ -236,17 +227,18 @@ we rule that the series have different generators.
 
     results.print_summary()
 
-.. parsed-literal::
+    """
 
-  <lifelines.StatisticalResult>
+    <lifelines.StatisticalResult>
                  t_0 = -1
-   null_distribution = chi squared
-  degrees_of_freedom = 1
+    null_distribution = chi squared
+    degrees_of_freedom = 1
                alpha = 0.99
 
-  ---
-   test_statistic      p  -log2(p)
-           260.47 <0.005    192.23
+    ---
+    test_statistic      p  -log2(p)
+           260.47  <0.005    192.23
+    """"
 
 Lets compare the different *types* of regimes present in the dataset:
 
@@ -407,24 +399,23 @@ years:
 
 Looking at the rates of change, I would say that both political
 philosophies have a constant hazard, albeit democratic regimes have a
-much *higher* constant hazard. So why did the combination of both
-regimes have a *decreasing* hazard? This is the effect of *frailty*.
+much *higher* constant hazard.
 
 Smoothing the hazard curve
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Interpretation of the cumulative hazard function can be difficult -- it
-is not how we usually interpret functions. (On the other hand, most
+is not how we usually interpret functions. On the other hand, most
 survival analysis is done using the cumulative hazard function, so understanding
-it is recommended).
+it is recommended.
 
 Alternatively, we can derive the more-interpretable hazard curve, but
 there is a catch. The derivation involves a kernel smoother (to smooth
 out the differences of the cumulative hazard curve) , and this requires
 us to specify a bandwidth parameter that controls the amount of
 smoothing. This functionality is in the ``smoothed_hazard_``
-and ``hazard_confidence_intervals_`` methods. (Why methods? They require
-an argument representing the bandwidth).
+and ``hazard_confidence_intervals_`` methods. Why methods? They require
+an argument representing the bandwidth.
 
 
 There is also a ``plot_hazard`` function (that also requires a
@@ -449,12 +440,11 @@ intervals, similar to the traditional ``plot`` functionality.
 .. image:: images/lifelines_intro_naf_smooth_multi.png
 
 
-It is more clear here which group has the higher hazard, and like
-hypothesized above, both hazard rates are close to being constant.
+It is more clear here which group has the higher hazard, and Non democractic regimes appear to have a constant hazard.
 
 There is no obvious way to choose a bandwidth, and different
 bandwidths produce different inferences, so it's best to be very careful
-here. (My advice: stick with the cumulative hazard function.)
+here. My advice: stick with the cumulative hazard function.
 
 .. code:: python
 
@@ -509,9 +499,7 @@ In lifelines, estimation is available using the ``WeibullFitter`` class. The ``p
     wf.print_summary()
     wf.plot()
 
-
-.. parsed-literal::
-
+    """
     <lifelines.WeibullFitter: fitted with 163 observations, 7 censored>
     number of subjects = 163
       number of events = 156
@@ -522,6 +510,7 @@ In lifelines, estimation is available using the ``WeibullFitter`` class. The ``p
              coef  se(coef)  lower 0.95  upper 0.95      p  -log2(p)
     lambda_  0.02      0.00        0.02        0.02 <0.005       inf
     rho_     3.45      0.24        2.97        3.93 <0.005     76.83
+    """
 
 .. image:: images/survival_weibull.png
 
@@ -594,6 +583,29 @@ Parametric models can also be used to create and plot the survival function, too
 
 .. image:: images/waltons_survival_function.png
 
+With parametric models, we have a functional form that allows us to extend the survival function (or hazard or cumulative hazard) past our maximum observed duration. This is called extrapolation. We can do this in a few ways.
+
+.. code:: python
+
+    timeline = np.linspace(0, 100, 200)
+
+    # directly compute the survival function, these return a pandas Series
+    wbf = WeibullFitter().fit(T, E)
+    wbf.survival_function_at_times(timeline)
+    wbf.hazard_at_times(timeline)
+    wbf.cumulative_hazard_at_times(timeline)
+
+    # use the `timeline` kwarg in `fit`
+    # by default, all functions and properties will use
+    # these values provided
+    wbf = WeibullFitter().fit(T, E, timeline=timeline)
+
+
+    wbf.plot_survival_function()
+
+.. image:: images/weibull_extrapolation.png
+
+
 
 Other types of censoring
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -634,20 +646,61 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 
 .. image:: images/lifelines_intro_lcd.png
 
+ .. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
+
+
 Left truncated data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
- .. note:: Not to be confused with left-censoring, which is also supported in ``KaplanMeierFitter``.
+Another form of bias that is introduced into a dataset is called left-truncation (or late entry). Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. So it's possible there are some counterfactual individuals who *would* have entered into your study (that is, went to prison), but instead died early.
 
-Another form of bias that is introduced into a dataset is called left-truncation. Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. Some theoretical indiviuals who would have entered into your study (i.e. went to prison) have already died.
-
-Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited indivduals previously diagnosed with AIDS, possibly years before.
-
-All univatiate fitters, like ``KaplanMeierFitter`` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between "birth" (or "exposure") to entering the study.
+All univariate fitters, like ``KaplanMeierFitter`` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between actual "birth" (or "exposure") to entering the study.
 
  .. note:: Nothing changes in the duration array: it still measures time from "birth" to time exited study (either by death or censoring). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
 
- .. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
+
+Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited indivduals previously diagnosed with AIDS, possibly years before. In our example below we will use a dataset like this, called the Multicenter Aids Cohort Study. In the figure below, we plot the lifetimes of subjects. A solid line is when the subject was under our observation, and a dashed line represents the unobserved period between diagnosis and study entry. A solid dot at the end of the line represents death.
+
+.. code:: python
+
+    from lifelines.datasets import load_multicenter_aids_cohort_study
+    from lifelines.plotting import plot_lifetimes
+
+    df = load_multicenter_aids_cohort_study()
+
+    plot_lifetimes(
+        df["T"] - df["W"],
+        event_observed=df["D"],
+        entry=df["W"],
+        event_observed_color="#383838",
+        event_censored_color="#383838",
+        left_truncated=True,
+    )
+    plt.ylabel("Patient Number")
+    plt.xlabel("Years from AIDS diagnosis")
+
+
+.. image:: images/lifetimes_mcas.png
+
+
+So subject #77, the subject at the top, was diagnosised with AIDS 7.5 years ago, but wasn't in our study for the first 4.5 years. From this point-of-view, why can't we "fill in" the dashed lines and say, for example, "subject #77 lived for 7.5 years"? If we did this, we would serverly underestimate chance of dieing early on after diagnosis. Why? It's possible that there were individuals who were diagnosed and then died shortly after, and never had a chance to enter our study. If we did manage to observe them however, they would have depressed the survival curve early on. Thus, "filling in" the dashed lines makes us over confident about what occurs in the early period after diagnosis. We can see this below when we model the survival curve with and without taking into account late entries.
+
+
+.. code:: python
+
+        from lifelines import KaplanMeierFitter
+
+        kmf = KaplanMeierFitter()
+        kmf.fit(df["T"], event_observed=df["D"], entry=df["W"], label='modelling late entries')
+        ax = kmf.plot()
+
+        kmf.fit(df["T"], event_observed=df["D"], label='ignoring late entries')
+        kmf.plot(ax=ax)
+
+
+.. image:: images/kmf_mcas.png
+
+
 
 .. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html
 .. _Statistically compare two populations: Examples.html#statistically-compare-two-populations

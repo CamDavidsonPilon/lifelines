@@ -1,5 +1,13 @@
 ### Changelog
 
+#### 0.19.3
+
+##### New features
+ - new AFT models: `LogNormalAFTFitter` and `LogLogisticAFTFitter`.
+ - AFT models now accept a `weights_col` argument to `fit`.
+ - Robust errors (sandwich errors) are now avilable in AFT models using the `robust=True` kwarg in `fit`.
+ - Performance increase to `print_summary` in the `CoxPHFitter` and `CoxTimeVaryingFitter` model.
+
 #### 0.19.2
 
 ##### New features
