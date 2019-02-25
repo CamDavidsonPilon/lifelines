@@ -7,6 +7,7 @@ import pandas as pd
 from lifelines.utils import _get_index, coalesce
 from lifelines.fitters import ParametericRegressionFitter
 from lifelines.utils.logsf import logsf
+from scipy.special import erfinv
 
 
 class LogNormalAFTFitter(ParametericRegressionFitter):
@@ -81,8 +82,8 @@ class LogNormalAFTFitter(ParametericRegressionFitter):
         predict_median
 
         """
-        # TODO
-        raise NotImplementedError()
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        return pd.DataFrame(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * p - 1)), index=_get_index(X))
 
     def predict_median(self, X, ancillary_X=None):
         """

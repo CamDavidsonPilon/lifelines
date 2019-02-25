@@ -63,7 +63,7 @@ copyright = "2014-{},  Cam Davidson-Pilon".format(date.today().year)
 #
 # The short X.Y version.
 
-version = "0.19.2"
+version = "0.19.3"
 # The full version, including dev info
 release = version
 

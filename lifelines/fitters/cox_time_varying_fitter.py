@@ -626,9 +626,9 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         trivial_dataset = self.start_stop_and_events.groupby(level=0).last()[["event", "stop"]]
         weights = self.weights.groupby(level=0).last()
-        trivial_dataset = trivial_dataset.join(weights)
+        trivial_dataset = trivial_dataset.join(weights).sort_values("stop")
 
-        ll_null = CoxPHFitter._trivial_log_likelihood(
+        ll_null = CoxPHFitter()._trivial_log_likelihood_single(
             trivial_dataset["stop"].values, trivial_dataset["event"].values, trivial_dataset["__weights"].values
         )
         ll_alt = self._log_likelihood

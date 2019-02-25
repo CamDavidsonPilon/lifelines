@@ -15,7 +15,7 @@ from textwrap import dedent
 
 import numpy as np
 import autograd.numpy as anp
-from autograd import hessian, value_and_grad, elementwise_grad as egrad
+from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
 from autograd.differential_operators import make_jvp_reversemode
 from scipy.optimize import minimize
 from scipy import stats
@@ -793,22 +793,30 @@ class ParametericRegressionFitter(BaseFitter):
         self.fit_intercept = fit_intercept
         self._fitted_parameter_names = [self._primary_parameter_name, self._ancillary_parameter_name]
 
-    def _negative_log_likelihood(self, params, T, E, *Xs):
-        n = T.shape[0]
-
+    def _negative_log_likelihood(self, params, T, E, W, *Xs):
         hz = self._hazard(params, T, *Xs)
         hz = anp.clip(hz, 1e-18, np.inf)
 
-        ll = (E * anp.log(hz)).sum() - self._cumulative_hazard(params, T, *Xs).sum()
+        ll = (W * E * anp.log(hz)).sum() - (W * self._cumulative_hazard(params, T, *Xs)).sum()
         if self.penalizer > 0:
             penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
         else:
             penalty = 0
 
-        ll = ll / n
+        ll = ll / np.sum(W)
         return -ll + self.penalizer * penalty
 
-    def fit(self, df, duration_col=None, event_col=None, ancillary_df=None, show_progress=False, timeline=None):
+    def fit(
+        self,
+        df,
+        duration_col=None,
+        event_col=None,
+        ancillary_df=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+    ):
         """
         Fit the accelerated failure time model to a dataset.
 
@@ -841,6 +849,12 @@ class ParametericRegressionFitter(BaseFitter):
 
         timeline: array, optional
             Specify a timeline that will be used for plotting and prediction
+
+        weights_col: string
+            the column in df that specifies weights per observation.
+
+        robust: boolean, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator.
 
         Returns
         -------
@@ -876,8 +890,10 @@ class ParametericRegressionFitter(BaseFitter):
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
+        self.weights_col = weights_col
         self._n_examples = df.shape[0]
         self.timeline = timeline
+        self.robust = robust
 
         df = df.copy()
 
@@ -887,8 +903,28 @@ class ParametericRegressionFitter(BaseFitter):
             if (self.event_col is not None)
             else pd.Series(np.ones(self._n_examples, dtype=bool), index=df.index, name="E")
         )
+        weights = (
+            pass_for_numeric_dtypes_or_raise_array(df.pop(self.weights_col)).astype(float)
+            if (self.weights_col is not None)
+            else pd.Series(np.ones(self._n_examples, dtype=float), index=df.index, name="weights")
+        )
+        # check to make sure their weights are okay
+        if self.weights_col:
+            if (weights.astype(int) != weights).any() and not self.robust:
+                warnings.warn(
+                    dedent(
+                        """It appears your weights are not integers, possibly propensity or sampling scores then?
+                                        It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
+                                        estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"""
+                    ),
+                    StatisticalWarning,
+                )
+            if (weights <= 0).any():
+                raise ValueError("values in weight column %s must be positive." % self.weights_col)
+
         self.durations = T.copy()
         self.event_observed = E.copy()
+        self.weights = weights.copy()
 
         if np.any(self.durations <= 0):
             raise ValueError(
@@ -935,6 +971,7 @@ class ParametericRegressionFitter(BaseFitter):
         _params, self._log_likelihood, self._hessian_ = self._fit_model(
             T.values,
             E.values,
+            weights.values,
             normalize(df, 0, _norm_std).values,
             normalize(ancillary_df, 0, _norm_std_ancillary).values,
             show_progress=show_progress,
@@ -942,7 +979,9 @@ class ParametericRegressionFitter(BaseFitter):
         self.params_ = _params / self._norm_std
 
         self.variance_matrix_ = self._compute_variance_matrix()
-        self.standard_errors_ = self._compute_standard_errors()
+        self.standard_errors_ = self._compute_standard_errors(
+            T.values, E.values, weights.values, df.values, ancillary_df.values
+        )
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._predicted_median = self.predict_median(df, ancillary_df)
 
@@ -958,18 +997,19 @@ class ParametericRegressionFitter(BaseFitter):
         if self.fit_intercept:
             check_low_var(df)
 
-    def _fit_model(self, T, E, *Xs, **kwargs):
+    def _fit_model(self, T, E, weights, *Xs, **kwargs):
         # TODO: move this to function kwarg when I remove py2
         show_progress = kwargs.pop("show_progress", False)
         n_params = sum([X.shape[1] for X in Xs])
         init_values = np.zeros((n_params,))
+        sum_weights = weights.sum()
 
         results = minimize(
             value_and_grad(self._negative_log_likelihood),
             init_values,
             method=None if self.l1_ratio <= 0.0 else "L-BFGS-B",
             jac=True,
-            args=(T, E, Xs[0], Xs[1]),  # TODO: remove py2, (T, E, *Xs)
+            args=(T, E, weights, Xs[0], Xs[1]),  # TODO: remove py2, (T, E, *Xs)
             options={"disp": show_progress},
         )
         if show_progress:
@@ -977,15 +1017,18 @@ class ParametericRegressionFitter(BaseFitter):
 
         if results.success:
             # pylint: disable=no-value-for-parameter
-            hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, *Xs)
-            return results.x, -self._n_examples * results.fun, self._n_examples * hessian_
+            hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, weights, *Xs)
+            return results.x, -sum_weights * results.fun, sum_weights * hessian_
         print(results)
+        name = self.__class__.__name__
         raise ConvergenceError(
             dedent(
                 """\
             Fitting did not converge. This could be a problem with your data:
             1. Are there any extreme values? (Try modelling them or dropping them to see if it helps convergence)
+            2. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`
         """
+                % name
             )
         )
 
@@ -1025,9 +1068,25 @@ class ParametericRegressionFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def _compute_standard_errors(self):
-        se = np.sqrt(self.variance_matrix_.diagonal())
+    def _compute_standard_errors(self, T, E, weights, *Xs):
+        if self.robust:
+            se = np.sqrt(self._compute_sandwich_errors(T, E, weights, *Xs).diagonal())
+        else:
+            se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.Series(se, name="se", index=self.params_.index)
+
+    def _compute_sandwich_errors(self, T, E, weights, *Xs):
+
+        ll_gradient = grad(self._negative_log_likelihood)
+        params = self.params_.values
+        n_params = params.shape[0]
+        J = np.zeros((n_params, n_params))
+
+        for t, e, w, x, ancillary_x in zip(T, E, weights, Xs[0], Xs[1]):
+            score_vector = ll_gradient(params, t, e, w, x, ancillary_x)
+            J += np.outer(score_vector, score_vector)
+
+        return np.dot(self.variance_matrix_, J).dot(self.variance_matrix_)
 
     def _compute_confidence_intervals(self):
         z = inv_normal_cdf(1 - self.alpha / 2)
@@ -1102,9 +1161,14 @@ class ParametericRegressionFitter(BaseFitter):
         print("{} = '{}'".format(justify("duration col"), self.duration_col))
         if self.event_col:
             print("{} = '{}'".format(justify("event col"), self.event_col))
+        if self.weights_col:
+            print("{} = '{}'".format(justify("weights col"), self.weights_col))
         if self.penalizer > 0:
             print("{} = {}".format(justify("penalizer"), self.penalizer))
             print("{} = {}".format(justify("l1_ratio"), self.l1_ratio))
+
+        if self.robust:
+            print("{} = {}".format(justify("robust variance"), True))
 
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))

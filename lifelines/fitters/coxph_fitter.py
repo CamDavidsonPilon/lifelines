@@ -693,12 +693,15 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             else:
                 factor = np.log(risk_phi)
 
+            print(t, weight_count / tied_death_counts * factor)
             log_lik = log_lik - weight_count / tied_death_counts * factor
 
         return log_lik
 
     @staticmethod
     def _trivial_log_likelihood_single(T, E, weights):
+        # assumes sorted on T!
+
         log_lik = 0
         n = T.shape[0]
 
@@ -715,7 +718,8 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             ei = E[i]
 
             # Calculate phi values
-            phi_i = w = weights[i]
+            phi_i = weights[i]
+            w = weights[i]
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + phi_i
@@ -739,14 +743,13 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 factor = np.log(risk_phi - np.arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
             else:
                 factor = np.log(risk_phi)
-
+            print(ti, weight_count / tied_death_counts * factor)
             log_lik = log_lik - weight_count / tied_death_counts * factor
 
             # reset tie values
             tied_death_counts = 0
             weight_count = 0.0
             tie_phi = 0
-
         return log_lik
 
     def _get_efron_values_batch(self, X, T, E, weights, beta):  # pylint: disable=too-many-locals

@@ -63,11 +63,21 @@ After calling the ``fit`` method, we have access to new properties like ``surviv
 .. code:: python
 
     kmf.survival_function_
+    kmf.confidence_interval_
     kmf.median_
     kmf.plot()
 
 
 .. image:: images/quickstart_kmf.png
+
+By specifying the ``timeline`` keyword argument in ``fit``, we can change how the above models are index:
+
+.. code:: python
+
+    kmf.fit(T, E, timeline=range(0, 100, 2))
+
+    kmf.survival_function_   # index is now the same as range(0, 100, 2)
+    kmf.confidence_interval_ # index is now the same as range(0, 100, 2)
 
 
 Instead of the Kaplan-Meier estimator, you may be interested in a parametric model. *lifelines* has builtin parametric models. For example, Weibull, Log-Normal, Log-Logistic, and more.
