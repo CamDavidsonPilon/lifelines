@@ -136,6 +136,7 @@ class KaplanMeierFitter(UnivariateFitter):
         self._predict_label = label
         self._update_docstrings()
 
+        setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
     def _check_values(self, array):
