@@ -84,14 +84,14 @@ class CoxPHFitter(BaseFitter):
         'Efron' is available.
 
       penalizer: float, optional (default=0.0)
-        Attach a L2 penalizer to the size of the coeffcients during regression. This improves
+        Attach a L2 penalizer to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the absolute value of :math:`\beta_i`.
         The penalty is :math:`\frac{1}{2} \text{penalizer} ||\beta||^2`.
 
       strata: list, optional
         specify a list of columns to use in stratification. This is useful if a
-         catagorical covariate does not obey the proportional hazard assumption. This
+         categorical covariate does not obey the proportional hazard assumption. This
          is used similar to the `strata` expression in R.
          See http://courses.washington.edu/b515/l17.pdf.
 
@@ -1310,7 +1310,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         Notes
         -----
-        If X is a dataframe, the order of the columns do not matter. But
+        If X is a DataFrame, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
@@ -1468,8 +1468,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def predict_expectation(self, X):
         r"""
-        Compute the expected lifetime, :math:`E[T]`, using covarites X. This algorithm to compute the expection is
-        to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integal, we use the trapizoidal rule to approximate the integral.
+        Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
+        to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapizoidal rule to approximate the integral.
 
         Caution
         --------
@@ -1490,7 +1490,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         Notes
         -----
-        If X is a dataframe, the order of the columns do not matter. But
+        If X is a DataFrame, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
 

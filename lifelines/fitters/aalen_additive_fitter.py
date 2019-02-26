@@ -57,11 +57,11 @@ class AalenAdditiveFitter(BaseFitter):
     alpha: float, optional (default=0.05)
       the level in the confidence intervals.
     coef_penalizer: float, optional (default: 0)
-      Attach a L2 penalizer to the size of the coeffcients during regression. This improves
+      Attach a L2 penalizer to the size of the coefficients during regression. This improves
       stability of the estimates and controls for high correlation between covariates.
       For example, this shrinks the absolute value of :math:`c_{i,t}`.
     smoothing_penalizer: float, optional (default: 0)
-      Attach a L2 penalizer to difference between adjacent (over time) coefficents. For
+      Attach a L2 penalizer to difference between adjacent (over time) coefficients. For
       example, this shrinks the absolute value of :math:`c_{i,t} - c_{i,t+1}`.
 
     """
@@ -87,22 +87,22 @@ class AalenAdditiveFitter(BaseFitter):
         Parameters
         ----------
         df: DataFrame
-            a Pandas dataframe with necessary columns `duration_col` and
+            a Pandas DataFrame with necessary columns `duration_col` and
             `event_col` (see below), covariates columns, and special columns (weights).
             `duration_col` refers to
             the lifetimes of the subjects. `event_col` refers to whether
             the 'death' events was observed: 1 if observed, 0 else (censored).
 
         duration_col: string
-            the name of the column in dataframe that contains the subjects'
+            the name of the column in DataFrame that contains the subjects'
             lifetimes.
 
         event_col: string, optional
-            the  name of thecolumn in dataframe that contains the subjects' death
+            the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
         weights_col: string, optional
-            an optional column in the dataframe, df, that denotes the weight per subject.
+            an optional column in the DataFrame, df, that denotes the weight per subject.
             This column is expelled and not used as a covariate, but as a weight in the
             final regression. Default weight is 1.
             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
@@ -471,7 +471,7 @@ It's important to know that the naive variance estimates of the coefficients are
         to survival data, including censorships.
 
         For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
-        onto the training dataset. It's analgous to the R^2 in linear models.
+        onto the training dataset. It's analogous to the R^2 in linear models.
 
         """
         # pylint: disable=access-member-before-definition
@@ -519,7 +519,7 @@ It's important to know that the naive variance estimates of the coefficients are
         decimals: int, optional (default=2)
             specify the number of decimal places to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
 
         """

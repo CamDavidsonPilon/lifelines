@@ -1,5 +1,11 @@
 ### Changelog
 
+#### 0.19.5
+
+##### New features
+ -  `plot_covariate_group` can accept multiple covariates to plot. This is useful for columns that have implicit correlation like polynomial features or categorical variables.
+ - Convergence improvements for AFT models.
+
 #### 0.19.4
 
 ##### Bug fixes

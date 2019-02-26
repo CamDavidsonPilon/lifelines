@@ -261,7 +261,7 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     Note
     -----
 
-    The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival
+    The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival
     curves cross, the logrank test will give an inaccurate assessment of differences.
 
 
@@ -418,7 +418,7 @@ def multivariate_logrank_test(
     .. math::
         \begin{align}
          & H_0: h_1(t) = h_2(t) = h_3(t) = ... = h_n(t) \\
-         & H_A: \text{there exist atleast one group that differs from the other.}
+         & H_A: \text{there exist at least one group that differs from the other.}
         \end{align}
 
 
@@ -572,7 +572,7 @@ class StatisticalResult(object):
         decimals: int, optional (default=2)
             specify the number of decimal places to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
 
         """

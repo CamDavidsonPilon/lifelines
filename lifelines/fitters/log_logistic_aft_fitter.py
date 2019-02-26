@@ -34,7 +34,7 @@ class LogLogisticAFTFitter(ParametericRegressionFitter):
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
 
     l1_ratio: float, optional (default=0.0)
-        how much of the penalizer should be attributed to an l1 penality (otherwise an l2 penalty). The penalty function looks like
+        how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
         ``penalizer * l1_ratio * ||w||_1 + 0.5 * penalizer * (1 - l1_ratio) * ||w||^2_2``
     """
 

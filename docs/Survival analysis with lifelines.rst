@@ -285,7 +285,7 @@ respectively. For example:
 
 The raw data is not always available in this format -- *lifelines*
 includes some helper functions to transform data formats to *lifelines*
-format. These are located in the ``lifelines.utils`` sublibrary. For
+format. These are located in the ``lifelines.utils`` sub-library. For
 example, the function ``datetimes_to_durations`` accepts an array or
 Pandas object of start times/dates, and an array or Pandas objects of
 end times/dates (or ``None`` if not observed):
@@ -440,7 +440,7 @@ intervals, similar to the traditional ``plot`` functionality.
 .. image:: images/lifelines_intro_naf_smooth_multi.png
 
 
-It is more clear here which group has the higher hazard, and Non democractic regimes appear to have a constant hazard.
+It is more clear here which group has the higher hazard, and Non-democratic regimes appear to have a constant hazard.
 
 There is no obvious way to choose a bandwidth, and different
 bandwidths produce different inferences, so it's best to be very careful
@@ -554,9 +554,9 @@ Similarly, there are other parametric models in *lifelines*. Generally, which pa
 
 .. image:: images/waltons_cumulative_hazard.png
 
-*lifelines* can also be used to define your own parametic model. There is a tutorial on this available, see `Piecewise Exponential Models and Creating Custom Models`_.
+*lifelines* can also be used to define your own parametric model. There is a tutorial on this available, see `Piecewise Exponential Models and Creating Custom Models`_.
 
-Parametric models can also be used to create and plot the survival function, too. Below we compare the parametic models versus the non-parametric Kaplan-Meier estimate:
+Parametric models can also be used to create and plot the survival function, too. Below we compare the parametric models versus the non-parametric Kaplan-Meier estimate:
 
 .. code:: python
 
@@ -659,7 +659,7 @@ All univariate fitters, like ``KaplanMeierFitter`` and any parametric models, ha
  .. note:: Nothing changes in the duration array: it still measures time from "birth" to time exited study (either by death or censoring). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
 
 
-Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited indivduals previously diagnosed with AIDS, possibly years before. In our example below we will use a dataset like this, called the Multicenter Aids Cohort Study. In the figure below, we plot the lifetimes of subjects. A solid line is when the subject was under our observation, and a dashed line represents the unobserved period between diagnosis and study entry. A solid dot at the end of the line represents death.
+Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited individuals previously diagnosed with AIDS, possibly years before. In our example below we will use a dataset like this, called the Multicenter Aids Cohort Study. In the figure below, we plot the lifetimes of subjects. A solid line is when the subject was under our observation, and a dashed line represents the unobserved period between diagnosis and study entry. A solid dot at the end of the line represents death.
 
 .. code:: python
 
@@ -683,7 +683,7 @@ Another situation with left-truncation occurs when subjects are exposed before e
 .. image:: images/lifetimes_mcas.png
 
 
-So subject #77, the subject at the top, was diagnosised with AIDS 7.5 years ago, but wasn't in our study for the first 4.5 years. From this point-of-view, why can't we "fill in" the dashed lines and say, for example, "subject #77 lived for 7.5 years"? If we did this, we would serverly underestimate chance of dieing early on after diagnosis. Why? It's possible that there were individuals who were diagnosed and then died shortly after, and never had a chance to enter our study. If we did manage to observe them however, they would have depressed the survival curve early on. Thus, "filling in" the dashed lines makes us over confident about what occurs in the early period after diagnosis. We can see this below when we model the survival curve with and without taking into account late entries.
+So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, but wasn't in our study for the first 4.5 years. From this point-of-view, why can't we "fill in" the dashed lines and say, for example, "subject #77 lived for 7.5 years"? If we did this, we would severely underestimate chance of dieing early on after diagnosis. Why? It's possible that there were individuals who were diagnosed and then died shortly after, and never had a chance to enter our study. If we did manage to observe them however, they would have depressed the survival curve early on. Thus, "filling in" the dashed lines makes us over confident about what occurs in the early period after diagnosis. We can see this below when we model the survival curve with and without taking into account late entries.
 
 
 .. code:: python
@@ -691,7 +691,7 @@ So subject #77, the subject at the top, was diagnosised with AIDS 7.5 years ago,
         from lifelines import KaplanMeierFitter
 
         kmf = KaplanMeierFitter()
-        kmf.fit(df["T"], event_observed=df["D"], entry=df["W"], label='modelling late entries')
+        kmf.fit(df["T"], event_observed=df["D"], entry=df["W"], label='modeling late entries')
         ax = kmf.plot()
 
         kmf.fit(df["T"], event_observed=df["D"], label='ignoring late entries')

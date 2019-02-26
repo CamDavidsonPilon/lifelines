@@ -30,7 +30,7 @@ will produce the difference at every relevant time point. A similar function exi
 Logrank test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consquence, if the survival curves cross, the logrank test will give an inaccurate assessment of differences.
+.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival curves cross, the logrank test will give an inaccurate assessment of differences.
 
 
 The ``lifelines.statistics.logrank_test`` function compares whether the "death" generation process of the two populations are equal:
@@ -275,7 +275,7 @@ Transforming survival-table data into *lifelines* format
 
 Some *lifelines* classes are designed for lists or arrays that represent one individual per row. If you instead have data in a *survival table* format, there exists a utility method to get it into *lifelines* format.
 
-**Example:** Suppose you have a csv file with data that looks like this:
+**Example:** Suppose you have a CSV file with data that looks like this:
 
 =========================   ==================    ============
 time                        observed deaths       censored
@@ -544,7 +544,7 @@ Initially, this can't be added to our baseline time-varying dataset. Using ``uti
 Example cumulative sums over time-varying covariates
 ############################################################
 
-Often we have either transactional covariate datasets or state covariate datasets. In a transactional dataset, it may make sense to sum up the covariates to represent administration of a treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount recieved at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
+Often we have either transactional covariate datasets or state covariate datasets. In a transactional dataset, it may make sense to sum up the covariates to represent administration of a treatment over time. For example, in the risky world of start-ups, we may want to sum up the funding amount received at a certain time. We also may be interested in the amount of the last round of funding. Below is an example to do just that:
 
 Suppose we have an initial DataFrame of start-ups like:
 
@@ -570,7 +570,7 @@ And a covariate dataframe representing funding rounds like:
     ])
 
 
-We can do the following to get both the cumulative funding recieved and the latest round of funding:
+We can do the following to get both the cumulative funding received and the latest round of funding:
 
 .. code-block:: python
 
@@ -597,7 +597,7 @@ Sample size determination under a CoxPH model
 ##############################################
 
 Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. That is, we want to evaluate the hypothesis
-H0: relative hazard ratio = 1 vs H1: relative hazard ratio != 1, where the relative hazard ratio is :math:`\exp{\left(\beta\right)}` for the experiment group vs the control group. Apriori, we are interested in the sample sizes of the two groups necessary to achieve a certain statistical power. To do this in lifelines, there is the ``lifelines.statistics.sample_size_necessary_under_cph`` function. For example:
+H0: relative hazard ratio = 1 vs H1: relative hazard ratio != 1, where the relative hazard ratio is :math:`\exp{\left(\beta\right)}` for the experiment group vs the control group. A priori, we are interested in the sample sizes of the two groups necessary to achieve a certain statistical power. To do this in lifelines, there is the ``lifelines.statistics.sample_size_necessary_under_cph`` function. For example:
 
 .. code-block:: python
 
@@ -616,7 +616,7 @@ This assumes you have estimates of the probability of event occuring for both th
 Power determination under a CoxPH model
 ##############################################
 
-Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. To determine the statistical power of a hazard ratio hypothesis test, under the CoxPH model, we can use ``lifelines.statistics.power_under_cph``. That is, suppose we want to know the probability that we reject the null hypothesis that the relative hazard ratio is 1, assuming the relative hazard ratio is truely different from 1. This function will give you that probability.
+Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. To determine the statistical power of a hazard ratio hypothesis test, under the CoxPH model, we can use ``lifelines.statistics.power_under_cph``. That is, suppose we want to know the probability that we reject the null hypothesis that the relative hazard ratio is 1, assuming the relative hazard ratio is truly different from 1. This function will give you that probability.
 
 
 .. code-block:: python
@@ -637,9 +637,9 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
 1. First check: look for ``ConvergenceWarning`` in the output. Most often problems in convergence are the result of problems in the dataset. *lifelines* has checks it runs against the dataset before fitting and warnings are outputted to the user.
 
-2. ``delta contains nan value(s).``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unboundedly, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
+2. ``delta contains nan value(s).``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unbounded, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
 
-3. ``Convergence halted due to matrix inversion problems``: This means that there is high colinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummifying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by looking at the correlation matrix of your dataset, or using the variance inflation factor (VIF) to find redundant variables.
+3. ``Convergence halted due to matrix inversion problems``: This means that there is high collinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by looking at the correlation matrix of your dataset, or using the variance inflation factor (VIF) to find redundant variables.
 
 4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are ``nan``'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
 
@@ -647,13 +647,13 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
    2. The data is completely separable, which means that there exists a covariate the completely determines whether an event occurred or not. For example, for all "death" events in the dataset, there exists a covariate that is constant amongst all of them. Look for a ``ConvergenceWarning`` after the ``fit`` call. See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression
 
-   3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarly using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
+   3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarily using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
 
    4. Another problem may be a co-linear relationship in your dataset. See point 3. above.
 
 5. If adding a very small ``penalizer`` significantly changes the results (``CoxPHFitter(penalizer=0.0001)``), then this probably means that the step size in the iterative algorithm is too large. Try decreasing it (``.fit(..., step_size=0.50)`` or smaller), and returning the ``penalizer`` term to 0.
 
-6. If using the ``strata`` arugment, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).size()``.
+6. If using the ``strata`` argument, make sure your stratification group sizes are not too small. Try ``df.groupby(strata).size()``.
 
 Adding weights to observations in a Cox model
 ##############################################
@@ -685,7 +685,7 @@ The original dataset has 432 rows, while the grouped dataset has 387 rows plus a
 The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the ``CoxTimeVaryingFitter``.
 
 
-The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artifical under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error.
+The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artificial under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error.
 
 .. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequeny of ties.
 
@@ -696,9 +696,9 @@ Correlations between subjects in a Cox model
 There are cases when your dataset contains correlated subjects, which breaks the independent-and-identically-distributed assumption. What are some cases when this may happen?
 
 1. If a subject appears more than once in the dataset (common when subjects can have the event more than once)
-2. If using a matching technique, like prospensity-score matching, there is a correlation between pairs.
+2. If using a matching technique, like propensity-score matching, there is a correlation between pairs.
 
-In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in ``CoxPHFitter.fit`` that allows you to specify the column in the dataframe that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
+In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in ``CoxPHFitter.fit`` that allows you to specify the column in the DataFrame that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
 
 .. code-block:: python
 
@@ -707,7 +707,7 @@ In both cases, the reported standard errors from a unadjusted Cox model will be 
 
     rossi = load_rossi()
 
-    # this may come from a database, or other libaries that specialize in matching
+    # this may come from a database, or other libraries that specialize in matching
     mathed_pairs = [
         (156, 230),
         (275, 228),

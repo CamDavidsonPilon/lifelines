@@ -26,7 +26,7 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
     Important
     ----------
     The parameterization of this model changed in lifelines 0.19.0. Previously, the cumulative hazard looked like
-    :math:`\lambda t`. The parameterization is now the recipricol of :math:`\lambda`.
+    :math:`\lambda t`. The parameterization is now the reciprocal of :math:`\lambda`.
 
 
     Notes

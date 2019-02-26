@@ -2,12 +2,13 @@
 from __future__ import division
 
 from autograd import numpy as np
+from autograd.scipy.stats.norm import logpdf
+from scipy.special import erfinv
 import pandas as pd
 
 from lifelines.utils import _get_index, coalesce
 from lifelines.fitters import ParametericRegressionFitter
 from lifelines.utils.logsf import logsf
-from scipy.special import erfinv
 
 
 class LogNormalAFTFitter(ParametericRegressionFitter):
@@ -36,7 +37,7 @@ class LogNormalAFTFitter(ParametericRegressionFitter):
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
 
     l1_ratio: float, optional (default=0.0)
-        how much of the penalizer should be attributed to an l1 penality (otherwise an l2 penalty). The penalty function looks like
+        how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
         ``penalizer * l1_ratio * ||w||_1 + 0.5 * penalizer * (1 - l1_ratio) * ||w||^2_2``
     """
 
@@ -53,6 +54,18 @@ class LogNormalAFTFitter(ParametericRegressionFitter):
         sigma_ = np.exp(np.dot(Xs[1], sigma_params))
         Z = (np.log(T) - mu_) / sigma_
         return -logsf(Z)
+
+    def _log_hazard(self, params, T, *Xs):
+        mu_params = params[self._LOOKUP_SLICE["mu_"]]
+        mu_ = np.dot(Xs[0], mu_params)
+
+        sigma_params = params[self._LOOKUP_SLICE["sigma_"]]
+
+        log_sigma_ = np.dot(Xs[1], sigma_params)
+        sigma_ = np.exp(log_sigma_)
+        Z = (np.log(T) - mu_) / sigma_
+
+        return logpdf(Z) - log_sigma_ - np.log(T) - logsf(Z)
 
     def predict_percentile(self, X, ancillary_X=None, p=0.5):
         """

@@ -34,7 +34,7 @@ class StatError(Exception):
 
 
 class ConvergenceError(ValueError):
-    # inherits from ValueError for backwards compatilibity reasons
+    # inherits from ValueError for backwards compatibility reasons
     def __init__(self, msg, original_exception=""):
         super(ConvergenceError, self).__init__(msg + "%s" % original_exception)
         self.original_exception = original_exception
@@ -56,8 +56,8 @@ def qth_survival_times(q, survival_functions, cdf=False):
     ----------
     q: float
       a float between 0 and 1 that represents the time when the survival function hits the qth percentile.
-    survival_functions: a (n,d) dataframe or numpy array.
-      If dataframe, will return index values (actual times)
+    survival_functions: a (n,d) DataFrame or numpy array.
+      If DataFrame, will return index values (actual times)
       If numpy array, will return indices.
     cdf: boolean, optional
       When doing left-censored data, cdf=True is used.
@@ -84,7 +84,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
     if survival_functions.shape[1] == 1 and q.shape == (1,):
         q = q[0]
         # If you add print statements to `qth_survival_time`, you'll see it's called
-        # once too many times. This is expected Pandas behaviour
+        # once too many times. This is expected Pandas behavior
         # https://stackoverflow.com/questions/21635915/why-does-pandas-apply-calculate-twice
         return survival_functions.apply(lambda s: qth_survival_time(q, s, cdf=cdf)).iloc[0]
     else:
@@ -102,7 +102,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
 def qth_survival_time(q, survival_function, cdf=False):
     """
-    Returns the time when a single survival function reachess the qth percentile.
+    Returns the time when a single survival function reaches the qth percentile.
 
     Parameters
     ----------
@@ -146,7 +146,7 @@ def group_survival_table_from_events(
     groups, durations, event_observed, birth_times=None, limit=-1
 ):  # pylint: disable=too-many-locals
     """
-    Joins multiple event series together into dataframes. A generalization of
+    Joins multiple event series together into DataFrames. A generalization of
     `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
 
     Parameters
@@ -167,11 +167,11 @@ def group_survival_table_from_events(
     unique_groups: np.array
       array of all the unique groups present
     removed: DataFrame
-      dataframe of removal count data at event_times for each group, column names are 'removed:<group name>'
+      DataFrame of removal count data at event_times for each group, column names are 'removed:<group name>'
     observed: DataFrame
-      dataframe of observed count data at event_times for each group, column names are 'observed:<group name>'
+      DataFrame of observed count data at event_times for each group, column names are 'observed:<group name>'
     censored: DataFrame
-      dataframe of censored count data at event_times for each group, column names are 'censored:<group name>'
+      DataFrame of censored count data at event_times for each group, column names are 'censored:<group name>'
 
     Example
     -------
@@ -271,7 +271,7 @@ def survival_table_from_events(
     birth_times: a (n,) array, optional
       representing when the subject was first observed. A subject's death event is then at [birth times + duration observed].
       If None (default), birth_times are set to be the first observation or 0, which ever is smaller.
-    columns: interable, optional
+    columns: iterable, optional
       a 3-length array to call the, in order, removed individuals, observed deaths
       and censorships.
     weights: (n,1) array, optional
@@ -437,7 +437,7 @@ def datetimes_to_durations(
     ----------
     start_times: an array, Series or DataFrame
         iterable representing start times. These can be strings, or datetime objects.
-    end_times: an array, Series or Dataframe
+    end_times: an array, Series or DataFrame
         iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
     fill_date: datetime, optional (default=datetime.Today())
         the date to use if end_times is a None or empty string. This corresponds to last date
@@ -571,13 +571,13 @@ def k_fold_cross_validation(
       and that event_col is optional. The objects must also have
       the "predictor" method defined below.
     df: DataFrame
-      a Pandas dataframe with necessary columns `duration_col` and (optional) `event_col`, plus
+      a Pandas DataFrame with necessary columns `duration_col` and (optional) `event_col`, plus
       other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
       refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
     duration_col: (n,) array
-      the column in dataframe that contains the subjects lifetimes.
+      the column in DataFrame that contains the subjects lifetimes.
     event_col: (n,) array
-      the column in dataframe that contains the subject's death observation. If left
+      the column in DataFrame that contains the subject's death observation. If left
       as None, assumes all individuals are non-censored.
     k: int
       the number of folds to perform. n/k data will be withheld for testing on.
@@ -735,7 +735,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         deaths = events["observed"]
 
         # Why subtract entrants like this? see https://github.com/CamDavidsonPilon/lifelines/issues/497
-        # specifically, we kill people, compute the ratio, and then "add" the entants. This means that
+        # specifically, we kill people, compute the ratio, and then "add" the entrants. This means that
         # the population should not have the late entrants. The only exception to this rule
         # is the first period, where entrants happen _prior_ to deaths.
         entrances = events["entrance"].copy()
@@ -792,7 +792,7 @@ def _get_index(X):
 
 def pass_for_numeric_dtypes_or_raise_array(x):
     """
-    Use the utility `to_numeric` to check that x is convertabile to numeric values, and then convert. Any errors
+    Use the utility `to_numeric` to check that x is convertible to numeric values, and then convert. Any errors
     are reported back to the user.
 
     Parameters
@@ -967,12 +967,12 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
     event_col: string
         string representing the column in df that represents whether the subject experienced the event or not.
     id_col: string, optional
-        Specify the column that represents an id, else lifelines creates an autoincrementing one.
+        Specify the column that represents an id, else lifelines creates an auto-incrementing one.
     time_gaps: float or int
         Specify a desired time_gap. For example, if time_gap is 2 and a subject lives for 10.5 units of time,
         then the final long form will have 5 + 1 rows for that subject: (0, 2], (2, 4], (4, 6], (6, 8], (8, 10], (10, 10.5]
-        Smaller time_gaps will produce larger dataframes, and larger time_gaps will produce smaller dataframes. In the limit,
-        the long dataframe will be identical to the original dataframe.
+        Smaller time_gaps will produce larger DataFrames, and larger time_gaps will produce smaller DataFrames. In the limit,
+        the long DataFrame will be identical to the original DataFrame.
 
     Returns
     --------
@@ -987,7 +987,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
     >>>
     >>> from lifelines import CoxTimeVaryingFitter
     >>> ctv = CoxTimeVaryingFitter()
-    >>> # age variable violates proprotional hazard
+    >>> # age variable violates proportional hazard
     >>> long_rossi['time * age'] = long_rossi['stop'] * long_rossi['age']
     >>> ctv.fit(long_rossi, id_col='id', event_col='arrest', show_progress=True)
     >>> ctv.print_summary()
@@ -1062,13 +1062,13 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):
 
 def to_long_format(df, duration_col):
     """
-    This function converts a survival analysis dataframe to a lifelines "long" format. The lifelines "long"
+    This function converts a survival analysis DataFrame to a lifelines "long" format. The lifelines "long"
     format is used in a common next function, ``add_covariate_to_timeline``.
 
     Parameters
     ----------
     df: DataFrame
-        a Dataframe in the standard survival analysis form (one for per observation, with covariates, duration and event flag)
+        a DataFrame in the standard survival analysis form (one for per observation, with covariates, duration and event flag)
     duration_col: string
         string representing the column in df that represents the durations of each subject.
 
@@ -1106,7 +1106,7 @@ def add_covariate_to_timeline(
     Parameters
     ----------
     long_form_df: DataFrame
-        a DataFrame that has the intial or intermediate "long" form of time-varying observations. Must contain
+        a DataFrame that has the initial or intermediate "long" form of time-varying observations. Must contain
         columns id_col, 'start', 'stop', and event_col. See function `to_long_format` to transform data into long form.
     cv: DataFrame
         a DataFrame that contains (possibly more than) one covariate to track over time. Must contain columns
@@ -1114,15 +1114,15 @@ def add_covariate_to_timeline(
     id_col: string
         the column in long_form_df and cv representing a unique identifier for subjects.
     duration_col: string
-        the column in cv that represents the time-since-birth the observation occured at.
+        the column in cv that represents the time-since-birth the observation occurred at.
     event_col: string
-        the column in df that represents if the event-of-interest occured
+        the column in df that represents if the event-of-interest occurred
     add_enum: boolean, optional
          a Boolean flag to denote whether to add a column enumerating rows per subject. Useful to specify a specific
         observation, ex: df[df['enum'] == 1] will grab the first observations per subject.
     overwrite: boolean, optional
         if True, covariate values in long_form_df will be overwritten by covariate values in cv if the column exists in both
-        cv and long_form_df and the timestamps are identical. If False, the default behaviour will be to sum
+        cv and long_form_df and the timestamps are identical. If False, the default behavior will be to sum
         the values together.
     cumulative_sum: boolean, optional
         sum over time the new covariates. Makes sense if the covariates are new additions, and not state changes (ex:
@@ -1239,9 +1239,9 @@ def covariates_from_event_matrix(df, id_col):
         2   3        3.0       5.0    7.0
 
 
-    where the values (aside from the id column) represent when an event occured for a specific user, relative
+    where the values (aside from the id column) represent when an event occurred for a specific user, relative
     to the subject's birth/entry. This is a common way format to pull data from a SQL table. We call this a duration matrix, and we
-    want to convert this dataframe to a format that can be included in a long form dataframe
+    want to convert this DataFrame to a format that can be included in a long form DataFrame
     (see add_covariate_to_timeline for more details on this).
 
     The duration matrix should have 1 row per subject (but not necessarily all subjects).

@@ -91,7 +91,7 @@ class KaplanMeierFitter(UnivariateFitter):
         if weights is not None:
             if (weights.astype(int) != weights).any():
                 warnings.warn(
-                    """It looks like your weights are not integers, possibly prospenity scores then?
+                    """It looks like your weights are not integers, possibly propensity scores then?
   It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
   estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
   or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
