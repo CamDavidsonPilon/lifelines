@@ -24,6 +24,7 @@ from lifelines.utils import (
     _get_index,
     _to_list,
     _to_tuple,
+    _to_array,
     survival_table_from_events,
     inv_normal_cdf,
     normalize,
@@ -70,7 +71,7 @@ class CoxPHFitter(BaseFitter):
     r"""
     This class implements fitting Cox's proportional hazard model:
 
-    .. math::  h(t|x) = h_0(t) \exp((x - \overline{x}) \beta)
+    .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)
 
     Parameters
     ----------
@@ -1278,7 +1279,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         -------
         partial_hazard: DataFrame
             Returns the partial hazard for the individuals, partial since the
-            baseline hazard is not included. Equal to :math:`\exp{\beta (X - mean(X_{train}))}`
+            baseline hazard is not included. Equal to :math:`\exp{(x - mean(x_{train}))'\beta}`
 
         Notes
         -----
@@ -1292,7 +1293,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to :math:`\beta (X - mean(X_{train}))`
+        baseline hazard is not included. Equal to :math:`(x - mean(x_{train}))'\beta `
 
 
         Parameters
@@ -1608,19 +1609,19 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         return ax
 
-    def plot_covariate_groups(self, covariate, values, plot_baseline=True, **kwargs):
+    def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
-        what happens when a covariate is varied over values in a group. This is useful to compare
-        subjects' survival as we vary a single covariate, all else being held equal. The baseline survival
+        what happens when a covariate(s) is varied over values in a group. This is useful to compare
+        subjects' survival as we vary covariate(s), all else being held equal. The baseline survival
         curve is equal to the predicted survival curve at all average values in the original dataset.
 
         Parameters
         ----------
-        covariate: string
-            a string of the covariate in the original dataset that we wish to vary.
-        values: iterable
-            an iterable of the values we wish the covariate to take on.
+        covariates: string or list
+            a string (or list of strings) of the covariate(s) in the original dataset that we wish to vary.
+        values: 1d or 2d iterable
+            an iterable of the values we wish the covariate(s) to take on.
         plot_baseline: bool
             also display the baseline survival, defined as the survival at the mean of the original dataset.
         kwargs:
@@ -1630,20 +1631,50 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         -------
         ax: matplotlib axis, or list of axis'
             the matplotlib axis that be edited.
+
+
+        Examples
+        ---------
+        >>> from lifelines import datasets, CoxPHFitter
+        >>> rossi = datasets.load_rossi()
+        >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+        >>> cph.plot_covariate_groups('prio', values=np.arange(0, 15), cmap='coolwarm')
+
+        >>> # multiple variables at once
+        >>> cph.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
+
+        >>> # if you have categorical variables, you can simply things:
+        >>> cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
+
         """
         from matplotlib import pyplot as plt
 
-        if covariate not in self.hazards_.index:
-            raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
+        covariates = _to_list(covariates)
+        n_covariates = len(covariates)
+        values = _to_array(values)
+        if len(values.shape) == 1:
+            values = values[None, :].T
+
+        if n_covariates != values.shape[1]:
+            raise ValueError("The number of covariates must equal to second dimension of the values array.")
+
+        for covariate in covariates:
+            if covariate not in self.hazards_.index:
+                raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
         set_kwargs_drawstyle(kwargs, "steps-post")
 
         if self.strata is None:
             axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
             x_bar = self._norm_mean.to_frame().T
-            X = pd.concat([x_bar] * len(values))
-            X.index = ["%s=%s" % (covariate, g) for g in values]
-            X[covariate] = values
+            X = pd.concat([x_bar] * values.shape[0])
+
+            if np.array_equal(np.eye(n_covariates), values):
+                X.index = ["%s=1" % c for c in covariates]
+            else:
+                X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+            for covariate, value in zip(covariates, values.T):
+                X[covariate] = value
 
             self.predict_survival_function(X).plot(ax=axes, **kwargs)
             if plot_baseline:
@@ -1658,9 +1689,13 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 for name, value in zip(_to_list(self.strata), _to_tuple(stratum)):
                     x_bar[name] = value
 
-                X = pd.concat([x_bar] * len(values))
-                X.index = ["%s=%s" % (covariate, g) for g in values]
-                X[covariate] = values
+                X = pd.concat([x_bar] * values.shape[0])
+                if np.array_equal(np.eye(len(covariates)), values):
+                    X.index = ["%s=1" % c for c in covariates]
+                else:
+                    X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+                for covariate, value in zip(covariates, values.T):
+                    X[covariate] = value
 
                 self.predict_survival_function(X).plot(ax=ax, **kwargs)
                 if plot_baseline:

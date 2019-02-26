@@ -55,27 +55,32 @@ class KaplanMeierFitter(UnivariateFitter):
         """
         Parameters
         ----------
-          durations: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
-          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated (not left-censored) observations. If None, all members of the population
+          durations: an array, list, pd.DataFrame or pd.Series
+            length n -- duration subject was observed for
+          event_observed: an array, list, pd.DataFrame, or pd.Series, optional
+             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+          timeline: an array, list, pd.DataFrame, or pd.Series, optional
+            return the best estimate at the values in timelines (postively increasing)
+          entry: an array, list, pd.DataFrame, or pd.Series, optional
+             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
              entered study when they were "born".
-          label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
-             alpha for this call to fit only.
-          left_censorship: True if durations and event_observed refer to left censorship events. Default False
-          ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
-          weights: n array, or pd.Series, of length n, if providing a weighted dataset. For example, instead
+          label: string, optional
+            a string to name the column of the estimate.
+          alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing alpha for this call to fit only.
+          left_censorship: bool, optional (default=False)
+            True if durations and event_observed refer to left censorship events. Default False
+          ci_labels: tuple, optional
+                add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
+          weights: an array, list, pd.DataFrame, or pd.Series, optional
+              if providing a weighted dataset. For example, instead
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
 
         Returns
         -------
         self: KaplanMeierFitter
-          self with new properties like ``survival_function_``.
+          self with new properties like ``survival_function_``, ``plot()``, ``median``
 
         """
 
@@ -131,17 +136,21 @@ class KaplanMeierFitter(UnivariateFitter):
         self._predict_label = label
         self._update_docstrings()
 
-        # plotting functions
-        setattr(self, "plot_" + estimate_name, self.plot)
         return self
 
     def _check_values(self, array):
         check_nans_or_infs(array)
 
     def plot_loglogs(self, *args, **kwargs):
+        r"""
+        Plot :math:`\log(S(t))` against :math:`\log(t)`
+        """
         return plot_loglogs(self, *args, **kwargs)
 
     def plot_survival_function(self, **kwargs):
+        """
+        Alias of ``plot``
+        """
         return self.plot(**kwargs)
 
     def survival_function_at_times(self, times, label=None):

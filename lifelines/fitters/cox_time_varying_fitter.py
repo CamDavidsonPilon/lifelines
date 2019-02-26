@@ -50,7 +50,7 @@ class CoxTimeVaryingFitter(BaseFitter):
     r"""
     This class implements fitting Cox's time-varying proportional hazard model:
 
-        .. math::  h(t|x(t)) = h_0(t)*\exp(x(t)'*beta)
+        .. math::  h(t|x(t)) = h_0(t)\exp(x(t)'\beta)
 
     Parameters
     ----------
@@ -506,7 +506,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to :math:`\beta (X - \bar{X})`
+        baseline hazard is not included. Equal to :math:`(x - \bar{x})'\beta `
 
 
         Parameters
@@ -539,7 +539,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def predict_partial_hazard(self, X):
         r"""
         Returns the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to :math:`\exp{\beta (X - \bar{X})}`
+        baseline hazard is not included. Equal to :math:`\exp{(x - \bar{x})'\beta }`
 
         Parameters
         ----------

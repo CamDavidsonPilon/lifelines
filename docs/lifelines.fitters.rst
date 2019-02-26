@@ -55,7 +55,6 @@ lifelines.fitters.kaplan\_meier\_fitter module
 
 .. automodule:: lifelines.fitters.kaplan_meier_fitter
     :members:
-    :undoc-members:
     :show-inheritance:
 
 lifelines.fitters.log\_logistic\_fitter module

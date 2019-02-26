@@ -18,9 +18,9 @@ class LogNormalAFTFitter(ParametericRegressionFitter):
 
     The cumulative hazard rate is
 
-    .. math:: H(t) = -\log(1 - \Phi((\log(t) - \mu(x))/\sigma(y)))
+    .. math:: H(t; x, y) = -\log(1 - \Phi\left(\frac{\log(T) - \mu(x)}{\sigma(y)}\right))
 
-    After calling the `.fit` method, you have access to properties like:
+    After calling the ``.fit`` method, you have access to properties like:
     ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.
 
 

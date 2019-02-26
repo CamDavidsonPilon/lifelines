@@ -53,7 +53,6 @@ class TestPlotting:
         positive_sample_lifetimes = np.arange(1, 100)
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes)
-            assert f.plot() is not None
             assert f.plot_cumulative_hazard() is not None
             assert f.plot_survival_function() is not None
             assert f.plot_hazard() is not None
@@ -368,6 +367,23 @@ class TestPlotting:
         self.plt.title("test_coxph_plot_covariate_groups_with_single_strata")
         self.plt.show(block=block)
 
+    def test_coxph_plot_covariate_groups_with_multiple_variables(self, block):
+        df = load_rossi()
+        cp = CoxPHFitter()
+        cp.fit(df, "week", "arrest")
+        cp.plot_covariate_groups(["age", "prio"], [[10, 0], [50, 10], [80, 90]])
+        self.plt.title("test_coxph_plot_covariate_groups_with_multiple_variables")
+        self.plt.show(block=block)
+
+    def test_coxph_plot_covariate_groups_with_multiple_variables_and_strata(self, block):
+        df = load_rossi()
+        df["strata"] = np.random.choice(["A", "B"], size=df.shape[0])
+        cp = CoxPHFitter()
+        cp.fit(df, "week", "arrest", strata="strata")
+        cp.plot_covariate_groups(["age", "prio"], [[10, 0], [50, 10], [80, 90]])
+        self.plt.title("test_coxph_plot_covariate_groups_with_multiple_variables_and_strata")
+        self.plt.show(block=block)
+
     def test_coxtv_plotting_with_subset_of_columns(self, block):
         df = load_stanford_heart_transplants()
         ctv = CoxTimeVaryingFitter()
@@ -474,4 +490,13 @@ class TestPlotting:
         aft.plot_covariate_groups("age", [10, 50, 80])
         self.plt.tight_layout()
         self.plt.title("test_weibull_aft_plot_covariate_groups")
+        self.plt.show(block=block)
+
+    def test_weibull_aft_plot_covariate_groups_with_multiple_columns(self, block):
+        df = load_rossi()
+        aft = WeibullAFTFitter()
+        aft.fit(df, "week", "arrest")
+        aft.plot_covariate_groups(["age", "prio"], [[10, 0], [50, 10], [80, 50]])
+        self.plt.tight_layout()
+        self.plt.title("test_weibull_aft_plot_covariate_groups_with_multiple_columns")
         self.plt.show(block=block)
