@@ -13,6 +13,7 @@ bZ = np.log(4)
 
 Z = np.random.binomial(1, p, size=N)
 X = np.random.binomial(1, 0.5, size=N)
+X_ = 20000 + 10 * np.random.randn(N)
 
 W = weibull_min.rvs(1, scale=1, loc=0, size=N)
 
@@ -21,7 +22,7 @@ T = np.exp(Y)
 
 #######################################
 
-df = pd.DataFrame({"T": T, "x": X})
+df = pd.DataFrame({"T": T, "x": X, "x_": X_})
 
 
 wf = WeibullAFTFitter().fit(df, "T")

@@ -16,9 +16,9 @@ class LogLogisticAFTFitter(ParametericRegressionFitter):
 
     The cumulative hazard rate is
 
-    .. math:: H(t) = \log(1 + (t / \alpha_(x)) ** \beta_(y))
+    .. math:: H(t; x , y) = \log\left(1 + \left(\frac{t}{\alpha(x)}\right)^ \beta(y)\right)
 
-    After calling the `.fit` method, you have access to properties like:
+    After calling the ``.fit`` method, you have access to properties like:
     ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.
 
 
@@ -34,7 +34,7 @@ class LogLogisticAFTFitter(ParametericRegressionFitter):
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
 
     l1_ratio: float, optional (default=0.0)
-        how much of the penalizer should be attributed to an l1 penality (otherwise an l2 penalty). The penalty function looks like
+        how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
         ``penalizer * l1_ratio * ||w||_1 + 0.5 * penalizer * (1 - l1_ratio) * ||w||^2_2``
     """
 
@@ -50,6 +50,17 @@ class LogLogisticAFTFitter(ParametericRegressionFitter):
         beta_params = params[self._LOOKUP_SLICE["beta_"]]
         beta_ = np.exp(np.dot(Xs[1], beta_params))
         return np.log1p((T / alpha_) ** beta_)
+
+    def _log_hazard(self, params, T, *Xs):
+        alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
+        log_alpha_ = np.dot(Xs[0], alpha_params)
+        alpha_ = np.exp(log_alpha_)
+
+        beta_params = params[self._LOOKUP_SLICE["beta_"]]
+        log_beta_ = np.dot(Xs[1], beta_params)
+        beta_ = np.exp(log_beta_)
+
+        return log_beta_ - log_alpha_ + np.expm1(log_beta_) * (np.log(T) - log_alpha_) - np.log1p((T / alpha_) ** beta_)
 
     def predict_percentile(self, X, ancillary_X=None, p=0.5):
         """

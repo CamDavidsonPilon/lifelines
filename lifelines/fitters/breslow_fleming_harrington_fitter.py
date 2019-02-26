@@ -13,7 +13,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
     """
     Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator
-    is a biased estimator of the survival function but is more stable when the popualtion is small and
+    is a biased estimator of the survival function but is more stable when the population is small and
     there are too few early truncation times, it may happen that is the number of patients at risk and
     the number of deaths is the same.
 
@@ -44,7 +44,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         durations: an array, or pd.Series, of length n
             duration subject was observed for
         timeline:
-            return the best estimate at the values in timelines (postively increasing)
+            return the best estimate at the values in timelines (positively increasing)
         event_observed: an array, or pd.Series, of length n
             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
         entry: an array, or pd.Series, of length n

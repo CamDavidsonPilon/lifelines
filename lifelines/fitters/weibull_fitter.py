@@ -20,7 +20,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
 
     and the hazard rate is:
 
-    .. math::  h(t) = \frac{\rho}{\lambda}(t/\lambda )^{\rho-1}
+    .. math::  h(t) = \frac{\rho}{\lambda}\left(\frac{t}{\lambda}\right)^{\rho-1}
 
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``, ``lambda_`` and ``rho_``.
     A summary of the fit is available with the method ``print_summary()``.
@@ -29,7 +29,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     Important
     ----------
     The parameterization of this model changed in lifelines 0.19.0. Previously, the cumulative hazard looked like
-    :math:`(\lambda t)^\rho`. The parameterization is now the recipricol of :math:`\lambda`.
+    :math:`(\lambda t)^\rho`. The parameterization is now the reciprocal of :math:`\lambda`.
 
     Examples
     --------

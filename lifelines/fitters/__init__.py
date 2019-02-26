@@ -28,6 +28,7 @@ from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle, set_kwargs_
 from lifelines.utils import (
     qth_survival_times,
     _to_array,
+    _to_list,
     dataframe_interpolate_at_times,
     ConvergenceError,
     inv_normal_cdf,
@@ -177,7 +178,7 @@ class UnivariateFitter(BaseFitter):
     @_must_call_fit_first
     def conditional_time_to_event_(self):
         """
-        Return a DataFrame, with index equal to ``survival_function_``, that estimates the median
+        Return a DataFrame, with index equal to ``survival_function_``'s index, that estimates the median
         duration remaining until the death event, given survival up until time t. For example, if an
         individual exists until age 1, their expected life remaining *given they lived to time 1*
         might be 9 years.
@@ -185,7 +186,6 @@ class UnivariateFitter(BaseFitter):
         Returns
         -------
         conditional_time_to_: DataFrame
-            with index equal to ``survival_function_``
 
         """
         return self._conditional_time_to_event_()
@@ -345,6 +345,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return anp.log(hz)
 
     def _negative_log_likelihood(self, params, T, E, entry):
+        import warnings
+
+        warnings.filterwarnings("ignore")
+
         n = T.shape[0]
         log_hz = self._log_hazard(params, T[E])
 
@@ -372,6 +376,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels: tuple
 
         """
+
         alpha2 = 1 - alpha / 2.0
         z = inv_normal_cdf(alpha2)
         df = pd.DataFrame(index=self.timeline)
@@ -582,7 +587,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             check_nans_or_infs(event_observed)
 
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
-        # check for negative or 0 durations - these are not allowed in a weibull model.
         if np.any(self.durations <= 0):
             raise ValueError(
                 "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
@@ -751,6 +755,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     @_must_call_fit_first
     def plot(self, **kwargs):
+        """
+        Produce a pretty-plot of the estimate.
+        """
         set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(
             self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
@@ -793,11 +800,18 @@ class ParametericRegressionFitter(BaseFitter):
         self.fit_intercept = fit_intercept
         self._fitted_parameter_names = [self._primary_parameter_name, self._ancillary_parameter_name]
 
-    def _negative_log_likelihood(self, params, T, E, W, *Xs):
+    def _log_hazard(self, params, T, *Xs):
+        # can be overwritten to improve convergence, see WeibullAFTFitter
         hz = self._hazard(params, T, *Xs)
-        hz = anp.clip(hz, 1e-18, np.inf)
+        hz = anp.clip(hz, 1e-20, np.inf)
+        return anp.log(hz)
 
-        ll = (W * E * anp.log(hz)).sum() - (W * self._cumulative_hazard(params, T, *Xs)).sum()
+    def _negative_log_likelihood(self, params, T, E, W, *Xs):
+        import warnings
+
+        warnings.filterwarnings("ignore")
+
+        ll = (W * E * self._log_hazard(params, T, *Xs)).sum() - (W * self._cumulative_hazard(params, T, *Xs)).sum()
         if self.penalizer > 0:
             penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
         else:
@@ -824,7 +838,7 @@ class ParametericRegressionFitter(BaseFitter):
         ----------
         df: DataFrame
             a Pandas DataFrame with necessary columns `duration_col` and
-            `event_col` (see below), covariates columns, and special columns (weights, strata).
+            `event_col` (see below), covariates columns, and special columns (weights).
             `duration_col` refers to
             the lifetimes of the subjects. `event_col` refers to whether
             the 'death' events was observed: 1 if observed, 0 else (censored).
@@ -1025,8 +1039,9 @@ class ParametericRegressionFitter(BaseFitter):
             dedent(
                 """\
             Fitting did not converge. This could be a problem with your data:
-            1. Are there any extreme values? (Try modelling them or dropping them to see if it helps convergence)
-            2. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`
+            1. Does a column have extremely high mean or variance? Try standardizing it.
+            2. Are there any extreme outliers? Try modelling them or dropping them to see if it helps convergence
+            3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`
         """
                 % name
             )
@@ -1076,17 +1091,18 @@ class ParametericRegressionFitter(BaseFitter):
         return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_errors(self, T, E, weights, *Xs):
+        with np.errstate(all="ignore"):
+            # convergence will fail catastraphically elsewhere.
+            ll_gradient = grad(self._negative_log_likelihood)
+            params = self.params_.values
+            n_params = params.shape[0]
+            J = np.zeros((n_params, n_params))
 
-        ll_gradient = grad(self._negative_log_likelihood)
-        params = self.params_.values
-        n_params = params.shape[0]
-        J = np.zeros((n_params, n_params))
+            for t, e, w, x, ancillary_x in zip(T, E, weights, Xs[0], Xs[1]):
+                score_vector = ll_gradient(params, t, e, w, x, ancillary_x)
+                J += np.outer(score_vector, score_vector)
 
-        for t, e, w, x, ancillary_x in zip(T, E, weights, Xs[0], Xs[1]):
-            score_vector = ll_gradient(params, t, e, w, x, ancillary_x)
-            J += np.outer(score_vector, score_vector)
-
-        return np.dot(self.variance_matrix_, J).dot(self.variance_matrix_)
+            return np.dot(self.variance_matrix_, J).dot(self.variance_matrix_)
 
     def _compute_confidence_intervals(self):
         z = inv_normal_cdf(1 - self.alpha / 2)
@@ -1098,7 +1114,7 @@ class ParametericRegressionFitter(BaseFitter):
 
     def _compute_likelihood_ratio_test(self):
         """
-        This function computes the likelihood ratio test for the Weibull model. We
+        This function computes the likelihood ratio test for the model. We
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
 
@@ -1351,18 +1367,18 @@ class ParametericRegressionFitter(BaseFitter):
 
         return ax
 
-    def plot_covariate_groups(self, covariate, values, plot_baseline=True, **kwargs):
+    def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
-        what happens when a covariate is varied over values in a group. This is useful to compare
-        subjects' survival as we vary a single covariate, all else being held equal. The baseline survival
+        what happens when a covariate(s) is varied over values in a group. This is useful to compare
+        subjects' survival as we vary covariate(s), all else being held equal. The baseline survival
         curve is equal to the predicted survival curve at all average values in the original dataset.
 
         Parameters
         ----------
-        covariate: string
-            a string of the covariate in the original dataset that we wish to vary.
-        values: iterable
+        covariates: string or list
+            a string (or list of strings) of the covariate in the original dataset that we wish to vary.
+        values: 1d or 2d iterable
             an iterable of the values we wish the covariate to take on.
         plot_baseline: bool
             also display the baseline survival, defined as the survival at the mean of the original dataset.
@@ -1373,24 +1389,56 @@ class ParametericRegressionFitter(BaseFitter):
         -------
         ax: matplotlib axis, or list of axis'
             the matplotlib axis that be edited.
+
+        Examples
+        ---------
+
+        >>> from lifelines import datasets, WeibullAFTFitter
+        >>> rossi = datasets.load_rossi()
+        >>> wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
+        >>> wf.plot_covariate_groups('prio', values=np.arange(0, 15), cmap='coolwarm')
+
+        >>> # multiple variables at once
+        >>> wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
+
+        >>> # if you have categorical variables, you can simply things:
+        >>> wf.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
+
+
         """
         from matplotlib import pyplot as plt
 
+        covariates = _to_list(covariates)
+        n_covariates = len(covariates)
+        values = _to_array(values)
+        if len(values.shape) == 1:
+            values = values[None, :].T
+
+        if len(covariates) != values.shape[1]:
+            raise ValueError("The number of covariates must equal to second dimension of the values array.")
+
         original_columns = self.params_.index.get_level_values(1)
-        if covariate not in original_columns:
-            raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
+        for covariate in covariates:
+            if covariate not in original_columns:
+                raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
         ax = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
 
+        # model X
         x_bar = self._norm_mean.to_frame().T
-        X = pd.concat([x_bar] * len(values))
-        X.index = ["%s=%s" % (covariate, g) for g in values]
-        X[covariate] = values
+        X = pd.concat([x_bar] * values.shape[0])
+        if np.array_equal(np.eye(len(covariates)), values):
+            X.index = ["%s=1" % c for c in covariates]
+        else:
+            X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+        for covariate, value in zip(covariates, values.T):
+            X[covariate] = value
 
+        # model ancillary X
         x_bar_anc = self._norm_mean_ancillary.to_frame().T
-        ancillary_X = pd.concat([x_bar_anc] * len(values))
-        ancillary_X.index = ["%s=%s" % (covariate, g) for g in values]
-        ancillary_X[covariate] = values
+        ancillary_X = pd.concat([x_bar_anc] * values.shape[0])
+        for covariate, value in zip(covariates, values.T):
+            ancillary_X[covariate] = value
 
         if self.fit_intercept:
             X["_intercept"] = 1.0

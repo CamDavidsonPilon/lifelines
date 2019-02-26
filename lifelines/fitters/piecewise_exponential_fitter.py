@@ -26,7 +26,7 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
     Important
     ----------
     The parameterization of this model changed in lifelines 0.19.1. Previously, the cumulative hazard looked like
-    :math:`\lambda_i t`. The parameterization is now the recipricol of :math:`\lambda_i`.
+    :math:`\lambda_i t`. The parameterization is now the reciprocal of :math:`\lambda_i`.
 
 
     """

@@ -50,7 +50,7 @@ class CoxTimeVaryingFitter(BaseFitter):
     r"""
     This class implements fitting Cox's time-varying proportional hazard model:
 
-        .. math::  h(t|x(t)) = h_0(t)*\exp(x(t)'*beta)
+        .. math::  h(t|x(t)) = h_0(t)\exp(x(t)'\beta)
 
     Parameters
     ----------
@@ -85,21 +85,21 @@ class CoxTimeVaryingFitter(BaseFitter):
         strata=None,
     ):  # pylint: disable=too-many-arguments
         """
-        Fit the Cox Propertional Hazard model to a time varying dataset. Tied survival times
+        Fit the Cox Proportional Hazard model to a time varying dataset. Tied survival times
         are handled using Efron's tie-method.
 
         Parameters
         -----------
         df: DataFrame
-            a Pandas dataframe with necessary columns `duration_col` and
+            a Pandas DataFrame with necessary columns `duration_col` and
            `event_col`, plus other covariates. `duration_col` refers to
            the lifetimes of the subjects. `event_col` refers to whether
            the 'death' events was observed: 1 if observed, 0 else (censored).
         id_col: string
-            A subject could have multiple rows in the dataframe. This column contains
-           the unique identifer per subject.
+            A subject could have multiple rows in the DataFrame. This column contains
+           the unique identifier per subject.
         event_col: string
-           the column in dataframe that contains the subjects' death
+           the column in DataFrame that contains the subjects' death
            observation. If left as None, assume all individuals are non-censored.
         start_col: string
             the column that contains the start of a subject's time period.
@@ -198,7 +198,7 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     @staticmethod
     def _check_values(df, events, start, stop, event_col):
-        # check_for_overlapping_intervals(df) # this is currenty too slow for production.
+        # check_for_overlapping_intervals(df) # this is currently too slow for production.
         check_nans_or_infs(df)
         check_low_var(df)
         check_complete_separation_low_variance(df, events, event_col)
@@ -276,7 +276,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         stop_times_events: DataFrame
              meta information about the subjects history
         show_progress: boolean, optional (default: True)
-            to show verbous output of convergence
+            to show verbose output of convergence
         step_size: float
             > 0 to determine a starting step size in NR algorithm.
         precision: float
@@ -506,7 +506,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to :math:`\beta (X - \bar{X})`
+        baseline hazard is not included. Equal to :math:`(x - \bar{x})'\beta `
 
 
         Parameters
@@ -522,7 +522,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         Note
         -----
-        If X is a dataframe, the order of the columns do not matter. But
+        If X is a DataFrame, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
@@ -539,7 +539,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def predict_partial_hazard(self, X):
         r"""
         Returns the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to :math:`\exp{\beta (X - \bar{X})}`
+        baseline hazard is not included. Equal to :math:`\exp{(x - \bar{x})'\beta }`
 
         Parameters
         ----------
@@ -554,7 +554,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         Note
         -----
-        If X is a dataframe, the order of the columns do not matter. But
+        If X is a DataFrame, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
 
@@ -570,7 +570,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         decimals: int, optional (default=2)
             specify the number of decimal places to show
         kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
 
         """
@@ -646,7 +646,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Parameters
         ----------
         columns : list, optional
-            specifiy a subset of the columns to plot
+            specify a subset of the columns to plot
         errorbar_kwargs:
             pass in additional plotting commands to matplotlib errorbar command
 

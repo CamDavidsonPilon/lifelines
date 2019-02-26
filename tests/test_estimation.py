@@ -1553,7 +1553,7 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.074052141, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 2.756355922, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 1.163429253, rtol=1e-4)
-        npt.assert_allclose(aft.summary.loc[("rho_", "prio"), "coef"], 0.008982523, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("rho_", "prio"), "coef"], 0.008982523, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("rho_", "age"), "coef"], -0.037069994, rtol=1e-4)
 
     def test_ancillary_True_is_same_as_full_df(self, rossi):

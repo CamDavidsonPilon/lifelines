@@ -147,7 +147,7 @@ but instead of a ``survival_function_`` being exposed, a ``cumulative_hazard_`` 
 
 .. note:: Similar to `Scikit-Learn <http://scikit-learn.org>`_, all statistically estimated quantities append an underscore to the property name.
 
-.. note:: More detailed docs about estimating the survivial function and cumulative hazard are available in `Survival analysis with lifelines`_.
+.. note:: More detailed docs about estimating the survival function and cumulative hazard are available in `Survival analysis with lifelines`_.
 
 
 Getting data in the right format
@@ -205,7 +205,7 @@ While the above ``KaplanMeierFitter`` and ``NelsonAalenFitter`` are useful, they
     regression_dataset.head()
 
 
-The input of the ``fit`` method's API in a regression is different. All the data, including durations, censorings and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``. Below we model our regression dataset using the Cox proportional hazard model, full docs `here <https://lifelines.readthedocs.io/en/latest/lifelines.fitters.html#module-lifelines.fitters.coxph_fitter>`_.
+The input of the ``fit`` method's API in a regression is different. All the data, including durations, censored indicators and covariates must be contained in **a Pandas DataFrame** (yes, it must be a DataFrame). The duration column and event occurred column must be specified in the call to ``fit``. Below we model our regression dataset using the Cox proportional hazard model, full docs `here <https://lifelines.readthedocs.io/en/latest/lifelines.fitters.html#module-lifelines.fitters.coxph_fitter>`_.
 
 .. code:: python
 

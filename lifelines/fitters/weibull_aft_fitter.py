@@ -19,9 +19,9 @@ class WeibullAFTFitter(ParametericRegressionFitter):
 
     which implies the cumulative hazard rate is
 
-    .. math:: H(t) = \left(\frac{t}{\lambda(x)} \right)^{\rho(y)},
+    .. math:: H(t; x, y) = \left(\frac{t}{\lambda(x)} \right)^{\rho(y)},
 
-    After calling the `.fit` method, you have access to properties like:
+    After calling the ``.fit`` method, you have access to properties like:
     ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.
 
 
@@ -37,7 +37,7 @@ class WeibullAFTFitter(ParametericRegressionFitter):
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
 
     l1_ratio: float, optional (default=0.0)
-        how much of the penalizer should be attributed to an l1 penality (otherwise an l2 penalty). The penalty function looks like
+        how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
         ``penalizer * l1_ratio * ||w||_1 + 0.5 * penalizer * (1 - l1_ratio) * ||w||^2_2``
     """
 
@@ -54,6 +54,15 @@ class WeibullAFTFitter(ParametericRegressionFitter):
         rho_ = np.exp(np.dot(Xs[1], rho_params))
 
         return (T / lambda_) ** rho_
+
+    def _log_hazard(self, params, T, *Xs):
+        lambda_params = params[self._LOOKUP_SLICE["lambda_"]]
+        log_lambda_ = np.dot(Xs[0], lambda_params)
+
+        rho_params = params[self._LOOKUP_SLICE["rho_"]]
+        log_rho_ = np.dot(Xs[1], rho_params)
+
+        return log_rho_ - log_lambda_ + np.expm1(log_rho_) * (np.log(T) - log_lambda_)
 
     def predict_percentile(self, X, ancillary_X=None, p=0.5):
         """

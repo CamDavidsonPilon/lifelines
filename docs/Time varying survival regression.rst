@@ -5,7 +5,7 @@ Time varying survival regression
 Cox's time varying proportional hazard model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Often an individual will have a covariate change over time. An example of this is hospital patients who enter the study and, at some future time, may recieve a heart transplant. We would like to know the effect of the transplant, but we cannot condition on whether they recieved the transplant naively. Consider that if patients needed to wait at least 1 year before getting a transplant, then everyone who dies before that year is considered as a non-transplant patient, and hence this would overestimate the hazard of not recieving a transplant.
+Often an individual will have a covariate change over time. An example of this is hospital patients who enter the study and, at some future time, may receive a heart transplant. We would like to know the effect of the transplant, but we cannot condition on whether they received the transplant naively. Consider that if patients needed to wait at least 1 year before getting a transplant, then everyone who dies before that year is considered as a non-transplant patient, and hence this would overestimate the hazard of not receiving a transplant.
 
 We can incorporate changes over time into our survival analysis by using a modification of the Cox model above. The general mathematical description is:
 
@@ -37,7 +37,7 @@ Dataset creation for time-varying regression
 
 In the above dataset, ``start`` and ``stop`` denote the boundaries, ``id`` is the unique identifier per subject, and ``event`` denotes if the subject died at the end of that period. For example, subject ID 2 had variable ``z=0`` up to and including the end of time period 5 (we can think that measurements happen at end of the time period), after which it was set to 1. Since ``event`` is 1 in that row, we conclude that the subject died at time 8,
 
-This desired dataset can be built up from smaller datasets. To do this we can use some helper functions provided in *lifelines*. Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations alive, and a censorsed flag, and possibly static covariates. Ex:
+This desired dataset can be built up from smaller datasets. To do this we can use some helper functions provided in *lifelines*. Typically, data will be in a format that looks like it comes out of a relational database. You may have a "base" table with ids, durations alive, and a censored flag, and possibly static covariates. Ex:
 
 .. table::
 
@@ -140,7 +140,7 @@ If your dataset is of the second type, that is, event-based, your dataset may lo
     2   3     3.0
     ...
 
-Initially, this can't be added to our baseline dataframe. However, using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added.
+Initially, this can't be added to our baseline DataFrame. However, using ``utils.covariates_from_event_matrix`` we can convert a DataFrame like this into one that can be easily added.
 
 
 .. code-block:: python
@@ -169,7 +169,7 @@ One additional flag on ``add_covariate_to_timeline`` that is of interest is the 
 Delaying time-varying covariates
 #############################################
 
-``add_covariate_to_timeline`` also has an option for delaying, or shifting, a covariate so it changes later than originally observed. One may ask, why should one delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknownst to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
+``add_covariate_to_timeline`` also has an option for delaying, or shifting, a covariate so it changes later than originally observed. One may ask, why should one delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknown-st to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
 
 To handle this, you can delay the observations by time periods:
 
@@ -203,4 +203,4 @@ Fitting the Cox model to the data involves using gradient descent. *lifelines* t
 Short note on prediction
 ################################################
 
-Unlike the other regression models, prediction in a time-varying setting is not trivial. To predict, we would need to know the covariates values beyond the observed times, but if we knew that, we would also know if the subject was still alive or not! However, it is still possible to compute the hazard values of subjects at known observations, the baseline cumulative hazard rate, and baseline survival function. So while ``CoxTimeVaryingFitter`` exposes prediction methods, there are logicial limitations to what these predictions mean.
+Unlike the other regression models, prediction in a time-varying setting is not trivial. To predict, we would need to know the covariates values beyond the observed times, but if we knew that, we would also know if the subject was still alive or not! However, it is still possible to compute the hazard values of subjects at known observations, the baseline cumulative hazard rate, and baseline survival function. So while ``CoxTimeVaryingFitter`` exposes prediction methods, there are logical limitations to what these predictions mean.

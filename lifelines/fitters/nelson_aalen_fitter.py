@@ -70,7 +70,7 @@ class NelsonAalenFitter(UnivariateFitter):
         durations: an array, or pd.Series, of length n
           duration subject was observed for
         timeline: iterable
-            return the best estimate at the values in timelines (postively increasing)
+            return the best estimate at the values in timelines (positively increasing)
         event_observed: an array, or pd.Series, of length n
             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
         entry: an array, or pd.Series, of length n
@@ -212,7 +212,7 @@ class NelsonAalenFitter(UnivariateFitter):
         Parameters
         ----------
           bandwidth: float
-            the bandwith to use in the Epanechnikov kernel. > 0
+            the bandwidth to use in the Epanechnikov kernel. > 0
           hazard_: numpy array
             a computed (n,) numpy array of estimated hazard rates. If none, uses ``smoothed_hazard_``
         """

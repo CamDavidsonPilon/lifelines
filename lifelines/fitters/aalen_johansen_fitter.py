@@ -16,7 +16,7 @@ class AalenJohansenFitter(UnivariateFitter):
     Meier estimator with competing risks as censored is akin to estimating the cumulative density if all competing risks
     had been prevented.
 
-    Aalen-Johansen cannot deal with tied times. We can get around this by randomy jittering the event times
+    Aalen-Johansen cannot deal with tied times. We can get around this by randomly jittering the event times
     slightly. This will be done automatically and generates a warning.
 
 

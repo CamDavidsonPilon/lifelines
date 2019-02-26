@@ -14,7 +14,7 @@ Traditionally, survival analysis was developed to measure lifespans of individua
 An actuary or health professional would ask questions like
 "how long does this population live for?", and answer it using survival analysis.
 For example, the population may be a nation's population (for actuaries),
-or a population stricken by a disease (in the medical professional's case).
+or a population stricken by a disease (in the medical professionals case).
 Traditionally, sort of a morbid subject.
 
 The analysis can be further applied to not just traditional *births and

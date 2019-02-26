@@ -5,13 +5,8 @@
 Survival regression
 #######################
 
-Often we have additional data aside from the duration, and if
-applicable any censorings that occurred. In the previous section's regime dataset, we have
-the type of government the political leader was part of, the country
-they were head of, and the year they were elected. Can we use this data
-in survival analysis?
-
-Yes, the technique is called *survival regression* -- the name implies
+Often we have additional data aside from the duration that we want to use.
+The technique is called *survival regression* -- the name implies
 we regress covariates (e.g., age, country, etc.) against
 another variable -- in this case durations. Similar to the
 logic in the first part of this tutorial, we cannot use traditional
@@ -24,7 +19,7 @@ hazard rate :math:`h(t | x)` as a function of :math:`t` and some covariates :mat
 
 The dataset for regression
 ===========================
-The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. There may be a column denoting the event status of each observation (1 if event occured, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial.
+The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. There may be a column denoting the event status of each observation (1 if event occurred, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial.
 
 
 An example dataset we will use is the Rossi recidivism dataset, available in *lifelines* as ``datasets.load_rossi``.
@@ -43,10 +38,10 @@ An example dataset we will use is the Rossi recidivism dataset, available in *li
     3      52       0    1   23     1     1    1     1     1
     """
 
-The dataframe ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occured, and the other columns represent variables we wish to regress against.
+The dataframe ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occurred, and the other columns represent variables we wish to regress against.
 
 
-If you need to first clean or transform your dataset (encode categorical variables, add interation terms, etc.), that should happen *before* using *lifelines*. Libraries like Pandas and Patsy help with that.
+If you need to first clean or transform your dataset (encode categorical variables, add interaction terms, etc.), that should happen *before* using *lifelines*. Libraries like Pandas and Patsy help with that.
 
 
 Cox's proportional hazard model
@@ -59,15 +54,14 @@ R as ``coxph``). The idea behind the model is that the log-hazard of an individu
 
 Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease the baseline hazard.
 
+.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
+
 
 Running the regression
 -----------------------
 
-
 The implementation of the Cox model in *lifelines* is called ``CoxPHFitter``. Like R, it has a ``print_summary`` function that prints a tabular view of coefficients and related stats.
 
-
-.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
 
 .. code:: python
 
@@ -222,11 +216,12 @@ With a fitted model, an alternative way to view the coefficients and their range
 
 .. image:: images/coxph_plot.png
 
+.. _plot-covariate-groups:
 
 Plotting the effect of varying a covariate
 -------------------------------------------
 
-After fitting, we can plot what the survival curves look like as we vary a single covarite while
+After fitting, we can plot what the survival curves look like as we vary a single covariate while
 holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the ``plot_covariate_groups`` method and give it the covariate of interest, and the values to display.
 
 .. code:: python
@@ -243,6 +238,36 @@ holding everything else equal. This is useful to understand the impact of a cova
 .. image:: images/coxph_plot_covarite_groups.png
 
 
+The ``plot_covariate_groups`` method can accept multiple covariates as well. This is useful for two purposes:
+
+1. There are derivative features in your dataset. For example, suppose you have included ``year`` and ``year**2`` in your dataset. It doesn't make sense to just vary ``year`` and leave ``year**2`` fixed. You'll need to specify manually the values the covariates take on in a N-d array or list (where N is the number of covariates being varied.)
+
+.. code:: python
+
+    cph.plot_covariate_groups(
+        ['year', 'year**2'],
+        [
+            [0, 0],
+            [1, 1],
+            [2, 4],
+            [3, 9],
+            [8, 64],
+        ],
+        cmap='coolwarm')
+
+2. This feature is also useful for analyzing categorical variables. In your regression, you may have dummy variables (also called one-hot-encoded variables) in your DataFrame that represent some categorical variable. To simultaneously plot the survival curves of each category, all else being equal, we can use:
+
+
+.. code:: python
+
+    cph.plot_covariate_groups(
+        ['d1', 'd2' 'd3', 'd4', 'd5'],
+        np.eye(5)
+        cmap='coolwarm')
+
+The reason why we use ``np.eye`` is because we want each row of the matrix to "turn on" one category and "turn off" the others.
+
+
 Checking the proportional hazards assumption
 -----------------------------------------------
 
@@ -255,7 +280,7 @@ Non-proportional hazards is a case of *model misspecification*. Suggestions are 
 Stratification
 -----------------------------------------------
 
-Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* smaller datasets, defined by the unique values of the stratifing covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``.
+Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* smaller datasets, defined by the unique values of the stratifying covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under ``baseline_cumulative_hazard_``.
 
 To specify variables to be used in stratification, we define them in the call to ``fit``:
 
@@ -299,9 +324,9 @@ To specify variables to be used in stratification, we define them in the call to
 Weights & robust errors
 -----------------------------------------------
 
-Observations can come with weights, as well. These weights may be integer values representing some commonly occuring observation, or they may be float values representing some sampling weights (ex: inverse probability weights). In the ``CoxPHFitter.fit`` method, an kwarg is present for specifying which column in the dataframe should be used as weights, ex: ``CoxPHFitter(df, 'T', 'E', weights_col='weights')``.
+Observations can come with weights, as well. These weights may be integer values representing some commonly occurring observation, or they may be float values representing some sampling weights (ex: inverse probability weights). In the ``CoxPHFitter.fit`` method, an kwarg is present for specifying which column in the DataFrame should be used as weights, ex: ``CoxPHFitter(df, 'T', 'E', weights_col='weights')``.
 
-When using sampling weights, it's correct to also change the standard error calculations. That is done by turning on the ``robust`` flag in ``fit``. Interally, ``CoxPHFitter`` will use the sandwhich estimator to compute the errors.
+When using sampling weights, it's correct to also change the standard error calculations. That is done by turning on the ``robust`` flag in ``fit``. Internally, ``CoxPHFitter`` will use the sandwich estimator to compute the errors.
 
 
 .. code:: python
@@ -328,9 +353,9 @@ Clusters & correlations
 Another property your dataset may have is groups of related subjects. This could be caused by:
 
  - a single individual having multiple occurrences, and hence showing up in the dataset more than once.
- - subjects that share some common property, like members of the same family or being matched on prospensity scores.
+ - subjects that share some common property, like members of the same family or being matched on propensity scores.
 
-We call these grouped subjects "clusters", and assume they are designated by some column in the dataframe (example below). When using clustesr, the point estimates of the model don't change, but the standard errors will increase. An intuitive argument for this is that 100 observations on 100 individuals provide more information than 100 observations on 10 individuals (or clusters).
+We call these grouped subjects "clusters", and assume they are designated by some column in the DataFrame (example below). When using cluster, the point estimates of the model don't change, but the standard errors will increase. An intuitive argument for this is that 100 observations on 100 individuals provide more information than 100 observations on 10 individuals (or clusters).
 
 
 .. code:: python
@@ -355,7 +380,7 @@ For more examples, see _`Correlations between subjects in a Cox model`.
 Residuals
 -----------------------------------------------
 
-After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modelling questions. See `Assessing Cox model fit using residuals`_.
+After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modeling questions. See `Assessing Cox model fit using residuals`_.
 
 
 Accelerated failure time models
@@ -445,13 +470,13 @@ From above, we can see that ``prio``, which is the number of previous incarcerat
 What does the ``rho_    _intercept`` row mean in the above table? Internally, we model the log of the ``rho_`` parameter, so the value of :math:`\rho` is the exponential of the value, so in case above it's :math:`\hat{\rho} = \exp0.339 = 1.404`. This brings us to the next point - modelling :math:`\rho` with covariates as well:
 
 
-Modelling ancillary parameters
+Modeling ancillary parameters
 -----------------------------------------------
 
-In the above model, we left the parameter :math:`\rho` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogenity in the :math:`\rho` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model :math:`\rho`, we use the ``ancillary_df`` keyword argument in the call to ``fit``. There are four valid options:
+In the above model, we left the parameter :math:`\rho` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogeneity in the :math:`\rho` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model :math:`\rho`, we use the ``ancillary_df`` keyword argument in the call to ``fit``. There are four valid options:
 
-1. ``False`` or ``None``: explicity do not model the ``rho_`` parameter (except for its intercept).
-2. a Pandas DataFrame. This option will use the columns in the Pandas DataFrame as the covariates in the regression for ``rho_``. This DataFrame could be a equal to, or a subset of, the original dataset using for modelling ``lambda_``, or it could be a totally different dataset.
+1. ``False`` or ``None``: explicitly do not model the ``rho_`` parameter (except for its intercept).
+2. a Pandas DataFrame. This option will use the columns in the Pandas DataFrame as the covariates in the regression for ``rho_``. This DataFrame could be a equal to, or a subset of, the original dataset using for modeling ``lambda_``, or it could be a totally different dataset.
 3. ``True``. Passing in ``True`` will internally reuse the dataset that is being used to model ``lambda_``.
 
 .. code:: python
@@ -507,7 +532,7 @@ In the above model, we left the parameter :math:`\rho` as a single unknown. We c
 Plotting
 -----------------------------------------------
 
-The plotting API is the same as in ``CoxPHFitter``. We can view all covarites in a forest plot:
+The plotting API is the same as in ``CoxPHFitter``. We can view all covariates in a forest plot:
 
 .. code:: python
 
@@ -517,7 +542,7 @@ The plotting API is the same as in ``CoxPHFitter``. We can view all covarites in
 .. image:: images/weibull_aft_forest.png
 
 
-We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using ``plot_covariate_groups``, and this is also a nice time to observe the effects of modelling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
+We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using ``plot_covariate_groups``, and this is also a nice time to observe the effects of modeling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
 
 .. code:: python
 
@@ -546,10 +571,13 @@ Comparing a few of these survival functions side by side:
 
 .. image:: images/weibull_aft_two_models_side_by_side.png
 
+You read more about and see other examples of the extensions to ``plot_covariate_groups`` :ref:`plot-covariate-groups`.
+
+
 Prediction
 -----------------------------------------------
 
-Given a new subject, we ask questions about their future survival? When are they likely to experience the event? What does their survival function look like? The ``WeibullAFTFitter`` is able to answer these. If we have modelled the ancillary covariates, we are required to include those as well:
+Given a new subject, we ask questions about their future survival? When are they likely to experience the event? What does their survival function look like? The ``WeibullAFTFitter`` is able to answer these. If we have modeled the ancillary covariates, we are required to include those as well:
 
 .. code:: python
 
@@ -562,7 +590,7 @@ Given a new subject, we ask questions about their future survival? When are they
     aft.predict_expectation(X, ancillary_X=X)
 
 
-There are two tunable parameters that can be used to to acheive a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to ``WeibullAFTFitter``. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_.
+There are two tunable parameters that can be used to to achieve a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to ``WeibullAFTFitter``. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_.
 
 .. code:: python
 
@@ -619,7 +647,7 @@ There are also the ``LogNormalAFTFitter`` and ``LogLogisticAFTFitter`` models, w
 Model selection for AFT models
 -----------------------------------------------
 
-Often, you don't know *a priori* which AFT model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihoood. We can look at the log-likelihood for each fitted model and select the largest one.
+Often, you don't know *a priori* which AFT model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihood. We can look at the log-likelihood for each fitted model and select the largest one.
 
 .. code::python
 
@@ -840,14 +868,14 @@ Model selection based on predictive power
 
 If censoring is present, it's not appropriate to use a loss function like mean-squared-error or
 mean-absolute-loss. Instead, one measure is the concordance-index, also known as the c-index. This measure
-evaluates the accuracy of the ordering of predicted time. It is infact a generalization
+evaluates the accuracy of the ordering of predicted time. It is in fact a generalization
 of AUC, another common loss function, and is interpreted similarly:
 
 * 0.5 is the expected result from random predictions,
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-Fitted survival models typically have a concordance index between 0.55 and 0.7 (this may seem bad, but even a perfect model has a lot of noise than can make a high score impossible). In *lifelines*, a fitted model's concordance-index is present in the output of ``print_summary()``, but also available under the ``score_`` property. Generally, the measure is implemented in *lifelines* under ``lifelines.utils.concordance_index`` and accepts the actual times (along with any censorings) and the predicted times.
+Fitted survival models typically have a concordance index between 0.55 and 0.7 (this may seem bad, but even a perfect model has a lot of noise than can make a high score impossible). In *lifelines*, a fitted model's concordance-index is present in the output of ``print_summary()``, but also available under the ``score_`` property. Generally, the measure is implemented in *lifelines* under ``lifelines.utils.concordance_index`` and accepts the actual times (along with any censored subjects) and the predicted times.
 
 .. code:: python
 
