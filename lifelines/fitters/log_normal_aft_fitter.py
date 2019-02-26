@@ -39,6 +39,25 @@ class LogNormalAFTFitter(ParametericRegressionFitter):
     l1_ratio: float, optional (default=0.0)
         how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
         ``penalizer * l1_ratio * ||w||_1 + 0.5 * penalizer * (1 - l1_ratio) * ||w||^2_2``
+
+    Attributes
+    ----------
+    params_ : DataFrame
+        The estimated coefficients
+    confidence_intervals_ : DataFrame
+        The lower and upper confidence intervals for the coefficients
+    durations: Series
+        The event_observed variable provided
+    event_observed: Series
+        The event_observed variable provided
+    weights: Series
+        The event_observed variable provided
+    variance_matrix_ : numpy array
+        The variance matrix of the coefficients
+    standard_errors_: Series
+        the standard errors of the estimates
+    score_: float
+        the concordance index of the model.
     """
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):

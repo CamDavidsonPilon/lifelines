@@ -28,6 +28,36 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
     The parameterization of this model changed in lifelines 0.19.1. Previously, the cumulative hazard looked like
     :math:`\lambda_i t`. The parameterization is now the reciprocal of :math:`\lambda_i`.
 
+    Attributes
+    ----------
+    cumulative_hazard_ : DataFrame
+        The estimated cumulative hazard (with custom timeline if provided)
+    confidence_interval_cumulative_hazard_ : DataFrame
+        The lower and upper confidence intervals for the cumulative hazard
+    hazard_ : DataFrame
+        The estimated hazard (with custom timeline if provided)
+    confidence_interval_hazard_ : DataFrame
+        The lower and upper confidence intervals for the hazard
+    survival_function_ : DataFrame
+        The estimated survival function (with custom timeline if provided)
+    confidence_interval_survival_function_ : DataFrame
+        The lower and upper confidence intervals for the survival function
+    variance_matrix_ : numpy array
+        The variance matrix of the coefficients
+    median_: float
+        The median time to event
+    lambda_i_: float
+        The fitted parameter in the model, for i = 0, 1 ... n-1 breakpoints
+    durations: array
+        The durations provided
+    event_observed: array
+        The event_observed variable provided
+    timeline: array
+        The time line to use for plotting and indexing
+    entry: array or None
+        The entry array provided, or None
+    breakpoints: array
+        The provided breakpoints
 
     """
 

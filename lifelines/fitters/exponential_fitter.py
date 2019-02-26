@@ -33,6 +33,34 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
     -----
     Reference: https://www4.stat.ncsu.edu/~dzhang2/st745/chap3.pdf
 
+    Attributes
+    ----------
+    cumulative_hazard_ : DataFrame
+        The estimated cumulative hazard (with custom timeline if provided)
+    confidence_interval_cumulative_hazard_ : DataFrame
+        The lower and upper confidence intervals for the cumulative hazard
+    hazard_ : DataFrame
+        The estimated hazard (with custom timeline if provided)
+    confidence_interval_hazard_ : DataFrame
+        The lower and upper confidence intervals for the hazard
+    survival_function_ : DataFrame
+        The estimated survival function (with custom timeline if provided)
+    confidence_interval_survival_function_ : DataFrame
+        The lower and upper confidence intervals for the survival function
+    variance_matrix_ : numpy array
+        The variance matrix of the coefficients
+    median_: float
+        The median time to event
+    lambda_: float
+        The fitted parameter in the model
+    durations: array
+        The durations provided
+    event_observed: array
+        The event_observed variable provided
+    timeline: array
+        The time line to use for plotting and indexing
+    entry: array or None
+        The entry array provided, or None
     """
 
     _fitted_parameter_names = ["lambda_"]

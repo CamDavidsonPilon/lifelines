@@ -84,7 +84,7 @@ class CoxPHFitter(BaseFitter):
         'Efron' is available.
 
       penalizer: float, optional (default=0.0)
-        Attach a L2 penalizer to the size of the coefficients during regression. This improves
+        Attach an L2 penalizer to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the absolute value of :math:`\beta_i`.
         The penalty is :math:`\frac{1}{2} \text{penalizer} ||\beta||^2`.
@@ -103,6 +103,30 @@ class CoxPHFitter(BaseFitter):
     >>> cph = CoxPHFitter()
     >>> cph.fit(rossi, 'week', 'arrest')
     >>> cph.print_summary()
+
+    Attributes
+    ----------
+    hazards_ : Series
+        The estimated hazards
+    confidence_intervals_ : DataFrame
+        The lower and upper confidence intervals for the hazard coefficients
+    durations: Series
+        The durations provided
+    event_observed: Series
+        The event_observed variable provided
+    weights: Series
+        The event_observed variable provided
+    variance_matrix_ : numpy array
+        The variance matrix of the coefficients
+    strata: list
+        the strata provided
+    standard_errors_: Series
+        the standard errors of the estimates
+    score_: float
+        the concordance index of the model.
+    baseline_hazard_: DataFrame
+    baseline_cumulative_hazard_: DataFrame
+    baseline_survival_: DataFrame
     """
 
     def __init__(self, alpha=0.05, tie_method="Efron", penalizer=0.0, strata=None):
@@ -170,7 +194,7 @@ class CoxPHFitter(BaseFitter):
 
         strata: list or string, optional
             specify a column or list of columns n to use in stratification. This is useful if a
-            catagorical covariate does not obey the proportional hazard assumption. This
+            categorical covariate does not obey the proportional hazard assumption. This
             is used similar to the `strata` expression in R.
             See http://courses.washington.edu/b515/l17.pdf.
 
@@ -183,7 +207,7 @@ class CoxPHFitter(BaseFitter):
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
 
         cluster_col: string, optional
-            specifies what column has unique identifers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+            specifies what column has unique identifiers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
             be used.
 
         batch_mode: bool, optional

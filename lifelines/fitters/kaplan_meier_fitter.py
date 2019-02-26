@@ -30,6 +30,7 @@ class KaplanMeierFitter(UnivariateFitter):
     alpha: float, option (default=0.05)
         The alpha value associated with the confidence intervals.
 
+
     Examples
     --------
     >>> from lifelines import KaplanMeierFitter
@@ -38,6 +39,26 @@ class KaplanMeierFitter(UnivariateFitter):
     >>> kmf = KaplanMeierFitter()
     >>> kmf.fit(waltons['T'], waltons['E'])
     >>> kmf.plot()
+
+
+    Attributes
+    ----------
+    survival_function_ : DataFrame
+        The estimated survival function (with custom timeline if provided)
+    median_ : float
+        The estimated median time to event. np.inf if doesn't exist.
+    confidence_interval_ : DataFrame
+        The lower and upper confidence intervals for the survival function
+    durations: array
+        The durations provided
+    event_observed: array
+        The event_observed variable provided
+    timeline: array
+        The time line to use for plotting and indexing
+    entry: array or None
+        The entry array provided, or None
+    event_table: DataFrame
+        A summary of the life table
     """
 
     def fit(

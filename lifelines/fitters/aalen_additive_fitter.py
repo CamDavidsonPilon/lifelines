@@ -64,6 +64,20 @@ class AalenAdditiveFitter(BaseFitter):
       Attach a L2 penalizer to difference between adjacent (over time) coefficients. For
       example, this shrinks the absolute value of :math:`c_{i,t} - c_{i,t+1}`.
 
+    Attributes
+    ----------
+    cumulative_hazards_ : DataFrame
+        The estimated cumulative hazard
+    hazards_ : DataFrame
+        The estimated hazards
+    confidence_intervals_ : DataFrame
+        The lower and upper confidence intervals for the cumulative hazard
+    durations: array
+        The durations provided
+    event_observed: array
+        The event_observed variable provided
+    weights: array
+        The event_observed variable provided
     """
 
     def __init__(self, fit_intercept=True, alpha=0.05, coef_penalizer=0.0, smoothing_penalizer=0.0):

@@ -37,6 +37,23 @@ class NelsonAalenFitter(UnivariateFitter):
     ------
     [1] Aalen, O., Borgan, O., Gjessing, H., 2008. Survival and Event History Analysis
 
+    Attributes
+    ----------
+    cumulative_hazard_ : DataFrame
+        The estimated cumulative hazard (with custom timeline if provided)
+    confidence_interval_ : DataFrame
+        The lower and upper confidence intervals for the cumulative hazard
+    durations: array
+        The durations provided
+    event_observed: array
+        The event_observed variable provided
+    timeline: array
+        The time line to use for plotting and indexing
+    entry: array or None
+        The entry array provided, or None
+    event_table: DataFrame
+        A summary of the life table
+
     """
 
     def __init__(self, alpha=0.05, nelson_aalen_smoothing=True):

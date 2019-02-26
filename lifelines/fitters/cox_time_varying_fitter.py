@@ -57,8 +57,28 @@ class CoxTimeVaryingFitter(BaseFitter):
     alpha: float, optional (default=0.05)
        the level in the confidence intervals.
     penalizer: float, optional
-        the coefficient of an l2 penalizer in the regression
+        the coefficient of an L2 penalizer in the regression
 
+    Attributes
+    ----------
+    hazards_ : Series
+        The estimated hazards
+    confidence_intervals_ : DataFrame
+        The lower and upper confidence intervals for the hazard coefficients
+    event_observed: Series
+        The event_observed variable provided
+    weights: Series
+        The event_observed variable provided
+    variance_matrix_ : numpy array
+        The variance matrix of the coefficients
+    strata: list
+        the strata provided
+    standard_errors_: Series
+        the standard errors of the estimates
+    score_: float
+        the concordance index of the model.
+    baseline_cumulative_hazard_: DataFrame
+    baseline_survival_: DataFrame
     """
 
     def __init__(self, alpha=0.05, penalizer=0.0, strata=None):
