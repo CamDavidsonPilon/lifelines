@@ -1,5 +1,10 @@
 ### Changelog
 
+#### 0.19.4
+
+##### Bug fixes
+ - remove some bad print statements in `CoxPHFitter`.
+
 #### 0.19.3
 
 ##### New features

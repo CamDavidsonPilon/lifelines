@@ -693,7 +693,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
             else:
                 factor = np.log(risk_phi)
 
-            print(t, weight_count / tied_death_counts * factor)
             log_lik = log_lik - weight_count / tied_death_counts * factor
 
         return log_lik
@@ -743,7 +742,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
                 factor = np.log(risk_phi - np.arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
             else:
                 factor = np.log(risk_phi)
-            print(ti, weight_count / tied_death_counts * factor)
             log_lik = log_lik - weight_count / tied_death_counts * factor
 
             # reset tie values
