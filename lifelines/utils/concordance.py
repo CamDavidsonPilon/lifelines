@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division
+
 import numpy as np
 from lifelines.utils.btree import _BTree
 

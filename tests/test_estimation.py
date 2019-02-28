@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import division
-
 import warnings
 
 # pylint: disable=wrong-import-position
@@ -13,10 +10,7 @@ import os
 import pickle
 from itertools import combinations
 
-try:
-    from StringIO import StringIO as stringio, StringIO
-except ImportError:
-    from io import StringIO, BytesIO as stringio
+from io import StringIO, BytesIO as stringio
 
 import numpy as np
 import pandas as pd
@@ -26,7 +20,6 @@ from scipy.stats import weibull_min, norm, logistic
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 
-from lifelines.compat import PY2, PY3
 from lifelines.utils import (
     k_fold_cross_validation,
     StatError,

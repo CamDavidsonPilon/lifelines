@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import division
+
 
 import collections
 from functools import wraps
@@ -47,8 +46,6 @@ from lifelines.utils import (
     normalize,
     concordance_index,
 )
-from lifelines.compat import PY2, PY3
-
 
 __all__ = []
 
@@ -89,22 +86,10 @@ class UnivariateFitter(BaseFitter):
     @_must_call_fit_first
     def _update_docstrings(self):
         # Update their docstrings
-        if PY2:
-            self.__class__.subtract.__func__.__doc__ = self.subtract.__doc__.format(
-                self._estimate_name, self.__class__.__name__
-            )
-            self.__class__.divide.__func__.__doc__ = self.divide.__doc__.format(
-                self._estimate_name, self.__class__.__name__
-            )
-            self.__class__.predict.__func__.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-            self.__class__.plot.__func__.__doc__ = _plot_estimate.__doc__.format(
-                self.__class__.__name__, self._estimate_name
-            )
-        elif PY3:
-            self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
-            self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
-            self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-            self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
+        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
+        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
+        self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
+        self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
     @_must_call_fit_first
     def plot(self, **kwargs):
@@ -345,8 +330,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return anp.log(hz)
 
     def _negative_log_likelihood(self, params, T, E, entry):
-        import warnings
-
         warnings.filterwarnings("ignore")
 
         n = T.shape[0]
@@ -807,8 +790,6 @@ class ParametericRegressionFitter(BaseFitter):
         return anp.log(hz)
 
     def _negative_log_likelihood(self, params, T, E, W, *Xs):
-        import warnings
-
         warnings.filterwarnings("ignore")
 
         ll = (W * E * self._log_hazard(params, T, *Xs)).sum() - (W * self._cumulative_hazard(params, T, *Xs)).sum()
@@ -1011,9 +992,7 @@ class ParametericRegressionFitter(BaseFitter):
         if self.fit_intercept:
             check_low_var(df)
 
-    def _fit_model(self, T, E, weights, *Xs, **kwargs):
-        # TODO: move this to function kwarg when I remove py2
-        show_progress = kwargs.pop("show_progress", False)
+    def _fit_model(self, T, E, weights, *Xs, show_progress=False):
         n_params = sum([X.shape[1] for X in Xs])
         init_values = np.zeros((n_params,))
         sum_weights = weights.sum()
@@ -1023,7 +1002,7 @@ class ParametericRegressionFitter(BaseFitter):
             init_values,
             method=None if self.l1_ratio <= 0.0 else "L-BFGS-B",
             jac=True,
-            args=(T, E, weights, Xs[0], Xs[1]),  # TODO: remove py2, (T, E, *Xs)
+            args=(T, E, weights, *Xs),
             options={"disp": show_progress},
         )
         if show_progress:
@@ -1040,7 +1019,7 @@ class ParametericRegressionFitter(BaseFitter):
                 """\
             Fitting did not converge. This could be a problem with your data:
             1. Does a column have extremely high mean or variance? Try standardizing it.
-            2. Are there any extreme outliers? Try modelling them or dropping them to see if it helps convergence
+            2. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence
             3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`
         """
                 % name
@@ -1102,7 +1081,7 @@ class ParametericRegressionFitter(BaseFitter):
                 score_vector = ll_gradient(params, t, e, w, x, ancillary_x)
                 J += np.outer(score_vector, score_vector)
 
-            return np.dot(self.variance_matrix_, J).dot(self.variance_matrix_)
+            return self.variance_matrix_ @ J @ self.variance_matrix_
 
     def _compute_confidence_intervals(self):
         z = inv_normal_cdf(1 - self.alpha / 2)
@@ -1409,7 +1388,6 @@ class ParametericRegressionFitter(BaseFitter):
         from matplotlib import pyplot as plt
 
         covariates = _to_list(covariates)
-        n_covariates = len(covariates)
         values = _to_array(values)
         if len(values.shape) == 1:
             values = values[None, :].T

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def filepath(fname):
@@ -22,14 +22,13 @@ setup(
     license="MIT",
     keywords="survival analysis statistics data analysis",
     url="https://github.com/CamDavidsonPilon/lifelines",
-    packages=["lifelines", "lifelines.datasets", "lifelines.fitters", "lifelines.utils"],
+    packages=find_packages(),
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 4 - Beta",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
@@ -39,8 +38,7 @@ setup(
         "numpy>=1.6.0",
         "scipy>=1.0",
         "pandas>=0.18",
-        """matplotlib>=2.0,<3.0;python_version<"3.0" """,
-        """matplotlib>=2.0;python_version>"3.0" """,
+        """matplotlib>=3.0""",
         "bottleneck>=1.0",
         "autograd>=1.2",
     ],

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import division
+
+
 import autograd.numpy as np
 from autograd.scipy.stats import norm
 from lifelines.fitters import KnownModelParametericUnivariateFitter

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+
 from itertools import combinations
 
 import numpy as np
@@ -511,7 +511,7 @@ def multivariate_logrank_test(
     V = V[:-1, :-1]
 
     # take the first n-1 groups
-    U = Z_j.iloc[:-1].dot(np.linalg.pinv(V[:-1, :-1])).dot(Z_j.iloc[:-1])  # Z.T*inv(V)*Z
+    U = Z_j.iloc[:-1] @ np.linalg.pinv(V[:-1, :-1]) @ Z_j.iloc[:-1]  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
     p_value = chisq_test(U, n_groups - 1)
