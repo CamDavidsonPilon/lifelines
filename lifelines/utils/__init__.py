@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division
+
 import warnings
 import collections
 from datetime import datetime
@@ -915,7 +915,7 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
             if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
-    See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ "
+    See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression"
                     % (col)
                 )
                 warnings.warn(warning_text, ConvergenceWarning)

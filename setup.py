@@ -23,6 +23,7 @@ setup(
     keywords="survival analysis statistics data analysis",
     url="https://github.com/CamDavidsonPilon/lifelines",
     packages=find_packages(),
+    python_requires=">=3.5",
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[

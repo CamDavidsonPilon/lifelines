@@ -181,7 +181,7 @@ def plot_lifetimes(
     **kwargs
 ):
     """
-    Retuns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#Censoring
+    Returns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#Censoring
 
     Parameters
     -----------

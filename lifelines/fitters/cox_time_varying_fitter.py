@@ -81,8 +81,7 @@ class CoxTimeVaryingFitter(BaseFitter):
     """
 
     def __init__(self, alpha=0.05, penalizer=0.0, strata=None):
-        if not (0 < alpha <= 1.0):
-            raise ValueError("alpha parameter must be between 0 and 1.")
+        super(CoxTimeVaryingFitter, self).__init__(alpha=alpha)
         if penalizer < 0:
             raise ValueError("penalizer parameter must be >= 0.")
 
@@ -153,7 +152,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df = df.copy()
 
         if not (id_col in df and event_col in df and start_col in df and stop_col in df):
-            raise KeyError("A column specified in the call to `fit` does not exist in the dataframe provided.")
+            raise KeyError("A column specified in the call to `fit` does not exist in the DataFrame provided.")
 
         if weights_col is None:
             self.weights_col = None
@@ -402,7 +401,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn(
                     "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ",
+See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression",
                     ConvergenceWarning,
                 )
                 converging, completed = False, False

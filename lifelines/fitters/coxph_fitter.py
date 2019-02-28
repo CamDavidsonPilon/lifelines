@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import time
 from datetime import datetime
 import warnings
@@ -129,12 +127,11 @@ class CoxPHFitter(BaseFitter):
     """
 
     def __init__(self, alpha=0.05, tie_method="Efron", penalizer=0.0, strata=None):
-        if not (0 < alpha <= 1.0):
-            raise ValueError("alpha parameter must be between 0 and 1.")
+        super(CoxPHFitter, self).__init__(alpha=alpha)
         if penalizer < 0:
             raise ValueError("penalizer parameter must be >= 0.")
         if tie_method != "Efron":
-            raise NotImplementedError("Only Efron is available atm.")
+            raise NotImplementedError("Only Efron is available at the moment.")
 
         self.alpha = alpha
         self.tie_method = tie_method
@@ -408,7 +405,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             since the fitter is iterative, show convergence
                  diagnostics.
         max_steps: int, optional
-            the maximum number of interations of the Newton-Rhaphson algorithm.
+            the maximum number of iterations of the Newton-Rhaphson algorithm.
 
         Returns
         -------
@@ -523,8 +520,8 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 converging, completed = False, False
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn(
-                    "The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ",
+                    "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
+See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression",
                     ConvergenceWarning,
                 )
                 converging, completed = False, False
@@ -546,7 +543,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # report to the user problems that we detect.
         if completed and norm_delta > 0.1:
             warnings.warn(
-                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity or complete separation in the dataset?"
+                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?"
                 % norm_delta,
                 ConvergenceWarning,
             )
@@ -560,7 +557,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
 
-        A good explaination for Efron. Consider three of five subjects who fail at the time.
+        A good explanation for Efron. Consider three of five subjects who fail at the time.
         As it is not known a priori that who is the first to fail, so one-third of
         (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
         of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
@@ -778,7 +775,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
-        A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+        A good explanation for how Efron handles ties. Consider three of five subjects who fail at the time.
         As it is not known a priori that who is the first to fail, so one-third of
         (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
         of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
@@ -1061,7 +1058,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def _compute_delta_beta(self, X, T, E, weights, index=None):
         """
         approximate change in betas as a result of excluding ith row. Good for finding outliers / specific
-        subjects that influence the model disproportinately. Good advice: don't drop these outliers, model them.
+        subjects that influence the model disproportionately. Good advice: don't drop these outliers, model them.
         """
         score_residuals = self._compute_score(X, T, E, weights, index=index)
 
@@ -1140,7 +1137,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Parameters
         ----------
         training_dataframe : pandas DataFrame
-            the same training dataframe given in `fit`
+            the same training DataFrame given in `fit`
         kind : string
             {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale', 'scaled_schoenfeld'}
 
@@ -1271,7 +1268,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         This function computes the likelihood ratio test for the Cox model. We
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
-
         """
         if self._batch_mode:
             ll_null = self._trivial_log_likelihood_batch(
@@ -1306,7 +1302,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         Notes
         -----
-        If X is a dataframe, the order of the columns do not matter. But
+        If X is a DataFrame, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
@@ -1733,7 +1729,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         self, training_df, advice=True, show_plots=False, p_value_threshold=0.05, plot_n_bootstraps=10
     ):
         """
-        Use this function to test the proportional hazards assumption. See iterative usage example at
+        Use this function to test the proportional hazards assumption. See usage example at
         https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
 
 
@@ -1780,8 +1776,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         References
         -----------
-        section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
-        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
+        section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf,
+        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf,
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
 
@@ -1813,13 +1809,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                         dedent(
                             """
                     The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates
-                    will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
-
-                    Similarly, when there are lots of observations, even minor deviances from the proportional hazard
+                    will be below the threshold by chance. This is compounded when there are many covariates. Similarly, when there are lots of observations, even minor deviances from the proportional hazard
                     assumption will be flagged.
 
-                    With that in mind, it's best to use a combination of statistical tests and eyeball tests to
-                    determine the most serious violations.
+                    With that in mind, it's best to use a combination of statistical tests and visual tests to
+                    determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)``.
 
                     """
                             % p_value_threshold
@@ -1844,18 +1838,18 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 # This should capture dichotomous / low cardinality values.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
-                        "   Advice: with so few unique values (only {0}), you can try `strata=['{1}']` in the call in `.fit`. See documentation in link [A] and [B] below.".format(
+                        "   Advice: with so few unique values (only {0}), you can try `strata=['{1}']` in the call in `.fit`. See documentation in link [B] below.".format(
                             n_uniques, variable
                         )
                     )
                 else:
                     print(
-                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}']` in the call in `.fit`. See documentation in link [A] and [B] below.""".format(
+                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}']` in the call in `.fit`. See documentation in link [B] below.""".format(
                             var=variable
                         )
                     )
                     print(
-                        """   Advice: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
+                        """   Alternative Advice: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
                             var=variable
                         )
                     )
@@ -1903,7 +1897,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     """
                 ---
                 [A]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
-                [B]  https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#checking-the-proportional-hazards-assumption
+                [B]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-1:-bin-variable-and-stratify-on-it
                 [C]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-2:-introduce-time-varying-covariates
             """
                 )
