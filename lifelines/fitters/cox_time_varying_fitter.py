@@ -486,7 +486,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
             if tied_death_counts > 1:
 
-                # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+                # A good explanation for how Efron handles ties. Consider three of five subjects who fail at the time.
                 # As it is not known a priori that who is the first to fail, so one-third of
                 # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
                 # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.

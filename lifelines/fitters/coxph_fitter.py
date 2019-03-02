@@ -411,6 +411,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         -------
         beta: (1,d) numpy array.
         """
+        # For future devs, I tried both autograd + scipy minimize and scipy minimize newton cg, and
+        # nothing was faster than the current implementation.
+
         self.path = []
         assert precision <= 1.0, "precision must be less than or equal to 1."
         _, d = X.shape
