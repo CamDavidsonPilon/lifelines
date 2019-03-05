@@ -1,7 +1,7 @@
 ### Changelog
 
 #### 0.20.0
- - Starting with 0.20.0, only Python3 will be supported.
+ - Starting with 0.20.0, only Python3 will be supported. Over 75% of recent installs where Py3.
 
 ##### API changes
  - `inital_beta` in Cox model's `.fit` is now `initial_point`.
