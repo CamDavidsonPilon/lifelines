@@ -1310,6 +1310,11 @@ class TestAFTFitters:
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
 
+    def test_accept_initial_params(self, rossi, models):
+
+        for fitter in models:
+            fitter.fit(rossi, "week", "arrest", initial_point=np.ones(9))
+
     def test_log_likelihood_is_maximized_for_data_generating_model(self):
 
         N = 50000

@@ -144,7 +144,7 @@ class CoxPHFitter(BaseFitter):
         duration_col=None,
         event_col=None,
         show_progress=False,
-        initial_beta=None,
+        initial_point=None,
         strata=None,
         step_size=None,
         weights_col=None,
@@ -158,22 +158,22 @@ class CoxPHFitter(BaseFitter):
         Parameters
         ----------
         df: DataFrame
-            a Pandas dataframe with necessary columns `duration_col` and
+            a Pandas DataFrame with necessary columns `duration_col` and
             `event_col` (see below), covariates columns, and special columns (weights, strata).
             `duration_col` refers to
             the lifetimes of the subjects. `event_col` refers to whether
             the 'death' events was observed: 1 if observed, 0 else (censored).
 
         duration_col: string
-            the name of the column in dataframe that contains the subjects'
+            the name of the column in DataFrame that contains the subjects'
             lifetimes.
 
         event_col: string, optional
-            the  name of thecolumn in dataframe that contains the subjects' death
+            the  name of thecolumn in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
         weights_col: string, optional
-            an optional column in the dataframe, df, that denotes the weight per subject.
+            an optional column in the DataFrame, df, that denotes the weight per subject.
             This column is expelled and not used as a covariate, but as a weight in the
             final regression. Default weight is 1.
             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
@@ -184,7 +184,7 @@ class CoxPHFitter(BaseFitter):
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
-        initial_beta: (d,) numpy array, optional
+        initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
@@ -286,7 +286,7 @@ class CoxPHFitter(BaseFitter):
             T,
             E,
             weights=weights,
-            initial_beta=initial_beta,
+            initial_point=initial_point,
             show_progress=show_progress,
             step_size=step_size,
         )
@@ -375,7 +375,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T,
         E,
         weights=None,
-        initial_beta=None,
+        initial_point=None,
         step_size=None,
         precision=1e-07,
         show_progress=True,
@@ -394,7 +394,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T: (n) Pandas Series representing observed durations.
         E: (n) Pandas Series representing death events.
         weights: (n) an iterable representing weights per observation.
-        initial_beta: (d,) numpy array of initial starting point for
+        initial_point: (d,) numpy array of initial starting point for
                       NR algorithm. Default 0.
         step_size: float, optional
             > 0.001 to determine a starting step size in NR algorithm.
@@ -416,9 +416,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         _, d = X.shape
 
         # make sure betas are correct size.
-        if initial_beta is not None:
-            assert initial_beta.shape == (d,)
-            beta = initial_beta
+        if initial_point is not None:
+            assert initial_point.shape == (d,)
+            beta = initial_point
         else:
             beta = np.zeros((d,))
 
@@ -477,7 +477,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                     raise e
             except LinAlgError as e:
                 raise ConvergenceError(
-                    """Convergence halted due to matrix inversion problems. Suspicion is high colinearity. Please see the following tips in the lifelines documentation:
+                    """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """,
                     e,
@@ -489,8 +489,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 raise ConvergenceError(
                     """delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-""",
-                    e,
+"""
                 )
 
             # Save these as pending result
@@ -840,7 +839,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
             if tied_death_counts > 1:
 
-                # a lot of this is now in einstien notation for performance, but see original "expanded" code here
+                # a lot of this is now in Einstein notation for performance, but see original "expanded" code here
                 # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/coxph_fitter.py#L755-L789
 
                 # it's faster if we can skip computing these when we don't need to.

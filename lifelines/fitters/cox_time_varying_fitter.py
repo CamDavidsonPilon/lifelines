@@ -101,6 +101,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         step_size=None,
         robust=False,
         strata=None,
+        initial_point=None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Proportional Hazard model to a time varying dataset. Tied survival times
@@ -133,7 +134,14 @@ class CoxTimeVaryingFitter(BaseFitter):
           "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
         step_size: float, optional
             set an initial step size for the fitting algorithm.
-        strata: TODO
+        strata: list or string, optional
+            specify a column or list of columns n to use in stratification. This is useful if a
+            categorical covariate does not obey the proportional hazard assumption. This
+            is used similar to the `strata` expression in R.
+            See http://courses.washington.edu/b515/l17.pdf.
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
 
         Returns
         --------
@@ -194,6 +202,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             start,
             stop,
             weights,
+            initial_point=initial_point,
             show_progress=show_progress,
             step_size=step_size,
         )
@@ -283,7 +292,17 @@ class CoxTimeVaryingFitter(BaseFitter):
             return df
 
     def _newton_rhaphson(
-        self, df, events, start, stop, weights, show_progress=False, step_size=None, precision=10e-6, max_steps=50
+        self,
+        df,
+        events,
+        start,
+        stop,
+        weights,
+        show_progress=False,
+        step_size=None,
+        precision=10e-6,
+        max_steps=50,
+        initial_point=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -310,7 +329,10 @@ class CoxTimeVaryingFitter(BaseFitter):
         _, d = df.shape
 
         # make sure betas are correct size.
-        beta = np.zeros((d,))
+        if initial_point is not None:
+            beta = initial_point
+        else:
+            beta = np.zeros((d,))
 
         i = 0
         converging = True

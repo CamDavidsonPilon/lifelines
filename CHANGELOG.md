@@ -1,5 +1,14 @@
 ### Changelog
 
+#### 0.20.0
+
+##### API changes
+ - `inital_beta` in Cox model's `.fit` is now `initial_point`.
+ - `initial_point` is now available in AFT models and `CoxTimeVaryingFitter`
+ - the DataFrame `confidence_intervals_` for univariate models is transposed now (previous parameters where columns, now parameters are rows).
+
+
+
 #### 0.19.5
 
 ##### New features
