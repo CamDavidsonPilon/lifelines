@@ -927,6 +927,8 @@ def check_complete_separation(df, events, durations, event_col):
 
 
 def check_nans_or_infs(df_or_array):
+    if len(df_or_array) == 0:
+        raise ValueError("Empty array/Series passed in.")
 
     nulls = pd.isnull(df_or_array)
     if hasattr(nulls, "values"):
