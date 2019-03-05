@@ -1628,6 +1628,18 @@ class TestCoxPHFitter:
     def cph(self):
         return CoxPHFitter()
 
+    def test_that_a_convergence_warning_is_not_thrown_if_using_compute_residuals(self, rossi):
+        rossi["c"] = rossi["week"] + np.random.exponential(rossi.shape[0])
+
+        cph = CoxPHFitter(penalizer=1.0)
+        with pytest.warns(ConvergenceWarning):
+            cph.fit(rossi, "week", "arrest")
+
+        with pytest.warns(None) as record:
+            cph.compute_residuals(rossi, "martingale")
+
+            assert len(record) == 0
+
     def test_that_adding_strata_will_change_c_index(self, cph, rossi):
         """
         df = read.csv('~/code/lifelines/lifelines/datasets/rossi.csv')

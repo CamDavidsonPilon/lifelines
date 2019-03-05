@@ -1145,6 +1145,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale", "scaled_schoenfeld"}
         assert kind in ALLOWED_RESIDUALS, "kind must be in %s" % ALLOWED_RESIDUALS
 
+        warnings.filterwarnings("ignore", category=ConvergenceWarning)
         X, T, E, weights, shuffled_original_index, _ = self._preprocess_dataframe(training_dataframe)
 
         resids = getattr(self, "_compute_%s" % kind)(X, T, E, weights, index=shuffled_original_index)
@@ -1808,12 +1809,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     print(
                         dedent(
                             """
-                    The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates
-                    will be below the threshold by chance. This is compounded when there are many covariates. Similarly, when there are lots of observations, even minor deviances from the proportional hazard
-                    assumption will be flagged.
+                    The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates will be below the threshold by chance. This is compounded when there are many covariates. Similarly, when there are lots of observations, even minor deviances from the proportional hazard assumption will be flagged.
 
-                    With that in mind, it's best to use a combination of statistical tests and visual tests to
-                    determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)``.
+                    With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)``.
 
                     """
                             % p_value_threshold

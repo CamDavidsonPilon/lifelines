@@ -889,12 +889,12 @@ def check_complete_separation_low_variance(df, events, event_col):
     problem_columns = censors_only.union(deaths_only).difference(total).tolist()
     if problem_columns:
         warning_text = """Column {cols} have very low variance when conditioned on death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
->>> events = df['{event_col}'].astype(bool)
->>> df.loc[events, '{cols}'].var()
->>> df.loc[~events, '{cols}'].var()
 
-Too low variance here means that the column {cols} completely determines whether a subject dies or not.
-See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression """.format(
+>>> events = df['{event_col}'].astype(bool)
+>>> print(df.loc[events, '{cols}'].var())
+>>> print(df.loc[~events, '{cols}'].var())
+
+A very low variance means that the column {cols} completely determines whether a subject dies or not. See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression """.format(
             cols=problem_columns[0], event_col=event_col
         )
         warnings.warn(warning_text, ConvergenceWarning)
@@ -1313,7 +1313,7 @@ class StepSizer:
 
         # recent monotonically decreasing is good though
         if len(self.norm_of_deltas) >= LOOKBACK and self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
-            self.step_size = min(self.step_size * SCALE, 1.0)
+            self.step_size = min(self.step_size * SCALE, self.initial_step_size)
 
         return self
 
