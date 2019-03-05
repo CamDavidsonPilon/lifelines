@@ -1728,7 +1728,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return axes
 
     def check_assumptions(
-        self, training_df, advice=True, show_plots=False, p_value_threshold=0.05, plot_n_bootstraps=10
+        self, training_df, advice=True, show_plots=False, p_value_threshold=0.01, plot_n_bootstraps=10
     ):
         """
         Use this function to test the proportional hazards assumption. See usage example at
@@ -1739,7 +1739,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         -----------
 
         training_df: DataFrame
-            the original DataFrame used in the call to ``fit(...)``
+            the original DataFrame used in the call to ``fit(...)`` or a sub-sampled version.
         advice: boolean, optional
             display advice as output to the user's screen
         show_plots: boolean, optional
@@ -1766,7 +1766,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         Notes
         -------
-        The ``p_value_threshold`` is arbitrarily set at 0.05. Under the null, some covariates
+        The ``p_value_threshold`` is arbitrarily set at 0.01. Under the null, some covariates
         will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
 
         Similarly, when there are lots of observations, even minor deviances from the proportional hazard
@@ -1812,7 +1812,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                             """
                     The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates will be below the threshold by chance. This is compounded when there are many covariates. Similarly, when there are lots of observations, even minor deviances from the proportional hazard assumption will be flagged.
 
-                    With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)``.
+                    With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)`` and looking for non-constant lines.
 
                     """
                             % p_value_threshold
@@ -1833,17 +1833,17 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 value_counts = values.value_counts()
                 n_uniques = value_counts.shape[0]
 
-                # Arbitrarly chosen 10 and 4 to check for ability to use strata col.
+                # Arbitrary chosen 10 and 4 to check for ability to use strata col.
                 # This should capture dichotomous / low cardinality values.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
-                        "   Advice: with so few unique values (only {0}), you can try `strata=['{1}']` in the call in `.fit`. See documentation in link [B] below.".format(
+                        "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [B] below.".format(
                             n_uniques, variable
                         )
                     )
                 else:
                     print(
-                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}']` in the call in `.fit`. See documentation in link [B] below.""".format(
+                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}', ...]` in the call in `.fit`. See documentation in link [B] below.""".format(
                             var=variable
                         )
                     )
@@ -1854,16 +1854,17 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     )
 
             if show_plots:
+                print("Bootstrapping residuals... this may take a moment.")
 
                 from matplotlib import pyplot as plt
 
                 fig = plt.figure()
 
                 # plot variable against all time transformations.
-                for i, (transform_name, transformer) in enumerate(TimeTransformers(), start=1):
+                for i, (transform_name, transformer) in enumerate(TimeTransformers().iter(["rank", "km"]), start=1):
                     p_value = test_results.summary.loc[(variable, transform_name), "p"]
 
-                    ax = fig.add_subplot(2, 2, i)
+                    ax = fig.add_subplot(2, 1, i)
 
                     y = residuals_and_duration[variable]
                     tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
@@ -1893,7 +1894,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if advice and counter > 0:
             print(
                 dedent(
-                    """
+                    r"""
                 ---
                 [A]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
                 [B]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-1:-bin-variable-and-stratify-on-it

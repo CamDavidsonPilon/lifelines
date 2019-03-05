@@ -660,6 +660,11 @@ class TimeTransformers:
     def get(self, key_or_callable):
         return self.TIME_TRANSFOMERS.get(key_or_callable, key_or_callable)
 
+    def iter(self, keys):
+        for key, item in self.TIME_TRANSFOMERS.items():
+            if key in keys:
+                yield key, item
+
 
 def proportional_hazard_test(
     fitted_cox_model, training_df, time_transform="rank", precomputed_residuals=None, **kwargs
