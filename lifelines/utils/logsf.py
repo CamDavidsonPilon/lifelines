@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
+
 from scipy.stats import norm as _scipy_norm
 import autograd.numpy as np
 from autograd.scipy.stats import norm
