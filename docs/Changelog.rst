@@ -6,6 +6,7 @@ Changelog
 
 -  Starting with 0.20.0, only Python3 will be supported. Over 75% of
    recent installs where Py3.
+-  Updated minimum dependencies, specifically Matplotlib and Pandas.
 
 API changes
 '''''''''''
