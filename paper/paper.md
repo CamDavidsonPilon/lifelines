@@ -17,7 +17,7 @@ bibliography: paper.bib
 
 # Summary
 
-One frustration of data scientists and statisticians is moving between programming languages to complete projects. The most common two are R and Python. For example, a statistical model may be fit in R, but needs to be deployed into a Python system. Previously, this may have meant using Python libraries to call out to R (still shuffling between two languages, but now abstracted), or translating the fitted model to Python (likely to introduce bugs). Libraries like Patsy [@nathaniel_j_smith_2018_1472929] and Statsmodels [@skipper_seabold_2017_275519] have helped data scientists and statisticians work in solely in Python. *lifelines* extends the toolbox of data scientists so they can perform common survival analysis tasks in Python. Its value comes from its intuitive and well documented API, its flexibility in modeling novel hazard functions, and its easy deployment in production systems & research stations along side other Python libraries. The internals of *lifelines* uses some novel approaches to survival analysis algorithms like automatic differentiation and meta-algorithms. We present high-level descriptions of these novel approaches next.
+One frustration of data scientists and statisticians is moving between programming languages to complete projects. The most common two are R and Python. For example, a survival analysis model may be fit using R's *survival-package*[@survival-package] or *flexsurv*[@flexsurv], but needs to be deployed into a Python system. Previously, this may have meant using Python libraries to call out to R (still shuffling between two languages, but now abstracted), or translating the fitted model to Python (likely to introduce bugs). Libraries like Patsy [@nathaniel_j_smith_2018_1472929] and Statsmodels [@skipper_seabold_2017_275519] have helped data scientists and statisticians work in solely in Python. *lifelines* extends the toolbox of data scientists so they can perform common survival analysis tasks in Python. Its value comes from its intuitive and well documented API, its flexibility in modeling novel hazard functions, and its easy deployment in production systems & research stations along side other Python libraries. The internals of *lifelines* uses some novel approaches to survival analysis algorithms like automatic differentiation and meta-algorithms. We present high-level descriptions of these novel approaches next.
 
 
 One goal of *lifelines* is to be pure Python so as to make installation and maintenance simple. This can be at odds with users' desire for high-performance model fitting. Though Python is becoming more and more performant, datasets are getting larger and larger at a faster rate. Internally, *lifelines* uses some interesting tricks to improve performance. I'd like to share the approaches taken as they can be applied to other Python libraries. For example, the Cox proportional hazard model with Efron's tie-handling method has a complicated partial-likelihood [@wiki:ph]:
@@ -26,7 +26,7 @@ $$
 \ell(\beta) = \sum_j \left(\sum_{i\in H_j} X_i \cdot \beta -\sum_{\ell=0}^{m-1}\log\left(\sum_{i:Y_i\ge t_j}\theta_i - \frac{\ell}{m}\sum_{i\in H_j}\theta_i\right)\right),
 $$
 
-and the Hessian matrix:
+where $\theta_i = \exp{(X_i \cdot \beta)}$, and the Hessian matrix is:
 
 $$
 \ell^{\prime\prime}(\beta) = -\sum_j \sum_{\ell=0}^{m-1} \left(\frac{\sum_{i:Y_i\ge t_j}\theta_iX_iX_i^\prime - \frac{\ell}{m}\sum_{i\in H_j}\theta_iX_iX_i^\prime}{\phi_{j,\ell,m}} - \frac{Z_{j,\ell,m} Z_{j,\ell,m}^\prime}{\phi_{j,\ell,m}^2}\right),
