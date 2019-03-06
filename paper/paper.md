@@ -7,7 +7,10 @@ tags:
 authors:
  - name: Cameron Davidson-Pilon
    orcid: 0000-0003-1794-9143
+   affiliation: 1
 affiliations:
+ - name: University of Waterloo
+   index: 1
 date: 07 March 2019
 bibliography: paper.bib
 ---
