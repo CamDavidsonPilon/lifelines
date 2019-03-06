@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import division
-
 import time
 from datetime import datetime
 import warnings
@@ -130,12 +127,11 @@ class CoxPHFitter(BaseFitter):
     """
 
     def __init__(self, alpha=0.05, tie_method="Efron", penalizer=0.0, strata=None):
-        if not (0 < alpha <= 1.0):
-            raise ValueError("alpha parameter must be between 0 and 1.")
+        super(CoxPHFitter, self).__init__(alpha=alpha)
         if penalizer < 0:
             raise ValueError("penalizer parameter must be >= 0.")
         if tie_method != "Efron":
-            raise NotImplementedError("Only Efron is available atm.")
+            raise NotImplementedError("Only Efron is available at the moment.")
 
         self.alpha = alpha
         self.tie_method = tie_method
@@ -148,7 +144,7 @@ class CoxPHFitter(BaseFitter):
         duration_col=None,
         event_col=None,
         show_progress=False,
-        initial_beta=None,
+        initial_point=None,
         strata=None,
         step_size=None,
         weights_col=None,
@@ -162,22 +158,22 @@ class CoxPHFitter(BaseFitter):
         Parameters
         ----------
         df: DataFrame
-            a Pandas dataframe with necessary columns `duration_col` and
+            a Pandas DataFrame with necessary columns `duration_col` and
             `event_col` (see below), covariates columns, and special columns (weights, strata).
             `duration_col` refers to
             the lifetimes of the subjects. `event_col` refers to whether
             the 'death' events was observed: 1 if observed, 0 else (censored).
 
         duration_col: string
-            the name of the column in dataframe that contains the subjects'
+            the name of the column in DataFrame that contains the subjects'
             lifetimes.
 
         event_col: string, optional
-            the  name of thecolumn in dataframe that contains the subjects' death
+            the  name of thecolumn in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
         weights_col: string, optional
-            an optional column in the dataframe, df, that denotes the weight per subject.
+            an optional column in the DataFrame, df, that denotes the weight per subject.
             This column is expelled and not used as a covariate, but as a weight in the
             final regression. Default weight is 1.
             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
@@ -188,7 +184,7 @@ class CoxPHFitter(BaseFitter):
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
-        initial_beta: (d,) numpy array, optional
+        initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
@@ -290,7 +286,7 @@ class CoxPHFitter(BaseFitter):
             T,
             E,
             weights=weights,
-            initial_beta=initial_beta,
+            initial_point=initial_point,
             show_progress=show_progress,
             step_size=step_size,
         )
@@ -379,7 +375,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T,
         E,
         weights=None,
-        initial_beta=None,
+        initial_point=None,
         step_size=None,
         precision=1e-07,
         show_progress=True,
@@ -398,7 +394,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T: (n) Pandas Series representing observed durations.
         E: (n) Pandas Series representing death events.
         weights: (n) an iterable representing weights per observation.
-        initial_beta: (d,) numpy array of initial starting point for
+        initial_point: (d,) numpy array of initial starting point for
                       NR algorithm. Default 0.
         step_size: float, optional
             > 0.001 to determine a starting step size in NR algorithm.
@@ -409,7 +405,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             since the fitter is iterative, show convergence
                  diagnostics.
         max_steps: int, optional
-            the maximum number of interations of the Newton-Rhaphson algorithm.
+            the maximum number of iterations of the Newton-Rhaphson algorithm.
 
         Returns
         -------
@@ -420,9 +416,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         _, d = X.shape
 
         # make sure betas are correct size.
-        if initial_beta is not None:
-            assert initial_beta.shape == (d,)
-            beta = initial_beta
+        if initial_point is not None:
+            assert initial_point.shape == (d,)
+            beta = initial_point
         else:
             beta = np.zeros((d,))
 
@@ -448,7 +444,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             i += 1
 
             if self.strata is None:
+
                 h, g, ll = get_gradients(X.values, T.values, E.values, weights.values, beta)
+
             else:
                 g = np.zeros_like(beta)
                 h = np.zeros((beta.shape[0], beta.shape[0]))
@@ -465,7 +463,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
-                inv_h_dot_g_T = spsolve(-h, g, sym_pos=True)
+                inv_h_dot_g_T = spsolve(-h, g, assume_a="pos", check_finite=False)
             except ValueError as e:
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
@@ -479,7 +477,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                     raise e
             except LinAlgError as e:
                 raise ConvergenceError(
-                    """Convergence halted due to matrix inversion problems. Suspicion is high colinearity. Please see the following tips in the lifelines documentation:
+                    """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 """,
                     e,
@@ -491,8 +489,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 raise ConvergenceError(
                     """delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
 https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-""",
-                    e,
+"""
                 )
 
             # Save these as pending result
@@ -524,8 +521,8 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 converging, completed = False, False
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn(
-                    "The log-likelihood is getting suspciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
-See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ ",
+                    "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
+See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression",
                     ConvergenceWarning,
                 )
                 converging, completed = False, False
@@ -547,7 +544,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         # report to the user problems that we detect.
         if completed and norm_delta > 0.1:
             warnings.warn(
-                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity or complete separation in the dataset?"
+                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?"
                 % norm_delta,
                 ConvergenceWarning,
             )
@@ -561,7 +558,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
 
-        A good explaination for Efron. Consider three of five subjects who fail at the time.
+        A good explanation for Efron. Consider three of five subjects who fail at the time.
         As it is not known a priori that who is the first to fail, so one-third of
         (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
         of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
@@ -779,7 +776,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
-        A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+        A good explanation for how Efron handles ties. Consider three of five subjects who fail at the time.
         As it is not known a priori that who is the first to fail, so one-third of
         (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
         of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
@@ -842,7 +839,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
             if tied_death_counts > 1:
 
-                # a lot of this is now in einstien notation for performance, but see original "expanded" code here
+                # a lot of this is now in Einstein notation for performance, but see original "expanded" code here
                 # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/coxph_fitter.py#L755-L789
 
                 # it's faster if we can skip computing these when we don't need to.
@@ -1062,7 +1059,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
     def _compute_delta_beta(self, X, T, E, weights, index=None):
         """
         approximate change in betas as a result of excluding ith row. Good for finding outliers / specific
-        subjects that influence the model disproportinately. Good advice: don't drop these outliers, model them.
+        subjects that influence the model disproportionately. Good advice: don't drop these outliers, model them.
         """
         score_residuals = self._compute_score(X, T, E, weights, index=index)
 
@@ -1141,7 +1138,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         Parameters
         ----------
         training_dataframe : pandas DataFrame
-            the same training dataframe given in `fit`
+            the same training DataFrame given in `fit`
         kind : string
             {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale', 'scaled_schoenfeld'}
 
@@ -1149,6 +1146,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale", "scaled_schoenfeld"}
         assert kind in ALLOWED_RESIDUALS, "kind must be in %s" % ALLOWED_RESIDUALS
 
+        warnings.filterwarnings("ignore", category=ConvergenceWarning)
         X, T, E, weights, shuffled_original_index, _ = self._preprocess_dataframe(training_dataframe)
 
         resids = getattr(self, "_compute_%s" % kind)(X, T, E, weights, index=shuffled_original_index)
@@ -1272,7 +1270,6 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
         This function computes the likelihood ratio test for the Cox model. We
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
-
         """
         if self._batch_mode:
             ll_null = self._trivial_log_likelihood_batch(
@@ -1307,7 +1304,7 @@ See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-o
 
         Notes
         -----
-        If X is a dataframe, the order of the columns do not matter. But
+        If X is a DataFrame, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
@@ -1731,10 +1728,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return axes
 
     def check_assumptions(
-        self, training_df, advice=True, show_plots=False, p_value_threshold=0.05, plot_n_bootstraps=10
+        self, training_df, advice=True, show_plots=False, p_value_threshold=0.01, plot_n_bootstraps=10
     ):
         """
-        Use this function to test the proportional hazards assumption. See iterative usage example at
+        Use this function to test the proportional hazards assumption. See usage example at
         https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
 
 
@@ -1742,7 +1739,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         -----------
 
         training_df: DataFrame
-            the original DataFrame used in the call to ``fit(...)``
+            the original DataFrame used in the call to ``fit(...)`` or a sub-sampled version.
         advice: boolean, optional
             display advice as output to the user's screen
         show_plots: boolean, optional
@@ -1769,7 +1766,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         Notes
         -------
-        The ``p_value_threshold`` is arbitrarily set at 0.05. Under the null, some covariates
+        The ``p_value_threshold`` is arbitrarily set at 0.01. Under the null, some covariates
         will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
 
         Similarly, when there are lots of observations, even minor deviances from the proportional hazard
@@ -1781,8 +1778,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         References
         -----------
-        section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf
-        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
+        section 5 in https://socialsciences.mcmaster.ca/jfox/Books/Companion/appendices/Appendix-Cox-Regression.pdf,
+        http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf,
         http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
         """
 
@@ -1813,14 +1810,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     print(
                         dedent(
                             """
-                    The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates
-                    will be below the threshold (i.e. by chance). This is compounded when there are many covariates.
+                    The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates will be below the threshold by chance. This is compounded when there are many covariates. Similarly, when there are lots of observations, even minor deviances from the proportional hazard assumption will be flagged.
 
-                    Similarly, when there are lots of observations, even minor deviances from the proportional hazard
-                    assumption will be flagged.
-
-                    With that in mind, it's best to use a combination of statistical tests and eyeball tests to
-                    determine the most serious violations.
+                    With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)`` and looking for non-constant lines.
 
                     """
                             % p_value_threshold
@@ -1841,37 +1833,38 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 value_counts = values.value_counts()
                 n_uniques = value_counts.shape[0]
 
-                # Arbitrarly chosen 10 and 4 to check for ability to use strata col.
+                # Arbitrary chosen 10 and 4 to check for ability to use strata col.
                 # This should capture dichotomous / low cardinality values.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
-                        "   Advice: with so few unique values (only {0}), you can try `strata=['{1}']` in the call in `.fit`. See documentation in link [A] and [B] below.".format(
+                        "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [B] below.".format(
                             n_uniques, variable
                         )
                     )
                 else:
                     print(
-                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}']` in the call in `.fit`. See documentation in link [A] and [B] below.""".format(
+                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}', ...]` in the call in `.fit`. See documentation in link [B] below.""".format(
                             var=variable
                         )
                     )
                     print(
-                        """   Advice: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
+                        """   Alternative Advice: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
                             var=variable
                         )
                     )
 
             if show_plots:
+                print("Bootstrapping residuals... this may take a moment.")
 
                 from matplotlib import pyplot as plt
 
                 fig = plt.figure()
 
                 # plot variable against all time transformations.
-                for i, (transform_name, transformer) in enumerate(TimeTransformers(), start=1):
+                for i, (transform_name, transformer) in enumerate(TimeTransformers().iter(["rank", "km"]), start=1):
                     p_value = test_results.summary.loc[(variable, transform_name), "p"]
 
-                    ax = fig.add_subplot(2, 2, i)
+                    ax = fig.add_subplot(2, 1, i)
 
                     y = residuals_and_duration[variable]
                     tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
@@ -1901,10 +1894,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         if advice and counter > 0:
             print(
                 dedent(
-                    """
+                    r"""
                 ---
                 [A]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
-                [B]  https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#checking-the-proportional-hazards-assumption
+                [B]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-1:-bin-variable-and-stratify-on-it
                 [C]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-2:-introduce-time-varying-covariates
             """
                 )

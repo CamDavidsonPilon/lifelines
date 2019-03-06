@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import division
-
 import warnings
 
 # pylint: disable=wrong-import-position
@@ -13,10 +10,7 @@ import os
 import pickle
 from itertools import combinations
 
-try:
-    from StringIO import StringIO as stringio, StringIO
-except ImportError:
-    from io import StringIO, BytesIO as stringio
+from io import StringIO, BytesIO as stringio
 
 import numpy as np
 import pandas as pd
@@ -26,7 +20,6 @@ from scipy.stats import weibull_min, norm, logistic
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 
-from lifelines.compat import PY2, PY3
 from lifelines.utils import (
     k_fold_cross_validation,
     StatError,
@@ -1317,6 +1310,10 @@ class TestAFTFitters:
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
 
+    def test_accept_initial_params(self, rossi, models):
+        for fitter in models:
+            fitter.fit(rossi, "week", "arrest", initial_point=np.ones(9))
+
     def test_log_likelihood_is_maximized_for_data_generating_model(self):
 
         N = 50000
@@ -1505,7 +1502,7 @@ class TestWeibullAFTFitter:
 
         npt.assert_allclose(aft.summary.loc[("lambda_", "fin"), "coef"], 0.27230591, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "age"), "coef"], 0.04072758, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "race"), "coef"], -0.22480808, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "race"), "coef"], -0.22480808, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "wexp"), "coef"], 0.10664712, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "coef"], 0.31095531, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], 0.05883352, rtol=1e-3)
@@ -1634,6 +1631,18 @@ class TestCoxPHFitter:
     @pytest.fixture
     def cph(self):
         return CoxPHFitter()
+
+    def test_that_a_convergence_warning_is_not_thrown_if_using_compute_residuals(self, rossi):
+        rossi["c"] = rossi["week"] + np.random.exponential(rossi.shape[0])
+
+        cph = CoxPHFitter(penalizer=1.0)
+        with pytest.warns(ConvergenceWarning):
+            cph.fit(rossi, "week", "arrest")
+
+        with pytest.warns(None) as record:
+            cph.compute_residuals(rossi, "martingale")
+
+            assert len(record) == 0
 
     def test_that_adding_strata_will_change_c_index(self, cph, rossi):
         """
@@ -3028,7 +3037,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             cph.fit(df, "T", "E")
 
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
-        # this is known as complete separation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
+        # this is known as complete separation: See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression
         cp = CoxPHFitter()
         ix = rossi["arrest"] == 1
         rossi.loc[ix, "paro"] = 1

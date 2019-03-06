@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import division
+
 
 import collections
 from functools import wraps
@@ -47,8 +46,6 @@ from lifelines.utils import (
     normalize,
     concordance_index,
 )
-from lifelines.compat import PY2, PY3
-
 
 __all__ = []
 
@@ -89,22 +86,10 @@ class UnivariateFitter(BaseFitter):
     @_must_call_fit_first
     def _update_docstrings(self):
         # Update their docstrings
-        if PY2:
-            self.__class__.subtract.__func__.__doc__ = self.subtract.__doc__.format(
-                self._estimate_name, self.__class__.__name__
-            )
-            self.__class__.divide.__func__.__doc__ = self.divide.__doc__.format(
-                self._estimate_name, self.__class__.__name__
-            )
-            self.__class__.predict.__func__.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-            self.__class__.plot.__func__.__doc__ = _plot_estimate.__doc__.format(
-                self.__class__.__name__, self._estimate_name
-            )
-        elif PY3:
-            self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
-            self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
-            self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-            self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
+        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
+        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
+        self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
+        self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
     @_must_call_fit_first
     def plot(self, **kwargs):
@@ -345,8 +330,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return anp.log(hz)
 
     def _negative_log_likelihood(self, params, T, E, entry):
-        import warnings
-
         warnings.filterwarnings("ignore")
 
         n = T.shape[0]
@@ -469,9 +452,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
         se = self._compute_standard_errors().loc["se"]
         z = inv_normal_cdf(1 - self.alpha / 2.0)
         return pd.DataFrame(
-            [self._fitted_parameters_ + z * se, self._fitted_parameters_ - z * se],
-            columns=self._fitted_parameter_names,
-            index=["upper-bound", "lower-bound"],
+            np.c_[self._fitted_parameters_ - z * se, self._fitted_parameters_ + z * se],
+            columns=["lower-bound", "upper-bound"],
+            index=self._fitted_parameter_names,
         )
 
     def _compute_z_values(self):
@@ -497,8 +480,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df = pd.DataFrame(index=self._fitted_parameter_names)
         df["coef"] = self._fitted_parameters_
         df["se(coef)"] = self._compute_standard_errors().loc["se"]
-        df["lower %g" % ci] = lower_upper_bounds.loc["lower-bound"]
-        df["upper %g" % ci] = lower_upper_bounds.loc["upper-bound"]
+        df["lower %g" % ci] = lower_upper_bounds["lower-bound"]
+        df["upper %g" % ci] = lower_upper_bounds["upper-bound"]
         df["p"] = self._compute_p_values()
         with np.errstate(invalid="ignore", divide="ignore"):
             df["-log2(p)"] = -np.log2(df["p"])
@@ -807,8 +790,6 @@ class ParametericRegressionFitter(BaseFitter):
         return anp.log(hz)
 
     def _negative_log_likelihood(self, params, T, E, W, *Xs):
-        import warnings
-
         warnings.filterwarnings("ignore")
 
         ll = (W * E * self._log_hazard(params, T, *Xs)).sum() - (W * self._cumulative_hazard(params, T, *Xs)).sum()
@@ -830,6 +811,7 @@ class ParametericRegressionFitter(BaseFitter):
         timeline=None,
         weights_col=None,
         robust=False,
+        initial_point=None,
     ):
         """
         Fit the accelerated failure time model to a dataset.
@@ -869,6 +851,10 @@ class ParametericRegressionFitter(BaseFitter):
 
         robust: boolean, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
 
         Returns
         -------
@@ -989,6 +975,7 @@ class ParametericRegressionFitter(BaseFitter):
             normalize(df, 0, _norm_std).values,
             normalize(ancillary_df, 0, _norm_std_ancillary).values,
             show_progress=show_progress,
+            initial_point=initial_point,
         )
         self.params_ = _params / self._norm_std
 
@@ -1011,36 +998,57 @@ class ParametericRegressionFitter(BaseFitter):
         if self.fit_intercept:
             check_low_var(df)
 
-    def _fit_model(self, T, E, weights, *Xs, **kwargs):
-        # TODO: move this to function kwarg when I remove py2
-        show_progress = kwargs.pop("show_progress", False)
-        n_params = sum([X.shape[1] for X in Xs])
-        init_values = np.zeros((n_params,))
-        sum_weights = weights.sum()
+    def _fit_model(self, T, E, weights, *Xs, show_progress=False, initial_point=None):
+
+        if initial_point is None:
+            import lifelines  # kinda hacky but lol
+
+            def transform_ith_param(model, i):
+                param = model._fitted_parameters_[i]
+                if param <= 0:
+                    return param
+                # technically this is suboptimal for lognormal mu, but that's okay.
+                return np.log(param)
+
+            name = self.__class__.__name__.replace("AFT", "")
+            uni_model = getattr(lifelines, name)().fit(T, E)  # pylint: disable=not-callable
+
+            # we may use this later in print_summary
+            self.__ll_null = uni_model._log_likelihood
+
+            initial_point = np.concatenate(
+                [
+                    # tack on as the intercept
+                    [0] * (_X.shape[1] - 1) + [transform_ith_param(uni_model, i)]
+                    for i, _X in enumerate(Xs)
+                ]
+            )
 
         results = minimize(
+            # using value_and_grad is much faster (takes advantage of shared computations) than spitting.
             value_and_grad(self._negative_log_likelihood),
-            init_values,
+            initial_point,
             method=None if self.l1_ratio <= 0.0 else "L-BFGS-B",
             jac=True,
-            args=(T, E, weights, Xs[0], Xs[1]),  # TODO: remove py2, (T, E, *Xs)
+            args=(T, E, weights, *Xs),
             options={"disp": show_progress},
         )
-        if show_progress:
+        if show_progress or not results.success:
             print(results)
 
         if results.success:
+            sum_weights = weights.sum()
             # pylint: disable=no-value-for-parameter
             hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, weights, *Xs)
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
-        print(results)
+
         name = self.__class__.__name__
         raise ConvergenceError(
             dedent(
                 """\
             Fitting did not converge. This could be a problem with your data:
             1. Does a column have extremely high mean or variance? Try standardizing it.
-            2. Are there any extreme outliers? Try modelling them or dropping them to see if it helps convergence
+            2. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence
             3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`
         """
                 % name
@@ -1048,7 +1056,6 @@ class ParametericRegressionFitter(BaseFitter):
         )
 
     def _create_slicer(self, *sizes):
-
         lookup = {}
         position = 0
 
@@ -1092,7 +1099,7 @@ class ParametericRegressionFitter(BaseFitter):
 
     def _compute_sandwich_errors(self, T, E, weights, *Xs):
         with np.errstate(all="ignore"):
-            # convergence will fail catastraphically elsewhere.
+            # convergence will fail catastrophically elsewhere.
             ll_gradient = grad(self._negative_log_likelihood)
             params = self.params_.values
             n_params = params.shape[0]
@@ -1102,7 +1109,7 @@ class ParametericRegressionFitter(BaseFitter):
                 score_vector = ll_gradient(params, t, e, w, x, ancillary_x)
                 J += np.outer(score_vector, score_vector)
 
-            return np.dot(self.variance_matrix_, J).dot(self.variance_matrix_)
+            return self.variance_matrix_ @ J @ self.variance_matrix_
 
     def _compute_confidence_intervals(self):
         z = inv_normal_cdf(1 - self.alpha / 2)
@@ -1111,6 +1118,19 @@ class ParametericRegressionFitter(BaseFitter):
         return pd.DataFrame(
             np.c_[params - z * se, params + z * se], index=self.params_.index, columns=["lower-bound", "upper-bound"]
         )
+
+    @property
+    def _ll_null(self):
+        if hasattr(self, "__ll_null"):
+            return self.__ll_null
+
+        initial_point = np.zeros(len(self._fitted_parameter_names))
+        self.__ll_null = (
+            self.__class__()
+            .fit(pd.DataFrame({"T": self.durations, "E": self.event_observed}), "T", "E", initial_point=initial_point)
+            ._log_likelihood
+        )
+        return self.__ll_null
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -1121,11 +1141,7 @@ class ParametericRegressionFitter(BaseFitter):
         """
         from lifelines.statistics import chisq_test
 
-        ll_null = (
-            self.__class__()
-            .fit(pd.DataFrame({"T": self.durations, "E": self.event_observed}), "T", "E")
-            ._log_likelihood
-        )
+        ll_null = self._ll_null
         ll_alt = self._log_likelihood
 
         test_stat = 2 * ll_alt - 2 * ll_null
@@ -1409,7 +1425,6 @@ class ParametericRegressionFitter(BaseFitter):
         from matplotlib import pyplot as plt
 
         covariates = _to_list(covariates)
-        n_covariates = len(covariates)
         values = _to_array(values)
         if len(values.shape) == 1:
             values = values[None, :].T

@@ -35,18 +35,18 @@ Or getting the bleeding edge version with:
 
 from the command line.
 
-##### Installation Issues?
+### Installation Issues?
 
 See the common [problems/solutions for installing lifelines](https://github.com/CamDavidsonPilon/lifelines/issues?utf8=%E2%9C%93&q=label%3Ainstallation+).
 
-#### Running the tests
+### Running the tests
 
 You can optionally run the test suite after install with
 
     py.test
 
 
-## lifelines Documentation and an intro to survival analysis
+## *lifelines* Documentation and an intro to survival analysis
 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples, API, and syntax, please check out the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
 
@@ -65,24 +65,24 @@ kmf.plot()
 
 <img src="https://imgur.com/d4Gi5J0.png" width="600">
 
-### Contacting & troubleshooting
+## Contacting & troubleshooting
  - There is a [Gitter](https://gitter.im/python-lifelines/) channel available.
  - Some users have posted common questions at [stats.stackexchange.com](https://stats.stackexchange.com/search?tab=votes&q=%22lifelines%22%20is%3aquestion)
  - creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines).
 
-### Roadmap
+## Roadmap
 You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965207f564eb2a3e48b5937873c14?v=47edda47ab774ca2ac7532bb0c750559).
 
 -------------------------------------------------------------------------------
 
-### Development
+## Development
 
-#### Setting up a lifelines development environment
+### Setting up a lifelines development environment
 
 1. From the root directory of `lifelines` activate your [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) (if you plan to use one).
 2. Install the development requirements and [`pre-commit`](https://pre-commit.com) hooks. If you are on Mac, Linux, or [Windows `WSL`](https://docs.microsoft.com/en-us/windows/wsl/faq) you can use the provided [`Makefile`](https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile). Just type `make` into the console and you're ready to start developing.
 
-#### Formatting
+### Formatting
 
 `lifelines` uses the [`black`](https://github.com/ambv/black) python formatter.
 There are 3 different ways to format your code.
@@ -98,7 +98,7 @@ There are 3 different ways to format your code.
 
 -------------------------------------------------------------------------------
 
-### Citing lifelines
+## Citing lifelines
 
 You can use this badge below to generate a DOI and reference text for the latest related version of lifelines:
 

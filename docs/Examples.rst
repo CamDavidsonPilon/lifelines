@@ -5,7 +5,7 @@
 More examples and recipes
 ==================================
 
-This section goes through some examples and recipes to help you use *lifelines*.
+This section goes through some examples and recipes to help you use *lifelines*. If you are looking for some full example usage of *lifelines*, there's full jupyter notebooks `here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_.
 
 
 Statistically compare two populations

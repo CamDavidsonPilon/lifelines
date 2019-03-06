@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-# aalen additive
-
 
 if __name__ == "__main__":
     import pandas as pd

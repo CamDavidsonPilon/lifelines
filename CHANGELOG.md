@@ -1,5 +1,22 @@
 ### Changelog
 
+#### 0.20.0
+ - Starting with 0.20.0, only Python3 will be supported. Over 75% of recent installs where Py3.
+ - Updated minimum dependencies, specifically Matplotlib and Pandas.
+
+##### New features
+ -  smarter initialization for AFT models which should improve convergence.
+
+##### API changes
+ - `inital_beta` in Cox model's `.fit` is now `initial_point`.
+ - `initial_point` is now available in AFT models and `CoxTimeVaryingFitter`
+ - the DataFrame `confidence_intervals_` for univariate models is transposed now (previous parameters where columns, now parameters are rows).
+
+##### Bug fixes
+ - Fixed a bug with plotting and `check_assumptions`.
+
+
+
 #### 0.19.5
 
 ##### New features

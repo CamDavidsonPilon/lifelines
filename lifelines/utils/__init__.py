@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division
+
 import warnings
 import collections
 from datetime import datetime
@@ -806,9 +806,14 @@ def pass_for_numeric_dtypes_or_raise_array(x):
     """
     try:
         if isinstance(x, (pd.Series, pd.DataFrame)):
-            return pd.to_numeric(x.squeeze())
+            v = pd.to_numeric(x.squeeze())
         else:
-            return pd.to_numeric(np.asarray(x).squeeze())
+            v = pd.to_numeric(np.asarray(x).squeeze())
+
+        if v.size == 0:
+            raise ValueError("Empty array/Series passed in.")
+        return v
+
     except:
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 
@@ -889,12 +894,12 @@ def check_complete_separation_low_variance(df, events, event_col):
     problem_columns = censors_only.union(deaths_only).difference(total).tolist()
     if problem_columns:
         warning_text = """Column {cols} have very low variance when conditioned on death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
->>> events = df['{event_col}'].astype(bool)
->>> df.loc[events, '{cols}'].var()
->>> df.loc[~events, '{cols}'].var()
 
-Too low variance here means that the column {cols} completely determines whether a subject dies or not.
-See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression """.format(
+>>> events = df['{event_col}'].astype(bool)
+>>> print(df.loc[events, '{cols}'].var())
+>>> print(df.loc[~events, '{cols}'].var())
+
+A very low variance means that the column {cols} completely determines whether a subject dies or not. See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression """.format(
             cols=problem_columns[0], event_col=event_col
         )
         warnings.warn(warning_text, ConvergenceWarning)
@@ -915,7 +920,7 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
             if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
-    See https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/ "
+    See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression"
                     % (col)
                 )
                 warnings.warn(warning_text, ConvergenceWarning)
@@ -927,7 +932,6 @@ def check_complete_separation(df, events, durations, event_col):
 
 
 def check_nans_or_infs(df_or_array):
-
     nulls = pd.isnull(df_or_array)
     if hasattr(nulls, "values"):
         if nulls.values.any():

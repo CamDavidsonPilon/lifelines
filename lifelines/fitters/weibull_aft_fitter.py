@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
-
 from autograd import numpy as np
 from scipy.special import gamma
 import pandas as pd

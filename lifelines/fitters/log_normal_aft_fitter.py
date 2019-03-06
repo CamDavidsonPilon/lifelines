@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
-
 from autograd import numpy as np
 from autograd.scipy.stats.norm import logpdf
 from scipy.special import erfinv
