@@ -1,5 +1,5 @@
 ---
-title: 'lifelines'
+title: 'lifelines: survival analysis in Python'
 tags:
   - survival analysis
   - reliability analysis
