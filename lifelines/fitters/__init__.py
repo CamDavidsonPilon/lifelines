@@ -999,12 +999,30 @@ class ParametericRegressionFitter(BaseFitter):
             check_low_var(df)
 
     def _fit_model(self, T, E, weights, *Xs, show_progress=False, initial_point=None):
-        n_params = sum([X.shape[1] for X in Xs])
 
         if initial_point is None:
-            initial_point = np.zeros((n_params,))
+            import lifelines  # kinda hacky but lol
 
-        sum_weights = weights.sum()
+            def transform_ith_param(model, i):
+                param = model._fitted_parameters_[i]
+                if param <= 0:
+                    return param
+                # technically this is suboptimal for lognormal mu, but that's okay.
+                return np.log(param)
+
+            name = self.__class__.__name__.replace("AFT", "")
+            uni_model = getattr(lifelines, name)().fit(T, E)  # pylint: disable=not-callable
+
+            # we may use this later in print_summary
+            self.__ll_null = uni_model._log_likelihood
+
+            initial_point = np.concatenate(
+                [
+                    # tack on as the intercept
+                    [0] * (_X.shape[1] - 1) + [transform_ith_param(uni_model, i)]
+                    for i, _X in enumerate(Xs)
+                ]
+            )
 
         results = minimize(
             # using value_and_grad is much faster (takes advantage of shared computations) than spitting.
@@ -1019,6 +1037,7 @@ class ParametericRegressionFitter(BaseFitter):
             print(results)
 
         if results.success:
+            sum_weights = weights.sum()
             # pylint: disable=no-value-for-parameter
             hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, weights, *Xs)
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
@@ -1037,7 +1056,6 @@ class ParametericRegressionFitter(BaseFitter):
         )
 
     def _create_slicer(self, *sizes):
-
         lookup = {}
         position = 0
 
@@ -1081,7 +1099,7 @@ class ParametericRegressionFitter(BaseFitter):
 
     def _compute_sandwich_errors(self, T, E, weights, *Xs):
         with np.errstate(all="ignore"):
-            # convergence will fail catastraphically elsewhere.
+            # convergence will fail catastrophically elsewhere.
             ll_gradient = grad(self._negative_log_likelihood)
             params = self.params_.values
             n_params = params.shape[0]
@@ -1101,6 +1119,19 @@ class ParametericRegressionFitter(BaseFitter):
             np.c_[params - z * se, params + z * se], index=self.params_.index, columns=["lower-bound", "upper-bound"]
         )
 
+    @property
+    def _ll_null(self):
+        if hasattr(self, "__ll_null"):
+            return self.__ll_null
+
+        initial_point = np.zeros(len(self._fitted_parameter_names))
+        self.__ll_null = (
+            self.__class__()
+            .fit(pd.DataFrame({"T": self.durations, "E": self.event_observed}), "T", "E", initial_point=initial_point)
+            ._log_likelihood
+        )
+        return self.__ll_null
+
     def _compute_likelihood_ratio_test(self):
         """
         This function computes the likelihood ratio test for the model. We
@@ -1110,11 +1141,7 @@ class ParametericRegressionFitter(BaseFitter):
         """
         from lifelines.statistics import chisq_test
 
-        ll_null = (
-            self.__class__()
-            .fit(pd.DataFrame({"T": self.durations, "E": self.event_observed}), "T", "E")
-            ._log_likelihood
-        )
+        ll_null = self._ll_null
         ll_alt = self._log_likelihood
 
         test_stat = 2 * ll_alt - 2 * ll_null

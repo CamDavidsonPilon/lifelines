@@ -806,9 +806,14 @@ def pass_for_numeric_dtypes_or_raise_array(x):
     """
     try:
         if isinstance(x, (pd.Series, pd.DataFrame)):
-            return pd.to_numeric(x.squeeze())
+            v = pd.to_numeric(x.squeeze())
         else:
-            return pd.to_numeric(np.asarray(x).squeeze())
+            v = pd.to_numeric(np.asarray(x).squeeze())
+
+        if v.size == 0:
+            raise ValueError("Empty array/Series passed in.")
+        return v
+
     except:
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 
@@ -927,9 +932,6 @@ def check_complete_separation(df, events, durations, event_col):
 
 
 def check_nans_or_infs(df_or_array):
-    if len(df_or_array) == 0:
-        raise ValueError("Empty array/Series passed in.")
-
     nulls = pd.isnull(df_or_array)
     if hasattr(nulls, "values"):
         if nulls.values.any():

@@ -8,7 +8,7 @@ pylint:
     # max-locals default = 15
     max-locals: 50
     # max-branches default = 15
-    max-branches: 15
+    max-branches: 16
   disable:
     - line-too-long
     - protected-access
