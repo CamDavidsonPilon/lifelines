@@ -52,7 +52,27 @@ $$
 \log{l(\theta|t, c, s)} = \sum_{i: c_i=1}\left( \log{h(t_i)} - H(t_i)\right) - \sum_{i: c_i=0} H(t_i) + \sum_{i} H(s_i)
 $$
 
-where $t_i$ are the observed or censored times of subject $i$, $c_i$ is 0 if the subject was censored, $s_i$ is time the subject entered the study, and $h(t)$ is the hazard which is the derivative of the cumulative hazard with respect to time. We use automatic differentiation to compute $h(t)$ and the gradient and Hessian with respect to the unknown parameters $\theta$. The user only needs to specify a cumulative hazard (in Python code). *lifelines* will invoke SciPy's `minimize` with the computed derivatives and return the maximum likelihood estimators of the model, along with standard errors, p-values, confidence intervals, etc. Some examples of user-defined cumulative hazards are in the main documentation.
+where $t_i$ are the observed or censored times of subject $i$, $c_i$ is 0 if the subject was censored, $s_i$ is time the subject entered the study, and $h(t)$ is the hazard which is the derivative of the cumulative hazard with respect to time. We use automatic differentiation to compute $h(t)$ and the gradient and Hessian with respect to the unknown parameters $\theta$. The user only needs to specify a cumulative hazard (in Python code). *lifelines* will invoke SciPy's `minimize` with the computed derivatives and return the maximum likelihood estimators of the model, along with standard errors, p-values, confidence intervals, etc. An example user defined cumulative hazard is below:
+
+```
+from lifelines.fitters import ParametericUnivariateFitter
+
+class ThreeParamHazardFitter(ParametericUnivariateFitter):
+
+    _fitted_parameter_names = ['alpha_', 'beta_', 'gamma_']
+    _bounds = [(0, None), (75, None), (0, None)]
+
+    # this is the only function we need to define. It always takes two arguments:
+    #   params: an iterable that unpacks the parameters you'll need in the order of _fitted_parameter_names
+    #   times: a numpy vector of times that will be passed in by the optimizer
+    def _cumulative_hazard(self, params, times):
+        a, b, c = params
+        return a / (b - times) ** c
+
+```
+
+
+Some more examples of user-defined cumulative hazards are in the main documentation.
 
 
 # Acknowledgments
