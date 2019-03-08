@@ -39,12 +39,6 @@ from the command line.
 
 See the common [problems/solutions for installing lifelines](https://github.com/CamDavidsonPilon/lifelines/issues?utf8=%E2%9C%93&q=label%3Ainstallation+).
 
-### Running the tests
-
-You can optionally run the test suite after install with
-
-    py.test
-
 
 ## *lifelines* Documentation and an intro to survival analysis
 
@@ -73,28 +67,9 @@ kmf.plot()
 ## Roadmap
 You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965207f564eb2a3e48b5937873c14?v=47edda47ab774ca2ac7532bb0c750559).
 
--------------------------------------------------------------------------------
-
 ## Development
 
-### Setting up a lifelines development environment
-
-1. From the root directory of `lifelines` activate your [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) (if you plan to use one).
-2. Install the development requirements and [`pre-commit`](https://pre-commit.com) hooks. If you are on Mac, Linux, or [Windows `WSL`](https://docs.microsoft.com/en-us/windows/wsl/faq) you can use the provided [`Makefile`](https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile). Just type `make` into the console and you're ready to start developing.
-
-### Formatting
-
-`lifelines` uses the [`black`](https://github.com/ambv/black) python formatter.
-There are 3 different ways to format your code.
-1. Use the [`Makefile`](https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile).
-   * `make format`
-2. Call `black` directly and pass the correct line length.
-   * `black . -l 120`
-3. Have you code formatted automatically during commit with the `pre-commit` hook.
-   * stage and commit your unformatted changes: `git commit -m "your_commit_message"`
-   * Code that needs to be formatted will "fail" the commit hooks and be formatted for you.
-   * Stage the newly formatted python code: `git add *.py`
-   * Recall your original commit command and commit again: `git commit -m "your_commit_message"`
+See our [Contributing](https://github.com/CamDavidsonPilon/lifelines/blob/master/CONTRIBUTING.md) guidelines.
 
 -------------------------------------------------------------------------------
 
