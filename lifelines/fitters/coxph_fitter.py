@@ -1909,7 +1909,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
     @property
     def score_(self):
         """
-        The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the AUC
+        The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the ROC AUC
         to survival data, including censorships.
 
         For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
