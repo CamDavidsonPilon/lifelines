@@ -1864,7 +1864,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 for i, (transform_name, transformer) in enumerate(TimeTransformers().iter(["rank", "km"]), start=1):
                     p_value = test_results.summary.loc[(variable, transform_name), "p"]
 
-                    ax = fig.add_subplot(2, 1, i)
+                    ax = fig.add_subplot(1, 2, i)
 
                     y = residuals_and_duration[variable]
                     tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
