@@ -2,7 +2,7 @@
 import time
 from datetime import datetime
 import warnings
-from textwrap import dedent
+from textwrap import dedent, fill
 import numpy as np
 import pandas as pd
 
@@ -1808,17 +1808,20 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             if counter == 1:
                 if advice:
                     print(
-                        dedent(
-                            """
-                    The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates will be below the threshold by chance. This is compounded when there are many covariates. Similarly, when there are lots of observations, even minor deviances from the proportional hazard assumption will be flagged.
-
-                    With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)`` and looking for non-constant lines.
-
-                    """
-                            % p_value_threshold
+                        fill(
+                            """The ``p_value_threshold`` is set at %g. Even under the null hypothesis of no violations, some covariates will be below the threshold by chance. This is compounded when there are many covariates. Similarly, when there are lots of observations, even minor deviances from the proportional hazard assumption will be flagged."""
+                            % p_value_threshold,
+                            width=100,
                         )
                     )
-
+                    print()
+                    print(
+                        fill(
+                            """With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)`` and looking for non-constant lines.""",
+                            width=100,
+                        )
+                    )
+                    print()
                 test_results.print_summary()
                 print()
 
@@ -1837,24 +1840,32 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 # This should capture dichotomous / low cardinality values.
                 if n_uniques <= 10 and value_counts.min() >= 4:
                     print(
-                        "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [B] below.".format(
-                            n_uniques, variable
+                        fill(
+                            "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [B] below.".format(
+                                n_uniques, variable
+                            ),
+                            width=100,
                         )
                     )
                 else:
                     print(
-                        """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}', ...]` in the call in `.fit`. See documentation in link [B] below.""".format(
-                            var=variable
+                        fill(
+                            """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}', ...]` in the call in `.fit`. See documentation in link [B] below.""".format(
+                                var=variable
+                            ),
+                            width=100,
                         )
                     )
                     print(
-                        """   Alternative Advice: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
-                            var=variable
+                        fill(
+                            """   Alternative Advice: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
+                                var=variable
+                            ),
+                            width=100,
                         )
                     )
 
             if show_plots:
-                print("Bootstrapping residuals... this may take a moment.")
 
                 from matplotlib import pyplot as plt
 
