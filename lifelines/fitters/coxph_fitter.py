@@ -57,7 +57,7 @@ class BatchVsSingle:
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
-            and (0.713869 + -0.000028 * n_total + 0.684229 * frac_dups + 0.000201 * n_total * frac_dups < 1)
+            and (0.712085 + -0.000025 * n_total + 0.579359 * frac_dups + 0.000044 * n_total * frac_dups < 1)
         ):
             return "batch"
         return "single"
@@ -683,15 +683,17 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
     @staticmethod
     def _trivial_log_likelihood_batch(T, E, weights):
         # used for log-likelihood test
+        n = T.shape[0]
         log_lik = 0
-        unique_death_times = np.unique(T)
+        unique_death_times_and_counts = zip(*np.unique(-T, return_counts=True))
         risk_phi = 0
+        pos = n
 
-        for t in reversed(unique_death_times):
+        for _, count_of_removals in unique_death_times_and_counts:
 
-            ix = T == t
+            slice_ = slice(pos - count_of_removals, pos)
 
-            weights_at_t = weights[ix]
+            weights_at_t = weights[slice_]
 
             phi_i = weights_at_t
 
@@ -699,11 +701,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             risk_phi = risk_phi + array_sum_to_scalar(phi_i)
 
             # Calculate the sums of Tie set
-            deaths = E[ix]
+            deaths = E[slice_]
 
             tied_death_counts = array_sum_to_scalar(deaths.astype(int))
             if tied_death_counts == 0:
                 # no deaths, can continue
+                pos -= count_of_removals
                 continue
 
             weights_deaths = weights_at_t[deaths]
@@ -716,6 +719,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 factor = np.log(risk_phi)
 
             log_lik = log_lik - weight_count / tied_death_counts * factor
+            pos -= count_of_removals
 
         return log_lik
 
@@ -774,6 +778,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
     def _get_efron_values_batch(self, X, T, E, weights, beta):  # pylint: disable=too-many-locals
         """
+        Assumes sorted on ascending on T
         Calculates the first and second order vector differentials, with respect to beta.
 
         A good explanation for how Efron handles ties. Consider three of five subjects who fail at the time.
@@ -788,7 +793,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         log_likelihood: float
         """
 
-        _, d = X.shape
+        n, d = X.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros((d,))
         log_lik = 0
@@ -799,20 +804,18 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-        unique_death_times = np.unique(T)
+        unique_death_times_and_counts = zip(*np.unique(-T, return_counts=True))
         scores = weights * np.exp(np.dot(X, beta))
+        pos = n
 
-        for t in reversed(unique_death_times):
+        for _, count_of_removals in unique_death_times_and_counts:
 
-            ix = T == t
+            slice_ = slice(pos - count_of_removals, pos)
 
-            # this can be improved by "stepping", ex: X[pos: pos+removals], since X is sorted by T
-            # slice_ = slice(pos - ix.sum(), pos)
+            X_at_t = X[slice_]
+            weights_at_t = weights[slice_]
 
-            X_at_t = X[ix]
-            weights_at_t = weights[ix]
-
-            phi_i = scores[ix][:, None]
+            phi_i = scores[slice_, None]
             phi_x_i = phi_i * X_at_t
             phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
@@ -822,11 +825,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             risk_phi_x_x = risk_phi_x_x + phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = E[ix]
+            deaths = E[slice_]
 
             tied_death_counts = array_sum_to_scalar(deaths.astype(int))
             if tied_death_counts == 0:
                 # no deaths, can continue
+                pos -= count_of_removals
                 continue
 
             xi_deaths = X_at_t[deaths]
@@ -875,6 +879,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
+            pos -= count_of_removals
 
         return hessian, gradient, log_lik
 
