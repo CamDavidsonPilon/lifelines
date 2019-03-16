@@ -210,4 +210,4 @@ class KaplanMeierFitter(UnivariateFitter):
 
     def _additive_var(self, population, deaths):
         np.seterr(divide="ignore")
-        return (1.0 * deaths / (population * (population - deaths))).replace([np.inf], 0)
+        return (deaths / (population * (population - deaths))).replace([np.inf], 0)

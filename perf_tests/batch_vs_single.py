@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from time import time
 import pandas as pd
 import numpy as np
@@ -13,11 +14,11 @@ ROSSI_ROWS = 432
 results = {}
 
 
-for n_copies in [1, 2, 4, 6, 8, 10, 13, 17, 20]:
+for n_copies in [1, 2, 4, 6, 8, 10, 13, 17, 20, 25]:
 
     # lower percents means more ties.
     # original rossi dataset has 0.113
-    for fraction in np.linspace(0.01, 0.99, 12):
+    for fraction in np.linspace(0.01, 0.99, 15):
         print(n_copies, fraction)
 
         df = pd.concat([load_rossi()] * n_copies)

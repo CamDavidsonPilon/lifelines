@@ -905,19 +905,25 @@ A very low variance means that the column {cols} completely determines whether a
         warnings.warn(warning_text, ConvergenceWarning)
 
 
+def correlation(x, y):
+    return np.corrcoef(x, y)[1, 0]
+
+
 def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
     THRESHOLD = 0.99
     n, _ = df.shape
 
     if n > 500:
-        # let's sample to speed this n**2 algo up.
+        # let's sample to speed this up.
         df = df.sample(n=500, random_state=0).copy()
         durations = durations.sample(n=500, random_state=0).copy()
 
+    rank_durations = durations.argsort()
     for col, series in df.iteritems():
         with np.errstate(invalid="ignore", divide="ignore"):
-            if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
+            rank_series = series.values.argsort()
+            if abs(correlation(rank_durations, rank_series)) >= THRESHOLD:
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
     See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression"

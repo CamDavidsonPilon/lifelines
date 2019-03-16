@@ -57,7 +57,7 @@ class BatchVsSingle:
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
-            and (0.713869 + -0.000028 * n_total + 0.684229 * frac_dups + 0.000201 * n_total * frac_dups < 1)
+            and (0.712085 + -0.000025 * n_total + 0.579359 * frac_dups + 0.000044 * n_total * frac_dups < 1)
         ):
             return "batch"
         return "single"
@@ -280,35 +280,32 @@ class CoxPHFitter(BaseFitter):
 
         self._norm_mean = X.mean(0)
         self._norm_std = X.std(0)
+        X_norm = normalize(X, self._norm_mean, self._norm_std)
 
         hazards_ = self._newton_rhaphson(
-            normalize(X, self._norm_mean, self._norm_std),
-            T,
-            E,
-            weights=weights,
-            initial_point=initial_point,
-            show_progress=show_progress,
-            step_size=step_size,
+            X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size
         )
 
         self.hazards_ = pd.Series(hazards_, index=X.columns, name="coef") / self._norm_std
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
-        self.standard_errors_ = self._compute_standard_errors(
-            normalize(X, self._norm_mean, self._norm_std), T, E, weights
-        )
+        self.standard_errors_ = self._compute_standard_errors(X_norm, T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
-
-        self.baseline_hazard_ = self._compute_baseline_hazards(X, T, E, weights)
-        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
-        self.baseline_survival_ = self._compute_baseline_survival()
 
         self._predicted_partial_hazards_ = (
             self.predict_partial_hazard(X)
             .rename(columns={0: "P"})
-            .assign(T=self.durations.values, E=self.event_observed.values)
+            .assign(T=self.durations.values, E=self.event_observed.values, W=self.weights.values)
             .set_index(X.index)
         )
+        self.baseline_hazard_ = self._compute_baseline_hazards()
+        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
+        self.baseline_survival_ = self._compute_baseline_survival()
+
+        if hasattr(self, "_concordance_score_"):
+            # we have already fit the model.
+            del self._concordance_score_
+
         return self
 
     def _preprocess_dataframe(self, df):
@@ -683,15 +680,17 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
     @staticmethod
     def _trivial_log_likelihood_batch(T, E, weights):
         # used for log-likelihood test
+        n = T.shape[0]
         log_lik = 0
-        unique_death_times = np.unique(T)
+        _, counts = np.unique(-T, return_counts=True)
         risk_phi = 0
+        pos = n
 
-        for t in reversed(unique_death_times):
+        for count_of_removals in counts:
 
-            ix = T == t
+            slice_ = slice(pos - count_of_removals, pos)
 
-            weights_at_t = weights[ix]
+            weights_at_t = weights[slice_]
 
             phi_i = weights_at_t
 
@@ -699,11 +698,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             risk_phi = risk_phi + array_sum_to_scalar(phi_i)
 
             # Calculate the sums of Tie set
-            deaths = E[ix]
+            deaths = E[slice_]
 
             tied_death_counts = array_sum_to_scalar(deaths.astype(int))
             if tied_death_counts == 0:
                 # no deaths, can continue
+                pos -= count_of_removals
                 continue
 
             weights_deaths = weights_at_t[deaths]
@@ -716,6 +716,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 factor = np.log(risk_phi)
 
             log_lik = log_lik - weight_count / tied_death_counts * factor
+            pos -= count_of_removals
 
         return log_lik
 
@@ -774,6 +775,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
     def _get_efron_values_batch(self, X, T, E, weights, beta):  # pylint: disable=too-many-locals
         """
+        Assumes sorted on ascending on T
         Calculates the first and second order vector differentials, with respect to beta.
 
         A good explanation for how Efron handles ties. Consider three of five subjects who fail at the time.
@@ -788,7 +790,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         log_likelihood: float
         """
 
-        _, d = X.shape
+        n, d = X.shape
         hessian = np.zeros((d, d))
         gradient = np.zeros((d,))
         log_lik = 0
@@ -799,20 +801,19 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-        unique_death_times = np.unique(T)
+        # counts are sorted by -T
+        _, counts = np.unique(-T, return_counts=True)
         scores = weights * np.exp(np.dot(X, beta))
+        pos = n
 
-        for t in reversed(unique_death_times):
+        for count_of_removals in counts:
 
-            ix = T == t
+            slice_ = slice(pos - count_of_removals, pos)
 
-            # this can be improved by "stepping", ex: X[pos: pos+removals], since X is sorted by T
-            # slice_ = slice(pos - ix.sum(), pos)
+            X_at_t = X[slice_]
+            weights_at_t = weights[slice_]
 
-            X_at_t = X[ix]
-            weights_at_t = weights[ix]
-
-            phi_i = scores[ix][:, None]
+            phi_i = scores[slice_, None]
             phi_x_i = phi_i * X_at_t
             phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
@@ -822,11 +823,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             risk_phi_x_x = risk_phi_x_x + phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = E[ix]
+            deaths = E[slice_]
 
             tied_death_counts = array_sum_to_scalar(deaths.astype(int))
             if tied_death_counts == 0:
                 # no deaths, can continue
+                pos -= count_of_removals
                 continue
 
             xi_deaths = X_at_t[deaths]
@@ -872,9 +874,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
             # which would be: np.einsum("Bi, Bj->Bij", t, t)
             a2 = summand.T.dot(summand)
+
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
+            pos -= count_of_removals
 
         return hessian, gradient, log_lik
 
@@ -1335,24 +1339,25 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
-
         hazard_names = self.hazards_.index
-        if isinstance(X, pd.DataFrame):
-            order = hazard_names
-            X = X[order]
-            check_for_numeric_dtypes_or_raise(X)
-        elif isinstance(X, pd.Series) and ((X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))):
+
+        if isinstance(X, pd.Series) and ((X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))):
             X = X.to_frame().T
-            order = hazard_names
-            X = X[order]
-            check_for_numeric_dtypes_or_raise(X)
+            return self.predict_log_partial_hazard(X)
         elif isinstance(X, pd.Series):
             assert len(hazard_names) == 1, "Series not the correct argument"
-            X = pd.DataFrame(X)
+            X = X.to_frame().T
+            return self.predict_log_partial_hazard(X)
+
+        index = _get_index(X)
+
+        if isinstance(X, pd.DataFrame):
+            order = hazard_names
+            X = X.reindex(order, axis="columns")
             check_for_numeric_dtypes_or_raise(X)
+            X = X.values
 
         X = X.astype(float)
-        index = _get_index(X)
 
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.hazards_), index=index)
@@ -1525,33 +1530,34 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         v = self.predict_survival_function(X)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
-    def _compute_baseline_hazard(self, X, durations, event_observed, weights, name):
+    def _compute_baseline_hazard(self, partial_hazards, name):
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
-        ind_hazards = self.predict_partial_hazard(X) * weights[:, None]
-        ind_hazards["event_at"] = durations.values
-        ind_hazards_summed_over_durations = (
-            ind_hazards.groupby("event_at")[0].sum().sort_index(ascending=False).cumsum()
+        ind_hazards = partial_hazards.copy()
+        ind_hazards["P"] *= ind_hazards["W"]
+        ind_hazards["E"] *= ind_hazards["W"]
+        ind_hazards_summed_over_durations = ind_hazards.groupby("T")[["P", "E"]].sum()
+        ind_hazards_summed_over_durations["P"] = ind_hazards_summed_over_durations["P"].loc[::-1].cumsum()
+        baseline_hazard = pd.DataFrame(
+            ind_hazards_summed_over_durations["E"] / ind_hazards_summed_over_durations["P"], columns=[name]
         )
-        ind_hazards_summed_over_durations.name = "hazards"
-        event_table = survival_table_from_events(durations, event_observed, weights=weights)
-        event_table = event_table.join(ind_hazards_summed_over_durations)
-        baseline_hazard = pd.DataFrame(event_table["observed"] / event_table["hazards"], columns=[name]).fillna(0)
-
         return baseline_hazard
 
-    def _compute_baseline_hazards(self, X, T, E, weights):
+    def _compute_baseline_hazards(self):
         if self.strata:
 
             index = self.durations.unique()
             baseline_hazards_ = pd.DataFrame(index=index).sort_index()
 
-            for (X_, T_, E_, W_), name in self._partition_by_strata(X, T, E, weights, as_dataframes=True):
+            for name, stratum_predicted_partial_hazards_ in self._predicted_partial_hazards_.groupby(self.strata):
                 baseline_hazards_ = baseline_hazards_.merge(
-                    self._compute_baseline_hazard(X_, T_, E_, W_, name), left_index=True, right_index=True, how="left"
+                    self._compute_baseline_hazard(stratum_predicted_partial_hazards_, name),
+                    left_index=True,
+                    right_index=True,
+                    how="left",
                 )
             return baseline_hazards_.fillna(0)
 
-        return self._compute_baseline_hazard(X, T, E, weights, name="baseline hazard")
+        return self._compute_baseline_hazard(self._predicted_partial_hazards_, name="baseline hazard")
 
     def _compute_baseline_cumulative_hazard(self):
         return self.baseline_hazard_.cumsum()
@@ -1932,7 +1938,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         """
         # pylint: disable=access-member-before-definition
-        if hasattr(self, "_predicted_partial_hazards_"):
+        if not hasattr(self, "_concordance_score_"):
             if self.strata:
                 # https://stats.stackexchange.com/questions/133817/stratified-concordance-index-survivalsurvconcordance
                 num_correct, num_tied, num_pairs = 0, 0, 0
@@ -1952,6 +1958,5 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 )
 
             self._concordance_score_ = _concordance_ratio(num_correct, num_tied, num_pairs)
-            del self._predicted_partial_hazards_
             return self._concordance_score_
         return self._concordance_score_

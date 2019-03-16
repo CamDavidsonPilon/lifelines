@@ -330,7 +330,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return anp.log(hz)
 
     def _negative_log_likelihood(self, params, T, E, entry):
-        warnings.filterwarnings("ignore")
 
         n = T.shape[0]
         log_hz = self._log_hazard(params, T[E])
@@ -359,7 +358,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels: tuple
 
         """
-
         alpha2 = 1 - alpha / 2.0
         z = inv_normal_cdf(alpha2)
         df = pd.DataFrame(index=self.timeline)
@@ -790,7 +788,7 @@ class ParametericRegressionFitter(BaseFitter):
         return anp.log(hz)
 
     def _negative_log_likelihood(self, params, T, E, W, *Xs):
-        warnings.filterwarnings("ignore")
+        warnings.simplefilter(action="ignore", category=FutureWarning)
 
         ll = (W * E * self._log_hazard(params, T, *Xs)).sum() - (W * self._cumulative_hazard(params, T, *Xs)).sum()
         if self.penalizer > 0:
@@ -1100,6 +1098,7 @@ class ParametericRegressionFitter(BaseFitter):
     def _compute_sandwich_errors(self, T, E, weights, *Xs):
         with np.errstate(all="ignore"):
             # convergence will fail catastrophically elsewhere.
+
             ll_gradient = grad(self._negative_log_likelihood)
             params = self.params_.values
             n_params = params.shape[0]

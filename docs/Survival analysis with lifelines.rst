@@ -646,7 +646,7 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 
 .. image:: images/lifelines_intro_lcd.png
 
- .. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
+.. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
 
 
 Left truncated data

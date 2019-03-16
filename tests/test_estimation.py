@@ -518,7 +518,7 @@ class TestUnivariateFitters:
             assert dif == 0
 
 
-class TestLogNormal:
+class TestLogNormalFitter:
     @pytest.fixture()
     def lnf(self):
         return LogNormalFitter()
@@ -2906,8 +2906,6 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         rossi = rossi[["week", "arrest", "fin", "age"]]
         cp = CoxPHFitter()
         cp.fit(rossi, "week", "arrest", weights_col="age")
-
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[0.0], 0.0, decimal=4)
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[1.0], 0.00183466, decimal=4)
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[2.0], 0.005880265, decimal=4)
         npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[10.0], 0.035425868, decimal=4)
@@ -3028,13 +3026,18 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
     def test_warning_is_raised_if_complete_separation_is_present(self, cph):
         # check for a warning if we have complete separation
 
-        df = pd.DataFrame.from_records(
-            [(-5, 1), (-4, 2), (-3, 3), (-2, 4), (-1, 5), (1, 6), (2, 7), (3, 8), (4, 9)], columns=["x", "T"]
-        )
-        df["E"] = np.random.binomial(1, 0.9, df.shape[0])
-
+        df = pd.DataFrame.from_records(zip(np.arange(-5, 5), np.arange(1, 10)), columns=["x", "T"])
         with pytest.warns(ConvergenceWarning, match="complete separation") as w:
-            cph.fit(df, "T", "E")
+            cph.fit(df, "T")
+
+        df = pd.DataFrame.from_records(zip(np.arange(1, 10), np.arange(1, 10)), columns=["x", "T"])
+        with pytest.warns(ConvergenceWarning, match="complete separation") as w:
+            cph.fit(df, "T")
+
+        df = pd.DataFrame.from_records(zip(np.arange(0, 100), np.arange(0, 100)), columns=["x", "T"])
+        df["x"] += np.random.randn(100)
+        with pytest.warns(ConvergenceWarning, match="complete separation") as w:
+            cph.fit(df, "T")
 
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
         # this is known as complete separation: See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression
@@ -3226,7 +3229,7 @@ class TestAalenAdditiveFitter:
         assert abs((T_pred.values > T).mean() - 0.5) < 0.05
 
     def test_dataframe_input_with_nonstandard_index(self):
-        aaf = AalenAdditiveFitter(coef_penalizer=2.0)
+        aaf = AalenAdditiveFitter(coef_penalizer=5.0)
         df = pd.DataFrame(
             [(16, True, True), (1, True, True), (4, False, True)],
             columns=["duration", "done_feeding", "white"],
