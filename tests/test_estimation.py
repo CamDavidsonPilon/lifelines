@@ -3026,13 +3026,18 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
     def test_warning_is_raised_if_complete_separation_is_present(self, cph):
         # check for a warning if we have complete separation
 
-        df = pd.DataFrame.from_records(
-            [(-5, 1), (-4, 2), (-3, 3), (-2, 4), (-1, 5), (1, 6), (2, 7), (3, 8), (4, 9)], columns=["x", "T"]
-        )
-        df["E"] = np.random.binomial(1, 0.9, df.shape[0])
-
+        df = pd.DataFrame.from_records(zip(np.arange(-5, 5), np.arange(1, 10)), columns=["x", "T"])
         with pytest.warns(ConvergenceWarning, match="complete separation") as w:
-            cph.fit(df, "T", "E")
+            cph.fit(df, "T")
+
+        df = pd.DataFrame.from_records(zip(np.arange(1, 10), np.arange(1, 10)), columns=["x", "T"])
+        with pytest.warns(ConvergenceWarning, match="complete separation") as w:
+            cph.fit(df, "T")
+
+        df = pd.DataFrame.from_records(zip(np.arange(0, 100), np.arange(0, 100)), columns=["x", "T"])
+        df["x"] += np.random.randn(100)
+        with pytest.warns(ConvergenceWarning, match="complete separation") as w:
+            cph.fit(df, "T")
 
     def test_what_happens_when_column_is_constant_for_all_non_deaths(self, rossi):
         # this is known as complete separation: See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression

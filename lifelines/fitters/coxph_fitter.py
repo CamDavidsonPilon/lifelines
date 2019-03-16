@@ -682,11 +682,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         # used for log-likelihood test
         n = T.shape[0]
         log_lik = 0
-        unique_death_times_and_counts = zip(*np.unique(-T, return_counts=True))
+        _, counts = np.unique(-T, return_counts=True)
         risk_phi = 0
         pos = n
 
-        for _, count_of_removals in unique_death_times_and_counts:
+        for count_of_removals in counts:
 
             slice_ = slice(pos - count_of_removals, pos)
 
@@ -801,11 +801,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
         risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
 
-        unique_death_times_and_counts = zip(*np.unique(-T, return_counts=True))
+        # counts are sorted by -T
+        _, counts = np.unique(-T, return_counts=True)
         scores = weights * np.exp(np.dot(X, beta))
         pos = n
 
-        for _, count_of_removals in unique_death_times_and_counts:
+        for count_of_removals in counts:
 
             slice_ = slice(pos - count_of_removals, pos)
 
@@ -873,6 +874,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
             # which would be: np.einsum("Bi, Bj->Bij", t, t)
             a2 = summand.T.dot(summand)
+
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
             log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
