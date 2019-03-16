@@ -1,5 +1,13 @@
 ### Changelog
 
+#### 0.20.1
+ - Some performance improvements to `CoxPHFitter` (about 30%). I know it may seem silly, but we are now about the same or slighty faster than the Cox model in R's `survival` package (for some testing datasets and some configurations). This is a big deal, because 1) lifelines does more error checking prior, 2) R's cox model is written in C, and we are still pure Python/NumPy, 3) R's cox model has decades of development.
+ - suppressed unimportant warnings
+
+##### API changes
+ - Previously, lifelines _always_ added a 0 row to `cph.baseline_hazard_`, even if there were no event at this time. This is no longer the case. A 0 will still be added if there is a duration (observed or not) at 0 occurs however.
+
+
 #### 0.20.0
  - Starting with 0.20.0, only Python3 will be supported. Over 75% of recent installs where Py3.
  - Updated minimum dependencies, specifically Matplotlib and Pandas.

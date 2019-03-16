@@ -186,7 +186,7 @@ class NelsonAalenFitter(UnivariateFitter):
         )
 
     def _variance_f_discrete(self, population, deaths):
-        return 1.0 * (population - deaths) * deaths / population ** 3
+        return (population - deaths) * deaths / population ** 3
 
     def _additive_f_smooth(self, population, deaths):
         cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1))
@@ -196,7 +196,7 @@ class NelsonAalenFitter(UnivariateFitter):
         )
 
     def _additive_f_discrete(self, population, deaths):
-        return (1.0 * deaths / population).replace([np.inf], 0)
+        return (deaths / population).replace([np.inf], 0)
 
     def smoothed_hazard_(self, bandwidth):
         """

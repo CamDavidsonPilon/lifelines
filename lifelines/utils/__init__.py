@@ -915,9 +915,11 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
         df = df.sample(n=500, random_state=0).copy()
         durations = durations.sample(n=500, random_state=0).copy()
 
+    rank_durations = durations.argsort()
     for col, series in df.iteritems():
         with np.errstate(invalid="ignore", divide="ignore"):
-            if abs(stats.spearmanr(series, durations).correlation) >= THRESHOLD:
+            rank_series = series.values.argsort()
+            if abs(np.corrcoef(rank_durations, rank_series)[1, 0]) >= THRESHOLD:
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
     See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression"
@@ -941,7 +943,7 @@ def check_nans_or_infs(df_or_array):
             raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
     # isinf check is done after isnull check since np.isinf doesn't work on None values
     if isinstance(df_or_array, (pd.Series, pd.DataFrame)):
-        infs = df_or_array.values == np.Inf
+        infs = df_or_array.values.astype(float) == np.Inf
     else:
         infs = np.isinf(df_or_array)
 
