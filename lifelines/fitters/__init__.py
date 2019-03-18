@@ -234,7 +234,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     """
 
     _KNOWN_MODEL = False
-    _MIN_PARAMETER_VALUE = 1e-09
+    _MIN_PARAMETER_VALUE = 1e-12
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
@@ -609,13 +609,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
             warning_text = dedent(
                 """\
 
-                The hessian was not invertable. This could be a model problem:
+                The Hessian was not invertible. This could be a model problem:
 
-                1. Are two parameters in the model colinear / exchangeable?
+                1. Are two parameters in the model collinear / exchangeable?
                 2. Is the cumulative hazard always non-negative and always non-decreasing?
                 3. Are there cusps/ in the cumulative hazard?
 
-                We will instead approximate it using the psuedo-inverse.
+                We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand

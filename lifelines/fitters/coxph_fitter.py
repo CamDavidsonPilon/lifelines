@@ -480,7 +480,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                     e,
                 )
 
-            delta = step_size * inv_h_dot_g_T
+            delta = inv_h_dot_g_T
 
             if np.any(np.isnan(delta)):
                 raise ConvergenceError(
@@ -524,10 +524,10 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 )
                 converging, completed = False, False
 
-            step_size = step_sizer.update(norm_delta).next()
+            beta += step_size * delta
 
-            beta += delta
             previous_ll = ll
+            step_size = step_sizer.update(norm_delta).next()
 
         self._hessian_ = hessian
         self._score_ = gradient
