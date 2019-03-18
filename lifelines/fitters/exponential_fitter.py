@@ -69,7 +69,8 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
     def median_(self):
         return np.log(2) / self.lambda_
 
-    def _fit_model(self, T, E, entry, show_progress=False):
+    def _fit_model(self, T, E, entry, left_censorship, show_progress=False):
+        # TODO: handle left censorship here
         T = T - entry
         lambda_ = T.sum() / E.sum()
         lambda_variance_ = T.sum() / lambda_

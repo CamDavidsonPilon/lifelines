@@ -349,11 +349,11 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
-        self._check_values(df, T, E, self.event_col)
-
         X = df.astype(float)
         T = T.astype(float)
         E = E.astype(bool)
+
+        self._check_values(X, T, E, self.event_col)
 
         return X, T, E, W, original_index, _clusters
 

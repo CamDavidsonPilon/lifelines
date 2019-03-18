@@ -938,25 +938,27 @@ def check_complete_separation(df, events, durations, event_col):
 
 
 def check_nans_or_infs(df_or_array):
-    nulls = pd.isnull(df_or_array)
-    if hasattr(nulls, "values"):
-        if nulls.values.any():
-            raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
-    else:
-        if nulls.any():
-            raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
-    # isinf check is done after isnull check since np.isinf doesn't work on None values
     if isinstance(df_or_array, (pd.Series, pd.DataFrame)):
-        infs = df_or_array.values == np.Inf
-    else:
-        infs = np.isinf(df_or_array)
+        return check_nans_or_infs(df_or_array.values)
 
-    if hasattr(infs, "values"):
-        if infs.values.any():
-            raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
-    else:
-        if infs.any():
-            raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
+    if pd.isnull(df_or_array).any():
+        raise TypeError("NaNs were detected in the dataset. Try using pd.isnull to find the problematic values.")
+
+    try:
+        infs = np.isinf(df_or_array)
+    except TypeError:
+        warning_text = (
+            """Attempting to convert an unexpected datatype '%s' to float. Suggestion: 1) use `lifelines.utils.datetime_to_durations` to do conversions or 2) manually convert to floats/booleans."""
+            % df_or_array.dtype
+        )
+        warnings.warn(warning_text)
+        try:
+            infs = np.isinf(df_or_array.astype(float))
+        except:
+            raise TypeError("Wrong dtype '%s'." % df_or_array.dtype)
+
+    if infs.any():
+        raise TypeError("Infs were detected in the dataset. Try using np.isinf to find the problematic values.")
 
 
 def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1):

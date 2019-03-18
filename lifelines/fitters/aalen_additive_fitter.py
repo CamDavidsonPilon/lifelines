@@ -287,17 +287,17 @@ It's important to know that the naive variance estimates of the coefficients are
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
+        X = df.astype(float)
+        T = T.astype(float)
+        E = E.astype(bool)
+
         self._check_values(df, T, E)
 
         if self.fit_intercept:
             assert (
                 "_intercept" not in df.columns
             ), "_intercept is an internal lifelines column, please rename your column first."
-            df["_intercept"] = 1.0
-
-        X = df.astype(float)
-        T = T.astype(float)
-        E = E.astype(bool)
+            X["_intercept"] = 1.0
 
         return X, T, E, W
 

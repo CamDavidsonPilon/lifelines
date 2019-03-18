@@ -323,11 +323,12 @@ class TestUnivariateFitters:
         )
         T = pd.to_datetime("2015-01-03") - t
         for fitter in univariate_fitters:
-            f = fitter().fit(T)
-            try:
-                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
-            except:
-                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
+            with pytest.warns(UserWarning, match="convert"):
+                f = fitter().fit(T)
+                try:
+                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
+                except:
+                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
 
     def test_univariate_fitters_okay_if_given_boolean_col_with_object_dtype(self, univariate_fitters):
         df = pd.DataFrame({"T": [1, 2, 3, 4, 5], "E": [True, True, True, True, None]})
@@ -336,7 +337,8 @@ class TestUnivariateFitters:
         assert df["E"].dtype == object
 
         for fitter in univariate_fitters:
-            fitter().fit(df["T"], df["E"])
+            with pytest.warns(UserWarning, match="convert"):
+                fitter().fit(df["T"], df["E"])
 
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(
         self, positive_sample_lifetimes, univariate_fitters
@@ -851,7 +853,7 @@ class TestKaplanMeierFitter:
         kmf = KaplanMeierFitter()
         kmf.fit(T, C, left_censorship=True)
         assert hasattr(kmf, "cumulative_density_")
-        assert hasattr(kmf, "plot_cumulative_density_")
+        assert hasattr(kmf, "plot_cumulative_density")
         assert not hasattr(kmf, "survival_function_")
 
     def test_kmf_left_censorship_stats(self):
@@ -1267,8 +1269,8 @@ class TestRegressionFitters:
         for fitter in regression_models:
             if getattr(fitter, "strata", False):
                 continue
-            for subset in [["t", "categorya_"], ["t", "categoryb_"], ["t", "string_"]]:
-                with pytest.raises(TypeError):
+            for subset in [["t", "categoryb_"], ["t", "string_"]]:
+                with pytest.raises(ValueError):
                     fitter.fit(df[subset], duration_col="t")
 
             for subset in [["t", "uint8_"]]:
@@ -3523,15 +3525,12 @@ class TestCoxTimeVaryingFitter:
             }
         )
 
-        for subset in [
-            ["start", "end", "e", "id", "categorya_"],
-            ["start", "end", "e", "id", "categoryb_"],
-            ["start", "end", "e", "id", "string_"],
-        ]:
-            with pytest.raises(TypeError):
+        for subset in [["start", "end", "e", "id", "categoryb_"], ["start", "end", "e", "id", "string_"]]:
+            with pytest.raises(ValueError):
                 ctv.fit(df[subset], id_col="id", event_col="e", stop_col="end")
 
         for subset in [
+            ["start", "end", "e", "id", "categorya_"],
             ["start", "end", "e", "id", "bool_"],
             ["start", "end", "e", "id", "int_"],
             ["start", "end", "e", "id", "float_"],

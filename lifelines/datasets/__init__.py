@@ -273,8 +273,6 @@ def load_static_test(**kwargs):
 
 def load_lcd(**kwargs):
     """
-    From the
-
     Copper concentrations (µg/L) in shallow groundwater samples from two different geological zones in the San Joaquin Valley, California. The alluvial fan data include four
     different detection limits and the basin trough data include five different detection limits.
 
@@ -294,6 +292,24 @@ def load_lcd(**kwargs):
             1  1  alluvial_fan
     """
     return _load_dataset("CuZn-LeftCensoredDataset.csv", **kwargs)
+
+
+def load_nh4(**kwargs):
+    """
+    Ammonium (NH4) concentration (mg/L) in precipitation measured at Olympic National Park, Hoh Ranger Station (WA14), weekly or every other week from January 6, 2009 through December 20, 2011.
+
+    Reference
+    -----------
+    National Atmospheric Deposition Program, National Trends Network (NADP/NTN).
+    http://nadp.slh.wisc.edu/data/sites/siteDetails.aspx?net=NTN&id=WA14
+    http://nadp.isws.illinois.edu/NTN/
+
+    ::
+
+        Size: (104,3)
+
+    """
+    return _load_dataset("nh4.csv", index_col=[0], **kwargs)
 
 
 def load_waltons(**kwargs):

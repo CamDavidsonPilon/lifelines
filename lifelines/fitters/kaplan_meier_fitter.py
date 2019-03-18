@@ -155,7 +155,7 @@ class KaplanMeierFitter(UnivariateFitter):
         self._predict_label = label
         self._update_docstrings()
 
-        setattr(self, "plot_" + estimate_name, self.plot)
+        setattr(self, "plot_" + estimate_name.rstrip("_"), self.plot)
         return self
 
     def _check_values(self, array):
@@ -166,12 +166,6 @@ class KaplanMeierFitter(UnivariateFitter):
         Plot :math:`\log(S(t))` against :math:`\log(t)`
         """
         return plot_loglogs(self, *args, **kwargs)
-
-    def plot_survival_function(self, **kwargs):
-        """
-        Alias of ``plot``
-        """
-        return self.plot(**kwargs)
 
     def survival_function_at_times(self, times, label=None):
         """
