@@ -231,11 +231,11 @@ def plot_lifetimes(
 
     for i in range(N):
         c = event_observed_color if event_observed[i] else event_censored_color
-        ax.hlines(N - 1 - i, entry[i], entry[i] + durations[i], color=c, lw=1.5)
+        ax.hlines(i, entry[i], entry[i] + durations[i], color=c, lw=1.5)
         if left_truncated:
-            ax.hlines(N - 1 - i, 0, entry[i], color=c, lw=1.0, linestyle="--")
+            ax.hlines(i, 0, entry[i], color=c, lw=1.0, linestyle="--")
         m = "" if not event_observed[i] else "o"
-        ax.scatter(entry[i] + durations[i], N - 1 - i, color=c, marker=m, s=10)
+        ax.scatter(entry[i] + durations[i], i, color=c, marker=m, s=10)
 
     ax.set_ylim(-0.5, N)
     return ax
