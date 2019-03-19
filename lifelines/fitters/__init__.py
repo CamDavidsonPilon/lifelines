@@ -345,7 +345,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         cum_haz = self._cumulative_hazard(params, times)
         return anp.log1p(-anp.exp(-cum_haz))
 
-    def _negative_log_likelihood_left_censoring(self, params, T, E, entry):
+    def _negative_log_likelihood_left_censoring(self, params, T, E, _entry):
 
         n = T.shape[0]
         log_hz = self._log_hazard(params, T)

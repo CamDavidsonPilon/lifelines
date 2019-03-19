@@ -22,7 +22,6 @@ from lifelines.utils import (
     _to_list,
     _to_tuple,
     _to_array,
-    survival_table_from_events,
     inv_normal_cdf,
     normalize,
     qth_survival_times,

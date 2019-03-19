@@ -8,11 +8,35 @@ from scipy import stats
 __all__ = ["add_at_risk_counts", "plot_lifetimes"]
 
 
-def left_censorship_cdf_plot(model, timeline=None, **plot_kwargs):
-    from lifelines import KaplanMeierFitter
+def get_distribution_name_of_lifelines_model(model):
+    return model.__class__.__name__.replace("Fitter", "").lower()
+
+
+def create_scipy_stats_model_from_lifelines_model(model):
     from lifelines.fitters import KnownModelParametericUnivariateFitter
 
     assert isinstance(model, KnownModelParametericUnivariateFitter)
+
+    dist = get_distribution_name_of_lifelines_model(model)
+    if dist == "weibull":
+        scipy_dist = "weibull_min"
+        sparams = (model.rho_, 0, model.lambda_)
+    elif dist == "lognormal":
+        scipy_dist = "lognorm"
+        sparams = (model.sigma_, 0, np.exp(model.mu_))
+    elif dist == "loglogistic":
+        scipy_dist = "fisk"
+        sparams = (model.beta_, 0, model.alpha_)
+    elif dist == "exponential":
+        scipy_dist = "expon"
+        sparams = (0, model.lambda_)
+    else:
+        raise TypeError()
+    return getattr(stats, scipy_dist)(*sparams)
+
+
+def left_censorship_cdf_plot(model, timeline=None, **plot_kwargs):
+    from lifelines import KaplanMeierFitter
 
     set_kwargs_ax(plot_kwargs)
     ax = plot_kwargs.pop("ax")
@@ -25,18 +49,8 @@ def left_censorship_cdf_plot(model, timeline=None, **plot_kwargs):
     )
     kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
 
-    dist = model.__class__.__name__.replace("Fitter", "").lower()
-    if dist == "weibull":
-        scipy_dist = "weibull_min"
-        sparams = (model.rho_, 0, model.lambda_)
-    elif dist == "lognormal":
-        scipy_dist = "lognorm"
-        sparams = (model.sigma_, 0, np.exp(model.mu_))
-    elif dist == "loglogistic":
-        scipy_dist = "fisk"
-        sparams = (model.beta_, 0, model.alpha_)
-
-    dist_object = getattr(stats, scipy_dist)(*sparams)
+    dist = get_distribution_name_of_lifelines_model(model)
+    dist_object = create_scipy_stats_model_from_lifelines_model(model)
     ax.plot(timeline, dist_object.cdf(timeline), label="fitted %s" % dist, **plot_kwargs)
     ax.legend()
     return ax
@@ -55,18 +69,8 @@ def qq_plot(model, timeline=None, **plot_kwargs):
     if timeline is None:
         timeline = model.timeline
 
-    n = model.durations.shape[0]
-
-    dist = model.__class__.__name__.replace("Fitter", "").lower()
-    if dist == "weibull":
-        scipy_dist = "weibull_min"
-        sparams = (model.rho_, 0, model.lambda_)
-    elif dist == "lognormal":
-        scipy_dist = "lognorm"
-        sparams = (model.sigma_, 0, np.exp(model.mu_))
-    elif dist == "loglogistic":
-        scipy_dist = "fisk"
-        sparams = (model.beta_, 0, model.alpha_)
+    dist = get_distribution_name_of_lifelines_model(model)
+    dist_object = create_scipy_stats_model_from_lifelines_model(model)
 
     COL_EMP = "empirical quantiles"
     COL_THEO = "fitted %s quantiles" % dist
@@ -79,17 +83,18 @@ def qq_plot(model, timeline=None, **plot_kwargs):
         quantiles = qth_survival_times(q, kmf.cumulative_density_, cdf=True)
     else:
         q = np.unique(1 - kmf.survival_function_.values[:, 0])
-        quantiles = qth_survival_times(q, kmf.survival_function_, cdf=False)
+        quantiles = qth_survival_times(q, 1 - kmf.survival_function_, cdf=True)
 
-    dist_object = getattr(stats, scipy_dist)(*sparams)
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0], np.nan).dropna()
 
     max_, min_ = quantiles[COL_EMP].max(), quantiles[COL_EMP].min()
+
     quantiles.plot.scatter(COL_THEO, COL_EMP, c="none", edgecolor="k", lw=0.5, ax=ax)
     ax.plot([min_, max_], [min_, max_], c="k", ls=":", lw=1.0)
     ax.set_ylim(min_, max_)
     ax.set_xlim(min_, max_)
+
     return ax
 
 

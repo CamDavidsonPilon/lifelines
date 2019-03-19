@@ -7,11 +7,11 @@ Recall that MLE bias is equal to 0 up to the order 1/sqrt(n), so we expect that 
 small n, we will see a bias.
 
 """
-
+import numpy as np
 from lifelines import WeibullFitter
 
 
-def one_detection_limit(dist, N, fraction_below_limit):
+def one_detection_limit(N, fraction_below_limit):
 
     T_actual = 0.5 * np.random.weibull(1, size=N)
 

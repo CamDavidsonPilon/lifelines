@@ -3,16 +3,12 @@ import numpy as np
 import scipy
 from matplotlib import pyplot as plt
 from lifelines import WeibullFitter, KaplanMeierFitter, LogNormalFitter, LogLogisticFitter
-from lifelines.datasets import load_nh4
 from lifelines.plotting import left_censorship_cdf_plot, qq_plot
 
 plt.style.use("bmh")
 
 
-df = load_nh4()
-T, E = df["NH4.mg.per.L"], ~df["Censored"]
-
-N = 150
+N = 2500
 
 T_actual = scipy.stats.fisk(8, 0, 1).rvs(N)
 
@@ -29,7 +25,6 @@ T = np.where(ix == 1, np.maximum(T, MIN_1), T)
 T = np.where(ix == 2, np.maximum(T, MIN_2), T)
 T = np.where(ix == 3, np.maximum(T, MIN_3), T)
 E = T_actual == T
-
 
 fig, axes = plt.subplots(2, 2, figsize=(9, 5))
 axes = axes.reshape(4)

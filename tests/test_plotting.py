@@ -3,6 +3,7 @@ import os
 import pytest
 import pandas as pd
 import numpy as np
+import scipy
 
 from lifelines import (
     NelsonAalenFitter,
@@ -14,12 +15,13 @@ from lifelines import (
     LogNormalFitter,
     LogLogisticFitter,
     WeibullAFTFitter,
+    ExponentialFitter,
 )
 
 from tests.test_estimation import known_parametric_univariate_fitters
 
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
-from lifelines.plotting import plot_lifetimes, left_censorship_cdf_plot
+from lifelines.plotting import plot_lifetimes, left_censorship_cdf_plot, qq_plot
 from lifelines.datasets import (
     load_waltons,
     load_regression_dataset,
@@ -504,9 +506,61 @@ class TestPlotting:
 
     def test_left_censorship_cdf_plots(self, block):
         df = load_nh4()
-        for model in [WeibullFitter(), LogNormalFitter(), LogLogisticFitter()]:
+        fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
+        axes = axes.reshape(4)
+        for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
             model.fit(df["NH4.mg.per.L"], ~df["Censored"], left_censorship=True)
-            ax = left_censorship_cdf_plot(model)
+            ax = left_censorship_cdf_plot(model, ax=axes[i])
             assert ax is not None
-            self.plt.title("test_left_censorship_cdf_plots")
+        self.plt.suptitle("test_left_censorship_cdf_plots")
+        self.plt.show(block=block)
+
+    def test_qq_plot_left_censoring(self, block):
+        df = load_nh4()
+        fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
+        axes = axes.reshape(4)
+        for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
+            model.fit(df["NH4.mg.per.L"], ~df["Censored"], left_censorship=True)
+            ax = qq_plot(model, ax=axes[i])
+            assert ax is not None
+        self.plt.suptitle("test_qq_plot_left_censoring")
+        self.plt.show(block=block)
+
+    def test_qq_plot_left_censoring_with_known_distribution(self, block):
+        N = 300
+        T_actual = scipy.stats.fisk(8, 0, 1).rvs(N)
+
+        MIN_0 = np.percentile(T_actual, 5)
+        MIN_1 = np.percentile(T_actual, 10)
+
+        T = T_actual.copy()
+        ix = np.random.randint(3, size=N)
+
+        T = np.where(ix == 0, np.maximum(T, MIN_0), T)
+        T = np.where(ix == 1, np.maximum(T, MIN_1), T)
+        E = T_actual == T
+
+        fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
+        axes = axes.reshape(4)
+        for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
+            model.fit(T, E, left_censorship=True)
+            ax = qq_plot(model, ax=axes[i])
+            assert ax is not None
+        self.plt.suptitle("test_qq_plot_left_censoring_with_known_distribution")
+        self.plt.show(block=block)
+
+    def test_qq_plot_right_censoring_with_known_distribution(self, block):
+        N = 3000
+        T_actual = scipy.stats.fisk(8, 0, 1).rvs(N)
+        C = scipy.stats.fisk(8, 0, 1).rvs(N)
+        E = T_actual < C
+        T = np.minimum(T_actual, C)
+
+        fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
+        axes = axes.reshape(4)
+        for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
+            model.fit(T, E)
+            ax = qq_plot(model, ax=axes[i])
+            assert ax is not None
+        self.plt.suptitle("test_qq_plot_right_censoring_with_known_distribution")
         self.plt.show(block=block)
