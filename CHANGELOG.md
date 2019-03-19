@@ -1,5 +1,19 @@
 ### Changelog
 
+#### 0.20.2
+
+##### New features
+ - Left censoring is now supported in univariate parametric models: `.fit(..., left_censorship=True)`. Examples are in the docs.
+ - new dataset: `lifelines.datasets.load_nh4()`
+ - Univariate parameteric models now include, by default, support for the cumulative density function: `.cumulative_density_`, `.confidence_interval_cumulative_density_`, `plot_cumulative_density()`, `cumulative_density_at_times(t)`.
+  [ ] add a qq-plot for univariate models.
+
+##### Bug fixes
+ - fixed a naming error in `KaplanMeierFitter` when `left_censorship` was set to True, `plot_cumulative_density_()` is now `plot_cumulative_density()`.
+ - added some error handling when passing in timedeltas. Ideally, users don't pass in timedeltas, as the scale is ambiguous. However, the error message before was not obvious, so we do some conversion, warn the user, and pass it through.
+
+
+
 #### 0.20.1
  - Some performance improvements to `CoxPHFitter` (about 30%). I know it may seem silly, but we are now about the same or slighty faster than the Cox model in R's `survival` package (for some testing datasets and some configurations). This is a big deal, because 1) lifelines does more error checking prior, 2) R's cox model is written in C, and we are still pure Python/NumPy, 3) R's cox model has decades of development.
  - suppressed unimportant warnings

@@ -190,8 +190,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         )
         weights = df.pop("__weights").astype(float)
 
-        self._check_values(df, events, start, stop, self.event_col)
         df = df.astype(float)
+        self._check_values(df, events, start, stop, self.event_col)
 
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)

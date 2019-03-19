@@ -3,8 +3,30 @@
 import warnings
 import numpy as np
 from lifelines.utils import coalesce
+from scipy import stats
 
 __all__ = ["add_at_risk_counts", "plot_lifetimes"]
+
+
+def qqplot(model):
+    # assert knownunivariatemodel
+    dist = model.__class__.__name__.replace("Fitter", "").lower()
+    if dist == "weibull":
+        dist = "weibull_min"
+        sparams = (model.rho_, model.lambda_)
+    elif dist == "lognormal":
+        dist = "lognorm"
+        sparams = (model.sigma_, 0, np.exp(model.mu_))
+    elif dist == "loglogistic":
+        dist = "fisk"
+        sparams = (model.beta_, model.alpha_)
+
+    (osm, orm) = stats.probplot(
+        model.durations[model.event_observed.astype(bool)], dist=dist, sparams=sparams, fit=False
+    )
+
+    ax = plt.scatter(osm, orm, facecolors="none", edgecolors="k")
+    return ax
 
 
 def is_latex_enabled():
