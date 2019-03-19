@@ -210,8 +210,20 @@ class TestParametricUnivariateFitters:
         T2 = np.random.exponential(1e-12, size=1000)
         E = T1 < T2
         T = np.minimum(T1, T2)
+
         for fitter in known_parametric_univariate_fitters:
             fitter().fit(T, E)
+
+    def test_models_can_handle_really_small_duration_values_for_left_censorship(
+        self, known_parametric_univariate_fitters
+    ):
+        T1 = np.random.exponential(1e-12, size=1000)
+        T2 = np.random.exponential(1e-12, size=1000)
+        E = T1 > T2
+        T = np.maximum(T1, T2)
+
+        for fitter in known_parametric_univariate_fitters:
+            fitter().fit(T, E, left_censorship=True)
 
     def test_parametric_univarite_fitters_can_print_summary(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
@@ -806,7 +818,7 @@ class TestExponentialFitter:
         E = np.array([1, 1, 1, 0], dtype=float)
         enf = ExponentialFitter()
         enf.fit(T, E)
-        assert abs(enf.lambda_ - (T.sum() / E.sum())) < 10e-6
+        assert abs(enf.lambda_ - (T.sum() / E.sum())) < 1e-4
 
     def test_fit_computes_correct_asymptotic_variance(self):
         N = 5000

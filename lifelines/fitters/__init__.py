@@ -242,7 +242,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     """
 
     _KNOWN_MODEL = False
-    _MIN_PARAMETER_VALUE = 1e-10
+    _MIN_PARAMETER_VALUE = 1e-9
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
@@ -340,12 +340,17 @@ class ParametericUnivariateFitter(UnivariateFitter):
         hz = anp.clip(hz, 1e-18, np.inf)
         return anp.log(hz)
 
+    def _log_1m_sf(self, params, times):
+        # equal to log(cdf), but often easier to express with sf.
+        cum_haz = self._cumulative_hazard(params, times)
+        return anp.log1p(-anp.exp(-cum_haz))
+
     def _negative_log_likelihood_left_censoring(self, params, T, E, entry):
 
         n = T.shape[0]
         log_hz = self._log_hazard(params, T)
         cum_haz = self._cumulative_hazard(params, T)
-        log_1m_sf = anp.log1p(-anp.exp(-cum_haz))
+        log_1m_sf = self._log_1m_sf(params, T)
 
         ll = (E * (log_hz - cum_haz - log_1m_sf)).sum() + log_1m_sf.sum()
 
