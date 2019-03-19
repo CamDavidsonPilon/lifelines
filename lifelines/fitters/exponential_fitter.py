@@ -69,14 +69,6 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
     def median_(self):
         return np.log(2) / self.lambda_
 
-    def _fit_model(self, T, E, entry, left_censorship, show_progress=False):
-        # TODO: handle left censorship here
-        T = T - entry
-        lambda_ = T.sum() / E.sum()
-        lambda_variance_ = T.sum() / lambda_
-        log_likelihood = -np.log(lambda_) * E.sum() - T.sum() / lambda_
-        return [lambda_], log_likelihood, np.array([[1.0 / lambda_variance_]])
-
     def _cumulative_hazard(self, params, times):
         lambda_ = params[0]
         return times / lambda_

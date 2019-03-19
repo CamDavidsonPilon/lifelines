@@ -4,6 +4,7 @@
 
 ##### New features
  - Left censoring is now supported in univariate parametric models: `.fit(..., left_censorship=True)`. Examples are in the docs.
+ - new dataset: `lifelines.datasets.load_nh4()`
  - Univariate parameteric models now include, by default, support for the cumulative density function: `.cumulative_density_`, `.confidence_interval_cumulative_density_`, `plot_cumulative_density()`, `cumulative_density_at_times(t)`.
   [ ] add a qq-plot for univariate models.
 
