@@ -11,13 +11,15 @@ from lifelines import (
     CoxTimeVaryingFitter,
     AalenAdditiveFitter,
     WeibullFitter,
+    LogNormalFitter,
+    LogLogisticFitter,
     WeibullAFTFitter,
 )
 
 from tests.test_estimation import known_parametric_univariate_fitters
 
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
-from lifelines.plotting import plot_lifetimes
+from lifelines.plotting import plot_lifetimes, left_censorship_cdf_plot
 from lifelines.datasets import (
     load_waltons,
     load_regression_dataset,
@@ -26,6 +28,7 @@ from lifelines.datasets import (
     load_stanford_heart_transplants,
     load_rossi,
     load_multicenter_aids_cohort_study,
+    load_nh4,
 )
 from lifelines.generate_datasets import cumulative_integral
 
@@ -497,4 +500,13 @@ class TestPlotting:
         aft.plot_covariate_groups(["age", "prio"], [[10, 0], [50, 10], [80, 50]])
         self.plt.tight_layout()
         self.plt.title("test_weibull_aft_plot_covariate_groups_with_multiple_columns")
+        self.plt.show(block=block)
+
+    def test_left_censorship_cdf_plots(self, block):
+        df = load_nh4()
+        for model in [WeibullFitter(), LogNormalFitter(), LogLogisticFitter()]:
+            model.fit(df["NH4.mg.per.L"], ~df["Censored"], left_censorship=True)
+            ax = left_censorship_cdf_plot(model)
+            assert ax is not None
+            self.plt.title("test_left_censorship_cdf_plots")
         self.plt.show(block=block)

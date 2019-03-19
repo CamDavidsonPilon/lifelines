@@ -410,11 +410,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
         return df
 
-    def _fit_model(self, T, E, entry, left_censorship, show_progress=True):
+    def _fit_model(self, T, E, entry, show_progress=True):
 
         non_zero_entries = entry[entry > 0]
 
-        if left_censorship:
+        if self.left_censorship:
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
         else:
             negative_log_likelihood = self._negative_log_likelihood_right_censoring
@@ -539,6 +539,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        if self.left_censorship:
+            print("{} = {}".format(justify("left-censored"), self.left_censorship))
         print(
             "{} = {}".format(
                 justify("hypothesis"),
@@ -598,6 +600,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         """
         label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
+        self.left_censorship = left_censorship
 
         check_nans_or_infs(durations)
         if event_observed is not None:
@@ -629,7 +632,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
-            self.durations, self.event_observed.astype(bool), self.entry, left_censorship, show_progress=show_progress
+            self.durations, self.event_observed.astype(bool), self.entry, show_progress=show_progress
         )
 
         if not self._KNOWN_MODEL:

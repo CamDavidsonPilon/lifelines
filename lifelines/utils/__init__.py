@@ -54,7 +54,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
 
     Parameters
     ----------
-    q: float
+    q: float or array
       a float between 0 and 1 that represents the time when the survival function hits the qth percentile.
     survival_functions: a (n,d) DataFrame or numpy array.
       If DataFrame, will return index values (actual times)
@@ -129,7 +129,7 @@ def qth_survival_time(q, survival_function, cdf=False):
         survival_function = survival_function.T.squeeze()
     if cdf:
         if survival_function.iloc[0] > q:
-            return np.inf
+            return -np.inf  # TODO: verify
         v = survival_function.index[survival_function.searchsorted([q])[0]]
     else:
         if survival_function.iloc[-1] > q:

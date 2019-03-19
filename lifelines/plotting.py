@@ -8,24 +8,89 @@ from scipy import stats
 __all__ = ["add_at_risk_counts", "plot_lifetimes"]
 
 
-def qqplot(model):
-    # assert knownunivariatemodel
+def left_censorship_cdf_plot(model, timeline=None, **plot_kwargs):
+    from lifelines import KaplanMeierFitter
+    from lifelines.fitters import KnownModelParametericUnivariateFitter
+
+    assert isinstance(model, KnownModelParametericUnivariateFitter)
+
+    set_kwargs_ax(plot_kwargs)
+    ax = plot_kwargs.pop("ax")
+
+    if timeline is None:
+        timeline = model.timeline
+
+    kmf = KaplanMeierFitter().fit(
+        model.durations, model.event_observed, left_censorship=True, label="empirical CDF", timeline=timeline
+    )
+    kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
+
     dist = model.__class__.__name__.replace("Fitter", "").lower()
     if dist == "weibull":
-        dist = "weibull_min"
-        sparams = (model.rho_, model.lambda_)
+        scipy_dist = "weibull_min"
+        sparams = (model.rho_, 0, model.lambda_)
     elif dist == "lognormal":
-        dist = "lognorm"
+        scipy_dist = "lognorm"
         sparams = (model.sigma_, 0, np.exp(model.mu_))
     elif dist == "loglogistic":
-        dist = "fisk"
-        sparams = (model.beta_, model.alpha_)
+        scipy_dist = "fisk"
+        sparams = (model.beta_, 0, model.alpha_)
 
-    (osm, orm) = stats.probplot(
-        model.durations[model.event_observed.astype(bool)], dist=dist, sparams=sparams, fit=False
+    dist_object = getattr(stats, scipy_dist)(*sparams)
+    ax.plot(timeline, dist_object.cdf(timeline), label="fitted %s" % dist, **plot_kwargs)
+    ax.legend()
+    return ax
+
+
+def qq_plot(model, timeline=None, **plot_kwargs):
+    from lifelines.utils import qth_survival_times
+    from lifelines import KaplanMeierFitter
+    from lifelines.fitters import KnownModelParametericUnivariateFitter
+
+    assert isinstance(model, KnownModelParametericUnivariateFitter)
+
+    set_kwargs_ax(plot_kwargs)
+    ax = plot_kwargs.pop("ax")
+
+    if timeline is None:
+        timeline = model.timeline
+
+    n = model.durations.shape[0]
+
+    dist = model.__class__.__name__.replace("Fitter", "").lower()
+    if dist == "weibull":
+        scipy_dist = "weibull_min"
+        sparams = (model.rho_, 0, model.lambda_)
+    elif dist == "lognormal":
+        scipy_dist = "lognorm"
+        sparams = (model.sigma_, 0, np.exp(model.mu_))
+    elif dist == "loglogistic":
+        scipy_dist = "fisk"
+        sparams = (model.beta_, 0, model.alpha_)
+
+    COL_EMP = "empirical quantiles"
+    COL_THEO = "fitted %s quantiles" % dist
+
+    kmf = KaplanMeierFitter().fit(
+        model.durations, model.event_observed, left_censorship=model.left_censorship, label=COL_EMP
     )
+    if model.left_censorship:
+        q = np.unique(kmf.cumulative_density_.values[:, 0])
+        quantiles = qth_survival_times(q, kmf.cumulative_density_, cdf=True)
+    else:
+        q = np.unique(1 - kmf.survival_function_.values[:, 0])
+        quantiles = qth_survival_times(q, kmf.survival_function_, cdf=False)
 
-    ax = plt.scatter(osm, orm, facecolors="none", edgecolors="k")
+    dist_object = getattr(stats, scipy_dist)(*sparams)
+    quantiles[COL_THEO] = dist_object.ppf(q)
+    quantiles = quantiles.replace([-np.inf], np.nan).dropna()
+
+    max_, min_ = quantiles[COL_EMP].max(), quantiles[COL_EMP].min()
+    quantiles.plot.scatter(COL_THEO, COL_EMP, c="none", edgecolor="k", lw=0.5, ax=ax)
+    print(quantiles)
+    ax.plot([min_, max_], [min_, max_], c="k", ls=":", lw=1.0)
+    ax.set_ylim(min_, max_)
+    ax.set_xlim(min_, max_)
     return ax
 
 
