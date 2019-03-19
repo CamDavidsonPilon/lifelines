@@ -83,11 +83,10 @@ def qq_plot(model, timeline=None, **plot_kwargs):
 
     dist_object = getattr(stats, scipy_dist)(*sparams)
     quantiles[COL_THEO] = dist_object.ppf(q)
-    quantiles = quantiles.replace([-np.inf], np.nan).dropna()
+    quantiles = quantiles.replace([-np.inf, 0], np.nan).dropna()
 
     max_, min_ = quantiles[COL_EMP].max(), quantiles[COL_EMP].min()
     quantiles.plot.scatter(COL_THEO, COL_EMP, c="none", edgecolor="k", lw=0.5, ax=ax)
-    print(quantiles)
     ax.plot([min_, max_], [min_, max_], c="k", ls=":", lw=1.0)
     ax.set_ylim(min_, max_)
     ax.set_xlim(min_, max_)
