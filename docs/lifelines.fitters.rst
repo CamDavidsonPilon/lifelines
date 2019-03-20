@@ -92,7 +92,7 @@ lifelines.fitters.piecewise\_exponential\_fitter module
 
 
 lifelines.fitters.weibull\_fitter module
-----------------------------------------
+------------------------------------------
 
 .. automodule:: lifelines.fitters.weibull_fitter
     :members:
@@ -101,7 +101,7 @@ lifelines.fitters.weibull\_fitter module
 
 
 lifelines.fitters.weibull\_aft\_fitter module
-----------------------------------------------
+-------------------------------------------------
 
 .. automodule:: lifelines.fitters.weibull_aft_fitter
     :members:
@@ -109,7 +109,7 @@ lifelines.fitters.weibull\_aft\_fitter module
     :show-inheritance:
 
 lifelines.fitters.log\_normal\_aft\_fitter module
-----------------------------------------------
+---------------------------------------------------
 
 .. automodule:: lifelines.fitters.log_normal_aft_fitter
     :members:
@@ -117,7 +117,7 @@ lifelines.fitters.log\_normal\_aft\_fitter module
     :show-inheritance:
 
 lifelines.fitters.log\_logistic\_aft\_fitter module
-----------------------------------------------
+-----------------------------------------------------
 
 .. automodule:: lifelines.fitters.log_logistic_aft_fitter
     :members:

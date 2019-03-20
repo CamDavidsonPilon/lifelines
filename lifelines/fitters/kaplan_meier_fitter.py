@@ -107,6 +107,8 @@ class KaplanMeierFitter(UnivariateFitter):
         if event_observed is not None:
             self._check_values(event_observed)
 
+        self.left_censorship = left_censorship
+
         if weights is not None:
             if (weights.astype(int) != weights).any():
                 warnings.warn(

@@ -5,7 +5,7 @@
 More examples and recipes
 ==================================
 
-This section goes through some examples and recipes to help you use *lifelines*. If you are looking for some full example usage of *lifelines*, there's full jupyter notebooks `here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_.
+This section goes through some examples and recipes to help you use *lifelines*. If you are looking for some full example usage of *lifelines*, `there are full Jupyter notebooks here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_.
 
 
 Statistically compare two populations
@@ -135,6 +135,37 @@ If using *lifelines* for prediction work, it's ideal that you perform some type 
     print(np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E')))
 
 From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
+
+Selecting a parametric model using QQ plots
+###############################################
+
+QQ plots normally are constructed by sorting the values. However, this isn't appropriate when there is censored data. In _lifelines_, there are routines to still create QQ plots with censored data. These are available under ``lifelines.plotting.qq_plots``, and accepts fitted a parametric lifelines model.
+
+.. code-block:: python
+
+    from lifelines import *
+    from lifelines.plotting import qq_plot
+
+    # generate some fake log-normal data
+    N = 1000
+    T_actual = np.exp(np.random.randn(N))
+    C = np.exp(np.random.randn(N))
+    E = T_actual < C
+    T = np.minimum(T_actual, C)
+
+    fig, axes = plt.subplots(2, 2, figsize=(8, 6))
+    axes = axes.reshape(4,)
+
+    for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
+        model.fit(T, E)
+        qq_plot(model, ax=axes[i])
+
+.. image:: images/qq_plot.png
+
+
+This graphical test can be used to invalidate models. For example, in the above figure, we can see that only the log-normal parametric model is appropriate (we expect deviance in the tails, but not too much). Another use case is choosing the correct parametric AFT model.
+
+The ``qq_plot`` also works with left censorship as well.
 
 
 Plotting multiple figures on a plot

@@ -21,7 +21,7 @@ from lifelines import (
 from tests.test_estimation import known_parametric_univariate_fitters
 
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
-from lifelines.plotting import plot_lifetimes, left_censorship_cdf_plot, qq_plot
+from lifelines.plotting import plot_lifetimes, cdf_plot, qq_plot
 from lifelines.datasets import (
     load_waltons,
     load_regression_dataset,
@@ -510,9 +510,20 @@ class TestPlotting:
         axes = axes.reshape(4)
         for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
             model.fit(df["NH4.mg.per.L"], ~df["Censored"], left_censorship=True)
-            ax = left_censorship_cdf_plot(model, ax=axes[i])
+            ax = cdf_plot(model, ax=axes[i])
             assert ax is not None
         self.plt.suptitle("test_left_censorship_cdf_plots")
+        self.plt.show(block=block)
+
+    def test_right_censorship_cdf_plots(self, block):
+        df = load_rossi()
+        fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
+        axes = axes.reshape(4)
+        for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
+            model.fit(df["week"], df["arrest"])
+            ax = cdf_plot(model, ax=axes[i])
+            assert ax is not None
+        self.plt.suptitle("test_right_censorship_cdf_plots")
         self.plt.show(block=block)
 
     def test_qq_plot_left_censoring(self, block):
@@ -524,6 +535,17 @@ class TestPlotting:
             ax = qq_plot(model, ax=axes[i])
             assert ax is not None
         self.plt.suptitle("test_qq_plot_left_censoring")
+        self.plt.show(block=block)
+
+    def test_qq_plot_left_censoring2(self, block):
+        df = load_lcd()
+        fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
+        axes = axes.reshape(4)
+        for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
+            model.fit(df["T"], df["C"], left_censorship=True)
+            ax = qq_plot(model, ax=axes[i])
+            assert ax is not None
+        self.plt.suptitle("test_qq_plot_left_censoring2")
         self.plt.show(block=block)
 
     def test_qq_plot_left_censoring_with_known_distribution(self, block):

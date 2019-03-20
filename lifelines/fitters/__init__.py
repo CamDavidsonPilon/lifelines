@@ -592,7 +592,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
-
+        left_censorship: bool, optional (default=False)
+            True if durations and event_observed refer to left censorship events. Default False
         Returns
         -------
           self

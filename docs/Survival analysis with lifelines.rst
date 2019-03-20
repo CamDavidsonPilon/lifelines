@@ -606,6 +606,8 @@ With parametric models, we have a functional form that allows us to extend the s
 .. image:: images/weibull_extrapolation.png
 
 
+To aid model selection, _lifelines_ has provided qq-plots, `Selecting a parametric model using QQ plots`_.
+
 
 Other types of censoring
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -619,21 +621,20 @@ occurring. Consider the case where a doctor sees a delayed onset of symptoms of 
 is unsure *when* the disease was contracted (birth), but knows it was before the discovery.
 
 Another situation where we have left-censored data is when measurements have only an upper bound, that is, the measurements
-instruments could only detect the measurement was *less* than some upper bound.
+instruments could only detect the measurement was *less* than some upper bound. This bound is often called the limit of detection (LOD). In practice, there could be more than one LOD. One very important statistical lesson: don't "fill-in" this value naively. It's tempting to use something like one-half the LOD, but this will cause *lots* of bias in downstream analysis.
 
-*lifelines* has support for left-censored datasets in the ``KaplanMeierFitter`` class, by adding the keyword ``left_censoring=True`` (default ``False``) to the call to ``fit``.
+*lifelines* has support for left-censored datasets in most univariate models, including the ``KaplanMeierFitter`` class, by adding the keyword ``left_censoring=True`` (default ``False``) to the call to ``fit``.
 
 .. code:: python
 
     from lifelines.datasets import load_lcd
     lcd_dataset = load_lcd()
 
-    ix = lcd_dataset['group'] == 'alluvial_fan'
-    T = lcd_dataset[ix]['T']
-    E = lcd_dataset[ix]['E'] #boolean array, True if observed.
+    T = lcd_dataset['T']
+    E = lcd_dataset['E'] #boolean array, True if observed.
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, E, left_censoring=True)
+    kmf.fit(T, E, left_censorship=True)
 
 Instead of producing a survival function, left-censored data is more interested in the cumulative density function
 of time to birth. This is available as the ``cumulative_density_`` property after fitting the data.
@@ -645,6 +646,10 @@ of time to birth. This is available as the ``cumulative_density_`` property afte
 
 
 .. image:: images/lifelines_intro_lcd.png
+
+Alternatively, you can use a parametric model to model the data. This allows for you to "peer" below the LOD, however using a parametric model means you need to correctly specify the distribution. You can use plots like qq-plots to help invalidate some distributions.
+
+
 
 .. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
 
@@ -704,3 +709,4 @@ So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, b
 
 .. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html
 .. _Statistically compare two populations: Examples.html#statistically-compare-two-populations
+.. _Selecting a parametric model using QQ plots: Examples.html#selecting-a-parametric-model-using-qq-plots

@@ -5,7 +5,7 @@ import numpy as np
 from lifelines.utils import coalesce
 from scipy import stats
 
-__all__ = ["add_at_risk_counts", "plot_lifetimes"]
+__all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot"]
 
 
 def get_distribution_name_of_lifelines_model(model):
@@ -35,7 +35,7 @@ def create_scipy_stats_model_from_lifelines_model(model):
     return getattr(stats, scipy_dist)(*sparams)
 
 
-def left_censorship_cdf_plot(model, timeline=None, **plot_kwargs):
+def cdf_plot(model, timeline=None, **plot_kwargs):
     from lifelines import KaplanMeierFitter
 
     set_kwargs_ax(plot_kwargs)
@@ -45,9 +45,16 @@ def left_censorship_cdf_plot(model, timeline=None, **plot_kwargs):
         timeline = model.timeline
 
     kmf = KaplanMeierFitter().fit(
-        model.durations, model.event_observed, left_censorship=True, label="empirical CDF", timeline=timeline
+        model.durations,
+        model.event_observed,
+        left_censorship=model.left_censorship,
+        label="empirical CDF",
+        timeline=timeline,
     )
-    kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
+    if model.left_censorship:
+        kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
+    else:
+        (1 - kmf.survival_function_).plot(ax=ax, **plot_kwargs)
 
     dist = get_distribution_name_of_lifelines_model(model)
     dist_object = create_scipy_stats_model_from_lifelines_model(model)
@@ -56,7 +63,35 @@ def left_censorship_cdf_plot(model, timeline=None, **plot_kwargs):
     return ax
 
 
-def qq_plot(model, timeline=None, **plot_kwargs):
+def qq_plot(model, **plot_kwargs):
+    """
+    Produces a quantile-quantile plot of the empirical CDF against
+    the fitted parametric CDF. Large deviances away from the line y=x
+    can invalidate a model (though we expect some natural deviance in the tails).
+
+    Parameters
+    -----------
+    model: obj
+        A fitted lifelines univariate parametric model, like ``WeibullFitter``
+    plot_kwargs:
+        kwargs for the plot.
+
+    Returns
+    --------
+    ax: axis object
+
+    Examples
+    ---------
+
+    >>> from lifelines import *
+    >>> from lifelines.plotting import qq_plot
+    >>> from lifelines.datasets import load_rossi
+    >>> df = load_rossi()
+    >>> wf = WeibullFitter().fit(df['week'], df['arrest'])
+    >>> qq_plot(wf)
+
+
+    """
     from lifelines.utils import qth_survival_times
     from lifelines import KaplanMeierFitter
     from lifelines.fitters import KnownModelParametericUnivariateFitter
@@ -65,9 +100,6 @@ def qq_plot(model, timeline=None, **plot_kwargs):
 
     set_kwargs_ax(plot_kwargs)
     ax = plot_kwargs.pop("ax")
-
-    if timeline is None:
-        timeline = model.timeline
 
     dist = get_distribution_name_of_lifelines_model(model)
     dist_object = create_scipy_stats_model_from_lifelines_model(model)
@@ -295,6 +327,12 @@ def plot_lifetimes(
     -------
     ax
 
+    Examples
+    ---------
+    >>> from lifelines.datasets import load_waltons
+    >>> from lifelines.plotting import plot_lifetimes
+    >>> T, E = load_waltons()["T"], load_waltons()["E"]
+    >>> ax = plot_lifetimes(T.loc[:50], event_observed=E.loc[:50])
 
     """
     set_kwargs_ax(kwargs)
