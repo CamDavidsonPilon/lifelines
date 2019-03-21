@@ -70,3 +70,8 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
         mu_, sigma_ = params
         Z = (np.log(times) - mu_) / sigma_
         return norm.logpdf(Z, loc=0, scale=1) - np.log(sigma_) - np.log(times) - logsf(Z)
+
+    def _log_1m_sf(self, params, times):
+        mu_, sigma_ = params
+        Z = (np.log(times) - mu_) / sigma_
+        return norm.logcdf(Z, loc=0, scale=1)

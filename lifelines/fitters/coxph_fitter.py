@@ -22,7 +22,6 @@ from lifelines.utils import (
     _to_list,
     _to_tuple,
     _to_array,
-    survival_table_from_events,
     inv_normal_cdf,
     normalize,
     qth_survival_times,
@@ -349,11 +348,11 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
-        self._check_values(df, T, E, self.event_col)
-
         X = df.astype(float)
         T = T.astype(float)
         E = E.astype(bool)
+
+        self._check_values(X, T, E, self.event_col)
 
         return X, T, E, W, original_index, _clusters
 
@@ -480,7 +479,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                     e,
                 )
 
-            delta = step_size * inv_h_dot_g_T
+            delta = inv_h_dot_g_T
 
             if np.any(np.isnan(delta)):
                 raise ConvergenceError(
@@ -524,10 +523,10 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 )
                 converging, completed = False, False
 
-            step_size = step_sizer.update(norm_delta).next()
+            beta += step_size * delta
 
-            beta += delta
             previous_ll = ll
+            step_size = step_sizer.update(norm_delta).next()
 
         self._hessian_ = hessian
         self._score_ = gradient

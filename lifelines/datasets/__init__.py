@@ -58,7 +58,7 @@ def load_multicenter_aids_cohort_study(**kwargs):
 
         AIDSY: date of AIDS diagnosis
         W: years from AIDS diagnosis to study entry
-        T: years from AIDS diagnosis to minimum of death or censoring 
+        T: years from AIDS diagnosis to minimum of death or censoring
         D: indicator of death during follow up
 
 
@@ -136,9 +136,9 @@ def load_canadian_senators(**kwargs):
 
 def load_dd(**kwargs):
     """
-    Classification of political regimes as democracy and dictatorship. 
-    Classification of democracies as parliamentary, semi-presidential (mixed) and presidential. 
-    Classification of dictatorships as military, civilian and royal. 
+    Classification of political regimes as democracy and dictatorship.
+    Classification of democracies as parliamentary, semi-presidential (mixed) and presidential.
+    Classification of dictatorships as military, civilian and royal.
     Coverage: 202 countries, from 1946 or year of independence to 2008.::
 
         Size: (1808, 12)
@@ -187,12 +187,12 @@ def load_larynx(**kwargs):
 
         Size: (89,6)
         Example:
-                time  age  death  Stage II  Stage III  Stage IV
-            0    0.6   77      1         0          0         0
-            1    1.3   53      1         0          0         0
-            2    2.4   45      1         0          0         0
-            3    2.5   57      0         0          0         0
-            4    3.2   58      1         0          0         0
+            time  age  death  Stage II  Stage III  Stage IV
+             0.6   77      1         0          0         0
+             1.3   53      1         0          0         0
+             2.4   45      1         0          0         0
+             2.5   57      0         0          0         0
+             3.2   58      1         0          0         0
 
     """
     return _load_dataset("larynx.csv", **kwargs)
@@ -204,12 +204,12 @@ def load_lung(**kwargs):
 
         Size: (288,10)
         Example:
-           inst  time  status  age  sex  ph.ecog  ph.karno  pat.karno  meal.cal  wt.loss
-        0   3.0   306       2   74    1      1.0      90.0      100.0    1175.0      NaN
-        1   3.0   455       2   68    1      0.0      90.0       90.0    1225.0     15.0
-        2   3.0  1010       1   56    1      0.0      90.0       90.0       NaN     15.0
-        3   5.0   210       2   57    1      1.0      90.0       60.0    1150.0     11.0
-        4   1.0   883       2   60    1      0.0     100.0       90.0       NaN      0.0
+         inst  time  status  age  sex  ph.ecog  ph.karno  pat.karno  meal.cal  wt.loss
+          3.0   306       2   74    1      1.0      90.0      100.0    1175.0      NaN
+          3.0   455       2   68    1      0.0      90.0       90.0    1225.0     15.0
+          3.0  1010       1   56    1      0.0      90.0       90.0       NaN     15.0
+          5.0   210       2   57    1      1.0      90.0       60.0    1150.0     11.0
+          1.0   883       2   60    1      0.0     100.0       90.0       NaN      0.0
 
     References
     -----------
@@ -225,12 +225,12 @@ def load_panel_test(**kwargs):
 
         Size: (28,5)
         Example:
-               id  t  E  var1  var2
-            0   1  1  0   0.0     1
-            1   1  2  0   0.0     1
-            2   1  3  0   4.0     3
-            3   1  4  1   8.0     4
-            4   2  1  0   1.2     1
+            id  t  E  var1  var2
+             1  1  0   0.0     1
+             1  2  0   0.0     1
+             1  3  0   4.0     3
+             1  4  1   8.0     4
+             2  1  0   1.2     1
 
     """
     return _load_dataset("panel_test.csv", **kwargs)
@@ -242,12 +242,12 @@ def load_psychiatric_patients(**kwargs):
 
         Size: (26,4)
         Example:
-               Age   T  C  sex
-            0   51   1  1    2
-            1   58   1  1    2
-            2   55   2  1    2
-            3   28  22  1    2
-            4   21  30  0    1
+            Age   T  C  sex
+             51   1  1    2
+             58   1  1    2
+             55   2  1    2
+             28  22  1    2
+             21  30  0    1
 
     """
     return _load_dataset("psychiatric_patients.csv", **kwargs)
@@ -259,32 +259,57 @@ def load_static_test(**kwargs):
 
         Size: (7,5)
         Example:
-               id  t  E  var1  var2
-            0   1  4  1    -1    -1
-            1   2  3  1    -2    -2
-            2   3  3  0    -3    -3
-            3   4  4  1    -4    -4
-            4   5  2  1    -5    -5
-            5   6  0  1    -6    -6
-            6   7  2  1    -7    -7
+            id  t  E  var1  var2
+             1  4  1    -1    -1
+             2  3  1    -2    -2
+             3  3  0    -3    -3
+             4  4  1    -4    -4
+             5  2  1    -5    -5
+             6  0  1    -6    -6
+             7  2  1    -7    -7
     """
     return _load_dataset("static_test.csv", **kwargs)
 
 
 def load_lcd(**kwargs):
     """
+    Copper concentrations (µg/L) in shallow groundwater samples from two different geological zones in the San Joaquin Valley, California. The alluvial fan data include four
+    different detection limits and the basin trough data include five different detection limits.
+
+    Reference
+    -----------
+    Millard, S.P. and Deverel, S.J. (1988). Nonparametric statistical methods for comparing two sites based on data with multiple non-detect limits. Water Resources Research 24: doi: 10.1029/88WR03412. issn: 0043-1397.
+
     ::
 
         Size: (104,3)
         Example:
-               C  T         group
-            0  0  1  alluvial_fan
-            1  0  1  alluvial_fan
-            2  0  1  alluvial_fan
-            3  0  1  alluvial_fan
-            4  1  1  alluvial_fan
+            C  T         group
+            0  1  alluvial_fan
+            0  1  alluvial_fan
+            0  1  alluvial_fan
+            0  1  alluvial_fan
+            1  1  alluvial_fan
     """
     return _load_dataset("CuZn-LeftCensoredDataset.csv", **kwargs)
+
+
+def load_nh4(**kwargs):
+    """
+    Ammonium (NH4) concentration (mg/L) in precipitation measured at Olympic National Park, Hoh Ranger Station (WA14), weekly or every other week from January 6, 2009 through December 20, 2011.
+
+    Reference
+    -----------
+    National Atmospheric Deposition Program, National Trends Network (NADP/NTN).
+    http://nadp.slh.wisc.edu/data/sites/siteDetails.aspx?net=NTN&id=WA14
+    http://nadp.isws.illinois.edu/NTN/
+
+    ::
+
+        Size: (104,3)
+
+    """
+    return _load_dataset("nh4.csv", index_col=[0], **kwargs)
 
 
 def load_waltons(**kwargs):
@@ -293,12 +318,12 @@ def load_waltons(**kwargs):
 
         Size: (163,3)
         Example:
-                T  E    group
-            0   6  1  miR-137
-            1  13  1  miR-137
-            2  13  1  miR-137
-            3  13  1  miR-137
-            4  19  1  miR-137
+             T  E    group
+             6  1  miR-137
+            13  1  miR-137
+            13  1  miR-137
+            13  1  miR-137
+            19  1  miR-137
 
     """
     return _load_dataset("waltons_dataset.csv", **kwargs)
@@ -336,12 +361,12 @@ def load_regression_dataset(**kwargs):
 
         Size: (200,5)
         Example:
-                   var1      var2      var3          T  E
-            0  0.595170  1.143472  1.571079  14.785479  1
-            1  0.209325  0.184677  0.356980   7.336734  1
-            2  0.693919  0.071893  0.557960   5.271527  1
-            3  0.443804  1.364646  0.374221  11.684168  1
-            4  1.613324  0.125566  1.921325   7.637764  1
+                var1      var2      var3          T  E
+            0.595170  1.143472  1.571079  14.785479  1
+            0.209325  0.184677  0.356980   7.336734  1
+            0.693919  0.071893  0.557960   5.271527  1
+            0.443804  1.364646  0.374221  11.684168  1
+            1.613324  0.125566  1.921325   7.637764  1
 
     """
     return _load_dataset("regression.csv", **kwargs)
@@ -373,12 +398,12 @@ def load_stanford_heart_transplants(**kwargs):
 
         Size: (172, 8)
         Example:
-               start  stop  event        age      year  surgery  transplant  id
-            0    0.0  50.0      1 -17.155373  0.123203        0           0   1
-            1    0.0   6.0      1   3.835729  0.254620        0           0   2
-            2    0.0   1.0      0   6.297057  0.265572        0           0   3
-            3    1.0  16.0      1   6.297057  0.265572        0           1   3
-            4    0.0  36.0      0  -7.737166  0.490075        0           0   4
+            start  stop  event        age      year  surgery  transplant  id
+              0.0  50.0      1 -17.155373  0.123203        0           0   1
+              0.0   6.0      1   3.835729  0.254620        0           0   2
+              0.0   1.0      0   6.297057  0.265572        0           0   3
+              1.0  16.0      1   6.297057  0.265572        0           1   3
+              0.0  36.0      0  -7.737166  0.490075        0           0   4
 
     References
     ----------
@@ -423,11 +448,11 @@ def load_dfcv():
         Size: (14, 6)
         Example:
 
-            start  group  z  stop  id  event
-        0       0    1.0  0   3.0   1   True
-        1       0    1.0  0   5.0   2  False
-        2       0    1.0  1   5.0   3   True
-        3       0    1.0  0   6.0   4   True
+         start  group  z  stop  id  event
+             0    1.0  0   3.0   1   True
+             0    1.0  0   5.0   2  False
+             0    1.0  1   5.0   3   True
+             0    1.0  0   6.0   4   True
 
 
     References
@@ -446,12 +471,12 @@ def load_lymphoma(**kwargs):
         Size: (80, 3)
         Example:
 
-           Stage_group  Time  Censor
-        0            1     6       1
-        1            1    19       1
-        2            1    32       1
-        3            1    42       1
-        4            1    42       1
+          Stage_group  Time  Censor
+                    1     6       1
+                    1    19       1
+                    1    32       1
+                    1    42       1
+                    1    42       1
 
     References
     ----------

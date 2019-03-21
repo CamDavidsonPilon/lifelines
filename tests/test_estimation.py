@@ -17,6 +17,8 @@ import pandas as pd
 import pytest
 from scipy.stats import weibull_min, norm, logistic
 
+from flaky import flaky
+
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 
@@ -162,6 +164,7 @@ class TestBaseFitter:
 
 
 class TestParametricUnivariateFitters:
+    @flaky
     def test_confidence_interval_is_expected(self):
 
         from autograd.scipy.special import logit
@@ -207,8 +210,20 @@ class TestParametricUnivariateFitters:
         T2 = np.random.exponential(1e-12, size=1000)
         E = T1 < T2
         T = np.minimum(T1, T2)
+
         for fitter in known_parametric_univariate_fitters:
             fitter().fit(T, E)
+
+    def test_models_can_handle_really_small_duration_values_for_left_censorship(
+        self, known_parametric_univariate_fitters
+    ):
+        T1 = np.random.exponential(1e-12, size=1000)
+        T2 = np.random.exponential(1e-12, size=1000)
+        E = T1 > T2
+        T = np.maximum(T1, T2)
+
+        for fitter in known_parametric_univariate_fitters:
+            fitter().fit(T, E, left_censorship=True)
 
     def test_parametric_univarite_fitters_can_print_summary(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
@@ -316,18 +331,18 @@ class TestUnivariateFitters:
             fitter.fit(T)
             assert hasattr(fitter, "plot")
 
-    @pytest.mark.xfail
     def test_univariate_fitters_ok_if_given_timedelta(self, univariate_fitters):
         t = pd.Series(
             [pd.to_datetime("2015-01-01 12:00"), pd.to_datetime("2015-01-02"), pd.to_datetime("2015-01-02 12:00")]
         )
         T = pd.to_datetime("2015-01-03") - t
         for fitter in univariate_fitters:
-            f = fitter().fit(T)
-            try:
-                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
-            except:
-                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
+            with pytest.warns(UserWarning, match="convert"):
+                f = fitter().fit(T)
+                try:
+                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
+                except:
+                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
 
     def test_univariate_fitters_okay_if_given_boolean_col_with_object_dtype(self, univariate_fitters):
         df = pd.DataFrame({"T": [1, 2, 3, 4, 5], "E": [True, True, True, True, None]})
@@ -336,7 +351,8 @@ class TestUnivariateFitters:
         assert df["E"].dtype == object
 
         for fitter in univariate_fitters:
-            fitter().fit(df["T"], df["E"])
+            with pytest.warns(UserWarning, match="convert"):
+                fitter().fit(df["T"], df["E"])
 
     def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(
         self, positive_sample_lifetimes, univariate_fitters
@@ -704,6 +720,30 @@ class TestLogLogisticFitter:
 
 
 class TestWeibullFitter:
+    @flaky
+    @pytest.mark.parametrize("N", [50, 100, 500, 1000])
+    def test_left_censorship_inference(self, N):
+        T_actual = 0.5 * np.random.weibull(5, size=N)
+
+        MIN_0 = np.percentile(T_actual, 5)
+        MIN_1 = np.percentile(T_actual, 10)
+        MIN_2 = np.percentile(T_actual, 30)
+        MIN_3 = np.percentile(T_actual, 50)
+
+        T = T_actual.copy()
+        ix = np.random.randint(4, size=N)
+
+        T = np.where(ix == 0, np.maximum(T, MIN_0), T)
+        T = np.where(ix == 1, np.maximum(T, MIN_1), T)
+        T = np.where(ix == 2, np.maximum(T, MIN_2), T)
+        T = np.where(ix == 3, np.maximum(T, MIN_3), T)
+        E = T_actual == T
+
+        wf = WeibullFitter().fit(T, E, left_censorship=True)
+
+        assert wf.summary.loc["rho_", "lower 0.95"] < 5 < wf.summary.loc["rho_", "upper 0.95"]
+        assert wf.summary.loc["lambda_", "lower 0.95"] < 0.5 < wf.summary.loc["lambda_", "upper 0.95"]
+
     def test_weibull_with_delayed_entries(self):
         # note the the independence of entry and final time is really important
         # (also called non-informative)
@@ -775,10 +815,20 @@ class TestWeibullFitter:
 class TestExponentialFitter:
     def test_fit_computes_correct_lambda_(self):
         T = np.array([10, 10, 10, 10], dtype=float)
-        E = np.array([1, 0, 0, 0], dtype=float)
+        E = np.array([1, 1, 1, 0], dtype=float)
         enf = ExponentialFitter()
         enf.fit(T, E)
-        assert abs(enf.lambda_ - (T.sum() / E.sum())) < 10e-6
+        assert abs(enf.lambda_ - (T.sum() / E.sum())) < 1e-4
+
+    def test_fit_computes_correct_asymptotic_variance(self):
+        N = 5000
+        T = np.random.exponential(size=N)
+        C = np.random.exponential(size=N)
+        E = T < C
+        T = np.minimum(T, C)
+        enf = ExponentialFitter()
+        enf.fit(T, E)
+        assert abs(enf.summary.loc["lambda_", "se(coef)"] ** 2 - (T.sum() / E.sum()) ** 2 / N) < 1e-3
 
 
 class TestKaplanMeierFitter:
@@ -851,7 +901,7 @@ class TestKaplanMeierFitter:
         kmf = KaplanMeierFitter()
         kmf.fit(T, C, left_censorship=True)
         assert hasattr(kmf, "cumulative_density_")
-        assert hasattr(kmf, "plot_cumulative_density_")
+        assert hasattr(kmf, "plot_cumulative_density")
         assert not hasattr(kmf, "survival_function_")
 
     def test_kmf_left_censorship_stats(self):
@@ -1267,8 +1317,8 @@ class TestRegressionFitters:
         for fitter in regression_models:
             if getattr(fitter, "strata", False):
                 continue
-            for subset in [["t", "categorya_"], ["t", "categoryb_"], ["t", "string_"]]:
-                with pytest.raises(TypeError):
+            for subset in [["t", "categoryb_"], ["t", "string_"]]:
+                with pytest.raises(ValueError):
                     fitter.fit(df[subset], duration_col="t")
 
             for subset in [["t", "uint8_"]]:
@@ -3523,15 +3573,12 @@ class TestCoxTimeVaryingFitter:
             }
         )
 
-        for subset in [
-            ["start", "end", "e", "id", "categorya_"],
-            ["start", "end", "e", "id", "categoryb_"],
-            ["start", "end", "e", "id", "string_"],
-        ]:
-            with pytest.raises(TypeError):
+        for subset in [["start", "end", "e", "id", "categoryb_"], ["start", "end", "e", "id", "string_"]]:
+            with pytest.raises(ValueError):
                 ctv.fit(df[subset], id_col="id", event_col="e", stop_col="end")
 
         for subset in [
+            ["start", "end", "e", "id", "categorya_"],
             ["start", "end", "e", "id", "bool_"],
             ["start", "end", "e", "id", "int_"],
             ["start", "end", "e", "id", "float_"],

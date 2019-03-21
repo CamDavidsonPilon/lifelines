@@ -3,8 +3,131 @@
 import warnings
 import numpy as np
 from lifelines.utils import coalesce
+from scipy import stats
 
-__all__ = ["add_at_risk_counts", "plot_lifetimes"]
+__all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot"]
+
+
+def get_distribution_name_of_lifelines_model(model):
+    return model.__class__.__name__.replace("Fitter", "").lower()
+
+
+def create_scipy_stats_model_from_lifelines_model(model):
+    from lifelines.fitters import KnownModelParametericUnivariateFitter
+
+    assert isinstance(model, KnownModelParametericUnivariateFitter)
+
+    dist = get_distribution_name_of_lifelines_model(model)
+    if dist == "weibull":
+        scipy_dist = "weibull_min"
+        sparams = (model.rho_, 0, model.lambda_)
+    elif dist == "lognormal":
+        scipy_dist = "lognorm"
+        sparams = (model.sigma_, 0, np.exp(model.mu_))
+    elif dist == "loglogistic":
+        scipy_dist = "fisk"
+        sparams = (model.beta_, 0, model.alpha_)
+    elif dist == "exponential":
+        scipy_dist = "expon"
+        sparams = (0, model.lambda_)
+    else:
+        raise TypeError()
+    return getattr(stats, scipy_dist)(*sparams)
+
+
+def cdf_plot(model, timeline=None, **plot_kwargs):
+    from lifelines import KaplanMeierFitter
+
+    set_kwargs_ax(plot_kwargs)
+    ax = plot_kwargs.pop("ax")
+
+    if timeline is None:
+        timeline = model.timeline
+
+    kmf = KaplanMeierFitter().fit(
+        model.durations,
+        model.event_observed,
+        left_censorship=model.left_censorship,
+        label="empirical CDF",
+        timeline=timeline,
+    )
+    if model.left_censorship:
+        kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
+    else:
+        (1 - kmf.survival_function_).plot(ax=ax, **plot_kwargs)
+
+    dist = get_distribution_name_of_lifelines_model(model)
+    dist_object = create_scipy_stats_model_from_lifelines_model(model)
+    ax.plot(timeline, dist_object.cdf(timeline), label="fitted %s" % dist, **plot_kwargs)
+    ax.legend()
+    return ax
+
+
+def qq_plot(model, **plot_kwargs):
+    """
+    Produces a quantile-quantile plot of the empirical CDF against
+    the fitted parametric CDF. Large deviances away from the line y=x
+    can invalidate a model (though we expect some natural deviance in the tails).
+
+    Parameters
+    -----------
+    model: obj
+        A fitted lifelines univariate parametric model, like ``WeibullFitter``
+    plot_kwargs:
+        kwargs for the plot.
+
+    Returns
+    --------
+    ax: axis object
+
+    Examples
+    ---------
+
+    >>> from lifelines import *
+    >>> from lifelines.plotting import qq_plot
+    >>> from lifelines.datasets import load_rossi
+    >>> df = load_rossi()
+    >>> wf = WeibullFitter().fit(df['week'], df['arrest'])
+    >>> qq_plot(wf)
+
+
+    """
+    from lifelines.utils import qth_survival_times
+    from lifelines import KaplanMeierFitter
+    from lifelines.fitters import KnownModelParametericUnivariateFitter
+
+    assert isinstance(model, KnownModelParametericUnivariateFitter)
+
+    set_kwargs_ax(plot_kwargs)
+    ax = plot_kwargs.pop("ax")
+
+    dist = get_distribution_name_of_lifelines_model(model)
+    dist_object = create_scipy_stats_model_from_lifelines_model(model)
+
+    COL_EMP = "empirical quantiles"
+    COL_THEO = "fitted %s quantiles" % dist
+
+    kmf = KaplanMeierFitter().fit(
+        model.durations, model.event_observed, left_censorship=model.left_censorship, label=COL_EMP
+    )
+    if model.left_censorship:
+        q = np.unique(kmf.cumulative_density_.values[:, 0])
+        quantiles = qth_survival_times(q, kmf.cumulative_density_, cdf=True)
+    else:
+        q = np.unique(1 - kmf.survival_function_.values[:, 0])
+        quantiles = qth_survival_times(q, 1 - kmf.survival_function_, cdf=True)
+
+    quantiles[COL_THEO] = dist_object.ppf(q)
+    quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
+
+    max_, min_ = quantiles[COL_EMP].max(), quantiles[COL_EMP].min()
+
+    quantiles.plot.scatter(COL_THEO, COL_EMP, c="none", edgecolor="k", lw=0.5, ax=ax)
+    ax.plot([min_, max_], [min_, max_], c="k", ls=":", lw=1.0)
+    ax.set_ylim(min_, max_)
+    ax.set_xlim(min_, max_)
+
+    return ax
 
 
 def is_latex_enabled():
@@ -204,6 +327,12 @@ def plot_lifetimes(
     -------
     ax
 
+    Examples
+    ---------
+    >>> from lifelines.datasets import load_waltons
+    >>> from lifelines.plotting import plot_lifetimes
+    >>> T, E = load_waltons()["T"], load_waltons()["E"]
+    >>> ax = plot_lifetimes(T.loc[:50], event_observed=E.loc[:50])
 
     """
     set_kwargs_ax(kwargs)
@@ -231,11 +360,11 @@ def plot_lifetimes(
 
     for i in range(N):
         c = event_observed_color if event_observed[i] else event_censored_color
-        ax.hlines(N - 1 - i, entry[i], entry[i] + durations[i], color=c, lw=1.5)
+        ax.hlines(i, entry[i], entry[i] + durations[i], color=c, lw=1.5)
         if left_truncated:
-            ax.hlines(N - 1 - i, 0, entry[i], color=c, lw=1.0, linestyle="--")
+            ax.hlines(i, 0, entry[i], color=c, lw=1.0, linestyle="--")
         m = "" if not event_observed[i] else "o"
-        ax.scatter(entry[i] + durations[i], N - 1 - i, color=c, marker=m, s=10)
+        ax.scatter(entry[i] + durations[i], i, color=c, marker=m, s=10)
 
     ax.set_ylim(-0.5, N)
     return ax

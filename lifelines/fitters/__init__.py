@@ -215,6 +215,10 @@ class UnivariateFitter(BaseFitter):
         raise NotImplementedError
 
     @_must_call_fit_first
+    def cumulative_density_at_times(self, times, label=None):
+        raise NotImplementedError
+
+    @_must_call_fit_first
     def plot_cumulative_hazard(self, **kwargs):
         raise NotImplementedError()
 
@@ -226,6 +230,10 @@ class UnivariateFitter(BaseFitter):
     def plot_hazard(self, **kwargs):
         raise NotImplementedError()
 
+    @_must_call_fit_first
+    def plot_cumulative_density(self, **kwargs):
+        raise NotImplementedError()
+
 
 class ParametericUnivariateFitter(UnivariateFitter):
     """
@@ -234,7 +242,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     """
 
     _KNOWN_MODEL = False
-    _MIN_PARAMETER_VALUE = 1e-09
+    _MIN_PARAMETER_VALUE = 1e-9
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
@@ -324,12 +332,31 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def _survival_function(self, params, times):
         return anp.exp(-self._cumulative_hazard(params, times))
 
+    def _cumulative_density(self, params, times):
+        return 1 - anp.exp(-self._cumulative_hazard(params, times))
+
     def _log_hazard(self, params, times):
         hz = self._hazard(params, times)
         hz = anp.clip(hz, 1e-18, np.inf)
         return anp.log(hz)
 
-    def _negative_log_likelihood(self, params, T, E, entry):
+    def _log_1m_sf(self, params, times):
+        # equal to log(cdf), but often easier to express with sf.
+        cum_haz = self._cumulative_hazard(params, times)
+        return anp.log1p(-anp.exp(-cum_haz))
+
+    def _negative_log_likelihood_left_censoring(self, params, T, E, _entry):
+
+        n = T.shape[0]
+        log_hz = self._log_hazard(params, T)
+        cum_haz = self._cumulative_hazard(params, T)
+        log_1m_sf = self._log_1m_sf(params, T)
+
+        ll = (E * (log_hz - cum_haz - log_1m_sf)).sum() + log_1m_sf.sum()
+
+        return -ll / n
+
+    def _negative_log_likelihood_right_censoring(self, params, T, E, entry):
 
         n = T.shape[0]
         log_hz = self._log_hazard(params, T[E])
@@ -386,11 +413,17 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def _fit_model(self, T, E, entry, show_progress=True):
 
         non_zero_entries = entry[entry > 0]
+
+        if self.left_censorship:
+            negative_log_likelihood = self._negative_log_likelihood_left_censoring
+        else:
+            negative_log_likelihood = self._negative_log_likelihood_right_censoring
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
             results = minimize(
-                value_and_grad(self._negative_log_likelihood),  # pylint: disable=no-value-for-parameter
+                value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
                 self._initial_values,
                 jac=True,
                 method="L-BFGS-B",
@@ -401,8 +434,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
             if results.success:
                 # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, non_zero_entries)
+                hessian_ = hessian(negative_log_likelihood)(results.x, T, E, non_zero_entries)
                 return results.x, -results.fun * T.shape[0], T.shape[0] * hessian_
+
+            # convergence failed.
             print(results)
             if self._KNOWN_MODEL:
                 raise ConvergenceError(
@@ -504,6 +539,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        if self.left_censorship:
+            print("{} = {}".format(justify("left-censored"), self.left_censorship))
         print(
             "{} = {}".format(
                 justify("hypothesis"),
@@ -532,6 +569,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels=None,
         show_progress=False,
         entry=None,
+        left_censorship=False,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -541,7 +579,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         event_observed: numpy array or pd.Series, optional
           length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
         timeline: list, optional
-            return the estimate at the values in timeline (postively increasing)
+            return the estimate at the values in timeline (positively increasing)
         label: string, optional
             a string to name the column of the estimate.
         alpha: float, optional
@@ -554,7 +592,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
-
+        left_censorship: bool, optional (default=False)
+            True if durations and event_observed refer to left censorship events. Default False
         Returns
         -------
           self
@@ -562,6 +601,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         """
         label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
+        self.left_censorship = left_censorship
 
         check_nans_or_infs(durations)
         if event_observed is not None:
@@ -609,13 +649,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
             warning_text = dedent(
                 """\
 
-                The hessian was not invertable. This could be a model problem:
+                The Hessian was not invertible. This could be a model problem:
 
-                1. Are two parameters in the model colinear / exchangeable?
+                1. Are two parameters in the model collinear / exchangeable?
                 2. Is the cumulative hazard always non-negative and always non-decreasing?
                 3. Are there cusps/ in the cumulative hazard?
 
-                We will instead approximate it using the psuedo-inverse.
+                We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
@@ -630,6 +670,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame()
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame()
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame()
+        self.cumulative_density_ = self.cumulative_density_at_times(self.timeline).to_frame()
 
         return self
 
@@ -652,6 +693,26 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         label = coalesce(label, self._label)
         return pd.Series(self._survival_function(self._fitted_parameters_, times), index=_to_array(times), name=label)
+
+    @_must_call_fit_first
+    def cumulative_density_at_times(self, times, label=None):
+        """
+        Return a Pandas series of the predicted cumulative density function (1-survival function) at specific times.
+
+        Parameters
+        -----------
+        times: iterable or float
+          values to return the survival function at.
+        label: string, optional
+          Rename the series returned. Useful for plotting.
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        label = coalesce(label, self._label)
+        return pd.Series(self._cumulative_density(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @_must_call_fit_first
     def cumulative_hazard_at_times(self, times, label=None):
@@ -734,6 +795,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
 
+    @property
+    @_must_call_fit_first
+    def confidence_interval_cumulative_density_(self):
+        """
+        The confidence interval of the survival function.
+        """
+        return self._compute_confidence_bounds_of_transform(self._cumulative_density, self.alpha, self._ci_labels)
+
     @_must_call_fit_first
     def plot(self, **kwargs):
         """
@@ -756,6 +825,16 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self,
             estimate=getattr(self, "survival_function_"),
             confidence_intervals=self.confidence_interval_survival_function_,
+            **kwargs
+        )
+
+    @_must_call_fit_first
+    def plot_cumulative_density(self, **kwargs):
+        set_kwargs_drawstyle(kwargs, "default")
+        return _plot_estimate(
+            self,
+            estimate=getattr(self, "cumulative_density_"),
+            confidence_intervals=self.confidence_interval_cumulative_density_,
             **kwargs
         )
 
@@ -824,11 +903,11 @@ class ParametericRegressionFitter(BaseFitter):
             the 'death' events was observed: 1 if observed, 0 else (censored).
 
         duration_col: string
-            the name of the column in dataframe that contains the subjects'
+            the name of the column in DataFrame that contains the subjects'
             lifetimes.
 
         event_col: string, optional
-            the  name of thecolumn in dataframe that contains the subjects' death
+            the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
         show_progress: boolean, optional (default=False)
@@ -837,7 +916,7 @@ class ParametericRegressionFitter(BaseFitter):
 
         ancillary_df: None, boolean, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
-            If None or False, explicity do not fit the ancillary parameters using any covariates.
+            If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
 
@@ -929,12 +1008,14 @@ class ParametericRegressionFitter(BaseFitter):
                 "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
             )
 
+        df = df.astype(float)
         self._check_values(df, T, E, self.event_col)
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
 
             ancillary_df = ancillary_df.copy().drop([duration_col, event_col], axis=1, errors="ignore")
+            ancillary_df = ancillary_df.astype(float)
             self._check_values(ancillary_df, T, E, self.event_col)
 
         elif (ancillary_df is None) or (ancillary_df is False):

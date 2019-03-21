@@ -5,7 +5,7 @@
 More examples and recipes
 ==================================
 
-This section goes through some examples and recipes to help you use *lifelines*. If you are looking for some full example usage of *lifelines*, there's full jupyter notebooks `here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_.
+This section goes through some examples and recipes to help you use *lifelines*. If you are looking for some full example usage of *lifelines*, `there are full Jupyter notebooks here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_.
 
 
 Statistically compare two populations
@@ -135,6 +135,37 @@ If using *lifelines* for prediction work, it's ideal that you perform some type 
     print(np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E')))
 
 From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
+
+Selecting a parametric model using QQ plots
+###############################################
+
+QQ plots normally are constructed by sorting the values. However, this isn't appropriate when there is censored data. In _lifelines_, there are routines to still create QQ plots with censored data. These are available under ``lifelines.plotting.qq_plots``, and accepts fitted a parametric lifelines model.
+
+.. code-block:: python
+
+    from lifelines import *
+    from lifelines.plotting import qq_plot
+
+    # generate some fake log-normal data
+    N = 1000
+    T_actual = np.exp(np.random.randn(N))
+    C = np.exp(np.random.randn(N))
+    E = T_actual < C
+    T = np.minimum(T_actual, C)
+
+    fig, axes = plt.subplots(2, 2, figsize=(8, 6))
+    axes = axes.reshape(4,)
+
+    for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
+        model.fit(T, E)
+        qq_plot(model, ax=axes[i])
+
+.. image:: images/qq_plot.png
+
+
+This graphical test can be used to invalidate models. For example, in the above figure, we can see that only the log-normal parametric model is appropriate (we expect deviance in the tails, but not too much). Another use case is choosing the correct parametric AFT model.
+
+The ``qq_plot`` also works with left censorship as well.
 
 
 Plotting multiple figures on a plot
@@ -639,7 +670,11 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
 2. ``delta contains nan value(s).``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unbounded, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
 
-3. ``Convergence halted due to matrix inversion problems``: This means that there is high collinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by looking at the correlation matrix of your dataset, or using the variance inflation factor (VIF) to find redundant variables.
+3. ``Convergence halted due to matrix inversion problems``: This means that there is high collinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by:
+
+   1. adding a penalizer to the model, ex: `CoxPHFitter(penalizer=0.1).fit(...)` until the model converges. In the `print_summary()`, the coefficients that have high collinearity will have large (absolute) magnitude in the `coefs` column.
+   2. using the variance inflation factor (VIF) to find redundant variables.
+   3. looking at the correlation matrix of your dataset, or
 
 4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are ``nan``'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
 
@@ -649,7 +684,7 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
    3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarily using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
 
-   4. Another problem may be a co-linear relationship in your dataset. See point 3. above.
+   4. Another problem may be a collinear relationship in your dataset. See point 3. above.
 
 5. If adding a very small ``penalizer`` significantly changes the results (``CoxPHFitter(penalizer=0.0001)``), then this probably means that the step size in the iterative algorithm is too large. Try decreasing it (``.fit(..., step_size=0.50)`` or smaller), and returning the ``penalizer`` term to 0.
 

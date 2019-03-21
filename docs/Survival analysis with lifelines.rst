@@ -606,12 +606,14 @@ With parametric models, we have a functional form that allows us to extend the s
 .. image:: images/weibull_extrapolation.png
 
 
+To aid model selection, _lifelines_ has provided qq-plots, `Selecting a parametric model using QQ plots`_.
+
 
 Other types of censoring
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Left censored data
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Left censored data and non-detection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We've mainly been focusing on *right-censoring*, which describes cases where we do not observe the death event.
 This situation is the most common one. Alternatively, there are situations where we do not observe the *birth* event
@@ -619,40 +621,92 @@ occurring. Consider the case where a doctor sees a delayed onset of symptoms of 
 is unsure *when* the disease was contracted (birth), but knows it was before the discovery.
 
 Another situation where we have left-censored data is when measurements have only an upper bound, that is, the measurements
-instruments could only detect the measurement was *less* than some upper bound.
-
-*lifelines* has support for left-censored datasets in the ``KaplanMeierFitter`` class, by adding the keyword ``left_censoring=True`` (default ``False``) to the call to ``fit``.
+instruments could only detect the measurement was *less* than some upper bound. This bound is often called the limit of detection (LOD). In practice, there could be more than one LOD. One very important statistical lesson: don't "fill-in" this value naively. It's tempting to use something like one-half the LOD, but this will cause *lots* of bias in downstream analysis. An example dataset is below:
 
 .. code:: python
 
-    from lifelines.datasets import load_lcd
-    lcd_dataset = load_lcd()
+    from lifelines.datasets import load_nh4
+    df = load_nh4()[['NH4.Orig.mg.per.L', 'NH4.mg.per.L', 'Censored']]
+    print(df.head())
 
-    ix = lcd_dataset['group'] == 'alluvial_fan'
-    T = lcd_dataset[ix]['T']
-    E = lcd_dataset[ix]['E'] #boolean array, True if observed.
+    """
+      NH4.Orig.mg.per.L  NH4.mg.per.L  Censored
+    1            <0.006         0.006      True
+    2            <0.006         0.006      True
+    3             0.006         0.006     False
+    4             0.016         0.016     False
+    5            <0.006         0.006      True
+    """
+
+*lifelines* has support for left-censored datasets in most univariate models, including the ``KaplanMeierFitter`` class, by adding the keyword ``left_censoring=True`` (default ``False``) to the call to ``fit``.
+
+.. code:: python
+
+
+    T, E = df['NH4.mg.per.L'], ~df['Censored']
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, E, left_censoring=True)
+    kmf.fit(T, E, left_censorship=True)
 
-Instead of producing a survival function, left-censored data is more interested in the cumulative density function
-of time to birth. This is available as the ``cumulative_density_`` property after fitting the data.
+Instead of producing a survival function, left-censored data analysis is more interested in the cumulative density function. This is available as the ``cumulative_density_`` property after fitting the data.
 
 .. code:: python
 
-    print(kmf.cumulative_density_)
+    print(kmf.cumulative_density_.head())
+
     kmf.plot() #will plot the CDF
+    plt.xlabel("Concentration of NH_4")
+
+    """
+              KM_estimate
+    timeline
+    0.000        0.379897
+    0.006        0.401002
+    0.007        0.464319
+    0.008        0.478828
+    0.009        0.536868
+    """
 
 
 .. image:: images/lifelines_intro_lcd.png
 
+Alternatively, you can use a parametric model to model the data. This allows for you to "peer" below the LOD, however using a parametric model means you need to correctly specify the distribution. You can use plots like qq-plots to help invalidate some distributions, see `Selecting a parametric model using QQ plots`_.
+
+
+.. code:: python
+
+    fig, axes = plt.subplots(3, 2, figsize=(9, 9))
+    timeline = np.linspace(0, 0.25, 100)
+
+    wf = WeibullFitter().fit(T, E, left_censorship=True, label="Weibull", timeline=timeline)
+    lnf = LogNormalFitter().fit(T, E, left_censorship=True, label="Log Normal", timeline=timeline)
+    lgf = LogLogisticFitter().fit(T, E, left_censorship=True, label="Log Logistic", timeline=timeline)
+
+    # plot what we just fit, along with the KMF estimate
+    kmf.plot_cumulative_density(ax=axes[0][0], ci_show=False)
+    wf.plot_cumulative_density(ax=axes[0][0], ci_show=False)
+    qq_plot(wf, ax=axes[0][1])
+
+    kmf.plot_cumulative_density(ax=axes[1][0], ci_show=False)
+    lnf.plot_cumulative_density(ax=axes[1][0], ci_show=False)
+    qq_plot(lnf, ax=axes[1][1])
+
+    kmf.plot_cumulative_density(ax=axes[2][0], ci_show=False)
+    lgf.plot_cumulative_density(ax=axes[2][0], ci_show=False)
+    qq_plot(lgf, ax=axes[2][1])
+
+.. image:: images/lcd_parametric.png
+
+
+Based on the above, the log-normal distribution seems to fit well, and the Weibull not very well at all.
+
 .. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
 
 
-Left truncated data
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Left truncated (late entry) data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another form of bias that is introduced into a dataset is called left-truncation (or late entry). Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. So it's possible there are some counterfactual individuals who *would* have entered into your study (that is, went to prison), but instead died early.
+Another form of bias that is introduced into a dataset is called left-truncation (or late entry). Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. So it's possible there are some counter-factual individuals who *would* have entered into your study (that is, went to prison), but instead died early.
 
 All univariate fitters, like ``KaplanMeierFitter`` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between actual "birth" (or "exposure") to entering the study.
 
@@ -704,3 +758,4 @@ So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, b
 
 .. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html
 .. _Statistically compare two populations: Examples.html#statistically-compare-two-populations
+.. _Selecting a parametric model using QQ plots: Examples.html#selecting-a-parametric-model-using-qq-plots
