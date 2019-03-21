@@ -118,7 +118,7 @@ def qq_plot(model, **plot_kwargs):
         quantiles = qth_survival_times(q, 1 - kmf.survival_function_, cdf=True)
 
     quantiles[COL_THEO] = dist_object.ppf(q)
-    quantiles = quantiles.replace([-np.inf, 0], np.nan).dropna()
+    quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
 
     max_, min_ = quantiles[COL_EMP].max(), quantiles[COL_EMP].min()
 
