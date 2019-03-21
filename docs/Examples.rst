@@ -670,7 +670,11 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
 2. ``delta contains nan value(s).``: First try adding ``show_progress=True`` in the ``fit`` function. If the values in ``delta`` grow unbounded, it's possible the ``step_size`` is too large. Try setting it to a small value (0.1-0.5).
 
-3. ``Convergence halted due to matrix inversion problems``: This means that there is high collinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by looking at the correlation matrix of your dataset, or using the variance inflation factor (VIF) to find redundant variables.
+3. ``Convergence halted due to matrix inversion problems``: This means that there is high collinearity in your dataset. That is, a column is equal to the linear combination of 1 or more other columns. A common cause of this error is dummying categorical variables but not dropping a column, or some hierarchical structure in your dataset.  Try to find the relationship by:
+
+   1. adding a penalizer to the model, ex: `CoxPHFitter(penalizer=0.1).fit(...)` until the model converges. In the `print_summary()`, the coefficients that have high collinearity will have large (absolute) magnitude in the `coefs` column.
+   2. using the variance inflation factor (VIF) to find redundant variables.
+   3. looking at the correlation matrix of your dataset, or
 
 4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are ``nan``'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
 
@@ -680,7 +684,7 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
 
    3. Related to above, the relationship between a covariate and the duration may be completely determined. For example, if the rank correlation between a covariate and the duration is very close to 1 or -1, then the log-likelihood can be increased arbitrarily using just that covariate. Look for a ``ConvergenceWarning`` after the ``fit`` call.
 
-   4. Another problem may be a co-linear relationship in your dataset. See point 3. above.
+   4. Another problem may be a collinear relationship in your dataset. See point 3. above.
 
 5. If adding a very small ``penalizer`` significantly changes the results (``CoxPHFitter(penalizer=0.0001)``), then this probably means that the step size in the iterative algorithm is too large. Try decreasing it (``.fit(..., step_size=0.50)`` or smaller), and returning the ``penalizer`` term to 0.
 

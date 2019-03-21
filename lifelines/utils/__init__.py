@@ -869,7 +869,7 @@ df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlappi
 
 
 def _low_var(df):
-    return df.var(0) < 10e-5
+    return df.var(0) < 1e-4
 
 
 def check_low_var(df, prescript="", postscript=""):

@@ -903,11 +903,11 @@ class ParametericRegressionFitter(BaseFitter):
             the 'death' events was observed: 1 if observed, 0 else (censored).
 
         duration_col: string
-            the name of the column in dataframe that contains the subjects'
+            the name of the column in DataFrame that contains the subjects'
             lifetimes.
 
         event_col: string, optional
-            the  name of thecolumn in dataframe that contains the subjects' death
+            the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
         show_progress: boolean, optional (default=False)
@@ -916,7 +916,7 @@ class ParametericRegressionFitter(BaseFitter):
 
         ancillary_df: None, boolean, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
-            If None or False, explicity do not fit the ancillary parameters using any covariates.
+            If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
 
