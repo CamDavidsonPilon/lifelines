@@ -5,13 +5,17 @@
 ##### New features
  - Left censoring is now supported in univariate parametric models: `.fit(..., left_censorship=True)`. Examples are in the docs.
  - new dataset: `lifelines.datasets.load_nh4()`
- - Univariate parameteric models now include, by default, support for the cumulative density function: `.cumulative_density_`, `.confidence_interval_cumulative_density_`, `plot_cumulative_density()`, `cumulative_density_at_times(t)`.
+ - Univariate parametric models now include, by default, support for the cumulative density function: `.cumulative_density_`, `.confidence_interval_cumulative_density_`, `plot_cumulative_density()`, `cumulative_density_at_times(t)`.
  -  add a `lifelines.plotting.qq_plot` for univariate parametric models that handles censored data.
+
+##### API changes
+ - `plot_lifetimes` no longer reverses the order when plotting. Thanks @vpolimenov!
+ - The `C` column in `load_lcd` dataset is renamed to `E`.
 
 ##### Bug fixes
  - fixed a naming error in `KaplanMeierFitter` when `left_censorship` was set to True, `plot_cumulative_density_()` is now `plot_cumulative_density()`.
  - added some error handling when passing in timedeltas. Ideally, users don't pass in timedeltas, as the scale is ambiguous. However, the error message before was not obvious, so we do some conversion, warn the user, and pass it through.
-
+ - `qth_survival_times` for a truncated CDF would return `np.inf` if the q parameter was below the truncation limit. This should have been `-np.inf`
 
 
 #### 0.20.1

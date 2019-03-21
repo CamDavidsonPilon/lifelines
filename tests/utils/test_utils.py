@@ -203,6 +203,11 @@ def test_qth_survival_times_with_duplicate_q_returns_valid_index_and_shape():
 def test_qth_survival_time_with_cdf_instead_of_survival_function():
     cdf = np.linspace(0, 1, 50)
     assert utils.qth_survival_times(0.5, cdf, cdf=True) == 25
+    assert utils.qth_survival_times(0.05, cdf, cdf=True) == 3
+
+    cdf = np.linspace(0.1, 1, 50)
+    assert utils.qth_survival_times(0.05, cdf, cdf=True) == -np.inf
+    assert utils.qth_survival_times(0.50, cdf, cdf=True) == 22
 
 
 def test_datetimes_to_durations_with_different_frequencies():

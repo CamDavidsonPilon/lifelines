@@ -129,7 +129,7 @@ def qth_survival_time(q, survival_function, cdf=False):
         survival_function = survival_function.T.squeeze()
     if cdf:
         if survival_function.iloc[0] > q:
-            return -np.inf  # TODO: verify
+            return -np.inf
         v = survival_function.index[survival_function.searchsorted([q])[0]]
     else:
         if survival_function.iloc[-1] > q:
