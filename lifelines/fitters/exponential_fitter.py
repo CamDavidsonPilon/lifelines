@@ -61,6 +61,10 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
         The time line to use for plotting and indexing
     entry: array or None
         The entry array provided, or None
+    cumumlative_density_ : DataFrame
+        The estimated cumulative density function (with custom timeline if provided)
+    confidence_interval_cumumlative_density_ : DataFrame
+        The lower and upper confidence intervals for the cumulative density
     """
 
     _fitted_parameter_names = ["lambda_"]

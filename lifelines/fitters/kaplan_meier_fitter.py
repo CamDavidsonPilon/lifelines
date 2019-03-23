@@ -46,7 +46,15 @@ class KaplanMeierFitter(UnivariateFitter):
     median_ : float
         The estimated median time to event. np.inf if doesn't exist.
     confidence_interval_ : DataFrame
-        The lower and upper confidence intervals for the survival function
+        The lower and upper confidence intervals for the survival function. An alias of
+        ``confidence_interval_survival_function_``
+    confidence_interval_survival_function_ : DataFrame
+        The lower and upper confidence intervals for the survival function. An alias of
+        ``confidence_interval_``
+    cumumlative_density_ : DataFrame
+        The estimated cumulative density function (with custom timeline if provided)
+    confidence_interval_cumumlative_density_ : DataFrame
+        The lower and upper confidence intervals for the cumulative density
     durations: array
         The durations provided
     event_observed: array
@@ -191,6 +199,22 @@ class KaplanMeierFitter(UnivariateFitter):
         """
         label = coalesce(label, self._label)
         return pd.Series(self.predict(times), index=_to_array(times), name=label)
+
+    def cumulative_density_at_times(self, times, label=None):
+        """
+        Return a Pandas series of the predicted cumulative density at specific times
+
+        Parameters
+        -----------
+        times: iterable or float
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        label = coalesce(label, self._label)
+        return pd.Series(1 - self.predict(times), index=_to_array(times), name=label)
 
     def plot_survival_function(self, **kwargs):
         return _plot_estimate(
