@@ -260,6 +260,7 @@ Invert axis
 
 .. image:: /images/invert_y_axis.png
 
+.. note:: This is deprecated and we suggest to use `kmf.plot_cumulative_density()` instead.
 
 
 Displaying at-risk counts below plots

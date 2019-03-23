@@ -15,7 +15,7 @@ from lifelines.utils import (
     StatisticalWarning,
     coalesce,
 )
-from lifelines.plotting import plot_loglogs
+from lifelines.plotting import plot_loglogs, _plot_estimate
 
 
 class KaplanMeierFitter(UnivariateFitter):
@@ -46,7 +46,15 @@ class KaplanMeierFitter(UnivariateFitter):
     median_ : float
         The estimated median time to event. np.inf if doesn't exist.
     confidence_interval_ : DataFrame
-        The lower and upper confidence intervals for the survival function
+        The lower and upper confidence intervals for the survival function. An alias of
+        ``confidence_interval_survival_function_``
+    confidence_interval_survival_function_ : DataFrame
+        The lower and upper confidence intervals for the survival function. An alias of
+        ``confidence_interval_``
+    cumumlative_density_ : DataFrame
+        The estimated cumulative density function (with custom timeline if provided)
+    confidence_interval_cumumlative_density_ : DataFrame
+        The lower and upper confidence intervals for the cumulative density
     durations: array
         The durations provided
     event_observed: array
@@ -108,6 +116,7 @@ class KaplanMeierFitter(UnivariateFitter):
             self._check_values(event_observed)
 
         self.left_censorship = left_censorship
+        self._label = label
 
         if weights is not None:
             if (weights.astype(int) != weights).any():
@@ -121,13 +130,15 @@ class KaplanMeierFitter(UnivariateFitter):
                 )
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
-        estimate_name = "survival_function_" if not left_censorship else "cumulative_density_"
-        v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
+        primary_estimate_name = "survival_function_" if not self.left_censorship else "cumulative_density_"
+        secondary_estimate_name = "cumulative_density_" if not self.left_censorship else "survival_function_"
 
-        self._label = label
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = _preprocess_inputs(
+            durations, event_observed, timeline, entry, weights
+        )
+
         alpha = alpha if alpha else self.alpha
-        log_survival_function, cumulative_sq_ = _additive_estimate(
+        log_estimate, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline, self._additive_f, self._additive_var, left_censorship
         )
 
@@ -145,19 +156,23 @@ class KaplanMeierFitter(UnivariateFitter):
                 )
 
         # estimation
-        setattr(self, estimate_name, pd.DataFrame(np.exp(log_survival_function), columns=[self._label]))
-        self.__estimate = getattr(self, estimate_name)
+        setattr(self, primary_estimate_name, pd.DataFrame(np.exp(log_estimate), columns=[self._label]))
+        setattr(self, secondary_estimate_name, pd.DataFrame(1 - np.exp(log_estimate), columns=[self._label]))
+
+        self.__estimate = getattr(self, primary_estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self.median_ = median_survival_times(self.__estimate, left_censorship=left_censorship)
         self._cumulative_sq_ = cumulative_sq_
 
+        setattr(self, "confidence_interval_" + primary_estimate_name, self.confidence_interval_)
+        setattr(self, "confidence_interval_" + secondary_estimate_name, 1 - self.confidence_interval_)
+
         # estimation methods
-        self._estimation_method = estimate_name
-        self._estimate_name = estimate_name
+        self._estimation_method = primary_estimate_name
+        self._estimate_name = primary_estimate_name
         self._predict_label = label
         self._update_docstrings()
 
-        setattr(self, "plot_" + estimate_name.rstrip("_"), self.plot)
         return self
 
     def _check_values(self, array):
@@ -185,6 +200,38 @@ class KaplanMeierFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(self.predict(times), index=_to_array(times), name=label)
 
+    def cumulative_density_at_times(self, times, label=None):
+        """
+        Return a Pandas series of the predicted cumulative density at specific times
+
+        Parameters
+        -----------
+        times: iterable or float
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        label = coalesce(label, self._label)
+        return pd.Series(1 - self.predict(times), index=_to_array(times), name=label)
+
+    def plot_survival_function(self, **kwargs):
+        return _plot_estimate(
+            self,
+            estimate=self.survival_function_,
+            confidence_intervals=self.confidence_interval_survival_function_,
+            **kwargs
+        )
+
+    def plot_cumulative_density(self, **kwargs):
+        return _plot_estimate(
+            self,
+            estimate=self.cumulative_density_,
+            confidence_intervals=self.confidence_interval_cumulative_density_,
+            **kwargs
+        )
+
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.
         # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
@@ -207,3 +254,13 @@ class KaplanMeierFitter(UnivariateFitter):
     def _additive_var(self, population, deaths):
         np.seterr(divide="ignore")
         return (deaths / (population * (population - deaths))).replace([np.inf], 0)
+
+    def plot_cumulative_hazard(self, **kwargs):
+        raise NotImplementedError(
+            "The Kaplan-Meier estimator is not used to estimate the cumulative hazard. Try the NelsonAalenFitter or any other parametric model"
+        )
+
+    def plot_hazard(self, **kwargs):
+        raise NotImplementedError(
+            "The Kaplan-Meier estimator is not used to estimate the hazard. Try the NelsonAalenFitter or any other parametric model"
+        )

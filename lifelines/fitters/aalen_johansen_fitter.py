@@ -80,7 +80,7 @@ class AalenJohansenFitter(UnivariateFitter):
           event_of_interest: integer -- indicator for event of interest. All other integers are considered competing events
              Ex) event_observed contains 0, 1, 2 where 0:censored, 1:lung cancer, and 2:death. If event_of_interest=1, then death (2)
              is considered a competing event. The returned cumulative incidence function corresponds to risk of lung cancer
-          timeline: return the best estimate at the values in timelines (postively increasing)
+          timeline: return the best estimate at the values in timelines (positively increasing)
           entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
              useful for left-truncated (not left-censored) observations. If None, all members of the population
              were born at time 0.

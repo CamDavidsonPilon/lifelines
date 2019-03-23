@@ -720,7 +720,7 @@ class TestLogLogisticFitter:
 
 
 class TestWeibullFitter:
-    @flaky
+    @flaky(max_runs=3, min_passes=2)
     @pytest.mark.parametrize("N", [50, 100, 500, 1000])
     def test_left_censorship_inference(self, N):
         T_actual = 0.5 * np.random.weibull(5, size=N)
@@ -902,7 +902,6 @@ class TestKaplanMeierFitter:
         kmf.fit(T, C, left_censorship=True)
         assert hasattr(kmf, "cumulative_density_")
         assert hasattr(kmf, "plot_cumulative_density")
-        assert not hasattr(kmf, "survival_function_")
 
     def test_kmf_left_censorship_stats(self):
         # from http://www.public.iastate.edu/~pdixon/stat505/Chapter%2011.pdf
@@ -1024,6 +1023,29 @@ class TestKaplanMeierFitter:
 
         expected = [1.0, 1.0, 0.667, 0.444, 0.222, 0.111, 0.0]
         npt.assert_allclose(kmf.survival_function_.values.reshape(7), expected, rtol=1e-2)
+
+    def test_kmf_has_both_survival_function_and_cumulative_density(self):
+        # right censoring
+        kmf = KaplanMeierFitter().fit(np.arange(100), left_censorship=False)
+        assert hasattr(kmf, "survival_function_")
+        assert hasattr(kmf, "plot_survival_function")
+        assert hasattr(kmf, "confidence_interval_survival_function_")
+        assert_frame_equal(kmf.confidence_interval_survival_function_, kmf.confidence_interval_)
+
+        assert hasattr(kmf, "cumulative_density_")
+        assert hasattr(kmf, "plot_cumulative_density")
+        assert hasattr(kmf, "confidence_interval_cumulative_density_")
+
+        # left censoring
+        kmf = KaplanMeierFitter().fit(np.arange(100), left_censorship=True)
+        assert hasattr(kmf, "survival_function_")
+        assert hasattr(kmf, "plot_survival_function")
+        assert hasattr(kmf, "confidence_interval_survival_function_")
+
+        assert hasattr(kmf, "cumulative_density_")
+        assert hasattr(kmf, "plot_cumulative_density")
+        assert hasattr(kmf, "confidence_interval_cumulative_density_")
+        assert_frame_equal(kmf.confidence_interval_cumulative_density_, kmf.confidence_interval_)
 
     def test_late_entry_with_tied_entry_and_death(self):
         np.random.seed(101)
@@ -3814,8 +3836,9 @@ class TestAalenJohansenFitter:
     def test_tied_input_data(self, fitter):
         # Based on new setup of ties, this counts as a valid tie
         d = [1, 2, 2, 4, 5, 6]
-        fitter.fit(durations=d, event_observed=[0, 1, 2, 1, 2, 0], event_of_interest=2)
-        npt.assert_equal(np.any(np.not_equal([0] + d, fitter.event_table.index)), True)
+        with pytest.warns(Warning, match="Tied event times"):
+            fitter.fit(durations=d, event_observed=[0, 1, 2, 1, 2, 0], event_of_interest=2)
+            npt.assert_equal(np.any(np.not_equal([0] + d, fitter.event_table.index)), True)
 
     def test_updated_input_ties(self, fitter):
         # Based on the new setup of ties, should not detect any ties as existing

@@ -1,5 +1,12 @@
 ### Changelog
 
+#### 0.20.3
+
+##### New features
+ - Now `cumulative_density_` & `survival_function_` are _always_ present on a fitted `KaplanMeierFitter`.
+ - New attributes/methods on `KaplanMeierFitter`: `plot_cumulative_density()`, `confidence_interval_cumulative_density_`, `plot_survival_function` and `confidence_interval_survival_function_`.
+
+
 #### 0.20.2
 
 ##### New features
