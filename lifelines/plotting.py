@@ -455,7 +455,7 @@ def _plot_estimate(
     **kwargs
 ):
 
-    """"
+    """
     Plots a pretty figure of {0}.{1}
 
     Matplotlib plot arguments can be passed in inside the kwargs, plus
@@ -478,12 +478,16 @@ def _plot_estimate(
         show group sizes at time points. See function ``add_at_risk_counts`` for details. Default: False
     loc: slice
         specify a time-based subsection of the curves to plot, ex:
-             .plot(loc=slice(0.,10.))
+
+        >>> model.plot(loc=slice(0.,10.))
+
         will plot the time values between t=0. and t=10.
     iloc: slice
         specify a location-based subsection of the curves to plot, ex:
-             .plot(iloc=slice(0,10))
-          will plot the first 10 time points.
+
+        >>> model.plot(iloc=slice(0,10))
+
+        will plot the first 10 time points.
     invert_y_axis: bool
         boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs. (Deprecated, use ``plot_cumulative_density()``)
 
