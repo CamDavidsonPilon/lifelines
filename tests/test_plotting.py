@@ -408,10 +408,10 @@ class TestPlotting:
         lcd_dataset = load_lcd()
         alluvial_fan = lcd_dataset.loc[lcd_dataset["group"] == "alluvial_fan"]
         basin_trough = lcd_dataset.loc[lcd_dataset["group"] == "basin_trough"]
-        kmf.fit(alluvial_fan["T"], alluvial_fan["C"], left_censorship=True, label="alluvial_fan")
+        kmf.fit(alluvial_fan["T"], alluvial_fan["E"], left_censorship=True, label="alluvial_fan")
         ax = kmf.plot()
 
-        kmf.fit(basin_trough["T"], basin_trough["C"], left_censorship=True, label="basin_trough")
+        kmf.fit(basin_trough["T"], basin_trough["E"], left_censorship=True, label="basin_trough")
         ax = kmf.plot(ax=ax)
         self.plt.title("test_kmf_left_censorship_plots")
         self.plt.show(block=block)
@@ -542,7 +542,7 @@ class TestPlotting:
         fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
         axes = axes.reshape(4)
         for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
-            model.fit(df["T"], df["C"], left_censorship=True)
+            model.fit(df["T"], df["E"], left_censorship=True)
             ax = qq_plot(model, ax=axes[i])
             assert ax is not None
         self.plt.suptitle("test_qq_plot_left_censoring2")

@@ -63,14 +63,23 @@ After calling the ``fit`` method, we have access to new properties like ``surviv
 .. code:: python
 
     kmf.survival_function_
-    kmf.confidence_interval_
+    kmf.cumulative_density_
     kmf.median_
-    kmf.plot()
+    kmf.plot_survival_function() # or just kmf.plot()
 
 
 .. image:: images/quickstart_kmf.png
 
-By specifying the ``timeline`` keyword argument in ``fit``, we can change how the above models are index:
+Alternatively, you can plot the cumulative density function:
+
+.. code:: python
+
+    kmf.plot_cumulative_density()
+
+.. image:: images/quickstart_kmf_cdf.png
+
+
+By specifying the ``timeline`` keyword argument in ``fit``, we can change how the above models are indexed:
 
 .. code:: python
 
