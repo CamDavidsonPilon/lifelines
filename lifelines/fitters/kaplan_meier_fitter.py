@@ -160,7 +160,7 @@ class KaplanMeierFitter(UnivariateFitter):
         setattr(self, secondary_estimate_name, pd.DataFrame(1 - np.exp(log_estimate), columns=[self._label]))
 
         self.__estimate = getattr(self, primary_estimate_name)
-        self.variance_ = self._greenwood_variance(cumulative_sq_)
+        self.variance_ = self._greenwood_variance(cumulative_sq_[:,None])
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self.median_ = median_survival_times(self.__estimate, left_censorship=left_censorship)
         self._cumulative_sq_ = cumulative_sq_
