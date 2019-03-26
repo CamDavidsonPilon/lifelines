@@ -1261,7 +1261,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats()},
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
             )
         )
 

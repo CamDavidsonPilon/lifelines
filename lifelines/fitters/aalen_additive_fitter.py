@@ -567,7 +567,7 @@ It's important to know that the naive variance estimates of the coefficients are
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats()},
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
             )
         )
 

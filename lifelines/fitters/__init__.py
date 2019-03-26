@@ -602,7 +602,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats()},
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
             )
         )
 
@@ -1248,16 +1248,16 @@ class ParametericRegressionFitter(BaseFitter):
 
     @property
     def _ll_null(self):
-        if hasattr(self, "__ll_null"):
-            return self.__ll_null
+        if hasattr(self, "_ll_null_"):
+            return self._ll_null_
 
         initial_point = np.zeros(len(self._fitted_parameter_names))
-        self.__ll_null = (
+        self._ll_null_ = (
             self.__class__()
             .fit(pd.DataFrame({"T": self.durations, "E": self.event_observed}), "T", "E", initial_point=initial_point)
             ._log_likelihood
         )
-        return self.__ll_null
+        return self._ll_null_
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -1345,7 +1345,7 @@ class ParametericRegressionFitter(BaseFitter):
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats()},
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
             )
         )
 
