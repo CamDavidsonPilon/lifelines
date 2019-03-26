@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 from textwrap import dedent
+import warnings
+from datetime import datetime
 from autograd import numpy as np
 from scipy.special import gamma
 import pandas as pd
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
-from datetime import datetime
 from lifelines.utils import _get_index, coalesce, qth_survival_times
 from lifelines.fitters import BaseFitter
+from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle, set_kwargs_ax
 
-import warnings
 from lifelines.utils import (
     qth_survival_times,
     _to_array,
@@ -44,23 +45,19 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
     This class implements an Piecewise Exponential model for univariate data. The model has parameterized
     hazard rate:
 
-    .. math::  h(t) = \begin{cases}
-                        1/\lambda_0,  & \text{if $t \le \tau_0$} \\
-                        1/\lambda_1 & \text{if $\tau_0 < t \le \tau_1$} \\
-                        1/\lambda_2 & \text{if $\tau_1 < t \le \tau_2$} \\
+    .. math::  h(t\;|\;x) = \begin{cases}
+                        1/\lambda_0(x),  & \text{if $t \le \tau_0$} \\
+                        1/\lambda_1(x) & \text{if $\tau_0 < t \le \tau_1$} \\
+                        1/\lambda_2(x) & \text{if $\tau_1 < t \le \tau_2$} \\
                         ...
                       \end{cases}
 
     You specify the breakpoints, :math:`\tau_i`, and *lifelines* will find the
     optional values for the parameters.
 
-    After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``plot``, ``cumulative_hazard_``
+    After calling the `.fit` method, you have access to properties like: ``params_``
     A summary of the fit is available with the method ``print_summary()``
 
-    Important
-    ----------
-    The parameterization of this model changed in lifelines 0.19.1. Previously, the cumulative hazard looked like
-    :math:`\lambda_i t`. The parameterization is now the reciprocal of :math:`\lambda_i`.
 
     Attributes
     ----------
@@ -124,9 +121,9 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         M = np.minimum(np.tile(bp, (n, 1)), T)
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
         lambdas_ = np.array(
-            [np.exp(np.dot(X, params[self._LOOKUP_SLICE["lambda_%d_" % i]])) for i in range(self.n_breakpoints)]
+            [np.exp(-np.dot(X, params[self._LOOKUP_SLICE["lambda_%d_" % i]])) for i in range(self.n_breakpoints)]
         )
-        return M * (1 / lambdas_.T)
+        return M * lambdas_.T
 
     def _log_hazard(self, params, T, X):
         # can be overwritten to improve convergence, see WeibullAFTFitter
@@ -327,7 +324,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
     def _fit_model(self, T, E, weights, X, show_progress=False, initial_point=None):
 
         if initial_point is None:
-            initial_point = np.ones((X.shape[1] * self.n_breakpoints))
+            initial_point = np.zeros((X.shape[1] * self.n_breakpoints))
 
         results = minimize(
             # using value_and_grad is much faster (takes advantage of shared computations) than spitting.
@@ -427,16 +424,16 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
 
     @property
     def _ll_null(self):
-        if hasattr(self, "__ll_null"):
-            return self.__ll_null
+        if hasattr(self, "_ll_null_"):
+            return self._ll_null_
 
         initial_point = np.zeros(len(self._fitted_parameter_names))
-        self.__ll_null = (
-            self.__class__(self.breakpoints[:-1])
+        self._ll_null_ = (
+            self.__class__(breakpoints=self.breakpoints[:-1], penalizer=self.penalizer, fit_intercept=True)
             .fit(pd.DataFrame({"T": self.durations, "E": self.event_observed}), "T", "E", initial_point=initial_point)
             ._log_likelihood
         )
-        return self.__ll_null
+        return self._ll_null_
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -523,7 +520,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats()},
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
             )
         )
 
@@ -595,7 +592,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
     def predict_percentile(self, X, p=0.5):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
-        individual does not cross 0.5, then the result is infinity.
+        individual does not cross 0.5 in the timeline (set in ``fit``), then the result is infinity.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
 
         Parameters
@@ -725,14 +722,9 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         columns = params_.index
 
         hazards = params_.loc[columns].to_frame(name="coefs")
-        hazards["se"] = z * standard_errors_.loc[columns]
 
-        if isinstance(hazards.index, pd.MultiIndex):
-            hazards = hazards.groupby(level=0, group_keys=False).apply(
-                lambda x: x.sort_values(by="coefs", ascending=True)
-            )
-        else:
-            hazards = hazards.sort_values(by="coefs", ascending=True)
+        hazards["se"] = z * standard_errors_.loc[columns]
+        hazards = hazards.swaplevel(1, 0).sort_index()
 
         yaxis_locations = list(range(len(columns)))
 
@@ -742,7 +734,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         ax.set_ylim(best_ylim)
 
         if isinstance(columns[0], tuple):
-            tick_labels = ["%s: %s" % (c, p) for (p, c) in hazards.index]
+            tick_labels = ["%s: %s" % (p, c) for (p, c) in hazards.index]
         else:
             tick_labels = [i for i in hazards.index]
 
@@ -790,55 +782,13 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
 
 
         """
-        from matplotlib import pyplot as plt
-
-        covariates = _to_list(covariates)
-        values = _to_array(values)
-        if len(values.shape) == 1:
-            values = values[None, :].T
-
-        if len(covariates) != values.shape[1]:
-            raise ValueError("The number of covariates must equal to second dimension of the values array.")
-
-        original_columns = self.params_.index.get_level_values(1)
-        for covariate in covariates:
-            if covariate not in original_columns:
-                raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
-
-        ax = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
-
-        # model X
-        x_bar = self._norm_mean.to_frame().T
-        X = pd.concat([x_bar] * values.shape[0])
-        if np.array_equal(np.eye(len(covariates)), values):
-            X.index = ["%s=1" % c for c in covariates]
-        else:
-            X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
-        for covariate, value in zip(covariates, values.T):
-            X[covariate] = value
-
-        # model ancillary X
-        x_bar_anc = self._norm_mean_ancillary.to_frame().T
-        ancillary_X = pd.concat([x_bar_anc] * values.shape[0])
-        for covariate, value in zip(covariates, values.T):
-            ancillary_X[covariate] = value
-
-        if self.fit_intercept:
-            X["_intercept"] = 1.0
-            ancillary_X["_intercept"] = 1.0
-
-        self.predict_survival_function(X, ancillary_X=ancillary_X).plot(ax=ax, **kwargs)
-        if plot_baseline:
-            self.predict_survival_function(x_bar, ancillary_X=x_bar_anc).rename(columns={0: "baseline survival"}).plot(
-                ax=ax, ls=":", color="k"
-            )
-        return ax
+        raise NotImplementedError()
 
     def _prep_inputs_for_prediction_and_return_parameters(self, X):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            X = X[self.params_["lambdas_0_"].index]
+            X = X[self.params_["lambda_0_"].index]
             if self.fit_intercept:
                 X["_intercept"] = 1.0
 
