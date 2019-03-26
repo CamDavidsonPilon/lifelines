@@ -34,6 +34,7 @@ from lifelines.utils import (
     string_justify,
     format_floats,
     format_p_value,
+    format_exp_floats,
     coalesce,
     check_nans_or_infs,
     pass_for_numeric_dtypes_or_raise_array,
@@ -303,7 +304,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
             raise ValueError(
-                "_bounds must be the same shape as _fitted_parameters_names must be the same shape as _initial_values"
+                "_bounds must be the same shape as _fitted_parameter_names must be the same shape as _initial_values"
             )
 
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
@@ -598,7 +599,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print("---")
 
         df = self.summary
-        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats()},
+            )
+        )
 
     def fit(
         self,
@@ -1336,7 +1342,12 @@ class ParametericRegressionFitter(BaseFitter):
 
         df = self.summary
         # Significance codes as last column
-        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats()},
+            )
+        )
 
         # Significance code explanation
         print("---")

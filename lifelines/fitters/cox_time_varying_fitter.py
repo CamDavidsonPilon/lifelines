@@ -36,6 +36,7 @@ from lifelines.utils import (
     check_nans_or_infs,
     string_justify,
     format_p_value,
+    format_exp_floats,
     format_floats,
     coalesce,
 )
@@ -644,7 +645,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         df = self.summary
         # Significance codes last
-        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats()},
+            )
+        )
 
         # Significance code explanation
         print("---")

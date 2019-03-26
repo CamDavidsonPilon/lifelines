@@ -24,6 +24,10 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``, ``lambda_`` and ``rho_``.
     A summary of the fit is available with the method ``print_summary()``.
 
+    Parameters
+    -----------
+    alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
 
     Important
     ----------

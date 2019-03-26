@@ -36,4 +36,5 @@ __all__ = [
     "WeibullAFTFitter",
     "LogLogisticAFTFitter",
     "LogNormalAFTFitter",
+    "PiecewiseExponentialFitter",
 ]

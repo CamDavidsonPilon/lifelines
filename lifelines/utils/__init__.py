@@ -1360,6 +1360,14 @@ def format_p_value(decimals):
     return lambda p: "<%s" % threshold if p < threshold else "{:4.{prec}f}".format(p, prec=decimals)
 
 
+def format_exp_floats():
+    """
+    sometimes the exp. column can be too large
+    """
+    threshold = 10 ** 5
+    return lambda n: "{:.2e}".format(n) if n > threshold else str(n)
+
+
 def format_floats(decimals):
     return lambda f: "{:4.{prec}f}".format(f, prec=decimals)
 
