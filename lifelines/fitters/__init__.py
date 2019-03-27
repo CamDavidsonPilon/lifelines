@@ -977,7 +977,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
             Specify a timeline that will be used for plotting and prediction
 
         weights_col: string
-            the column in df that specifies weights per observation.
+            the column in DataFrame that specifies weights per observation.
 
         robust: boolean, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator.
@@ -986,7 +986,8 @@ class ParametericAFTRegressionFitter(BaseFitter):
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
-        entry_col: TODO
+        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+            the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
         Returns
         -------
@@ -996,7 +997,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         Examples
         --------
-        >>> from lifelines import WeibullAFTFitter
+        >>> from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
         >>>
         >>> df = pd.DataFrame({
         >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
