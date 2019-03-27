@@ -126,7 +126,6 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         return M * lambdas_.T
 
     def _log_hazard(self, params, T, X):
-        # can be overwritten to improve convergence, see WeibullAFTFitter
         hz = self._hazard(params, T, X)
         hz = np.clip(hz, 1e-20, np.inf)
         return np.log(hz)
@@ -138,7 +137,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         ).sum()
         if self.penalizer > 0:
             coef_penalty = 0
-            for i in range(X.shape[1]):
+            for i in range(X.shape[1] - 1):  # assuming the intercept col is the last column...
                 coef_penalty = coef_penalty + (params[i :: X.shape[1]]).var()
         else:
             coef_penalty = 0
