@@ -334,6 +334,23 @@ class CoxPHFitter(BaseFitter):
             else pd.Series(np.ones((self._n_examples,)), index=df.index, name="weights")
         )
 
+        _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
+
+        X = df.astype(float)
+        T = T.astype(float)
+        E = E.astype(bool)
+
+        self._check_values(X, T, E, W)
+
+        return X, T, E, W, original_index, _clusters
+
+    def _check_values(self, X, T, E, W):
+        check_for_numeric_dtypes_or_raise(X)
+        check_nans_or_infs(T)
+        check_nans_or_infs(E)
+        check_nans_or_infs(X)
+        check_low_var(X)
+        check_complete_separation(X, E, T, self.event_col)
         # check to make sure their weights are okay
         if self.weights_col:
             if (W.astype(int) != W).any() and not self.robust:
@@ -346,25 +363,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 )
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
-
-        _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
-
-        X = df.astype(float)
-        T = T.astype(float)
-        E = E.astype(bool)
-
-        self._check_values(X, T, E, self.event_col)
-
-        return X, T, E, W, original_index, _clusters
-
-    @staticmethod
-    def _check_values(X, T, E, event_col):
-        check_for_numeric_dtypes_or_raise(X)
-        check_nans_or_infs(T)
-        check_nans_or_infs(E)
-        check_nans_or_infs(X)
-        check_low_var(X)
-        check_complete_separation(X, E, T, event_col)
 
     def _newton_rhaphson(
         self,

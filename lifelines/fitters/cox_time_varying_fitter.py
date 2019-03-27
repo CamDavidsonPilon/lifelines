@@ -192,7 +192,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         weights = df.pop("__weights").astype(float)
 
         df = df.astype(float)
-        self._check_values(df, events, start, stop, self.event_col)
+        self._check_values(df, events, start, stop)
 
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
@@ -224,12 +224,11 @@ class CoxTimeVaryingFitter(BaseFitter):
         self._n_unique = df.index.unique().shape[0]
         return self
 
-    @staticmethod
-    def _check_values(df, events, start, stop, event_col):
+    def _check_values(self, df, events, start, stop):
         # check_for_overlapping_intervals(df) # this is currently too slow for production.
         check_nans_or_infs(df)
         check_low_var(df)
-        check_complete_separation_low_variance(df, events, event_col)
+        check_complete_separation_low_variance(df, events, self.event_col)
         check_for_numeric_dtypes_or_raise(df)
         check_for_immediate_deaths(events, start, stop)
         check_for_instantaneous_events(start, stop)

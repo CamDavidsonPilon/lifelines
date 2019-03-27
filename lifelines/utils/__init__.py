@@ -868,6 +868,13 @@ df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlappi
         )
 
 
+def check_positivity(array):
+    if np.any(array <= 0):
+        raise ValueError(
+            "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
+        )
+
+
 def _low_var(df):
     return df.var(0) < 1e-4
 

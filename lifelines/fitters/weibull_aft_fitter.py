@@ -4,10 +4,10 @@ from scipy.special import gamma
 import pandas as pd
 
 from lifelines.utils import _get_index, coalesce
-from lifelines.fitters import ParametericRegressionFitter
+from lifelines.fitters import ParametericAFTRegressionFitter
 
 
-class WeibullAFTFitter(ParametericRegressionFitter):
+class WeibullAFTFitter(ParametericAFTRegressionFitter):
     r"""
     This class implements a Weibull AFT model. The model has parameterized
     form, with :math:`\lambda(x) = \exp\left(\beta_0 + \beta_1x_1 + ... + \beta_n x_n \right)`,

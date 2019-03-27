@@ -1,5 +1,20 @@
 ### Changelog
 
+#### 0.20.4
+
+##### New features
+ - left-truncation support in AFT models, using the `entry_col` kwarg in `fit()`
+ - `generate_datasets.piecewise_exponential_survival_data` for generating piecewise exp. data
+ - Faster `print_summary` for AFT models.
+
+##### API changes
+ - Pandas is now correctly pinned to >= 0.23.0. This was always the case, but not specified in setup.py correctly.
+
+##### Bug fixes
+ - Better handling for extremely large numbers in `print_summary`
+ - `PiecewiseExponentialFitter` is available with `from lifelines import *`.
+
+
 #### 0.20.3
 
 ##### New features

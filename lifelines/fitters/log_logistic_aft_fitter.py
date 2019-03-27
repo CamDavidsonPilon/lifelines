@@ -5,10 +5,10 @@ from autograd import numpy as np
 import pandas as pd
 
 from lifelines.utils import _get_index, coalesce
-from lifelines.fitters import ParametericRegressionFitter
+from lifelines.fitters import ParametericAFTRegressionFitter
 
 
-class LogLogisticAFTFitter(ParametericRegressionFitter):
+class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
     r"""
     This class implements a Log-Logistic AFT model. The model has parameterized
     form, with :math:`\alpha(x) = \exp\left(a_0 + a_1x_1 + ... + a_n x_n \right)`,

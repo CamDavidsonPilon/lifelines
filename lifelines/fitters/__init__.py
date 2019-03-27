@@ -41,6 +41,7 @@ from lifelines.utils import (
     check_for_numeric_dtypes_or_raise,
     check_complete_separation,
     check_low_var,
+    check_positivity,
     StatisticalWarning,
     StatError,
     median_survival_times,
@@ -655,10 +656,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             check_nans_or_infs(event_observed)
 
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
-        if np.any(self.durations <= 0):
-            raise ValueError(
-                "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
-            )
+        check_positivity(self.durations)
 
         if not self._KNOWN_MODEL:
             self._check_cumulative_hazard_is_monotone_and_positive(self.durations, self._initial_values)
@@ -898,9 +896,9 @@ class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
     _KNOWN_MODEL = True
 
 
-class ParametericRegressionFitter(BaseFitter):
+class ParametericAFTRegressionFitter(BaseFitter):
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):
-        super(ParametericRegressionFitter, self).__init__(alpha=alpha)
+        super(ParametericAFTRegressionFitter, self).__init__(alpha=alpha)
         self._hazard = egrad(self._cumulative_hazard, argnum=1)  # pylint: disable=unexpected-keyword-arg
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
@@ -913,10 +911,17 @@ class ParametericRegressionFitter(BaseFitter):
         hz = anp.clip(hz, 1e-20, np.inf)
         return anp.log(hz)
 
-    def _negative_log_likelihood(self, params, T, E, W, *Xs):
+    def _negative_log_likelihood(self, params, T, E, W, starts, *Xs):
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
-        ll = (W * E * self._log_hazard(params, T, *Xs)).sum() - (W * self._cumulative_hazard(params, T, *Xs)).sum()
+        non_zero_starts = starts > 0
+
+        ll = (
+            (W * E * self._log_hazard(params, T, *Xs)).sum()
+            - (W * self._cumulative_hazard(params, T, *Xs)).sum()
+            + self._cumulative_hazard(params, starts[non_zero_starts], *(X[non_zero_starts, :] for X in Xs)).sum()
+        )
+
         if self.penalizer > 0:
             penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
         else:
@@ -936,6 +941,7 @@ class ParametericRegressionFitter(BaseFitter):
         weights_col=None,
         robust=False,
         initial_point=None,
+        entry_col=None,
     ):
         """
         Fit the accelerated failure time model to a dataset.
@@ -980,6 +986,8 @@ class ParametericRegressionFitter(BaseFitter):
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
+        entry_col: TODO
+
         Returns
         -------
         self:
@@ -1015,6 +1023,7 @@ class ParametericRegressionFitter(BaseFitter):
         self.duration_col = duration_col
         self.event_col = event_col
         self.weights_col = weights_col
+        self.entry_col = entry_col
         self._n_examples = df.shape[0]
         self.timeline = timeline
         self.robust = robust
@@ -1032,43 +1041,34 @@ class ParametericRegressionFitter(BaseFitter):
             if (self.weights_col is not None)
             else pd.Series(np.ones(self._n_examples, dtype=float), index=df.index, name="weights")
         )
-        # check to make sure their weights are okay
-        if self.weights_col:
-            if (weights.astype(int) != weights).any() and not self.robust:
-                warnings.warn(
-                    dedent(
-                        """It appears your weights are not integers, possibly propensity or sampling scores then?
-                                        It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
-                                        estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"""
-                    ),
-                    StatisticalWarning,
-                )
-            if (weights <= 0).any():
-                raise ValueError("values in weight column %s must be positive." % self.weights_col)
+
+        entries = (
+            pass_for_numeric_dtypes_or_raise_array(df.pop(entry_col)).astype(float)
+            if (entry_col is not None)
+            else pd.Series(np.zeros(self._n_examples, dtype=float), index=df.index, name="start")
+        )
 
         self.durations = T.copy()
         self.event_observed = E.copy()
+        self.entry = entries.copy()
         self.weights = weights.copy()
 
-        if np.any(self.durations <= 0):
-            raise ValueError(
-                "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
-            )
-
         df = df.astype(float)
-        self._check_values(df, T, E, self.event_col)
+        self._check_values(df, T, E, weights, entries)
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
 
-            ancillary_df = ancillary_df.copy().drop([duration_col, event_col], axis=1, errors="ignore")
+            ancillary_df = ancillary_df.copy().drop(
+                [duration_col, event_col, weights_col, entry_col], axis=1, errors="ignore"
+            )
             ancillary_df = ancillary_df.astype(float)
-            self._check_values(ancillary_df, T, E, self.event_col)
-
+            check_for_numeric_dtypes_or_raise(df)
+            check_nans_or_infs(df)
         elif (ancillary_df is None) or (ancillary_df is False):
             ancillary_df = pd.DataFrame(np.ones((df.shape[0],)), index=df.index, columns=["_intercept"])
         elif ancillary_df is True:
-            ancillary_df = df.copy()
+            ancillary_df = df.copy().drop([duration_col, event_col, weights_col, entry_col], axis=1, errors="ignore")
 
         if self.fit_intercept:
             assert "_intercept" not in df
@@ -1098,6 +1098,7 @@ class ParametericRegressionFitter(BaseFitter):
             T.values,
             E.values,
             weights.values,
+            entries.values,
             normalize(df, 0, _norm_std).values,
             normalize(ancillary_df, 0, _norm_std_ancillary).values,
             show_progress=show_progress,
@@ -1107,48 +1108,73 @@ class ParametericRegressionFitter(BaseFitter):
 
         self.variance_matrix_ = self._compute_variance_matrix()
         self.standard_errors_ = self._compute_standard_errors(
-            T.values, E.values, weights.values, df.values, ancillary_df.values
+            T.values, E.values, weights.values, entries.values, df.values, ancillary_df.values
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._predicted_median = self.predict_median(df, ancillary_df)
 
         return self
 
-    def _check_values(self, df, T, E, event_col):
+    def _check_values(self, df, T, E, weights, entries):
         check_for_numeric_dtypes_or_raise(df)
+        check_nans_or_infs(df)
         check_nans_or_infs(T)
         check_nans_or_infs(E)
-        check_nans_or_infs(df)
-        check_complete_separation(df, E, T, event_col)
+        check_positivity(T)
+        check_complete_separation(df, E, T, self.event_col)
+
+        if self.weights_col:
+            if (weights.astype(int) != weights).any() and not self.robust:
+                warnings.warn(
+                    dedent(
+                        """It appears your weights are not integers, possibly propensity or sampling scores then?
+                                        It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
+                                        estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"""
+                    ),
+                    StatisticalWarning,
+                )
+            if (weights <= 0).any():
+                raise ValueError("values in weight column %s must be positive." % self.weights_col)
+
+        if self.entry_col:
+            count_invalid_rows = (entries > T).sum()
+            if count_invalid_rows:
+                warnings.warn("""There exist %d rows where entry > duration.""")
 
         if self.fit_intercept:
             check_low_var(df)
 
-    def _fit_model(self, T, E, weights, *Xs, show_progress=False, initial_point=None):
+    def _create_initial_point(self, T, E, entries, *Xs):
+        """
+        See https://github.com/CamDavidsonPilon/lifelines/issues/664
+        """
+        import lifelines  # kinda hacky but lol
+
+        def transform_ith_param(model, i):
+            param = model._fitted_parameters_[i]
+            if param <= 0:
+                return param
+            # technically this is suboptimal for log normal mu, but that's okay.
+            return np.log(param)
+
+        name = self.__class__.__name__.replace("AFT", "")
+        uni_model = getattr(lifelines, name)().fit(T, E, entry=entries)  # pylint: disable=not-callable
+
+        # we may use this later in print_summary
+        self._ll_null_ = uni_model._log_likelihood
+
+        return np.concatenate(
+            [
+                # tack on as the intercept
+                [0] * (_X.shape[1] - 1) + [transform_ith_param(uni_model, i)]
+                for i, _X in enumerate(Xs)
+            ]
+        )
+
+    def _fit_model(self, T, E, weights, entries, *Xs, show_progress=False, initial_point=None):
 
         if initial_point is None:
-            import lifelines  # kinda hacky but lol
-
-            def transform_ith_param(model, i):
-                param = model._fitted_parameters_[i]
-                if param <= 0:
-                    return param
-                # technically this is suboptimal for lognormal mu, but that's okay.
-                return np.log(param)
-
-            name = self.__class__.__name__.replace("AFT", "")
-            uni_model = getattr(lifelines, name)().fit(T, E)  # pylint: disable=not-callable
-
-            # we may use this later in print_summary
-            self.__ll_null = uni_model._log_likelihood
-
-            initial_point = np.concatenate(
-                [
-                    # tack on as the intercept
-                    [0] * (_X.shape[1] - 1) + [transform_ith_param(uni_model, i)]
-                    for i, _X in enumerate(Xs)
-                ]
-            )
+            initial_point = self._create_initial_point(T, E, entries, *Xs)
 
         results = minimize(
             # using value_and_grad is much faster (takes advantage of shared computations) than spitting.
@@ -1156,7 +1182,7 @@ class ParametericRegressionFitter(BaseFitter):
             initial_point,
             method=None if self.l1_ratio <= 0.0 else "L-BFGS-B",
             jac=True,
-            args=(T, E, weights, *Xs),
+            args=(T, E, weights, entries, *Xs),
             options={"disp": show_progress},
         )
         if show_progress or not results.success:
@@ -1165,7 +1191,7 @@ class ParametericRegressionFitter(BaseFitter):
         if results.success:
             sum_weights = weights.sum()
             # pylint: disable=no-value-for-parameter
-            hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, weights, *Xs)
+            hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, weights, entries, *Xs)
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
         name = self.__class__.__name__
@@ -1198,7 +1224,7 @@ class ParametericRegressionFitter(BaseFitter):
             unit_scaled_variance_matrix_ = np.linalg.pinv(self._hessian_)
             warning_text = dedent(
                 """\
-                The hessian was not invertable. We will instead approximate it using the psuedo-inverse.
+                The hessian was not invertible. We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
@@ -1216,14 +1242,14 @@ class ParametericRegressionFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def _compute_standard_errors(self, T, E, weights, *Xs):
+    def _compute_standard_errors(self, T, E, weights, entries, *Xs):
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_errors(T, E, weights, *Xs).diagonal())
+            se = np.sqrt(self._compute_sandwich_errors(T, E, weights, entries, *Xs).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.Series(se, name="se", index=self.params_.index)
 
-    def _compute_sandwich_errors(self, T, E, weights, *Xs):
+    def _compute_sandwich_errors(self, T, E, weights, entries, *Xs):
         with np.errstate(all="ignore"):
             # convergence will fail catastrophically elsewhere.
 
@@ -1232,8 +1258,8 @@ class ParametericRegressionFitter(BaseFitter):
             n_params = params.shape[0]
             J = np.zeros((n_params, n_params))
 
-            for t, e, w, x, ancillary_x in zip(T, E, weights, Xs[0], Xs[1]):
-                score_vector = ll_gradient(params, t, e, w, x, ancillary_x)
+            for t, e, w, s, x, ancillary_x in zip(T, E, weights, entries, Xs[0], Xs[1]):
+                score_vector = ll_gradient(params, t, e, w, s, x, ancillary_x)
                 J += np.outer(score_vector, score_vector)
 
             return self.variance_matrix_ @ J @ self.variance_matrix_
@@ -1254,7 +1280,13 @@ class ParametericRegressionFitter(BaseFitter):
         initial_point = np.zeros(len(self._fitted_parameter_names))
         self._ll_null_ = (
             self.__class__()
-            .fit(pd.DataFrame({"T": self.durations, "E": self.event_observed}), "T", "E", initial_point=initial_point)
+            .fit(
+                pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry}),
+                "T",
+                "E",
+                initial_point=initial_point,
+                entry_col="entry",
+            )
             ._log_likelihood
         )
         return self._ll_null_
