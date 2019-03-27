@@ -36,6 +36,7 @@ from lifelines.utils import (
     check_nans_or_infs,
     string_justify,
     format_p_value,
+    format_exp_floats,
     format_floats,
     coalesce,
 )
@@ -191,7 +192,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         weights = df.pop("__weights").astype(float)
 
         df = df.astype(float)
-        self._check_values(df, events, start, stop, self.event_col)
+        self._check_values(df, events, start, stop)
 
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
@@ -223,12 +224,11 @@ class CoxTimeVaryingFitter(BaseFitter):
         self._n_unique = df.index.unique().shape[0]
         return self
 
-    @staticmethod
-    def _check_values(df, events, start, stop, event_col):
+    def _check_values(self, df, events, start, stop):
         # check_for_overlapping_intervals(df) # this is currently too slow for production.
         check_nans_or_infs(df)
         check_low_var(df)
-        check_complete_separation_low_variance(df, events, event_col)
+        check_complete_separation_low_variance(df, events, self.event_col)
         check_for_numeric_dtypes_or_raise(df)
         check_for_immediate_deaths(events, start, stop)
         check_for_instantaneous_events(start, stop)
@@ -644,7 +644,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         df = self.summary
         # Significance codes last
-        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
+            )
+        )
 
         # Significance code explanation
         print("---")

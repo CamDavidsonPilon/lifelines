@@ -868,6 +868,13 @@ df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlappi
         )
 
 
+def check_positivity(array):
+    if np.any(array <= 0):
+        raise ValueError(
+            "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
+        )
+
+
 def _low_var(df):
     return df.var(0) < 1e-4
 
@@ -1358,6 +1365,16 @@ def _to_tuple(x):
 def format_p_value(decimals):
     threshold = 0.5 * 10 ** (-decimals)
     return lambda p: "<%s" % threshold if p < threshold else "{:4.{prec}f}".format(p, prec=decimals)
+
+
+def format_exp_floats(decimals):
+    """
+    sometimes the exp. column can be too large
+    """
+    threshold = 10 ** 5
+    return (
+        lambda n: "{:.{prec}e}".format(n, prec=decimals) if n > threshold else "{:4.{prec}f}".format(n, prec=decimals)
+    )
 
 
 def format_floats(decimals):

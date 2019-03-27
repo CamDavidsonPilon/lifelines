@@ -38,8 +38,8 @@ setup(
     install_requires=[
         "numpy>=1.6.0",
         "scipy>=1.0",
-        "pandas>=0.18",
-        """matplotlib>=3.0""",
+        "pandas>=0.23.0",
+        "matplotlib>=3.0",
         "bottleneck>=1.0",
         "autograd>=1.2",
     ],

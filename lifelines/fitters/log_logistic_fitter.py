@@ -23,6 +23,11 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``plot``, ``survival_function_``, ``alpha_`` and ``beta_``.
     A summary of the fit is available with the method 'print_summary()'
 
+    Parameters
+    -----------
+    alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
+
     Examples
     --------
 

@@ -5,11 +5,11 @@ from scipy.special import erfinv
 import pandas as pd
 
 from lifelines.utils import _get_index, coalesce
-from lifelines.fitters import ParametericRegressionFitter
+from lifelines.fitters import ParametericAFTRegressionFitter
 from lifelines.utils.logsf import logsf
 
 
-class LogNormalAFTFitter(ParametericRegressionFitter):
+class LogNormalAFTFitter(ParametericAFTRegressionFitter):
     r"""
     This class implements a Log-Normal AFT model. The model has parameterized
     form, with :math:`\mu(x) = \exp\left(a_0 + a_1x_1 + ... + a_n x_n \right)`,

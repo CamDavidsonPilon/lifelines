@@ -1382,6 +1382,29 @@ class TestAFTFitters:
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
 
+    def test_warning_is_present_if_entry_greater_than_duration(self, rossi, models):
+        rossi["start"] = 10
+        for fitter in models:
+            with pytest.warns(Warning, match="entry > duration"):
+                fitter.fit(rossi, "week", "arrest", entry_col="start")
+
+    def test_weights_col_and_start_col_is_not_included_in_the_output(self, models, rossi):
+        rossi["weights"] = 2.0
+        rossi["start"] = 0.0
+
+        for fitter in models:
+            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary_df=False)
+            assert "weights" not in fitter.params_.index.get_level_values(1)
+            assert "start" not in fitter.params_.index.get_level_values(1)
+
+            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary_df=True)
+            assert "weights" not in fitter.params_.index.get_level_values(1)
+            assert "start" not in fitter.params_.index.get_level_values(1)
+
+            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary_df=rossi)
+            assert "weights" not in fitter.params_.index.get_level_values(1)
+            assert "start" not in fitter.params_.index.get_level_values(1)
+
     def test_accept_initial_params(self, rossi, models):
         for fitter in models:
             fitter.fit(rossi, "week", "arrest", initial_point=np.ones(9))
@@ -1563,6 +1586,57 @@ class TestWeibullAFTFitter:
     @pytest.fixture
     def aft(self):
         return WeibullAFTFitter()
+
+    def test_fitted_coefs_with_eha_when_left_truncated(self, aft, rossi):
+        """
+        library(eha)
+        df = read.csv("~/code/lifelines/lifelines/datasets/rossi.csv")
+        df['start'] = 0
+        df[df['week'] > 10, 'start'] = 2
+        r = aftreg(Surv(start, week, arrest) ~ fin + race + wexp + mar + paro + prio + age, data=df)
+        summary(r)
+        """
+
+        rossi["start"] = 0
+        rossi.loc[rossi["week"] > 10, "start"] = 2
+
+        aft.fit(rossi, "week", "arrest", entry_col="start")
+
+        # it's the negative in EHA
+        npt.assert_allclose(aft.summary.loc[("lambda_", "fin"), "coef"], 0.28865175, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "age"), "coef"], 0.04323855, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "race"), "coef"], -0.23883560, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "wexp"), "coef"], 0.11339258, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "coef"], 0.33081212, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], 0.06303764, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.06954257, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 3.98650094, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 0.27564733, rtol=1e-4)
+
+    def test_fitted_se_with_eha_when_left_truncated(self, aft, rossi):
+        """
+        library(eha)
+        df = read.csv("~/code/lifelines/lifelines/datasets/rossi.csv")
+        df['start'] = 0
+        df[df['week'] > 10, 'start'] = 2
+        r = aftreg(Surv(start, week, arrest) ~ fin + race + wexp + mar + paro + prio + age, data=df)
+        summary(r)
+        """
+
+        rossi["start"] = 0
+        rossi.loc[rossi["week"] > 10, "start"] = 2
+
+        aft.fit(rossi, "week", "arrest", entry_col="start")
+
+        npt.assert_allclose(aft.summary.loc[("lambda_", "fin"), "se(coef)"], 0.148, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "age"), "se(coef)"], 0.017, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "race"), "se(coef)"], 0.235, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "wexp"), "se(coef)"], 0.162, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "se(coef)"], 0.292, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "se(coef)"], 0.149, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "se(coef)"], 0.022, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.446, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.104, rtol=1e-2)
 
     def test_fitted_coefs_match_with_flexsurv_has(self, aft, rossi):
         """
@@ -3439,8 +3513,8 @@ class TestCoxTimeVaryingFitter:
         df = pd.DataFrame.from_records(
             [
                 {"id": 1, "start": 0, "stop": 0, "var": 1.0, "event": 1},
-                {"id": 1, "start": 0, "stop": 10, "var": 1.0, "event": 1},
-                {"id": 2, "start": 0, "stop": 10, "var": 1.0, "event": 1},
+                {"id": 1, "start": 0, "stop": 10, "var": 2.0, "event": 1},
+                {"id": 2, "start": 0, "stop": 10, "var": 3.0, "event": 1},
             ]
         )
 

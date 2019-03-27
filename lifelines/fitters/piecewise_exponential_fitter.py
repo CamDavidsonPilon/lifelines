@@ -22,6 +22,13 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
     After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``plot``, ``cumulative_hazard_``
     A summary of the fit is available with the method ``print_summary()``
 
+    Parameters
+    -----------
+    breakpoints: list
+        a list of times when a new exponential model is constructed.
+    alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
+
     Important
     ----------
     The parameterization of this model changed in lifelines 0.19.1. Previously, the cumulative hazard looked like
@@ -66,10 +73,10 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
 
     def __init__(self, breakpoints, *args, **kwargs):
         breakpoints = np.sort(breakpoints)
-        if not (breakpoints[-1] < np.inf):
+        if breakpoints and not (breakpoints[-1] < np.inf):
             raise ValueError("Do not add inf to the breakpoints.")
 
-        if breakpoints[0] < 0:
+        if breakpoints and breakpoints[0] <= 0:
             raise ValueError("First breakpoint must be greater than 0.")
 
         self.breakpoints = np.append(breakpoints, [np.inf])
@@ -84,7 +91,6 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
 
         n = times.shape[0]
         times = times.reshape((n, 1))
-
         bp = self.breakpoints
         M = np.minimum(np.tile(bp, (n, 1)), times)
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])

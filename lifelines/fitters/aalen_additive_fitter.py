@@ -26,6 +26,7 @@ from lifelines.utils import (
     _to_list,
     format_floats,
     format_p_value,
+    format_exp_floats,
     survival_table_from_events,
     StatisticalWarning,
 )
@@ -563,7 +564,12 @@ It's important to know that the naive variance estimates of the coefficients are
         print("---")
 
         df = self.summary
-        print(df.to_string(float_format=format_floats(decimals), formatters={"p": format_p_value(decimals)}))
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
+            )
+        )
 
         # Significance code explanation
         print("---")

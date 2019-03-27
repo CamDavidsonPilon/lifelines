@@ -9,6 +9,46 @@ from scipy.optimize import newton
 from scipy.integrate import cumtrapz
 
 
+def piecewise_exponential_survival_data(n, breakpoints, lambdas):
+    """
+
+    Note
+    --------
+    No censoring is present here.
+
+    Examples
+    --------
+
+    >>> T = piecewise_exponential_survival_data(100000, [1, 3], [0.2, 3, 1.])
+    >>> NelsonAalenFitter().fit(T).plot()
+
+    """
+    assert len(breakpoints) == len(lambdas) - 1
+
+    breakpoints = np.append([0], breakpoints)
+
+    delta_breakpoints = np.diff(breakpoints)
+
+    T = np.empty(n)
+    for i in range(n):
+        U = np.random.random()
+        E = -np.log(U)
+
+        running_sum = 0
+        for delta, lambda_, bp in zip(delta_breakpoints, lambdas, breakpoints):
+            factor = lambda_ * delta
+            if E < running_sum + factor:
+                t = bp + (E - running_sum) / lambda_
+                break
+            running_sum += factor
+        else:
+            t = breakpoints[-1] + (E - running_sum) / lambdas[-1]
+
+        T[i] = t
+
+    return T
+
+
 def exponential_survival_data(n, cr=0.05, scale=1.0):
 
     t = stats.expon.rvs(scale=scale, size=n)
@@ -273,7 +313,7 @@ def cumulative_integral(fx, x):
 def construct_survival_curves(hazard_rates, timelines):
     """
     Given hazard rates, reconstruct the survival curves
-    
+
     Parameters
     ----------
     hazard_rates: (n,t) array

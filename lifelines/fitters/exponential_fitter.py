@@ -23,15 +23,15 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
     After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``lambda_``, ``cumulative_hazard_``
     A summary of the fit is available with the method ``print_summary()``
 
+    Parameters
+    -----------
+    alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
+
     Important
     ----------
     The parameterization of this model changed in lifelines 0.19.0. Previously, the cumulative hazard looked like
     :math:`\lambda t`. The parameterization is now the reciprocal of :math:`\lambda`.
-
-
-    Notes
-    -----
-    Reference: https://www4.stat.ncsu.edu/~dzhang2/st745/chap3.pdf
 
     Attributes
     ----------

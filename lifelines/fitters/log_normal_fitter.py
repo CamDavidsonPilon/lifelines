@@ -22,6 +22,12 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
     After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``mu_``, ``sigma_``.
     A summary of the fit is available with the method ``print_summary()``
 
+    Parameters
+    -----------
+    alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
+
+
     Attributes
     ----------
     cumulative_hazard_ : DataFrame

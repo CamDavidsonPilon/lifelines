@@ -732,7 +732,7 @@ located under ``lifelines.AalenAdditiveFitter``.
     +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
 
 
-I'm using the lovely library `patsy <https://github.com/pydata/patsy>`__ here to create a
+I'm using the lovely library `Patsy <https://github.com/pydata/patsy>`__ here to create a
 design matrix from my original dataframe.
 
 .. code:: python
@@ -856,6 +856,14 @@ Prime Minister Stephen Harper.
 
 Model selection in survival regression
 =========================================
+
+Parametric vs Semi-parametric models
+---------------------------------------
+Above, we've displayed two *semi-parametric* models (Cox model and Aalen's model), and a family of *parametric* AFT models. Which should you choose? What are the advantages and disadvantages of either? I suggest reading the two following StackExchange answers to get a better idea of what experts think:
+
+1. `In survival analysis, why do we use semi-parametric models (Cox proportional hazards) instead of fully parametric models? <https://stats.stackexchange.com/q/64739/11867>`__
+2. `In survival analysis, when should we use fully parametric models over semi-parametric ones? <https://stats.stackexchange.com/q/399544/11867>`__
+
 
 Model selection based on residuals
 -----------------------------------------------
