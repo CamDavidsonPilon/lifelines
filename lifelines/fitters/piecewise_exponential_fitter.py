@@ -77,6 +77,7 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
             raise ValueError("Do not add inf to the breakpoints.")
 
         if breakpoints and breakpoints[0] <= 0:
+            raise ValueError("Starting breakpoint must be greater than 0.")
 
         self.breakpoints = np.append(breakpoints, [np.inf])
         n_breakpoints = len(self.breakpoints)
