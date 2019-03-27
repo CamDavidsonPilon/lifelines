@@ -102,10 +102,10 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         super(PiecewiseExponentialRegressionFitter, self).__init__(alpha=alpha)
 
         breakpoints = np.sort(breakpoints)
-        if len(breakpoints) > 0 and not (breakpoints[-1] < np.inf):
+        if len(breakpoints) and not (breakpoints[-1] < np.inf):
             raise ValueError("Do not add inf to the breakpoints.")
 
-        if len(breakpoints) > 0 and breakpoints[0] < 0:
+        if len(breakpoints) and breakpoints[0] < 0:
             raise ValueError("First breakpoint must be greater than 0.")
 
         self.breakpoints = np.append(breakpoints, [np.inf])
@@ -321,10 +321,25 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         if self.fit_intercept:
             check_low_var(df)
 
+    def _create_initial_point(self, T, E, X):
+        """
+        See https://github.com/CamDavidsonPilon/lifelines/issues/664
+        """
+        from lifelines.fitters.piecewise_exponential_fitter import PiecewiseExponentialFitter
+
+        uni_model = PiecewiseExponentialFitter(self.breakpoints[:-1]).fit(T, E)  # pylint: disable=not-callable
+
+        # we may use this later in print_summary
+        self._ll_null_ = uni_model._log_likelihood
+
+        initial_point = np.zeros((X.shape[1] * self.n_breakpoints))
+        initial_point[X.shape[1] - 1 :: X.shape[1]] = np.log(uni_model._fitted_parameters_)
+        return initial_point
+
     def _fit_model(self, T, E, weights, X, show_progress=False, initial_point=None):
 
         if initial_point is None:
-            initial_point = np.zeros((X.shape[1] * self.n_breakpoints))
+            initial_point = self._create_initial_point(T, E, X)
 
         results = minimize(
             # using value_and_grad is much faster (takes advantage of shared computations) than spitting.

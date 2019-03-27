@@ -1145,7 +1145,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         if self.fit_intercept:
             check_low_var(df)
 
-    def _create_initial_point(self, T, E, entries, *Xs):
+    def _create_initial_point(self, T, E, weights, entries, *Xs):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
@@ -1175,7 +1175,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
     def _fit_model(self, T, E, weights, entries, *Xs, show_progress=False, initial_point=None):
 
         if initial_point is None:
-            initial_point = self._create_initial_point(T, E, entries, *Xs)
+            initial_point = self._create_initial_point(T, E, weights, entries, *Xs)
 
         results = minimize(
             # using value_and_grad is much faster (takes advantage of shared computations) than spitting.

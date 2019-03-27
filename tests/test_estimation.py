@@ -102,6 +102,11 @@ class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
         super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
 
 
+class PiecewiseExponentialRegressionFitterTesting(PiecewiseExponentialRegressionFitter):
+    def __init__(self, **kwargs):
+        super(PiecewiseExponentialRegressionFitterTesting, self).__init__([5.0], **kwargs)
+
+
 @pytest.fixture
 def data_pred2():
     N = 150

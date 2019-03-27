@@ -73,11 +73,11 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
 
     def __init__(self, breakpoints, *args, **kwargs):
         breakpoints = np.sort(breakpoints)
-        if breakpoints and not (breakpoints[-1] < np.inf):
+        if len(breakpoints) and not (breakpoints[-1] < np.inf):
             raise ValueError("Do not add inf to the breakpoints.")
 
-        if breakpoints and breakpoints[0] <= 0:
-            raise ValueError("Starting breakpoint must be greater than 0.")
+        if len(breakpoints) and breakpoints[0] <= 0:
+            raise ValueError("First breakpoint must be greater than 0.")
 
         self.breakpoints = np.append(breakpoints, [np.inf])
         n_breakpoints = len(self.breakpoints)
