@@ -11,10 +11,16 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     the experimental data, and the other is the predicted survival
     times from a model of some kind.
 
-    The concordance index is a value between 0 and 1 where,
-    0.5 is the expected result from random predictions,
-    1.0 is perfect concordance and,
-    0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
+    The c-index is the average of how often a model says X is greater than Y when, in the observed
+    data, X is indeed greater than Y. The c-index also handles how to handle censored values
+    (obviously, if Y is censored, it's hard to know if X is truly greater than Y).
+
+
+    The concordance index is a value between 0 and 1 where:
+
+    - 0.5 is the expected result from random predictions,
+    - 1.0 is perfect concordance and,
+    - 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
     Parameters
     ----------
@@ -42,7 +48,6 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     >>> from lifelines.utils import concordance_index
     >>> cph = CoxPHFitter().fit(df, 'T', 'E')
     >>> concordance_index(df['T'], -cph.predict_partial_hazard(df), df['E'])
-
 
     """
     event_times = np.asarray(event_times, dtype=float)
