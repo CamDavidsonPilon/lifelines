@@ -1826,7 +1826,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     print()
                     print(
                         fill(
-                            """With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)`` and looking for non-constant lines.""",
+                            """With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)`` and looking for non-constant lines. See link [A] below for a full example.""",
                             width=100,
                         )
                     )
@@ -1837,7 +1837,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             print()
             print(
                 "%d. Variable '%s' failed the non-proportional test: p-value is %s."
-                % (counter, variable, format_p_value(4)(minumum_observed_p_value))
+                % (counter, variable, format_p_value(4)(minumum_observed_p_value)),
+                end="\n\n",
             )
 
             if advice:
@@ -1850,7 +1851,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 if n_uniques <= 10 and value_counts.min() >= 5:
                     print(
                         fill(
-                            "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [B] below.".format(
+                            "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [E] below.".format(
                                 n_uniques, variable
                             ),
                             width=100,
@@ -1863,7 +1864,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                                 var=variable
                             ),
                             width=100,
-                        )
+                        ),
+                        end="\n\n",
                     )
                     print(
                         fill(
@@ -1871,15 +1873,17 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                                 var=variable
                             ),
                             width=100,
-                        )
+                        ),
+                        end="\n\n",
                     )
                     print(
                         fill(
-                            """   Advice 3: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
+                            """   Advice 3: try adding an interaction term with your time variable. See documentation in link [C] below.""".format(
                                 var=variable
                             ),
                             width=100,
-                        )
+                        ),
+                        end="\n\n",
                     )
 
             if show_plots:
@@ -1925,8 +1929,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     r"""
                 ---
                 [A]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
-                [B]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-1:-bin-variable-and-stratify-on-it
-                [C]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-2:-introduce-time-varying-covariates
+                [B]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Bin-variable-and-stratify-on-it
+                [C]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Introduce-time-varying-covariates
+                [D]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Modify-the-functional-form
+                [E]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Stratification
             """
                 )
             )
