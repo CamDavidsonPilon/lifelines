@@ -15,14 +15,14 @@
  - `PiecewiseExponentialFitter` is available with `from lifelines import *`.
 
 
-#### 0.20.3
+#### 0.20.3 - 2019-03-23
 
 ##### New features
  - Now `cumulative_density_` & `survival_function_` are _always_ present on a fitted `KaplanMeierFitter`.
  - New attributes/methods on `KaplanMeierFitter`: `plot_cumulative_density()`, `confidence_interval_cumulative_density_`, `plot_survival_function` and `confidence_interval_survival_function_`.
 
 
-#### 0.20.2
+#### 0.20.2 - 2019-03-21
 
 ##### New features
  - Left censoring is now supported in univariate parametric models: `.fit(..., left_censorship=True)`. Examples are in the docs.
@@ -40,7 +40,8 @@
  - `qth_survival_times` for a truncated CDF would return `np.inf` if the q parameter was below the truncation limit. This should have been `-np.inf`
 
 
-#### 0.20.1
+#### 0.20.1 - 2019-03-16
+
  - Some performance improvements to `CoxPHFitter` (about 30%). I know it may seem silly, but we are now about the same or slighty faster than the Cox model in R's `survival` package (for some testing datasets and some configurations). This is a big deal, because 1) lifelines does more error checking prior, 2) R's cox model is written in C, and we are still pure Python/NumPy, 3) R's cox model has decades of development.
  - suppressed unimportant warnings
 
@@ -48,7 +49,8 @@
  - Previously, lifelines _always_ added a 0 row to `cph.baseline_hazard_`, even if there were no event at this time. This is no longer the case. A 0 will still be added if there is a duration (observed or not) at 0 occurs however.
 
 
-#### 0.20.0
+#### 0.20.0 - 2019-03-05
+
  - Starting with 0.20.0, only Python3 will be supported. Over 75% of recent installs where Py3.
  - Updated minimum dependencies, specifically Matplotlib and Pandas.
 
@@ -65,18 +67,18 @@
 
 
 
-#### 0.19.5
+#### 0.19.5 - 2019-02-26
 
 ##### New features
  -  `plot_covariate_group` can accept multiple covariates to plot. This is useful for columns that have implicit correlation like polynomial features or categorical variables.
  - Convergence improvements for AFT models.
 
-#### 0.19.4
+#### 0.19.4 - 2019-02-25
 
 ##### Bug fixes
  - remove some bad print statements in `CoxPHFitter`.
 
-#### 0.19.3
+#### 0.19.3 - 2019-02-25
 
 ##### New features
  - new AFT models: `LogNormalAFTFitter` and `LogLogisticAFTFitter`.
@@ -84,7 +86,7 @@
  - Robust errors (sandwich errors) are now avilable in AFT models using the `robust=True` kwarg in `fit`.
  - Performance increase to `print_summary` in the `CoxPHFitter` and `CoxTimeVaryingFitter` model.
 
-#### 0.19.2
+#### 0.19.2 - 2019-02-22
 
 ##### New features
  - `ParametricUnivariateFitters`, like `WeibullFitter`, have smoothed plots when plotting (vs stepped plots)
@@ -93,7 +95,7 @@
  - The `ExponentialFitter` log likelihood _value_ was incorrect - inference was correct however.
  - Univariate fitters are more flexiable and can allow 2-d and DataFrames as inputs.
 
-#### 0.19.1
+#### 0.19.1 - 2019-02-21
 
 ##### New features
  - improved stability of `LogNormalFitter`
@@ -103,7 +105,7 @@
  - **Important**: we changed the parameterization of the `PiecewiseExponential` to the same as `ExponentialFitter` (from `\lambda * t` to `t / \lambda`).
 
 
-#### 0.19.0
+#### 0.19.0 - 2019-02-20
 
 ##### New features
  - New regression model `WeibullAFTFitter` for fitting accelerated failure time models. Docs have been added to our [documentation](https://lifelines.readthedocs.io/) about how to use `WeibullAFTFitter` (spoiler: it's API is similar to the other regression models) and how to interpret the output.
@@ -125,28 +127,33 @@
  - Fixed a calculation bug in the concordance index for stratified Cox models. Thanks @airanmehr!
  - Fixed some Pandas <0.24 bugs.
 
-#### 0.18.6
+#### 0.18.6 - 2019-02-13
+
  - some improvements to the output of `check_assumptions`. `show_plots` is turned to `False` by default now. It only shows `rank` and `km` p-values now.
  - some performance improvements to `qth_survival_time`.
 
-#### 0.18.5
+#### 0.18.5 - 2019-02-11
+
  - added new plotting methods to parametric univariate models: `plot_survival_function`, `plot_hazard` and `plot_cumulative_hazard`. The last one is an alias for `plot`.
  - added new properties to parametric univarite models: `confidence_interval_survival_function_`, `confidence_interval_hazard_`, `confidence_interval_cumulative_hazard_`. The last one is an alias for `confidence_interval_`.
  - Fixed some overflow issues with `AalenJohansenFitter`'s variance calculations when using large datasets.
  - Fixed an edgecase in `AalenJohansenFitter` that causing some datasets with to be jittered too often.
  - Add a new kwarg to  `AalenJohansenFitter`, `calculate_variance` that can be used to turn off variance calculations since this can take a long time for large datasets. Thanks @pzivich!
 
-#### 0.18.4
+#### 0.18.4 - 2019-02-10
+
  - fixed confidence intervals in cumulative hazards for parametric univarite models. They were previously
    serverly depressed.
  - adding left-truncation support to parametric univarite models with the `entry` kwarg in `.fit`
 
-#### 0.18.3
+#### 0.18.3 - 2019-02-07
+
  - Some performance improvements to parametric univariate models.
  - Suppressing some irrelevant NumPy and autograd warnings, so lifeline warnings are more noticeable.
  - Improved some warning and error messages.
 
-#### 0.18.2
+#### 0.18.2 - 2019-02-05
+
  - New univariate fitter `PiecewiseExponentialFitter` for creating a stepwise hazard model. See docs online.
  - Ability to create novel parametric univariate models using the new `ParametericUnivariateFitter` super class. See docs online for how to do this.
  - Unfortunately, parametric univariate fitters are not serializable with `pickle`. The library `dill` is still useable.
@@ -154,13 +161,14 @@
  - `LogNormalFitter` no longer models `log_sigma`.
 
 
-#### 0.18.1
+#### 0.18.1 2019-02-02
  - bug fixes in `LogNormalFitter` variance estimates
  - improve convergence of `LogNormalFitter`. We now model the log of sigma internally, but still expose sigma externally.
  - use the `autograd` lib to help with gradients.
  - New `LogLogisticFitter` univariate fitter available.
 
-#### 0.18.0
+#### 0.18.0 - 2019-01-31
+
  - `LogNormalFitter` is a new univariate fitter you can use.
  - `WeibullFitter` now correctly returns the confidence intervals (previously returned only NaNs)
  - `WeibullFitter.print_summary()` displays p-values associated with its parameters not equal to 1.0 - previously this was (implicitly) comparing against 0, which is trivially always true (the parameters must be greater than 0)
@@ -174,28 +182,32 @@
  - new warning message when Cox models detects possible non-unique solutions to maximum likelihood.
  - Generally: clean up lifelines exception handling. Ex: catch `LinAlgError: Matrix is singular.` and report back to the user advice.
 
-#### 0.17.5
+#### 0.17.5 - 2019-01-25
+
  - more bugs in `plot_covariate_groups` fixed when using non-numeric strata.
 
-#### 0.17.4
+#### 0.17.4 -2019-01-25
+
  - Fix bug in `plot_covariate_groups` that wasn't allowing for strata to be used.
  - change name of `multicenter_aids_cohort_study` to `load_multicenter_aids_cohort_study`
  - `groups` is now called `values` in `CoxPHFitter.plot_covariate_groups`
 
-#### 0.17.3
+#### 0.17.3 - 2019-01-24
  - Fix in `compute_residuals` when using `schoenfeld` and the minumum duration has only censored subjects.
 
-#### 0.17.2
+#### 0.17.2 2019-01-22
  - Another round of serious performance improvements for the Cox models. Up to 2x faster for CoxPHFitter and CoxTimeVaryingFitter. This was mostly the result of using NumPy's `einsum` to simplify a previous `for` loop. The downside is the code is more esoteric now. I've added comments as necessary though 🤞
 
-#### 0.17.1
+#### 0.17.1 - 2019-01-20
+
  - adding bottleneck as a dependency. This library is highly-recommended by Pandas, and in lifelines we see some nice performance improvements with it too. (~15% for `CoxPHFitter`)
  - There was a small bug in `CoxPHFitter` when using `batch_mode` that was causing coefficients to deviate from their MLE value. This bug eluded tests, which means that it's discrepancy was less than 0.0001 difference. It's fixed now, and even more accurate tests are added.
  - Faster `CoxPHFitter._compute_likelihood_ratio_test()`
  - Fixes a Pandas performance warning in `CoxTimeVaryingFitter`.
  - Performances improvements to `CoxTimeVaryingFitter`.
 
-#### 0.17.0
+#### 0.17.0 - 2019-01-11
+
  - corrected behaviour in `CoxPHFitter` where `score_` was not being refreshed on every new `fit`.
  - Reimplentation of `AalenAdditiveFitter`. There were significant changes to it:
    - implementation is at least 10x faster, and possibly up to 100x faster for some datasets.
@@ -207,17 +219,20 @@
  - some plotting improvemnts to `plotting.plot_lifetimes`
 
 
-#### 0.16.3
+#### 0.16.3 - 2019-01-03
+
  - More `CoxPHFitter` performance improvements. Up to a 40% reduction vs 0.16.2 for some datasets.
 
-#### 0.16.2
+#### 0.16.2 - 2019-01-02
+
  - Fixed `CoxTimeVaryingFitter` to allow more than one variable to be stratafied
  - Significant performance improvements for `CoxPHFitter` with dataset has lots of duplicate times. See https://github.com/CamDavidsonPilon/lifelines/issues/591
 
-#### 0.16.1
+#### 0.16.1 - 2019-01-01
  - Fixed py2 division error in `concordance` method.
 
-#### 0.16.0
+#### 0.16.0 - 2019-01-01
+
  - Drop Python 3.4 support.
  - introduction of residual calculations in `CoxPHFitter.compute_residuals`. Residuals include "schoenfeld", "score", "delta_beta", "deviance", "martingale", and "scaled_schoenfeld".
  - removes `estimation` namespace for fitters. Should be using `from lifelines import xFitter` now. Thanks @usmanatron
@@ -234,21 +249,22 @@
  - `CoxTimeVaryingFitter` now accepts `strata`.
 
 #### 0.15.4
+
  - bug fix for the Cox model likelihood ratio test when using non-trivial weights.
 
-#### 0.15.3
+#### 0.15.3 - 2018-12-18
  - Only allow matplotlib less than 3.0.
 
-#### 0.15.2
+#### 0.15.2 - 2018-11-23
  - API changes to `plotting.plot_lifetimes`
  - `cluster_col` and `strata` can be used together in `CoxPHFitter`
  - removed `entry` from `ExponentialFitter` and `WeibullFitter` as it was doing nothing.
 
-#### 0.15.1
+#### 0.15.1 - 2018-11-23
  - Bug fixes for v0.15.0
  - Raise NotImplementedError if the `robust` flag is used in `CoxTimeVaryingFitter` - that's not ready yet.
 
-#### 0.15.0
+#### 0.15.0 - 2018-11-22
  - adding `robust` params to `CoxPHFitter`'s `fit`. This enables atleast i) using non-integer weights in the model (these could be sampling weights like IPTW), and ii) mis-specified models (ex: non-proportional hazards). Under the hood it's a sandwich estimator. This does not handle ties, so if there are high number of ties, results may significantly differ from other software.
  - `standard_errors_` is now a property on fitted `CoxPHFitter` which describes the standard errors of the coefficients.
  - `variance_matrix_` is now a property on fitted `CoxPHFitter` which describes the variance matrix of the coefficients.
@@ -272,15 +288,15 @@
  - Shifting the "signficance codes" for p-values down an order of magnitude. (Example, p-values between 0.1 and 0.05 are not noted at all and p-values between 0.05 and 0.1 are noted with `.`, etc.). This deviates with how they are presented in other software. There is an argument to be made to remove p-values from lifelines altogether (_become the changes you want to see in the world_ lol), but I worry that people could compute the p-values by hand incorrectly, a worse outcome I think. So, this is my stance. P-values between 0.1 and 0.05 offer _very_ little information, so they are removed. There is a growing movement in statistics to shift "signficant" findings to p-values less than 0.01 anyways.
  - New fitter for cumulative incidence of multiple risks `AalenJohansenFitter`. Thanks @pzivich! See "Methodologic Issues When Estimating Risks in Pharmacoepidemiology" for a nice overview of the model.
 
-#### 0.14.6
+#### 0.14.6 - 2018-07-02
  - fix for n > 2 groups in `multivariate_logrank_test` (again).
  - fix bug for when `event_observed` column was not boolean.
 
-#### 0.14.5
+#### 0.14.5 - 2018-06-29
  - fix for n > 2 groups in `multivariate_logrank_test`
  - fix weights in KaplanMeierFitter when using a pandas Series.
 
-#### 0.14.4
+#### 0.14.4 - 2018-06-14
  - Adds `baseline_cumulative_hazard_` and `baseline_survival_` to `CoxTimeVaryingFitter`. Because of this, new prediction methods are available.
  - fixed a bug in `add_covariate_to_timeline` when using `cumulative_sum` with multiple columns.
  - Added `Likelihood ratio test` to `CoxPHFitter.print_summary` and `CoxTimeVaryingFitter.print_summary`
@@ -288,15 +304,15 @@
  - New `delay` parameter in `add_covariate_to_timeline`
  - removed `two_sided_z_test` from `statistics`
 
-#### 0.14.3
+#### 0.14.3 - 2018-05-24
  - fixes a bug when subtracting or dividing two `UnivariateFitters` with labels.
  - fixes an import error with using `CoxTimeVaryingFitter` predict methods.
  - adds a `column` argument to `CoxTimeVaryingFitter` and `CoxPHFitter` `plot` method to plot only a subset of columns.
 
-#### 0.14.2
+#### 0.14.2 - 2018-05-18
  - some quality of life improvements for working with `CoxTimeVaryingFitter` including new `predict_` methods.
 
-#### 0.14.1
+#### 0.14.1 - 2018-04-01
  - fixed bug with using weights and strata in `CoxPHFitter`
  - fixed bug in using non-integer weights in `KaplanMeierFitter`
  - Performance optimizations in `CoxPHFitter` for up to 40% faster completion of `fit`.
@@ -305,14 +321,14 @@
  - Performance optimizations in `AalenAdditiveFitter` for up to 50% faster completion of `fit` for large dataframes, and up to 10% faster for small dataframes.
 
 
-#### 0.14.0
+#### 0.14.0 - 2018-03-03
  - adding `plot_covariate_groups` to `CoxPHFitter` to visualize what happens to survival as we vary a covariate, all else being equal.
  - `utils` functions like `qth_survival_times` and `median_survival_times` now return the transpose of the DataFrame compared to previous version of lifelines. The reason for this is that we often treat survival curves as columns in DataFrames, and functions of the survival curve as index (ex: KaplanMeierFitter.survival_function_ returns a survival curve _at_ time _t_).
  - `KaplanMeierFitter.fit` and `NelsonAalenFitter.fit` accept a `weights` vector that can be used for pre-aggregated datasets. See this [issue](https://github.com/CamDavidsonPilon/lifelines/issues/396).
  - Convergence errors now return a custom `ConvergenceWarning` instead of a `RuntimeWarning`
  - New checks for complete separation in the dataset for regressions.
 
-#### 0.13.0
+#### 0.13.0 - 2017-12-22
  - removes `is_significant` and `test_result` from `StatisticalResult`. Users can instead choose their significance level by comparing to `p_value`. The string representation of this class has changed aswell.
  - `CoxPHFitter` and `AalenAdditiveFitter` now have a `score_` property that is the concordance-index of the dataset to the fitted model.
  - `CoxPHFitter` and `AalenAdditiveFitter` no longer have the `data` property. It was an _almost_ duplicate of the training data, but was causing the model to be very large when serialized.
@@ -338,15 +354,15 @@
  - Changing liscense to valilla MIT.
  - Speed up `NelsonAalenFitter.fit` considerably.
 
-#### 0.11.1
+#### 0.11.1 - 2017-06-22
  - Python3 fix for `CoxPHFitter.plot`.
 
-#### 0.11.0
+#### 0.11.0 - 2017-06-21
  - fixes regression in `KaplanMeierFitter.plot` when using Seaborn and lifelines.
  - introduce a new `.plot` function to a fitted `CoxPHFitter` instance. This plots the hazard coefficients and their confidence intervals.
  - in all plot methods, the `ix` kwarg has been deprecated in favour of a new `loc` kwarg. This is to align with Pandas deprecating `ix`
 
-#### 0.10.1
+#### 0.10.1 - 2017-06-05
  - fix in internal normalization for `CoxPHFitter` predict methods.
 
 #### 0.10.0
@@ -376,7 +392,7 @@
  - removing the `predict` method in CoxPHFitter and AalenAdditiveFitter. This is because the choice of `predict_median` as a default was causing too much confusion, and no other natual choice as a default was available. All other `predict_` methods remain.
  - Default predict method in `k_fold_cross_validation` is now `predict_expectation`
 
-#### 0.8.1
+#### 0.8.1 - 2015-08-01
  - supports matplotlib 1.5.
  - introduction of a param `nn_cumulative_hazards` in AalenAdditiveModel's `__init__` (default True). This parameter will truncate all non-negative cumulative hazards in prediction methods to 0.
  - bug fixes including:
@@ -405,7 +421,7 @@ categorical variables in your dataset.
 - refactor each fitter into it's own submodule. For now, the tests are still in the same file. This will also *not* break the API.
 
 
-#### 0.7.0
+#### 0.7.0 - 2015-03-01
 - allow for multiple fitters to be passed into `k_fold_cross_validation`.
 - statistical tests in `lifelines.statistics`. now return a `StatisticalResult` object with properties like `p_value`, `test_results`, and `summary`.
 - fixed a bug in how log-rank statistical tests are performed. The covariance matrix was not being correctly calculated. This resulted in slightly different p-values.
@@ -418,7 +434,7 @@ categorical variables in your dataset.
 so if your work is to sum up the survival function (for expected values or something similar), it's more difficult to
 make a mistake.
 
-#### 0.6.0
+#### 0.6.0 - 2015-02-04
 
 - Inclusion of the univariate fitters `WeibullFitter` and `ExponentialFitter`.
 - Removing `BayesianFitter` from lifelines.
@@ -432,7 +448,7 @@ is `smoothing_penalizer`.
 - In `KaplanMeierFitter`, `epsilon` has been renamed to `precision`.
 
 
-#### 0.5.1
+#### 0.5.1 - 2014-12-24
 
 - New API for `CoxPHFitter` and `AalenAdditiveFitter`: the default arguments for `event_col` and `duration_col`. `duration_col` is now mandatory, and `event_col` now accepts a column, or by default, `None`, which assumes all events are observed (non-censored).
 - Fix statistical tests.
@@ -442,7 +458,7 @@ is `smoothing_penalizer`.
 - Adding "At Risk" counts option to univariate fitter `plot` methods, `.plot(at_risk_counts=True)`, and the function `lifelines.plotting.add_at_risk_counts`.
 - Fix bug Epanechnikov kernel.
 
-#### 0.5.0
+#### 0.5.0 - 2014-12-07
 
 - move testing to py.test
 - refactor tests into smaller files
@@ -451,7 +467,7 @@ is `smoothing_penalizer`.
 - Alternate metrics can be used for `k_fold_cross_validation`.
 
 
-#### 0.4.4
+#### 0.4.4 - 2014-11-27
 
  - Lots of improvements to numerical stability (but something things still need work)
  - Additions to `summary` in CoxPHFitter.
@@ -459,7 +475,7 @@ is `smoothing_penalizer`.
  - Fixes bug in 1-d input not returning in CoxPHFitter
  - Lots of new tests.
 
-#### 0.4.3
+#### 0.4.3 - 2014-07-23
  - refactoring of `qth_survival_times`: it can now accept an iterable (or a scalar still) of probabilities in the q argument, and will return a DataFrame with these as columns. If len(q)==1 and a single survival function is given, will return a scalar, not a DataFrame. Also some good speed improvements.
  - KaplanMeierFitter and NelsonAalenFitter now have a `_label` property that is passed in during the fit.
  - KaplanMeierFitter/NelsonAalenFitter's inital `alpha` value is overwritten if a new `alpha` value is passed
@@ -468,7 +484,7 @@ is `smoothing_penalizer`.
     med(S(t | T>s)) - s, human readable: the estimated time left of living, given an individual is aged s.
 - Adds option `include_likelihood` to CoxPHFitter fit method to save the final log-likelihood value.
 
-#### 0.4.2
+#### 0.4.2 - 2014-06-19
 
  - Massive speed improvements to CoxPHFitter.
  - Additional prediction method: `predict_percentile` is available on CoxPHFitter and AalenAdditiveFitter. Given a percentile, p, this function returns the value t such that *S(t | x) = p*. It is a generalization of `predict_median`.
@@ -487,7 +503,7 @@ is `smoothing_penalizer`.
 - fixing `regression_dataset` in `datasets`.
 
 
-#### 0.4.1
+#### 0.4.1 - 2014-06-11
 
  - `CoxFitter` is now known as `CoxPHFitter`
  - refactoring some tests that used redundant data from `lifelines.datasets`.
@@ -499,7 +515,7 @@ is `smoothing_penalizer`.
  - Adding a Changelog.
  - more sanitizing for the statistical tests =)
 
-#### 0.4.0
+#### 0.4.0 - 2014-06-08
 
  - `CoxFitter` implements Cox Proportional Hazards model in lifelines.
  - lifelines moves the wheels distributions.

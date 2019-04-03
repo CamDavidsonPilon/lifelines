@@ -1809,7 +1809,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         for variable in self.hazards_.index:
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
-            if minumum_observed_p_value > p_value_threshold:
+            if np.round(minumum_observed_p_value, 2) > p_value_threshold:
                 continue
 
             counter += 1
@@ -1826,7 +1826,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     print()
                     print(
                         fill(
-                            """With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)`` and looking for non-constant lines.""",
+                            """With that in mind, it's best to use a combination of statistical tests and visual tests to determine the most serious violations. Produce visual plots using ``check_assumptions(..., show_plots=True)`` and looking for non-constant lines. See link [A] below for a full example.""",
                             width=100,
                         )
                     )
@@ -1837,7 +1837,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             print()
             print(
                 "%d. Variable '%s' failed the non-proportional test: p-value is %s."
-                % (counter, variable, format_p_value(4)(minumum_observed_p_value))
+                % (counter, variable, format_p_value(4)(minumum_observed_p_value)),
+                end="\n\n",
             )
 
             if advice:
@@ -1847,10 +1848,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
                 # Arbitrary chosen 10 and 4 to check for ability to use strata col.
                 # This should capture dichotomous / low cardinality values.
-                if n_uniques <= 10 and value_counts.min() >= 4:
+                if n_uniques <= 10 and value_counts.min() >= 5:
                     print(
                         fill(
-                            "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [B] below.".format(
+                            "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [E] below.".format(
                                 n_uniques, variable
                             ),
                             width=100,
@@ -1859,19 +1860,30 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 else:
                     print(
                         fill(
-                            """   Advice: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}', ...]` in the call in `.fit`. See documentation in link [B] below.""".format(
+                            """   Advice 1: the functional form of the variable '{var}' might be incorrect. That is, there may be non-linear terms missing. The proportional hazard test used is very sensitive to incorrect functional forms. See documentation in link [D] below on how to specify a functional form.""".format(
                                 var=variable
                             ),
                             width=100,
-                        )
+                        ),
+                        end="\n\n",
                     )
                     print(
                         fill(
-                            """   Alternative Advice: try adding an interaction term with your time variable. See documentation in link [A] and specifically link [C] below.""".format(
+                            """   Advice 2: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}', ...]` in the call in `.fit`. See documentation in link [B] below.""".format(
                                 var=variable
                             ),
                             width=100,
-                        )
+                        ),
+                        end="\n\n",
+                    )
+                    print(
+                        fill(
+                            """   Advice 3: try adding an interaction term with your time variable. See documentation in link [C] below.""".format(
+                                var=variable
+                            ),
+                            width=100,
+                        ),
+                        end="\n\n",
                     )
 
             if show_plots:
@@ -1917,8 +1929,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     r"""
                 ---
                 [A]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
-                [B]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-1:-bin-variable-and-stratify-on-it
-                [C]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Option-2:-introduce-time-varying-covariates
+                [B]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Bin-variable-and-stratify-on-it
+                [C]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Introduce-time-varying-covariates
+                [D]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Modify-the-functional-form
+                [E]  https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html#Stratification
             """
                 )
             )
