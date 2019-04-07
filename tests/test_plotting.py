@@ -16,6 +16,7 @@ from lifelines import (
     LogLogisticFitter,
     WeibullAFTFitter,
     ExponentialFitter,
+    AalenJohansenFitter,
 )
 
 from tests.test_estimation import known_parametric_univariate_fitters
@@ -115,6 +116,33 @@ class TestPlotting:
         naf.fit(data2)
         naf.plot(ax=ax, color="k")
         self.plt.title("test_naf_plotting_with_custom_coloirs")
+        self.plt.show(block=block)
+        return
+
+    def test_ajf_plotting(self, block):
+        E = [0, 1, 1, 2, 2, 0]
+        T = [1, 2, 3, 4, 5, 6]
+        ajf = AalenJohansenFitter().fit(T, E, event_of_interest=1)
+        ajf.plot()
+        self.plt.title("test_ajf_plotting")
+        self.plt.show(block=block)
+        return
+
+    def test_ajf_plotting_no_confidence_intervals(self, block):
+        E = [0, 1, 1, 2, 2, 0]
+        T = [1, 2, 3, 4, 5, 6]
+        ajf = AalenJohansenFitter(calculate_variance=False).fit(T, E, event_of_interest=1)
+        ajf.plot(ci_show=False)
+        self.plt.title("test_ajf_plotting_no_confidence_intervals")
+        self.plt.show(block=block)
+        return
+
+    def test_ajf_plotting_with_add_count_at_risk(self, block):
+        E = [0, 1, 1, 2, 2, 0]
+        T = [1, 2, 3, 4, 5, 6]
+        ajf = AalenJohansenFitter().fit(T, E, event_of_interest=1)
+        ajf.plot(at_risk_counts=True)
+        self.plt.title("test_ajf_plotting_with_add_count_at_risk")
         self.plt.show(block=block)
         return
 

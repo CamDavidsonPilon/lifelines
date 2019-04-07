@@ -4022,7 +4022,7 @@ class TestAalenJohansenFitter:
         variance_from_sas = np.array([0.0, 0.0, 0.0, 0.0, 0.032, 0.048, 0.048])
 
         fitter.fit(duration, event_observed, event_of_interest=2)
-        npt.assert_allclose(variance_from_sas, np.array(fitter.variance))
+        npt.assert_allclose(variance_from_sas, np.array(fitter.variance_))
 
     def test_ci_calculation_against_sas(self, fitter, duration, event_observed):
         ci_from_sas = np.array(
