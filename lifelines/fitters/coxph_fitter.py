@@ -451,6 +451,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                     h += _h
                     ll += _ll
 
+            if i == 1 and np.all(beta == 0):
+                # this is a neat optimization, the null partial likelihood
+                # is the same as the full partial but evaluated at zero.
+                # if the user supplied a non-trivial initial point, we need to delay this.
+                self._log_likelihood_null = ll
+
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
                 g -= self.penalizer * beta
@@ -1278,16 +1284,18 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
         """
-        if self._batch_mode:
-            ll_null = self._trivial_log_likelihood_batch(
-                self.durations.values, self.event_observed.values, self.weights.values
-            )
+        if hasattr(self, "_log_likelihood_null"):
+            ll_null = self._log_likelihood_null
         else:
-            ll_null = self._trivial_log_likelihood_single(
-                self.durations.values, self.event_observed.values, self.weights.values
-            )
+            if self._batch_mode:
+                ll_null = self._trivial_log_likelihood_batch(
+                    self.durations.values, self.event_observed.values, self.weights.values
+                )
+            else:
+                ll_null = self._trivial_log_likelihood_single(
+                    self.durations.values, self.event_observed.values, self.weights.values
+                )
         ll_alt = self._log_likelihood
-
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)

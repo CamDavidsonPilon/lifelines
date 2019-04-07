@@ -3872,16 +3872,26 @@ Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
         data(heart)
         r = coxph(Surv(start, stop, event) ~ age + strata(transplant) + surgery + year, data=heart)
         r
+        logLik(r)
         """
         ctv.fit(heart, id_col="id", event_col="event", strata="transplant")
         summary = ctv.summary.sort_index()
         npt.assert_allclose(summary["coef"].tolist(), [0.0293, -0.6176, -0.1527], atol=0.001)
         npt.assert_allclose(summary["se(coef)"].tolist(), [0.0139, 0.3707, 0.0710], atol=0.001)
         npt.assert_allclose(summary["z"].tolist(), [2.11, -1.67, -2.15], atol=0.01)
+        npt.assert_allclose(ctv._log_likelihood, -254.7144, atol=0.01)
 
     def test_ctv_with_multiple_strata(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant", "surgery"])
-        assert True
+        npt.assert_allclose(ctv._log_likelihood, -230.6726, atol=0.01)
+
+    def test_ctv_ratio_test_with_strata(self, ctv, heart):
+        ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"])
+        npt.assert_allclose(ctv._compute_likelihood_ratio_test()[0], 15.68, atol=0.01)
+
+    def test_ctv_ratio_test_with_strata_and_initial_point(self, ctv, heart):
+        ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"], initial_point=0.1 * np.ones(3))
+        npt.assert_allclose(ctv._compute_likelihood_ratio_test()[0], 15.68, atol=0.01)
 
 
 class TestAalenJohansenFitter:
