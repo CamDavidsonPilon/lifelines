@@ -254,12 +254,22 @@ def test_datetimes_to_durations_custom_censor():
     npt.assert_almost_equal(C, np.array([1, 0, 0], dtype=bool))
 
 
-def test_survival_table_to_events():
-    T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([1, 0, 1, 1, 1, 1])
-    d = utils.survival_table_from_events(T, C, np.zeros_like(T))
-    T_, C_ = utils.survival_events_from_table(d[["censored", "observed"]])
+def test_survival_events_from_table_no_ties():
+    T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([1, 0, 1, 1, 0, 1])
+    d = utils.survival_table_from_events(T, C)
+    T_, C_, W_ = utils.survival_events_from_table(d[["censored", "observed"]])
     npt.assert_array_equal(T, T_)
     npt.assert_array_equal(C, C_)
+    npt.assert_array_equal(W_, np.ones_like(T))
+
+
+def test_survival_events_from_table_with_ties():
+    T, C = np.array([1, 2, 3, 4, 4, 5]), np.array([1, 0, 1, 1, 1, 1])
+    d = utils.survival_table_from_events(T, C)
+    T_, C_, W_ = utils.survival_events_from_table(d[["censored", "observed"]])
+    npt.assert_array_equal([1, 2, 3, 4, 5], T_)
+    npt.assert_array_equal([1, 0, 1, 1, 1], C_)
+    npt.assert_array_equal([1, 1, 1, 2, 1], W_)
 
 
 def test_survival_table_from_events_with_non_trivial_censorship_column():
