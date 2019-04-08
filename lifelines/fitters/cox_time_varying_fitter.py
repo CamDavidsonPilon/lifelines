@@ -16,7 +16,6 @@ from scipy.linalg import solve as spsolve, LinAlgError
 from bottleneck import nansum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter
-from lifelines import CoxPHFitter
 from lifelines.statistics import chisq_test
 from lifelines.utils import (
     _get_index,

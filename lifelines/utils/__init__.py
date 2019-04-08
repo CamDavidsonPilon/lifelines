@@ -416,8 +416,6 @@ def survival_events_from_table(survival_table, observed_deaths_col="observed", c
     >>> W = np.array([ 1,  1,  1,  1,  1,  1])
 
     """
-    columns = [observed_deaths_col, censored_col]
-
     T_ = []
     E_ = []
     W_ = []

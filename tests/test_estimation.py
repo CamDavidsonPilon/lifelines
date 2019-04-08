@@ -67,7 +67,11 @@ from lifelines.datasets import (
     load_stanford_heart_transplants,
     load_multicenter_aids_cohort_study,
 )
-from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes
+from lifelines.generate_datasets import (
+    generate_hazard_rates,
+    generate_random_lifetimes,
+    piecewise_exponential_survival_data,
+)
 
 
 @pytest.fixture
@@ -532,6 +536,35 @@ class TestUnivariateFitters:
             unpickled = loads(dumps(fitter))
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
+
+
+class TestPiecewiseExponentialFitter:
+    def test_fit_with_bad_breakpoints_raises_error(self):
+        with pytest.raises(ValueError):
+            pwf = PiecewiseExponentialFitter(None)
+
+        with pytest.raises(ValueError):
+            pwf = PiecewiseExponentialFitter([])
+
+        with pytest.raises(ValueError):
+            pwf = PiecewiseExponentialFitter([0, 1, 2, 3])
+
+        with pytest.raises(ValueError):
+            pwf = PiecewiseExponentialFitter([1, 2, 3, np.inf])
+
+    def test_fit_on_simulated_data(self):
+        bp = [1, 2]
+        lambdas = [0.5, 0.1, 1.0]
+        N = int(5 * 1e5)
+        T_actual = piecewise_exponential_survival_data(N, bp, lambdas)
+        T_censor = piecewise_exponential_survival_data(N, bp, lambdas)
+        T = np.minimum(T_actual, T_censor)
+        E = T_actual < T_censor
+
+        pwf = PiecewiseExponentialFitter(bp).fit(T, E)
+        npt.assert_allclose(pwf.summary.loc["lambda_0_", "coef"], 1 / 0.5, rtol=0.01)
+        npt.assert_allclose(pwf.summary.loc["lambda_1_", "coef"], 1 / 0.1, rtol=0.01)
+        npt.assert_allclose(pwf.summary.loc["lambda_2_", "coef"], 1 / 1.0, rtol=0.01)
 
 
 class TestLogNormalFitter:
