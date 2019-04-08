@@ -112,7 +112,6 @@ lifelines.fitters.log\_logistic\_aft\_fitter module
 
 
 
-
 .. automodule:: lifelines.fitters
     :members:
     :undoc-members:

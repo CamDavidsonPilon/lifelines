@@ -1,6 +1,20 @@
 ### Changelog
 
-#### 0.20.4
+#### 0.20.5 - 2019-04-08
+
+##### New features
+ - performance improvements for `print_summary`.
+
+##### API changes
+ - `utils.survival_events_from_table` returns an integer weight vector as well as durations and censoring vector.
+ - in `AalenJohansenFitter`, the `variance` parameter is renamed to `variance_` to align with the usual lifelines convention.
+
+##### Bug fixes
+ - Fixed an error in the `CoxTimeVaryingFitter`'s likelihood ratio test when using strata.
+ - Fixed some plotting bugs with `AalenJohansenFitter`
+
+
+#### 0.20.4 - 2019-03-27
 
 ##### New features
  - left-truncation support in AFT models, using the `entry_col` kwarg in `fit()`
