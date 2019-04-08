@@ -156,6 +156,9 @@ class CoxTimeVaryingFitter(BaseFitter):
             raise NotImplementedError("Not available yet.")
 
         self.event_col = event_col
+        self.id_col = id_col
+        self.stop_col = stop_col
+        self.start_col = start_col
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
         df = df.copy()
@@ -359,6 +362,12 @@ class CoxTimeVaryingFitter(BaseFitter):
                     g += _g
                     h += _h
                     ll += _ll
+
+            if i == 1 and np.all(beta == 0):
+                # this is a neat optimization, the null partial likelihood
+                # is the same as the full partial but evaluated at zero.
+                # if the user supplied a non-trivial initial point, we need to delay this.
+                self._log_likelihood_null = ll
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -668,16 +677,28 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         Conveniently, we can actually use CoxPHFitter class to do most of the work.
 
         """
+        if hasattr(self, "_log_likelihood_null"):
+            ll_null = self._log_likelihood_null
 
-        trivial_dataset = self.start_stop_and_events.groupby(level=0).last()[["event", "stop"]]
-        weights = self.weights.groupby(level=0).last()
-        trivial_dataset = trivial_dataset.join(weights).sort_values("stop")
+        else:
+            trivial_dataset = self.start_stop_and_events
+            trivial_dataset = trivial_dataset.join(self.weights)
+            trivial_dataset = trivial_dataset.reset_index()
+            ll_null = (
+                CoxTimeVaryingFitter()
+                .fit(
+                    trivial_dataset,
+                    start_col=self.start_col,
+                    stop_col=self.stop_col,
+                    event_col=self.event_col,
+                    id_col=self.id_col,
+                    weights_col="__weights",
+                    strata=self.strata,
+                )
+                ._log_likelihood
+            )
 
-        ll_null = CoxPHFitter()._trivial_log_likelihood_single(
-            trivial_dataset["stop"].values, trivial_dataset["event"].values, trivial_dataset["__weights"].values
-        )
         ll_alt = self._log_likelihood
-
         test_stat = 2 * (ll_alt - ll_null)
         degrees_freedom = self.hazards_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
