@@ -119,6 +119,7 @@ class KaplanMeierFitter(UnivariateFitter):
         self._label = label
 
         if weights is not None:
+            weights = np.asarray(weights)
             if (weights.astype(int) != weights).any():
                 warnings.warn(
                     """It looks like your weights are not integers, possibly propensity scores then?

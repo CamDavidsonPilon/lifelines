@@ -329,10 +329,10 @@ time                        observed deaths       censored
     df = pd.read_csv('file.csv', columns = ['time', observed deaths', 'censored'])
     df = df.set_index('time')
 
-    T, E = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
+    T, E, W = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
+    # weights, W, is the number of occurrences of each observation - helps with data compression.
 
-    print(T) # array([0,0,0,0,0,0,0,1,...])
-    print(E) # array([1,1,1,1,1,1,1,0,...])
+    kmf = KaplanMeierFitter().fit(T, E, weights=W)
 
 
 Transforming observational data into survival-table format

@@ -19,6 +19,7 @@ __all__ = [
     "median_survival_times",
     "survival_table_from_events",
     "group_survival_table_from_events",
+    "survival_events_from_table",
     "datetimes_to_durations",
     "concordance_index",
     "k_fold_cross_validation",
@@ -374,26 +375,28 @@ def _group_event_table_by_intervals(event_table, intervals):
     )
 
 
-def survival_events_from_table(event_table, observed_deaths_col="observed", censored_col="censored"):
+def survival_events_from_table(survival_table, observed_deaths_col="observed", censored_col="censored"):
     """
     This is the inverse of the function ``survival_table_from_events``.
 
     Parameters
     ----------
-    event_table: DataFrame
-        a pandas DataFrame with index as the durations (!!) and columns "observed" and "censored", referring to
+    survival_table: DataFrame
+        a pandas DataFrame with index as the durations and columns "observed" and "censored", referring to
            the number of individuals that died and were censored at time t.
-    observed_deaths_col: str
-        default: "observed"
-    censored_col: str
-        default: "censored"
+    observed_deaths_col: str, optional (default: "observed")
+        the column in the survival table that represents the number of subjects that were observed to die at a specific time
+    censored_col: str,  optional (default: "censored")
+        the column in the survival table that represents the number of subjects that were censored at a specific time
 
     Returns
     -------
     T: array
-      durations of observation -- one element for each individual in the population.
-    C: array
-      event observations -- one element for each individual in the population. 1 if observed, 0 else.
+      durations of observation -- one element for observed time
+    E: array
+      event observations -- 1 if observed, 0 else.
+    W: array
+      weights - integer weights to "condense" the data
 
     Example
     -------
@@ -409,21 +412,27 @@ def survival_events_from_table(event_table, observed_deaths_col="observed", cens
     >>>
     >>> # would return
     >>> T = np.array([ 1.,  2.,  3.,  4.,  4.,  5.]),
-    >>> C = np.array([ 1.,  0.,  1.,  1.,  0.,  0.])
+    >>> E = np.array([ 1.,  0.,  1.,  1.,  0.,  0.])
+    >>> W = np.array([ 1,  1,  1,  1,  1,  1])
 
     """
     columns = [observed_deaths_col, censored_col]
-    N = event_table[columns].sum().sum()
-    T = np.empty(N)
-    C = np.empty(N)
-    i = 0
-    for event_time, row in event_table.iterrows():
-        n = row[columns].sum()
-        T[i : i + n] = event_time
-        C[i : i + n] = np.r_[np.ones(row[columns[0]]), np.zeros(row[columns[1]])]
-        i += n
 
-    return T, C
+    T_ = []
+    E_ = []
+    W_ = []
+
+    for t, row in survival_table.iterrows():
+        if row[observed_deaths_col] > 0:
+            T_.append(t)
+            E_.append(1)
+            W_.append(row[observed_deaths_col])
+        if row[censored_col] > 0:
+            T_.append(t)
+            E_.append(0)
+            W_.append(row[censored_col])
+
+    return np.asarray(T_), np.asarray(E_), np.asarray(W_)
 
 
 def datetimes_to_durations(
