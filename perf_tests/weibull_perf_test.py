@@ -7,17 +7,18 @@ if __name__ == "__main__":
 
     from lifelines import WeibullFitter
 
-    np.random.seed(1)
-    N = 250000
-    mu = 3 * np.random.randn()
-    sigma = np.random.uniform(0.1, 3.0)
+    data = (
+        [{"start": 0, "stop": 2, "E": False}] * (1000 - 376)
+        + [{"start": 2, "stop": 5, "E": False}] * (376 - 82)
+        + [{"start": 5, "stop": 10, "E": False}] * (82 - 7)
+        + [{"start": 10, "stop": 1e10, "E": False}] * 7
+    )
 
-    X, C = np.exp(sigma * np.random.randn(N) + mu), np.exp(np.random.randn(N) + mu)
-    E = X <= C
-    T = np.minimum(X, C)
+    df = pd.DataFrame.from_records(data)
+    print(df)
 
     wb = WeibullFitter()
     start_time = time.time()
-    wb.fit(T, E)
+    wb.fit_interval_censoring(df["start"], df["stop"], df["E"])
     print("--- %s seconds ---" % (time.time() - start_time))
     wb.print_summary(5)

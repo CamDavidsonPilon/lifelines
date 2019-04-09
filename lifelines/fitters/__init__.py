@@ -382,13 +382,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 yield (lb + self._MIN_PARAMETER_VALUE, ub - self._MIN_PARAMETER_VALUE)
 
     def _cumulative_hazard(self, params, times):
-        raise NotImplementedError
+        raise NotImplementedError("Subclass implements this.")
 
     def _survival_function(self, params, times):
         return anp.exp(-self._cumulative_hazard(params, times))
 
     def _cumulative_density(self, params, times):
-        return 1 - anp.exp(-self._cumulative_hazard(params, times))
+        return 1 - self._survival_function(params, times)
 
     def _log_hazard(self, params, times):
         hz = self._hazard(params, times)
@@ -400,8 +400,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
         cum_haz = self._cumulative_hazard(params, times)
         return anp.log1p(-anp.exp(-cum_haz))
 
-    def _negative_log_likelihood_left_censoring(self, params, T, E, _entry):
+    def _negative_log_likelihood_left_censoring(self, params, Ts, E, _entry):
 
+        T = Ts[1]
         n = T.shape[0]
         log_hz = self._log_hazard(params, T)
         cum_haz = self._cumulative_hazard(params, T)
@@ -411,12 +412,21 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         return -ll / n
 
-    def _negative_log_likelihood_right_censoring(self, params, T, E, entry):
-
+    def _negative_log_likelihood_right_censoring(self, params, Ts, E, entry):
+        T = Ts[0]
         n = T.shape[0]
         log_hz = self._log_hazard(params, T[E])
+        cum_haz = self._cumulative_hazard(params, T).sum()
 
-        ll = log_hz.sum() - self._cumulative_hazard(params, T).sum() + self._cumulative_hazard(params, entry).sum()
+        ll = log_hz.sum() - cum_haz.sum() + self._cumulative_hazard(params, entry).sum()
+        return -ll / n
+
+    def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry):
+        start, stop = Ts
+        n = start.shape[0]
+        ll = self._log_hazard(params, start[E]).sum() - self._cumulative_hazard(params, start[E]).sum()
+        ll = ll + anp.log(self._survival_function(params, start[~E]) - self._survival_function(params, stop[~E])).sum()
+        ll = ll + self._cumulative_hazard(params, entry).sum()
         return -ll / n
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
@@ -465,12 +475,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
         return df
 
-    def _fit_model(self, T, E, entry, show_progress=True):
+    def _fit_model(self, Ts, E, entry, show_progress=True):
 
         non_zero_entries = entry[entry > 0]
 
-        if self.left_censorship:
+        if self._censoring_type == CensoringType.LEFT:
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
+        elif self._censoring_type == CensoringType.INTERVAL:
+            negative_log_likelihood = self._negative_log_likelihood_interval_censoring
         else:
             negative_log_likelihood = self._negative_log_likelihood_right_censoring
 
@@ -482,15 +494,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 self._initial_values,
                 jac=True,
                 method="L-BFGS-B",
-                args=(T, E, non_zero_entries),
+                args=(Ts, E, non_zero_entries),
                 bounds=self._bounds,
                 options={"disp": show_progress},
             )
 
             if results.success:
                 # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(negative_log_likelihood)(results.x, T, E, non_zero_entries)
-                return results.x, -results.fun * T.shape[0], T.shape[0] * hessian_
+                hessian_ = hessian(negative_log_likelihood)(results.x, Ts, E, non_zero_entries)
+                return results.x, -results.fun * E.shape[0], E.shape[0] * hessian_
 
             # convergence failed.
             print(results)
@@ -594,8 +606,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print("{} = {}".format(justify("number of subjects"), self.event_observed.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        if self.left_censorship:
-            print("{} = {}".format(justify("left-censored"), self.left_censorship))
         print(
             "{} = {}".format(
                 justify("hypothesis"),
@@ -629,7 +639,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels=None,
         show_progress=False,
         entry=None,
-        left_censorship=False,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -652,37 +661,169 @@ class ParametericUnivariateFitter(UnivariateFitter):
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
-        left_censorship: bool, optional (default=False)
-            True if durations and event_observed refer to left censorship events. Default False
         Returns
         -------
           self
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
-        self.left_censorship = left_censorship
-
         check_nans_or_infs(durations)
+        check_positivity(durations)
+        self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
+        self._censoring_type = CensoringType.RIGHT
+
+        return self._fit(
+            (self.durations, None),
+            event_observed=event_observed,
+            timeline=timeline,
+            label=label,
+            alpha=alpha,
+            ci_labels=ci_labels,
+            show_progress=show_progress,
+            entry=entry,
+        )
+
+    def fit_left_censoring(
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
+    ):  # pylint: disable=too-many-arguments
+        """
+        Parameters
+        ----------
+        durations: an array, or pd.Series TODO: new name
+          length n, duration subject was observed for
+        event_observed: numpy array or pd.Series, optional
+          length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+        timeline: list, optional
+            return the estimate at the values in timeline (positively increasing)
+        label: string, optional
+            a string to name the column of the estimate.
+        alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: list, optional
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        show_progress: boolean, optional
+            since this is an iterative fitting algorithm, switching this to True will display some iteration details.
+        entry: an array, or pd.Series, of length n
+            relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
+            entered study when they were "born": time zero.
+        Returns
+        -------
+          self
+            self with new properties like ``cumulative_hazard_``, ``survival_function_``
+
+        """
+        # TODO: new name
+        check_nans_or_infs(durations)
+        check_positivity(durations)
+
+        self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
+        self._censoring_type = CensoringType.LEFT
+        return self._fit(
+            (None, self.durations),
+            event_observed=event_observed,
+            timeline=timeline,
+            label=label,
+            alpha=alpha,
+            ci_labels=ci_labels,
+            show_progress=show_progress,
+            entry=entry,
+        )
+
+    def fit_interval_censoring(
+        self,
+        start,
+        stop,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
+    ):  # pylint: disable=too-many-arguments
+        """
+        Parameters
+        ----------
+        durations: an array, or pd.Series
+          length n, duration subject was observed for
+        event_observed: numpy array or pd.Series, optional
+          length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+        timeline: list, optional
+            return the estimate at the values in timeline (positively increasing)
+        label: string, optional
+            a string to name the column of the estimate.
+        alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: list, optional
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        show_progress: boolean, optional
+            since this is an iterative fitting algorithm, switching this to True will display some iteration details.
+        entry: an array, or pd.Series, of length n
+            relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
+            entered study when they were "born": time zero.
+        Returns
+        -------
+          self
+            self with new properties like ``cumulative_hazard_``, ``survival_function_``
+
+        """
+        check_nans_or_infs(start)
+        check_positivity(stop)
+        # check if start == stop and start <= stop
+        self.stop = np.asarray(pass_for_numeric_dtypes_or_raise_array(stop))
+        self.start = np.asarray(pass_for_numeric_dtypes_or_raise_array(start))
+        self._censoring_type = CensoringType.INTERVAL
+
+        return self._fit(
+            (np.clip(self.start, 1e-20, 1e25), np.clip(self.stop, 1e-20, 1e25)),
+            event_observed=event_observed,
+            timeline=timeline,
+            label=label,
+            alpha=alpha,
+            ci_labels=ci_labels,
+            show_progress=show_progress,
+            entry=entry,
+        )
+
+    def _fit(
+        self,
+        Ts,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
+    ):
+
+        label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
+        n = len(coalesce(*Ts))
+
         if event_observed is not None:
             check_nans_or_infs(event_observed)
 
-        self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
-        check_positivity(self.durations)
-
         if not self._KNOWN_MODEL:
-            self._check_cumulative_hazard_is_monotone_and_positive(self.durations, self._initial_values)
+            self._check_cumulative_hazard_is_monotone_and_positive(coalesce(*Ts), self._initial_values)
 
-        self.event_observed = (
-            np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        )
+        self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones(n)
 
-        self.entry = np.asarray(entry) if entry is not None else np.zeros_like(self.durations)
+        self.entry = np.asarray(entry) if entry is not None else np.zeros(n)
 
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline).astype(float))
         else:
-            self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
+            self.timeline = np.linspace(coalesce(*Ts).min(), coalesce(*Ts).max(), n)
 
         self._label = label
         self._ci_labels = ci_labels
@@ -690,11 +831,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
-            self.durations, self.event_observed.astype(bool), self.entry, show_progress=show_progress
+            Ts, self.event_observed.astype(bool), self.entry, show_progress=show_progress
         )
 
         if not self._KNOWN_MODEL:
-            self._check_cumulative_hazard_is_monotone_and_positive(self.durations, self._fitted_parameters_)
+            self._check_cumulative_hazard_is_monotone_and_positive(coalesce(*Ts), self._fitted_parameters_)
 
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
@@ -1345,7 +1486,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         if self._censoring_type == CensoringType.RIGHT:
             uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries)
         elif self._censoring_type == CensoringType.INTERVAL:
-            uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries)
+            uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries)
         elif self._censoring_type == CensoringType.LEFT:
             uni_model.fit_left_censoring(Ts[0], event_observed=E, entry=entries)
 
