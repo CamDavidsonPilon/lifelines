@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import collections
 from functools import wraps
 import sys
@@ -93,6 +91,7 @@ class BaseFitter(object):
         raise NotImplementedError()
 
     def fit_right_censoring(self, *args, **kwargs):
+        self._censoring_type = CensoringType.RIGHT
         return self.fit(*args, **kwargs)
 
 
@@ -400,34 +399,45 @@ class ParametericUnivariateFitter(UnivariateFitter):
         cum_haz = self._cumulative_hazard(params, times)
         return anp.log1p(-anp.exp(-cum_haz))
 
-    def _negative_log_likelihood_left_censoring(self, params, Ts, E, _entry):
-
+    def _negative_log_likelihood_left_censoring(self, params, Ts, E, entry, W):
         T = Ts[1]
-        n = T.shape[0]
+        non_zero_entries = entry > 0
+
         log_hz = self._log_hazard(params, T)
         cum_haz = self._cumulative_hazard(params, T)
         log_1m_sf = self._log_1m_sf(params, T)
 
-        ll = (E * (log_hz - cum_haz - log_1m_sf)).sum() + log_1m_sf.sum()
+        ll = (E * W * (log_hz - cum_haz - log_1m_sf)).sum() + (W * log_1m_sf).sum()
+        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
 
-        return -ll / n
+        return -ll / W.sum()
 
-    def _negative_log_likelihood_right_censoring(self, params, Ts, E, entry):
+    def _negative_log_likelihood_right_censoring(self, params, Ts, E, entry, W):
         T = Ts[0]
-        n = T.shape[0]
+        non_zero_entries = entry > 0
+
         log_hz = self._log_hazard(params, T[E])
-        cum_haz = self._cumulative_hazard(params, T).sum()
+        cum_haz = self._cumulative_hazard(params, T)
 
-        ll = log_hz.sum() - cum_haz.sum() + self._cumulative_hazard(params, entry).sum()
-        return -ll / n
+        ll = (W * log_hz).sum() - (W * cum_haz).sum()
+        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
+        return -ll / W.sum()
 
-    def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry):
+    def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry, W):
         start, stop = Ts
-        n = start.shape[0]
-        ll = self._log_hazard(params, start[E]).sum() - self._cumulative_hazard(params, start[E]).sum()
-        ll = ll + anp.log(self._survival_function(params, start[~E]) - self._survival_function(params, stop[~E])).sum()
-        ll = ll + self._cumulative_hazard(params, entry).sum()
-        return -ll / n
+        non_zero_entries = entry > 0
+
+        ll = (W[E] * self._log_hazard(params, start[E])).sum() - (
+            W[E] * self._cumulative_hazard(params, start[E])
+        ).sum()
+        ll = (
+            ll
+            + (
+                W[~E] * anp.log(self._survival_function(params, start[~E]) - self._survival_function(params, stop[~E]))
+            ).sum()
+        )
+        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
+        return -ll / W.sum()
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
         return self._compute_confidence_bounds_of_transform(self._cumulative_hazard, alpha, ci_labels)
@@ -475,10 +485,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
         return df
 
-    def _fit_model(self, Ts, E, entry, show_progress=True):
-
-        non_zero_entries = entry[entry > 0]
-
+    def _fit_model(self, Ts, E, entry, weights, show_progress=True):
         if self._censoring_type == CensoringType.LEFT:
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
         elif self._censoring_type == CensoringType.INTERVAL:
@@ -494,15 +501,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 self._initial_values,
                 jac=True,
                 method="L-BFGS-B",
-                args=(Ts, E, non_zero_entries),
+                args=(Ts, E, entry, weights),
                 bounds=self._bounds,
                 options={"disp": show_progress},
             )
 
             if results.success:
                 # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(negative_log_likelihood)(results.x, Ts, E, non_zero_entries)
-                return results.x, -results.fun * E.shape[0], E.shape[0] * hessian_
+                hessian_ = hessian(negative_log_likelihood)(results.x, Ts, E, entry, weights)
+                return results.x, -results.fun * weights.sum(), hessian_ * weights.sum()
 
             # convergence failed.
             print(results)
@@ -639,6 +646,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels=None,
         show_progress=False,
         entry=None,
+        weights=None,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -661,6 +669,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
+        weights: an array, or pd.Series, of length n
+            integer weights per observation
         Returns
         -------
           self
@@ -681,6 +691,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             ci_labels=ci_labels,
             show_progress=show_progress,
             entry=entry,
+            weights=weights,
         )
 
     def fit_left_censoring(
@@ -715,6 +726,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
+        weights: an array, or pd.Series, of length n
+            integer weights per observation
         Returns
         -------
           self
@@ -736,6 +749,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             ci_labels=ci_labels,
             show_progress=show_progress,
             entry=entry,
+            weights=weights,
         )
 
     def fit_interval_censoring(
@@ -749,6 +763,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels=None,
         show_progress=False,
         entry=None,
+        weights=None,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -771,6 +786,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
+        weights: an array, or pd.Series, of length n
+            integer weights per observation
         Returns
         -------
           self
@@ -779,9 +796,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         check_nans_or_infs(start)
         check_positivity(stop)
-        # check if start == stop and start <= stop
+
         self.stop = np.asarray(pass_for_numeric_dtypes_or_raise_array(stop))
         self.start = np.asarray(pass_for_numeric_dtypes_or_raise_array(start))
+
+        if (self.stop < self.start).any():
+            raise ValueError("All stop times must be greater than or equal to start times.")
+
         self._censoring_type = CensoringType.INTERVAL
 
         return self._fit(
@@ -793,6 +814,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             ci_labels=ci_labels,
             show_progress=show_progress,
             entry=entry,
+            weights=weights,
         )
 
     def _fit(
@@ -805,6 +827,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels=None,
         show_progress=False,
         entry=None,
+        weights=None,
     ):
 
         label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
@@ -819,6 +842,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones(n)
 
         self.entry = np.asarray(entry) if entry is not None else np.zeros(n)
+        self.weights = np.asarray(weights) if weights is not None else np.ones(n)
 
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline).astype(float))
@@ -831,7 +855,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
-            Ts, self.event_observed.astype(bool), self.entry, show_progress=show_progress
+            Ts, self.event_observed.astype(bool), self.entry, self.weights, show_progress=show_progress
         )
 
         if not self._KNOWN_MODEL:
@@ -1095,7 +1119,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
     def _log_1m_sf(self, params, T, *Xs):
         # equal to log(cdf), but often easier to express with sf.
-        # TODO: can be overwritten when log(cdf) is simple to express
         cum_haz = self._cumulative_hazard(params, times, *Xs)
         return anp.log1p(-anp.exp(-cum_haz))
 
@@ -1304,10 +1327,11 @@ class ParametericAFTRegressionFitter(BaseFitter):
             raise ValueError(
                 "For all rows, start == stop if and only if event observed = 1. Likewise, start < stop if and only if event observed = 0"
             )
+        if (start > stop).any():
+            raise ValueError("All stop times must be greater than or equal to start times.")
 
         self.start = start
         self.stop = stop
-        # TODO: if event occurred, start == stop
 
         self._fit(
             self._log_likelihood_interval_censoring,
@@ -1484,11 +1508,11 @@ class ParametericAFTRegressionFitter(BaseFitter):
         uni_model = getattr(lifelines, name)()
 
         if self._censoring_type == CensoringType.RIGHT:
-            uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries)
+            uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
         elif self._censoring_type == CensoringType.INTERVAL:
-            uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries)
+            uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
         elif self._censoring_type == CensoringType.LEFT:
-            uni_model.fit_left_censoring(Ts[0], event_observed=E, entry=entries)
+            uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model._log_likelihood
@@ -1511,8 +1535,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
     def _fit_model(self, likelihood, Ts, E, weights, entries, Xs, show_progress=False, initial_point=None):
 
         if initial_point is None:
-            # TODO: update the initial point to consider the type of censoring being fit
-            # move this into the fit_ methods
             initial_point = self._create_initial_point(Ts, E, entries, weights, Xs)
 
         assert initial_point.shape[0] == sum(X.shape[1] for X in Xs), "initial_point is not the correct shape."
@@ -1567,7 +1589,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
             unit_scaled_variance_matrix_ = np.linalg.pinv(self._hessian_)
             warning_text = dedent(
                 """\
-                The hessian was not invertible. We will instead approximate it using the pseudo-inverse.
+                The Hessian was not invertible. We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand

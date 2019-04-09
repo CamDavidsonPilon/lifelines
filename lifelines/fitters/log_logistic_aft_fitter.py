@@ -81,6 +81,16 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
 
         return log_beta_ - log_alpha_ + np.expm1(log_beta_) * (np.log(T) - log_alpha_) - np.log1p((T / alpha_) ** beta_)
 
+    def _log_1m_sf(self, params, T, *Xs):
+        alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
+        log_alpha_ = np.dot(Xs[0], alpha_params)
+        alpha_ = np.exp(log_alpha_)
+
+        beta_params = params[self._LOOKUP_SLICE["beta_"]]
+        log_beta_ = np.dot(Xs[1], beta_params)
+        beta_ = np.exp(log_beta_)
+        return -np.log1p((T / alpha_) ** -beta_)
+
     def predict_percentile(self, X, ancillary_X=None, p=0.5):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an

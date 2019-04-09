@@ -17,8 +17,11 @@ if __name__ == "__main__":
     df = pd.DataFrame.from_records(data)
     print(df)
 
+    df = df.groupby(["start", "stop", "E"]).size().reset_index()
+    print(df)
+
     wb = WeibullFitter()
     start_time = time.time()
-    wb.fit_interval_censoring(df["start"], df["stop"], df["E"])
+    wb.fit_interval_censoring(df["start"], df["stop"], df["E"], weights=df[0])
     print("--- %s seconds ---" % (time.time() - start_time))
     wb.print_summary(5)
