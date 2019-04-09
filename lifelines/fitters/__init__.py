@@ -890,6 +890,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self, estimate=getattr(self, "hazard_"), confidence_intervals=self.confidence_interval_hazard_, **kwargs
         )
 
+    fit_right_censoring = fit
+
 
 class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 
@@ -905,35 +907,97 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.fit_intercept = fit_intercept
         self._fitted_parameter_names = [self._primary_parameter_name, self._ancillary_parameter_name]
 
+    def _check_values(self, df, T, E, weights, entries):
+        check_for_numeric_dtypes_or_raise(df)
+        check_nans_or_infs(df)
+        check_nans_or_infs(T)
+        check_nans_or_infs(E)
+        check_positivity(T)
+        check_complete_separation(df, E, T, self.event_col)
+
+        if self.weights_col:
+            if (weights.astype(int) != weights).any() and not self.robust:
+                warnings.warn(
+                    dedent(
+                        """It appears your weights are not integers, possibly propensity or sampling scores then?
+                                        It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
+                                        estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"""
+                    ),
+                    StatisticalWarning,
+                )
+            if (weights <= 0).any():
+                raise ValueError("values in weight column %s must be positive." % self.weights_col)
+
+        if self.entry_col:
+            count_invalid_rows = (entries > T).sum()
+            if count_invalid_rows:
+                warnings.warn("""There exist %d rows where entry > duration.""")
+
+        if self.fit_intercept:
+            check_low_var(df)
+
     def _log_hazard(self, params, T, *Xs):
         # can be overwritten to improve convergence, see WeibullAFTFitter
         hz = self._hazard(params, T, *Xs)
         hz = anp.clip(hz, 1e-20, np.inf)
         return anp.log(hz)
 
-    def _negative_log_likelihood(self, params, T, E, W, starts, *Xs):
+    def _log_1m_sf(self, params, T, *Xs):
+        # equal to log(cdf), but often easier to express with sf.
+        # TODO: can be overwritten when log(cdf) is simple to express
+        cum_haz = self._cumulative_hazard(params, times, *Xs)
+        return anp.log1p(-anp.exp(-cum_haz))
+
+    def _survival_function(self, params, T, *Xs):
+        return anp.exp(-self._cumulative_hazard(params, T, *Xs))
+
+    def _log_likelihood_right_censoring(self, params, Ts, E, W, entries, Xs):
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
-        non_zero_starts = starts > 0
-
+        non_zero_entries = entries > 0
+        T = Ts[1]
         ll = (
             (W * E * self._log_hazard(params, T, *Xs)).sum()
             - (W * self._cumulative_hazard(params, T, *Xs)).sum()
-            + self._cumulative_hazard(params, starts[non_zero_starts], *(X[non_zero_starts, :] for X in Xs)).sum()
+            + self._cumulative_hazard(params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)).sum()
         )
-
-        if self.penalizer > 0:
-            penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
-        else:
-            penalty = 0
-
         ll = ll / np.sum(W)
-        return -ll + self.penalizer * penalty
+        return ll
+
+    def _log_likelihood_left_censoring(self, params, Ts, E, W, entries, Xs):
+        warnings.simplefilter(action="ignore", category=FutureWarning)
+
+        # non_zero_starts = entries > 0
+        T = Ts[0]
+        log_hz = self._log_hazard(params, T, *Xs)
+        cum_haz = self._cumulative_hazard(params, T, *Xs)
+        log_1m_sf = self._log_1m_sf(params, T, *Xs)
+
+        ll = (W * E * (log_hz - cum_haz - log_1m_sf)).sum() + W * log_1m_sf.sum()
+        ll = ll / np.sum(W)
+        return ll
+
+    def _log_likelihood_interval_censoring(self, params, Ts, E, W, entries, Xs):
+        warnings.simplefilter(action="ignore", category=FutureWarning)
+
+        start, stop = Ts
+
+        ll = (
+            (W * E * (self._log_hazard(params, stop, *Xs) - self._cumulative_hazard(params, stop, *Xs))).sum()
+            + (
+                W
+                * (1 - E)
+                * apn.log(self._survival_function(params, stop, *Xs) - self._survival_function(params, start, *Xs))
+            ).sum()
+            + self._cumulative_hazard(params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)).sum()
+        )
+        ll = ll / np.sum(W)
+        return ll
 
     def fit(
         self,
         df,
-        duration_col=None,
+        duration_col,
         event_col=None,
         ancillary_df=None,
         show_progress=False,
@@ -1017,21 +1081,132 @@ class ParametericAFTRegressionFitter(BaseFitter):
         >>> aft.predict_median(df)
 
         """
-        if duration_col is None:
-            raise TypeError("duration_col cannot be None.")
-
-        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
-        self.event_col = event_col
-        self.weights_col = weights_col
-        self.entry_col = entry_col
-        self._n_examples = df.shape[0]
-        self.timeline = timeline
-        self.robust = robust
+        self._duration_cols = [duration_col]
+        self._censoring_type = "right"
 
         df = df.copy()
 
         T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
+        self.durations = T.copy()
+
+        self._fit(
+            self._log_likelihood_right_censoring,
+            df,
+            (None, T.values),
+            event_col=event_col,
+            ancillary_df=ancillary_df,
+            show_progress=show_progress,
+            timeline=timeline,
+            weights_col=weights_col,
+            robust=robust,
+            initial_point=initial_point,
+            entry_col=entry_col,
+        )
+
+        return self
+
+    def fit_interval_censoring(
+        self,
+        df,
+        start_col,
+        stop_col,
+        event_col,
+        ancillary_df=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+        initial_point=None,
+        entry_col=None,
+    ):
+
+        self.start_col = start_col
+        self.stop_col = stop_col
+        self._duration_cols = [start_col, stop_col]
+        self._censoring_type = "interval"
+
+        df = df.copy()
+
+        start = pass_for_numeric_dtypes_or_raise_array(df.pop(start_col)).astype(float)
+        stop = pass_for_numeric_dtypes_or_raise_array(df.pop(stop_col)).astype(float)
+
+        # TODO: if event occurred, start == stop
+
+        self._fit(
+            self._log_likelihood_interval_censoring,
+            df,
+            (start.values, stop.values),
+            event_col=event_col,
+            ancillary_df=ancillary_df,
+            show_progress=show_progress,
+            timeline=timeline,
+            weights_col=weights_col,
+            robust=robust,
+            initial_point=initial_point,
+            entry_col=entry_col,
+        )
+
+        return self
+
+    def fit_left_censoring(
+        self,
+        df,
+        duration_col=None,  # TODO: what's a better name for this
+        event_col=None,
+        ancillary_df=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+        initial_point=None,
+        entry_col=None,
+    ):
+
+        self._censoring_type = "left"
+        df = df.copy()
+
+        # TODO: create T
+
+        self._fit(
+            self._log_likelihood_interval_censoring,
+            df,
+            (T.values, None),
+            event_col=event_col,
+            ancillary_df=ancillary_df,
+            show_progress=show_progress,
+            timeline=timeline,
+            weights_col=weights_col,
+            robust=robust,
+            initial_point=initial_point,
+            entry_col=entry_col,
+        )
+
+        return self
+
+    def _fit(
+        self,
+        log_likelihood_function,
+        df,
+        Ts,
+        event_col=None,
+        ancillary_df=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+        initial_point=None,
+        entry_col=None,
+    ):
+
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        self.weights_col = weights_col
+        self.entry_col = entry_col
+        self.event_col = event_col
+        self._n_examples = df.shape[0]
+        self.timeline = timeline
+        self.robust = robust
+
         E = (
             pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col)).astype(bool)
             if (self.event_col is not None)
@@ -1049,19 +1224,18 @@ class ParametericAFTRegressionFitter(BaseFitter):
             else pd.Series(np.zeros(self._n_examples, dtype=float), index=df.index, name="start")
         )
 
-        self.durations = T.copy()
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
 
         df = df.astype(float)
-        self._check_values(df, T, E, weights, entries)
+        self._check_values(df, Ts[1], E, weights, entries)
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
 
             ancillary_df = ancillary_df.copy().drop(
-                [duration_col, event_col, weights_col, entry_col], axis=1, errors="ignore"
+                [event_col, weights_col, entry_col] + self._duration_cols, axis=1, errors="ignore"
             )
             ancillary_df = ancillary_df.astype(float)
             check_for_numeric_dtypes_or_raise(df)
@@ -1069,7 +1243,9 @@ class ParametericAFTRegressionFitter(BaseFitter):
         elif (ancillary_df is None) or (ancillary_df is False):
             ancillary_df = pd.DataFrame(np.ones((df.shape[0],)), index=df.index, columns=["_intercept"])
         elif ancillary_df is True:
-            ancillary_df = df.copy().drop([duration_col, event_col, weights_col, entry_col], axis=1, errors="ignore")
+            ancillary_df = df.copy().drop(
+                [event_col, weights_col, entry_col] + self._duration_cols, axis=1, errors="ignore"
+            )
 
         if self.fit_intercept:
             assert "_intercept" not in df
@@ -1096,12 +1272,12 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self._norm_std = pd.Series(np.append(_norm_std, _norm_std_ancillary), index=_index)
 
         _params, self._log_likelihood, self._hessian_ = self._fit_model(
-            T.values,
+            log_likelihood_function,
+            Ts,
             E.values,
             weights.values,
             entries.values,
-            normalize(df, 0, _norm_std).values,
-            normalize(ancillary_df, 0, _norm_std_ancillary).values,
+            (normalize(df, 0, _norm_std).values, normalize(ancillary_df, 0, _norm_std_ancillary).values),
             show_progress=show_progress,
             initial_point=initial_point,
         )
@@ -1109,43 +1285,12 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         self.variance_matrix_ = self._compute_variance_matrix()
         self.standard_errors_ = self._compute_standard_errors(
-            T.values, E.values, weights.values, entries.values, df.values, ancillary_df.values
+            Ts, E.values, weights.values, entries.values, (df.values, ancillary_df.values)
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._predicted_median = self.predict_median(df, ancillary_df)
 
-        return self
-
-    def _check_values(self, df, T, E, weights, entries):
-        check_for_numeric_dtypes_or_raise(df)
-        check_nans_or_infs(df)
-        check_nans_or_infs(T)
-        check_nans_or_infs(E)
-        check_positivity(T)
-        check_complete_separation(df, E, T, self.event_col)
-
-        if self.weights_col:
-            if (weights.astype(int) != weights).any() and not self.robust:
-                warnings.warn(
-                    dedent(
-                        """It appears your weights are not integers, possibly propensity or sampling scores then?
-                                        It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
-                                        estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"""
-                    ),
-                    StatisticalWarning,
-                )
-            if (weights <= 0).any():
-                raise ValueError("values in weight column %s must be positive." % self.weights_col)
-
-        if self.entry_col:
-            count_invalid_rows = (entries > T).sum()
-            if count_invalid_rows:
-                warnings.warn("""There exist %d rows where entry > duration.""")
-
-        if self.fit_intercept:
-            check_low_var(df)
-
-    def _create_initial_point(self, T, E, entries, *Xs):
+    def _create_initial_point(self, Ts, E, entries, Xs):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
@@ -1159,7 +1304,10 @@ class ParametericAFTRegressionFitter(BaseFitter):
             return np.log(param)
 
         name = self.__class__.__name__.replace("AFT", "")
-        uni_model = getattr(lifelines, name)().fit(T, E, entry=entries)  # pylint: disable=not-callable
+        uni_model = getattr(lifelines, name)()
+        getattr(uni_model, "fit_%s_censoring" % self._censoring_type)(
+            Ts[1], E, entry=entries
+        )  # pylint: disable=not-callable
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model._log_likelihood
@@ -1172,18 +1320,29 @@ class ParametericAFTRegressionFitter(BaseFitter):
             ]
         )
 
-    def _fit_model(self, T, E, weights, entries, *Xs, show_progress=False, initial_point=None):
+    def _add_penalty(self, value, params, *args):
+        if self.penalizer > 0:
+            penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
+        else:
+            penalty = 0
+        return value + self.penalizer * penalty
+
+    def _fit_model(self, likelihood, Ts, E, weights, entries, Xs, show_progress=False, initial_point=None):
 
         if initial_point is None:
-            initial_point = self._create_initial_point(T, E, entries, *Xs)
+            # TODO: update the initial point to consider the type of censoring being fit
+            # move this into the fit_ methods
+            initial_point = self._create_initial_point(Ts, E, entries, Xs)
+
+        self._neg_likelihood_with_penalty_function = lambda *args: self._add_penalty(-likelihood(*args), *args)
 
         results = minimize(
-            # using value_and_grad is much faster (takes advantage of shared computations) than spitting.
-            value_and_grad(self._negative_log_likelihood),
+            # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
+            value_and_grad(self._neg_likelihood_with_penalty_function),
             initial_point,
             method=None if self.l1_ratio <= 0.0 else "L-BFGS-B",
             jac=True,
-            args=(T, E, weights, entries, *Xs),
+            args=(Ts, E, weights, entries, Xs),
             options={"disp": show_progress},
         )
         if show_progress or not results.success:
@@ -1192,7 +1351,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         if results.success:
             sum_weights = weights.sum()
             # pylint: disable=no-value-for-parameter
-            hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, weights, entries, *Xs)
+            hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
         name = self.__class__.__name__
@@ -1243,24 +1402,32 @@ class ParametericAFTRegressionFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def _compute_standard_errors(self, T, E, weights, entries, *Xs):
+    def _compute_standard_errors(self, Ts, E, weights, entries, Xs):
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_errors(T, E, weights, entries, *Xs).diagonal())
+            se = np.sqrt(self._compute_sandwich_errors(Ts, E, weights, entries, Xs).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.Series(se, name="se", index=self.params_.index)
 
-    def _compute_sandwich_errors(self, T, E, weights, entries, *Xs):
+    def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):
+        def safe_zip(first, second):
+            if first is None:
+                yield from ((None, x) for x in second)
+            elif second is None:
+                yield from ((x, None) for x in first)
+            else:
+                yield from zip(first, second)
+
         with np.errstate(all="ignore"):
             # convergence will fail catastrophically elsewhere.
 
-            ll_gradient = grad(self._negative_log_likelihood)
+            ll_gradient = grad(self._neg_likelihood_with_penalty_function)
             params = self.params_.values
             n_params = params.shape[0]
             J = np.zeros((n_params, n_params))
 
-            for t, e, w, s, x, ancillary_x in zip(T, E, weights, entries, Xs[0], Xs[1]):
-                score_vector = ll_gradient(params, t, e, w, s, x, ancillary_x)
+            for ts, e, w, s, xs in zip(safe_zip(*Ts), E, weights, entries, zip(*Xs)):
+                score_vector = ll_gradient(params, ts, e, w, s, xs)
                 J += np.outer(score_vector, score_vector)
 
             return self.variance_matrix_ @ J @ self.variance_matrix_
@@ -1660,3 +1827,5 @@ class ParametericAFTRegressionFitter(BaseFitter):
         ancillary_scores = np.exp(np.dot(ancillary_X, ancillary_params))
 
         return primary_scores, ancillary_scores
+
+    fit_right_censoring = fit
