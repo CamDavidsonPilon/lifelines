@@ -12,11 +12,17 @@ if __name__ == "__main__":
 
     df = load_rossi()
     df = pd.concat([df] * 1)
-    df["start"] = np.random.randint(0, 3, size=df.shape[0])
-    # df = df.reset_index()
-    # df['week'] = np.random.exponential(1, size=df.shape[0])
+
+    df["start"] = df["week"]
+    df["stop"] = np.where(df["arrest"], df["start"], np.inf)
+    df = df.drop("week", axis=1)
+
     wp = WeibullAFTFitter()
     start_time = time.time()
-    wp.fit(df, duration_col="week", event_col="arrest", start_col="start")
+    print(df.head())
+    wp.fit_interval_censoring(df, start_col="start", stop_col="stop", event_col="arrest")
     print("--- %s seconds ---" % (time.time() - start_time))
+    wp.print_summary()
+
+    wp.fit_right_censoring(load_rossi(), "week", event_col="arrest")
     wp.print_summary()

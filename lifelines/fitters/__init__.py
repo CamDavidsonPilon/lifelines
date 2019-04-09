@@ -52,6 +52,12 @@ from lifelines.utils import (
 __all__ = []
 
 
+class CensoringType:
+    LEFT = "left"
+    INTERVAL = "interval"
+    RIGHT = "right"
+
+
 def _must_call_fit_first(func):
     @wraps(func)
     def error_wrapper(*args, **kwargs):
@@ -82,6 +88,12 @@ class BaseFitter(object):
         except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s
+
+    def fit(*args, **kwargs):
+        raise NotImplementedError()
+
+    def fit_right_censoring(self, *args, **kwargs):
+        return self.fit(*args, **kwargs)
 
 
 class UnivariateFitter(BaseFitter):
@@ -579,7 +591,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         justify = string_justify(18)
         print(self)
-        print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
+        print("{} = {}".format(justify("number of subjects"), self.event_observed.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
         if self.left_censorship:
@@ -890,8 +902,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self, estimate=getattr(self, "hazard_"), confidence_intervals=self.confidence_interval_hazard_, **kwargs
         )
 
-    fit_right_censoring = fit
-
 
 class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 
@@ -949,31 +959,43 @@ class ParametericAFTRegressionFitter(BaseFitter):
         return anp.log1p(-anp.exp(-cum_haz))
 
     def _survival_function(self, params, T, *Xs):
-        return anp.exp(-self._cumulative_hazard(params, T, *Xs))
+        return anp.clip(anp.exp(-self._cumulative_hazard(params, T, *Xs)), 1e-25, 1.0)
 
     def _log_likelihood_right_censoring(self, params, Ts, E, W, entries, Xs):
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
+        T = Ts[0]
         non_zero_entries = entries > 0
-        T = Ts[1]
-        ll = (
-            (W * E * self._log_hazard(params, T, *Xs)).sum()
-            - (W * self._cumulative_hazard(params, T, *Xs)).sum()
-            + self._cumulative_hazard(params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)).sum()
+
+        log_hz = self._log_hazard(params, T, *Xs)
+        cum_hz = self._cumulative_hazard(params, T, *Xs)
+        delayed_entries = self._cumulative_hazard(
+            params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)
         )
+
+        ll = 0
+        ll = ll + (W * E * log_hz).sum()
+        ll = ll + -(W * cum_hz).sum()
+        ll = ll + (W[non_zero_entries] * delayed_entries).sum()
         ll = ll / np.sum(W)
         return ll
 
     def _log_likelihood_left_censoring(self, params, Ts, E, W, entries, Xs):
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
-        # non_zero_starts = entries > 0
-        T = Ts[0]
+        T = Ts[1]
+        non_zero_entries = entries > 0
+
         log_hz = self._log_hazard(params, T, *Xs)
         cum_haz = self._cumulative_hazard(params, T, *Xs)
         log_1m_sf = self._log_1m_sf(params, T, *Xs)
+        delayed_entries = self._cumulative_hazard(
+            params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)
+        )
 
+        ll = 0
         ll = (W * E * (log_hz - cum_haz - log_1m_sf)).sum() + W * log_1m_sf.sum()
+        ll = ll + (W[non_zero_entries] * delayed_entries).sum()
         ll = ll / np.sum(W)
         return ll
 
@@ -981,16 +1003,22 @@ class ParametericAFTRegressionFitter(BaseFitter):
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
         start, stop = Ts
-
-        ll = (
-            (W * E * (self._log_hazard(params, stop, *Xs) - self._cumulative_hazard(params, stop, *Xs))).sum()
-            + (
-                W
-                * (1 - E)
-                * apn.log(self._survival_function(params, stop, *Xs) - self._survival_function(params, start, *Xs))
-            ).sum()
-            + self._cumulative_hazard(params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)).sum()
+        non_zero_entries = entries > 0
+        observed_deaths = self._log_hazard(params, stop[E], *(X[E, :] for X in Xs)) - self._cumulative_hazard(
+            params, stop[E], *(X[E, :] for X in Xs)
         )
+        censored_interval_deaths = anp.log(
+            self._survival_function(params, start[~E], *(X[~E, :] for X in Xs))
+            - self._survival_function(params, stop[~E], *(X[~E, :] for X in Xs))
+        )
+        delayed_entries = self._cumulative_hazard(
+            params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)
+        )
+
+        ll = 0
+        ll = ll + (W[E] * observed_deaths).sum()
+        ll = ll + (W[~E] * censored_interval_deaths).sum()
+        # ll = ll + (W[non_zero_entries] * delayed_entries).sum()
         ll = ll / np.sum(W)
         return ll
 
@@ -1082,8 +1110,8 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         """
         self.duration_col = duration_col
-        self._duration_cols = [duration_col]
-        self._censoring_type = "right"
+        self._time_cols = [duration_col]
+        self._censoring_type = CensoringType.RIGHT
 
         df = df.copy()
 
@@ -1093,7 +1121,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self._fit(
             self._log_likelihood_right_censoring,
             df,
-            (None, T.values),
+            (T.values, None),
             event_col=event_col,
             ancillary_df=ancillary_df,
             show_progress=show_progress,
@@ -1120,23 +1148,29 @@ class ParametericAFTRegressionFitter(BaseFitter):
         initial_point=None,
         entry_col=None,
     ):
+        """
+        Start == Stop for extact observations (if any)
+        and stop=inf for right censored data
+        """
 
         self.start_col = start_col
         self.stop_col = stop_col
-        self._duration_cols = [start_col, stop_col]
-        self._censoring_type = "interval"
+        self._time_cols = [start_col, stop_col]
+        self._censoring_type = CensoringType.INTERVAL
 
         df = df.copy()
 
         start = pass_for_numeric_dtypes_or_raise_array(df.pop(start_col)).astype(float)
         stop = pass_for_numeric_dtypes_or_raise_array(df.pop(stop_col)).astype(float)
 
+        self.start = start
+        self.stop = stop
         # TODO: if event occurred, start == stop
 
         self._fit(
             self._log_likelihood_interval_censoring,
             df,
-            (start.values, stop.values),
+            (start.values, np.clip(stop.values, 0, 1e20)),
             event_col=event_col,
             ancillary_df=ancillary_df,
             show_progress=show_progress,
@@ -1163,15 +1197,15 @@ class ParametericAFTRegressionFitter(BaseFitter):
         entry_col=None,
     ):
 
-        self._censoring_type = "left"
+        self._censoring_type = CensoringType.LEFT
         df = df.copy()
 
         # TODO: create T
 
         self._fit(
-            self._log_likelihood_interval_censoring,
+            self._log_likelihood_left_censoring,
             df,
-            (T.values, None),
+            (None, T.values),
             event_col=event_col,
             ancillary_df=ancillary_df,
             show_progress=show_progress,
@@ -1229,13 +1263,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.weights = weights.copy()
 
         df = df.astype(float)
-        self._check_values(df, Ts[1], E, weights, entries)
+        self._check_values(df, coalesce(*Ts), E, weights, entries)
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
 
             ancillary_df = ancillary_df.copy().drop(
-                [event_col, weights_col, entry_col] + self._duration_cols, axis=1, errors="ignore"
+                [event_col, weights_col, entry_col] + self._time_cols, axis=1, errors="ignore"
             )
             ancillary_df = ancillary_df.astype(float)
             check_for_numeric_dtypes_or_raise(df)
@@ -1244,7 +1278,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
             ancillary_df = pd.DataFrame(np.ones((df.shape[0],)), index=df.index, columns=["_intercept"])
         elif ancillary_df is True:
             ancillary_df = df.copy().drop(
-                [event_col, weights_col, entry_col] + self._duration_cols, axis=1, errors="ignore"
+                [event_col, weights_col, entry_col] + self._time_cols, axis=1, errors="ignore"
             )
 
         if self.fit_intercept:
@@ -1256,6 +1290,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         _norm_std, _norm_std_ancillary = df.std(0), ancillary_df.std(0)
         self._norm_mean, self._norm_mean_ancillary = df.mean(0), ancillary_df.mean(0)
+
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
             _norm_std["_intercept"] = 1.0
@@ -1305,9 +1340,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         name = self.__class__.__name__.replace("AFT", "")
         uni_model = getattr(lifelines, name)()
-        getattr(uni_model, "fit_%s_censoring" % self._censoring_type)(
-            Ts[1], E, entry=entries
-        )  # pylint: disable=not-callable
+
+        if self._censoring_type == CensoringType.RIGHT:
+            uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries)
+        elif self._censoring_type == CensoringType.INTERVAL:
+            uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries)
+        elif self._censoring_type == CensoringType.LEFT:
+            uni_model.fit_left_censoring(Ts[0], event_observed=E, entry=entries)
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model._log_likelihood
@@ -1446,17 +1485,18 @@ class ParametericAFTRegressionFitter(BaseFitter):
             return self._ll_null_
 
         initial_point = np.zeros(len(self._fitted_parameter_names))
-        self._ll_null_ = (
-            self.__class__()
-            .fit(
-                pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry}),
-                "T",
-                "E",
-                initial_point=initial_point,
-                entry_col="entry",
-            )
-            ._log_likelihood
-        )
+
+        model = self.__class__()
+        if self._censoring_type == CensoringType.Right:
+            df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry})
+            model.fit_right_censoring(df, "T", "E", initial_point=initial_point, entry_col="entry")
+        elif self._censoring_type == CensoringType.Interval:
+            df = pd.DataFrame({"start": self.start, "stop": self.stop, "E": self.event_observed, "entry": self.entry})
+            model.fit_interval_censoring(df, "start", "stop", "E", initial_point=initial_point, entry_col="entry")
+        if self._censoring_type == CensoringType.Left:
+            raise NotImplementedError()
+
+        self._ll_null_ = model._log_likelihood
         return self._ll_null_
 
     def _compute_likelihood_ratio_test(self):
@@ -1484,7 +1524,9 @@ class ParametericAFTRegressionFitter(BaseFitter):
         Returns
         -------
         df : DataFrame
-            Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
+            Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper
+        """
+
         ci = 1 - self.alpha
         with np.errstate(invalid="ignore", divide="ignore"):
             df = pd.DataFrame(index=self.params_.index)
@@ -1517,7 +1559,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         # Print information about data first
         justify = string_justify(18)
         print(self)
-        print("{} = '{}'".format(justify("duration col"), self.duration_col))
         if self.event_col:
             print("{} = '{}'".format(justify("event col"), self.event_col))
         if self.weights_col:
@@ -1551,7 +1592,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         # Significance code explanation
         print("---")
-        print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+        # print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
         print(
             "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
@@ -1827,5 +1868,3 @@ class ParametericAFTRegressionFitter(BaseFitter):
         ancillary_scores = np.exp(np.dot(ancillary_X, ancillary_params))
 
         return primary_scores, ancillary_scores
-
-    fit_right_censoring = fit

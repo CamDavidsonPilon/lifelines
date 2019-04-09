@@ -931,7 +931,7 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
     if n > 500:
         # let's sample to speed this up.
         df = df.sample(n=500, random_state=0).copy()
-        durations = durations.sample(n=500, random_state=0).copy()
+        durations = pd.Series(durations).sample(n=500, random_state=0).copy()
 
     rank_durations = durations.argsort()
     for col, series in df.iteritems():

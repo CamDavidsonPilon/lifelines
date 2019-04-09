@@ -552,11 +552,11 @@ class TestPiecewiseExponentialFitter:
         with pytest.raises(ValueError):
             pwf = PiecewiseExponentialFitter([1, 2, 3, np.inf])
 
-    @flaky(max_runs=3, min_passes=2)
+    @flaky(max_runs=3, min_passes=1)
     def test_fit_on_simulated_data(self):
         bp = [1, 2]
         lambdas = [0.5, 0.1, 1.0]
-        N = int(1e6)
+        N = int(5 * 1e5)
         T_actual = piecewise_exponential_survival_data(N, bp, lambdas)
         T_censor = piecewise_exponential_survival_data(N, bp, lambdas)
         T = np.minimum(T_actual, T_censor)
