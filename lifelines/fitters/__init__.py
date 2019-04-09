@@ -1018,7 +1018,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         ll = 0
         ll = ll + (W[E] * observed_deaths).sum()
         ll = ll + (W[~E] * censored_interval_deaths).sum()
-        # ll = ll + (W[non_zero_entries] * delayed_entries).sum()
+        ll = ll + (W[non_zero_entries] * delayed_entries).sum()
         ll = ll / np.sum(W)
         return ll
 
@@ -1148,10 +1148,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         initial_point=None,
         entry_col=None,
     ):
-        """
-        Start == Stop for extact observations (if any)
-        and stop=inf for right censored data
-        """
 
         self.start_col = start_col
         self.stop_col = stop_col
@@ -1163,6 +1159,11 @@ class ParametericAFTRegressionFitter(BaseFitter):
         start = pass_for_numeric_dtypes_or_raise_array(df.pop(start_col)).astype(float)
         stop = pass_for_numeric_dtypes_or_raise_array(df.pop(stop_col)).astype(float)
 
+        if ((start == stop) != df[event_col]).any():
+            raise ValueError(
+                "For all rows, start == stop if and only if event observed = 1. Likewise, start < stop if and only if event observed = 0"
+            )
+
         self.start = start
         self.stop = stop
         # TODO: if event occurred, start == stop
@@ -1170,7 +1171,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self._fit(
             self._log_likelihood_interval_censoring,
             df,
-            (start.values, np.clip(stop.values, 0, 1e20)),
+            (start.values, np.clip(stop.values, 0, 1e25)),
             event_col=event_col,
             ancillary_df=ancillary_df,
             show_progress=show_progress,
@@ -1325,7 +1326,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._predicted_median = self.predict_median(df, ancillary_df)
 
-    def _create_initial_point(self, Ts, E, entries, Xs):
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
@@ -1371,7 +1372,9 @@ class ParametericAFTRegressionFitter(BaseFitter):
         if initial_point is None:
             # TODO: update the initial point to consider the type of censoring being fit
             # move this into the fit_ methods
-            initial_point = self._create_initial_point(Ts, E, entries, Xs)
+            initial_point = self._create_initial_point(Ts, E, entries, weights, Xs)
+
+        assert initial_point.shape[0] == sum(X.shape[1] for X in Xs), "initial_point is not the correct shape."
 
         self._neg_likelihood_with_penalty_function = lambda *args: self._add_penalty(-likelihood(*args), *args)
 

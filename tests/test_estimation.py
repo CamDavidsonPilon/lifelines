@@ -1806,6 +1806,25 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.013165, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.003630, rtol=1e-3)
 
+    def test_inference_is_the_same_if_using_right_censorship_or_interval_censorship_with_inf_endpoints(
+        self, rossi, aft
+    ):
+        df = rossi.copy()
+        df["start"] = df["week"]
+        df["stop"] = np.where(df["arrest"], df["start"], np.inf)
+        df = df.drop("week", axis=1)
+
+        aft.fit_interval_censoring(df, start_col="start", stop_col="stop", event_col="arrest")
+        interval_censored_results = aft.summary.copy()
+
+        aft.fit_right_censoring(rossi, "week", event_col="arrest")
+        right_censored_results = aft.summary.copy()
+
+        assert_frame_equal(interval_censored_results, right_censored_results)
+
+    def test_inference_on_known_R_output(self, aft):
+        pass
+
 
 class TestCoxPHFitter:
     @pytest.fixture
