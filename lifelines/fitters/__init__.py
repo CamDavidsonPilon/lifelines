@@ -419,7 +419,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         log_hz = self._log_hazard(params, T[E])
         cum_haz = self._cumulative_hazard(params, T)
 
-        ll = (W * log_hz).sum() - (W * cum_haz).sum()
+        ll = (W[E] * log_hz).sum() - (W * cum_haz).sum()
         ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
         return -ll / W.sum()
 
@@ -677,9 +677,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        check_nans_or_infs(durations)
-        check_positivity(durations)
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
+        check_nans_or_infs(self.durations)
+        check_positivity(self.durations)
         self._censoring_type = CensoringType.RIGHT
 
         return self._fit(
@@ -704,6 +704,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels=None,
         show_progress=False,
         entry=None,
+        weights=None,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -735,10 +736,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         """
         # TODO: new name
-        check_nans_or_infs(durations)
-        check_positivity(durations)
 
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
+        check_nans_or_infs(self.durations)
+        check_positivity(self.durations)
         self._censoring_type = CensoringType.LEFT
         return self._fit(
             (None, self.durations),
@@ -1200,7 +1201,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         entry_col=None,
     ):
         """
-        Fit the accelerated failure time model to a dataset.
+        Fit the accelerated failure time model to a right-censored dataset.
 
         Parameters
         ----------
@@ -1312,6 +1313,84 @@ class ParametericAFTRegressionFitter(BaseFitter):
         initial_point=None,
         entry_col=None,
     ):
+        """
+        Fit the accelerated failure time model to a left-censored dataset.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        start_col: string
+            the name of the column in DataFrame that contains the subjects'
+            left-most observation.
+
+        stop_col: string
+            the name of the column in DataFrame that contains the subjects'
+            right-most observation.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, assume all individuals are uncensored.
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        ancillary_df: None, boolean, or DataFrame, optional (default=None)
+            Choose to model the ancillary parameters.
+            If None or False, explicitly do not fit the ancillary parameters using any covariates.
+            If True, model the ancillary parameters with the same covariates as ``df``.
+            If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+
+        timeline: array, optional
+            Specify a timeline that will be used for plotting and prediction
+
+        weights_col: string
+            the column in DataFrame that specifies weights per observation.
+
+        robust: boolean, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+            the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        Returns
+        -------
+        self:
+            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+
+
+        Examples
+        --------
+        >>> from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
+        >>>
+        >>> df = pd.DataFrame({
+        >>>     'start': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'stop':  [5, 3, 9, 8, 7, 4, 8, 5, 2, 5, 6, np.inf],
+        >>>     'E':     [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>> })
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit_interval_censoring(df, 'start', 'stop', 'E')
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit_interval_censoring(df, 'start', 'stop', 'E', ancillary_df=df)
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+        """
 
         self.start_col = start_col
         self.stop_col = stop_col
@@ -1362,7 +1441,79 @@ class ParametericAFTRegressionFitter(BaseFitter):
         initial_point=None,
         entry_col=None,
     ):
+        """
+        Fit the accelerated failure time model to a left-censored dataset.
 
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        duration_col: string
+            the name of the column in DataFrame that contains the subjects'
+            lifetimes.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, assume all individuals are uncensored.
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        ancillary_df: None, boolean, or DataFrame, optional (default=None)
+            Choose to model the ancillary parameters.
+            If None or False, explicitly do not fit the ancillary parameters using any covariates.
+            If True, model the ancillary parameters with the same covariates as ``df``.
+            If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+
+        timeline: array, optional
+            Specify a timeline that will be used for plotting and prediction
+
+        weights_col: string
+            the column in DataFrame that specifies weights per observation.
+
+        robust: boolean, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+            the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        Returns
+        -------
+        self:
+            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+
+
+        Examples
+        --------
+        >>> from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
+        >>>
+        >>> df = pd.DataFrame({
+        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>> })
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit_left_censoring(df, 'T', 'E')
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit_left_censoring(df, 'T', 'E', ancillary_df=df)
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+        """
         self._censoring_type = CensoringType.LEFT
         df = df.copy()
 
@@ -1429,7 +1580,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.weights = weights.copy()
 
         df = df.astype(float)
-        self._check_values(df, coalesce(*Ts), E, weights, entries)
+        self._check_values(df, coalesce(Ts[1], Ts[0]), E, weights, entries)
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"

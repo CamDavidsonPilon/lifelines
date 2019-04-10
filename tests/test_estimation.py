@@ -66,6 +66,7 @@ from lifelines.datasets import (
     load_regression_dataset,
     load_stanford_heart_transplants,
     load_multicenter_aids_cohort_study,
+    load_diabetes,
 )
 from lifelines.generate_datasets import (
     generate_hazard_rates,
@@ -227,7 +228,7 @@ class TestParametricUnivariateFitters:
         T = np.maximum(T1, T2)
 
         for fitter in known_parametric_univariate_fitters:
-            fitter().fit(T, E, left_censorship=True)
+            fitter().fit_left_censoring(T, E)
 
     def test_parametric_univarite_fitters_can_print_summary(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
@@ -508,7 +509,7 @@ class TestUnivariateFitters:
                 fitter().fit(T)
 
     def test_typeerror_is_thrown_if_there_is_nans_in_the_event_col(self, univariate_fitters):
-        T = np.arange(5)
+        T = np.arange(1, 5)
         E = [1, 0, None, 1, 1]
         for fitter in univariate_fitters:
             with pytest.raises(TypeError):
@@ -773,7 +774,7 @@ class TestWeibullFitter:
         T = np.where(ix == 3, np.maximum(T, MIN_3), T)
         E = T_actual == T
 
-        wf = WeibullFitter().fit(T, E, left_censorship=True)
+        wf = WeibullFitter().fit_left_censoring(T, E)
 
         assert wf.summary.loc["rho_", "lower 0.95"] < 5 < wf.summary.loc["rho_", "upper 0.95"]
         assert wf.summary.loc["lambda_", "lower 0.95"] < 0.5 < wf.summary.loc["lambda_", "upper 0.95"]
@@ -1524,37 +1525,6 @@ class TestAFTFitters:
             factor = aft.summary.loc[(aft._primary_parameter_name, "prio"), "exp(coef)"]
             npt.assert_allclose(accelerated_survival, baseline_survival * factor)
 
-    def test_aft_weibull_with_weights(self, rossi):
-        """
-        library('flexsurv')
-        r = flexsurvreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio, data=df, dist='weibull', weights=age)
-        r$coef
-        """
-        wf = WeibullAFTFitter().fit(rossi, "week", "arrest", weights_col="age")
-
-        npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.3842902, rtol=1e-3)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "race"), "coef"], -0.24538246, rtol=1e-4)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "wexp"), "coef"], 0.31146214, rtol=1e-3)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "mar"), "coef"], 0.47322543, rtol=1e-2)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "paro"), "coef"], -0.02885281, rtol=1e-3)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "prio"), "coef"], -0.06162843, rtol=1e-3)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "_intercept"), "coef"], 4.93041526, rtol=1e-2)
-        npt.assert_allclose(wf.summary.loc[("rho_", "_intercept"), "coef"], 0.28612353, rtol=1e-4)
-
-    @pytest.mark.xfail()
-    def test_aft_weibull_with_ancillary_model_and_with_weights(self, rossi):
-        """
-        library('flexsurv')
-        r = flexsurvreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio + shape(prio), data=df, dist='weibull', weights=age)
-        r$coef
-        """
-        wf = WeibullAFTFitter(penalizer=0).fit(rossi, "week", "arrest", weights_col="age", ancillary_df=rossi[["prio"]])
-
-        npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.360792647, rtol=1e-3)
-        npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], -0.025505680, rtol=1e-4)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "_intercept"), "coef"], 4.707300215, rtol=1e-2)
-        npt.assert_allclose(wf.summary.loc[("rho_", "_intercept"), "coef"], 0.367701670, rtol=1e-4)
-
 
 class TestLogNormalAFTFitter:
     @pytest.fixture
@@ -1768,9 +1738,9 @@ class TestWeibullAFTFitter:
         with pytest.raises(ValueError):
             aft.predict_survival_function(rossi)
 
-    def test_passing_in_additional_ancillary_df_in_predict_methods_okay_if_not_fitted_with_one(self, rossi):
+    def test_passing_in_additional_ancillary_df_in_predict_methods_okay_if_not_fitted_with_one(self, rossi, aft):
 
-        aft = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=False)
+        aft.fit(rossi, "week", "arrest", ancillary_df=False)
         aft.predict_median(rossi, ancillary_X=rossi)
         aft.predict_percentile(rossi, ancillary_X=rossi)
         aft.predict_cumulative_hazard(rossi, ancillary_X=rossi)
@@ -1820,10 +1790,61 @@ class TestWeibullAFTFitter:
         aft.fit_right_censoring(rossi, "week", event_col="arrest")
         right_censored_results = aft.summary.copy()
 
-        assert_frame_equal(interval_censored_results, right_censored_results)
+        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=5)
 
-    def test_inference_on_known_R_output(self, aft):
-        pass
+    def test_interval_censoring_inference_on_known_R_output(self, aft):
+        """
+        library(flexsurv)
+
+        flexsurvreg(Surv(left, right, type='interval2') ~ gender, data=IR_diabetes, dist="weibull")
+
+        """
+        df = load_diabetes()
+        df["gender"] = df["gender"] == "male"
+        df["E"] = df["left"] == df["right"]
+
+        aft.fit_interval_censoring(df, "left", "right", "E")
+
+        npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "coef"], 0.04576, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], np.log(18.31971), rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], np.log(2.82628), rtol=1e-4)
+
+        npt.assert_allclose(aft._log_likelihood, -2027.196, rtol=1e-3)
+
+        npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "se(coef)"], 0.02823, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.42273, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.08356, rtol=1e-1)
+
+    def test_aft_weibull_with_weights(self, rossi, aft):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio, data=df, dist='weibull', weights=age)
+        r$coef
+        """
+        aft.fit(rossi, "week", "arrest", weights_col="age")
+
+        npt.assert_allclose(aft.summary.loc[("lambda_", "fin"), "coef"], 0.3842902, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "race"), "coef"], -0.24538246, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "wexp"), "coef"], 0.31146214, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "coef"], 0.47322543, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], -0.02885281, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.06162843, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 4.93041526, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 0.28612353, rtol=1e-4)
+
+    @pytest.mark.xfail()
+    def test_aft_weibull_with_ancillary_model_and_with_weights(self, rossi):
+        """
+        library('flexsurv')
+        r = flexsurvreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio + shape(prio), data=df, dist='weibull', weights=age)
+        r$coef
+        """
+        wf = WeibullAFTFitter(penalizer=0).fit(rossi, "week", "arrest", weights_col="age", ancillary_df=rossi[["prio"]])
+
+        npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.360792647, rtol=1e-3)
+        npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], -0.025505680, rtol=1e-4)
+        npt.assert_allclose(wf.summary.loc[("lambda_", "_intercept"), "coef"], 4.707300215, rtol=1e-2)
+        npt.assert_allclose(wf.summary.loc[("rho_", "_intercept"), "coef"], 0.367701670, rtol=1e-4)
 
 
 class TestCoxPHFitter:
