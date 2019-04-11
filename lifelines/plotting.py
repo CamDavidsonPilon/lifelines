@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import warnings
-from textwrap import dedent
 import numpy as np
 from lifelines.utils import coalesce
 from scipy import stats
@@ -451,7 +450,6 @@ def _plot_estimate(
     ci_alpha=0.25,
     ci_show=True,
     at_risk_counts=False,
-    invert_y_axis=False,
     **kwargs
 ):
 
@@ -488,8 +486,6 @@ def _plot_estimate(
         >>> model.plot(iloc=slice(0,10))
 
         will plot the first 10 time points.
-    invert_y_axis: bool
-        boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs. (Deprecated, use ``plot_cumulative_density()``)
 
     Returns
     -------
@@ -499,21 +495,6 @@ def _plot_estimate(
     plot_estimate_config = PlotEstimateConfig(
         cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, **kwargs
     )
-
-    if invert_y_axis:
-        warnings.warn(
-            dedent(
-                """
-            The invert_y_axis will be removed in lifelines 0.21.0. Likely you are trying to plot the cumulative density function?
-            That's now part of the KaplanMeierFitter,
-
-            >>> kmf.plot_cumulative_density()
-            >>> # nice
-
-        """
-            ),
-            PendingDeprecationWarning,
-        )
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc)
 
@@ -556,18 +537,6 @@ def _plot_estimate(
 
     if at_risk_counts:
         add_at_risk_counts(cls, ax=plot_estimate_config.ax)
-
-    if invert_y_axis:
-        # need to check if it's already inverted
-        original_y_ticks = plot_estimate_config.ax.get_yticks()
-        if not getattr(plot_estimate_config.ax, "__lifelines_inverted", False):
-            # not inverted yet
-
-            plot_estimate_config.ax.invert_yaxis()
-            # don't ask.
-            y_ticks = np.round(1.000000000001 - original_y_ticks, decimals=8)
-            plot_estimate_config.ax.set_yticklabels(y_ticks)
-            plot_estimate_config.ax.__lifelines_inverted = True
 
     return plot_estimate_config.ax
 

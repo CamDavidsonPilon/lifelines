@@ -29,6 +29,7 @@ from lifelines.utils import (
     format_exp_floats,
     survival_table_from_events,
     StatisticalWarning,
+    CensoringType,
 )
 
 from lifelines.plotting import set_kwargs_ax
@@ -151,6 +152,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         """
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        self._censoring_type = CensoringType.RIGHT
 
         df = df.copy()
 

@@ -685,6 +685,48 @@ Often, you don't know *a priori* which AFT model to use. Each model has some ass
     print(wf._log_likelihood)  # -679.60
 
 
+Left, right and interval censored data
+-----------------------------------------------
+
+The AFT models have APIs that handle left and interval censored data, too. The API for them is different than the API for fitting to right censored data. Here's an example with interval censored data.
+
+.. code::python
+    from lifelines.datasets import load_diabetes
+
+    df = load_diabetes()
+    df['gender'] = df['gender'] == 'male'
+
+    print(df.head())
+    """
+       left  right  gender
+    1    24     27    True
+    2    22     22   False
+    3    37     39    True
+    4    20     20    True
+    5     1     16    True
+    """
+
+    wf = WeibullAFTFitter().fit_interval_censoring(df, start_col='left', stop_col='right')
+    wf.print_summary()
+
+    """
+    <lifelines.WeibullAFTFitter: fitted with 731 observations, 136 censored>
+             event col = 'E'
+    number of subjects = 731
+      number of events = 595
+        log-likelihood = -2027.20
+      time fit was run = 2019-04-11 19:39:42 UTC
+
+    ---
+                        coef exp(coef)  se(coef)      z      p  -log2(p)  lower 0.95  upper 0.95
+    lambda_ gender      0.05      1.05      0.03   1.66   0.10      3.38       -0.01        0.10
+            _intercept  2.91     18.32      0.02 130.15 <0.005       inf        2.86        2.95
+    rho_    _intercept  1.04      2.83      0.03  36.91 <0.005    988.46        0.98        1.09
+    ---
+    Log-likelihood ratio test = 2.74 on 1 df, -log2(p)=3.35
+    """
+
+
 
 Aalen's additive model
 =============================

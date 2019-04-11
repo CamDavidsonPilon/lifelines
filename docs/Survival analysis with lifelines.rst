@@ -623,6 +623,8 @@ is unsure *when* the disease was contracted (birth), but knows it was before the
 Another situation where we have left-censored data is when measurements have only an upper bound, that is, the measurements
 instruments could only detect the measurement was *less* than some upper bound. This bound is often called the limit of detection (LOD). In practice, there could be more than one LOD. One very important statistical lesson: don't "fill-in" this value naively. It's tempting to use something like one-half the LOD, but this will cause *lots* of bias in downstream analysis. An example dataset is below:
 
+.. note:: The recommended API for modeling left-censored data using parametric models changed in version 0.21.0. Below is the recommended API.
+
 .. code:: python
 
     from lifelines.datasets import load_nh4
@@ -638,7 +640,8 @@ instruments could only detect the measurement was *less* than some upper bound. 
     5            <0.006         0.006      True
     """
 
-*lifelines* has support for left-censored datasets in most univariate models, including the ``KaplanMeierFitter`` class, by adding the keyword ``left_censoring=True`` (default ``False``) to the call to ``fit``.
+
+*lifelines* has support for left-censored datasets in most univariate models, including the ``KaplanMeierFitter`` class, by using the ``fit_left_censoring`` method.
 
 .. code:: python
 
@@ -646,7 +649,7 @@ instruments could only detect the measurement was *less* than some upper bound. 
     T, E = df['NH4.mg.per.L'], ~df['Censored']
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, E, left_censorship=True)
+    kmf.fit_left_censoring(T, E)
 
 Instead of producing a survival function, left-censored data analysis is more interested in the cumulative density function. This is available as the ``cumulative_density_`` property after fitting the data.
 
@@ -678,9 +681,9 @@ Alternatively, you can use a parametric model to model the data. This allows for
     fig, axes = plt.subplots(3, 2, figsize=(9, 9))
     timeline = np.linspace(0, 0.25, 100)
 
-    wf = WeibullFitter().fit(T, E, left_censorship=True, label="Weibull", timeline=timeline)
-    lnf = LogNormalFitter().fit(T, E, left_censorship=True, label="Log Normal", timeline=timeline)
-    lgf = LogLogisticFitter().fit(T, E, left_censorship=True, label="Log Logistic", timeline=timeline)
+    wf = WeibullFitter().fit_left_censoring(T, E, label="Weibull", timeline=timeline)
+    lnf = LogNormalFitter().fit_left_censoring(T, E, label="Log Normal", timeline=timeline)
+    lgf = LogLogisticFitter().fit_left_censoring(T, E, label="Log Logistic", timeline=timeline)
 
     # plot what we just fit, along with the KMF estimate
     kmf.plot_cumulative_density(ax=axes[0][0], ci_show=False)
@@ -700,7 +703,23 @@ Alternatively, you can use a parametric model to model the data. This allows for
 
 Based on the above, the log-normal distribution seems to fit well, and the Weibull not very well at all.
 
-.. note:: Other types of censoring, like interval-censoring, are not implemented in *lifelines* yet.
+
+Interval censored data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Data can also be interval censored. An example of this is periodically recording the population of micro-organisms as they die-off. Their deaths are interval censored because you know a subject died between two observations periods. New to lifelines in version 0.21.0, all parametric models have support for interval censored data.
+
+.. note:: The API for ``fit_interval_censoring`` is different than right and left censored data. Also,
+
+.. code:: python
+
+
+    from lifelines.datasets import load_diabetes
+
+    df = load_diabetes()
+
+    wf = WeibullFitter().fit_left_censoring(df['left'], df['right'])
+
 
 
 Left truncated (late entry) data

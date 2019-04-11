@@ -6,7 +6,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines import NelsonAalenFitter
-from lifelines.utils import _to_array, coalesce
+from lifelines.utils import _to_array, coalesce, CensoringType
 
 
 class BreslowFlemingHarringtonFitter(UnivariateFitter):
@@ -65,6 +65,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
           self, with new properties like ``survival_function_``.
 
         """
+        self._censoring_type = CensoringType.RIGHT
         self._label = label
         alpha = coalesce(alpha, self.alpha)
 

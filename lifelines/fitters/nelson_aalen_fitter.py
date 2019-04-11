@@ -14,6 +14,7 @@ from lifelines.utils import (
     inv_normal_cdf,
     check_nans_or_infs,
     StatisticalWarning,
+    CensoringType,
 )
 
 
@@ -110,7 +111,7 @@ class NelsonAalenFitter(UnivariateFitter):
           self, with new properties like ``cumulative_hazard_``.
 
         """
-
+        self._censoring_type = CensoringType.RIGHT
         check_nans_or_infs(durations)
         if event_observed is not None:
             check_nans_or_infs(event_observed)

@@ -30,6 +30,12 @@ __all__ = [
 ]
 
 
+class CensoringType:
+    LEFT = "left"
+    INTERVAL = "interval"
+    RIGHT = "right"
+
+
 class StatError(Exception):
     pass
 

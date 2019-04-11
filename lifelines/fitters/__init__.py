@@ -45,15 +45,10 @@ from lifelines.utils import (
     median_survival_times,
     normalize,
     concordance_index,
+    CensoringType,
 )
 
 __all__ = []
-
-
-class CensoringType:
-    LEFT = "left"
-    INTERVAL = "interval"
-    RIGHT = "right"
 
 
 def _must_call_fit_first(func):
@@ -647,6 +642,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         show_progress=False,
         entry=None,
         weights=None,
+        left_censorship=False,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -677,6 +673,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
+        if left_censorship:
+            warnings.warn(
+                "kwarg left_censorship is deprecated and will be removed in a future release. Please use ``.fit_left_censoring`` instead.",
+                DeprecationWarning,
+            )
+            return self.fit_left_censoring(
+                durations, event_observed, timeline, label, alpha, ci_labels, show_progress, entry, weights
+            )
+
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
         check_nans_or_infs(self.durations)
         check_positivity(self.durations)
@@ -1304,7 +1309,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         df,
         start_col,
         stop_col,
-        event_col,
+        event_col=None,
         ancillary_df=None,
         show_progress=False,
         timeline=None,
@@ -1319,11 +1324,8 @@ class ParametericAFTRegressionFitter(BaseFitter):
         Parameters
         ----------
         df: DataFrame
-            a Pandas DataFrame with necessary columns `duration_col` and
-            `event_col` (see below), covariates columns, and special columns (weights).
-            `duration_col` refers to
-            the lifetimes of the subjects. `event_col` refers to whether
-            the 'death' events was observed: 1 if observed, 0 else (censored).
+            a Pandas DataFrame with necessary columns ``start_col``, ``stop_col``  (see below),
+            and any other covariates or weights.
 
         start_col: string
             the name of the column in DataFrame that contains the subjects'
@@ -1331,11 +1333,11 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         stop_col: string
             the name of the column in DataFrame that contains the subjects'
-            right-most observation.
+            right-most observation. Values can be np.inf (and should be if the subject is right-censored).
 
         event_col: string, optional
             the  name of the column in DataFrame that contains the subjects' death
-            observation. If left as None, assume all individuals are uncensored.
+            observation. If left as None, will be inferred from the start and stop columns (start==stop means uncensored)
 
         show_progress: boolean, optional (default=False)
             since the fitter is iterative, show convergence
@@ -1375,7 +1377,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         >>>
         >>> df = pd.DataFrame({
         >>>     'start': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'stop':  [5, 3, 9, 8, 7, 4, 8, 5, 2, 5, 6, np.inf],
+        >>>     'stop':  [5, 3, 9, 8, 7, 4, 8, 5, 2, 5, 6, np.inf],  # this last subject is right-censored.
         >>>     'E':     [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
         >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
         >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
@@ -1402,9 +1404,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
         start = pass_for_numeric_dtypes_or_raise_array(df.pop(start_col)).astype(float)
         stop = pass_for_numeric_dtypes_or_raise_array(df.pop(stop_col)).astype(float)
 
+        if event_col is None:
+            event_col = "E"
+            df["E"] = start == stop
+
         if ((start == stop) != df[event_col]).any():
             raise ValueError(
-                "For all rows, start == stop if and only if event observed = 1. Likewise, start < stop if and only if event observed = 0"
+                "For all rows, start == stop if and only if event observed = 1 (uncensored). Likewise, start < stop if and only if event observed = 0 (censored)"
             )
         if (start > stop).any():
             raise ValueError("All stop times must be greater than or equal to start times.")
@@ -1899,7 +1905,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         print("---")
 
         df = self.summary
-        # Significance codes as last column
         print(
             df.to_string(
                 float_format=format_floats(decimals),
@@ -1907,9 +1912,10 @@ class ParametericAFTRegressionFitter(BaseFitter):
             )
         )
 
-        # Significance code explanation
         print("---")
-        # print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+        if self._censoring_type == CensoringType.RIGHT:
+            print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+
         print(
             "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
@@ -2176,7 +2182,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
                 X["_intercept"] = 1.0
             X = X[self.params_.loc[self._primary_parameter_name].index]
         else:
-            assert X.shape[1] == (self.params_.loc[self._primary_parameter_name].shape[0] + 1)  # 1 for _intercept
+            assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
 
         primary_params = self.params_[self._LOOKUP_SLICE[self._primary_parameter_name]]
         ancillary_params = self.params_[self._LOOKUP_SLICE[self._ancillary_parameter_name]]

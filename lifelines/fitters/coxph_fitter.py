@@ -40,6 +40,7 @@ from lifelines.utils import (
     format_floats,
     format_exp_floats,
     dataframe_interpolate_at_times,
+    CensoringType,
 )
 
 __all__ = ["CoxPHFitter"]
@@ -257,6 +258,7 @@ class CoxPHFitter(BaseFitter):
         if duration_col is None:
             raise TypeError("duration_col cannot be None.")
 
+        self._censoring_type = CensoringType.RIGHT
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
