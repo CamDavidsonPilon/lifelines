@@ -121,7 +121,7 @@ After fitting, the value of the maximum log-likelihood this available using ``cp
 Goodness of fit
 -----------------------
 
-After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? Interpret the spread as how much "variance" is provided by the baseline hazard versus the partial hazard. The baseline hazard is approximately equal to the Kaplan-Meier curve if none of the variance is explained by the covariates / partial hazard. Deviations from this provide a visual measure of variance explained). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
+After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, a few methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? Interpret the spread as how much "variance" is provided by the baseline hazard versus the partial hazard. The baseline hazard is approximately equal to the Kaplan-Meier curve if none of the variance is explained by the covariates / partial hazard. Deviations from this provide a visual measure of variance explained). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
 
 .. image:: images/goodfit.png
 
@@ -691,6 +691,7 @@ Left, right and interval censored data
 The AFT models have APIs that handle left and interval censored data, too. The API for them is different than the API for fitting to right censored data. Here's an example with interval censored data.
 
 .. code::python
+
     from lifelines.datasets import load_diabetes
 
     df = load_diabetes()

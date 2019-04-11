@@ -268,6 +268,17 @@ class TestParametricUnivariateFitters:
         with pytest.warns(StatisticalWarning, match="non-decreasing") as w:
             DecreasingFitter().fit([0.01, 0.5, 10.0, 20])
 
+    def test_parameteric_models_all_can_do_interval_censoring(self, known_parametric_univariate_fitters):
+        df = load_diabetes()
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit_interval_censoring(df["left"], df["right"])
+
+    def test_parameteric_models_fail_if_passing_in_bad_event_data(self, known_parametric_univariate_fitters):
+        df = load_diabetes()
+        for fitter in known_parametric_univariate_fitters:
+            with pytest.raises(ValueError, match="start == stop"):
+                f = fitter().fit_interval_censoring(df["left"], df["right"], event_observed=np.ones_like(df["right"]))
+
 
 class TestUnivariateFitters:
     @pytest.fixture
@@ -342,12 +353,11 @@ class TestUnivariateFitters:
         )
         T = pd.to_datetime("2015-01-03") - t
         for fitter in univariate_fitters:
-            with pytest.warns(UserWarning, match="convert"):
-                f = fitter().fit(T)
-                try:
-                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
-                except:
-                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
+            f = fitter().fit(T)
+            try:
+                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
+            except:
+                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
 
     def test_univariate_fitters_okay_if_given_boolean_col_with_object_dtype(self, univariate_fitters):
         df = pd.DataFrame({"T": [1, 2, 3, 4, 5], "E": [True, True, True, True, None]})
@@ -1410,17 +1420,17 @@ class TestRegressionFitters:
         rossi.loc[3, "week"] = None
         for fitter in regression_models:
             with pytest.raises(TypeError):
-                fitter.fit("week", "arrest")
+                fitter.fit(rossi, "week", "arrest")
 
     def test_error_is_thrown_if_there_is_nans_in_the_event_col(self, regression_models, rossi):
         rossi.loc[3, "arrest"] = None
         for fitter in regression_models:
             with pytest.raises(TypeError):
-                fitter.fit("week", "arrest")
+                fitter.fit(rossi, "week", "arrest")
 
     def test_all_models_have_censoring_type(self, regression_models, rossi):
         for fitter in regression_models:
-            fitter.fit("week", "arrest")
+            fitter.fit(rossi, "week", "arrest")
             assert hasattr(fitter, "_censoring_type")
 
 

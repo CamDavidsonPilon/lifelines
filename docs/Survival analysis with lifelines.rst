@@ -718,7 +718,7 @@ Data can also be interval censored. An example of this is periodically recording
 
     df = load_diabetes()
 
-    wf = WeibullFitter().fit_left_censoring(df['left'], df['right'])
+    wf = WeibullFitter().fit_interval_censoring(start=df['left'], stop=df['right'])
 
 
 

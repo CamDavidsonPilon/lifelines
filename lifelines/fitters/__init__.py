@@ -421,14 +421,20 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry, W):
         start, stop = Ts
         non_zero_entries = entry > 0
+        observed_weights, censored_weights = W[E], W[~E]
+        censored_starts = start[~E]
+        observed_stops, censored_stops = stop[E], stop[~E]
 
-        ll = (W[E] * self._log_hazard(params, start[E])).sum() - (
-            W[E] * self._cumulative_hazard(params, start[E])
+        ll = (observed_weights * self._log_hazard(params, observed_stops)).sum() - (
+            observed_weights * self._cumulative_hazard(params, observed_stops)
         ).sum()
         ll = (
             ll
             + (
-                W[~E] * anp.log(self._survival_function(params, start[~E]) - self._survival_function(params, stop[~E]))
+                censored_weights
+                * anp.log(
+                    self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops)
+                )
             ).sum()
         )
         ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
@@ -485,7 +491,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
         elif self._censoring_type == CensoringType.INTERVAL:
             negative_log_likelihood = self._negative_log_likelihood_interval_censoring
-        else:
+        elif self._censoring_type == CensoringType.RIGHT:
             negative_log_likelihood = self._negative_log_likelihood_right_censoring
 
         with warnings.catch_warnings():
@@ -712,9 +718,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         weights=None,
     ):  # pylint: disable=too-many-arguments
         """
+        Fit the model to a left-censored dataset
+
         Parameters
         ----------
-        durations: an array, or pd.Series TODO: new name
+        durations: an array, or pd.Series
           length n, duration subject was observed for
         event_observed: numpy array or pd.Series, optional
           length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
@@ -740,7 +748,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        # TODO: new name
 
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
         check_nans_or_infs(self.durations)
@@ -772,12 +779,17 @@ class ParametericUnivariateFitter(UnivariateFitter):
         weights=None,
     ):  # pylint: disable=too-many-arguments
         """
+        Fit the model to an interval censored dataset.
+
         Parameters
         ----------
-        durations: an array, or pd.Series
-          length n, duration subject was observed for
+        start: an array, or pd.Series
+          length n, the start of the period the subject experienced the event in.
+        stop: an array, or pd.Series
+          length n, the end of the period the subject experienced the event in. If the value is equal to the corresponding value in start, then
+          the individual's event was observed (not censored).
         event_observed: numpy array or pd.Series, optional
-          length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+          length n, if left optional, infer from ``start`` and ``stop`` (if start==stop then event observed, if start < stop, then event censored)
         timeline: list, optional
             return the estimate at the values in timeline (positively increasing)
         label: string, optional
@@ -808,6 +820,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         if (self.stop < self.start).any():
             raise ValueError("All stop times must be greater than or equal to start times.")
+
+        if event_observed is None:
+            event_observed = self.stop == self.start
+
+        if ((self.start == self.stop) != event_observed).any():
+            raise ValueError(
+                "For all rows, start == stop if and only if event observed = 1 (uncensored). Likewise, start < stop if and only if event observed = 0 (censored)"
+            )
 
         self._censoring_type = CensoringType.INTERVAL
 
@@ -1437,7 +1457,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
     def fit_left_censoring(
         self,
         df,
-        duration_col=None,  # TODO: what's a better name for this
+        duration_col=None,
         event_col=None,
         ancillary_df=None,
         show_progress=False,
@@ -1461,7 +1481,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         duration_col: string
             the name of the column in DataFrame that contains the subjects'
-            lifetimes.
+            lifetimes/measurements/etc. This column contains the (possibly) left-censored data.
 
         event_col: string, optional
             the  name of the column in DataFrame that contains the subjects' death
@@ -1523,7 +1543,8 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self._censoring_type = CensoringType.LEFT
         df = df.copy()
 
-        # TODO: create T
+        T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
+        self.durations = T.copy()
 
         self._fit(
             self._log_likelihood_left_censoring,
@@ -1565,7 +1586,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.robust = robust
 
         E = (
-            pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col)).astype(bool)
+            pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col))
             if (self.event_col is not None)
             else pd.Series(np.ones(self._n_examples, dtype=bool), index=df.index, name="E")
         )
@@ -1581,6 +1602,8 @@ class ParametericAFTRegressionFitter(BaseFitter):
             else pd.Series(np.zeros(self._n_examples, dtype=float), index=df.index, name="start")
         )
 
+        check_nans_or_infs(E)
+        E = E.astype(bool)
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()

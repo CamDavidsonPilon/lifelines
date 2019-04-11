@@ -81,6 +81,8 @@ class KaplanMeierFitter(UnivariateFitter):
         weights=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
+        Fit the model to a right-censored dataset
+
         Parameters
         ----------
           durations: an array, list, pd.DataFrame or pd.Series
@@ -131,6 +133,39 @@ class KaplanMeierFitter(UnivariateFitter):
         ci_labels=None,
         weights=None,
     ):
+        """
+        Fit the model to a left-censored dataset
+
+        Parameters
+        ----------
+          durations: an array, list, pd.DataFrame or pd.Series
+            length n -- duration subject was observed for
+          event_observed: an array, list, pd.DataFrame, or pd.Series, optional
+             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+          timeline: an array, list, pd.DataFrame, or pd.Series, optional
+            return the best estimate at the values in timelines (postively increasing)
+          entry: an array, list, pd.DataFrame, or pd.Series, optional
+             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
+             entered study when they were "born".
+          label: string, optional
+            a string to name the column of the estimate.
+          alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing alpha for this call to fit only.
+          left_censorship: bool, optional (default=False)
+            Deprecated, use ``fit_left_censoring``
+          ci_labels: tuple, optional
+                add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
+          weights: an array, list, pd.DataFrame, or pd.Series, optional
+              if providing a weighted dataset. For example, instead
+              of providing every subject as a single element of `durations` and `event_observed`, one could
+              weigh subject differently.
+
+        Returns
+        -------
+        self: KaplanMeierFitter
+          self with new properties like ``survival_function_``, ``plot()``, ``median``
+
+        """
         self._censoring_type = CensoringType.LEFT
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
@@ -196,7 +231,6 @@ class KaplanMeierFitter(UnivariateFitter):
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         is_left_censoring = self._censoring_type == CensoringType.LEFT
-        print("is_left_censoring", is_left_censoring)
         primary_estimate_name = "survival_function_" if not is_left_censoring else "cumulative_density_"
         secondary_estimate_name = "cumulative_density_" if not is_left_censoring else "survival_function_"
 

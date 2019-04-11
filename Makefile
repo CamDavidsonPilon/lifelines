@@ -20,9 +20,6 @@ else
 		prospector --output-format grouped
 endif
 
-format:
-	black . --line-length 120
-
 check_format:
 ifeq ($(TRAVIS_PYTHON_VERSION), 3.6)
 		black . --check --line-length 120

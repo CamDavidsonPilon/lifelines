@@ -340,6 +340,9 @@ class CoxPHFitter(BaseFitter):
 
         X = df.astype(float)
         T = T.astype(float)
+
+        # we check nans here because converting to bools maps NaNs to True..
+        check_nans_or_infs(E)
         E = E.astype(bool)
 
         self._check_values(X, T, E, W)
@@ -349,7 +352,6 @@ class CoxPHFitter(BaseFitter):
     def _check_values(self, X, T, E, W):
         check_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
-        check_nans_or_infs(E)
         check_nans_or_infs(X)
         check_low_var(X)
         check_complete_separation(X, E, T, self.event_col)
