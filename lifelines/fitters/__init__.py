@@ -104,9 +104,9 @@ class UnivariateFitter(BaseFitter):
         -----------
         show_censors: bool
             place markers at censorship events. Default: False
-        censor_styles: bool
+        censor_styles: dict
             If show_censors, this dictionary will be passed into the plot call.
-        ci_alpha: bool
+        ci_alpha: float
             the transparency level of the confidence interval. Default: 0.3
         ci_force_lines: bool
             force the confidence intervals to be line plots (versus default shaded areas). Default: False
