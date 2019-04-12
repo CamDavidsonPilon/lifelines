@@ -1145,7 +1145,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
     def _log_1m_sf(self, params, T, *Xs):
         # equal to log(cdf), but often easier to express with sf.
-        cum_haz = self._cumulative_hazard(params, times, *Xs)
+        cum_haz = self._cumulative_hazard(params, T, *Xs)
         return anp.log1p(-anp.exp(-cum_haz))
 
     def _survival_function(self, params, T, *Xs):
@@ -1184,7 +1184,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         )
 
         ll = 0
-        ll = (W * E * (log_hz - cum_haz - log_1m_sf)).sum() + W * log_1m_sf.sum()
+        ll = (W * E * (log_hz - cum_haz - log_1m_sf)).sum() + (W * log_1m_sf).sum()
         ll = ll + (W[non_zero_entries] * delayed_entries).sum()
         ll = ll / np.sum(W)
         return ll

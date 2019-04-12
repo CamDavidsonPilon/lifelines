@@ -1565,6 +1565,28 @@ class TestAFTFitters:
 
             assert_frame_equal(aft.predict_expectation(subject), aft.predict_expectation(subject.values))
 
+    def test_aft_models_can_do_left_censoring(self, models):
+        N = 100
+        T_actual = 0.5 * np.random.weibull(5, size=N)
+
+        MIN_0 = np.percentile(T_actual, 5)
+        MIN_1 = np.percentile(T_actual, 10)
+        MIN_2 = np.percentile(T_actual, 30)
+        MIN_3 = np.percentile(T_actual, 50)
+
+        T = T_actual.copy()
+        ix = np.random.randint(4, size=N)
+
+        T = np.where(ix == 0, np.maximum(T, MIN_0), T)
+        T = np.where(ix == 1, np.maximum(T, MIN_1), T)
+        T = np.where(ix == 2, np.maximum(T, MIN_2), T)
+        T = np.where(ix == 3, np.maximum(T, MIN_3), T)
+        E = T_actual == T
+        df = pd.DataFrame({"T": T, "E": E})
+
+        for model in models:
+            model.fit_left_censoring(df, "T", "E")
+
 
 class TestLogNormalAFTFitter:
     @pytest.fixture
