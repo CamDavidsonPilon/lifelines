@@ -42,7 +42,7 @@ due to some external circumstances. All the information we have on
 these individuals are their current lifetime durations (which is
 naturally *less* than their actual lifetimes).
 
-.. note:: There is also left-censoring, where an individuals birth event is not seen.
+.. note:: There is also left-censoring and interval censoring, which are expanded on later.
 
 A common mistake data analysts make is choosing to ignore the
 right-censored individuals. We will see why this is a mistake next.

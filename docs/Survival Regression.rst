@@ -644,7 +644,7 @@ The Log-Normal and Log-Logistic AFT model
 There are also the ``LogNormalAFTFitter`` and ``LogLogisticAFTFitter`` models, which instead of assuming that the survival time distribution is Weibull, we assume it is Log-Normal or Log-Logistic, respectively. They have identical APIs to the ``WeibullAFTFitter``, but the parameter names are different.
 
 
-.. code::python
+.. code:: python
 
     from lifelines import LogLogisticAFTFitter
     from lifelines import LogNormalAFTFitter
@@ -658,7 +658,7 @@ Model selection for AFT models
 
 Often, you don't know *a priori* which AFT model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihood. We can look at the log-likelihood for each fitted model and select the largest one.
 
-.. code::python
+.. code:: python
 
     from lifelines import LogLogisticAFTFitter, WeibullAFTFitter, LogNormalAFTFitter
     from lifelines.datasets import load_rossi
@@ -690,7 +690,7 @@ Left, right and interval censored data
 
 The AFT models have APIs that handle left and interval censored data, too. The API for them is different than the API for fitting to right censored data. Here's an example with interval censored data.
 
-.. code::python
+.. code:: python
 
     from lifelines.datasets import load_diabetes
 

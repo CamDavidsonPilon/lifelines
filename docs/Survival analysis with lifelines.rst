@@ -709,7 +709,7 @@ Interval censored data
 
 Data can also be interval censored. An example of this is periodically recording the population of micro-organisms as they die-off. Their deaths are interval censored because you know a subject died between two observations periods. New to lifelines in version 0.21.0, all parametric models have support for interval censored data.
 
-.. note:: The API for ``fit_interval_censoring`` is different than right and left censored data. Also,
+.. note:: The API for ``fit_interval_censoring`` is different than right and left censored data.
 
 .. code:: python
 

@@ -352,12 +352,13 @@ class TestUnivariateFitters:
             [pd.to_datetime("2015-01-01 12:00"), pd.to_datetime("2015-01-02"), pd.to_datetime("2015-01-02 12:00")]
         )
         T = pd.to_datetime("2015-01-03") - t
-        for fitter in univariate_fitters:
-            f = fitter().fit(T)
-            try:
-                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
-            except:
-                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
+        with pytest.warns(UserWarning, match="Attempting to convert an unexpected"):
+            for fitter in univariate_fitters:
+                f = fitter().fit(T)
+                try:
+                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
+                except:
+                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
 
     def test_univariate_fitters_okay_if_given_boolean_col_with_object_dtype(self, univariate_fitters):
         df = pd.DataFrame({"T": [1, 2, 3, 4, 5], "E": [True, True, True, True, None]})
@@ -1305,6 +1306,15 @@ class TestRegressionFitters:
             if getattr(fitter, "strata", False):
                 continue
             fitter.fit(df, "T", "E")
+
+    def test_fit_raise_an_error_if_nan_in_event_col(self, regression_models):
+        df = pd.DataFrame({"T": np.arange(1, 11), "E": [True] * 9 + [None]})
+
+        for fitter in regression_models:
+            if getattr(fitter, "strata", False):
+                continue
+            with pytest.raises(TypeError, match="NaNs were detected in the dataset"):
+                fitter.fit(df, "T", "E")
 
     def test_fit_methods_require_duration_col(self, rossi, regression_models):
         for fitter in regression_models:
