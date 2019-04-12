@@ -723,7 +723,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         """
         from matplotlib import pyplot as plt
 
-        ax = errorbar_kwargs.get("ax", None) or plt.figure().add_subplot(111)
+        ax = errorbar_kwargs.pop("ax", None) or plt.figure().add_subplot(111)
 
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
