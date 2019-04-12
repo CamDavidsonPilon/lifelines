@@ -2,7 +2,7 @@
 
 import warnings
 import numpy as np
-from lifelines.utils import coalesce
+from lifelines.utils import coalesce, CensoringType
 from scipy import stats
 
 __all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot"]
@@ -107,15 +107,20 @@ def qq_plot(model, **plot_kwargs):
     COL_EMP = "empirical quantiles"
     COL_THEO = "fitted %s quantiles" % dist
 
-    kmf = KaplanMeierFitter().fit(
-        model.durations, model.event_observed, left_censorship=model.left_censorship, label=COL_EMP
-    )
-    if model.left_censorship:
+    is_left_censored = model._censoring_type == CensoringType.LEFT
+    is_interval_censored = model._censoring_type == CensoringType.INTERVAL
+    is_right_censored = model._censoring_type == CensoringType.RIGHT
+
+    if is_left_censored:
+        kmf = KaplanMeierFitter().fit_left_censoring(model.durations, model.event_observed, label=COL_EMP)
         q = np.unique(kmf.cumulative_density_.values[:, 0])
         quantiles = qth_survival_times(q, kmf.cumulative_density_, cdf=True)
-    else:
+    elif is_right_censored:
+        kmf = KaplanMeierFitter().fit_right_censoring(model.durations, model.event_observed, label=COL_EMP)
         q = np.unique(1 - kmf.survival_function_.values[:, 0])
         quantiles = qth_survival_times(q, 1 - kmf.survival_function_, cdf=True)
+    elif is_interval_censored:
+        raise NotImplementedError()
 
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
