@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import warnings
-from textwrap import dedent
 import numpy as np
-from lifelines.utils import coalesce
+from lifelines.utils import coalesce, CensoringType
 from scipy import stats
 
 __all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot"]
@@ -108,15 +107,20 @@ def qq_plot(model, **plot_kwargs):
     COL_EMP = "empirical quantiles"
     COL_THEO = "fitted %s quantiles" % dist
 
-    kmf = KaplanMeierFitter().fit(
-        model.durations, model.event_observed, left_censorship=model.left_censorship, label=COL_EMP
-    )
-    if model.left_censorship:
+    is_left_censored = model._censoring_type == CensoringType.LEFT
+    is_interval_censored = model._censoring_type == CensoringType.INTERVAL
+    is_right_censored = model._censoring_type == CensoringType.RIGHT
+
+    if is_left_censored:
+        kmf = KaplanMeierFitter().fit_left_censoring(model.durations, model.event_observed, label=COL_EMP)
         q = np.unique(kmf.cumulative_density_.values[:, 0])
         quantiles = qth_survival_times(q, kmf.cumulative_density_, cdf=True)
-    else:
+    elif is_right_censored:
+        kmf = KaplanMeierFitter().fit_right_censoring(model.durations, model.event_observed, label=COL_EMP)
         q = np.unique(1 - kmf.survival_function_.values[:, 0])
         quantiles = qth_survival_times(q, 1 - kmf.survival_function_, cdf=True)
+    elif is_interval_censored:
+        raise NotImplementedError()
 
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
@@ -451,7 +455,6 @@ def _plot_estimate(
     ci_alpha=0.25,
     ci_show=True,
     at_risk_counts=False,
-    invert_y_axis=False,
     **kwargs
 ):
 
@@ -488,8 +491,6 @@ def _plot_estimate(
         >>> model.plot(iloc=slice(0,10))
 
         will plot the first 10 time points.
-    invert_y_axis: bool
-        boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs. (Deprecated, use ``plot_cumulative_density()``)
 
     Returns
     -------
@@ -499,21 +500,6 @@ def _plot_estimate(
     plot_estimate_config = PlotEstimateConfig(
         cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, **kwargs
     )
-
-    if invert_y_axis:
-        warnings.warn(
-            dedent(
-                """
-            The invert_y_axis will be removed in lifelines 0.21.0. Likely you are trying to plot the cumulative density function?
-            That's now part of the KaplanMeierFitter,
-
-            >>> kmf.plot_cumulative_density()
-            >>> # nice
-
-        """
-            ),
-            PendingDeprecationWarning,
-        )
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc)
 
@@ -556,18 +542,6 @@ def _plot_estimate(
 
     if at_risk_counts:
         add_at_risk_counts(cls, ax=plot_estimate_config.ax)
-
-    if invert_y_axis:
-        # need to check if it's already inverted
-        original_y_ticks = plot_estimate_config.ax.get_yticks()
-        if not getattr(plot_estimate_config.ax, "__lifelines_inverted", False):
-            # not inverted yet
-
-            plot_estimate_config.ax.invert_yaxis()
-            # don't ask.
-            y_ticks = np.round(1.000000000001 - original_y_ticks, decimals=8)
-            plot_estimate_config.ax.set_yticklabels(y_ticks)
-            plot_estimate_config.ax.__lifelines_inverted = True
 
     return plot_estimate_config.ax
 

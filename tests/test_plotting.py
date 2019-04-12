@@ -92,21 +92,6 @@ class TestPlotting:
         self.plt.title("test_kmf_with_risk_counts")
         self.plt.show(block=block)
 
-    def test_kmf_with_inverted_axis(self, block, kmf):
-
-        T = np.random.exponential(size=100)
-        kmf = KaplanMeierFitter()
-        kmf.fit(T, label="t2")
-        ax = kmf.plot(invert_y_axis=True, at_risk_counts=True)
-
-        T = np.random.exponential(3, size=100)
-        kmf = KaplanMeierFitter()
-        kmf.fit(T, label="t1")
-        kmf.plot(invert_y_axis=True, ax=ax, ci_force_lines=False)
-
-        self.plt.title("test_kmf_with_inverted_axis")
-        self.plt.show(block=block)
-
     def test_naf_plotting_with_custom_colours(self, block):
         data1 = np.random.exponential(5, size=(200, 1))
         data2 = np.random.exponential(1, size=(500))
@@ -436,10 +421,10 @@ class TestPlotting:
         lcd_dataset = load_lcd()
         alluvial_fan = lcd_dataset.loc[lcd_dataset["group"] == "alluvial_fan"]
         basin_trough = lcd_dataset.loc[lcd_dataset["group"] == "basin_trough"]
-        kmf.fit(alluvial_fan["T"], alluvial_fan["E"], left_censorship=True, label="alluvial_fan")
+        kmf.fit_left_censoring(alluvial_fan["T"], alluvial_fan["E"], label="alluvial_fan")
         ax = kmf.plot()
 
-        kmf.fit(basin_trough["T"], basin_trough["E"], left_censorship=True, label="basin_trough")
+        kmf.fit_left_censoring(basin_trough["T"], basin_trough["E"], label="basin_trough")
         ax = kmf.plot(ax=ax)
         self.plt.title("test_kmf_left_censorship_plots")
         self.plt.show(block=block)
@@ -537,7 +522,7 @@ class TestPlotting:
         fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
         axes = axes.reshape(4)
         for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
-            model.fit(df["NH4.mg.per.L"], ~df["Censored"], left_censorship=True)
+            model.fit_left_censoring(df["NH4.mg.per.L"], ~df["Censored"])
             ax = cdf_plot(model, ax=axes[i])
             assert ax is not None
         self.plt.suptitle("test_left_censorship_cdf_plots")
@@ -559,7 +544,7 @@ class TestPlotting:
         fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
         axes = axes.reshape(4)
         for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
-            model.fit(df["NH4.mg.per.L"], ~df["Censored"], left_censorship=True)
+            model.fit_left_censoring(df["NH4.mg.per.L"], ~df["Censored"])
             ax = qq_plot(model, ax=axes[i])
             assert ax is not None
         self.plt.suptitle("test_qq_plot_left_censoring")
@@ -570,7 +555,7 @@ class TestPlotting:
         fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
         axes = axes.reshape(4)
         for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
-            model.fit(df["T"], df["E"], left_censorship=True)
+            model.fit_left_censoring(df["T"], df["E"])
             ax = qq_plot(model, ax=axes[i])
             assert ax is not None
         self.plt.suptitle("test_qq_plot_left_censoring2")
@@ -593,7 +578,7 @@ class TestPlotting:
         fig, axes = self.plt.subplots(2, 2, figsize=(9, 5))
         axes = axes.reshape(4)
         for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter(), ExponentialFitter()]):
-            model.fit(T, E, left_censorship=True)
+            model.fit_left_censoring(T, E)
             ax = qq_plot(model, ax=axes[i])
             assert ax is not None
         self.plt.suptitle("test_qq_plot_left_censoring_with_known_distribution")

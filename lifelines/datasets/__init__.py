@@ -483,3 +483,29 @@ def load_lymphoma(**kwargs):
     From https://www.statsdirect.com/help/content/survival_analysis/logrank.htm
     """
     return _load_dataset("lymphoma.csv", **kwargs)
+
+
+def load_diabetes(**kwargs):
+    """
+    An interval censored dataset.
+
+    References
+    ----------
+    Borch-Johnsens, K, Andersen, P and Decker, T (1985). "The effect of proteinuria on relative mortality in Type I (insulin-dependent) diabetes mellitus." Diabetologia, 28, 590-596.
+
+    ::
+
+        Size: (731, 3)
+        Example:
+
+           left  right  gender
+             24     27    male
+             22     22  female
+             37     39    male
+             20     20    male
+              1     16    male
+              8     20  female
+             14     14    male
+    """
+
+    return _load_dataset("interval_diabetes.csv", index_col=0, **kwargs)

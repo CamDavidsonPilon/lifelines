@@ -121,7 +121,7 @@ After fitting, the value of the maximum log-likelihood this available using ``cp
 Goodness of fit
 -----------------------
 
-After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, two methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? Interpret the spread as how much "variance" is provided by the baseline hazard versus the partial hazard. The baseline hazard is approximately equal to the Kaplan-Meier curve if none of the variance is explained by the covariates / partial hazard. Deviations from this provide a visual measure of variance explained). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
+After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, a few methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? Interpret the spread as how much "variance" is provided by the baseline hazard versus the partial hazard. The baseline hazard is approximately equal to the Kaplan-Meier curve if none of the variance is explained by the covariates / partial hazard. Deviations from this provide a visual measure of variance explained). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
 
 .. image:: images/goodfit.png
 
@@ -644,7 +644,7 @@ The Log-Normal and Log-Logistic AFT model
 There are also the ``LogNormalAFTFitter`` and ``LogLogisticAFTFitter`` models, which instead of assuming that the survival time distribution is Weibull, we assume it is Log-Normal or Log-Logistic, respectively. They have identical APIs to the ``WeibullAFTFitter``, but the parameter names are different.
 
 
-.. code::python
+.. code:: python
 
     from lifelines import LogLogisticAFTFitter
     from lifelines import LogNormalAFTFitter
@@ -658,7 +658,7 @@ Model selection for AFT models
 
 Often, you don't know *a priori* which AFT model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihood. We can look at the log-likelihood for each fitted model and select the largest one.
 
-.. code::python
+.. code:: python
 
     from lifelines import LogLogisticAFTFitter, WeibullAFTFitter, LogNormalAFTFitter
     from lifelines.datasets import load_rossi
@@ -683,6 +683,52 @@ Often, you don't know *a priori* which AFT model to use. Each model has some ass
     print(llf._log_likelihood) # -678.94, slightly the best model.
     print(lnf._log_likelihood) # -680.39
     print(wf._log_likelihood)  # -679.60
+
+
+Left, right and interval censored data
+-----------------------------------------------
+
+The AFT models have APIs that handle left and interval censored data, too. The API for them is different than the API for fitting to right censored data. Here's an example with interval censored data.
+
+.. code:: python
+
+    from lifelines.datasets import load_diabetes
+
+    df = load_diabetes()
+    df['gender'] = df['gender'] == 'male'
+
+    print(df.head())
+    """
+       left  right  gender
+    1    24     27    True
+    2    22     22   False
+    3    37     39    True
+    4    20     20    True
+    5     1     16    True
+    """
+
+    wf = WeibullAFTFitter().fit_interval_censoring(df, lower_bound_col='left', upper_bound_col='right')
+    wf.print_summary()
+
+    """
+    <lifelines.WeibullAFTFitter: fitted with 731 observations, 136 censored>
+             event col = 'E'
+    number of subjects = 731
+      number of events = 595
+        log-likelihood = -2027.20
+      time fit was run = 2019-04-11 19:39:42 UTC
+
+    ---
+                        coef exp(coef)  se(coef)      z      p  -log2(p)  lower 0.95  upper 0.95
+    lambda_ gender      0.05      1.05      0.03   1.66   0.10      3.38       -0.01        0.10
+            _intercept  2.91     18.32      0.02 130.15 <0.005       inf        2.86        2.95
+    rho_    _intercept  1.04      2.83      0.03  36.91 <0.005    988.46        0.98        1.09
+    ---
+    Log-likelihood ratio test = 2.74 on 1 df, -log2(p)=3.35
+    """
+
+
+Another example of using lifelines for interval censored data is located `here <https://dataorigami.net/blogs/napkin-folding/counting-and-interval-censoring>`_.
 
 
 

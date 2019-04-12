@@ -1,5 +1,24 @@
 ### Changelog
 
+
+#### 0.21.0
+
+##### New features
+ - `weights` is now a optional kwarg for parametric univariate models.
+ - all univariate and multivariate parametric models now have ability to handle left, right and interval censored data (the former two being special cases of the latter). Users can use the `fit_right_censoring` (which is an alias for `fit`), `fit_left_censoring` and `fit_interval_censoring`.
+ - a new interval censored dataset is available under `lifelines.datasets.load_diabetes`
+
+##### API changes
+ - `left_censorship` on all univariate fitters has been deprecated. Please use the new
+ api `model.fit_left_censoring(...)`.
+ - `invert_y_axis` in `model.plot(...` has been removed.
+ - `entries` property in multivariate parametric models has a new Series name: `entry`
+
+##### Bug fixes
+ - lifelines was silently converting any NaNs in the event vector to True. An error is now thrown instead.
+ - Fixed an error that didn't let users use Numpy arrays in prediction for AFT models
+
+
 #### 0.20.5 - 2019-04-08
 
 ##### New features

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import collections
 from functools import wraps
 import sys
@@ -47,6 +45,7 @@ from lifelines.utils import (
     median_survival_times,
     normalize,
     concordance_index,
+    CensoringType,
 )
 
 __all__ = []
@@ -82,6 +81,13 @@ class BaseFitter(object):
         except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s
+
+    def fit(*args, **kwargs):
+        raise NotImplementedError()
+
+    def fit_right_censoring(self, *args, **kwargs):
+        self._censoring_type = CensoringType.RIGHT
+        return self.fit(*args, **kwargs)
 
 
 class UnivariateFitter(BaseFitter):
@@ -370,13 +376,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 yield (lb + self._MIN_PARAMETER_VALUE, ub - self._MIN_PARAMETER_VALUE)
 
     def _cumulative_hazard(self, params, times):
-        raise NotImplementedError
+        raise NotImplementedError("Subclass implements this.")
 
     def _survival_function(self, params, times):
         return anp.exp(-self._cumulative_hazard(params, times))
 
     def _cumulative_density(self, params, times):
-        return 1 - anp.exp(-self._cumulative_hazard(params, times))
+        return 1 - self._survival_function(params, times)
 
     def _log_hazard(self, params, times):
         hz = self._hazard(params, times)
@@ -388,24 +394,51 @@ class ParametericUnivariateFitter(UnivariateFitter):
         cum_haz = self._cumulative_hazard(params, times)
         return anp.log1p(-anp.exp(-cum_haz))
 
-    def _negative_log_likelihood_left_censoring(self, params, T, E, _entry):
+    def _negative_log_likelihood_left_censoring(self, params, Ts, E, entry, W):
+        T = Ts[1]
+        non_zero_entries = entry > 0
 
-        n = T.shape[0]
         log_hz = self._log_hazard(params, T)
         cum_haz = self._cumulative_hazard(params, T)
         log_1m_sf = self._log_1m_sf(params, T)
 
-        ll = (E * (log_hz - cum_haz - log_1m_sf)).sum() + log_1m_sf.sum()
+        ll = (E * W * (log_hz - cum_haz - log_1m_sf)).sum() + (W * log_1m_sf).sum()
+        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
 
-        return -ll / n
+        return -ll / W.sum()
 
-    def _negative_log_likelihood_right_censoring(self, params, T, E, entry):
+    def _negative_log_likelihood_right_censoring(self, params, Ts, E, entry, W):
+        T = Ts[0]
+        non_zero_entries = entry > 0
 
-        n = T.shape[0]
         log_hz = self._log_hazard(params, T[E])
+        cum_haz = self._cumulative_hazard(params, T)
 
-        ll = log_hz.sum() - self._cumulative_hazard(params, T).sum() + self._cumulative_hazard(params, entry).sum()
-        return -ll / n
+        ll = (W[E] * log_hz).sum() - (W * cum_haz).sum()
+        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
+        return -ll / W.sum()
+
+    def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry, W):
+        start, stop = Ts
+        non_zero_entries = entry > 0
+        observed_weights, censored_weights = W[E], W[~E]
+        censored_starts = start[~E]
+        observed_stops, censored_stops = stop[E], stop[~E]
+
+        ll = (observed_weights * self._log_hazard(params, observed_stops)).sum() - (
+            observed_weights * self._cumulative_hazard(params, observed_stops)
+        ).sum()
+        ll = (
+            ll
+            + (
+                censored_weights
+                * anp.log(
+                    self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops)
+                )
+            ).sum()
+        )
+        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
+        return -ll / W.sum()
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
         return self._compute_confidence_bounds_of_transform(self._cumulative_hazard, alpha, ci_labels)
@@ -453,13 +486,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
         return df
 
-    def _fit_model(self, T, E, entry, show_progress=True):
-
-        non_zero_entries = entry[entry > 0]
-
-        if self.left_censorship:
+    def _fit_model(self, Ts, E, entry, weights, show_progress=True):
+        if self._censoring_type == CensoringType.LEFT:
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
-        else:
+        elif self._censoring_type == CensoringType.INTERVAL:
+            negative_log_likelihood = self._negative_log_likelihood_interval_censoring
+        elif self._censoring_type == CensoringType.RIGHT:
             negative_log_likelihood = self._negative_log_likelihood_right_censoring
 
         with warnings.catch_warnings():
@@ -470,15 +502,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 self._initial_values,
                 jac=True,
                 method="L-BFGS-B",
-                args=(T, E, non_zero_entries),
+                args=(Ts, E, entry, weights),
                 bounds=self._bounds,
                 options={"disp": show_progress},
             )
 
             if results.success:
                 # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(negative_log_likelihood)(results.x, T, E, non_zero_entries)
-                return results.x, -results.fun * T.shape[0], T.shape[0] * hessian_
+                hessian_ = hessian(negative_log_likelihood)(results.x, Ts, E, entry, weights)
+                return results.x, -results.fun * weights.sum(), hessian_ * weights.sum()
 
             # convergence failed.
             print(results)
@@ -579,11 +611,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         justify = string_justify(18)
         print(self)
-        print("{} = {}".format(justify("number of subjects"), self.durations.shape[0]))
+        print("{} = {}".format(justify("number of subjects"), self.event_observed.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
         print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
-        if self.left_censorship:
-            print("{} = {}".format(justify("left-censored"), self.left_censorship))
         print(
             "{} = {}".format(
                 justify("hypothesis"),
@@ -617,6 +647,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ci_labels=None,
         show_progress=False,
         entry=None,
+        weights=None,
         left_censorship=False,
     ):  # pylint: disable=too-many-arguments
         """
@@ -640,37 +671,209 @@ class ParametericUnivariateFitter(UnivariateFitter):
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
             entered study when they were "born": time zero.
-        left_censorship: bool, optional (default=False)
-            True if durations and event_observed refer to left censorship events. Default False
+        weights: an array, or pd.Series, of length n
+            integer weights per observation
         Returns
         -------
           self
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
-        self.left_censorship = left_censorship
+        if left_censorship:
+            warnings.warn(
+                "kwarg left_censorship is deprecated and will be removed in a future release. Please use ``.fit_left_censoring`` instead.",
+                DeprecationWarning,
+            )
+            return self.fit_left_censoring(
+                durations, event_observed, timeline, label, alpha, ci_labels, show_progress, entry, weights
+            )
 
-        check_nans_or_infs(durations)
+        self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
+        check_nans_or_infs(self.durations)
+        check_positivity(self.durations)
+        self._censoring_type = CensoringType.RIGHT
+
+        return self._fit(
+            (self.durations, None),
+            event_observed=event_observed,
+            timeline=timeline,
+            label=label,
+            alpha=alpha,
+            ci_labels=ci_labels,
+            show_progress=show_progress,
+            entry=entry,
+            weights=weights,
+        )
+
+    def fit_left_censoring(
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
+        weights=None,
+    ):  # pylint: disable=too-many-arguments
+        """
+        Fit the model to a left-censored dataset
+
+        Parameters
+        ----------
+        durations: an array, or pd.Series
+          length n, duration subject was observed for
+        event_observed: numpy array or pd.Series, optional
+          length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+        timeline: list, optional
+            return the estimate at the values in timeline (positively increasing)
+        label: string, optional
+            a string to name the column of the estimate.
+        alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: list, optional
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        show_progress: boolean, optional
+            since this is an iterative fitting algorithm, switching this to True will display some iteration details.
+        entry: an array, or pd.Series, of length n
+            relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
+            entered study when they were "born": time zero.
+        weights: an array, or pd.Series, of length n
+            integer weights per observation
+        Returns
+        -------
+          self
+            self with new properties like ``cumulative_hazard_``, ``survival_function_``
+
+        """
+
+        self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
+        check_nans_or_infs(self.durations)
+        check_positivity(self.durations)
+        self._censoring_type = CensoringType.LEFT
+        return self._fit(
+            (None, self.durations),
+            event_observed=event_observed,
+            timeline=timeline,
+            label=label,
+            alpha=alpha,
+            ci_labels=ci_labels,
+            show_progress=show_progress,
+            entry=entry,
+            weights=weights,
+        )
+
+    def fit_interval_censoring(
+        self,
+        lower_bound,
+        upper_bound,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
+        weights=None,
+    ):  # pylint: disable=too-many-arguments
+        """
+        Fit the model to an interval censored dataset.
+
+        Parameters
+        ----------
+        lower_bound: an array, or pd.Series
+          length n, the start of the period the subject experienced the event in.
+        upper_bound: an array, or pd.Series
+          length n, the end of the period the subject experienced the event in. If the value is equal to the corresponding value in lower_bound, then
+          the individual's event was observed (not censored).
+        event_observed: numpy array or pd.Series, optional
+          length n, if left optional, infer from ``lower_bound`` and ``upper_cound`` (if lower_bound==upper_bound then event observed, if lower_bound < upper_bound, then event censored)
+        timeline: list, optional
+            return the estimate at the values in timeline (positively increasing)
+        label: string, optional
+            a string to name the column of the estimate.
+        alpha: float, optional
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: list, optional
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        show_progress: boolean, optional
+            since this is an iterative fitting algorithm, switching this to True will display some iteration details.
+        entry: an array, or pd.Series, of length n
+            relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
+            entered study when they were "born": time zero.
+        weights: an array, or pd.Series, of length n
+            integer weights per observation
+        Returns
+        -------
+          self
+            self with new properties like ``cumulative_hazard_``, ``survival_function_``
+
+        """
+        check_nans_or_infs(lower_bound)
+        check_positivity(upper_bound)
+
+        self.upper_bound = np.asarray(pass_for_numeric_dtypes_or_raise_array(upper_bound))
+        self.lower_bound = np.asarray(pass_for_numeric_dtypes_or_raise_array(lower_bound))
+
+        if (self.upper_bound < self.lower_bound).any():
+            raise ValueError("All upper_bound times must be greater than or equal to lower_bound times.")
+
+        if event_observed is None:
+            event_observed = self.upper_bound == self.lower_bound
+
+        if ((self.lower_bound == self.upper_bound) != event_observed).any():
+            raise ValueError(
+                "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
+            )
+
+        self._censoring_type = CensoringType.INTERVAL
+
+        return self._fit(
+            (np.clip(self.lower_bound, 1e-20, 1e25), np.clip(self.upper_bound, 1e-20, 1e25)),
+            event_observed=event_observed,
+            timeline=timeline,
+            label=label,
+            alpha=alpha,
+            ci_labels=ci_labels,
+            show_progress=show_progress,
+            entry=entry,
+            weights=weights,
+        )
+
+    def _fit(
+        self,
+        Ts,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
+        weights=None,
+    ):
+
+        label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
+        n = len(coalesce(*Ts))
+
         if event_observed is not None:
             check_nans_or_infs(event_observed)
 
-        self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
-        check_positivity(self.durations)
-
         if not self._KNOWN_MODEL:
-            self._check_cumulative_hazard_is_monotone_and_positive(self.durations, self._initial_values)
+            self._check_cumulative_hazard_is_monotone_and_positive(coalesce(*Ts), self._initial_values)
 
-        self.event_observed = (
-            np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones_like(self.durations)
-        )
+        self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones(n)
 
-        self.entry = np.asarray(entry) if entry is not None else np.zeros_like(self.durations)
+        self.entry = np.asarray(entry) if entry is not None else np.zeros(n)
+        self.weights = np.asarray(weights) if weights is not None else np.ones(n)
 
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline).astype(float))
         else:
-            self.timeline = np.linspace(self.durations.min(), self.durations.max(), self.durations.shape[0])
+            self.timeline = np.linspace(coalesce(*Ts).min(), coalesce(*Ts).max(), n)
 
         self._label = label
         self._ci_labels = ci_labels
@@ -678,11 +881,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
-            self.durations, self.event_observed.astype(bool), self.entry, show_progress=show_progress
+            Ts, self.event_observed.astype(bool), self.entry, self.weights, show_progress=show_progress
         )
 
         if not self._KNOWN_MODEL:
-            self._check_cumulative_hazard_is_monotone_and_positive(self.durations, self._fitted_parameters_)
+            self._check_cumulative_hazard_is_monotone_and_positive(coalesce(*Ts), self._fitted_parameters_)
 
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
@@ -905,35 +1108,114 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.fit_intercept = fit_intercept
         self._fitted_parameter_names = [self._primary_parameter_name, self._ancillary_parameter_name]
 
+    def _check_values(self, df, T, E, weights, entries):
+        check_for_numeric_dtypes_or_raise(df)
+        check_nans_or_infs(df)
+        check_nans_or_infs(T)
+        check_nans_or_infs(E)
+        check_positivity(T)
+        check_complete_separation(df, E, T, self.event_col)
+
+        if self.weights_col:
+            if (weights.astype(int) != weights).any() and not self.robust:
+                warnings.warn(
+                    dedent(
+                        """It appears your weights are not integers, possibly propensity or sampling scores then?
+                                        It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
+                                        estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"""
+                    ),
+                    StatisticalWarning,
+                )
+            if (weights <= 0).any():
+                raise ValueError("values in weight column %s must be positive." % self.weights_col)
+
+        if self.entry_col:
+            count_invalid_rows = (entries > T).sum()
+            if count_invalid_rows:
+                warnings.warn("""There exist %d rows where entry > duration.""")
+
+        if self.fit_intercept:
+            check_low_var(df)
+
     def _log_hazard(self, params, T, *Xs):
         # can be overwritten to improve convergence, see WeibullAFTFitter
         hz = self._hazard(params, T, *Xs)
         hz = anp.clip(hz, 1e-20, np.inf)
         return anp.log(hz)
 
-    def _negative_log_likelihood(self, params, T, E, W, starts, *Xs):
+    def _log_1m_sf(self, params, T, *Xs):
+        # equal to log(cdf), but often easier to express with sf.
+        cum_haz = self._cumulative_hazard(params, T, *Xs)
+        return anp.log1p(-anp.exp(-cum_haz))
+
+    def _survival_function(self, params, T, *Xs):
+        return anp.clip(anp.exp(-self._cumulative_hazard(params, T, *Xs)), 1e-25, 1.0)
+
+    def _log_likelihood_right_censoring(self, params, Ts, E, W, entries, Xs):
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
-        non_zero_starts = starts > 0
+        T = Ts[0]
+        non_zero_entries = entries > 0
 
-        ll = (
-            (W * E * self._log_hazard(params, T, *Xs)).sum()
-            - (W * self._cumulative_hazard(params, T, *Xs)).sum()
-            + self._cumulative_hazard(params, starts[non_zero_starts], *(X[non_zero_starts, :] for X in Xs)).sum()
+        log_hz = self._log_hazard(params, T, *Xs)
+        cum_hz = self._cumulative_hazard(params, T, *Xs)
+        delayed_entries = self._cumulative_hazard(
+            params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)
         )
 
-        if self.penalizer > 0:
-            penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
-        else:
-            penalty = 0
-
+        ll = 0
+        ll = ll + (W * E * log_hz).sum()
+        ll = ll + -(W * cum_hz).sum()
+        ll = ll + (W[non_zero_entries] * delayed_entries).sum()
         ll = ll / np.sum(W)
-        return -ll + self.penalizer * penalty
+        return ll
+
+    def _log_likelihood_left_censoring(self, params, Ts, E, W, entries, Xs):
+        warnings.simplefilter(action="ignore", category=FutureWarning)
+
+        T = Ts[1]
+        non_zero_entries = entries > 0
+
+        log_hz = self._log_hazard(params, T, *Xs)
+        cum_haz = self._cumulative_hazard(params, T, *Xs)
+        log_1m_sf = self._log_1m_sf(params, T, *Xs)
+        delayed_entries = self._cumulative_hazard(
+            params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)
+        )
+
+        ll = 0
+        ll = (W * E * (log_hz - cum_haz - log_1m_sf)).sum() + (W * log_1m_sf).sum()
+        ll = ll + (W[non_zero_entries] * delayed_entries).sum()
+        ll = ll / np.sum(W)
+        return ll
+
+    def _log_likelihood_interval_censoring(self, params, Ts, E, W, entries, Xs):
+        warnings.simplefilter(action="ignore", category=FutureWarning)
+
+        start, stop = Ts
+        non_zero_entries = entries > 0
+        observed_deaths = self._log_hazard(params, stop[E], *(X[E, :] for X in Xs)) - self._cumulative_hazard(
+            params, stop[E], *(X[E, :] for X in Xs)
+        )
+        censored_interval_deaths = anp.log(
+            self._survival_function(params, start[~E], *(X[~E, :] for X in Xs))
+            - self._survival_function(params, stop[~E], *(X[~E, :] for X in Xs))
+        )
+        delayed_entries = self._cumulative_hazard(
+            params, entries[non_zero_entries], *(X[non_zero_entries, :] for X in Xs)
+        )
+
+        ll = 0
+        ll = ll + (W[E] * observed_deaths).sum()
+        ll = ll + (W[~E] * censored_interval_deaths).sum()
+        ll = ll + (W[non_zero_entries] * delayed_entries).sum()
+        ll = ll / np.sum(W)
+        return ll
 
     def fit(
         self,
         df,
-        duration_col=None,
+        duration_col,
         event_col=None,
         ancillary_df=None,
         show_progress=False,
@@ -944,7 +1226,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         entry_col=None,
     ):
         """
-        Fit the accelerated failure time model to a dataset.
+        Fit the accelerated failure time model to a right-censored dataset.
 
         Parameters
         ----------
@@ -1017,23 +1299,294 @@ class ParametericAFTRegressionFitter(BaseFitter):
         >>> aft.predict_median(df)
 
         """
-        if duration_col is None:
-            raise TypeError("duration_col cannot be None.")
-
-        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
-        self.event_col = event_col
-        self.weights_col = weights_col
-        self.entry_col = entry_col
-        self._n_examples = df.shape[0]
-        self.timeline = timeline
-        self.robust = robust
+        self._time_cols = [duration_col]
+        self._censoring_type = CensoringType.RIGHT
 
         df = df.copy()
 
         T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
+        self.durations = T.copy()
+
+        self._fit(
+            self._log_likelihood_right_censoring,
+            df,
+            (T.values, None),
+            event_col=event_col,
+            ancillary_df=ancillary_df,
+            show_progress=show_progress,
+            timeline=timeline,
+            weights_col=weights_col,
+            robust=robust,
+            initial_point=initial_point,
+            entry_col=entry_col,
+        )
+
+        return self
+
+    def fit_interval_censoring(
+        self,
+        df,
+        lower_bound_col,
+        upper_bound_col,
+        event_col=None,
+        ancillary_df=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+        initial_point=None,
+        entry_col=None,
+    ):
+        """
+        Fit the accelerated failure time model to a left-censored dataset.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns ``lower_bound_col``, ``upper_bound_col``  (see below),
+            and any other covariates or weights.
+
+        lower_bound_col: string
+            the name of the column in DataFrame that contains the subjects'
+            left-most observation.
+
+        upper_bound_col: string
+            the name of the column in DataFrame that contains the subjects'
+            right-most observation. Values can be np.inf (and should be if the subject is right-censored).
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, will be inferred from the start and stop columns (lower_bound==upper_bound means uncensored)
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        ancillary_df: None, boolean, or DataFrame, optional (default=None)
+            Choose to model the ancillary parameters.
+            If None or False, explicitly do not fit the ancillary parameters using any covariates.
+            If True, model the ancillary parameters with the same covariates as ``df``.
+            If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+
+        timeline: array, optional
+            Specify a timeline that will be used for plotting and prediction
+
+        weights_col: string
+            the column in DataFrame that specifies weights per observation.
+
+        robust: boolean, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+            the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        Returns
+        -------
+        self:
+            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+
+
+        Examples
+        --------
+        >>> from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
+        >>>
+        >>> df = pd.DataFrame({
+        >>>     'start': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'stop':  [5, 3, 9, 8, 7, 4, 8, 5, 2, 5, 6, np.inf],  # this last subject is right-censored.
+        >>>     'E':     [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>> })
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit_interval_censoring(df, 'start', 'stop', 'E')
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit_interval_censoring(df, 'start', 'stop', 'E', ancillary_df=df)
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+        """
+
+        self.lower_bound_col = lower_bound_col
+        self.upper_bound_col = upper_bound_col
+        self._time_cols = [lower_bound_col, upper_bound_col]
+        self._censoring_type = CensoringType.INTERVAL
+
+        df = df.copy()
+
+        lower_bound = pass_for_numeric_dtypes_or_raise_array(df.pop(lower_bound_col)).astype(float)
+        upper_bound = pass_for_numeric_dtypes_or_raise_array(df.pop(upper_bound_col)).astype(float)
+
+        if event_col is None:
+            event_col = "E"
+            df["E"] = lower_bound == upper_bound
+
+        if ((lower_bound == upper_bound) != df[event_col]).any():
+            raise ValueError(
+                "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
+            )
+        if (lower_bound > upper_bound).any():
+            raise ValueError("All upper bound measurements must be greater than or equal to lower bound measurements.")
+
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
+
+        self._fit(
+            self._log_likelihood_interval_censoring,
+            df,
+            (lower_bound.values, np.clip(upper_bound.values, 0, 1e25)),
+            event_col=event_col,
+            ancillary_df=ancillary_df,
+            show_progress=show_progress,
+            timeline=timeline,
+            weights_col=weights_col,
+            robust=robust,
+            initial_point=initial_point,
+            entry_col=entry_col,
+        )
+
+        return self
+
+    def fit_left_censoring(
+        self,
+        df,
+        duration_col=None,
+        event_col=None,
+        ancillary_df=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+        initial_point=None,
+        entry_col=None,
+    ):
+        """
+        Fit the accelerated failure time model to a left-censored dataset.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        duration_col: string
+            the name of the column in DataFrame that contains the subjects'
+            lifetimes/measurements/etc. This column contains the (possibly) left-censored data.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, assume all individuals are uncensored.
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        ancillary_df: None, boolean, or DataFrame, optional (default=None)
+            Choose to model the ancillary parameters.
+            If None or False, explicitly do not fit the ancillary parameters using any covariates.
+            If True, model the ancillary parameters with the same covariates as ``df``.
+            If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+
+        timeline: array, optional
+            Specify a timeline that will be used for plotting and prediction
+
+        weights_col: string
+            the column in DataFrame that specifies weights per observation.
+
+        robust: boolean, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+            the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        Returns
+        -------
+        self:
+            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+
+
+        Examples
+        --------
+        >>> from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
+        >>>
+        >>> df = pd.DataFrame({
+        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        >>> })
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit_left_censoring(df, 'T', 'E')
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+        >>>
+        >>> aft = WeibullAFTFitter()
+        >>> aft.fit_left_censoring(df, 'T', 'E', ancillary_df=df)
+        >>> aft.print_summary()
+        >>> aft.predict_median(df)
+        """
+        self._censoring_type = CensoringType.LEFT
+        df = df.copy()
+
+        T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
+        self.durations = T.copy()
+
+        self._fit(
+            self._log_likelihood_left_censoring,
+            df,
+            (None, T.values),
+            event_col=event_col,
+            ancillary_df=ancillary_df,
+            show_progress=show_progress,
+            timeline=timeline,
+            weights_col=weights_col,
+            robust=robust,
+            initial_point=initial_point,
+            entry_col=entry_col,
+        )
+
+        return self
+
+    def _fit(
+        self,
+        log_likelihood_function,
+        df,
+        Ts,
+        event_col=None,
+        ancillary_df=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+        initial_point=None,
+        entry_col=None,
+    ):
+
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        self.weights_col = weights_col
+        self.entry_col = entry_col
+        self.event_col = event_col
+        self._n_examples = df.shape[0]
+        self.timeline = timeline
+        self.robust = robust
+
         E = (
-            pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col)).astype(bool)
+            pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col))
             if (self.event_col is not None)
             else pd.Series(np.ones(self._n_examples, dtype=bool), index=df.index, name="E")
         )
@@ -1046,22 +1599,23 @@ class ParametericAFTRegressionFitter(BaseFitter):
         entries = (
             pass_for_numeric_dtypes_or_raise_array(df.pop(entry_col)).astype(float)
             if (entry_col is not None)
-            else pd.Series(np.zeros(self._n_examples, dtype=float), index=df.index, name="start")
+            else pd.Series(np.zeros(self._n_examples, dtype=float), index=df.index, name="entry")
         )
 
-        self.durations = T.copy()
+        check_nans_or_infs(E)
+        E = E.astype(bool)
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
 
         df = df.astype(float)
-        self._check_values(df, T, E, weights, entries)
+        self._check_values(df, coalesce(Ts[1], Ts[0]), E, weights, entries)
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
 
             ancillary_df = ancillary_df.copy().drop(
-                [duration_col, event_col, weights_col, entry_col], axis=1, errors="ignore"
+                [event_col, weights_col, entry_col] + self._time_cols, axis=1, errors="ignore"
             )
             ancillary_df = ancillary_df.astype(float)
             check_for_numeric_dtypes_or_raise(df)
@@ -1069,7 +1623,9 @@ class ParametericAFTRegressionFitter(BaseFitter):
         elif (ancillary_df is None) or (ancillary_df is False):
             ancillary_df = pd.DataFrame(np.ones((df.shape[0],)), index=df.index, columns=["_intercept"])
         elif ancillary_df is True:
-            ancillary_df = df.copy().drop([duration_col, event_col, weights_col, entry_col], axis=1, errors="ignore")
+            ancillary_df = df.copy().drop(
+                [event_col, weights_col, entry_col] + self._time_cols, axis=1, errors="ignore"
+            )
 
         if self.fit_intercept:
             assert "_intercept" not in df
@@ -1080,6 +1636,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         _norm_std, _norm_std_ancillary = df.std(0), ancillary_df.std(0)
         self._norm_mean, self._norm_mean_ancillary = df.mean(0), ancillary_df.mean(0)
+
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
             _norm_std["_intercept"] = 1.0
@@ -1096,12 +1653,12 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self._norm_std = pd.Series(np.append(_norm_std, _norm_std_ancillary), index=_index)
 
         _params, self._log_likelihood, self._hessian_ = self._fit_model(
-            T.values,
+            log_likelihood_function,
+            Ts,
             E.values,
             weights.values,
             entries.values,
-            normalize(df, 0, _norm_std).values,
-            normalize(ancillary_df, 0, _norm_std_ancillary).values,
+            (normalize(df, 0, _norm_std).values, normalize(ancillary_df, 0, _norm_std_ancillary).values),
             show_progress=show_progress,
             initial_point=initial_point,
         )
@@ -1109,43 +1666,12 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         self.variance_matrix_ = self._compute_variance_matrix()
         self.standard_errors_ = self._compute_standard_errors(
-            T.values, E.values, weights.values, entries.values, df.values, ancillary_df.values
+            Ts, E.values, weights.values, entries.values, (df.values, ancillary_df.values)
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._predicted_median = self.predict_median(df, ancillary_df)
 
-        return self
-
-    def _check_values(self, df, T, E, weights, entries):
-        check_for_numeric_dtypes_or_raise(df)
-        check_nans_or_infs(df)
-        check_nans_or_infs(T)
-        check_nans_or_infs(E)
-        check_positivity(T)
-        check_complete_separation(df, E, T, self.event_col)
-
-        if self.weights_col:
-            if (weights.astype(int) != weights).any() and not self.robust:
-                warnings.warn(
-                    dedent(
-                        """It appears your weights are not integers, possibly propensity or sampling scores then?
-                                        It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
-                                        estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"""
-                    ),
-                    StatisticalWarning,
-                )
-            if (weights <= 0).any():
-                raise ValueError("values in weight column %s must be positive." % self.weights_col)
-
-        if self.entry_col:
-            count_invalid_rows = (entries > T).sum()
-            if count_invalid_rows:
-                warnings.warn("""There exist %d rows where entry > duration.""")
-
-        if self.fit_intercept:
-            check_low_var(df)
-
-    def _create_initial_point(self, T, E, entries, *Xs):
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
@@ -1159,7 +1685,14 @@ class ParametericAFTRegressionFitter(BaseFitter):
             return np.log(param)
 
         name = self.__class__.__name__.replace("AFT", "")
-        uni_model = getattr(lifelines, name)().fit(T, E, entry=entries)  # pylint: disable=not-callable
+        uni_model = getattr(lifelines, name)()
+
+        if self._censoring_type == CensoringType.RIGHT:
+            uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
+        elif self._censoring_type == CensoringType.INTERVAL:
+            uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
+        elif self._censoring_type == CensoringType.LEFT:
+            uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model._log_likelihood
@@ -1172,18 +1705,29 @@ class ParametericAFTRegressionFitter(BaseFitter):
             ]
         )
 
-    def _fit_model(self, T, E, weights, entries, *Xs, show_progress=False, initial_point=None):
+    def _add_penalty(self, value, params, *args):
+        if self.penalizer > 0:
+            penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
+        else:
+            penalty = 0
+        return value + self.penalizer * penalty
+
+    def _fit_model(self, likelihood, Ts, E, weights, entries, Xs, show_progress=False, initial_point=None):
 
         if initial_point is None:
-            initial_point = self._create_initial_point(T, E, entries, *Xs)
+            initial_point = self._create_initial_point(Ts, E, entries, weights, Xs)
+
+        assert initial_point.shape[0] == sum(X.shape[1] for X in Xs), "initial_point is not the correct shape."
+
+        self._neg_likelihood_with_penalty_function = lambda *args: self._add_penalty(-likelihood(*args), *args)
 
         results = minimize(
-            # using value_and_grad is much faster (takes advantage of shared computations) than spitting.
-            value_and_grad(self._negative_log_likelihood),
+            # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
+            value_and_grad(self._neg_likelihood_with_penalty_function),
             initial_point,
             method=None if self.l1_ratio <= 0.0 else "L-BFGS-B",
             jac=True,
-            args=(T, E, weights, entries, *Xs),
+            args=(Ts, E, weights, entries, Xs),
             options={"disp": show_progress},
         )
         if show_progress or not results.success:
@@ -1192,7 +1736,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         if results.success:
             sum_weights = weights.sum()
             # pylint: disable=no-value-for-parameter
-            hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, weights, entries, *Xs)
+            hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
         name = self.__class__.__name__
@@ -1225,7 +1769,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
             unit_scaled_variance_matrix_ = np.linalg.pinv(self._hessian_)
             warning_text = dedent(
                 """\
-                The hessian was not invertible. We will instead approximate it using the pseudo-inverse.
+                The Hessian was not invertible. We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
@@ -1243,24 +1787,32 @@ class ParametericAFTRegressionFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def _compute_standard_errors(self, T, E, weights, entries, *Xs):
+    def _compute_standard_errors(self, Ts, E, weights, entries, Xs):
         if self.robust:
-            se = np.sqrt(self._compute_sandwich_errors(T, E, weights, entries, *Xs).diagonal())
+            se = np.sqrt(self._compute_sandwich_errors(Ts, E, weights, entries, Xs).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.Series(se, name="se", index=self.params_.index)
 
-    def _compute_sandwich_errors(self, T, E, weights, entries, *Xs):
+    def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):
+        def safe_zip(first, second):
+            if first is None:
+                yield from ((None, x) for x in second)
+            elif second is None:
+                yield from ((x, None) for x in first)
+            else:
+                yield from zip(first, second)
+
         with np.errstate(all="ignore"):
             # convergence will fail catastrophically elsewhere.
 
-            ll_gradient = grad(self._negative_log_likelihood)
+            ll_gradient = grad(self._neg_likelihood_with_penalty_function)
             params = self.params_.values
             n_params = params.shape[0]
             J = np.zeros((n_params, n_params))
 
-            for t, e, w, s, x, ancillary_x in zip(T, E, weights, entries, Xs[0], Xs[1]):
-                score_vector = ll_gradient(params, t, e, w, s, x, ancillary_x)
+            for ts, e, w, s, xs in zip(safe_zip(*Ts), E, weights, entries, zip(*Xs)):
+                score_vector = ll_gradient(params, ts, e, w, s, xs)
                 J += np.outer(score_vector, score_vector)
 
             return self.variance_matrix_ @ J @ self.variance_matrix_
@@ -1279,17 +1831,20 @@ class ParametericAFTRegressionFitter(BaseFitter):
             return self._ll_null_
 
         initial_point = np.zeros(len(self._fitted_parameter_names))
-        self._ll_null_ = (
-            self.__class__()
-            .fit(
-                pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry}),
-                "T",
-                "E",
-                initial_point=initial_point,
-                entry_col="entry",
+
+        model = self.__class__()
+        if self._censoring_type == CensoringType.Right:
+            df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry})
+            model.fit_right_censoring(df, "T", "E", initial_point=initial_point, entry_col="entry")
+        elif self._censoring_type == CensoringType.Interval:
+            df = pd.DataFrame(
+                {"lb": self.lower_bound, "ub": self.upper_bound, "E": self.event_observed, "entry": self.entry}
             )
-            ._log_likelihood
-        )
+            model.fit_interval_censoring(df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry")
+        if self._censoring_type == CensoringType.Left:
+            raise NotImplementedError()
+
+        self._ll_null_ = model._log_likelihood
         return self._ll_null_
 
     def _compute_likelihood_ratio_test(self):
@@ -1317,7 +1872,9 @@ class ParametericAFTRegressionFitter(BaseFitter):
         Returns
         -------
         df : DataFrame
-            Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
+            Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper
+        """
+
         ci = 1 - self.alpha
         with np.errstate(invalid="ignore", divide="ignore"):
             df = pd.DataFrame(index=self.params_.index)
@@ -1350,7 +1907,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         # Print information about data first
         justify = string_justify(18)
         print(self)
-        print("{} = '{}'".format(justify("duration col"), self.duration_col))
         if self.event_col:
             print("{} = '{}'".format(justify("event col"), self.event_col))
         if self.weights_col:
@@ -1374,7 +1930,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         print("---")
 
         df = self.summary
-        # Significance codes as last column
         print(
             df.to_string(
                 float_format=format_floats(decimals),
@@ -1382,9 +1937,10 @@ class ParametericAFTRegressionFitter(BaseFitter):
             )
         )
 
-        # Significance code explanation
         print("---")
-        print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+        if self._censoring_type == CensoringType.RIGHT:
+            print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+
         print(
             "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                 *self._compute_likelihood_ratio_test(), prec=decimals
@@ -1651,7 +2207,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
                 X["_intercept"] = 1.0
             X = X[self.params_.loc[self._primary_parameter_name].index]
         else:
-            assert X.shape[1] == (self.params_.loc[self._primary_parameter_name].shape[0] + 1)  # 1 for _intercept
+            assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
 
         primary_params = self.params_[self._LOOKUP_SLICE[self._primary_parameter_name]]
         ancillary_params = self.params_[self._LOOKUP_SLICE[self._ancillary_parameter_name]]

@@ -29,6 +29,7 @@ from lifelines.utils import (
     format_exp_floats,
     survival_table_from_events,
     StatisticalWarning,
+    CensoringType,
 )
 
 from lifelines.plotting import set_kwargs_ax
@@ -151,6 +152,7 @@ class AalenAdditiveFitter(BaseFitter):
 
         """
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        self._censoring_type = CensoringType.RIGHT
 
         df = df.copy()
 
@@ -290,6 +292,8 @@ It's important to know that the naive variance estimates of the coefficients are
 
         X = df.astype(float)
         T = T.astype(float)
+
+        check_nans_or_infs(E)
         E = E.astype(bool)
 
         self._check_values(df, T, E)
@@ -335,7 +339,6 @@ It's important to know that the naive variance estimates of the coefficients are
     def _check_values(self, X, T, E):
         check_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
-        check_nans_or_infs(E)
         check_nans_or_infs(X)
 
     def predict_survival_function(self, X):
