@@ -750,8 +750,9 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         tick_labels = [columns[i] for i in order]
 
-        plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
+        ax.set_yticks(yaxis_locations)
+        ax.set_yticklabels(tick_labels)
+        ax.set_xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
 
