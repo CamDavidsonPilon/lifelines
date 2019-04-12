@@ -767,8 +767,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def fit_interval_censoring(
         self,
-        start,
-        stop,
+        lower_bound,
+        upper_bound,
         event_observed=None,
         timeline=None,
         label=None,
@@ -783,13 +783,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         Parameters
         ----------
-        start: an array, or pd.Series
+        lower_bound: an array, or pd.Series
           length n, the start of the period the subject experienced the event in.
-        stop: an array, or pd.Series
-          length n, the end of the period the subject experienced the event in. If the value is equal to the corresponding value in start, then
+        upper_bound: an array, or pd.Series
+          length n, the end of the period the subject experienced the event in. If the value is equal to the corresponding value in lower_bound, then
           the individual's event was observed (not censored).
         event_observed: numpy array or pd.Series, optional
-          length n, if left optional, infer from ``start`` and ``stop`` (if start==stop then event observed, if start < stop, then event censored)
+          length n, if left optional, infer from ``lower_bound`` and ``upper_cound`` (if lower_bound==upper_bound then event observed, if lower_bound < upper_bound, then event censored)
         timeline: list, optional
             return the estimate at the values in timeline (positively increasing)
         label: string, optional
@@ -812,27 +812,27 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        check_nans_or_infs(start)
-        check_positivity(stop)
+        check_nans_or_infs(lower_bound)
+        check_positivity(upper_bound)
 
-        self.stop = np.asarray(pass_for_numeric_dtypes_or_raise_array(stop))
-        self.start = np.asarray(pass_for_numeric_dtypes_or_raise_array(start))
+        self.upper_bound = np.asarray(pass_for_numeric_dtypes_or_raise_array(upper_bound))
+        self.lower_bound = np.asarray(pass_for_numeric_dtypes_or_raise_array(lower_bound))
 
-        if (self.stop < self.start).any():
-            raise ValueError("All stop times must be greater than or equal to start times.")
+        if (self.upper_bound < self.lower_bound).any():
+            raise ValueError("All upper_bound times must be greater than or equal to lower_bound times.")
 
         if event_observed is None:
-            event_observed = self.stop == self.start
+            event_observed = self.upper_bound == self.lower_bound
 
-        if ((self.start == self.stop) != event_observed).any():
+        if ((self.lower_bound == self.upper_bound) != event_observed).any():
             raise ValueError(
-                "For all rows, start == stop if and only if event observed = 1 (uncensored). Likewise, start < stop if and only if event observed = 0 (censored)"
+                "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
             )
 
         self._censoring_type = CensoringType.INTERVAL
 
         return self._fit(
-            (np.clip(self.start, 1e-20, 1e25), np.clip(self.stop, 1e-20, 1e25)),
+            (np.clip(self.lower_bound, 1e-20, 1e25), np.clip(self.upper_bound, 1e-20, 1e25)),
             event_observed=event_observed,
             timeline=timeline,
             label=label,
@@ -1327,8 +1327,8 @@ class ParametericAFTRegressionFitter(BaseFitter):
     def fit_interval_censoring(
         self,
         df,
-        start_col,
-        stop_col,
+        lower_bound_col,
+        upper_bound_col,
         event_col=None,
         ancillary_df=None,
         show_progress=False,
@@ -1344,20 +1344,20 @@ class ParametericAFTRegressionFitter(BaseFitter):
         Parameters
         ----------
         df: DataFrame
-            a Pandas DataFrame with necessary columns ``start_col``, ``stop_col``  (see below),
+            a Pandas DataFrame with necessary columns ``lower_bound_col``, ``upper_bound_col``  (see below),
             and any other covariates or weights.
 
-        start_col: string
+        lower_bound_col: string
             the name of the column in DataFrame that contains the subjects'
             left-most observation.
 
-        stop_col: string
+        upper_bound_col: string
             the name of the column in DataFrame that contains the subjects'
             right-most observation. Values can be np.inf (and should be if the subject is right-censored).
 
         event_col: string, optional
             the  name of the column in DataFrame that contains the subjects' death
-            observation. If left as None, will be inferred from the start and stop columns (start==stop means uncensored)
+            observation. If left as None, will be inferred from the start and stop columns (lower_bound==upper_bound means uncensored)
 
         show_progress: boolean, optional (default=False)
             since the fitter is iterative, show convergence
@@ -1414,34 +1414,34 @@ class ParametericAFTRegressionFitter(BaseFitter):
         >>> aft.predict_median(df)
         """
 
-        self.start_col = start_col
-        self.stop_col = stop_col
-        self._time_cols = [start_col, stop_col]
+        self.lower_bound_col = lower_bound_col
+        self.upper_bound_col = upper_bound_col
+        self._time_cols = [lower_bound_col, upper_bound_col]
         self._censoring_type = CensoringType.INTERVAL
 
         df = df.copy()
 
-        start = pass_for_numeric_dtypes_or_raise_array(df.pop(start_col)).astype(float)
-        stop = pass_for_numeric_dtypes_or_raise_array(df.pop(stop_col)).astype(float)
+        lower_bound = pass_for_numeric_dtypes_or_raise_array(df.pop(lower_bound_col)).astype(float)
+        upper_bound = pass_for_numeric_dtypes_or_raise_array(df.pop(upper_bound_col)).astype(float)
 
         if event_col is None:
             event_col = "E"
-            df["E"] = start == stop
+            df["E"] = lower_bound == upper_bound
 
-        if ((start == stop) != df[event_col]).any():
+        if ((lower_bound == upper_bound) != df[event_col]).any():
             raise ValueError(
-                "For all rows, start == stop if and only if event observed = 1 (uncensored). Likewise, start < stop if and only if event observed = 0 (censored)"
+                "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
             )
-        if (start > stop).any():
-            raise ValueError("All stop times must be greater than or equal to start times.")
+        if (lower_bound > upper_bound).any():
+            raise ValueError("All upper bound measurements must be greater than or equal to lower bound measurements.")
 
-        self.start = start
-        self.stop = stop
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
 
         self._fit(
             self._log_likelihood_interval_censoring,
             df,
-            (start.values, np.clip(stop.values, 0, 1e25)),
+            (lower_bound.values, np.clip(upper_bound.values, 0, 1e25)),
             event_col=event_col,
             ancillary_df=ancillary_df,
             show_progress=show_progress,
@@ -1599,7 +1599,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         entries = (
             pass_for_numeric_dtypes_or_raise_array(df.pop(entry_col)).astype(float)
             if (entry_col is not None)
-            else pd.Series(np.zeros(self._n_examples, dtype=float), index=df.index, name="start")
+            else pd.Series(np.zeros(self._n_examples, dtype=float), index=df.index, name="entry")
         )
 
         check_nans_or_infs(E)
@@ -1837,8 +1837,10 @@ class ParametericAFTRegressionFitter(BaseFitter):
             df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry})
             model.fit_right_censoring(df, "T", "E", initial_point=initial_point, entry_col="entry")
         elif self._censoring_type == CensoringType.Interval:
-            df = pd.DataFrame({"start": self.start, "stop": self.stop, "E": self.event_observed, "entry": self.entry})
-            model.fit_interval_censoring(df, "start", "stop", "E", initial_point=initial_point, entry_col="entry")
+            df = pd.DataFrame(
+                {"lb": self.lower_bound, "ub": self.upper_bound, "E": self.event_observed, "entry": self.entry}
+            )
+            model.fit_interval_censoring(df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry")
         if self._censoring_type == CensoringType.Left:
             raise NotImplementedError()
 

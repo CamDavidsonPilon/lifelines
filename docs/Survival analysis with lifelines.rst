@@ -718,7 +718,10 @@ Data can also be interval censored. An example of this is periodically recording
 
     df = load_diabetes()
 
-    wf = WeibullFitter().fit_interval_censoring(start=df['left'], stop=df['right'])
+    wf = WeibullFitter().fit_interval_censoring(lower_bound=df['left'], upper_bound=df['right'])
+
+
+Another example of using lifelines for interval censored data is located `here <https://dataorigami.net/blogs/napkin-folding/counting-and-interval-censoring>`_.
 
 
 

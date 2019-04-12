@@ -276,7 +276,7 @@ class TestParametricUnivariateFitters:
     def test_parameteric_models_fail_if_passing_in_bad_event_data(self, known_parametric_univariate_fitters):
         df = load_diabetes()
         for fitter in known_parametric_univariate_fitters:
-            with pytest.raises(ValueError, match="start == stop"):
+            with pytest.raises(ValueError, match="lower_bound == upper_bound"):
                 f = fitter().fit_interval_censoring(df["left"], df["right"], event_observed=np.ones_like(df["right"]))
 
 
@@ -773,7 +773,7 @@ class TestLogLogisticFitter:
 
 class TestWeibullFitter:
     @flaky(max_runs=3, min_passes=2)
-    @pytest.mark.parametrize("N", [50, 100, 500, 1000])
+    @pytest.mark.parametrize("N", [500, 1000])
     def test_left_censorship_inference(self, N):
         T_actual = 0.5 * np.random.weibull(5, size=N)
 
@@ -1814,7 +1814,7 @@ class TestWeibullAFTFitter:
         df["stop"] = np.where(df["arrest"], df["start"], np.inf)
         df = df.drop("week", axis=1)
 
-        aft.fit_interval_censoring(df, start_col="start", stop_col="stop", event_col="arrest")
+        aft.fit_interval_censoring(df, lower_bound_col="start", upper_bound_col="stop", event_col="arrest")
         interval_censored_results = aft.summary.copy()
 
         aft.fit_right_censoring(rossi, "week", event_col="arrest")

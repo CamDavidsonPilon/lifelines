@@ -707,7 +707,7 @@ The AFT models have APIs that handle left and interval censored data, too. The A
     5     1     16    True
     """
 
-    wf = WeibullAFTFitter().fit_interval_censoring(df, start_col='left', stop_col='right')
+    wf = WeibullAFTFitter().fit_interval_censoring(df, lower_bound_col='left', upper_bound_col='right')
     wf.print_summary()
 
     """
@@ -726,6 +726,9 @@ The AFT models have APIs that handle left and interval censored data, too. The A
     ---
     Log-likelihood ratio test = 2.74 on 1 df, -log2(p)=3.35
     """
+
+
+Another example of using lifelines for interval censored data is located `here <https://dataorigami.net/blogs/napkin-folding/counting-and-interval-censoring>`_.
 
 
 

@@ -12,8 +12,10 @@
  - `left_censorship` on all univariate fitters has been deprecated. Please use the new
  api `model.fit_left_censoring(...)`.
  - `invert_y_axis` in `model.plot(...` has been removed.
+ - `entries` property in multivariate parametric models has a new Series name: `entry`
 
 ##### Bug fixes
+ - lifelines was silently converting any NaNs in the event vector to True. An error is now thrown instead.
  - Fixed an error that didn't let users use Numpy arrays in prediction for AFT models
 
 
