@@ -759,7 +759,7 @@ Another situation with left-truncation occurs when subjects are exposed before e
 .. image:: images/lifetimes_mcas.png
 
 
-So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, but wasn't in our study for the first 4.5 years. From this point-of-view, why can't we "fill in" the dashed lines and say, for example, "subject #77 lived for 7.5 years"? If we did this, we would severely underestimate chance of dieing early on after diagnosis. Why? It's possible that there were individuals who were diagnosed and then died shortly after, and never had a chance to enter our study. If we did manage to observe them however, they would have depressed the survival curve early on. Thus, "filling in" the dashed lines makes us over confident about what occurs in the early period after diagnosis. We can see this below when we model the survival curve with and without taking into account late entries.
+So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, but wasn't in our study for the first 4.5 years. From this point-of-view, why can't we "fill in" the dashed lines and say, for example, "subject #77 lived for 7.5 years"? If we did this, we would severely underestimate chance of dying early on after diagnosis. Why? It's possible that there were individuals who were diagnosed and then died shortly after, and never had a chance to enter our study. If we did manage to observe them however, they would have depressed the survival curve early on. Thus, "filling in" the dashed lines makes us over confident about what occurs in the early period after diagnosis. We can see this below when we model the survival curve with and without taking into account late entries.
 
 
 .. code:: python
