@@ -65,6 +65,7 @@ that we would be severely underestimating the true average lifespan.
 
 
     from lifelines.plotting import plot_lifetimes
+    import numpy as np
     from numpy.random import uniform, exponential
 
     N = 25
