@@ -19,6 +19,7 @@ implementations?
 -  internal plotting methods
 -  simple and intuitive API
 -  only focus is survival analysis
+-  handles right, left and interval censored data
 
 
 Contents:

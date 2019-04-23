@@ -284,7 +284,7 @@ class CoxPHFitter(BaseFitter):
         self._norm_std = X.std(0)
         X_norm = normalize(X, self._norm_mean, self._norm_std)
 
-        hazards_ = self._newton_rhaphson(
+        hazards_ = self._fit_model(
             X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size
         )
 
@@ -368,7 +368,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-    def _newton_rhaphson(
+    def _fit_model(
         self,
         X,
         T,
