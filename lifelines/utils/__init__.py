@@ -353,7 +353,7 @@ def survival_table_from_events(
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
 
     # group by intervals
-    if collapse:
+    if (collapse) or (intervals is not None):
         event_table = _group_event_table_by_intervals(event_table, intervals)
 
     if (np.asarray(weights).astype(int) != weights).any():
@@ -376,9 +376,12 @@ def _group_event_table_by_intervals(event_table, intervals):
 
         intervals = np.arange(0, event_max + bin_width, bin_width)
 
-    return event_table.groupby(pd.cut(event_table["event_at"], intervals)).agg(
+    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals)).agg(
         {"removed": ["sum"], "observed": ["sum"], "censored": ["sum"], "at_risk": ["max"]}
     )
+    # convert columns from multiindex
+    event_table.columns = event_table.columns.droplevel(1)
+    return event_table
 
 
 def survival_events_from_table(survival_table, observed_deaths_col="observed", censored_col="censored"):
@@ -1123,6 +1126,8 @@ def add_covariate_to_timeline(
     id_col,
     duration_col,
     event_col,
+    start_col="start",
+    stop_col="stop",
     add_enum=False,
     overwrite=True,
     cumulative_sum=False,
@@ -1133,7 +1138,6 @@ def add_covariate_to_timeline(
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
     to be used iteratively as one adds more and more covariates to track over time. Before using this function, it is recommended
     to view the documentation at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-creation-for-time-varying-regression.
-
 
     Parameters
     ----------
@@ -1175,8 +1179,6 @@ def add_covariate_to_timeline(
     to_episodic_format
     to_long_format
     covariates_from_event_matrix
-
-
     """
 
     def remove_redundant_rows(cv):
@@ -1198,7 +1200,7 @@ def add_covariate_to_timeline(
         return cv
 
     def transform_cv_to_long_format(cv):
-        return cv.rename(columns={duration_col: "start"})
+        return cv.rename(columns={duration_col: start_col})
 
     def expand(df, cvs):
         id_ = df.name
@@ -1208,9 +1210,9 @@ def add_covariate_to_timeline(
             return df
 
         final_state = bool(df[event_col].iloc[-1])
-        final_stop_time = df["stop"].iloc[-1]
-        df = df.drop([id_col, event_col, "stop"], axis=1).set_index("start")
-        cv = cv.drop([id_col], axis=1).set_index("start").loc[:final_stop_time]
+        final_stop_time = df[stop_col].iloc[-1]
+        df = df.drop([id_col, event_col, stop_col], axis=1).set_index(start_col)
+        cv = cv.drop([id_col], axis=1).set_index(start_col).loc[:final_stop_time]
 
         if cumulative_sum:
             cv = cv.cumsum()
@@ -1226,11 +1228,11 @@ def add_covariate_to_timeline(
 
         n = expanded_df.shape[0]
         expanded_df = expanded_df.reset_index()
-        expanded_df["stop"] = expanded_df["start"].shift(-1)
+        expanded_df[stop_col] = expanded_df[start_col].shift(-1)
         expanded_df[id_col] = id_
         expanded_df[event_col] = False
         expanded_df.at[n - 1, event_col] = final_state
-        expanded_df.at[n - 1, "stop"] = final_stop_time
+        expanded_df.at[n - 1, stop_col] = final_stop_time
 
         if add_enum:
             expanded_df["enum"] = np.arange(1, n + 1)
@@ -1239,11 +1241,6 @@ def add_covariate_to_timeline(
             expanded_df[cv.columns] = expanded_df[cv.columns].ffill().fillna(0)
 
         return expanded_df.ffill()
-
-    if "stop" not in long_form_df.columns or "start" not in long_form_df.columns:
-        raise IndexError(
-            "The columns `stop` and `start` must be in long_form_df - perhaps you need to use `lifelines.utils.to_long_format` first?"
-        )
 
     if delay < 0:
         raise ValueError("delay parameter must be equal to or greater than 0")
