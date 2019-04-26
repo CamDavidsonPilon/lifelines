@@ -1,7 +1,18 @@
 ### Changelog
 
+#### 0.21.1 - 2019-04-26
 
-#### 0.21.0
+##### New features
+ - users can provided their own start and stop column names in `add_covariate_to_timeline`
+ - PiecewiseExponentialFitter now allows numpy arrays as breakpoints
+
+##### API changes
+ - output of `survival_table_from_events` when collapsing rows to intervals now removes the "aggregate" column multi-index.
+
+##### Bug fixes
+ - fixed bug in CoxTimeVaryingFitter when ax is provided, thanks @j-i-l!
+
+#### 0.21.0 - 2019-04-12
 
 ##### New features
  - `weights` is now a optional kwarg for parametric univariate models.
