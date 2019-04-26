@@ -139,7 +139,7 @@ From these results, Aalen's Additive model with a penalizer of 10 is best model 
 Selecting a parametric model using QQ plots
 ###############################################
 
-QQ plots normally are constructed by sorting the values. However, this isn't appropriate when there is censored data. In _lifelines_, there are routines to still create QQ plots with censored data. These are available under ``lifelines.plotting.qq_plots``, and accepts fitted a parametric lifelines model.
+QQ plots normally are constructed by sorting the values. However, this isn't appropriate when there is censored data. In *lifelines*, there are routines to still create QQ plots with censored data. These are available under ``lifelines.plotting.qq_plots``, and accepts fitted a parametric lifelines model.
 
 .. code-block:: python
 

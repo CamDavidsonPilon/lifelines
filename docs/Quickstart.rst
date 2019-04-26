@@ -93,6 +93,8 @@ Instead of the Kaplan-Meier estimator, you may be interested in a parametric mod
 
 .. code:: python
 
+    from lifelines import *
+
     fig, axes = plt.subplots(2, 3, figsize=(9, 5))
 
     kmf = KaplanMeierFitter().fit(T, E, label='KaplanMeierFitter')
