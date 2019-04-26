@@ -72,7 +72,7 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
     """
 
     def __init__(self, breakpoints, *args, **kwargs):
-        if not breakpoints:
+        if not list(breakpoints):
             raise ValueError("Breakpoints must be provided.")
 
         if not (max(breakpoints) < np.inf):
