@@ -5,33 +5,43 @@ import numpy as np
 from lifelines.utils import coalesce, CensoringType
 from scipy import stats
 
-__all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot"]
+__all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot", "cdf_plot"]
 
 
 def get_distribution_name_of_lifelines_model(model):
-    return model.__class__.__name__.replace("Fitter", "").lower()
+    return model.__class__.__name__.replace("Fitter", "").replace("AFT", "").lower()
 
 
 def create_scipy_stats_model_from_lifelines_model(model):
-    from lifelines.fitters import KnownModelParametericUnivariateFitter
+    from lifelines.fitters import KnownModelParametericUnivariateFitter, ParametericAFTRegressionFitter
 
-    assert isinstance(model, KnownModelParametericUnivariateFitter)
-
+    is_univariate_model = isinstance(model, KnownModelParametericUnivariateFitter)
     dist = get_distribution_name_of_lifelines_model(model)
+
+    if not (is_univariate_model):
+        raise TypeError(
+            "Cannot use qq-plot with this model. See notes here: https://lifelines.readthedocs.io/en/latest/Examples.html?highlight=qq_plot#selecting-a-parametric-model-using-qq-plots"
+        )
+
     if dist == "weibull":
         scipy_dist = "weibull_min"
         sparams = (model.rho_, 0, model.lambda_)
+
     elif dist == "lognormal":
         scipy_dist = "lognorm"
         sparams = (model.sigma_, 0, np.exp(model.mu_))
+
     elif dist == "loglogistic":
         scipy_dist = "fisk"
         sparams = (model.beta_, 0, model.alpha_)
+
     elif dist == "exponential":
         scipy_dist = "expon"
         sparams = (0, model.lambda_)
+
     else:
-        raise TypeError()
+        raise NotImplementedError("Distribution not implemented in SciPy")
+
     return getattr(stats, scipy_dist)(*sparams)
 
 
@@ -44,17 +54,20 @@ def cdf_plot(model, timeline=None, **plot_kwargs):
     if timeline is None:
         timeline = model.timeline
 
-    kmf = KaplanMeierFitter().fit(
-        model.durations,
-        model.event_observed,
-        left_censorship=model.left_censorship,
-        label="empirical CDF",
-        timeline=timeline,
-    )
-    if model.left_censorship:
-        kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
-    else:
-        (1 - kmf.survival_function_).plot(ax=ax, **plot_kwargs)
+    COL_EMP = "empirical quantiles"
+
+    if model._censoring_type == CensoringType.LEFT:
+        kmf = KaplanMeierFitter().fit_left_censoring(
+            model.durations, model.event_observed, label=COL_EMP, timeline=timeline
+        )
+    elif model._censoring_type == CensoringType.RIGHT:
+        kmf = KaplanMeierFitter().fit_right_censoring(
+            model.durations, model.event_observed, label=COL_EMP, timeline=timeline
+        )
+    elif model._censoring_type == CensoringType.INTERVAL:
+        raise NotImplementedError()
+
+    kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
 
     dist = get_distribution_name_of_lifelines_model(model)
     dist_object = create_scipy_stats_model_from_lifelines_model(model)
@@ -94,9 +107,6 @@ def qq_plot(model, **plot_kwargs):
     """
     from lifelines.utils import qth_survival_times
     from lifelines import KaplanMeierFitter
-    from lifelines.fitters import KnownModelParametericUnivariateFitter
-
-    assert isinstance(model, KnownModelParametericUnivariateFitter)
 
     set_kwargs_ax(plot_kwargs)
     ax = plot_kwargs.pop("ax")
@@ -107,21 +117,15 @@ def qq_plot(model, **plot_kwargs):
     COL_EMP = "empirical quantiles"
     COL_THEO = "fitted %s quantiles" % dist
 
-    is_left_censored = model._censoring_type == CensoringType.LEFT
-    is_interval_censored = model._censoring_type == CensoringType.INTERVAL
-    is_right_censored = model._censoring_type == CensoringType.RIGHT
-
-    if is_left_censored:
+    if model._censoring_type == CensoringType.LEFT:
         kmf = KaplanMeierFitter().fit_left_censoring(model.durations, model.event_observed, label=COL_EMP)
-        q = np.unique(kmf.cumulative_density_.values[:, 0])
-        quantiles = qth_survival_times(q, kmf.cumulative_density_, cdf=True)
-    elif is_right_censored:
+    elif model._censoring_type == CensoringType.RIGHT:
         kmf = KaplanMeierFitter().fit_right_censoring(model.durations, model.event_observed, label=COL_EMP)
-        q = np.unique(1 - kmf.survival_function_.values[:, 0])
-        quantiles = qth_survival_times(q, 1 - kmf.survival_function_, cdf=True)
-    elif is_interval_censored:
+    elif model._censoring_type == CensoringType.INTERVAL:
         raise NotImplementedError()
 
+    q = np.unique(kmf.cumulative_density_.values[:, 0])
+    quantiles = qth_survival_times(q, kmf.cumulative_density_, cdf=True)
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
 
