@@ -2334,7 +2334,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
     def test_efron_newtons_method(self, data_nus, cph):
         cph._batch_mode = False
-        newton = cph._newton_rhaphson
+        newton = cph._fit_model
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
         assert np.abs(newton(X, T, E, W)[0] - -0.0335) < 0.0001
 
