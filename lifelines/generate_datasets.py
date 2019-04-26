@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 # lib to create fake survival datasets
 import numpy as np
-from numpy import random
 import pandas as pd
 
 from scipy import stats
 from scipy.optimize import newton
 from scipy.integrate import cumtrapz
+
+random = np.random
 
 
 def piecewise_exponential_survival_data(n, breakpoints, lambdas):
@@ -31,7 +32,7 @@ def piecewise_exponential_survival_data(n, breakpoints, lambdas):
 
     T = np.empty(n)
     for i in range(n):
-        U = np.random.random()
+        U = random.random()
         E = -np.log(U)
 
         running_sum = 0

@@ -20,9 +20,8 @@ if __name__ == "__main__":
     wp = WeibullAFTFitter()
     start_time = time.time()
     print(df.head())
-    wp.fit_interval_censoring(df, start_col="start", stop_col="stop", event_col="arrest")
+    wp.fit_interval_censoring(df, lower_bound_col="start", upper_bound_col="stop", event_col="arrest")
     print("--- %s seconds ---" % (time.time() - start_time))
     wp.print_summary()
 
-    wp.fit_right_censoring(load_rossi(), "week", event_col="arrest")
-    wp.print_summary()
+    wp.summary.loc["rho_", "_intercept"]

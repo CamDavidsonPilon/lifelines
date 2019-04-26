@@ -613,7 +613,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.event_observed.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
-        print("{} = {:.3f}".format(justify("log-likelihood"), self._log_likelihood))
+        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
         print(
             "{} = {}".format(
                 justify("hypothesis"),
@@ -1705,12 +1705,12 @@ class ParametericAFTRegressionFitter(BaseFitter):
             ]
         )
 
-    def _add_penalty(self, value, params, *args):
+    def _add_penalty(self, ll, params, *args):
         if self.penalizer > 0:
             penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
         else:
             penalty = 0
-        return value + self.penalizer * penalty
+        return ll + self.penalizer * penalty
 
     def _fit_model(self, likelihood, Ts, E, weights, entries, Xs, show_progress=False, initial_point=None):
 
