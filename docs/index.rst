@@ -47,7 +47,6 @@ Contents:
   Survival Regression
   Time varying survival regression
   jupyter_notebooks/Proportional hazard assumption.ipynb
-  jupyter_notebooks/Cox residuals.ipynb
 
 .. toctree::
   :maxdepth: 1

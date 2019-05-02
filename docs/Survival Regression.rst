@@ -10,7 +10,7 @@ The technique is called *survival regression* -- the name implies
 we regress covariates (e.g., age, country, etc.) against
 another variable -- in this case durations. Similar to the
 logic in the first part of this tutorial, we cannot use traditional
-methods like linear regression.
+methods like linear regression because of censoring.
 
 There are a few popular models in survival regression: Cox's
 model, accelerated failure models, and Aalen's additive model. All models attempt to represent the
@@ -104,7 +104,7 @@ Consider the coefficient of ``mar`` (whether the subject is married or not). The
 
 .. math::
 
- exp(-0.43) = \frac{\text{hazard of married subjects at time $t$}}{\text{hazard of unmarried subjects at time $t$}}
+ \exp(-0.43) = \frac{\text{hazard of married subjects at time $t$}}{\text{hazard of unmarried subjects at time $t$}}
 
 
 Note that left-hand side is a constant (specifically, it's independent of time, :math:`t`), but the right-hand side has two factors that can vary with time. The *proportional assumption* is that this is true in reality. That is, hazards can change over time, but their ratio between levels remains a constant. Later we will deal with checking this assumption.
@@ -121,11 +121,11 @@ After fitting, the value of the maximum log-likelihood this available using ``cp
 Goodness of fit
 -----------------------
 
-After fitting, you may want to know how "good" of a fit your model was to the data. Aside from traditional approaches, a few methods the author has found useful is to 1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and 2. compare spread between the baseline survival function vs the Kaplan Meier survival function (Why? Interpret the spread as how much "variance" is provided by the baseline hazard versus the partial hazard. The baseline hazard is approximately equal to the Kaplan-Meier curve if none of the variance is explained by the covariates / partial hazard. Deviations from this provide a visual measure of variance explained). For example, the first figure below is a good fit, and the second figure is a much weaker fit.
+After fitting, you may want to know how "good" of a fit your model was to the data. A few methods the author has found useful is to
 
-.. image:: images/goodfit.png
+1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and
 
-.. image:: images/badfit.png
+2. look at the log-likelihood test to
 
 
 Prediction
@@ -736,8 +736,6 @@ Aalen's additive model
 =============================
 
 .. warning:: This implementation is still experimental.
-
-.. note:: This API of this model changed in version 0.17.0
 
 Aalen's Additive model is another regression model we can use. Like the Cox model, it defines
 the hazard rate, but instead of the linear model being multiplicative like the Cox model, the Aalen model is
