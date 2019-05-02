@@ -509,3 +509,19 @@ def load_diabetes(**kwargs):
     """
 
     return _load_dataset("interval_diabetes.csv", index_col=0, **kwargs)
+
+
+def load_lupus(**kwargs):
+    """
+    See https://projecteuclid.org/download/pdf_1/euclid.aos/1176345693
+
+    Note
+    ------
+    I transcribed this from the original paper, and highly suspect there are differences.
+
+    References
+    -----------
+    Merrell, M., & Shulman, L. E. (1955). Determination of prognosis in chronic disease, illustrated by systemic lupus erythematosus. Journal of Chronic Diseases, 1(1), 12–32. doi:10.1016/0021-9681(55)90018-7
+
+    """
+    return _load_dataset("merrell1955.csv", index_col=0, **kwargs)
