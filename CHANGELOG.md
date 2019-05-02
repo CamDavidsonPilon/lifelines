@@ -1,5 +1,16 @@
 ### Changelog
 
+#### 0.21.2 - 2019-04-26
+
+##### New features
+ - New regression model: `PiecewiseExponentialRegressionFitter` is available. See blog post here: https://dataorigami.net/blogs/napkin-folding/churn
+
+##### API changes
+ - The default behavior of the `predict` method on non-parametric estimators (`KaplanMeierFitter`, etc.) has changed from (previous) linear interpolation to (new) return last value. Linear interpolation is still possible with the `interpolate` flag.
+
+##### Bug fixes
+
+
 #### 0.21.1 - 2019-04-26
 
 ##### New features

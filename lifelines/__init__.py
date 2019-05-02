@@ -16,6 +16,7 @@ from lifelines.fitters.piecewise_exponential_fitter import PiecewiseExponentialF
 from lifelines.fitters.weibull_aft_fitter import WeibullAFTFitter
 from lifelines.fitters.log_logistic_aft_fitter import LogLogisticAFTFitter
 from lifelines.fitters.log_normal_aft_fitter import LogNormalAFTFitter
+from lifelines.fitters.piecewise_exponential_regression_fitter import PiecewiseExponentialRegressionFitter
 
 
 from lifelines.version import __version__
@@ -37,4 +38,5 @@ __all__ = [
     "LogLogisticAFTFitter",
     "LogNormalAFTFitter",
     "PiecewiseExponentialFitter",
+    "PiecewiseExponentialRegressionFitter",
 ]

@@ -1236,6 +1236,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         justify = string_justify(18)
         print(self)
         print("{} = '{}'".format(justify("duration col"), self.duration_col))
+
         if self.event_col:
             print("{} = '{}'".format(justify("event col"), self.event_col))
         if self.weights_col:
@@ -1255,7 +1256,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
-        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
+        print("{} = {:.{prec}f}".format(justify("partial log-likelihood"), self._log_likelihood, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 
         for k, v in kwargs.items():

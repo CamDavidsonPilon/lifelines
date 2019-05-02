@@ -271,7 +271,6 @@ class KaplanMeierFitter(UnivariateFitter):
         # estimation methods
         self._estimation_method = primary_estimate_name
         self._estimate_name = primary_estimate_name
-        self._predict_label = label
         self._update_docstrings()
 
         return self

@@ -123,9 +123,9 @@ Goodness of fit
 
 After fitting, you may want to know how "good" of a fit your model was to the data. A few methods the author has found useful is to
 
-1. look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` and
-
-2. look at the log-likelihood test to
+ - look at the concordance-index (see below section on :ref:`Model Selection in Survival Regression`), available as ``cph.score_`` or in the ``print_summary`` as a measure of predictive accuracy.
+ - look at the log-likelihood test result in the ``print_summary``
+ - check the proportional hazards assumption with the ``check_assumptions`` method. See section later on this page for more details.
 
 
 Prediction
@@ -674,7 +674,7 @@ Often, you don't know *a priori* which AFT model to use. Each model has some ass
     print(wf._log_likelihood)   # -679.916, slightly the best model.
 
 
-    # with some heterogenity in the ancillary parameters
+    # with some heterogeneity in the ancillary parameters
     ancillary_df = rossi[['prio']]
     llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
     lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)

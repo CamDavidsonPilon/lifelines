@@ -51,19 +51,6 @@ from lifelines.utils import (
 __all__ = []
 
 
-def _must_call_fit_first(func):
-    @wraps(func)
-    def error_wrapper(*args, **kwargs):
-        self = args[0]
-        try:
-            self._predict_label
-        except AttributeError:
-            raise RuntimeError("Must call `fit` first!")
-        return func(*args, **kwargs)
-
-    return error_wrapper
-
-
 class BaseFitter(object):
     def __init__(self, alpha=0.05):
         if not (0 < alpha <= 1.0):
@@ -91,7 +78,6 @@ class BaseFitter(object):
 
 
 class UnivariateFitter(BaseFitter):
-    @_must_call_fit_first
     def _update_docstrings(self):
         # Update their docstrings
         self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
@@ -99,7 +85,6 @@ class UnivariateFitter(BaseFitter):
         self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
         self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
 
-    @_must_call_fit_first
     def plot(self, **kwargs):
         """
         Plots a pretty figure of the model
@@ -146,7 +131,6 @@ class UnivariateFitter(BaseFitter):
             self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
         )
 
-    @_must_call_fit_first
     def subtract(self, other):
         """
         Subtract the {0} of two {1} objects.
@@ -166,7 +150,6 @@ class UnivariateFitter(BaseFitter):
             columns=["diff"],
         )
 
-    @_must_call_fit_first
     def divide(self, other):
         """
         Divide the {0} of two {1} objects.
@@ -229,7 +212,6 @@ class UnivariateFitter(BaseFitter):
         """
         return self._conditional_time_to_event_()
 
-    @_must_call_fit_first
     def _conditional_time_to_event_(self):
         """
         Return a DataFrame, with index equal to survival_function_, that estimates the median
@@ -256,35 +238,27 @@ class UnivariateFitter(BaseFitter):
             - age
         )
 
-    @_must_call_fit_first
     def hazard_at_times(self, times, label=None):
         raise NotImplementedError
 
-    @_must_call_fit_first
     def survival_function_at_times(self, times, label=None):
         raise NotImplementedError
 
-    @_must_call_fit_first
     def cumulative_hazard_at_times(self, times, label=None):
         raise NotImplementedError
 
-    @_must_call_fit_first
     def cumulative_density_at_times(self, times, label=None):
         raise NotImplementedError
 
-    @_must_call_fit_first
     def plot_cumulative_hazard(self, **kwargs):
         raise NotImplementedError()
 
-    @_must_call_fit_first
     def plot_survival_function(self, **kwargs):
         raise NotImplementedError()
 
-    @_must_call_fit_first
     def plot_hazard(self, **kwargs):
         raise NotImplementedError()
 
-    @_must_call_fit_first
     def plot_cumulative_density(self, **kwargs):
         raise NotImplementedError()
 
@@ -292,7 +266,6 @@ class UnivariateFitter(BaseFitter):
 class ParametericUnivariateFitter(UnivariateFitter):
     """
     Without overriding anything, assumes all parameters must be greater than 0.
-
     """
 
     _KNOWN_MODEL = False
@@ -574,7 +547,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return (self._fitted_parameters_ - self._initial_values) / self._compute_standard_errors().loc["se"]
 
     @property
-    @_must_call_fit_first
     def summary(self):
         """
         Summary statistics describing the fit.
@@ -600,7 +572,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             df["-log2(p)"] = -np.log2(df["p"])
         return df
 
-    @_must_call_fit_first
     def print_summary(self, decimals=2, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
@@ -917,7 +888,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             )
             warnings.warn(warning_text, StatisticalWarning)
 
-        self._predict_label = label
         self._update_docstrings()
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame()
@@ -927,7 +897,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         return self
 
-    @_must_call_fit_first
     def survival_function_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted survival value at specific times.
@@ -947,7 +916,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(self._survival_function(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
-    @_must_call_fit_first
     def cumulative_density_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted cumulative density function (1-survival function) at specific times.
@@ -967,7 +935,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(self._cumulative_density(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
-    @_must_call_fit_first
     def cumulative_hazard_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted cumulative hazard value at specific times.
@@ -987,7 +954,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
-    @_must_call_fit_first
     def hazard_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted hazard at specific times.
@@ -1008,7 +974,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @property
-    @_must_call_fit_first
     def median_(self):
         """
         Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
@@ -1017,7 +982,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return median_survival_times(self.survival_function_)
 
     @property
-    @_must_call_fit_first
     def confidence_interval_(self):
         """
         The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_cumulative_hazard_``.
@@ -1025,7 +989,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self._compute_confidence_bounds_of_cumulative_hazard(self.alpha, self._ci_labels)
 
     @property
-    @_must_call_fit_first
     def confidence_interval_cumulative_hazard_(self):
         """
         The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_``.
@@ -1033,7 +996,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self.confidence_interval_
 
     @property
-    @_must_call_fit_first
     def confidence_interval_hazard_(self):
         """
         The confidence interval of the hazard.
@@ -1041,7 +1003,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self._compute_confidence_bounds_of_transform(self._hazard, self.alpha, self._ci_labels)
 
     @property
-    @_must_call_fit_first
     def confidence_interval_survival_function_(self):
         """
         The confidence interval of the survival function.
@@ -1049,14 +1010,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
 
     @property
-    @_must_call_fit_first
     def confidence_interval_cumulative_density_(self):
         """
         The confidence interval of the survival function.
         """
         return self._compute_confidence_bounds_of_transform(self._cumulative_density, self.alpha, self._ci_labels)
 
-    @_must_call_fit_first
     def plot(self, **kwargs):
         """
         Produce a pretty-plot of the estimate.
@@ -1066,12 +1025,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
         )
 
-    @_must_call_fit_first
     def plot_cumulative_hazard(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
         return self.plot(**kwargs)
 
-    @_must_call_fit_first
     def plot_survival_function(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(
@@ -1081,7 +1038,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             **kwargs
         )
 
-    @_must_call_fit_first
     def plot_cumulative_density(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(
@@ -1091,7 +1047,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             **kwargs
         )
 
-    @_must_call_fit_first
     def plot_hazard(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(

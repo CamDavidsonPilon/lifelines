@@ -387,12 +387,19 @@ class TestUnivariateFitters:
         time = 1
         assert abs(kmf.predict(time) - kmf.survival_function_.iloc[time].values) < 10e-8
 
-    def test_predict_method_returns_an_approximation_if_not_in_the_index(self):
+    def test_predict_method_returns_an_approximation_if_not_in_the_index_and_interpolate_set_to_true(self):
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
-        assert abs(kmf.predict(0.5) - 5 / 6.0) < 10e-8
-        assert abs(kmf.predict(1.9999) - 0.3333666666) < 10e-8
+        assert abs(kmf.predict(0.5, interpolate=True) - 5 / 6.0) < 10e-8
+        assert abs(kmf.predict(1.9999, interpolate=True) - 0.3333666666) < 10e-8
+
+    def test_predict_method_returns_the_previous_value_if_not_in_the_index(self):
+        T = [1, 2, 3]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T)
+        assert abs(kmf.predict(1.0, interpolate=False) - 2 / 3) < 10e-8
+        assert abs(kmf.predict(1.9999, interpolate=False) - 2 / 3) < 10e-8
 
     def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes

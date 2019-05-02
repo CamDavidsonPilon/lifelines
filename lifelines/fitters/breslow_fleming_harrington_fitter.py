@@ -88,7 +88,6 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         # estimation methods
         self._estimation_method = "survival_function_"
         self._estimate_name = "survival_function_"
-        self._predict_label = label
         self._update_docstrings()
 
         # plotting functions
