@@ -188,15 +188,18 @@ class UnivariateFitter(BaseFitter):
         )
         return t
 
-    @_must_call_fit_first
-    def predict(self, times):
+    def predict(self, times, interpolate=False):
         """
         Predict the {0} at certain point in time. Uses a linear interpolation if
         points in time are not in the index.
 
         Parameters
         ----------
-        times: a scalar or an array of times to predict the value of {0} at.
+        times: scalar, or array
+            a scalar or an array of times to predict the value of {0} at.
+        interpolate: boolean, optional (default=False)
+            for methods that produce a stepwise solution (Kaplan-Meier, Nelson-Aalen, etc), turning this to
+            True will use an linear interpolation method to provide a more "smooth" answer.
 
         Returns
         -------
@@ -204,12 +207,14 @@ class UnivariateFitter(BaseFitter):
         """
         if callable(self._estimation_method):
             return pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
+
         estimate = getattr(self, self._estimation_method)
-        # non-linear interpolations can push the survival curves above 1 and below 0.
-        return dataframe_interpolate_at_times(estimate, times)
+        if not interpolate:
+            return estimate.asof(times).squeeze()
+        else:
+            return dataframe_interpolate_at_times(estimate, times)
 
     @property
-    @_must_call_fit_first
     def conditional_time_to_event_(self):
         """
         Return a DataFrame, with index equal to ``survival_function_``'s index, that estimates the median
