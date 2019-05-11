@@ -3,17 +3,19 @@ from textwrap import dedent
 import warnings
 from datetime import datetime
 from autograd import numpy as np
+from scipy.integrate import trapz
 from scipy.special import gamma
 import pandas as pd
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
-from lifelines.utils import _get_index, coalesce, qth_survival_times
+from lifelines.utils import _get_index, CensoringType
 from lifelines.fitters import BaseFitter
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle, set_kwargs_ax
 
 from lifelines.utils import (
-    qth_survival_times,
     _to_array,
     _to_list,
+    _get_index,
+    qth_survival_times,
     dataframe_interpolate_at_times,
     ConvergenceError,
     inv_normal_cdf,
@@ -31,6 +33,7 @@ from lifelines.utils import (
     StatError,
     median_survival_times,
     normalize,
+    CensoringType,
     concordance_index,
 )
 from autograd.differential_operators import make_jvp_reversemode
@@ -231,6 +234,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         self.event_col = event_col
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
+        self._censoring_type = CensoringType.RIGHT
         self.timeline = timeline
         self.robust = robust
 
@@ -238,7 +242,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
 
         T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
         E = (
-            pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col)).astype(bool)
+            pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col))
             if (self.event_col is not None)
             else pd.Series(np.ones(self._n_examples, dtype=bool), index=df.index, name="E")
         )
@@ -261,6 +265,10 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
             if (weights <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
+        df = df.astype(float)
+        self._check_values(df, T, E, self.event_col)
+
+        E = E.astype(bool)
         self.durations = T.copy()
         self.event_observed = E.copy()
         self.weights = weights.copy()
@@ -269,9 +277,6 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
             raise ValueError(
                 "This model does not allow for non-positive durations. Suggestion: add a small positive value to zero elements."
             )
-
-        df = df.astype(float)
-        self._check_values(df, T, E, self.event_col)
 
         if self.fit_intercept:
             assert "_intercept" not in df
@@ -310,6 +315,8 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         self._predicted_cumulative_hazard_ = self.predict_cumulative_hazard(df, times=[np.percentile(T, 75)]).T
 
         return self
+
+    fit_right_censoring = fit
 
     def _check_values(self, df, T, E, event_col):
         check_for_numeric_dtypes_or_raise(df)
@@ -603,6 +610,43 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
 
         """
         return self.predict_percentile(X, p=0.5)
+
+    def predict_expectation(self, X):
+        r"""
+        Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
+        to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapizoidal rule to approximate the integral.
+
+        Caution
+        --------
+        However, if the survival function doesn't converge to 0, the the expectation is really infinity and the returned
+        values are meaningless/too large. In that case, using ``predict_median`` or ``predict_percentile`` would be better.
+
+        Parameters
+        ----------
+
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+
+        Returns
+        -------
+        expectations : DataFrame
+
+        Notes
+        -----
+        If X is a DataFrame, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+
+        See Also
+        --------
+        predict_median
+        predict_percentile
+        """
+        subjects = _get_index(X)
+        v = self.predict_survival_function(X)[subjects]
+        return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
     def predict_percentile(self, X, p=0.5):
         """

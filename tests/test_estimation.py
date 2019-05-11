@@ -53,6 +53,7 @@ from lifelines import (
     WeibullAFTFitter,
     LogNormalAFTFitter,
     LogLogisticAFTFitter,
+    PiecewiseExponentialRegressionFitter,
 )
 
 from lifelines.datasets import (
@@ -105,6 +106,11 @@ def data_pred1():
 class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
     def __init__(self, **kwargs):
         super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
+
+
+class PiecewiseExponentialRegressionTesting(PiecewiseExponentialRegressionFitter):
+    def __init__(self, **kwargs):
+        super(PiecewiseExponentialRegressionTesting, self).__init__([5.0], **kwargs)
 
 
 @pytest.fixture
@@ -1280,6 +1286,7 @@ class TestRegressionFitters:
             WeibullAFTFitter(),
             LogNormalAFTFitter(),
             LogLogisticAFTFitter(),
+            PiecewiseExponentialRegressionFitter(breakpoints=[25.0]),
         ]
 
     def test_dill_serialization(self, rossi, regression_models):
@@ -1358,6 +1365,9 @@ class TestRegressionFitters:
         normalized_rossi["week"] = (normalized_rossi["week"]) / t.std()
 
         for fitter in regression_models:
+            if isinstance(fitter, PiecewiseExponentialRegressionFitter):
+                continue
+
             # we drop indexes since aaf will have a different "time" index.
             try:
                 hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_
@@ -1449,6 +1459,64 @@ class TestRegressionFitters:
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
             assert hasattr(fitter, "_censoring_type")
+
+
+class TestPiecewiseExponentialRegressionFitter:
+    def test_inference(self):
+
+        N, d = 80000, 2
+
+        # some numbers take from http://statwonk.com/parametric-survival.html
+        breakpoints = (1, 31, 34, 62, 65)
+
+        betas = np.array(
+            [
+                [1.0, -0.2, np.log(15)],
+                [5.0, -0.4, np.log(333)],
+                [9.0, -0.6, np.log(18)],
+                [5.0, -0.8, np.log(500)],
+                [2.0, -1.0, np.log(20)],
+                [1.0, -1.2, np.log(500)],
+            ]
+        )
+
+        X = 0.1 * np.random.exponential(size=(N, d))
+        X = np.c_[X, np.ones(N)]
+
+        T = np.empty(N)
+        for i in range(N):
+            lambdas = np.exp(-betas.dot(X[i, :]))
+            T[i] = piecewise_exponential_survival_data(1, breakpoints, lambdas)[0]
+
+        T_censor = np.minimum(
+            T.mean() * np.random.exponential(size=N), 110
+        )  # 110 is the end of observation, eg. current time.
+
+        df = pd.DataFrame(X[:, :-1], columns=["var1", "var2"])
+        df["T"] = np.round(np.maximum(np.minimum(T, T_censor), 0.1), 1)
+        df["E"] = T <= T_censor
+
+        pew = PiecewiseExponentialRegressionFitter(breakpoints=breakpoints, penalizer=0.0001).fit(df, "T", "E")
+
+        def assert_allclose(variable_name_tuple, actual):
+            npt.assert_allclose(
+                pew.summary.loc[variable_name_tuple, "coef"],
+                actual,
+                rtol=1,
+                atol=2 * pew.summary.loc[variable_name_tuple, "se(coef)"],
+            )
+
+        assert_allclose(("lambda_0_", "var1"), betas[0][0])
+        assert_allclose(("lambda_0_", "var2"), betas[0][1])
+        assert_allclose(("lambda_0_", "_intercept"), betas[0][2])
+
+        assert_allclose(("lambda_1_", "var1"), betas[1][0])
+        assert_allclose(("lambda_1_", "var2"), betas[1][1])
+        assert_allclose(("lambda_1_", "_intercept"), betas[1][2])
+
+        assert_allclose(("lambda_5_", "var1"), betas[-1][0])
+        assert_allclose(("lambda_5_", "var2"), betas[-1][1])
+        assert_allclose(("lambda_5_", "_intercept"), betas[-1][2])
 
 
 class TestAFTFitters:
