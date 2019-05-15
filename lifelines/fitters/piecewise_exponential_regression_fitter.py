@@ -2,12 +2,15 @@
 from textwrap import dedent
 import warnings
 from datetime import datetime
-from autograd import numpy as np
 from scipy.integrate import trapz
 from scipy.special import gamma
+from scipy.optimize import minimize
+from scipy import stats
+from numpy.linalg import inv, pinv
 import pandas as pd
+from autograd import numpy as np
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
-from lifelines.utils import _get_index, CensoringType
+
 from lifelines.fitters import BaseFitter
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle, set_kwargs_ax
 
@@ -36,11 +39,6 @@ from lifelines.utils import (
     CensoringType,
     concordance_index,
 )
-from autograd.differential_operators import make_jvp_reversemode
-from scipy.optimize import minimize
-from scipy import stats
-import pandas as pd
-from numpy.linalg import inv, pinv
 
 
 class PiecewiseExponentialRegressionFitter(BaseFitter):

@@ -108,11 +108,6 @@ class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
         super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
 
 
-class PiecewiseExponentialRegressionTesting(PiecewiseExponentialRegressionFitter):
-    def __init__(self, **kwargs):
-        super(PiecewiseExponentialRegressionTesting, self).__init__([5.0], **kwargs)
-
-
 @pytest.fixture
 def data_pred2():
     N = 150
@@ -787,7 +782,7 @@ class TestLogLogisticFitter:
 
 class TestWeibullFitter:
     @flaky(max_runs=3, min_passes=2)
-    @pytest.mark.parametrize("N", [500, 1000])
+    @pytest.mark.parametrize("N", [750, 1500])
     def test_left_censorship_inference(self, N):
         T_actual = 0.5 * np.random.weibull(5, size=N)
 
