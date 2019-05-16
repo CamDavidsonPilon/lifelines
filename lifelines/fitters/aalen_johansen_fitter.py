@@ -60,6 +60,7 @@ class AalenJohansenFitter(UnivariateFitter):
         self._seed = seed  # Seed is for the jittering process
         self._calc_var = calculate_variance  # Optionally skips calculating variance to save time on bootstraps
 
+    @CensoringType.right_censoring
     def fit(
         self,
         durations,
@@ -99,9 +100,6 @@ class AalenJohansenFitter(UnivariateFitter):
         self : AalenJohansenFitter
           self, with new properties like ``cumulative_incidence_``.
         """
-
-        self._censoring_type = CensoringType.RIGHT
-
         # Checking for tied event times
         ties = self._check_for_duplicates(durations=durations, events=event_observed)
 
@@ -152,7 +150,6 @@ class AalenJohansenFitter(UnivariateFitter):
         # Setting attributes
         self._estimation_method = "cumulative_density_"
         self._estimate_name = "cumulative_density_"
-        self._predict_label = label
         self._update_docstrings()
 
         self._label = label
@@ -220,7 +217,7 @@ class AalenJohansenFitter(UnivariateFitter):
         df["Ft"] = self.cumulative_density_
         df["lagS"] = lagged_survival.fillna(1)
         if ci_labels is None:
-            ci_labels = ["%s_upper_%g" % (self._predict_label, ci), "%s_lower_%g" % (self._predict_label, ci)]
+            ci_labels = ["%s_upper_%g" % (self._label, ci), "%s_lower_%g" % (self._label, ci)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
         # Have to loop through each time independently. Don't think there is a faster way

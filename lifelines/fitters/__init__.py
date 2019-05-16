@@ -51,27 +51,15 @@ from lifelines.utils import (
 __all__ = []
 
 
-def _must_call_fit_first(func):
-    @wraps(func)
-    def error_wrapper(*args, **kwargs):
-        self = args[0]
-        try:
-            self._predict_label
-        except AttributeError:
-            raise RuntimeError("Must call `fit` first!")
-        return func(*args, **kwargs)
-
-    return error_wrapper
-
-
 class BaseFitter(object):
     def __init__(self, alpha=0.05):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
+        self._class_name = self.__class__.__name__
 
     def __repr__(self):
-        classname = self.__class__.__name__
+        classname = self._class_name
         try:
             s = """<lifelines.%s: fitted with %d observations, %d censored>""" % (
                 classname,
@@ -82,24 +70,23 @@ class BaseFitter(object):
             s = """<lifelines.%s>""" % classname
         return s
 
+    @CensoringType.right_censoring
     def fit(*args, **kwargs):
         raise NotImplementedError()
 
+    @CensoringType.right_censoring
     def fit_right_censoring(self, *args, **kwargs):
-        self._censoring_type = CensoringType.RIGHT
         return self.fit(*args, **kwargs)
 
 
 class UnivariateFitter(BaseFitter):
-    @_must_call_fit_first
     def _update_docstrings(self):
         # Update their docstrings
-        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
-        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
-        self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-        self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
+        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self._class_name)
+        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self._class_name)
+        self.__class__.predict.__doc__ = self.predict.__doc__.format(self._class_name)
+        self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self._class_name, self._estimate_name)
 
-    @_must_call_fit_first
     def plot(self, **kwargs):
         """
         Plots a pretty figure of the model
@@ -146,7 +133,6 @@ class UnivariateFitter(BaseFitter):
             self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
         )
 
-    @_must_call_fit_first
     def subtract(self, other):
         """
         Subtract the {0} of two {1} objects.
@@ -166,7 +152,6 @@ class UnivariateFitter(BaseFitter):
             columns=["diff"],
         )
 
-    @_must_call_fit_first
     def divide(self, other):
         """
         Divide the {0} of two {1} objects.
@@ -188,15 +173,18 @@ class UnivariateFitter(BaseFitter):
         )
         return t
 
-    @_must_call_fit_first
-    def predict(self, times):
+    def predict(self, times, interpolate=False):
         """
         Predict the {0} at certain point in time. Uses a linear interpolation if
         points in time are not in the index.
 
         Parameters
         ----------
-        times: a scalar or an array of times to predict the value of {0} at.
+        times: scalar, or array
+            a scalar or an array of times to predict the value of {0} at.
+        interpolate: boolean, optional (default=False)
+            for methods that produce a stepwise solution (Kaplan-Meier, Nelson-Aalen, etc), turning this to
+            True will use an linear interpolation method to provide a more "smooth" answer.
 
         Returns
         -------
@@ -204,12 +192,14 @@ class UnivariateFitter(BaseFitter):
         """
         if callable(self._estimation_method):
             return pd.DataFrame(self._estimation_method(_to_array(times)), index=_to_array(times)).loc[times].squeeze()
+
         estimate = getattr(self, self._estimation_method)
-        # non-linear interpolations can push the survival curves above 1 and below 0.
-        return dataframe_interpolate_at_times(estimate, times)
+        if not interpolate:
+            return estimate.asof(times).squeeze()
+        else:
+            return dataframe_interpolate_at_times(estimate, times)
 
     @property
-    @_must_call_fit_first
     def conditional_time_to_event_(self):
         """
         Return a DataFrame, with index equal to ``survival_function_``'s index, that estimates the median
@@ -224,7 +214,6 @@ class UnivariateFitter(BaseFitter):
         """
         return self._conditional_time_to_event_()
 
-    @_must_call_fit_first
     def _conditional_time_to_event_(self):
         """
         Return a DataFrame, with index equal to survival_function_, that estimates the median
@@ -251,35 +240,27 @@ class UnivariateFitter(BaseFitter):
             - age
         )
 
-    @_must_call_fit_first
     def hazard_at_times(self, times, label=None):
         raise NotImplementedError
 
-    @_must_call_fit_first
     def survival_function_at_times(self, times, label=None):
         raise NotImplementedError
 
-    @_must_call_fit_first
     def cumulative_hazard_at_times(self, times, label=None):
         raise NotImplementedError
 
-    @_must_call_fit_first
     def cumulative_density_at_times(self, times, label=None):
         raise NotImplementedError
 
-    @_must_call_fit_first
     def plot_cumulative_hazard(self, **kwargs):
         raise NotImplementedError()
 
-    @_must_call_fit_first
     def plot_survival_function(self, **kwargs):
         raise NotImplementedError()
 
-    @_must_call_fit_first
     def plot_hazard(self, **kwargs):
         raise NotImplementedError()
 
-    @_must_call_fit_first
     def plot_cumulative_density(self, **kwargs):
         raise NotImplementedError()
 
@@ -287,7 +268,6 @@ class UnivariateFitter(BaseFitter):
 class ParametericUnivariateFitter(UnivariateFitter):
     """
     Without overriding anything, assumes all parameters must be greater than 0.
-
     """
 
     _KNOWN_MODEL = False
@@ -315,7 +295,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             )
 
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
-        class_name = self.__class__.__name__
+        class_name = self._class_name
 
         cumulative_hazard = self._cumulative_hazard(values, durations)
         if not np.all(cumulative_hazard > 0):
@@ -487,11 +467,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return df
 
     def _fit_model(self, Ts, E, entry, weights, show_progress=True):
-        if self._censoring_type == CensoringType.LEFT:
+        if CensoringType.is_left_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
-        elif self._censoring_type == CensoringType.INTERVAL:
+        elif CensoringType.is_interval_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_interval_censoring
-        elif self._censoring_type == CensoringType.RIGHT:
+        elif CensoringType.is_right_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_right_censoring
 
         with warnings.catch_warnings():
@@ -520,7 +500,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                         """\
                     Fitting did not converge. This is mostly a lifelines problem, but a few things you can check:
                     1. Are there any extreme values in the durations column?
-                      - Try scaling your durations to a more reasonable values closer to 1 (multipling or dividing by some 10^n).
+                      - Try scaling your durations to a more reasonable values closer to 1 (multiplying or dividing by some 10^n).
                       - Try dropping them to see if the model converges.
                 """
                     )
@@ -532,13 +512,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
                         """\
                     Fitting did not converge.
 
-                    1. Are two parameters in the model colinear / exchangeable? (Change model)
+                    1. Are two parameters in the model collinear / exchangeable? (Change model)
                     2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
                     3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
 
                     This could be a problem with your data:
                     1. Are there any extreme values in the durations column?
-                        - Try scaling your durations to a more reasonable value closer to 1 (multipling or dividing by a large constant).
+                        - Try scaling your durations to a more reasonable value closer to 1 (multiplying or dividing by a large constant).
                         - Try dropping them to see if the model converges.
                     """
                     )
@@ -569,7 +549,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return (self._fitted_parameters_ - self._initial_values) / self._compute_standard_errors().loc["se"]
 
     @property
-    @_must_call_fit_first
     def summary(self):
         """
         Summary statistics describing the fit.
@@ -595,7 +574,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             df["-log2(p)"] = -np.log2(df["p"])
         return df
 
-    @_must_call_fit_first
     def print_summary(self, decimals=2, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
@@ -637,6 +615,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             )
         )
 
+    @CensoringType.right_censoring
     def fit(
         self,
         durations,
@@ -691,7 +670,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
         check_nans_or_infs(self.durations)
         check_positivity(self.durations)
-        self._censoring_type = CensoringType.RIGHT
 
         return self._fit(
             (self.durations, None),
@@ -705,6 +683,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             weights=weights,
         )
 
+    @CensoringType.left_censoring
     def fit_left_censoring(
         self,
         durations,
@@ -752,7 +731,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
         check_nans_or_infs(self.durations)
         check_positivity(self.durations)
-        self._censoring_type = CensoringType.LEFT
         return self._fit(
             (None, self.durations),
             event_observed=event_observed,
@@ -765,6 +743,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             weights=weights,
         )
 
+    @CensoringType.interval_censoring
     def fit_interval_censoring(
         self,
         lower_bound,
@@ -829,8 +808,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
             )
 
-        self._censoring_type = CensoringType.INTERVAL
-
         return self._fit(
             (np.clip(self.lower_bound, 1e-20, 1e25), np.clip(self.upper_bound, 1e-20, 1e25)),
             event_observed=event_observed,
@@ -856,7 +833,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         weights=None,
     ):
 
-        label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
+        label = coalesce(label, self._class_name.replace("Fitter", "") + "_estimate")
         n = len(coalesce(*Ts))
 
         if event_observed is not None:
@@ -912,7 +889,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             )
             warnings.warn(warning_text, StatisticalWarning)
 
-        self._predict_label = label
         self._update_docstrings()
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame()
@@ -922,7 +898,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         return self
 
-    @_must_call_fit_first
     def survival_function_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted survival value at specific times.
@@ -942,7 +917,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(self._survival_function(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
-    @_must_call_fit_first
     def cumulative_density_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted cumulative density function (1-survival function) at specific times.
@@ -962,7 +936,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(self._cumulative_density(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
-    @_must_call_fit_first
     def cumulative_hazard_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted cumulative hazard value at specific times.
@@ -982,7 +955,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
-    @_must_call_fit_first
     def hazard_at_times(self, times, label=None):
         """
         Return a Pandas series of the predicted hazard at specific times.
@@ -1003,7 +975,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @property
-    @_must_call_fit_first
     def median_(self):
         """
         Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
@@ -1012,7 +983,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return median_survival_times(self.survival_function_)
 
     @property
-    @_must_call_fit_first
     def confidence_interval_(self):
         """
         The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_cumulative_hazard_``.
@@ -1020,7 +990,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self._compute_confidence_bounds_of_cumulative_hazard(self.alpha, self._ci_labels)
 
     @property
-    @_must_call_fit_first
     def confidence_interval_cumulative_hazard_(self):
         """
         The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_``.
@@ -1028,7 +997,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self.confidence_interval_
 
     @property
-    @_must_call_fit_first
     def confidence_interval_hazard_(self):
         """
         The confidence interval of the hazard.
@@ -1036,7 +1004,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self._compute_confidence_bounds_of_transform(self._hazard, self.alpha, self._ci_labels)
 
     @property
-    @_must_call_fit_first
     def confidence_interval_survival_function_(self):
         """
         The confidence interval of the survival function.
@@ -1044,14 +1011,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
 
     @property
-    @_must_call_fit_first
     def confidence_interval_cumulative_density_(self):
         """
         The confidence interval of the survival function.
         """
         return self._compute_confidence_bounds_of_transform(self._cumulative_density, self.alpha, self._ci_labels)
 
-    @_must_call_fit_first
     def plot(self, **kwargs):
         """
         Produce a pretty-plot of the estimate.
@@ -1061,12 +1026,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
         )
 
-    @_must_call_fit_first
     def plot_cumulative_hazard(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
         return self.plot(**kwargs)
 
-    @_must_call_fit_first
     def plot_survival_function(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(
@@ -1076,7 +1039,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             **kwargs
         )
 
-    @_must_call_fit_first
     def plot_cumulative_density(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(
@@ -1086,7 +1048,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             **kwargs
         )
 
-    @_must_call_fit_first
     def plot_hazard(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(
@@ -1212,6 +1173,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         ll = ll / np.sum(W)
         return ll
 
+    @CensoringType.right_censoring
     def fit(
         self,
         df,
@@ -1301,7 +1263,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         """
         self.duration_col = duration_col
         self._time_cols = [duration_col]
-        self._censoring_type = CensoringType.RIGHT
 
         df = df.copy()
 
@@ -1324,6 +1285,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         return self
 
+    @CensoringType.interval_censoring
     def fit_interval_censoring(
         self,
         df,
@@ -1417,7 +1379,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.lower_bound_col = lower_bound_col
         self.upper_bound_col = upper_bound_col
         self._time_cols = [lower_bound_col, upper_bound_col]
-        self._censoring_type = CensoringType.INTERVAL
 
         df = df.copy()
 
@@ -1454,6 +1415,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         return self
 
+    @CensoringType.left_censoring
     def fit_left_censoring(
         self,
         df,
@@ -1540,7 +1502,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         >>> aft.print_summary()
         >>> aft.predict_median(df)
         """
-        self._censoring_type = CensoringType.LEFT
         df = df.copy()
 
         T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
@@ -1684,14 +1645,18 @@ class ParametericAFTRegressionFitter(BaseFitter):
             # technically this is suboptimal for log normal mu, but that's okay.
             return np.log(param)
 
-        name = self.__class__.__name__.replace("AFT", "")
-        uni_model = getattr(lifelines, name)()
+        name = self._class_name.replace("AFT", "")
+        try:
+            uni_model = getattr(lifelines, name)()
+        except:
+            # some custom AFT model that univariate model is not defined.
+            return np.concatenate([[0] * _X.shape[1] for _X in enumerate(Xs)])
 
-        if self._censoring_type == CensoringType.RIGHT:
+        if CensoringType.is_right_censoring(self):
             uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
-        elif self._censoring_type == CensoringType.INTERVAL:
+        elif CensoringType.is_interval_censoring(self):
             uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
-        elif self._censoring_type == CensoringType.LEFT:
+        elif CensoringType.is_left_censoring(self):
             uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
         # we may use this later in print_summary
@@ -1739,7 +1704,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
             hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
-        name = self.__class__.__name__
+        name = self._class_name
         raise ConvergenceError(
             dedent(
                 """\
@@ -1833,28 +1798,27 @@ class ParametericAFTRegressionFitter(BaseFitter):
         initial_point = np.zeros(len(self._fitted_parameter_names))
 
         model = self.__class__()
-        if self._censoring_type == CensoringType.Right:
+        if CensoringType.is_right_censoring(self):
             df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry})
             model.fit_right_censoring(df, "T", "E", initial_point=initial_point, entry_col="entry")
-        elif self._censoring_type == CensoringType.Interval:
+        elif CensoringType.is_interval_censoring(self):
             df = pd.DataFrame(
                 {"lb": self.lower_bound, "ub": self.upper_bound, "E": self.event_observed, "entry": self.entry}
             )
             model.fit_interval_censoring(df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry")
-        if self._censoring_type == CensoringType.Left:
+        if CensoringType.is_left_censoring(self):
             raise NotImplementedError()
 
         self._ll_null_ = model._log_likelihood
         return self._ll_null_
 
-    def _compute_likelihood_ratio_test(self):
+    def log_likelihood_ratio_test(self):
         """
         This function computes the likelihood ratio test for the model. We
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
-
         """
-        from lifelines.statistics import chisq_test
+        from lifelines.statistics import chisq_test, StatisticalResult
 
         ll_null = self._ll_null
         ll_alt = self._log_likelihood
@@ -1862,8 +1826,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.params_.shape[0] - 2  # delta in number of parameters between models
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
-        with np.errstate(invalid="ignore", divide="ignore"):
-            return test_stat, degrees_freedom, -np.log2(p_value)
+        return StatisticalResult(
+            p_value,
+            test_stat,
+            name="log-likelihood ratio test",
+            degrees_freedom=degrees_freedom,
+            null_distribution="chi squared",
+        )
 
     @property
     def summary(self):
@@ -1938,14 +1907,16 @@ class ParametericAFTRegressionFitter(BaseFitter):
         )
 
         print("---")
-        if self._censoring_type == CensoringType.RIGHT:
+        if CensoringType.is_right_censoring(self):
             print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
 
-        print(
-            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                *self._compute_likelihood_ratio_test(), prec=decimals
+        with np.errstate(invalid="ignore", divide="ignore"):
+            sr = self.log_likelihood_ratio_test()
+            print(
+                "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+                    sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
+                )
             )
-        )
 
     def predict_survival_function(self, X, times=None, ancillary_X=None):
         """

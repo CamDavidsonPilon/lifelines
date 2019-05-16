@@ -68,6 +68,7 @@ class KaplanMeierFitter(UnivariateFitter):
         A summary of the life table
     """
 
+    @CensoringType.right_censoring
     def fit(
         self,
         durations,
@@ -119,9 +120,9 @@ class KaplanMeierFitter(UnivariateFitter):
                 DeprecationWarning,
             )
 
-        self._censoring_type = CensoringType.RIGHT
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
+    @CensoringType.left_censoring
     def fit_left_censoring(
         self,
         durations,
@@ -166,7 +167,6 @@ class KaplanMeierFitter(UnivariateFitter):
           self with new properties like ``survival_function_``, ``plot()``, ``median``
 
         """
-        self._censoring_type = CensoringType.LEFT
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
     def _fit(
@@ -230,7 +230,7 @@ class KaplanMeierFitter(UnivariateFitter):
                 )
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
-        is_left_censoring = self._censoring_type == CensoringType.LEFT
+        is_left_censoring = CensoringType.is_left_censoring(self)
         primary_estimate_name = "survival_function_" if not is_left_censoring else "cumulative_density_"
         secondary_estimate_name = "cumulative_density_" if not is_left_censoring else "survival_function_"
 
@@ -271,7 +271,6 @@ class KaplanMeierFitter(UnivariateFitter):
         # estimation methods
         self._estimation_method = primary_estimate_name
         self._estimate_name = primary_estimate_name
-        self._predict_label = label
         self._update_docstrings()
 
         return self

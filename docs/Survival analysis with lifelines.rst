@@ -606,7 +606,7 @@ With parametric models, we have a functional form that allows us to extend the s
 .. image:: images/weibull_extrapolation.png
 
 
-To aid model selection, _lifelines_ has provided qq-plots, `Selecting a parametric model using QQ plots`_.
+To aid model selection, *lifelines* has provided qq-plots, `Selecting a parametric model using QQ plots`_.
 
 
 Other types of censoring

@@ -538,7 +538,7 @@ class StatisticalResult(object):
     name: iterable or string
         if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable.
     kwargs:
-        additional information to display in ``print_summary()``.
+        additional information to attach to the object and display in ``print_summary()``.
 
     """
 
@@ -554,7 +554,6 @@ class StatisticalResult(object):
         if name is not None:
             self.name = _to_list(name)
             assert len(self.name) == len(self._test_statistic)
-
         else:
             self.name = None
 
@@ -599,11 +598,14 @@ class StatisticalResult(object):
         return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
 
     def __repr__(self):
+        if self.name and len(self.name) == 1:
+            return "<lifelines.StatisticalResult: {0}>".format(self.name[0])
         return "<lifelines.StatisticalResult>"
 
     def _to_string(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
+
         df = self.summary
         with np.errstate(invalid="ignore", divide="ignore"):
             df["-log2(p)"] = -np.log2(df["p"])

@@ -53,6 +53,7 @@ from lifelines import (
     WeibullAFTFitter,
     LogNormalAFTFitter,
     LogLogisticAFTFitter,
+    PiecewiseExponentialRegressionFitter,
 )
 
 from lifelines.datasets import (
@@ -387,12 +388,19 @@ class TestUnivariateFitters:
         time = 1
         assert abs(kmf.predict(time) - kmf.survival_function_.iloc[time].values) < 10e-8
 
-    def test_predict_method_returns_an_approximation_if_not_in_the_index(self):
+    def test_predict_method_returns_an_approximation_if_not_in_the_index_and_interpolate_set_to_true(self):
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
         kmf.fit(T)
-        assert abs(kmf.predict(0.5) - 5 / 6.0) < 10e-8
-        assert abs(kmf.predict(1.9999) - 0.3333666666) < 10e-8
+        assert abs(kmf.predict(0.5, interpolate=True) - 5 / 6.0) < 10e-8
+        assert abs(kmf.predict(1.9999, interpolate=True) - 0.3333666666) < 10e-8
+
+    def test_predict_method_returns_the_previous_value_if_not_in_the_index(self):
+        T = [1, 2, 3]
+        kmf = KaplanMeierFitter()
+        kmf.fit(T)
+        assert abs(kmf.predict(1.0, interpolate=False) - 2 / 3) < 10e-8
+        assert abs(kmf.predict(1.9999, interpolate=False) - 2 / 3) < 10e-8
 
     def test_custom_timeline_can_be_list_or_array(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
@@ -774,7 +782,7 @@ class TestLogLogisticFitter:
 
 class TestWeibullFitter:
     @flaky(max_runs=3, min_passes=2)
-    @pytest.mark.parametrize("N", [500, 1000])
+    @pytest.mark.parametrize("N", [750, 1500])
     def test_left_censorship_inference(self, N):
         T_actual = 0.5 * np.random.weibull(5, size=N)
 
@@ -1273,6 +1281,7 @@ class TestRegressionFitters:
             WeibullAFTFitter(),
             LogNormalAFTFitter(),
             LogLogisticAFTFitter(),
+            PiecewiseExponentialRegressionFitter(breakpoints=[25.0]),
         ]
 
     def test_dill_serialization(self, rossi, regression_models):
@@ -1351,6 +1360,9 @@ class TestRegressionFitters:
         normalized_rossi["week"] = (normalized_rossi["week"]) / t.std()
 
         for fitter in regression_models:
+            if isinstance(fitter, PiecewiseExponentialRegressionFitter):
+                continue
+
             # we drop indexes since aaf will have a different "time" index.
             try:
                 hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_
@@ -1442,6 +1454,64 @@ class TestRegressionFitters:
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
             assert hasattr(fitter, "_censoring_type")
+
+
+class TestPiecewiseExponentialRegressionFitter:
+    def test_inference(self):
+
+        N, d = 80000, 2
+
+        # some numbers take from http://statwonk.com/parametric-survival.html
+        breakpoints = (1, 31, 34, 62, 65)
+
+        betas = np.array(
+            [
+                [1.0, -0.2, np.log(15)],
+                [5.0, -0.4, np.log(333)],
+                [9.0, -0.6, np.log(18)],
+                [5.0, -0.8, np.log(500)],
+                [2.0, -1.0, np.log(20)],
+                [1.0, -1.2, np.log(500)],
+            ]
+        )
+
+        X = 0.1 * np.random.exponential(size=(N, d))
+        X = np.c_[X, np.ones(N)]
+
+        T = np.empty(N)
+        for i in range(N):
+            lambdas = np.exp(-betas.dot(X[i, :]))
+            T[i] = piecewise_exponential_survival_data(1, breakpoints, lambdas)[0]
+
+        T_censor = np.minimum(
+            T.mean() * np.random.exponential(size=N), 110
+        )  # 110 is the end of observation, eg. current time.
+
+        df = pd.DataFrame(X[:, :-1], columns=["var1", "var2"])
+        df["T"] = np.round(np.maximum(np.minimum(T, T_censor), 0.1), 1)
+        df["E"] = T <= T_censor
+
+        pew = PiecewiseExponentialRegressionFitter(breakpoints=breakpoints, penalizer=0.0001).fit(df, "T", "E")
+
+        def assert_allclose(variable_name_tuple, actual):
+            npt.assert_allclose(
+                pew.summary.loc[variable_name_tuple, "coef"],
+                actual,
+                rtol=1,
+                atol=2 * pew.summary.loc[variable_name_tuple, "se(coef)"],
+            )
+
+        assert_allclose(("lambda_0_", "var1"), betas[0][0])
+        assert_allclose(("lambda_0_", "var2"), betas[0][1])
+        assert_allclose(("lambda_0_", "_intercept"), betas[0][2])
+
+        assert_allclose(("lambda_1_", "var1"), betas[1][0])
+        assert_allclose(("lambda_1_", "var2"), betas[1][1])
+        assert_allclose(("lambda_1_", "_intercept"), betas[1][2])
+
+        assert_allclose(("lambda_5_", "var1"), betas[-1][0])
+        assert_allclose(("lambda_5_", "var2"), betas[-1][1])
+        assert_allclose(("lambda_5_", "_intercept"), betas[-1][2])
 
 
 class TestAFTFitters:
@@ -1748,7 +1818,7 @@ class TestWeibullAFTFitter:
     def test_fitted_log_likelihood_ratio_test_match_with_flexsurv_has(self, aft, rossi):
         # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
         aft.fit(rossi, "week", "arrest")
-        npt.assert_allclose(aft._compute_likelihood_ratio_test()[0], 33.42, rtol=0.01)
+        npt.assert_allclose(aft.log_likelihood_ratio_test().test_statistic, 33.42, rtol=0.01)
 
     def test_coefs_with_fitted_ancillary_params(self, aft, rossi):
         """
@@ -2843,7 +2913,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(regression_dataset, "T", "E")
 
-        without_weights = cph._compute_likelihood_ratio_test()
+        without_weights = cph.log_likelihood_ratio_test()
 
         regression_dataset["weights"] = 0.5
         cph = CoxPHFitter()
@@ -2852,8 +2922,8 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
             cph.fit(regression_dataset, "T", "E", weights_col="weights")
 
-            with_weights = cph._compute_likelihood_ratio_test()
-            assert with_weights[0] != without_weights[0]
+            with_weights = cph.log_likelihood_ratio_test()
+            assert with_weights.test_statistic != without_weights.test_statistic
 
     def test_log_likelihood_test_against_R_with_weights(self, rossi):
         """
@@ -2879,7 +2949,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         with pytest.warns(StatisticalWarning, match="weights are not integers"):
             cph.fit(df, "T", "E", show_progress=True, weights_col="w")
             expected = 0.05
-            assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
+            assert abs(cph.log_likelihood_ratio_test().test_statistic - expected) < 0.01
 
     def test_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -3041,7 +3111,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         expected = 33.27
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest")
-        assert (cf._compute_likelihood_ratio_test()[0] - expected) < 0.001
+        assert (cf.log_likelihood_ratio_test().test_statistic - expected) < 0.001
 
     def test_output_with_strata_against_R(self, rossi):
         """
@@ -3936,9 +4006,10 @@ class TestCoxTimeVaryingFitter:
 
     def test_likelihood_ratio_test_against_R(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event")
-        test_stat, deg_of_freedom, neg_log2_p_value = ctv._compute_likelihood_ratio_test()
+        sr = ctv.log_likelihood_ratio_test()
+        test_stat, deg_of_freedom, p_value = sr.test_statistic, sr.degrees_freedom, sr.p_value
         assert abs(test_stat - 15.1) < 0.1
-        assert abs(2 ** (-neg_log2_p_value) - 0.00448) < 0.001
+        assert abs(p_value - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
@@ -4029,11 +4100,11 @@ Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
 
     def test_ctv_ratio_test_with_strata(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"])
-        npt.assert_allclose(ctv._compute_likelihood_ratio_test()[0], 15.68, atol=0.01)
+        npt.assert_allclose(ctv.log_likelihood_ratio_test().test_statistic, 15.68, atol=0.01)
 
     def test_ctv_ratio_test_with_strata_and_initial_point(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"], initial_point=0.1 * np.ones(3))
-        npt.assert_allclose(ctv._compute_likelihood_ratio_test()[0], 15.68, atol=0.01)
+        npt.assert_allclose(ctv.log_likelihood_ratio_test().test_statistic, 15.68, atol=0.01)
 
 
 class TestAalenJohansenFitter:

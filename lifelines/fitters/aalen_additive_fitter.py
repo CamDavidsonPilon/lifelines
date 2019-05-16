@@ -94,6 +94,7 @@ class AalenAdditiveFitter(BaseFitter):
         if coef_penalizer < 0 or smoothing_penalizer < 0:
             raise ValueError("penalizer parameters must be >= 0.")
 
+    @CensoringType.right_censoring
     def fit(self, df, duration_col, event_col=None, weights_col=None, show_progress=False):
         """
         Parameters
@@ -152,7 +153,6 @@ class AalenAdditiveFitter(BaseFitter):
 
         """
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
-        self._censoring_type = CensoringType.RIGHT
 
         df = df.copy()
 

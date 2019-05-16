@@ -28,6 +28,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
     """
 
+    @CensoringType.right_censoring
     def fit(
         self,
         durations,
@@ -65,7 +66,6 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
           self, with new properties like ``survival_function_``.
 
         """
-        self._censoring_type = CensoringType.RIGHT
         self._label = label
         alpha = coalesce(alpha, self.alpha)
 
@@ -88,7 +88,6 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         # estimation methods
         self._estimation_method = "survival_function_"
         self._estimate_name = "survival_function_"
-        self._predict_label = label
         self._update_docstrings()
 
         # plotting functions
