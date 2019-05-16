@@ -598,7 +598,7 @@ class StatisticalResult(object):
         return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
 
     def __repr__(self):
-        if len(self.name) == 1:
+        if self.name and len(self.name) == 1:
             return "<lifelines.StatisticalResult: {0}>".format(self.name[0])
         return "<lifelines.StatisticalResult>"
 

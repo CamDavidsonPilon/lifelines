@@ -669,7 +669,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 )
             )
 
-    def _compute_likelihood_ratio_test(self):
+    def log_likelihood_ratio_test(self):
         """
         This function computes the likelihood ratio test for the Cox model. We
         compare the existing model (with all the covariates) to the trivial model

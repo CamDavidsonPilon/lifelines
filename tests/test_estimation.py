@@ -2923,7 +2923,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             cph.fit(regression_dataset, "T", "E", weights_col="weights")
 
             with_weights = cph.log_likelihood_ratio_test()
-            assert with_weights.test_statistic != without_weights.test_statistics
+            assert with_weights.test_statistic != without_weights.test_statistic
 
     def test_log_likelihood_test_against_R_with_weights(self, rossi):
         """
