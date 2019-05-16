@@ -3,7 +3,8 @@
 import warnings
 import collections
 from datetime import datetime
-from enum import Enum
+from functools import wraps
+
 
 import numpy as np
 from scipy.linalg import solve
@@ -30,10 +31,50 @@ __all__ = [
 ]
 
 
-class CensoringType(Enum):
-    LEFT = "left"
-    INTERVAL = "interval"
-    RIGHT = "right"
+class CensoringType:
+
+    LEFT = 1
+    INTERVAL = 2
+    RIGHT = 3
+
+    @classmethod
+    def right_censoring(cls, function):
+        @wraps(function)
+        def f(self, *args, **kwargs):
+            self._censoring_type = cls.RIGHT
+            return function(self, *args, **kwargs)
+
+        return f
+
+    @classmethod
+    def left_censoring(cls, function):
+        @wraps(function)
+        def f(self, *args, **kwargs):
+            self._censoring_type = cls.LEFT
+            return function(self, *args, **kwargs)
+
+        return f
+
+    @classmethod
+    def interval_censoring(cls, function):
+        @wraps(function)
+        def f(self, *args, **kwargs):
+            self._censoring_type = cls.INTERVAL
+            return function(self, *args, **kwargs)
+
+        return f
+
+    @classmethod
+    def is_right_censoring(cls, model):
+        return model._censoring_type == cls.RIGHT
+
+    @classmethod
+    def is_left_censoring(cls, model):
+        return model._censoring_type == cls.LEFT
+
+    @classmethod
+    def is_interval_censoring(cls, model):
+        return model._censoring_type == cls.INTERVAL
 
 
 class StatError(Exception):

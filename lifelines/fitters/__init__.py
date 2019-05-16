@@ -70,11 +70,12 @@ class BaseFitter(object):
             s = """<lifelines.%s>""" % classname
         return s
 
+    @CensoringType.right_censoring
     def fit(*args, **kwargs):
         raise NotImplementedError()
 
+    @CensoringType.right_censoring
     def fit_right_censoring(self, *args, **kwargs):
-        self._censoring_type = CensoringType.RIGHT
         return self.fit(*args, **kwargs)
 
 
@@ -466,11 +467,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return df
 
     def _fit_model(self, Ts, E, entry, weights, show_progress=True):
-        if self._censoring_type == CensoringType.LEFT:
+        if CensoringType.is_left_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
-        elif self._censoring_type == CensoringType.INTERVAL:
+        elif CensoringType.is_interval_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_interval_censoring
-        elif self._censoring_type == CensoringType.RIGHT:
+        elif CensoringType.is_right_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_right_censoring
 
         with warnings.catch_warnings():
@@ -499,7 +500,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                         """\
                     Fitting did not converge. This is mostly a lifelines problem, but a few things you can check:
                     1. Are there any extreme values in the durations column?
-                      - Try scaling your durations to a more reasonable values closer to 1 (multipling or dividing by some 10^n).
+                      - Try scaling your durations to a more reasonable values closer to 1 (multiplying or dividing by some 10^n).
                       - Try dropping them to see if the model converges.
                 """
                     )
@@ -511,13 +512,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
                         """\
                     Fitting did not converge.
 
-                    1. Are two parameters in the model colinear / exchangeable? (Change model)
+                    1. Are two parameters in the model collinear / exchangeable? (Change model)
                     2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
                     3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
 
                     This could be a problem with your data:
                     1. Are there any extreme values in the durations column?
-                        - Try scaling your durations to a more reasonable value closer to 1 (multipling or dividing by a large constant).
+                        - Try scaling your durations to a more reasonable value closer to 1 (multiplying or dividing by a large constant).
                         - Try dropping them to see if the model converges.
                     """
                     )
@@ -614,6 +615,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             )
         )
 
+    @CensoringType.right_censoring
     def fit(
         self,
         durations,
@@ -668,7 +670,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
         check_nans_or_infs(self.durations)
         check_positivity(self.durations)
-        self._censoring_type = CensoringType.RIGHT
 
         return self._fit(
             (self.durations, None),
@@ -682,6 +683,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             weights=weights,
         )
 
+    @CensoringType.left_censoring
     def fit_left_censoring(
         self,
         durations,
@@ -729,7 +731,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations))
         check_nans_or_infs(self.durations)
         check_positivity(self.durations)
-        self._censoring_type = CensoringType.LEFT
         return self._fit(
             (None, self.durations),
             event_observed=event_observed,
@@ -742,6 +743,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             weights=weights,
         )
 
+    @CensoringType.interval_censoring
     def fit_interval_censoring(
         self,
         lower_bound,
@@ -805,8 +807,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             raise ValueError(
                 "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
             )
-
-        self._censoring_type = CensoringType.INTERVAL
 
         return self._fit(
             (np.clip(self.lower_bound, 1e-20, 1e25), np.clip(self.upper_bound, 1e-20, 1e25)),
@@ -1173,6 +1173,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         ll = ll / np.sum(W)
         return ll
 
+    @CensoringType.right_censoring
     def fit(
         self,
         df,
@@ -1262,7 +1263,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         """
         self.duration_col = duration_col
         self._time_cols = [duration_col]
-        self._censoring_type = CensoringType.RIGHT
 
         df = df.copy()
 
@@ -1285,6 +1285,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         return self
 
+    @CensoringType.interval_censoring
     def fit_interval_censoring(
         self,
         df,
@@ -1378,7 +1379,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.lower_bound_col = lower_bound_col
         self.upper_bound_col = upper_bound_col
         self._time_cols = [lower_bound_col, upper_bound_col]
-        self._censoring_type = CensoringType.INTERVAL
 
         df = df.copy()
 
@@ -1415,6 +1415,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         return self
 
+    @CensoringType.left_censoring
     def fit_left_censoring(
         self,
         df,
@@ -1501,7 +1502,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         >>> aft.print_summary()
         >>> aft.predict_median(df)
         """
-        self._censoring_type = CensoringType.LEFT
         df = df.copy()
 
         T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
@@ -1652,11 +1652,11 @@ class ParametericAFTRegressionFitter(BaseFitter):
             # some custom AFT model that univariate model is not defined.
             return np.concatenate([[0] * _X.shape[1] for _X in enumerate(Xs)])
 
-        if self._censoring_type == CensoringType.RIGHT:
+        if CensoringType.is_right_censoring(self):
             uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
-        elif self._censoring_type == CensoringType.INTERVAL:
+        elif CensoringType.is_interval_censoring(self):
             uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
-        elif self._censoring_type == CensoringType.LEFT:
+        elif CensoringType.is_left_censoring(self):
             uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
         # we may use this later in print_summary
@@ -1798,28 +1798,27 @@ class ParametericAFTRegressionFitter(BaseFitter):
         initial_point = np.zeros(len(self._fitted_parameter_names))
 
         model = self.__class__()
-        if self._censoring_type == CensoringType.Right:
+        if CensoringType.is_right_censoring(self):
             df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry})
             model.fit_right_censoring(df, "T", "E", initial_point=initial_point, entry_col="entry")
-        elif self._censoring_type == CensoringType.Interval:
+        elif CensoringType.is_interval_censoring(self):
             df = pd.DataFrame(
                 {"lb": self.lower_bound, "ub": self.upper_bound, "E": self.event_observed, "entry": self.entry}
             )
             model.fit_interval_censoring(df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry")
-        if self._censoring_type == CensoringType.Left:
+        if CensoringType.is_left_censoring(self):
             raise NotImplementedError()
 
         self._ll_null_ = model._log_likelihood
         return self._ll_null_
 
-    def _compute_likelihood_ratio_test(self):
+    def log_likelihood_ratio_test(self):
         """
         This function computes the likelihood ratio test for the model. We
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
-
         """
-        from lifelines.statistics import chisq_test
+        from lifelines.statistics import chisq_test, StatisticalResult
 
         ll_null = self._ll_null
         ll_alt = self._log_likelihood
@@ -1827,8 +1826,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.params_.shape[0] - 2  # delta in number of parameters between models
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
-        with np.errstate(invalid="ignore", divide="ignore"):
-            return test_stat, degrees_freedom, -np.log2(p_value)
+        return StatisticalResult(
+            p_value,
+            test_stat,
+            name="log-likelihood ratio test",
+            degrees_freedom=degrees_freedom,
+            null_distribution="chi squared",
+        )
 
     @property
     def summary(self):
@@ -1903,14 +1907,16 @@ class ParametericAFTRegressionFitter(BaseFitter):
         )
 
         print("---")
-        if self._censoring_type == CensoringType.RIGHT:
+        if CensoringType.is_right_censoring(self):
             print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
 
-        print(
-            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                *self._compute_likelihood_ratio_test(), prec=decimals
+        with np.errstate(invalid="ignore", divide="ignore"):
+            sr = self.log_likelihood_ratio_test()
+            print(
+                "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+                    sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
+                )
             )
-        )
 
     def predict_survival_function(self, X, times=None, ancillary_X=None):
         """

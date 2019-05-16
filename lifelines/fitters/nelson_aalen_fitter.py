@@ -70,6 +70,7 @@ class NelsonAalenFitter(UnivariateFitter):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
+    @CensoringType.right_censoring
     def fit(
         self,
         durations,
@@ -111,7 +112,6 @@ class NelsonAalenFitter(UnivariateFitter):
           self, with new properties like ``cumulative_hazard_``.
 
         """
-        self._censoring_type = CensoringType.RIGHT
         check_nans_or_infs(durations)
         if event_observed is not None:
             check_nans_or_infs(event_observed)

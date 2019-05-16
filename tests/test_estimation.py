@@ -1818,7 +1818,7 @@ class TestWeibullAFTFitter:
     def test_fitted_log_likelihood_ratio_test_match_with_flexsurv_has(self, aft, rossi):
         # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
         aft.fit(rossi, "week", "arrest")
-        npt.assert_allclose(aft._compute_likelihood_ratio_test()[0], 33.42, rtol=0.01)
+        npt.assert_allclose(aft.log_likelihood_ratio_test().test_statistic, 33.42, rtol=0.01)
 
     def test_coefs_with_fitted_ancillary_params(self, aft, rossi):
         """
@@ -2913,7 +2913,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph = CoxPHFitter()
         cph.fit(regression_dataset, "T", "E")
 
-        without_weights = cph._compute_likelihood_ratio_test()
+        without_weights = cph.log_likelihood_ratio_test()
 
         regression_dataset["weights"] = 0.5
         cph = CoxPHFitter()
@@ -2922,8 +2922,8 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
             cph.fit(regression_dataset, "T", "E", weights_col="weights")
 
-            with_weights = cph._compute_likelihood_ratio_test()
-            assert with_weights[0] != without_weights[0]
+            with_weights = cph.log_likelihood_ratio_test()
+            assert with_weights.test_statistic != without_weights.test_statistics
 
     def test_log_likelihood_test_against_R_with_weights(self, rossi):
         """
@@ -2949,7 +2949,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         with pytest.warns(StatisticalWarning, match="weights are not integers"):
             cph.fit(df, "T", "E", show_progress=True, weights_col="w")
             expected = 0.05
-            assert abs(cph._compute_likelihood_ratio_test()[0] - expected) < 0.01
+            assert abs(cph.log_likelihood_ratio_test().test_statistic - expected) < 0.01
 
     def test_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -3111,7 +3111,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         expected = 33.27
         cf = CoxPHFitter()
         cf.fit(rossi, duration_col="week", event_col="arrest")
-        assert (cf._compute_likelihood_ratio_test()[0] - expected) < 0.001
+        assert (cf.log_likelihood_ratio_test().test_statistic - expected) < 0.001
 
     def test_output_with_strata_against_R(self, rossi):
         """
@@ -4006,9 +4006,10 @@ class TestCoxTimeVaryingFitter:
 
     def test_likelihood_ratio_test_against_R(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event")
-        test_stat, deg_of_freedom, neg_log2_p_value = ctv._compute_likelihood_ratio_test()
+        sr = ctv.log_likelihood_ratio_test()
+        test_stat, deg_of_freedom, p_value = sr.test_statistic, sr.degrees_freedom, sr.p_value
         assert abs(test_stat - 15.1) < 0.1
-        assert abs(2 ** (-neg_log2_p_value) - 0.00448) < 0.001
+        assert abs(p_value - 0.00448) < 0.001
         assert deg_of_freedom == 4
 
     def test_error_thrown_weights_are_nonpositive(self, ctv, heart):
@@ -4099,11 +4100,11 @@ Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
 
     def test_ctv_ratio_test_with_strata(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"])
-        npt.assert_allclose(ctv._compute_likelihood_ratio_test()[0], 15.68, atol=0.01)
+        npt.assert_allclose(ctv.log_likelihood_ratio_test().test_statistic, 15.68, atol=0.01)
 
     def test_ctv_ratio_test_with_strata_and_initial_point(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"], initial_point=0.1 * np.ones(3))
-        npt.assert_allclose(ctv._compute_likelihood_ratio_test()[0], 15.68, atol=0.01)
+        npt.assert_allclose(ctv.log_likelihood_ratio_test().test_statistic, 15.68, atol=0.01)
 
 
 class TestAalenJohansenFitter:

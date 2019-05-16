@@ -14,7 +14,7 @@ from bottleneck import nansum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter
 from lifelines.plotting import set_kwargs_ax, set_kwargs_drawstyle
-from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers
+from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers, StatisticalResult
 from lifelines.utils.lowess import lowess
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio
 from lifelines.utils import (
@@ -139,6 +139,7 @@ class CoxPHFitter(BaseFitter):
         self.penalizer = penalizer
         self.strata = strata
 
+    @CensoringType.right_censoring
     def fit(
         self,
         df,
@@ -258,7 +259,6 @@ class CoxPHFitter(BaseFitter):
         if duration_col is None:
             raise TypeError("duration_col cannot be None.")
 
-        self._censoring_type = CensoringType.RIGHT
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
@@ -1277,13 +1277,15 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         # Significance code explanation
         print("---")
         print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
-        print(
-            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                *self._compute_likelihood_ratio_test(), prec=decimals
+        with np.errstate(invalid="ignore", divide="ignore"):
+            sr = self.log_likelihood_ratio_test()
+            print(
+                "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+                    sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
+                )
             )
-        )
 
-    def _compute_likelihood_ratio_test(self):
+    def log_likelihood_ratio_test(self):
         """
         This function computes the likelihood ratio test for the Cox model. We
         compare the existing model (with all the covariates) to the trivial model
@@ -1304,8 +1306,13 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.hazards_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
-        with np.errstate(invalid="ignore", divide="ignore"):
-            return test_stat, degrees_freedom, -np.log2(p_value)
+        return StatisticalResult(
+            p_value,
+            test_stat,
+            name="log-likelihood ratio test",
+            null_distribution="chi squared",
+            degrees_freedom=degrees_freedom,
+        )
 
     def predict_partial_hazard(self, X):
         r"""

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import numpy as np
 from lifelines import WeibullFitter
 
 lambda_, rho_ = 2, 0.5

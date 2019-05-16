@@ -16,7 +16,7 @@ from scipy.linalg import solve as spsolve, LinAlgError
 from bottleneck import nansum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter
-from lifelines.statistics import chisq_test
+from lifelines.statistics import chisq_test, StatisticalResult
 from lifelines.utils import (
     _get_index,
     _to_list,
@@ -661,11 +661,13 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         # Significance code explanation
         print("---")
-        print(
-            "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                *self._compute_likelihood_ratio_test(), prec=decimals
+        with np.errstate(invalid="ignore", divide="ignore"):
+            sr = self.log_likelihood_ratio_test()
+            print(
+                "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+                    sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
+                )
             )
-        )
 
     def _compute_likelihood_ratio_test(self):
         """
@@ -701,8 +703,13 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         test_stat = 2 * (ll_alt - ll_null)
         degrees_freedom = self.hazards_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
-        with np.errstate(invalid="ignore", divide="ignore"):
-            return test_stat, degrees_freedom, -np.log2(p_value)
+        return StatisticalResult(
+            p_value,
+            test_stat,
+            name="log-likelihood ratio test",
+            degrees_freedom=degrees_freedom,
+            null_distribution="chi squared",
+        )
 
     def plot(self, columns=None, **errorbar_kwargs):
         """

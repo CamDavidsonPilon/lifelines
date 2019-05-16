@@ -146,6 +146,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         ll = ll / np.sum(W)
         return -ll + self.penalizer * coef_penalty
 
+    @CensoringType.right_censoring
     def fit(
         self,
         df,
@@ -231,7 +232,6 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         self.event_col = event_col
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
-        self._censoring_type = CensoringType.RIGHT
         self.timeline = timeline
         self.robust = robust
 

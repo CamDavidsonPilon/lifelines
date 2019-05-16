@@ -4,9 +4,11 @@
 
 ##### New features
  - New regression model: `PiecewiseExponentialRegressionFitter` is available. See blog post here: https://dataorigami.net/blogs/napkin-folding/churn
+ - Regression models have a new method `log_likelihood_ratio_test` that computes, you guessed it, the log-likelihood ratio test. Previously this was an internal API that is being exposed.
 
 ##### API changes
  - The default behavior of the `predict` method on non-parametric estimators (`KaplanMeierFitter`, etc.) has changed from (previous) linear interpolation to (new) return last value. Linear interpolation is still possible with the `interpolate` flag.
+ - removing `_compute_likelihood_ratio_test` on regression models. Use `log_likelihood_ratio_test` now.
 
 ##### Bug fixes
 

@@ -60,6 +60,7 @@ class AalenJohansenFitter(UnivariateFitter):
         self._seed = seed  # Seed is for the jittering process
         self._calc_var = calculate_variance  # Optionally skips calculating variance to save time on bootstraps
 
+    @CensoringType.right_censoring
     def fit(
         self,
         durations,
@@ -99,9 +100,6 @@ class AalenJohansenFitter(UnivariateFitter):
         self : AalenJohansenFitter
           self, with new properties like ``cumulative_incidence_``.
         """
-
-        self._censoring_type = CensoringType.RIGHT
-
         # Checking for tied event times
         ties = self._check_for_duplicates(durations=durations, events=event_observed)
 
