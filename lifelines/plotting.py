@@ -9,7 +9,7 @@ __all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot", "cdf_plot"]
 
 
 def get_distribution_name_of_lifelines_model(model):
-    return model.__class__.__name__.replace("Fitter", "").replace("AFT", "").lower()
+    return model._class_name.replace("Fitter", "").replace("AFT", "").lower()
 
 
 def create_scipy_stats_model_from_lifelines_model(model):

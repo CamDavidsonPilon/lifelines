@@ -137,12 +137,11 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         ll = (W[E] * self._log_hazard(params, T[E], X[E, :])).sum() - (
             W[:, None] * self._cumulative_hazard(params, T, X)
         ).sum()
+
+        coef_penalty = 0
         if self.penalizer > 0:
-            coef_penalty = 0
             for i in range(X.shape[1] - 1):  # assuming the intercept col is the last column...
                 coef_penalty = coef_penalty + (params[i :: X.shape[1]]).var()
-        else:
-            coef_penalty = 0
 
         ll = ll / np.sum(W)
         return -ll + self.penalizer * coef_penalty
@@ -364,7 +363,6 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
             hessian_ = hessian(self._negative_log_likelihood)(results.x, T, E, weights, X)
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
-        name = self.__class__.__name__
         raise ConvergenceError(
             dedent(
                 """\
@@ -373,7 +371,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
             2. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence
             3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`
         """
-                % name
+                % self._class_name
             )
         )
 

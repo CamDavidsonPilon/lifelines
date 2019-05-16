@@ -787,7 +787,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         return survival_df
 
     def __repr__(self):
-        classname = self.__class__.__name__
+        classname = self._class_name
         try:
             s = """<lifelines.%s: fitted with %d periods, %d subjects, %d events>""" % (
                 classname,

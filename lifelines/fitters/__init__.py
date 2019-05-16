@@ -56,9 +56,10 @@ class BaseFitter(object):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
+        self._class_name = self.__class__.__name__
 
     def __repr__(self):
-        classname = self.__class__.__name__
+        classname = self._class_name
         try:
             s = """<lifelines.%s: fitted with %d observations, %d censored>""" % (
                 classname,
@@ -80,10 +81,10 @@ class BaseFitter(object):
 class UnivariateFitter(BaseFitter):
     def _update_docstrings(self):
         # Update their docstrings
-        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self.__class__.__name__)
-        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self.__class__.__name__)
-        self.__class__.predict.__doc__ = self.predict.__doc__.format(self.__class__.__name__)
-        self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self.__class__.__name__, self._estimate_name)
+        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self._class_name)
+        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self._class_name)
+        self.__class__.predict.__doc__ = self.predict.__doc__.format(self._class_name)
+        self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self._class_name, self._estimate_name)
 
     def plot(self, **kwargs):
         """
@@ -293,7 +294,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             )
 
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
-        class_name = self.__class__.__name__
+        class_name = self._class_name
 
         cumulative_hazard = self._cumulative_hazard(values, durations)
         if not np.all(cumulative_hazard > 0):
@@ -832,7 +833,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         weights=None,
     ):
 
-        label = coalesce(label, self.__class__.__name__.replace("Fitter", "") + "_estimate")
+        label = coalesce(label, self._class_name.replace("Fitter", "") + "_estimate")
         n = len(coalesce(*Ts))
 
         if event_observed is not None:
@@ -1644,8 +1645,12 @@ class ParametericAFTRegressionFitter(BaseFitter):
             # technically this is suboptimal for log normal mu, but that's okay.
             return np.log(param)
 
-        name = self.__class__.__name__.replace("AFT", "")
-        uni_model = getattr(lifelines, name)()
+        name = self._class_name.replace("AFT", "")
+        try:
+            uni_model = getattr(lifelines, name)()
+        except:
+            # some custom AFT model that univariate model is not defined.
+            return np.concatenate([[0] * _X.shape[1] for _X in enumerate(Xs)])
 
         if self._censoring_type == CensoringType.RIGHT:
             uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
@@ -1699,7 +1704,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
             hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
-        name = self.__class__.__name__
+        name = self._class_name
         raise ConvergenceError(
             dedent(
                 """\

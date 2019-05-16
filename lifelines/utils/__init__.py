@@ -3,7 +3,7 @@
 import warnings
 import collections
 from datetime import datetime
-
+from enum import Enum
 
 import numpy as np
 from scipy.linalg import solve
@@ -30,7 +30,7 @@ __all__ = [
 ]
 
 
-class CensoringType:
+class CensoringType(Enum):
     LEFT = "left"
     INTERVAL = "interval"
     RIGHT = "right"
