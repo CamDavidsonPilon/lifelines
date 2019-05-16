@@ -248,7 +248,8 @@ class AalenAdditiveFitter(BaseFitter):
             X[exits, :] = 0
 
             if show_progress and i % int((n_deaths / 10)) == 0:
-                print("Iteration %d/%d, seconds_since_start = %.2f" % (i + 1, n_deaths, time.time() - start))
+                print("\rIteration %d/%d, seconds_since_start = %.2f" % (i + 1, n_deaths, time.time() - start),
+                      end="")
 
             last_iteration = i + 1
             # terminate early when there are less than (3 * d) subjects left, where d does not include the intercept.
