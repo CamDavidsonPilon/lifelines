@@ -1,6 +1,6 @@
 ### Changelog
 
-#### 0.21.2 - 2019-04-26
+#### 0.21.2 - 2019-05-16
 
 ##### New features
  - New regression model: `PiecewiseExponentialRegressionFitter` is available. See blog post here: https://dataorigami.net/blogs/napkin-folding/churn
