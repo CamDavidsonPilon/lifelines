@@ -37,7 +37,7 @@ setup(
     ],
     install_requires=[
         "numpy>=1.6.0",
-        "scipy>=1.0",
+        "scipy<=1.2.1",
         "pandas>=0.23.0",
         "matplotlib>=3.0",
         "bottleneck>=1.0",
