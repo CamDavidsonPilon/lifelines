@@ -1012,7 +1012,7 @@ def check_nans_or_infs(df_or_array):
         infs = np.isinf(df_or_array)
     except TypeError:
         warning_text = (
-            """Attempting to convert an unexpected datatype '%s' to float. Suggestion: 1) use `lifelines.utils.datetime_to_durations` to do conversions or 2) manually convert to floats/booleans."""
+            """Attempting to convert an unexpected datatype '%s' to float. Suggestion: 1) use `lifelines.utils.datetimes_to_durations` to do conversions or 2) manually convert to floats/booleans."""
             % df_or_array.dtype
         )
         warnings.warn(warning_text)
