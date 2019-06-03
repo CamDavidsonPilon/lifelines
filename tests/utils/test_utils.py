@@ -720,6 +720,32 @@ class TestLongDataFrameUtils(object):
         )
         assert_frame_equal(expected, df, check_like=True)
 
+    def test_covariates_from_event_matrix_with_simple_addition(self):
+
+        base_df = pd.DataFrame(
+            [[1, 0, 5, 1], [2, 0, 4, 1], [3, 0, 8, 1], [4, 0, 4, 1]], columns=["id", "start", "stop", "e"]
+        )
+
+        event_df = pd.DataFrame([[1, 1], [2, 2], [3, 3], [4, None]], columns=["id", "poison"])
+        cv = utils.covariates_from_event_matrix(event_df, "id")
+        ldf = utils.add_covariate_to_timeline(base_df, cv, "id", "duration", "e", cumulative_sum=False)
+
+        assert pd.notnull(ldf).all().all()
+
+        expected = pd.DataFrame(
+            [
+                (0.0, 0.0, 1.0, 1, False),
+                (1.0, 1.0, 5.0, 1, True),
+                (0.0, 0.0, 2.0, 2, False),
+                (2.0, 1.0, 4.0, 2, True),
+                (0.0, 0.0, 3.0, 3, False),
+                (3.0, 1.0, 8.0, 3, True),
+                (0.0, 0.0, 4.0, 4, True),
+            ],
+            columns=["start", "cumsum_poison", "stop", "id", "e"],
+        )
+        assert_frame_equal(expected, ldf, check_dtype=False, check_like=True)
+
     def test_covariates_from_event_matrix(self):
 
         base_df = pd.DataFrame(

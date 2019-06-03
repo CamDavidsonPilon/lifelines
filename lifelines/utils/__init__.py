@@ -1178,7 +1178,7 @@ def add_covariate_to_timeline(
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
     to be used iteratively as one adds more and more covariates to track over time. Before using this function, it is recommended
-    to view the documentation at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-creation-for-time-varying-regression.
+    to view the documentation at https://lifelines.readthedocs.io/en/latest/Time%20varying%20survival%20regression.html#dataset-creation-for-time-varying-regression
 
     Parameters
     ----------
@@ -1334,10 +1334,15 @@ def covariates_from_event_matrix(df, id_col):
 
     """
     df = df.set_index(id_col)
-    df = df.stack().reset_index()
+    df = df.fillna(np.inf)
+    df = df.stack(dropna=False).reset_index()
     df.columns = [id_col, "event", "duration"]
     df["_counter"] = 1
-    return df.pivot_table(index=[id_col, "duration"], columns="event", fill_value=0)["_counter"].reset_index()
+    return (
+        df.pivot_table(index=[id_col, "duration"], columns="event", fill_value=0)["_counter"]
+        .reset_index()
+        .rename_axis(None, axis=1)
+    )
 
 
 class StepSizer:
