@@ -1773,7 +1773,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return axes
 
     def check_assumptions(
-        self, training_df, advice=True, show_plots=False, p_value_threshold=0.01, plot_n_bootstraps=10
+        self, training_df, advice=True, show_plots=False, p_value_threshold=0.01, plot_n_bootstraps=10, columns=None
     ):
         """
         Use this function to test the proportional hazards assumption. See usage example at
@@ -1795,6 +1795,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         plot_n_bootstraps:
             in the plots displayed, also display plot_n_bootstraps bootstrapped loess curves. This will slow down
             the function significantly.
+        columns: list, optional
+            specify a subset of columns to test.
 
 
         Examples
@@ -1843,7 +1845,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         counter = 0
         n = residuals_and_duration.shape[0]
 
-        for variable in self.hazards_.index:
+        for variable in self.hazards_.index.intersection(columns or self.hazards_.index):
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if np.round(minumum_observed_p_value, 2) > p_value_threshold:
                 continue
