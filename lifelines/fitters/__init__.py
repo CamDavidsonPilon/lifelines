@@ -979,7 +979,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
         robust summary statistic for the population, if it exists.
+
+        For known parametric models, this should be overwritten by something more accurate.
         """
+        warnings.warn(
+            "Approximating the median using `survival_function_`. Try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
+            StatisticalWarning,
+        )
         return median_survival_times(self.survival_function_)
 
     @property
