@@ -1,5 +1,15 @@
 ### Changelog
 
+#### 0.21.3
+
+##### New features
+ - `CoxPHFitter.plot` now accepts a `hazard_ratios` (boolean) parameter that will plot the hazard ratios (and CIs) instead of the log-hazard ratios.
+ - `CoxPHFitter.check_assumptions` now accepts a `columns` parameter to specify only checking a subset of columns.
+
+##### Bug fixes
+ - `covariates_from_event_matrix` handle nulls better
+
+
 #### 0.21.2 - 2019-05-16
 
 ##### New features

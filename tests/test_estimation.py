@@ -2023,6 +2023,12 @@ class TestCoxPHFitter:
         cph.fit(rossi, "week", "arrest")
         cph.check_assumptions(rossi)
 
+    def test_check_assumptions_for_subset_of_columns(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest")
+        cph.check_assumptions(rossi, columns=["age"])
+        cph.check_assumptions(rossi, columns=[])
+        cph.check_assumptions(rossi, columns=["age", "fin"])
+
     def test_cph_doesnt_modify_original_dataframe(self, cph):
         df = pd.DataFrame(
             {
