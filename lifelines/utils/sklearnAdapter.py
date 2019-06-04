@@ -1,10 +1,7 @@
-from sklearn.base import BaseEstimator, RegressorMixin, MetaEstimatorMixin, MultiOutputMixin
-from sklearn.model_selection import cross_validate
-from sklearn.metrics import fbeta_score, make_scorer
-from . import concordance_index
-import pandas
-
 import inspect
+import pandas
+from sklearn.base import BaseEstimator, RegressorMixin, MetaEstimatorMixin, MultiOutputMixin
+from . import concordance_index
 
 
 def filterKwArgs(f, kwargs):
@@ -27,7 +24,8 @@ def filterKwArgs(f, kwargs):
 
 
 class LifelinesSKLearnAdapter(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
-    def __init__(self, fitter, params, yArgName="duration_col", eventArgName="event_col", remap=None):
+    __slots__ = ("fitter", "params", "yArgName", "eventArgName", "remap", "concordanceRemap")
+    def __init__(self, fitter, params, yArgName="duration_col", eventArgName="event_col", remap=None, concordanceRemap=None):
         self.fitter = fitter
         assert yArgName in params
         self.params = params
@@ -36,6 +34,9 @@ class LifelinesSKLearnAdapter(BaseEstimator, MetaEstimatorMixin, RegressorMixin)
         if remap is None:
             remap = {}
         self.remap = remap
+        if concordanceRemap is None:
+            concordanceRemap = lambda sself, c: c
+        self.concordanceRemap = concordanceRemap
 
     @property
     def yColumn(self):
@@ -78,4 +79,6 @@ class LifelinesSKLearnAdapter(BaseEstimator, MetaEstimatorMixin, RegressorMixin)
         else:
             etalonExpectation = y
         predictedExpectation = self.predict(X)
-        return concordance_index(etalonExpectation, predictedExpectation, event_observed=eventColumn)
+        res = concordance_index(etalonExpectation, predictedExpectation, event_observed=eventColumn)
+        res = self.concordanceRemap(self, res)
+        return res
