@@ -13,6 +13,7 @@ from numpy.random import randn
 from lifelines import CoxPHFitter
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
 from lifelines import utils
+from lifelines.utils.sklearn_adapter import sklearn_adapter
 
 
 def test_format_p_values():
@@ -921,3 +922,51 @@ class TestStepSizer:
         assert ss.next() == start
         ss.update(20.0)
         assert ss.next() < start
+
+
+class TestSklearnAdapter:
+    @pytest.fixture
+    def X(self):
+        return load_regression_dataset().drop("T", axis=1)
+
+    @pytest.fixture
+    def Y(self):
+        return load_regression_dataset().pop("T")
+
+    def test_model_has_correct_api(self, X, Y):
+        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        cph = base_model()
+        assert hasattr(cph, "fit")
+        cph.fit(X, Y)
+        assert hasattr(cph, "predict")
+        cph.predict(X)
+        assert hasattr(cph, "score")
+        cph.score(X, Y)
+
+    def test_sklearn_common_functions_accept_model(self, X, Y):
+        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import GridSearchCV
+        from lifelines import WeibullAFTFitter
+
+        base_model = sklearn_adapter(WeibullAFTFitter, duration_col="T", event_col="E")
+        wf = base_model(penalizer=1.0)
+        assert len(cross_val_score(wf, X, Y, cv=3)) == 3
+
+        grid_params = {"penalizer": 10.0 ** np.arange(-2, 3), "l1_ratio": [0.0, 0.5, 1.0]}
+        clf = GridSearchCV(base_model(), grid_params, cv=5)
+        clf.fit(X, Y)
+        assert clf.predict(X).shape[0] == X.shape[0]
+
+    def test_model_can_accept_things_like_strata(self, X, Y):
+        X["strata"] = np.random.randint(0, 2, size=X.shape[0])
+        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        cph = base_model(strata="strata")
+        cph.fit(X, Y)
+
+    def test_we_can_user_other_prediction_methods(self, X, Y):
+        from lifelines import WeibullAFTFitter
+
+        base_model = sklearn_adapter(WeibullAFTFitter, duration_col="T", event_col="E", predictor="predict_median")
+        wf = base_model(strata="strata")
+        wf.fit(X, Y)
+        assert wf.predict(X).shape[0] == X.shape[0]

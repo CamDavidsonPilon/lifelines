@@ -982,7 +982,10 @@ into a training set and a testing set fits itself on the training set and evalua
         # 0.542
         # 0.035
 
+Also, lifelines has wrappers for `compatibility with scikit learn`_ for making cross-validation and grid-search even easier.
+
 
 .. _Assessing Cox model fit using residuals: jupyter_notebooks/Cox%20residuals.html
 .. _Testing the Proportional Hazard Assumptions: jupyter_notebooks/Proportional%20hazard%20assumption.html
-.. _time varying model: Time varying survival regression
+.. _time varying model: Time%20varying%20survival%20regression.html
+.. _compatibility with scikit learn: Compatibility%20with%20scikit-learn.html
