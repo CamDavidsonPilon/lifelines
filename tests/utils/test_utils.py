@@ -943,7 +943,7 @@ class TestSklearnAdapter:
         assert hasattr(cph, "score")
         cph.score(X, Y)
 
-    def test_sklearn_common_functions_accept_model(self, X, Y):
+    def test_sklearn_cross_val_score_accept_model(self, X, Y):
         from sklearn.model_selection import cross_val_score
         from sklearn.model_selection import GridSearchCV
         from lifelines import WeibullAFTFitter
@@ -951,6 +951,13 @@ class TestSklearnAdapter:
         base_model = sklearn_adapter(WeibullAFTFitter, duration_col="T", event_col="E")
         wf = base_model(penalizer=1.0)
         assert len(cross_val_score(wf, X, Y, cv=3)) == 3
+
+    def test_sklearn_GridSearchCV_accept_model(self, X, Y):
+        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import GridSearchCV
+        from lifelines import WeibullAFTFitter
+
+        base_model = sklearn_adapter(WeibullAFTFitter, duration_col="T", event_col="E")
 
         grid_params = {"penalizer": 10.0 ** np.arange(-2, 3), "l1_ratio": [0.0, 0.5, 1.0]}
         clf = GridSearchCV(base_model(), grid_params, cv=5)
@@ -970,3 +977,25 @@ class TestSklearnAdapter:
         wf = base_model(strata="strata")
         wf.fit(X, Y)
         assert wf.predict(X).shape[0] == X.shape[0]
+
+    def test_dill(self, X, Y):
+        import dill
+
+        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        cph = base_model()
+        cph.fit(X, Y)
+
+        s = dill.dumps(cph)
+        s = dill.loads(s)
+        cph.predict(X)
+
+    def test_pickle(self, X, Y):
+        import pickle
+
+        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        cph = base_model()
+        cph.fit(X, Y)
+
+        s = pickle.dumps(cph)
+        s = pickle.loads(s)
+        cph.predict(X)
