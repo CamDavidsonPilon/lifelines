@@ -20,7 +20,7 @@ def filter_kwargs(f, kwargs):
 class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
     def __init__(self, **kwargs):
         self._params = kwargs
-        self._fitter = self._fitter(**filter_kwargs(self._fitter.__init__, self._params))
+        self.lifelines_model = self.lifelines_model(**filter_kwargs(self.lifelines_model.__init__, self._params))
 
         self._params["duration_col"] = "duration_col"
         self._params["event_col"] = self._event_col
@@ -51,19 +51,19 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         if y is not None:
             X.insert(len(X.columns), self._yColumn, y, allow_duplicates=False)
 
-        fit = getattr(self._fitter, self._fit_method)
-        self._fitter = fit(df=X, **filter_kwargs(fit, self._params))
+        fit = getattr(self.lifelines_model, self._fit_method)
+        self.lifelines_model = fit(df=X, **filter_kwargs(fit, self._params))
         return self
 
     def set_params(self, **params):
         for key, value in params.items():
-            setattr(self._fitter, key, value)
+            setattr(self.lifelines_model, key, value)
         return self
 
     def get_params(self, deep=True):
         out = {}
-        for k in inspect.signature(self._fitter.__init__).parameters:
-            out[k] = getattr(self._fitter, k)
+        for k in inspect.signature(self.lifelines_model.__init__).parameters:
+            out[k] = getattr(self.lifelines_model, k)
         return out
 
     def predict(self, X):
@@ -73,7 +73,7 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         X: DataFrame or numpy array
 
         """
-        return getattr(self._fitter, self._predict_method)(X)[0].values
+        return getattr(self.lifelines_model, self._predict_method)(X)[0].values
 
     def score(self, X, y, sample_weight=None):
         """
@@ -117,7 +117,7 @@ def sklearn_adapter(fitter, event_col=None, predict_method="predict_expectation"
     klass = type(
         name,
         (_SklearnModel,),
-        {"_fitter": fitter, "_event_col": event_col, "_predict_method": predict_method, "_fit_method": "fit"},
+        {"lifelines_model": fitter, "_event_col": event_col, "_predict_method": predict_method, "_fit_method": "fit"},
     )
     globals()[klass.__name__] = klass
     return klass

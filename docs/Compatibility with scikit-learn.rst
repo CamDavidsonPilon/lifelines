@@ -25,23 +25,23 @@ New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline'
     CoxRegression = sklearn_adapter(CoxPHFitter, event_col='arrest')
     # CoxRegression is a class like the `LinearRegression` class or `SVC` class in scikit-learn
 
-    cph = CoxRegression(penalizer=1.0)
-    cph.fit(X, Y)
-    print(cph)
+    sk_cph = CoxRegression(penalizer=1.0)
+    sk_cph.fit(X, Y)
+    print(sk_cph)
 
     """
     CoxPHFitter(alpha=0.05, penalizer=1.0, strata=None, tie_method='Efron')
     """
 
-    cph.predict(X)
-    cph.score(X, Y)
+    sk_cph.predict(X)
+    sk_cph.score(X, Y)
 
 
-If needed, the original lifeline's instance is available as the ``_fitter`` attribute.
+If needed, the original lifeline's instance is available as the ``lifelines_model`` attribute.
 
 .. code:: python
 
-    cph._fitter.print_summary()
+    sk_cph.lifelines_model.print_summary()
 
 
 
