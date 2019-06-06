@@ -22,7 +22,7 @@ New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline'
     X = load_rossi().drop('week', axis=1)
     Y = load_rossi().pop('week')
 
-    CoxRegression = sklearn_adapter(CoxPHFitter, duration_col='week', event_col='arrest')
+    CoxRegression = sklearn_adapter(CoxPHFitter, event_col='arrest')
     # CoxRegression is a class like the `LinearRegression` class or `SVC` class in scikit-learn
 
     cph = CoxRegression(penalizer=1.0)
@@ -54,7 +54,7 @@ The wrapped classes can even be used in more complex scikit-learn functions (ex:
     from sklearn.model_selection import cross_val_score
 
 
-    base_class = sklearn_adapter(WeibullAFTFitter, duration_col='week', event_col='arrest')
+    base_class = sklearn_adapter(WeibullAFTFitter, event_col='arrest')
     wf = base_class()
 
     scores = cross_val_score(wf, X, Y, cv=5)

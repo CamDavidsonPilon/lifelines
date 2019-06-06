@@ -10,7 +10,7 @@ import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
 
-from lifelines import CoxPHFitter
+from lifelines import CoxPHFitter, WeibullAFTFitter
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
 from lifelines import utils
 from lifelines.utils.sklearn_adapter import sklearn_adapter
@@ -729,8 +729,7 @@ class TestLongDataFrameUtils(object):
 
         event_df = pd.DataFrame([[1, 1], [2, 2], [3, 3], [4, None]], columns=["id", "poison"])
         cv = utils.covariates_from_event_matrix(event_df, "id")
-        ldf = utils.add_covariate_to_timeline(base_df, cv, "id", "duration", "e", cumulative_sum=False)
-
+        ldf = utils.add_covariate_to_timeline(base_df, cv, "id", "duration", "e", cumulative_sum=True)
         assert pd.notnull(ldf).all().all()
 
         expected = pd.DataFrame(
@@ -934,7 +933,7 @@ class TestSklearnAdapter:
         return load_regression_dataset().pop("T")
 
     def test_model_has_correct_api(self, X, Y):
-        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
         cph = base_model()
         assert hasattr(cph, "fit")
         cph.fit(X, Y)
@@ -946,18 +945,16 @@ class TestSklearnAdapter:
     def test_sklearn_cross_val_score_accept_model(self, X, Y):
         from sklearn.model_selection import cross_val_score
         from sklearn.model_selection import GridSearchCV
-        from lifelines import WeibullAFTFitter
 
-        base_model = sklearn_adapter(WeibullAFTFitter, duration_col="T", event_col="E")
+        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
         wf = base_model(penalizer=1.0)
         assert len(cross_val_score(wf, X, Y, cv=3)) == 3
 
     def test_sklearn_GridSearchCV_accept_model(self, X, Y):
         from sklearn.model_selection import cross_val_score
         from sklearn.model_selection import GridSearchCV
-        from lifelines import WeibullAFTFitter
 
-        base_model = sklearn_adapter(WeibullAFTFitter, duration_col="T", event_col="E")
+        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
 
         grid_params = {
             "penalizer": 10.0 ** np.arange(-2, 3),
@@ -967,19 +964,18 @@ class TestSklearnAdapter:
         clf = GridSearchCV(base_model(), grid_params, cv=4)
         clf.fit(X, Y)
 
-        assert clf.best_params_ == {"l1_ratio": 0.5, "model_ancillary": True, "penalizer": 0.01}
+        assert clf.best_params_ == {"l1_ratio": 0.5, "model_ancillary": False, "penalizer": 0.01}
         assert clf.predict(X).shape[0] == X.shape[0]
 
     def test_model_can_accept_things_like_strata(self, X, Y):
         X["strata"] = np.random.randint(0, 2, size=X.shape[0])
-        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
         cph = base_model(strata="strata")
         cph.fit(X, Y)
 
     def test_we_can_user_other_prediction_methods(self, X, Y):
-        from lifelines import WeibullAFTFitter
 
-        base_model = sklearn_adapter(WeibullAFTFitter, duration_col="T", event_col="E", predictor="predict_median")
+        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E", predict_method="predict_median")
         wf = base_model(strata="strata")
         wf.fit(X, Y)
         assert wf.predict(X).shape[0] == X.shape[0]
@@ -987,7 +983,7 @@ class TestSklearnAdapter:
     def test_dill(self, X, Y):
         import dill
 
-        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
         cph = base_model()
         cph.fit(X, Y)
 
@@ -998,7 +994,7 @@ class TestSklearnAdapter:
     def test_pickle(self, X, Y):
         import pickle
 
-        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
         cph = base_model()
         cph.fit(X, Y)
 
@@ -1009,7 +1005,7 @@ class TestSklearnAdapter:
     def test_isinstance(self):
         from sklearn.base import BaseEstimator, RegressorMixin, MetaEstimatorMixin, MultiOutputMixin
 
-        base_model = sklearn_adapter(CoxPHFitter, duration_col="T", event_col="E")
+        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
         assert isinstance(base_model(), BaseEstimator)
         assert isinstance(base_model(), RegressorMixin)
         assert isinstance(base_model(), MetaEstimatorMixin)

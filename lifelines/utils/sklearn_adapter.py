@@ -22,7 +22,7 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         self._params = kwargs
         self._fitter = self._fitter(**filter_kwargs(self._fitter.__init__, self._params))
 
-        self._params["duration_col"] = self._duration_col
+        self._params["duration_col"] = "duration_col"
         self._params["event_col"] = self._event_col
 
     @property
@@ -76,6 +76,15 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         return getattr(self._fitter, self._predict_method)(X)[0].values
 
     def score(self, X, y, sample_weight=None):
+        """
+
+        Parameters
+        -----------
+
+        X: DataFrame
+            must be a pandas DataFrame (with event_col included, if applicable)
+
+        """
         rest_columns = list(set(X.columns) - {self._yColumn, self._eventColumn})
 
         x = X.loc[:, rest_columns]
@@ -88,7 +97,7 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         return res
 
 
-def sklearn_adapter(fitter, duration_col, event_col=None, predict_method="predict_expectation"):
+def sklearn_adapter(fitter, event_col=None, predict_method="predict_expectation"):
     """
     This function wraps lifelines models into a scikit-learn compatible API. The function returns a
     class that can be instantiated with parameters (similar to a scikit-learn class).
@@ -98,23 +107,17 @@ def sklearn_adapter(fitter, duration_col, event_col=None, predict_method="predic
 
     fitter: class
         The class (not an instance) to be wrapper. Example: ``CoxPHFitter`` or ``WeibullAFTFitter``
-    duration_col: string
-        The column in your dataframe
-
-
+    event_col: string
+        The column in your DataFrame that represents (if applicable) the event column
+    predict_method: string
+        Can be the string ``"predict_median", "predict_expectation"``
 
     """
     name = "SkLearn" + fitter.__name__
     klass = type(
         name,
         (_SklearnModel,),
-        {
-            "_fitter": fitter,
-            "_duration_col": duration_col,
-            "_event_col": event_col,
-            "_predict_method": predict_method,
-            "_fit_method": "fit",
-        },
+        {"_fitter": fitter, "_event_col": event_col, "_predict_method": predict_method, "_fit_method": "fit"},
     )
     globals()[klass.__name__] = klass
     return klass
