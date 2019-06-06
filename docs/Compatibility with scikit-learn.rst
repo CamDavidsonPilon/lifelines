@@ -8,6 +8,9 @@ Compatibility with scikit-learn
 
 New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline's regression models with scikit-learn's APIs.
 
+.. note:: The X variable still needs to be a DataFrame, and should contains the event-occurred column (``event_col``) if it exists.
+
+
 
 .. code:: python
 
@@ -20,7 +23,7 @@ New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline'
     Y = load_rossi().pop('week')
 
     CoxRegression = sklearn_adapter(CoxPHFitter, duration_col='week', event_col='arrest')
-    # CoxRegression is like LinearRegression, or SVC class in scikit-learn
+    # CoxRegression is a class like the `LinearRegression` class or `SVC` class in scikit-learn
 
     cph = CoxRegression(penalizer=1.0)
     cph.fit(X, Y)
@@ -34,39 +37,52 @@ New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline'
     cph.score(X, Y)
 
 
+If needed, the original lifeline's instance is available as the ``_fitter`` attribute.
 
-The wrapped classes can even be used in more complex scikit-learn functions and classes
+.. code:: python
+
+    cph._fitter.print_summary()
+
+
+
+The wrapped classes can even be used in more complex scikit-learn functions (ex: ``cross_val_score``) and classes (ex: ``GridSearchCV``):
 
 
 .. code:: python
 
+    from lifelines import WeibullAFTFitter
     from sklearn.model_selection import cross_val_score
 
 
-    base_class = sklearn_adapter(CoxPHFitter, duration_col='week', event_col='arrest')
-    cph = base_class(penalizer=1.0)
+    base_class = sklearn_adapter(WeibullAFTFitter, duration_col='week', event_col='arrest')
+    wf = base_class()
 
-    scores = cross_val_score(cph, X, Y, cv=5)
+    scores = cross_val_score(wf, X, Y, cv=5)
     print(scores)
 
     """
-    [0.69253438 0.55414668 0.588 0.64797196 0.52120917]
+    [0.59037328 0.503427   0.55454545 0.59689534 0.62311068]
     """
 
 
 
     from sklearn.model_selection import GridSearchCV
 
-    clf = GridSearchCV(cph, {'penalizer': [0, 1, 10]}, cv=5)
+    clf = GridSearchCV(wf, {
+       "penalizer": 10.0 ** np.arange(-2, 3),
+       "l1_ratio": [0, 1/3, 2/3],
+       "model_ancillary": [True, False],
+    }, cv=4)
     clf.fit(X, Y)
-    print(clf)
+
+    print(clf.best_estimator_)
 
     """
-    GridSearchCV(cv=5, error_score='raise-deprecating',
-                 estimator=CoxPHFitter(alpha=0.05, penalizer=1.0, strata=None,
-                                       tie_method='Efron'),
-                 iid='warn', n_jobs=None, param_grid={'penalizer': [0, 1, 10]},
-                 pre_dispatch='2*n_jobs', refit=True, return_train_score=False,
-                 scoring=None, verbose=0)
+    SkLearnWeibullAFTFitter(alpha=0.05, fit_intercept=True,
+                            l1_ratio=0.66666, model_ancillary=True,
+                            penalizer=0.01)
 
     """
+
+
+.. note:: The ``sklearn_adapter`` is currently only designed to work with right-censored data.

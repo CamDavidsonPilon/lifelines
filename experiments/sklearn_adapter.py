@@ -16,13 +16,12 @@ base_class = sklearn_adapter(CoxPHFitter, duration_col="week", event_col="arrest
 cph = base_class(penalizer=1.0)
 
 cph.fit(X, Y)
-print(cph.predict(X))
-print(cph.score(X, Y))
 
 scores = cross_val_score(cph, X, Y, cv=5)
 print(scores)
 
+base_model = sklearn_adapter(WeibullAFTFitter, duration_col="week", event_col="arrest")
 
-clf = GridSearchCV(cph, {"penalizer": [0, 1, 10]}, cv=5)
+clf = GridSearchCV(base_model(), {"penalizer": [0, 1, 10], "model_ancillary": [True, False]}, cv=5)
 clf.fit(X, Y)
 print(clf)

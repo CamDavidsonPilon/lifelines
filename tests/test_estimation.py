@@ -1657,6 +1657,13 @@ class TestAFTFitters:
         for model in models:
             model.fit_left_censoring(df, "T", "E")
 
+    def test_model_ancillary_parameter_works_as_expected(self, rossi):
+        aft = WeibullAFTFitter(model_ancillary=True)
+        aft.fit(rossi, "week", "arrest")
+        assert aft.summary.loc["rho_"].shape[0] == 8
+
+        assert aft.predict_median(rossi).shape[0] == rossi.shape[0]
+
 
 class TestLogNormalAFTFitter:
     @pytest.fixture

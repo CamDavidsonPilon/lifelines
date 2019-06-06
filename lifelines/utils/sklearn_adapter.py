@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import inspect
-import pandas
+import pandas as pd
 
 try:
-    from sklearn.base import BaseEstimator, RegressorMixin, MetaEstimatorMixin, MultiOutputMixin
+    from sklearn.base import BaseEstimator, RegressorMixin, MetaEstimatorMixin
 except ImportError:
     raise ImportError("scikit-learn must be installed on the local system to use this utility class.")
 from . import concordance_index
@@ -34,12 +34,30 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         return self._params["event_col"]
 
     def fit(self, X, y=None, sample_weight=None):
+        """
+
+        Parameters
+        -----------
+
+        X: DataFrame
+            must be a pandas DataFrame (with event_col included, if applicable)
+
+        """
+        if not isinstance(X, pd.DataFrame):
+            raise ValueError("X must be a DataFrame")
+
         X = X.copy()
 
         if y is not None:
             X.insert(len(X.columns), self._yColumn, y, allow_duplicates=False)
 
-        self._fitter.fit(df=X, **filter_kwargs(self._fitter.fit, self._params))
+        fit = getattr(self._fitter, self._fit_method)
+        self._fitter = fit(df=X, **filter_kwargs(fit, self._params))
+        return self
+
+    def set_params(self, **params):
+        for key, value in params.items():
+            setattr(self._fitter, key, value)
         return self
 
     def get_params(self, deep=True):
@@ -49,8 +67,13 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         return out
 
     def predict(self, X):
-        """lifelines-expected function to predict expectation"""
-        return getattr(self._fitter, self._predict_function_name)(X)[0].values
+        """
+        Parameters
+        ------------
+        X: DataFrame or numpy array
+
+        """
+        return getattr(self._fitter, self._predict_method)(X)[0].values
 
     def score(self, X, y, sample_weight=None):
         rest_columns = list(set(X.columns) - {self._yColumn, self._eventColumn})
@@ -65,10 +88,22 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         return res
 
 
-a
+def sklearn_adapter(fitter, duration_col, event_col=None, predict_method="predict_expectation"):
+    """
+    This function wraps lifelines models into a scikit-learn compatible API. The function returns a
+    class that can be instantiated with parameters (similar to a scikit-learn class).
+
+    Parameters
+    ----------
+
+    fitter: class
+        The class (not an instance) to be wrapper. Example: ``CoxPHFitter`` or ``WeibullAFTFitter``
+    duration_col: string
+        The column in your dataframe
 
 
-def sklearn_adapter(fitter, duration_col, event_col, predictor="predict_expectation"):
+
+    """
     name = "SkLearn" + fitter.__name__
     klass = type(
         name,
@@ -77,7 +112,8 @@ def sklearn_adapter(fitter, duration_col, event_col, predictor="predict_expectat
             "_fitter": fitter,
             "_duration_col": duration_col,
             "_event_col": event_col,
-            "_predict_function_name": predictor,
+            "_predict_method": predict_method,
+            "_fit_method": "fit",
         },
     )
     globals()[klass.__name__] = klass
