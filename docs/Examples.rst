@@ -136,6 +136,8 @@ If using *lifelines* for prediction work, it's ideal that you perform some type 
 
 From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
 
+*lifelines* also has wrappers to use scikit-learn's cross validation and grid search tools. See `how to use lifelines with scikit learn <https://lifelines.readthedocs.io/en/latest/Compatibility%20with%20scikit-learn.html>`_.
+
 Selecting a parametric model using QQ plots
 ###############################################
 
@@ -547,7 +549,7 @@ In Pandas, this may look like:
     2   3     3.0     5.0    7.0
     ...
 
-Initially, this can't be added to our baseline time-varying dataset. Using ``utils.covariates_from_event_matrix`` we can convert a dataframe like this into one that can be easily added.
+Initially, this can't be added to our baseline time-varying dataset. Using ``utils.covariates_from_event_matrix`` we can convert a DataFrame like this into one that can be easily added.
 
 .. code-block:: python
 
@@ -588,7 +590,7 @@ Suppose we have an initial DataFrame of start-ups like:
     ])
 
 
-And a covariate dataframe representing funding rounds like:
+And a covariate DataFrame representing funding rounds like:
 
 
 .. code-block:: python
@@ -721,9 +723,9 @@ The original dataset has 432 rows, while the grouped dataset has 387 rows plus a
 The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the ``CoxTimeVaryingFitter``.
 
 
-The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artificial under/over sampling of observations (ex: inverse probability of treatment weights). It is recommened to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error.
+The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artificial under/over sampling of observations (ex: inverse probability of treatment weights). It is recommended to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error.
 
-.. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequeny of ties.
+.. warning:: The implementation of the sandwich estimator does not handle ties correctly (under the Efron handling of ties), and will give slightly or significantly different results from other software depending on the frequency of ties.
 
 
 Correlations between subjects in a Cox model
