@@ -3,19 +3,16 @@ from textwrap import dedent
 import warnings
 from datetime import datetime
 from scipy.integrate import trapz
-from scipy.special import gamma
 from scipy.optimize import minimize
 from scipy import stats
-from numpy.linalg import inv, pinv
 import pandas as pd
 from autograd import numpy as np
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
 
 from lifelines.fitters import BaseFitter
-from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle, set_kwargs_ax
+from lifelines.plotting import set_kwargs_drawstyle, set_kwargs_ax
 
 from lifelines.utils import (
-    _to_array,
     _to_list,
     _get_index,
     qth_survival_times,
@@ -74,7 +71,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         the level in the confidence intervals.
 
     fit_intercept: boolean, optional (default=True)
-        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
+        Allow lifelines to add an intercept column of 1s to df.
 
     penalizer: float, optional (default=0.0)
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
@@ -99,7 +96,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         the concordance index of the model.
     """
 
-    def __init__(self, breakpoints, alpha=0.05, penalizer=0.0, fit_intercept=True, *args, **kwargs):
+    def __init__(self, breakpoints, alpha=0.05, penalizer=0.0, fit_intercept=True):
         super(PiecewiseExponentialRegressionFitter, self).__init__(alpha=alpha)
 
         breakpoints = np.sort(breakpoints)
@@ -563,7 +560,7 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
             )
         )
 
-    def predict_survival_function(self, X, times=None, ancillary_X=None):
+    def predict_survival_function(self, X, times=None):
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -572,10 +569,6 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
         ----------
 
         X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
@@ -697,10 +690,6 @@ class PiecewiseExponentialRegressionFitter(BaseFitter):
             an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
 
         Returns
         -------
