@@ -37,6 +37,10 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
         ``penalizer * l1_ratio * ||w||_1 + 0.5 * penalizer * (1 - l1_ratio) * ||w||^2_2``
 
+    model_ancillary: optional (default=False)
+        set the model instance to always model the ancillary parameter with the supplied Dataframe.
+        This is useful for grid-search optimization.
+
     Attributes
     ----------
     params_ : DataFrame
@@ -57,7 +61,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         the concordance index of the model.
     """
 
-    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):
+    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         self._ancillary_parameter_name = "beta_"
         self._primary_parameter_name = "alpha_"
         super(LogLogisticAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept)

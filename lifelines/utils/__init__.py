@@ -640,17 +640,15 @@ def k_fold_cross_validation(
       the number of folds to perform. n/k data will be withheld for testing on.
     evaluation_measure: function
       a function that accepts either (event_times, predicted_event_times),
-      or (event_times, predicted_event_times, event_observed)
-      and returns something (could be anything).
+      or (event_times, predicted_event_times, event_observed).
       Default: statistics.concordance_index: (C-index)
-      between two series of event times
     predictor: string
       a string that matches a prediction method on the fitter instances.
       For example, ``predict_expectation`` or ``predict_percentile``.
       Default is "predict_expectation"
       The interface for the method is: ``predict(self, data, **optional_kwargs)``
     fitter_kwargs:
-      keyword args to pass into fitter.fit method
+      keyword args to pass into fitter.fit method.
     predictor_kwargs:
       keyword args to pass into predictor-method.
 
@@ -660,12 +658,10 @@ def k_fold_cross_validation(
       (k,1) list of scores for each fold. The scores can be anything.
     """
     # Make sure fitters is a list
-    try:
-        fitters = list(fitters)
-    except TypeError:
-        fitters = [fitters]
+    fitters = _to_list(fitters)
+
     # Each fitter has its own scores
-    fitterscores = [[] for _ in fitters]
+    fitter_scores = [[] for _ in fitters]
 
     n, _ = df.shape
     df = df.copy()
@@ -691,7 +687,7 @@ def k_fold_cross_validation(
         E_actual = testing_data[event_col].values
         X_testing = testing_data[testing_columns]
 
-        for fitter, scores in zip(fitters, fitterscores):
+        for fitter, scores in zip(fitters, fitter_scores):
             # fit the fitter to the training data
             fitter.fit(training_data, duration_col=duration_col, event_col=event_col, **fitter_kwargs)
             T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
@@ -703,8 +699,8 @@ def k_fold_cross_validation(
 
     # If a single fitter was given as argument, return a single result
     if len(fitters) == 1:
-        return fitterscores[0]
-    return fitterscores
+        return fitter_scores[0]
+    return fitter_scores
 
 
 def normalize(X, mean=None, std=None):
@@ -1178,7 +1174,7 @@ def add_covariate_to_timeline(
     """
     This is a util function to help create a long form table tracking subjects' covariate changes over time. It is meant
     to be used iteratively as one adds more and more covariates to track over time. Before using this function, it is recommended
-    to view the documentation at https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#dataset-creation-for-time-varying-regression.
+    to view the documentation at https://lifelines.readthedocs.io/en/latest/Time%20varying%20survival%20regression.html#dataset-creation-for-time-varying-regression
 
     Parameters
     ----------
@@ -1334,10 +1330,15 @@ def covariates_from_event_matrix(df, id_col):
 
     """
     df = df.set_index(id_col)
-    df = df.stack().reset_index()
+    df = df.fillna(np.inf)
+    df = df.stack(dropna=False).reset_index()
     df.columns = [id_col, "event", "duration"]
     df["_counter"] = 1
-    return df.pivot_table(index=[id_col, "duration"], columns="event", fill_value=0)["_counter"].reset_index()
+    return (
+        df.pivot_table(index=[id_col, "duration"], columns="event", fill_value=0)["_counter"]
+        .reset_index()
+        .rename_axis(None, axis=1)
+    )
 
 
 class StepSizer:

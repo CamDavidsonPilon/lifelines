@@ -342,6 +342,14 @@ class TestPlotting:
         self.plt.title("test_coxph_plotting")
         self.plt.show(block=block)
 
+    def test_coxph_plotting_with_hazards_ratios(self, block):
+        df = load_regression_dataset()
+        cp = CoxPHFitter()
+        cp.fit(df, "T", "E")
+        cp.plot(hazard_ratios=True)
+        self.plt.title("test_coxph_plotting")
+        self.plt.show(block=block)
+
     def test_coxph_plotting_with_subset_of_columns(self, block):
         df = load_regression_dataset()
         cp = CoxPHFitter()

@@ -79,6 +79,10 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
         The time line to use for plotting and indexing
     entry: array or None
         The entry array provided, or None
+
+    See Also
+    ----------
+    Looking for a 3-parameter Weibull model? See notes here: https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html#3-parameter-Weibull-distribution
     """
 
     _fitted_parameter_names = ["lambda_", "rho_"]

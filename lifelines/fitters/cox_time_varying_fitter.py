@@ -412,7 +412,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 print(
                     "\rIteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
                     % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start_time),
-                    end=""
+                    end="",
                 )
 
             # convergence criteria

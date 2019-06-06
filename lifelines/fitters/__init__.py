@@ -979,7 +979,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
         robust summary statistic for the population, if it exists.
+
+        For known parametric models, this should be overwritten by something more accurate.
         """
+        warnings.warn(
+            "Approximating the median using `survival_function_`. Try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
+            StatisticalWarning,
+        )
         return median_survival_times(self.survival_function_)
 
     @property
@@ -1061,12 +1067,13 @@ class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 
 
 class ParametericAFTRegressionFitter(BaseFitter):
-    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):
+    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         super(ParametericAFTRegressionFitter, self).__init__(alpha=alpha)
         self._hazard = egrad(self._cumulative_hazard, argnum=1)  # pylint: disable=unexpected-keyword-arg
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
         self.fit_intercept = fit_intercept
+        self.model_ancillary = model_ancillary
         self._fitted_parameter_names = [self._primary_parameter_name, self._ancillary_parameter_name]
 
     def _check_values(self, df, T, E, weights, entries):
@@ -1545,7 +1552,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self._n_examples = df.shape[0]
         self.timeline = timeline
         self.robust = robust
-
         E = (
             pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col))
             if (self.event_col is not None)
@@ -1573,6 +1579,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self._check_values(df, coalesce(Ts[1], Ts[0]), E, weights, entries)
 
         if isinstance(ancillary_df, pd.DataFrame):
+            self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
 
             ancillary_df = ancillary_df.copy().drop(
@@ -1581,12 +1588,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
             ancillary_df = ancillary_df.astype(float)
             check_for_numeric_dtypes_or_raise(df)
             check_nans_or_infs(df)
-        elif (ancillary_df is None) or (ancillary_df is False):
-            ancillary_df = pd.DataFrame(np.ones((df.shape[0],)), index=df.index, columns=["_intercept"])
-        elif ancillary_df is True:
+        elif (ancillary_df is True) or self.model_ancillary:
+            self.model_ancillary = True
             ancillary_df = df.copy().drop(
                 [event_col, weights_col, entry_col] + self._time_cols, axis=1, errors="ignore"
             )
+        elif (ancillary_df is None) or (ancillary_df is False):
+            ancillary_df = pd.DataFrame(np.ones((df.shape[0],)), index=df.index, columns=["_intercept"])
 
         if self.fit_intercept:
             assert "_intercept" not in df
@@ -2161,14 +2169,20 @@ class ParametericAFTRegressionFitter(BaseFitter):
     def _prep_inputs_for_prediction_and_return_scores(self, X, ancillary_X):
         X = X.copy()
 
-        if ancillary_X is None:
-            ancillary_X = pd.DataFrame(np.ones((X.shape[0], 1)), columns=["_intercept"])
-        elif isinstance(ancillary_X, pd.DataFrame):
+        if isinstance(ancillary_X, pd.DataFrame):
             ancillary_X = ancillary_X.copy()
             if self.fit_intercept:
                 ancillary_X["_intercept"] = 1.0
             ancillary_X = ancillary_X[self.params_.loc[self._ancillary_parameter_name].index]
+        elif ancillary_X is None and not self.model_ancillary:
+            ancillary_X = pd.DataFrame(np.ones((X.shape[0], 1)), columns=["_intercept"])
+        elif ancillary_X is None and self.model_ancillary:
+            ancillary_X = pd.DataFrame(X).copy()
+            if self.fit_intercept:
+                ancillary_X["_intercept"] = 1.0
+            ancillary_X = ancillary_X[self.params_.loc[self._ancillary_parameter_name].index]
         else:
+            # provided numpy array
             assert ancillary_X.shape[1] == (
                 self.params_.loc[self._ancillary_parameter_name].shape[0] + 1
             )  # 1 for _intercept
@@ -2178,6 +2192,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
                 X["_intercept"] = 1.0
             X = X[self.params_.loc[self._primary_parameter_name].index]
         else:
+            # provided numpy array
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
 
         primary_params = self.params_[self._LOOKUP_SLICE[self._primary_parameter_name]]

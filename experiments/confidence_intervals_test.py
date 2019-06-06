@@ -13,6 +13,7 @@ E = T_actual < T_censor
 time = [1.0]
 
 # lifelines computed confidence interval
+wf = WeibullFitter()
 print(wf.fit(T, E, timeline=time).confidence_interval_cumulative_hazard_)
 
 

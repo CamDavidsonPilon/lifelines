@@ -508,7 +508,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
                 print(
                     "\rIteration %d: norm_delta = %.5f, step_size = %.4f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
                     % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start),
-                    end=""
+                    end="",
                 )
 
             # convergence criteria
@@ -1609,14 +1609,16 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             survival_df.columns = ["baseline survival"]
         return survival_df
 
-    def plot(self, columns=None, **errorbar_kwargs):
+    def plot(self, columns=None, hazard_ratios=False, **errorbar_kwargs):
         """
-        Produces a visual representation of the coefficients, including their standard errors and magnitudes.
+        Produces a visual representation of the coefficients (i.e. log hazard ratios), including their standard errors and magnitudes.
 
         Parameters
         ----------
         columns : list, optional
             specify a subset of the columns to plot
+        hazard_ratios: bool, optional
+            by default, `plot` will present the log-hazard ratios (the coefficients). However, by turning this flag to True, the hazard ratios are presented instead.
         errorbar_kwargs:
             pass in additional plotting commands to matplotlib errorbar command
 
@@ -1643,20 +1645,33 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
-        symmetric_errors = z * self.standard_errors_[columns].to_frame().squeeze(axis=1).values.copy()
-        hazards = self.hazards_.loc[columns].values.copy()
+        log_hazards = self.hazards_.loc[columns].values.copy()
 
-        order = np.argsort(hazards)
+        order = np.argsort(log_hazards)
 
-        ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
+        if hazard_ratios:
+            exp_log_hazards = np.exp(log_hazards)
+            upper_errors = exp_log_hazards * (np.exp(z * self.standard_errors_[columns].values) - 1)
+            lower_errors = exp_log_hazards * (1 - np.exp(-z * self.standard_errors_[columns].values))
+            ax.errorbar(
+                exp_log_hazards[order],
+                yaxis_locations,
+                xerr=np.vstack([lower_errors[order], upper_errors[order]]),
+                **errorbar_kwargs
+            )
+            plt.xlabel("HR (%g%% CI)" % ((1 - self.alpha) * 100))
+        else:
+            symmetric_errors = z * self.standard_errors_[columns].values
+            ax.errorbar(log_hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
+            plt.xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
+
         best_ylim = ax.get_ylim()
-        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.vlines(1 if hazard_ratios else 0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
         ax.set_ylim(best_ylim)
 
         tick_labels = [columns[i] for i in order]
 
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
 
@@ -1758,7 +1773,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return axes
 
     def check_assumptions(
-        self, training_df, advice=True, show_plots=False, p_value_threshold=0.01, plot_n_bootstraps=10
+        self, training_df, advice=True, show_plots=False, p_value_threshold=0.01, plot_n_bootstraps=10, columns=None
     ):
         """
         Use this function to test the proportional hazards assumption. See usage example at
@@ -1780,6 +1795,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         plot_n_bootstraps:
             in the plots displayed, also display plot_n_bootstraps bootstrapped loess curves. This will slow down
             the function significantly.
+        columns: list, optional
+            specify a subset of columns to test.
 
 
         Examples
@@ -1828,7 +1845,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         counter = 0
         n = residuals_and_duration.shape[0]
 
-        for variable in self.hazards_.index:
+        for variable in self.hazards_.index.intersection(columns or self.hazards_.index):
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if np.round(minumum_observed_p_value, 2) > p_value_threshold:
                 continue
