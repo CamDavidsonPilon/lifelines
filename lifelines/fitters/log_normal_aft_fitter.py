@@ -38,6 +38,10 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
         ``penalizer * l1_ratio * ||w||_1 + 0.5 * penalizer * (1 - l1_ratio) * ||w||^2_2``
 
+    model_ancillary: optional (default=False)
+        set the model instance to always model the ancillary parameter with the supplied DataFrame.
+        This is useful for grid-search optimization.
+
     Attributes
     ----------
     params_ : DataFrame
@@ -58,10 +62,10 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         the concordance index of the model.
     """
 
-    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True):
+    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         self._primary_parameter_name = "mu_"
         self._ancillary_parameter_name = "sigma_"
-        super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept)
+        super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
     def _cumulative_hazard(self, params, T, *Xs):
         mu_params = params[self._LOOKUP_SLICE["mu_"]]

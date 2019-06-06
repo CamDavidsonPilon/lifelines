@@ -1657,6 +1657,13 @@ class TestAFTFitters:
         for model in models:
             model.fit_left_censoring(df, "T", "E")
 
+    def test_model_ancillary_parameter_works_as_expected(self, rossi):
+        aft = WeibullAFTFitter(model_ancillary=True)
+        aft.fit(rossi, "week", "arrest")
+        assert aft.summary.loc["rho_"].shape[0] == 8
+
+        assert aft.predict_median(rossi).shape[0] == rossi.shape[0]
+
 
 class TestLogNormalAFTFitter:
     @pytest.fixture
@@ -1867,8 +1874,10 @@ class TestWeibullAFTFitter:
         aft.predict_cumulative_hazard(rossi, ancillary_X=rossi)
         aft.predict_survival_function(rossi, ancillary_X=rossi)
 
-        with pytest.raises(ValueError):
-            aft.predict_survival_function(rossi)
+        aft.predict_median(rossi)
+        aft.predict_percentile(rossi)
+        aft.predict_cumulative_hazard(rossi)
+        aft.predict_survival_function(rossi)
 
     def test_passing_in_additional_ancillary_df_in_predict_methods_okay_if_not_fitted_with_one(self, rossi, aft):
 

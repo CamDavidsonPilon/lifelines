@@ -45,6 +45,7 @@ Contents:
   :caption: Regression Models
 
   Survival Regression
+  Compatibility with scikit-learn
   Time varying survival regression
   jupyter_notebooks/Proportional hazard assumption.ipynb
 
