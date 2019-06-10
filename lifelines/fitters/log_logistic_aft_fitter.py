@@ -72,7 +72,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
 
         beta_params = params[self._LOOKUP_SLICE["beta_"]]
         beta_ = np.exp(np.dot(Xs[1], beta_params))
-        return np.log1p((T / alpha_) ** beta_)
+        return np.logaddexp(beta_ * (np.log(T) - np.log(alpha_)), 0)
 
     def _log_hazard(self, params, T, *Xs):
         alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
@@ -83,7 +83,12 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         log_beta_ = np.dot(Xs[1], beta_params)
         beta_ = np.exp(log_beta_)
 
-        return log_beta_ - log_alpha_ + np.expm1(log_beta_) * (np.log(T) - log_alpha_) - np.log1p((T / alpha_) ** beta_)
+        return (
+            log_beta_
+            - log_alpha_
+            + np.expm1(log_beta_) * (np.log(T) - log_alpha_)
+            - np.logaddexp(beta_ * (np.log(T) - np.log(alpha_)), 0)
+        )
 
     def _log_1m_sf(self, params, T, *Xs):
         alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
@@ -93,7 +98,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         beta_params = params[self._LOOKUP_SLICE["beta_"]]
         log_beta_ = np.dot(Xs[1], beta_params)
         beta_ = np.exp(log_beta_)
-        return -np.log1p((T / alpha_) ** -beta_)
+        return -np.logaddexp(-beta_ * (np.log(T) - np.log(alpha_)), 0)
 
     def predict_percentile(self, X, ancillary_X=None, p=0.5):
         """

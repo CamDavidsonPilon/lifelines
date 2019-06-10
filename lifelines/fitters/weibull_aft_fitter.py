@@ -73,7 +73,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
 
         rho_params = params[self._LOOKUP_SLICE["rho_"]]
         rho_ = np.exp(np.dot(Xs[1], rho_params))
-        return (T / lambda_) ** rho_
+        return np.exp(rho_ * (np.log(T) - np.log(lambda_)))
 
     def _log_hazard(self, params, T, *Xs):
         lambda_params = params[self._LOOKUP_SLICE["lambda_"]]

@@ -89,7 +89,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
 
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params
-        return (times / lambda_) ** rho_
+        return np.exp(rho_ * (np.log(times) - np.log(lambda_)))
 
     @property
     def median_(self):
