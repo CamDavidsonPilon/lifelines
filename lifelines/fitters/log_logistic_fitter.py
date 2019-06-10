@@ -82,7 +82,7 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
 
     def _cumulative_hazard(self, params, times):
         alpha_, beta_ = params
-        return np.logaddexp(beta_ * (np.log(times) - np.log(alpha_)), 0)
+        return np.logaddexp(beta_ * (np.log(np.clip(times, 1e-25, np.inf)) - np.log(alpha_)), 0)
 
     def _log_1m_sf(self, params, times):
         alpha_, beta_ = params

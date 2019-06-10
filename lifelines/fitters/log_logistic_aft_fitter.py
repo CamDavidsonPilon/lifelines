@@ -72,7 +72,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
 
         beta_params = params[self._LOOKUP_SLICE["beta_"]]
         beta_ = np.exp(np.dot(Xs[1], beta_params))
-        return np.logaddexp(beta_ * (np.log(T) - np.log(alpha_)), 0)
+        return np.logaddexp(beta_ * (np.log(np.clip(T, 1e-25, np.inf)) - np.log(alpha_)), 0)
 
     def _log_hazard(self, params, T, *Xs):
         alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
