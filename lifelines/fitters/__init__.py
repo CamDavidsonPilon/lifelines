@@ -26,6 +26,7 @@ from lifelines.utils import (
     qth_survival_times,
     _to_array,
     _to_list,
+    safe_zip,
     dataframe_interpolate_at_times,
     ConvergenceError,
     inv_normal_cdf,
@@ -1640,18 +1641,19 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._predicted_median = self.predict_median(df, ancillary_df)
 
+    @staticmethod
+    def _transform_ith_param(model, i):
+        param = model._fitted_parameters_[i]
+        if param <= 0:
+            return param
+        # technically this is suboptimal for log normal mu, but that's okay.
+        return np.log(param)
+
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
         import lifelines  # kinda hacky but lol
-
-        def transform_ith_param(model, i):
-            param = model._fitted_parameters_[i]
-            if param <= 0:
-                return param
-            # technically this is suboptimal for log normal mu, but that's okay.
-            return np.log(param)
 
         name = self._class_name.replace("AFT", "")
         try:
@@ -1673,7 +1675,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         return np.concatenate(
             [
                 # tack on as the intercept
-                [0] * (_X.shape[1] - 1) + [transform_ith_param(uni_model, i)]
+                [0] * (_X.shape[1] - 1) + [self._transform_ith_param(uni_model, i)]
                 for i, _X in enumerate(Xs)
             ]
         )
@@ -1768,13 +1770,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):
-        def safe_zip(first, second):
-            if first is None:
-                yield from ((None, x) for x in second)
-            elif second is None:
-                yield from ((x, None) for x in first)
-            else:
-                yield from zip(first, second)
 
         with np.errstate(all="ignore"):
             # convergence will fail catastrophically elsewhere.

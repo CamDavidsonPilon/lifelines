@@ -66,16 +66,17 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
             out[k] = getattr(self.lifelines_model, k)
         return out
 
-    def predict(self, X):
+    def predict(self, X, **kwargs):
         """
         Parameters
         ------------
         X: DataFrame or numpy array
 
         """
-        return getattr(self.lifelines_model, self._predict_method)(X)[0].values
+        predictions = getattr(self.lifelines_model, self._predict_method)(X, **kwargs).squeeze().values
+        return predictions
 
-    def score(self, X, y, sample_weight=None):
+    def score(self, X, y, **kwargs):
         """
 
         Parameters
@@ -93,11 +94,14 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
         if y is None:
             y = X.loc[:, self._yColumn]
 
-        res = concordance_index(y, self.predict(x), event_observed=e)
+        if callable(self._scoring_method):
+            res = self._scoring_method(y, self.predict(x, **kwargs), event_observed=e)
+        else:
+            raise ValueError()
         return res
 
 
-def sklearn_adapter(fitter, event_col=None, predict_method="predict_expectation"):
+def sklearn_adapter(fitter, event_col=None, predict_method="predict_expectation", scoring_method=concordance_index):
     """
     This function wraps lifelines models into a scikit-learn compatible API. The function returns a
     class that can be instantiated with parameters (similar to a scikit-learn class).
@@ -111,13 +115,21 @@ def sklearn_adapter(fitter, event_col=None, predict_method="predict_expectation"
         The column in your DataFrame that represents (if applicable) the event column
     predict_method: string
         Can be the string ``"predict_median", "predict_expectation"``
+    scoring_method: function
+        Provide a way to produce a ``score`` on the scikit-learn model. Signature should look like (durations, predictions, event_observed=None)
 
     """
     name = "SkLearn" + fitter.__name__
     klass = type(
         name,
         (_SklearnModel,),
-        {"lifelines_model": fitter, "_event_col": event_col, "_predict_method": predict_method, "_fit_method": "fit"},
+        {
+            "lifelines_model": fitter,
+            "_event_col": event_col,
+            "_predict_method": predict_method,
+            "_fit_method": "fit",
+            "_scoring_method": staticmethod(scoring_method),
+        },
     )
     globals()[klass.__name__] = klass
     return klass

@@ -1294,6 +1294,17 @@ class TestRegressionFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
+    def test_joblib_serialization(self, rossi, regression_models):
+        from joblib import dump, load
+
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+
+            dump(fitter, "filename.joblib")
+            unpickled = load("filename.joblib")
+            dif = (fitter.durations - unpickled.durations).sum()
+            assert dif == 0
+
     @pytest.mark.xfail()
     def test_pickle(self, rossi, regression_models):
         from pickle import dump
