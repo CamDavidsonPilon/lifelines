@@ -12,6 +12,7 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
+from lifelines.utils.sklearn_adapter import sklearn_adapter
 
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "to_long_format",
     "to_episodic_format",
     "add_covariate_to_timeline",
+    "sklearn_adapter",
     "covariates_from_event_matrix",
 ]
 
@@ -1446,3 +1448,12 @@ def dataframe_interpolate_at_times(df, times):
 
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")
+
+
+def safe_zip(first, second):
+    if first is None:
+        yield from ((None, x) for x in second)
+    elif second is None:
+        yield from ((x, None) for x in first)
+    else:
+        yield from zip(first, second)

@@ -1009,3 +1009,32 @@ class TestSklearnAdapter:
         assert isinstance(base_model(), BaseEstimator)
         assert isinstance(base_model(), RegressorMixin)
         assert isinstance(base_model(), MetaEstimatorMixin)
+
+    @pytest.mark.xfail
+    def test_sklearn_GridSearchCV_accept_model_with_parallelization(self, X, Y):
+        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import GridSearchCV
+
+        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
+
+        grid_params = {
+            "penalizer": 10.0 ** np.arange(-2, 3),
+            "l1_ratio": [0.05, 0.5, 0.95],
+            "model_ancillary": [True, False],
+        }
+        # note the n_jobs
+        clf = GridSearchCV(base_model(), grid_params, cv=4, n_jobs=-1)
+        clf.fit(X, Y)
+
+        assert clf.best_params_ == {"l1_ratio": 0.5, "model_ancillary": False, "penalizer": 0.01}
+        assert clf.predict(X).shape[0] == X.shape[0]
+
+    def test_joblib(self, X, Y):
+        from joblib import dump, load
+
+        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
+
+        clf = base_model()
+        clf.fit(X, Y)
+        dump(clf, "filename.joblib")
+        clf = load("filename.joblib")
