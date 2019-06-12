@@ -929,7 +929,7 @@ Model selection based on predictive power
 
 If censoring is present, it's not appropriate to use a loss function like mean-squared-error or
 mean-absolute-loss. Instead, one measure is the concordance-index, also known as the c-index. This measure
-evaluates the accuracy of the ordering of predicted time. It is in fact a generalization
+evaluates the accuracy of the *ranking* of predicted time. It is in fact a generalization
 of AUC, another common loss function, and is interpreted similarly:
 
 * 0.5 is the expected result from random predictions,
@@ -958,6 +958,8 @@ Fitted survival models typically have a concordance index between 0.55 and 0.75 
     # method three
     from lifelines.utils import concordance_index
     print(concordance_index(rossi['week'], -cph.predict_partial_hazard(rossi), rossi['arrest']))
+
+.. note:: Remember, the concordance score evaluates the relative rankings of subject's event times. Thus, it is scale invariant (i.e. you can multiple by a positive constant, or add a constant, and the rankings won't change). A model maximized for concordance-index does not necessarily give good predicted *times*, but will give good predicted *rankings*.
 
 
 However, there are other, arguably better, methods to measure the fit of a model. Included in ``print_summary`` is the log-likelihood, which can be used in an `AIC calculation <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, and the `log-likelihood ratio statistic <https://en.wikipedia.org/wiki/Likelihood-ratio_test>`_. Generally, I personally loved this article by Frank Harrell, `"Statistically Efficient Ways to Quantify Added Predictive Value of New Measurements" <http://www.fharrell.com/post/addvalue/>`_.

@@ -112,7 +112,7 @@ lifelines.fitters.log\_logistic\_aft\_fitter module
 
 
 lifelines.fitters.piecewise\_exponential\_regression\_fitter module
------------------------------------------------------
+----------------------------------------------------------------------
 
 .. automodule:: lifelines.fitters.piecewise_exponential_regression_fitter
     :members:

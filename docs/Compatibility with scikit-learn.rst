@@ -8,8 +8,7 @@ Compatibility with scikit-learn
 
 New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline's regression models with scikit-learn's APIs.
 
-.. note:: The X variable still needs to be a DataFrame, and should contains the event-occurred column (``event_col``) if it exists.
-
+.. note:: the API and functionality is still experimental. Please report any bugs or features on our Github issue list.
 
 
 .. code:: python
@@ -19,7 +18,7 @@ New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline'
     from lifelines import CoxPHFitter
     from lifelines.datasets import load_rossi
 
-    X = load_rossi().drop('week', axis=1)
+    X = load_rossi().drop('week', axis=1) # keep as a dataframe
     Y = load_rossi().pop('week')
 
     CoxRegression = sklearn_adapter(CoxPHFitter, event_col='arrest')
@@ -30,11 +29,14 @@ New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline'
     print(sk_cph)
 
     """
-    CoxPHFitter(alpha=0.05, penalizer=1.0, strata=None, tie_method='Efron')
+    SkLearnCoxPHFitter(alpha=0.05, penalizer=1.0, strata=None, tie_method='Efron')
     """
 
     sk_cph.predict(X)
     sk_cph.score(X, Y)
+
+
+.. note:: The X variable still needs to be a DataFrame, and should contains the event-occurred column (``event_col``) if it exists.
 
 
 If needed, the original lifeline's instance is available as the ``lifelines_model`` attribute.
