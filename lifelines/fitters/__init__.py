@@ -503,6 +503,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                     1. Are there any extreme values in the durations column?
                       - Try scaling your durations to a more reasonable values closer to 1 (multiplying or dividing by some 10^n).
                       - Try dropping them to see if the model converges.
+                    2. The parametric model chosen may just be a poor model of the data. Try another parametric model.
                 """
                     )
                 )
@@ -515,12 +516,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
                     1. Are two parameters in the model collinear / exchangeable? (Change model)
                     2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
-                    3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
+                    3. Are there inputs to the cumulative hazard that could produce NaNs or Infs? (Check your _bounds)
 
                     This could be a problem with your data:
                     1. Are there any extreme values in the durations column?
                         - Try scaling your durations to a more reasonable value closer to 1 (multiplying or dividing by a large constant).
                         - Try dropping them to see if the model converges.
+                    2. The parametric model chosen may just be a poor model of the data. Try another parametric model.
+
                     """
                     )
                 )
@@ -1718,10 +1721,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
         raise ConvergenceError(
             dedent(
                 """\
-            Fitting did not converge. This could be a problem with your data:
-            1. Does a column have extremely high mean or variance? Try standardizing it.
-            2. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence
-            3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`
+            Fitting did not converge. This could be a problem with your dataset:
+
+            0. Are there any lifelines warnings outputted during the `fit`?
+            1. Inspect your DataFrame: does everything look as expected?
+            2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
+            3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
+            4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
         """
                 % name
             )
@@ -1747,8 +1753,15 @@ class ParametericAFTRegressionFitter(BaseFitter):
                 The Hessian was not invertible. We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
-                fitted parameters too. Perform plots of the cumulative hazard to help understand
-                the latter's bias.
+                fitted parameters too.
+
+                Some ways to possible ways fix this:
+
+                0. Are there any lifelines warnings outputted during the `fit`?
+                1. Inspect your DataFrame: does everything look as expected?
+                2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
+                3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
+                4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
                 """
             )
             warnings.warn(warning_text, StatisticalWarning)
