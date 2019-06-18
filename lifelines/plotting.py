@@ -315,7 +315,7 @@ def plot_lifetimes(
     sort_by_duration=True,
     event_observed_color="#A60628",
     event_censored_color="#348ABD",
-    **kwargs
+    **kwargs,
 ):
     """
     Returns a lifetime plot, see examples: https://lifelines.readthedocs.io/en/latest/Survival%20Analysis%20intro.html#Censoring
@@ -464,7 +464,7 @@ def _plot_estimate(
     ci_alpha=0.25,
     ci_show=True,
     at_risk_counts=False,
-    **kwargs
+    **kwargs,
 ):
 
     """
