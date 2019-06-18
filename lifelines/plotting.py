@@ -246,11 +246,11 @@ def add_at_risk_counts(*fitters, **kwargs):
     from matplotlib import pyplot as plt
 
     # Axes and Figure can't be None
-    ax = kwargs.get("ax", None)
+    ax = kwargs.pop("ax", None)
     if ax is None:
         ax = plt.gca()
 
-    fig = kwargs.get("fig", None)
+    fig = kwargs.pop("fig", None)
     if fig is None:
         fig = plt.gcf()
 
@@ -258,7 +258,7 @@ def add_at_risk_counts(*fitters, **kwargs):
         labels = [f._label for f in fitters]
     else:
         # Allow None, in which case no labels should be used
-        labels = kwargs["labels"]
+        labels = kwargs.pop("labels", None)
         if labels is None:
             labels = [None] * len(fitters)
     # Create another axes where we can put size ticks
@@ -280,19 +280,24 @@ def add_at_risk_counts(*fitters, **kwargs):
     ticklabels = []
     for tick in ax2.get_xticks():
         lbl = ""
-        for f, l in zip(fitters, labels):
+        # Get counts at tick
+        counts = [f.durations[f.durations >= tick].shape[0] for f in fitters]
+        # Get length of largest count
+        max_length = len(str(max(counts)))
+        # Create tick label
+        for l, c in zip(labels, counts):
             # First tick is prepended with the label
             if tick == ax2.get_xticks()[0] and l is not None:
                 if is_latex_enabled():
-                    s = "\n{}\\quad".format(l) + "{}"
+                    s = "\n{}\\quad".format(l) + f"{{:>{max_length}d}}"
                 else:
-                    s = "\n{}   ".format(l) + "{}"
+                    s = "\n{}   ".format(l) + f"{{:>{max_length}d}}"
             else:
                 s = "\n{}"
-            lbl += s.format(f.durations[f.durations >= tick].shape[0])
+            lbl += s.format(c)
         ticklabels.append(lbl.strip())
     # Align labels to the right so numbers can be compared easily
-    ax2.set_xticklabels(ticklabels, ha="right")
+    ax2.set_xticklabels(ticklabels, ha="right", **kwargs)
 
     # Add a descriptive headline.
     ax2.xaxis.set_label_coords(0, ax2_ypos)
