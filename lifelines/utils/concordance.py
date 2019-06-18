@@ -50,30 +50,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     >>> concordance_index(df['T'], -cph.predict_partial_hazard(df), df['E'])
 
     """
-    event_times = np.asarray(event_times, dtype=float)
-    predicted_scores = np.asarray(predicted_scores, dtype=float)
-
-    # Allow for (n, 1) or (1, n) arrays
-    if event_times.ndim == 2 and (event_times.shape[0] == 1 or event_times.shape[1] == 1):
-        # Flatten array
-        event_times = event_times.ravel()
-    # Allow for (n, 1) or (1, n) arrays
-    if predicted_scores.ndim == 2 and (predicted_scores.shape[0] == 1 or predicted_scores.shape[1] == 1):
-        # Flatten array
-        predicted_scores = predicted_scores.ravel()
-
-    if event_times.shape != predicted_scores.shape:
-        raise ValueError("Event times and predictions must have the same shape")
-    if event_times.ndim != 1:
-        raise ValueError("Event times can only be 1-dimensional: (n,)")
-
-    if event_observed is None:
-        event_observed = np.ones(event_times.shape[0], dtype=float)
-    else:
-        event_observed = np.asarray(event_observed, dtype=float).ravel()
-        if event_observed.shape != event_times.shape:
-            raise ValueError("Observed events must be 1-dimensional of same length as event times")
-
+    event_times, predicted_scores, event_observed = _preprocess_data(event_times, predicted_scores, event_observed)
     num_correct, num_tied, num_pairs = _concordance_summary_statistics(event_times, predicted_scores, event_observed)
 
     return _concordance_ratio(num_correct, num_tied, num_pairs)
@@ -204,8 +181,30 @@ def _naive_concordance_summary_statistics(event_times, predicted_event_times, ev
     """
     Fallback, simpler method to compute concordance.
 
-    Assumes the data has been verified by lifelines.utils.concordance_index first.
     """
+
+    def _valid_comparison(time_a, time_b, event_a, event_b):
+        """True if times can be compared."""
+        if time_a == time_b:
+            # Ties are only informative if exactly one event happened
+            return event_a != event_b
+        if event_a and event_b:
+            return True
+        if event_a and time_a < time_b:
+            return True
+        if event_b and time_b < time_a:
+            return True
+        return False
+
+    def _concordance_value(time_a, time_b, pred_a, pred_b, event_a, event_b):
+        if pred_a == pred_b:
+            # Same as random
+            return (0, 1)
+        if pred_a < pred_b:
+            return (time_a < time_b) or (time_a == time_b and event_a and not event_b), 0
+        # pred_a > pred_b
+        return (time_a > time_b) or (time_a == time_b and not event_a and event_b), 0
+
     num_pairs = 0.0
     num_correct = 0.0
     num_tied = 0.0
@@ -228,31 +227,105 @@ def _naive_concordance_summary_statistics(event_times, predicted_event_times, ev
     return (num_correct, num_tied, num_pairs)
 
 
-def naive_concordance_index(event_times, predicted_event_times, event_observed):
+def naive_concordance_index(event_times, predicted_event_times, event_observed=None):
+    event_times, predicted_event_times, event_observed = _preprocess_data(
+        event_times, predicted_event_times, event_observed
+    )
     return _concordance_ratio(
         *_naive_concordance_summary_statistics(event_times, predicted_event_times, event_observed)
     )
 
 
-def _valid_comparison(time_a, time_b, event_a, event_b):
-    """True if times can be compared."""
-    if time_a == time_b:
-        # Ties are only informative if exactly one event happened
-        return event_a != event_b
-    if event_a and event_b:
-        return True
-    if event_a and time_a < time_b:
-        return True
-    if event_b and time_b < time_a:
-        return True
-    return False
+def isometry_index(event_times, predicted_event_times, event_observed=None):
+    """
+    This metric is a measure of how much the prediction function is an isometry. An isometry is defined
+    as a function, f, such that d(x, y) = d(f(x), f(y)), where d is a distance metric.
 
 
-def _concordance_value(time_a, time_b, pred_a, pred_b, event_a, event_b):
-    if pred_a == pred_b:
-        # Same as random
-        return (0, 1)
-    if pred_a < pred_b:
-        return (time_a < time_b) or (time_a == time_b and event_a and not event_b), 0
-    # pred_a > pred_b
-    return (time_a > time_b) or (time_a == time_b and not event_a and event_b), 0
+    Parameters
+    -----------
+
+
+
+    See Also
+    --------
+    ``concordance_index``
+
+
+    Notes
+    -------
+    Naive algorithm, probably very slow.
+    """
+
+    def _valid_comparison(time_a, time_b, pred_a, pred_b, event_a, event_b):
+        import pdb
+
+        pdb.set_trace()
+        """True if times can be compared."""
+        if event_a and event_b:
+            return True
+        if event_a and time_a < time_b:
+            return True and ((time_b - time_a) < (pred_b - pred_a))
+        if event_b and time_b < time_a:
+            return True and ((time_a - time_b) < (pred_a - pred_b))
+        return False
+
+    def _isometry_value(time_a, time_b, pred_a, pred_b, event_a, event_b):
+        if time_a < time_b:
+            return ((time_b - time_a) - (pred_b - pred_a)) ** 2
+        else:
+            return ((time_a - time_b) - (pred_a - pred_b)) ** 2
+
+    event_times, predicted_event_times, event_observed = _preprocess_data(
+        event_times, predicted_event_times, event_observed
+    )
+
+    num_pairs = 0.0
+    running_sum = 0.0
+
+    for a, time_a in enumerate(event_times):
+        pred_a = predicted_event_times[a]
+        event_a = event_observed[a]
+        # Don't want to double count
+        for b in range(a + 1, len(event_times)):
+            time_b = event_times[b]
+            pred_b = predicted_event_times[b]
+            event_b = event_observed[b]
+
+            if _valid_comparison(time_a, time_b, pred_a, pred_b, event_a, event_b):
+                num_pairs += 1.0
+                running_sum += _isometry_value(time_a, time_b, pred_a, pred_b, event_a, event_b)
+
+    if num_pairs == 0:
+        print("no valid comp")
+        return np.inf
+    else:
+        return running_sum / num_pairs
+
+
+def _preprocess_data(event_times, predicted_scores, event_observed):
+    event_times = np.asarray(event_times, dtype=float)
+    predicted_scores = np.asarray(predicted_scores, dtype=float)
+
+    # Allow for (n, 1) or (1, n) arrays
+    if event_times.ndim == 2 and (event_times.shape[0] == 1 or event_times.shape[1] == 1):
+        # Flatten array
+        event_times = event_times.ravel()
+    # Allow for (n, 1) or (1, n) arrays
+    if predicted_scores.ndim == 2 and (predicted_scores.shape[0] == 1 or predicted_scores.shape[1] == 1):
+        # Flatten array
+        predicted_scores = predicted_scores.ravel()
+
+    if event_times.shape != predicted_scores.shape:
+        raise ValueError("Event times and predictions must have the same shape")
+    if event_times.ndim != 1:
+        raise ValueError("Event times can only be 1-dimensional: (n,)")
+
+    if event_observed is None:
+        event_observed = np.ones(event_times.shape[0], dtype=float)
+    else:
+        event_observed = np.asarray(event_observed, dtype=float).ravel()
+        if event_observed.shape != event_times.shape:
+            raise ValueError("Observed events must be 1-dimensional of same length as event times")
+
+    return event_times, predicted_scores, event_observed
