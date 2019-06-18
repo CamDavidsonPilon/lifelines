@@ -282,12 +282,12 @@ def add_at_risk_counts(*fitters, **kwargs):
         lbl = ""
         # Get counts at tick
         counts = [f.durations[f.durations >= tick].shape[0] for f in fitters]
-        # Get length of largest count
-        max_length = len(str(max(counts)))
         # Create tick label
         for l, c in zip(labels, counts):
             # First tick is prepended with the label
             if tick == ax2.get_xticks()[0] and l is not None:
+                # Get length of largest count
+                max_length = len(str(max(counts)))
                 if is_latex_enabled():
                     s = "\n{}\\quad".format(l) + f"{{:>{max_length}d}}"
                 else:
