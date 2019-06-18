@@ -464,7 +464,7 @@ def _plot_estimate(
     ci_alpha=0.25,
     ci_show=True,
     at_risk_counts=False,
-    **kwargs,
+    **kwargs
 ):
 
     """
