@@ -1,11 +1,21 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+
+
+import warnings
 import numpy as np
 import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import _preprocess_inputs, _additive_estimate, epanechnikov_kernel,\
-    inv_normal_cdf
+from lifelines.plotting import _plot_estimate
+from lifelines.utils import (
+    _preprocess_inputs,
+    _additive_estimate,
+    epanechnikov_kernel,
+    inv_normal_cdf,
+    check_nans_or_infs,
+    StatisticalWarning,
+    CensoringType,
+)
 
 
 class NelsonAalenFitter(UnivariateFitter):
@@ -13,17 +23,43 @@ class NelsonAalenFitter(UnivariateFitter):
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard.
 
-    NelsonAalenFitter( alpha=0.95, nelson_aalen_smoothing=True)
+    NelsonAalenFitter(alpha=0.05, nelson_aalen_smoothing=True)
 
-    alpha: The alpha value associated with the confidence intervals.
-    nelson_aalen_smoothing: If the event times are naturally discrete (like discrete years, minutes, etc.)
+    Parameters
+    ----------
+    alpha: float, optional (default=0.05)
+        The alpha value associated with the confidence intervals.
+    nelson_aalen_smoothing: bool, optional
+        If the event times are naturally discrete (like discrete years, minutes, etc.)
       then it is advisable to turn this parameter to False. See [1], pg.84.
+
+    Notes
+    ------
+    [1] Aalen, O., Borgan, O., Gjessing, H., 2008. Survival and Event History Analysis
+
+    Attributes
+    ----------
+    cumulative_hazard_ : DataFrame
+        The estimated cumulative hazard (with custom timeline if provided)
+    confidence_interval_ : DataFrame
+        The lower and upper confidence intervals for the cumulative hazard
+    durations: array
+        The durations provided
+    event_observed: array
+        The event_observed variable provided
+    timeline: array
+        The time line to use for plotting and indexing
+    entry: array or None
+        The entry array provided, or None
+    event_table: DataFrame
+        A summary of the life table
 
     """
 
-    def __init__(self, alpha=0.95, nelson_aalen_smoothing=True):
-        if not (0 < alpha <= 1.):
-            raise ValueError('alpha parameter must be between 0 and 1.')
+    def __init__(self, alpha=0.05, nelson_aalen_smoothing=True):
+        super(NelsonAalenFitter, self).__init__(alpha=alpha)
+        if not (0 < alpha <= 1.0):
+            raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
 
@@ -34,33 +70,69 @@ class NelsonAalenFitter(UnivariateFitter):
             self._variance_f = self._variance_f_discrete
             self._additive_f = self._additive_f_discrete
 
-    def fit(self, durations, event_observed=None, timeline=None, entry=None,
-            label='NA_estimate', alpha=None, ci_labels=None):
+    @CensoringType.right_censoring
+    def fit(
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        entry=None,
+        label="NA_estimate",
+        alpha=None,
+        ci_labels=None,
+        weights=None,
+    ):  # pylint: disable=too-many-arguments
         """
-        Parameters:
-          duration: an array, or pd.Series, of length n -- duration subject was observed for
-          timeline: return the best estimate at the values in timelines (postively increasing)
-          event_observed: an array, or pd.Series, of length n -- True if the the death was observed, False if the event
-             was lost (right-censored). Defaults all True if event_observed==None
-          entry: an array, or pd.Series, of length n -- relative time when a subject entered the study. This is
-             useful for left-truncated observations, i.e the birth event was not observed.
-             If None, defaults to all 0 (all birth events observed.)
-          label: a string to name the column of the estimate.
-          alpha: the alpha value in the confidence intervals. Overrides the initializing
-             alpha for this call to fit only.
-          ci_labels: add custom column names to the generated confidence intervals
-                as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+        Parameters
+        -----------
+        durations: an array, or pd.Series, of length n
+          duration subject was observed for
+        timeline: iterable
+            return the best estimate at the values in timelines (positively increasing)
+        event_observed: an array, or pd.Series, of length n
+            True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+        entry: an array, or pd.Series, of length n
+           relative time when a subject entered the study. This is
+           useful for left-truncated observations, i.e the birth event was not observed.
+           If None, defaults to all 0 (all birth events observed.)
+        label: string
+            a string to name the column of the estimate.
+        alpha: float
+            the alpha value in the confidence intervals. Overrides the initializing
+           alpha for this call to fit only.
+        ci_labels: iterable
+            add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
+        weights: n array, or pd.Series, of length n
+            if providing a weighted dataset. For example, instead
+            of providing every subject as a single element of `durations` and `event_observed`, one could
+            weigh subject differently.
 
-        Returns:
-          self, with new properties like 'cumulative_hazard_'.
+        Returns
+        -------
+          self, with new properties like ``cumulative_hazard_``.
 
         """
+        check_nans_or_infs(durations)
+        if event_observed is not None:
+            check_nans_or_infs(event_observed)
 
-        v = _preprocess_inputs(durations, event_observed, timeline, entry)
+        if weights is not None:
+            if (weights.astype(int) != weights).any():
+                warnings.warn(
+                    """It looks like your weights are not integers, possibly prospenity scores then?
+  It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
+  estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
+  or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
+                  """,
+                    StatisticalWarning,
+                )
+
+        v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
 
-        cumulative_hazard_, cumulative_sq_ = _additive_estimate(self.event_table, self.timeline,
-                                                                self._additive_f, self._variance_f, False)
+        cumulative_hazard_, cumulative_sq_ = _additive_estimate(
+            self.event_table, self.timeline, self._additive_f, self._variance_f, False
+        )
 
         # esimates
         self._label = label
@@ -68,53 +140,74 @@ class NelsonAalenFitter(UnivariateFitter):
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
         self._cumulative_sq = cumulative_sq_
 
-        # estimation functions
-        self.predict = self._predict("cumulative_hazard_", self._label)
-        self.subtract = self._subtract("cumulative_hazard_")
-        self.divide = self._divide("cumulative_hazard_")
+        # estimation methods
+        self._estimation_method = "cumulative_hazard_"
+        self._estimate_name = "cumulative_hazard_"
+        self._update_docstrings()
 
         # plotting
-        self.plot = self._plot_estimate("cumulative_hazard_")
         self.plot_cumulative_hazard = self.plot
-        self.plot_hazard = self._plot_estimate('hazard_')
 
         return self
 
+    def plot_hazard(self, **kwargs):
+        if "bandwidth" not in kwargs:
+            raise ValueError(
+                "Must specify a bandwidth parameter in the call to plot_hazard, e.g. `plot_hazard(bandwidth=1.0)`"
+            )
+        bandwidth = kwargs.pop("bandwidth")
+        estimate = self.smoothed_hazard_(bandwidth)
+        confidence_intervals = self.smoothed_hazard_confidence_intervals_(bandwidth, estimate.values[:, 0])
+        return _plot_estimate(self, estimate, confidence_intervals, **kwargs)
+
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
-        alpha2 = inv_normal_cdf(1 - (1 - alpha) / 2)
+        z = inv_normal_cdf(1 - alpha / 2)
         df = pd.DataFrame(index=self.timeline)
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%.2f" % (self._label, alpha), "%s_lower_%.2f" % (self._label, alpha)]
+            ci_labels = ["%s_upper_%g" % (self._label, 1 - alpha), "%s_lower_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
         self.ci_labels = ci_labels
 
-        df[ci_labels[0]] = self.cumulative_hazard_.values * \
-            np.exp(alpha2 * np.sqrt(cumulative_sq_) / self.cumulative_hazard_.values)
-        df[ci_labels[1]] = self.cumulative_hazard_.values * \
-            np.exp(-alpha2 * np.sqrt(cumulative_sq_) / self.cumulative_hazard_.values)
+        cum_hazard_ = self.cumulative_hazard_.values
+        df[ci_labels[0]] = cum_hazard_ * np.exp(
+            z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
+        )
+        df[ci_labels[1]] = cum_hazard_ * np.exp(
+            -z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
+        )
         return df
 
     def _variance_f_smooth(self, population, deaths):
-        df = pd.DataFrame({'N': population, 'd': deaths})
-        return df.apply(lambda N_d: np.sum((1. / (N_d[0] - i) ** 2 for i in range(int(N_d[1])))), axis=1)
+        cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1) ** 2)
+        return pd.Series(
+            cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
+            index=population.index,
+        )
 
     def _variance_f_discrete(self, population, deaths):
-        return 1. * (population - deaths) * deaths / population ** 3
+        return (population - deaths) * deaths / population ** 3
 
     def _additive_f_smooth(self, population, deaths):
-        df = pd.DataFrame({'N': population, 'd': deaths})
-        return df.apply(lambda N_d: np.sum((1. / (N_d[0] - i) for i in range(int(N_d[1])))), axis=1)
+        cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1))
+        return pd.Series(
+            cum_[population - 1] - np.where(population - deaths - 1 >= 0, cum_[population - deaths - 1], 0),
+            index=population.index,
+        )
 
     def _additive_f_discrete(self, population, deaths):
-        return (1. * deaths / population).replace([np.inf], 0)
+        return (deaths / population).replace([np.inf], 0)
 
     def smoothed_hazard_(self, bandwidth):
         """
-        Parameters:
-          bandwidth: the bandwith used in the Epanechnikov kernel.
+        Parameters
+        -----------
+        bandwidth: float
+            the bandwith used in the Epanechnikov kernel.
 
-        Returns:
+        Returns
+        -------
+        DataFrame:
           a DataFrame of the smoothed hazard
         """
         timeline = self.timeline
@@ -122,36 +215,44 @@ class NelsonAalenFitter(UnivariateFitter):
         hazard_name = "differenced-" + cumulative_hazard_name
         hazard_ = self.cumulative_hazard_.diff().fillna(self.cumulative_hazard_.iloc[0])
         C = (hazard_[cumulative_hazard_name] != 0.0).values
-        return pd.DataFrame(1. / bandwidth * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C, :]),
-                            columns=[hazard_name], index=timeline)
+        return pd.DataFrame(
+            1.0
+            / bandwidth
+            * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth), hazard_.values[C, :]),
+            columns=[hazard_name],
+            index=timeline,
+        )
 
     def smoothed_hazard_confidence_intervals_(self, bandwidth, hazard_=None):
         """
-        Parameter:
-          bandwidth: the bandwith to use in the Epanechnikov kernel.
-          hazard_: a computed (n,) numpy array of estimated hazard rates. If none, uses naf.smoothed_hazard_
+        Parameters
+        ----------
+          bandwidth: float
+            the bandwidth to use in the Epanechnikov kernel. > 0
+          hazard_: numpy array
+            a computed (n,) numpy array of estimated hazard rates. If none, uses ``smoothed_hazard_``
         """
         if hazard_ is None:
             hazard_ = self.smoothed_hazard_(bandwidth).values[:, 0]
 
         timeline = self.timeline
-        alpha2 = inv_normal_cdf(1 - (1 - self.alpha) / 2)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         self._cumulative_sq.iloc[0] = 0
         var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
-        C = (var_hazard_.values != 0.0)  # only consider the points with jumps
-        std_hazard_ = np.sqrt(1. / (bandwidth ** 2) * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C]))
+        C = var_hazard_.values != 0.0  # only consider the points with jumps
+        std_hazard_ = np.sqrt(
+            1.0
+            / (bandwidth ** 2)
+            * np.dot(
+                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C]
+            )
+        )
         values = {
-            self.ci_labels[0]: hazard_ * np.exp(alpha2 * std_hazard_ / hazard_),
-            self.ci_labels[1]: hazard_ * np.exp(-alpha2 * std_hazard_ / hazard_)
+            self.ci_labels[0]: hazard_ * np.exp(z * std_hazard_ / hazard_),
+            self.ci_labels[1]: hazard_ * np.exp(-z * std_hazard_ / hazard_),
         }
         return pd.DataFrame(values, index=timeline)
 
     @property
     def conditional_time_to_event_(self):
         raise NotImplementedError
-
-"""
-References:
-[1] Aalen, O., Borgan, O., Gjessing, H., 2008. Survival and Event History Analysis
-
-"""

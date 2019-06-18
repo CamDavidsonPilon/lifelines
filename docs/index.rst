@@ -8,7 +8,7 @@
 -------------------------------------
 
 
-Lifelines
+lifelines
 =====================================
 
 *lifelines* is a implementation of survival analysis in Python. What
@@ -17,37 +17,81 @@ implementations?
 
 -  built on top of Pandas
 -  internal plotting methods
--  simple and intuitive API (*designed for humans*)
--  only does survival analysis (No unnecessary features or second-class
-   implementations)
+-  simple and intuitive API
+-  only focus is survival analysis
+-  handles right, left and interval censored data
 
 
 Contents:
-------------------------------
+============
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
+  :caption: Quickstart & Intro
 
   Quickstart
   Survival Analysis intro
-  Intro to lifelines
-  Survival Regression
-  Examples
 
+.. toctree::
+  :maxdepth: 1
+  :caption: Univariate Models
+
+  Survival analysis with lifelines
+  jupyter_notebooks/Piecewise Exponential Models and Creating Custom Models.ipynb
+  jupyter_notebooks/Modelling time-lagged conversion rates.ipynb
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Regression Models
+
+  Survival Regression
+  Compatibility with scikit-learn
+  Time varying survival regression
+  jupyter_notebooks/Proportional hazard assumption.ipynb
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Detailed documentation
+
+  Examples
+  References
+
+.. toctree::
+  :maxdepth: 1
+  :caption: About lifelines
+
+  Changelog
+  Citing lifelines <https://doi.org/10.5281/zenodo.805993>
+
+.. toctree::
+  :maxdepth: 1
+  :caption: Questions? Suggestions?
+
+  Gitter channel <https://gitter.im/python-lifelines/Lobby>
+  Create a GitHub issue <https://github.com/camdavidsonpilon/lifelines/issues>
+  Development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>
 
 Installation
 ------------------------------
 
-Dependencies are from the typical Python data-stack: Numpy, Pandas, Scipy, and optionally Matplotlib. Install using:
+
+.. code-block:: console
 
     pip install lifelines
 
 
-Source code and Issue Tracker
+Source code and issue tracker
 ------------------------------
 
-Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_
-Please report bugs, issues and feature extensions there. 
+Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_.
+Please report bugs, issues and feature extensions there. We also have `Gitter channel <https://gitter.im/python-lifelines/Lobby>`_ available to discuss survival analysis and *lifelines*:
+
+Citing *lifelines*
+------------------------------
+
+The following link will bring you to a page where you can find the latest citation for *lifelines*:
+
+`Citation for lifelines <https://doi.org/10.5281/zenodo.805993>`_
 
 
 Indices and tables
@@ -56,4 +100,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

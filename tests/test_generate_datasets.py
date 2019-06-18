@@ -1,11 +1,10 @@
-# test_generate_datasets.py
-from __future__ import print_function
+# -*- coding: utf-8 -*-
 import os
 
 import pytest
 import matplotlib.pyplot as plt
 
-from lifelines.estimation import KaplanMeierFitter, NelsonAalenFitter
+from lifelines import NelsonAalenFitter, KaplanMeierFitter
 from lifelines.generate_datasets import exponential_survival_data
 
 

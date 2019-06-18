@@ -1,4 +1,0 @@
-numpy
-scipy
-pandas>=0.18
-matplotlib>=1.5

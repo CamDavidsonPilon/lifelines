@@ -1,0 +1,7 @@
+-r dev-requirements.txt
+sphinx
+sphinx_rtd_theme
+nbsphinx
+jupyter_client
+nbconvert!=5.4
+ipykernel

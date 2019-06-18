@@ -1,15 +1,56 @@
 # -*- coding: utf-8 -*-
 # lib to create fake survival datasets
 import numpy as np
-from numpy import random
 import pandas as pd
 
-from scipy import stats as stats
+from scipy import stats
 from scipy.optimize import newton
 from scipy.integrate import cumtrapz
 
+random = np.random
 
-def exponential_survival_data(n, cr=0.05, scale=1.):
+
+def piecewise_exponential_survival_data(n, breakpoints, lambdas):
+    """
+
+    Note
+    --------
+    No censoring is present here.
+
+    Examples
+    --------
+
+    >>> T = piecewise_exponential_survival_data(100000, [1, 3], [0.2, 3, 1.])
+    >>> NelsonAalenFitter().fit(T).plot()
+
+    """
+    assert len(breakpoints) == len(lambdas) - 1
+
+    breakpoints = np.append([0], breakpoints)
+
+    delta_breakpoints = np.diff(breakpoints)
+
+    T = np.empty(n)
+    for i in range(n):
+        U = random.random()
+        E = -np.log(U)
+
+        running_sum = 0
+        for delta, lambda_, bp in zip(delta_breakpoints, lambdas, breakpoints):
+            factor = lambda_ * delta
+            if E < running_sum + factor:
+                t = bp + (E - running_sum) / lambda_
+                break
+            running_sum += factor
+        else:
+            t = breakpoints[-1] + (E - running_sum) / lambdas[-1]
+
+        T[i] = t
+
+    return T
+
+
+def exponential_survival_data(n, cr=0.05, scale=1.0):
 
     t = stats.expon.rvs(scale=scale, size=n)
     if cr == 0.0:
@@ -20,9 +61,10 @@ def exponential_survival_data(n, cr=0.05, scale=1.):
         return v / (np.exp(v) - 1) - cr
 
     # find the threshold:
-    h = newton(pF, 1., maxiter=500)
+    h = newton(pF, 1.0, maxiter=500)
 
     # generate truncated data
+    # pylint: disable=invalid-unary-operand-type
     R = (1 - np.exp(-h / scale)) * stats.uniform.rvs(size=n)
     entrance = -np.log(1 - R) * scale
 
@@ -33,7 +75,8 @@ def exponential_survival_data(n, cr=0.05, scale=1.):
 
 # Models with covariates
 
-class coeff_func(object):
+
+class coeff_func:
 
     """This is a decorator class used later to construct nice names"""
 
@@ -44,6 +87,7 @@ class coeff_func(object):
         def __repr__():
             s = self.f.__doc__.replace("alpha", "%.4f" % kwargs["alpha"]).replace("beta", "%.4f" % kwargs["beta"])
             return s
+
         self.__doc__ = __repr__()
         self.__repr__ = __repr__
         self.__str__ = __repr__
@@ -75,9 +119,10 @@ def periodic_(t, alpha=1, beta=1):
 
 
 @coeff_func
-def constant_(t, alpha=1, beta=1):
+def constant_(t, alpha=1, beta=1):  # pylint: disable=unused-argument
     """beta"""
     return beta
+
 
 FUNCS = [exp_comp_, log_, inverseSq_, constant_, periodic_]
 
@@ -110,15 +155,16 @@ def generate_covariates(n, d, n_binary=0, p=0.5):
 
     returns (n, d+1)
     """
-    assert (n_binary >= 0 and n_binary <= d), "binary must be between 0 and d"
+    # pylint: disable=chained-comparison
+    assert n_binary >= 0 and n_binary <= d, "binary must be between 0 and d"
     covariates = np.zeros((n, d + 1))
-    covariates[:, :d - n_binary] = random.exponential(1, size=(n, d - n_binary))
-    covariates[:, d - n_binary:-1] = random.binomial(1, p, size=(n, n_binary))
+    covariates[:, : d - n_binary] = random.exponential(1, size=(n, d - n_binary))
+    covariates[:, d - n_binary : -1] = random.binomial(1, p, size=(n, n_binary))
     covariates[:, -1] = np.ones(n)
     return covariates
 
 
-def constant_coefficients(d, timelines, constant=False, independent=0):
+def constant_coefficients(d, timelines, constant=True, independent=0):
     """
     Proportional hazards model.
 
@@ -130,7 +176,7 @@ def constant_coefficients(d, timelines, constant=False, independent=0):
 
     returns a matrix (t,d+1) of coefficients
     """
-    return time_varying_coefficients(d, timelines, constant=True, independent=independent, randgen=random.normal)
+    return time_varying_coefficients(d, timelines, constant, independent=independent, randgen=random.normal)
 
 
 def time_varying_coefficients(d, timelines, constant=False, independent=0, randgen=random.exponential):
@@ -189,16 +235,15 @@ def generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_bina
     if model == "aalen":
         coefficients = time_varying_coefficients(d + 1, timelines, independent=independent, constant=constant)
         hazard_rates = np.dot(covariates, coefficients.T)
-        return pd.DataFrame(hazard_rates.T, index=timelines), coefficients, pd.DataFrame(covariates)
-    elif model == "cox":
+        return (pd.DataFrame(hazard_rates.T, index=timelines), coefficients, pd.DataFrame(covariates))
+    if model == "cox":
         covariates = covariates[:, :-1]
         coefficients = constant_coefficients(d, timelines, independent)
         baseline = time_varying_coefficients(1, timelines)
         hazard_rates = np.exp(np.dot(covariates, coefficients.T)) * baseline[baseline.columns[0]].values
         coefficients["baseline: " + baseline.columns[0]] = baseline.values
-        return pd.DataFrame(hazard_rates.T, index=timelines), coefficients, pd.DataFrame(covariates)
-    else:
-        raise Exception
+        return (pd.DataFrame(hazard_rates.T, index=timelines), coefficients, pd.DataFrame(covariates))
+    raise Exception
 
 
 def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
@@ -212,7 +257,8 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
               If (n,) np.array >=0 , censor elementwise.
 
 
-    Returns:
+    Returns
+    -------
       survival_times: (size,n) array of random variables.
       (optional) censorship: if censor is true, returns (size,n) array with bool True
          if the death was observed (not right-censored)
@@ -244,20 +290,23 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
 
 
 def generate_observational_matrix(n, d, timelines, constant=False, independent=0, n_binary=0, model="aalen"):
-    hz, coeff, covariates = generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_binary=0, model=model)
+    hz, coeff, covariates = generate_hazard_rates(n, d, timelines, constant, independent, n_binary, model=model)
     R = generate_random_lifetimes(hz, timelines)
     covariates["event_at"] = R.T[0]
-    return covariates.sort_values(by="event_at"), pd.DataFrame(cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines)
+    return (
+        covariates.sort_values(by="event_at"),
+        pd.DataFrame(cumulative_integral(coeff.values, timelines), columns=coeff.columns, index=timelines),
+    )
 
 
 def cumulative_integral(fx, x):
     """
     Return the cumulative integral of arrays, initial value is 0.
 
-    Parameters:
-
-        fx: (n,d) numpy array, what you want to integral of
-        x: (n,) numpy array, location to integrate over.
+    Parameters
+    ----------
+    fx: (n,d) numpy array, what you want to integral of
+    x: (n,) numpy array, location to integrate over.
     """
     return cumtrapz(fx.T, x, initial=0).T
 
@@ -265,11 +314,15 @@ def cumulative_integral(fx, x):
 def construct_survival_curves(hazard_rates, timelines):
     """
     Given hazard rates, reconstruct the survival curves
-      hazard_rates: (n,t) array
-      timelines: (t,) the observational times
 
-    Returns:t
-      survial curves, (n,t) array
+    Parameters
+    ----------
+    hazard_rates: (n,t) array
+    timelines: (t,) the observational times
+
+    Returns
+    -------
+    t: survial curves, (n,t) array
     """
     cumulative_hazards = cumulative_integral(hazard_rates.values, timelines)
     return pd.DataFrame(np.exp(-cumulative_hazards), index=timelines)

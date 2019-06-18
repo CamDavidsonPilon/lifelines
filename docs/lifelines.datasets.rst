@@ -1,8 +1,6 @@
-lifelines.datasets package
-==========================
+lifelines.datasets
+==================
 
-Module contents
----------------
 
 .. automodule:: lifelines.datasets
     :members:

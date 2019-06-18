@@ -1,0 +1,5 @@
+python-coveralls
+seaborn
+pytest-travis-fold
+dill
+-r dev-requirements.txt

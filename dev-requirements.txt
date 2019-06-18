@@ -1,5 +1,0 @@
--r requirements.txt
-pytest
-python-coveralls
-pytest-cov
-seaborn

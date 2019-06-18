@@ -1,20 +1,5 @@
-lifelines.utils package
-=======================
-
-Submodules
-----------
-
-lifelines.utils.progress_bar module
------------------------------------
-
-.. automodule:: lifelines.utils.progress_bar
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
+lifelines.utils
+===============
 
 .. automodule:: lifelines.utils
     :members:
