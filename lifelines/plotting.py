@@ -289,9 +289,9 @@ def add_at_risk_counts(*fitters, **kwargs):
                 # Get length of largest count
                 max_length = len(str(max(counts)))
                 if is_latex_enabled():
-                    s = "\n{}\\quad".format(l) + f"{{:>{max_length}d}}"
+                    s = "\n{}\\quad".format(l) + "{{:>{}d}}".format(max_length)
                 else:
-                    s = "\n{}   ".format(l) + f"{{:>{max_length}d}}"
+                    s = "\n{}   ".format(l) + "{{:>{}d}}".format(max_length)
             else:
                 s = "\n{}"
             lbl += s.format(c)
