@@ -271,9 +271,11 @@ def add_at_risk_counts(*fitters, **kwargs):
     remove_spines(ax2, ["top", "right", "bottom", "left"])
     # Set ticks and labels on bottom
     ax2.xaxis.tick_bottom()
-    # Match tick numbers and locations
-    ax2.set_xticks(ax.get_xticks())
-    ax2.set_xlim(ax.get_xlim())
+    # Get visible ticks
+    min_time, max_time = ax.get_xlim()
+    ax2.set_xlim(min_time, max_time)
+    visible_ticks = [tick for tick in ax.get_xticks() if min_time <= tick <= max_time]
+    ax2.set_xticks(visible_ticks)
     # Remove ticks, need to do this AFTER moving the ticks
     remove_ticks(ax2, x=True, y=True)
     # Add population size at times
