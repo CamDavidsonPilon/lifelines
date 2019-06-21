@@ -12,7 +12,6 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
-from lifelines.utils.sklearn_adapter import sklearn_adapter
 
 
 __all__ = [
@@ -28,7 +27,6 @@ __all__ = [
     "to_long_format",
     "to_episodic_format",
     "add_covariate_to_timeline",
-    "sklearn_adapter",
     "covariates_from_event_matrix",
 ]
 
