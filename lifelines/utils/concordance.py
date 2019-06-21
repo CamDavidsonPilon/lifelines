@@ -50,7 +50,9 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     >>> concordance_index(df['T'], -cph.predict_partial_hazard(df), df['E'])
 
     """
-    event_times, predicted_scores, event_observed = _preprocess_data(event_times, predicted_scores, event_observed)
+    event_times, predicted_scores, event_observed = _preprocess_scoring_data(
+        event_times, predicted_scores, event_observed
+    )
     num_correct, num_tied, num_pairs = _concordance_summary_statistics(event_times, predicted_scores, event_observed)
 
     return _concordance_ratio(num_correct, num_tied, num_pairs)
@@ -228,7 +230,7 @@ def _naive_concordance_summary_statistics(event_times, predicted_event_times, ev
 
 
 def naive_concordance_index(event_times, predicted_event_times, event_observed=None):
-    event_times, predicted_event_times, event_observed = _preprocess_data(
+    event_times, predicted_event_times, event_observed = _preprocess_scoring_data(
         event_times, predicted_event_times, event_observed
     )
     return _concordance_ratio(
@@ -236,74 +238,7 @@ def naive_concordance_index(event_times, predicted_event_times, event_observed=N
     )
 
 
-def isometry_index(event_times, predicted_event_times, event_observed=None):
-    """
-    This metric is a measure of how much the prediction function is an isometry. An isometry is defined
-    as a function, f, such that d(x, y) = d(f(x), f(y)), where d is a distance metric.
-
-
-    Parameters
-    -----------
-
-
-
-    See Also
-    --------
-    ``concordance_index``
-
-
-    Notes
-    -------
-    Naive algorithm, probably very slow.
-    """
-
-    def _valid_comparison(time_a, time_b, pred_a, pred_b, event_a, event_b):
-        import pdb
-
-        pdb.set_trace()
-        """True if times can be compared."""
-        if event_a and event_b:
-            return True
-        if event_a and time_a < time_b:
-            return True and ((time_b - time_a) < (pred_b - pred_a))
-        if event_b and time_b < time_a:
-            return True and ((time_a - time_b) < (pred_a - pred_b))
-        return False
-
-    def _isometry_value(time_a, time_b, pred_a, pred_b, event_a, event_b):
-        if time_a < time_b:
-            return ((time_b - time_a) - (pred_b - pred_a)) ** 2
-        else:
-            return ((time_a - time_b) - (pred_a - pred_b)) ** 2
-
-    event_times, predicted_event_times, event_observed = _preprocess_data(
-        event_times, predicted_event_times, event_observed
-    )
-
-    num_pairs = 0.0
-    running_sum = 0.0
-
-    for a, time_a in enumerate(event_times):
-        pred_a = predicted_event_times[a]
-        event_a = event_observed[a]
-        # Don't want to double count
-        for b in range(a + 1, len(event_times)):
-            time_b = event_times[b]
-            pred_b = predicted_event_times[b]
-            event_b = event_observed[b]
-
-            if _valid_comparison(time_a, time_b, pred_a, pred_b, event_a, event_b):
-                num_pairs += 1.0
-                running_sum += _isometry_value(time_a, time_b, pred_a, pred_b, event_a, event_b)
-
-    if num_pairs == 0:
-        print("no valid comp")
-        return np.inf
-    else:
-        return running_sum / num_pairs
-
-
-def _preprocess_data(event_times, predicted_scores, event_observed):
+def _preprocess_scoring_data(event_times, predicted_scores, event_observed):
     event_times = np.asarray(event_times, dtype=float)
     predicted_scores = np.asarray(predicted_scores, dtype=float)
 
