@@ -1294,6 +1294,7 @@ class TestRegressionFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
+    @pytest.mark.xfail()
     def test_joblib_serialization(self, rossi, regression_models):
         from joblib import dump, load
 
