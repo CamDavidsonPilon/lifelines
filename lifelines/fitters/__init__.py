@@ -2054,10 +2054,12 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         params_ = self.params_.copy()
         standard_errors_ = self.standard_errors_.copy()
+        user_supplied_columns = False
 
         if columns is not None:
             params_ = params_.loc[:, columns]
             standard_errors_ = standard_errors_.loc[:, columns]
+            user_supplied_columns = True
         if parameter is not None:
             params_ = params_.loc[parameter]
             standard_errors_ = standard_errors_.loc[parameter]
@@ -2067,12 +2069,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
         hazards = params_.loc[columns].to_frame(name="coefs")
         hazards["se"] = z * standard_errors_.loc[columns]
 
-        if isinstance(hazards.index, pd.MultiIndex):
-            hazards = hazards.groupby(level=0, group_keys=False).apply(
-                lambda x: x.sort_values(by="coefs", ascending=True)
-            )
-        else:
-            hazards = hazards.sort_values(by="coefs", ascending=True)
+        if not user_supplied_columns:
+            if isinstance(hazards.index, pd.MultiIndex):
+                hazards = hazards.groupby(level=0, group_keys=False).apply(
+                    lambda x: x.sort_values(by="coefs", ascending=True)
+                )
+            else:
+                hazards = hazards.sort_values(by="coefs", ascending=True)
 
         yaxis_locations = list(range(len(columns)))
 
