@@ -1,5 +1,17 @@
 ### Changelog
 
+#### 0.21.5 - 2019-06-22
+
+I'm skipping 0.21.4 version because of deployment issues.
+
+##### New features
+ - `scoring_method` now a kwarg on `sklearn_adapter`
+
+##### Bug fixes
+ - fixed an implicit import of scikit-learn. scikit-learn is an optional package.
+ - fixed visual bug that misaligned x-axis ticks and at-risk counts. Thanks @christopherahern!
+
+
 #### 0.21.3 - 2019-06-04
 
 ##### New features
