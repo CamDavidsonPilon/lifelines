@@ -284,7 +284,9 @@ The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add 
 .. code-block:: python
 
     from lifelines import KaplanMeierFitter
+    from lifelines.datasets import load_waltons
 
+    waltons = load_waltons()
     ix = waltons['group'] == 'control'
 
     ax = plt.subplot(111)

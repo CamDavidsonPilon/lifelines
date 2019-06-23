@@ -678,6 +678,9 @@ Alternatively, you can use a parametric model to model the data. This allows for
 
 .. code:: python
 
+    from lifelines import *
+    from lifelines.plotting import qq_plot
+
     fig, axes = plt.subplots(3, 2, figsize=(9, 9))
     timeline = np.linspace(0, 0.25, 100)
 
