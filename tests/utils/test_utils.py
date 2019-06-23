@@ -13,6 +13,7 @@ from numpy.random import randn
 from lifelines import CoxPHFitter, WeibullAFTFitter
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
 from lifelines import utils
+from lifelines import metrics
 from lifelines.utils.sklearn_adapter import sklearn_adapter
 
 
@@ -75,35 +76,35 @@ def test_lstsq_returns_correct_values():
 def test_l1_log_loss_with_no_observed():
     actual = np.array([1, 1, 1])
     predicted = np.array([1, 1, 1])
-    assert utils.l1_log_loss(actual, predicted) == 0.0
+    assert metrics.uncensored_l1_log_loss(actual, predicted) == 0.0
     predicted = predicted + 1
-    assert utils.l1_log_loss(actual, predicted) == np.log(2)
+    assert metrics.uncensored_l1_log_loss(actual, predicted) == np.log(2)
 
 
 def test_l1_log_loss_with_observed():
     E = np.array([0, 1, 1])
     actual = np.array([1, 1, 1])
     predicted = np.array([1, 1, 1])
-    assert utils.l1_log_loss(actual, predicted, E) == 0.0
+    assert metrics.uncensored_l1_log_loss(actual, predicted, E) == 0.0
     predicted = np.array([2, 1, 1])
-    assert utils.l1_log_loss(actual, predicted, E) == 0.0
+    assert metrics.uncensored_l1_log_loss(actual, predicted, E) == 0.0
 
 
 def test_l2_log_loss_with_no_observed():
     actual = np.array([1, 1, 1])
     predicted = np.array([1, 1, 1])
-    assert utils.l2_log_loss(actual, predicted) == 0.0
+    assert metrics.uncensored_l2_log_loss(actual, predicted) == 0.0
     predicted = predicted + 1
-    assert abs(utils.l2_log_loss(actual, predicted) - np.log(2) ** 2) < 10e-8
+    assert abs(metrics.uncensored_l2_log_loss(actual, predicted) - np.log(2) ** 2) < 10e-8
 
 
 def test_l2_log_loss_with_observed():
     E = np.array([0, 1, 1])
     actual = np.array([1, 1, 1])
     predicted = np.array([1, 1, 1])
-    assert utils.l2_log_loss(actual, predicted, E) == 0.0
+    assert metrics.uncensored_l2_log_loss(actual, predicted, E) == 0.0
     predicted = np.array([2, 1, 1])
-    assert utils.l2_log_loss(actual, predicted, E) == 0.0
+    assert metrics.uncensored_l2_log_loss(actual, predicted, E) == 0.0
 
 
 def test_unnormalize():
@@ -1009,3 +1010,33 @@ class TestSklearnAdapter:
         assert isinstance(base_model(), BaseEstimator)
         assert isinstance(base_model(), RegressorMixin)
         assert isinstance(base_model(), MetaEstimatorMixin)
+
+    @pytest.mark.xfail
+    def test_sklearn_GridSearchCV_accept_model_with_parallelization(self, X, Y):
+        from sklearn.model_selection import cross_val_score
+        from sklearn.model_selection import GridSearchCV
+
+        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
+
+        grid_params = {
+            "penalizer": 10.0 ** np.arange(-2, 3),
+            "l1_ratio": [0.05, 0.5, 0.95],
+            "model_ancillary": [True, False],
+        }
+        # note the n_jobs
+        clf = GridSearchCV(base_model(), grid_params, cv=4, n_jobs=-1)
+        clf.fit(X, Y)
+
+        assert clf.best_params_ == {"l1_ratio": 0.5, "model_ancillary": False, "penalizer": 0.01}
+        assert clf.predict(X).shape[0] == X.shape[0]
+
+    @pytest.mark.xfail
+    def test_joblib(self, X, Y):
+        from joblib import dump, load
+
+        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
+
+        clf = base_model()
+        clf.fit(X, Y)
+        dump(clf, "filename.joblib")
+        clf = load("filename.joblib")

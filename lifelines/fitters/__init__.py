@@ -26,6 +26,7 @@ from lifelines.utils import (
     qth_survival_times,
     _to_array,
     _to_list,
+    safe_zip,
     dataframe_interpolate_at_times,
     ConvergenceError,
     inv_normal_cdf,
@@ -502,6 +503,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                     1. Are there any extreme values in the durations column?
                       - Try scaling your durations to a more reasonable values closer to 1 (multiplying or dividing by some 10^n).
                       - Try dropping them to see if the model converges.
+                    2. The parametric model chosen may just be a poor model of the data. Try another parametric model.
                 """
                     )
                 )
@@ -514,12 +516,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
                     1. Are two parameters in the model collinear / exchangeable? (Change model)
                     2. Is the cumulative hazard always non-negative and always non-decreasing? (Assumption error)
-                    3. Are there inputs to the cumulative hazard that could produce nans or infs? (Check your _bounds)
+                    3. Are there inputs to the cumulative hazard that could produce NaNs or Infs? (Check your _bounds)
 
                     This could be a problem with your data:
                     1. Are there any extreme values in the durations column?
                         - Try scaling your durations to a more reasonable value closer to 1 (multiplying or dividing by a large constant).
                         - Try dropping them to see if the model converges.
+                    2. The parametric model chosen may just be a poor model of the data. Try another parametric model.
+
                     """
                     )
                 )
@@ -1640,18 +1644,19 @@ class ParametericAFTRegressionFitter(BaseFitter):
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self._predicted_median = self.predict_median(df, ancillary_df)
 
+    @staticmethod
+    def _transform_ith_param(model, i):
+        param = model._fitted_parameters_[i]
+        if param <= 0:
+            return param
+        # technically this is suboptimal for log normal mu, but that's okay.
+        return np.log(param)
+
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
         import lifelines  # kinda hacky but lol
-
-        def transform_ith_param(model, i):
-            param = model._fitted_parameters_[i]
-            if param <= 0:
-                return param
-            # technically this is suboptimal for log normal mu, but that's okay.
-            return np.log(param)
 
         name = self._class_name.replace("AFT", "")
         try:
@@ -1673,7 +1678,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
         return np.concatenate(
             [
                 # tack on as the intercept
-                [0] * (_X.shape[1] - 1) + [transform_ith_param(uni_model, i)]
+                [0] * (_X.shape[1] - 1) + [self._transform_ith_param(uni_model, i)]
                 for i, _X in enumerate(Xs)
             ]
         )
@@ -1716,10 +1721,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
         raise ConvergenceError(
             dedent(
                 """\
-            Fitting did not converge. This could be a problem with your data:
-            1. Does a column have extremely high mean or variance? Try standardizing it.
-            2. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence
-            3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`
+            Fitting did not converge. This could be a problem with your dataset:
+
+            0. Are there any lifelines warnings outputted during the `fit`?
+            1. Inspect your DataFrame: does everything look as expected?
+            2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
+            3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
+            4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
         """
                 % name
             )
@@ -1745,8 +1753,15 @@ class ParametericAFTRegressionFitter(BaseFitter):
                 The Hessian was not invertible. We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
-                fitted parameters too. Perform plots of the cumulative hazard to help understand
-                the latter's bias.
+                fitted parameters too.
+
+                Some ways to possible ways fix this:
+
+                0. Are there any lifelines warnings outputted during the `fit`?
+                1. Inspect your DataFrame: does everything look as expected?
+                2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
+                3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
+                4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
                 """
             )
             warnings.warn(warning_text, StatisticalWarning)
@@ -1768,13 +1783,6 @@ class ParametericAFTRegressionFitter(BaseFitter):
         return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):
-        def safe_zip(first, second):
-            if first is None:
-                yield from ((None, x) for x in second)
-            elif second is None:
-                yield from ((x, None) for x in first)
-            else:
-                yield from zip(first, second)
 
         with np.errstate(all="ignore"):
             # convergence will fail catastrophically elsewhere.
@@ -2046,10 +2054,12 @@ class ParametericAFTRegressionFitter(BaseFitter):
 
         params_ = self.params_.copy()
         standard_errors_ = self.standard_errors_.copy()
+        user_supplied_columns = False
 
         if columns is not None:
             params_ = params_.loc[:, columns]
             standard_errors_ = standard_errors_.loc[:, columns]
+            user_supplied_columns = True
         if parameter is not None:
             params_ = params_.loc[parameter]
             standard_errors_ = standard_errors_.loc[parameter]
@@ -2059,12 +2069,13 @@ class ParametericAFTRegressionFitter(BaseFitter):
         hazards = params_.loc[columns].to_frame(name="coefs")
         hazards["se"] = z * standard_errors_.loc[columns]
 
-        if isinstance(hazards.index, pd.MultiIndex):
-            hazards = hazards.groupby(level=0, group_keys=False).apply(
-                lambda x: x.sort_values(by="coefs", ascending=True)
-            )
-        else:
-            hazards = hazards.sort_values(by="coefs", ascending=True)
+        if not user_supplied_columns:
+            if isinstance(hazards.index, pd.MultiIndex):
+                hazards = hazards.groupby(level=0, group_keys=False).apply(
+                    lambda x: x.sort_values(by="coefs", ascending=True)
+                )
+            else:
+                hazards = hazards.sort_values(by="coefs", ascending=True)
 
         yaxis_locations = list(range(len(columns)))
 

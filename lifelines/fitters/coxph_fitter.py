@@ -1622,6 +1622,14 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         errorbar_kwargs:
             pass in additional plotting commands to matplotlib errorbar command
 
+        Examples
+        ---------
+
+        >>> from lifelines import datasets, CoxPHFitter
+        >>> rossi = datasets.load_rossi()
+        >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+        >>> cph.plot(hazard_ratios=True)
+
         Returns
         -------
         ax: matplotlib axis
@@ -1640,14 +1648,16 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         errorbar_kwargs.setdefault("capsize", 3)
 
         z = inv_normal_cdf(1 - self.alpha / 2)
+        user_supplied_columns = True
 
         if columns is None:
+            user_supplied_columns = False
             columns = self.hazards_.index
 
         yaxis_locations = list(range(len(columns)))
         log_hazards = self.hazards_.loc[columns].values.copy()
 
-        order = np.argsort(log_hazards)
+        order = list(range(len(columns) - 1, -1, -1)) if user_supplied_columns else np.argsort(log_hazards)
 
         if hazard_ratios:
             exp_log_hazards = np.exp(log_hazards)
@@ -1707,7 +1717,15 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>> cph.plot_covariate_groups('prio', values=np.arange(0, 15), cmap='coolwarm')
 
         >>> # multiple variables at once
-        >>> cph.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
+        >>> cph.plot_covariate_groups(['prio', 'paro'], values=[
+        >>>  [0,  0],
+        >>>  [5,  0],
+        >>>  [10, 0],
+        >>>  [0,  1],
+        >>>  [5,  1],
+        >>>  [10, 1]
+        >>> ], cmap='coolwarm')
+        >>>
 
         >>> # if you have categorical variables, you can simply things:
         >>> cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))

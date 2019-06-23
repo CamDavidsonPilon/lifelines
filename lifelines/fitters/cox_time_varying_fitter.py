@@ -743,13 +743,16 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         z = inv_normal_cdf(1 - self.alpha / 2)
 
         if columns is None:
+            user_supplied_columns = False
             columns = self.hazards_.index
+        else:
+            user_supplied_columns = True
 
         yaxis_locations = list(range(len(columns)))
-        symmetric_errors = z * self.standard_errors_[columns].to_frame().squeeze(axis=1).values.copy()
+        symmetric_errors = z * self.standard_errors_[columns].values.copy()
         hazards = self.hazards_[columns].values.copy()
 
-        order = np.argsort(hazards)
+        order = list(range(len(columns) - 1, -1, -1)) if user_supplied_columns else np.argsort(log_hazards)
 
         ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
         best_ylim = ax.get_ylim()
