@@ -67,20 +67,20 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         self._primary_parameter_name = "lambda_"
         super(WeibullAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
-    def _cumulative_hazard(self, params, T, *Xs):
-        lambda_params = params[self._LOOKUP_SLICE["lambda_"]]
-        lambda_ = np.exp(np.dot(Xs[0], lambda_params))
+    def _cumulative_hazard(self, params, T, Xs):
+        lambda_params = params["lambda_"]
+        lambda_ = np.exp(np.dot(Xs["lambda_"], lambda_params))
 
-        rho_params = params[self._LOOKUP_SLICE["rho_"]]
-        rho_ = np.exp(np.dot(Xs[1], rho_params))
+        rho_params = params["rho_"]
+        rho_ = np.exp(np.dot(Xs["rho_"], rho_params))
         return np.exp(rho_ * (np.log(np.clip(T, 1e-25, np.inf)) - np.log(lambda_)))
 
-    def _log_hazard(self, params, T, *Xs):
-        lambda_params = params[self._LOOKUP_SLICE["lambda_"]]
-        log_lambda_ = np.dot(Xs[0], lambda_params)
+    def _log_hazard(self, params, T, Xs):
+        lambda_params = params["lambda_"]
+        log_lambda_ = np.dot(Xs["lambda_"], lambda_params)
 
-        rho_params = params[self._LOOKUP_SLICE["rho_"]]
-        log_rho_ = np.dot(Xs[1], rho_params)
+        rho_params = params["rho_"]
+        log_rho_ = np.dot(Xs["rho_"], rho_params)
 
         return log_rho_ - log_lambda_ + np.expm1(log_rho_) * (np.log(T) - log_lambda_)
 

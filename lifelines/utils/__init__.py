@@ -1405,3 +1405,25 @@ def safe_zip(first, second):
         yield from ((x, None) for x in first)
     else:
         yield from zip(first, second)
+
+
+class DataframeSliceDict:
+    def __init__(self, df, mappings):
+        self.df = df
+        self.mappings = mappings
+        self.size = sum(len(v) for v in self.mappings.values())
+
+    def __getitem__(self, key):
+        return self.df[self.mappings[key]].values
+
+    def __iter__(self):
+        for k in self.mappings:
+            yield (k, self[k])
+
+    def filter(self, ix):
+        return DataframeSliceDict(self.df.values[ix], self.mappings)
+
+    def iterdicts(self):
+        for _, x in self.df.iterrows():
+            yield DataframeSliceDict(x.to_frame().T, self.mappings)
+            # yield {key: x[cols].values for key, cols in self.mappings.items()}
