@@ -1074,11 +1074,11 @@ class ParametericAFTRegressionFitter(BaseFitter):
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         super(ParametericAFTRegressionFitter, self).__init__(alpha=alpha)
         self._hazard = egrad(self._cumulative_hazard, argnum=1)  # pylint: disable=unexpected-keyword-arg
+        self._fitted_parameter_names = [self._primary_parameter_name, self._ancillary_parameter_name]
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
         self.fit_intercept = fit_intercept
         self.model_ancillary = model_ancillary
-        self._fitted_parameter_names = [self._primary_parameter_name, self._ancillary_parameter_name]
 
     def _check_values(self, df, T, E, weights, entries):
         check_for_numeric_dtypes_or_raise(df)
@@ -1763,6 +1763,7 @@ class ParametericAFTRegressionFitter(BaseFitter):
                 3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
                 4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
                 """
+                % self._class_name
             )
             warnings.warn(warning_text, StatisticalWarning)
 
@@ -1814,16 +1815,20 @@ class ParametericAFTRegressionFitter(BaseFitter):
         initial_point = np.zeros(len(self._fitted_parameter_names))
 
         model = self.__class__()
-        if CensoringType.is_right_censoring(self):
-            df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry})
-            model.fit_right_censoring(df, "T", "E", initial_point=initial_point, entry_col="entry")
-        elif CensoringType.is_interval_censoring(self):
-            df = pd.DataFrame(
-                {"lb": self.lower_bound, "ub": self.upper_bound, "E": self.event_observed, "entry": self.entry}
-            )
-            model.fit_interval_censoring(df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry")
-        if CensoringType.is_left_censoring(self):
-            raise NotImplementedError()
+        with warnings.catch_warnings():
+            # ignore all warnings during this fitting. Maybe change later TODO
+            warnings.simplefilter("ignore")
+
+            if CensoringType.is_right_censoring(self):
+                df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry})
+                model.fit_right_censoring(df, "T", "E", initial_point=initial_point, entry_col="entry")
+            elif CensoringType.is_interval_censoring(self):
+                df = pd.DataFrame(
+                    {"lb": self.lower_bound, "ub": self.upper_bound, "E": self.event_observed, "entry": self.entry}
+                )
+                model.fit_interval_censoring(df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry")
+            if CensoringType.is_left_censoring(self):
+                raise NotImplementedError()
 
         self._ll_null_ = model._log_likelihood
         return self._ll_null_
