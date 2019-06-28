@@ -67,34 +67,34 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         self._ancillary_parameter_name = "sigma_"
         super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
-    def _cumulative_hazard(self, params, T, *Xs):
-        mu_params = params[self._LOOKUP_SLICE["mu_"]]
-        mu_ = np.dot(Xs[0], mu_params)
+    def _cumulative_hazard(self, params, T, Xs):
+        mu_params = params["mu_"]
+        mu_ = np.dot(Xs["mu_"], mu_params)
 
-        sigma_params = params[self._LOOKUP_SLICE["sigma_"]]
-        sigma_ = np.exp(np.dot(Xs[1], sigma_params))
+        sigma_params = params["sigma_"]
+        sigma_ = np.exp(np.dot(Xs["sigma_"], sigma_params))
         Z = (np.log(T) - mu_) / sigma_
         return -logsf(Z)
 
-    def _log_hazard(self, params, T, *Xs):
-        mu_params = params[self._LOOKUP_SLICE["mu_"]]
-        mu_ = np.dot(Xs[0], mu_params)
+    def _log_hazard(self, params, T, Xs):
+        mu_params = params["mu_"]
+        mu_ = np.dot(Xs["mu_"], mu_params)
 
-        sigma_params = params[self._LOOKUP_SLICE["sigma_"]]
+        sigma_params = params["sigma_"]
 
-        log_sigma_ = np.dot(Xs[1], sigma_params)
+        log_sigma_ = np.dot(Xs["sigma_"], sigma_params)
         sigma_ = np.exp(log_sigma_)
         Z = (np.log(T) - mu_) / sigma_
 
         return norm.logpdf(Z) - log_sigma_ - np.log(T) - logsf(Z)
 
-    def _log_1m_sf(self, params, T, *Xs):
-        mu_params = params[self._LOOKUP_SLICE["mu_"]]
-        mu_ = np.dot(Xs[0], mu_params)
+    def _log_1m_sf(self, params, T, Xs):
+        mu_params = params["mu_"]
+        mu_ = np.dot(Xs["mu_"], mu_params)
 
-        sigma_params = params[self._LOOKUP_SLICE["sigma_"]]
+        sigma_params = params["sigma_"]
 
-        log_sigma_ = np.dot(Xs[1], sigma_params)
+        log_sigma_ = np.dot(Xs["sigma_"], sigma_params)
         sigma_ = np.exp(log_sigma_)
         Z = (np.log(T) - mu_) / sigma_
         return norm.logcdf(Z, loc=0, scale=1)

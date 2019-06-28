@@ -144,32 +144,3 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         """
         lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
         return pd.DataFrame((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(X))
-
-    def predict_cumulative_hazard(self, X, times=None, ancillary_X=None):
-        """
-        Return the cumulative hazard rate of subjects in X at time points.
-
-        Parameters
-        ----------
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        times: iterable, optional
-            an iterable of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations (observed and unobserved). Uses a linear interpolation if
-            points in time are not in the index.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-        Returns
-        -------
-        cumulative_hazard_ : DataFrame
-            the cumulative hazard of individuals over the timeline
-        """
-        times = coalesce(times, self.timeline, np.unique(self.durations))
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-
-        return pd.DataFrame(np.outer(times, 1 / lambda_) ** rho_, columns=_get_index(X), index=times)

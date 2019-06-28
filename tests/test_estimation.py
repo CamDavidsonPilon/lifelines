@@ -1859,7 +1859,7 @@ class TestWeibullAFTFitter:
         aft1 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=True)
         aft2 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=rossi)
 
-        assert_frame_equal(aft1.summary, aft2.summary)
+        assert_frame_equal(aft1.summary, aft2.summary, check_like=True)
 
     def test_ancillary_None_is_same_as_False(self, rossi):
 
@@ -1943,7 +1943,7 @@ class TestWeibullAFTFitter:
         aft.fit_right_censoring(rossi, "week", event_col="arrest")
         right_censored_results = aft.summary.copy()
 
-        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=4)
+        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=3)
 
     def test_weibull_interval_censoring_inference_on_known_R_output(self, aft):
         """
@@ -1958,7 +1958,7 @@ class TestWeibullAFTFitter:
         df["E"] = df["left"] == df["right"]
 
         aft.fit_interval_censoring(df, "left", "right", "E")
-
+        print(aft.summary)
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "coef"], 0.04576, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], np.log(18.31971), rtol=1e-4)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], np.log(2.82628), rtol=1e-4)

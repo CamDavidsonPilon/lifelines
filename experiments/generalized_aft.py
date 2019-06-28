@@ -1,54 +1,7 @@
 # -*- coding: utf-8 -*-
-import collections
-from functools import wraps
-import sys
-import warnings
-from datetime import datetime
-
-# pylint: disable=wrong-import-position
-warnings.simplefilter(action="ignore", category=FutureWarning)
-
-from textwrap import dedent
-
+from lifelines.fitters import ParametericRegressionFitter
 import numpy as np
 import autograd.numpy as anp
-from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
-from autograd.differential_operators import make_jvp_reversemode
-from scipy.optimize import minimize
-from scipy import stats
-import pandas as pd
-from numpy.linalg import inv, pinv
-
-
-from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle, set_kwargs_ax
-from lifelines.fitters import BaseFitter
-
-from lifelines.utils import (
-    qth_survival_times,
-    _to_array,
-    _to_list,
-    safe_zip,
-    dataframe_interpolate_at_times,
-    ConvergenceError,
-    inv_normal_cdf,
-    string_justify,
-    format_floats,
-    format_p_value,
-    format_exp_floats,
-    coalesce,
-    check_nans_or_infs,
-    pass_for_numeric_dtypes_or_raise_array,
-    check_for_numeric_dtypes_or_raise,
-    check_complete_separation,
-    check_low_var,
-    check_positivity,
-    StatisticalWarning,
-    StatError,
-    median_survival_times,
-    normalize,
-    concordance_index,
-    CensoringType,
-)
 
 
 class Weibull(ParametericRegressionFitter):

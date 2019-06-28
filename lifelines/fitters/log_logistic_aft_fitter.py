@@ -66,21 +66,21 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         self._primary_parameter_name = "alpha_"
         super(LogLogisticAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept)
 
-    def _cumulative_hazard(self, params, T, *Xs):
-        alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
-        alpha_ = np.exp(np.dot(Xs[0], alpha_params))
+    def _cumulative_hazard(self, params, T, Xs):
+        alpha_params = params["alpha_"]
+        alpha_ = np.exp(np.dot(Xs["alpha_"], alpha_params))
 
-        beta_params = params[self._LOOKUP_SLICE["beta_"]]
-        beta_ = np.exp(np.dot(Xs[1], beta_params))
+        beta_params = params["beta_"]
+        beta_ = np.exp(np.dot(Xs["beta_"], beta_params))
         return np.logaddexp(beta_ * (np.log(np.clip(T, 1e-25, np.inf)) - np.log(alpha_)), 0)
 
-    def _log_hazard(self, params, T, *Xs):
-        alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
-        log_alpha_ = np.dot(Xs[0], alpha_params)
+    def _log_hazard(self, params, T, Xs):
+        alpha_params = params["alpha_"]
+        log_alpha_ = np.dot(Xs["alpha_"], alpha_params)
         alpha_ = np.exp(log_alpha_)
 
-        beta_params = params[self._LOOKUP_SLICE["beta_"]]
-        log_beta_ = np.dot(Xs[1], beta_params)
+        beta_params = params["beta_"]
+        log_beta_ = np.dot(Xs["beta_"], beta_params)
         beta_ = np.exp(log_beta_)
 
         return (
@@ -90,13 +90,13 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
             - np.logaddexp(beta_ * (np.log(T) - np.log(alpha_)), 0)
         )
 
-    def _log_1m_sf(self, params, T, *Xs):
-        alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
-        log_alpha_ = np.dot(Xs[0], alpha_params)
+    def _log_1m_sf(self, params, T, Xs):
+        alpha_params = params["alpha_"]
+        log_alpha_ = np.dot(Xs["alpha_"], alpha_params)
         alpha_ = np.exp(log_alpha_)
 
-        beta_params = params[self._LOOKUP_SLICE["beta_"]]
-        log_beta_ = np.dot(Xs[1], beta_params)
+        beta_params = params["beta_"]
+        log_beta_ = np.dot(Xs["beta_"], beta_params)
         beta_ = np.exp(log_beta_)
         return -np.logaddexp(-beta_ * (np.log(T) - np.log(alpha_)), 0)
 

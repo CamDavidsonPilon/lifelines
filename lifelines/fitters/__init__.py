@@ -1137,6 +1137,44 @@ class ParametericRegressionFitter(BaseFitter):
         ll = ll / anp.sum(W)
         return ll
 
+    def _log_likelihood_left_censoring(self, params, Ts, E, W, entries, Xs):
+        warnings.simplefilter(action="ignore", category=FutureWarning)
+
+        T = Ts[1]
+        non_zero_entries = entries > 0
+
+        log_hz = self._log_hazard(params, T, Xs)
+        cum_haz = self._cumulative_hazard(params, T, Xs)
+        log_1m_sf = self._log_1m_sf(params, T, Xs)
+        delayed_entries = self._cumulative_hazard(params, entries[non_zero_entries], Xs.filter(non_zero_entries))
+
+        ll = 0
+        ll = (W * E * (log_hz - cum_haz - log_1m_sf)).sum() + (W * log_1m_sf).sum()
+        ll = ll + (W[non_zero_entries] * delayed_entries).sum()
+        ll = ll / anp.sum(W)
+        return ll
+
+    def _log_likelihood_interval_censoring(self, params, Ts, E, W, entries, Xs):
+        warnings.simplefilter(action="ignore", category=FutureWarning)
+
+        start, stop = Ts
+        non_zero_entries = entries > 0
+        observed_deaths = self._log_hazard(params, stop[E], Xs.filter(E)) - self._cumulative_hazard(
+            params, stop[E], Xs.filter(E)
+        )
+        censored_interval_deaths = anp.log(
+            self._survival_function(params, start[~E], Xs.filter(~E))
+            - self._survival_function(params, stop[~E], Xs.filter(~E))
+        )
+        delayed_entries = self._cumulative_hazard(params, entries[non_zero_entries], Xs.filter(non_zero_entries))
+
+        ll = 0
+        ll = ll + (W[E] * observed_deaths).sum()
+        ll = ll + (W[~E] * censored_interval_deaths).sum()
+        ll = ll + (W[non_zero_entries] * delayed_entries).sum()
+        ll = ll / anp.sum(W)
+        return ll
+
     @CensoringType.right_censoring
     def fit(
         self,
@@ -1272,7 +1310,9 @@ class ParametericRegressionFitter(BaseFitter):
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
-        self.regressors = {name: list(set(cols) & set(df.columns)) for name, cols in regressors.items()}
+        self.regressors = {
+            name: list(df.columns.intersection(cols)) for name, cols in regressors.items()
+        }  # the .intersection perserves order, important!
 
         df = df.astype(float)
         self._check_values(df, coalesce(Ts[1], Ts[0]), E, weights, entries)
@@ -1286,7 +1326,6 @@ class ParametericRegressionFitter(BaseFitter):
         Xs = self._create_Xs_dict(df_normalized)
 
         self._LOOKUP_SLICE = self._create_slicer(Xs)
-
         _index = pd.MultiIndex.from_tuples(
             sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
         )
@@ -1308,7 +1347,7 @@ class ParametericRegressionFitter(BaseFitter):
         self.variance_matrix_ = self._compute_variance_matrix()
         self.standard_errors_ = self._compute_standard_errors(Ts, E.values, weights.values, entries.values, Xs)
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        self._predicted_median = self.predict_median(df)
+        # self._predicted_median = self.predict_median(df)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return np.zeros(Xs.size)
@@ -1949,24 +1988,29 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
 
         df = df.copy()
 
-        T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
+        T = pass_for_numeric_dtypes_or_raise_array(df.pop(self.duration_col)).astype(float)
         self.durations = T.copy()
 
-        primary_columns = df.columns.difference([duration_col, event_col]).tolist()
+        primary_columns = df.columns.difference([self.duration_col, event_col]).tolist()
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
             regressors = {
                 self._primary_parameter_name: primary_columns,
-                self._ancillary_parameter_name: ancillary_df.columns.tolist(),
+                self._ancillary_parameter_name: ancillary_df.columns.difference(
+                    [self.duration_col, event_col]
+                ).tolist(),
             }
-            df = pd.concat([df, ancillary_df[ancillary_df.columns.difference(df.columns)]], axis=1)
+            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
+                [self.duration_col, event_col]
+            )
+            df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
 
         elif (ancillary_df is True) or self.model_ancillary:
             self.model_ancillary = True
             regressors = {
-                self._primary_parameter_name: primary_columns,
-                self._ancillary_parameter_name: primary_columns,
+                self._primary_parameter_name: primary_columns.copy(),
+                self._ancillary_parameter_name: primary_columns.copy(),
             }
         elif (ancillary_df is None) or (ancillary_df is False):
             regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
@@ -2107,12 +2151,37 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
-        self._fit(
+        primary_columns = df.columns.difference([self.lower_bound_col, self.upper_bound_col, event_col]).tolist()
+
+        if isinstance(ancillary_df, pd.DataFrame):
+            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
+            regressors = {
+                self._primary_parameter_name: primary_columns,
+                self._ancillary_parameter_name: ancillary_df.columns.tolist(),
+            }
+            df = pd.concat([df, ancillary_df[ancillary_df.columns.difference(df.columns)]], axis=1)
+
+        elif (ancillary_df is True) or self.model_ancillary:
+            self.model_ancillary = True
+            regressors = {
+                self._primary_parameter_name: primary_columns.copy(),
+                self._ancillary_parameter_name: primary_columns.copy(),
+            }
+        elif (ancillary_df is None) or (ancillary_df is False):
+            regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
+
+        if self.fit_intercept:
+            assert "_intercept" not in df
+            df["_intercept"] = 1.0
+            regressors[self._primary_parameter_name].append("_intercept")
+            regressors[self._ancillary_parameter_name].append("_intercept")
+
+        super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_interval_censoring,
             df,
             (lower_bound.values, np.clip(upper_bound.values, 0, 1e25)),
             event_col=event_col,
-            ancillary_df=ancillary_df,
+            regressors=regressors,
             show_progress=show_progress,
             timeline=timeline,
             weights_col=weights_col,
@@ -2215,12 +2284,36 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
         T = pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
         self.durations = T.copy()
 
-        self._fit(
+        primary_columns = df.columns.difference([duration_col, event_col]).tolist()
+        if isinstance(ancillary_df, pd.DataFrame):
+            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
+            regressors = {
+                self._primary_parameter_name: primary_columns,
+                self._ancillary_parameter_name: ancillary_df.columns.tolist(),
+            }
+            df = pd.concat([df, ancillary_df[ancillary_df.columns.difference(df.columns)]], axis=1)
+
+        elif (ancillary_df is True) or self.model_ancillary:
+            self.model_ancillary = True
+            regressors = {
+                self._primary_parameter_name: primary_columns.copy(),
+                self._ancillary_parameter_name: primary_columns.copy(),
+            }
+        elif (ancillary_df is None) or (ancillary_df is False):
+            regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
+
+        if self.fit_intercept:
+            assert "_intercept" not in df
+            df["_intercept"] = 1.0
+            regressors[self._primary_parameter_name].append("_intercept")
+            regressors[self._ancillary_parameter_name].append("_intercept")
+
+        super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_left_censoring,
             df,
             (None, T.values),
             event_col=event_col,
-            ancillary_df=ancillary_df,
+            regressors=regressors,
             show_progress=show_progress,
             timeline=timeline,
             weights_col=weights_col,
@@ -2494,3 +2587,86 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
         ancillary_scores = np.exp(np.dot(ancillary_X, ancillary_params))
 
         return primary_scores, ancillary_scores
+
+    def predict_survival_function(self, df, ancillary_df=None, times=None):
+        """
+        Predict the survival function for individuals, given their covariates. This assumes that the individual
+        just entered the study (that is, we do not condition on how long they have already lived for.)
+
+        Parameters
+        ----------
+
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        ancillary_X: numpy array or DataFrame, optional
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        times: iterable, optional
+            an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved). Uses a linear interpolation if
+            points in time are not in the index.
+
+
+        Returns
+        -------
+        survival_function : DataFrame
+            the survival probabilities of individuals over the timeline
+        """
+        return np.exp(-self.predict_cumulative_hazard(df, ancillary_df=ancillary_df, times=times))
+
+    def predict_median(self, df, ancillary_df=None):
+        """
+        Predict the median lifetimes for the individuals. If the survival curve of an
+        individual does not cross 0.5, then the result is infinity.
+
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+
+        Returns
+        -------
+        percentiles: DataFrame
+            the median lifetimes for the individuals. If the survival curve of an
+            individual does not cross 0.5, then the result is infinity.
+
+
+        See Also
+        --------
+        predict_percentile, predict_expectation
+
+        """
+
+        return self.predict_percentile(df, ancillary_df=ancillary_df, p=0.5)
+
+    def predict_percentile(self, df, ancillary_df=None, p=0.5):
+        return qth_survival_times(p, self.predict_survival_function(df, ancillary_df=ancillary_df))
+
+    def predict_cumulative_hazard(self, df, ancillary_df=None, times=None):
+
+        times = coalesce(times, self.timeline, np.unique(self.durations))
+        n = df.shape[0]
+
+        if isinstance(ancillary_df, pd.DataFrame):
+            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
+            df = pd.concat([df, ancillary_df[ancillary_df.columns.difference(df.columns)]], axis=1)
+
+        if self.fit_intercept:
+            assert "_intercept" not in df
+            df["_intercept"] = 1.0
+
+        Xs = self._create_Xs_dict(df)
+
+        params_dict = {
+            parameter_name: self.params_.values[self._LOOKUP_SLICE[parameter_name]]
+            for parameter_name in self._fitted_parameter_names
+        }
+
+        return pd.DataFrame(
+            self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
+        )
