@@ -1312,7 +1312,8 @@ class ParametericRegressionFitter(BaseFitter):
         self.weights = weights.copy()
         self.regressors = {
             name: list(df.columns.intersection(cols)) for name, cols in regressors.items()
-        }  # the .intersection perserves order, important!
+        }  # the .intersection preserves order, important!
+        self._LOOKUP_SLICE = self._create_slicer()
 
         df = df.astype(float)
         self._check_values(df, coalesce(Ts[1], Ts[0]), E, weights, entries)
@@ -1321,21 +1322,18 @@ class ParametericRegressionFitter(BaseFitter):
 
         _norm_std = df.std(0)
         _norm_std[_norm_std < 1e-8] = 1.0
-        df_normalized = normalize(df, 0, _norm_std)
 
-        Xs = self._create_Xs_dict(df_normalized)
-
-        self._LOOKUP_SLICE = self._create_slicer(Xs)
         _index = pd.MultiIndex.from_tuples(
             sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
         )
 
+        self._norm_mean = df.mean(0)
         self._norm_std = pd.Series([_norm_std.loc[variable_name] for _, variable_name in _index], index=_index)
 
         _params, self._log_likelihood, self._hessian_ = self._fit_model(
             log_likelihood_function,
             Ts,
-            Xs,
+            self._create_Xs_dict(normalize(df, 0, _norm_std)),
             E.values,
             weights.values,
             entries.values,
@@ -1345,23 +1343,25 @@ class ParametericRegressionFitter(BaseFitter):
         self.params_ = _params / self._norm_std
 
         self.variance_matrix_ = self._compute_variance_matrix()
-        self.standard_errors_ = self._compute_standard_errors(Ts, E.values, weights.values, entries.values, Xs)
+        self.standard_errors_ = self._compute_standard_errors(
+            Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
+        )
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        # self._predicted_median = self.predict_median(df)
+        self._predicted_median = self.predict_median(df)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return np.zeros(Xs.size)
 
-    def _add_penalty(self, ll, *args):
-        return ll
+    def _add_penalty(self, params, neg_ll, *args):
+        return neg_ll
 
-    def _wrap_ll(self, ll):
+    def _wrap_function_to_covert_array_to_dict(self, function):
         def f(params_array, *args):
             params_dict = {
                 parameter_name: params_array[self._LOOKUP_SLICE[parameter_name]]
                 for parameter_name in self._fitted_parameter_names
             }
-            return ll(params_dict, *args)
+            return function(params_dict, *args)
 
         return f
 
@@ -1372,9 +1372,9 @@ class ParametericRegressionFitter(BaseFitter):
 
         assert initial_point.shape[0] == Xs.size, "initial_point is not the correct shape."
 
-        self._neg_likelihood_with_penalty_function = lambda *args: self._add_penalty(
-            -self._wrap_ll(likelihood)(*args), *args
-        )
+        self._neg_likelihood_with_penalty_function = lambda params, *args: self._wrap_function_to_covert_array_to_dict(
+            self._add_penalty
+        )(params, -self._wrap_function_to_covert_array_to_dict(likelihood)(params, *args), *args)
 
         results = minimize(
             # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
@@ -1410,12 +1410,12 @@ class ParametericRegressionFitter(BaseFitter):
             )
         )
 
-    def _create_slicer(self, Xs):
+    def _create_slicer(self):
         lookup = {}
         position = 0
 
-        for name, X in Xs:
-            size = X.shape[1]
+        for name, cols in self.regressors.items():
+            size = len(cols)
             lookup[name] = slice(position, position + size)
             position += size
 
@@ -1472,6 +1472,7 @@ class ParametericRegressionFitter(BaseFitter):
             J = np.zeros((n_params, n_params))
 
             for ts, e, w, s, xs in zip(safe_zip(*Ts), E, weights, entries, Xs.iterdicts()):
+                print(ts, e, w, s, xs)
                 score_vector = ll_gradient(params, ts, e, w, s, xs)
                 J += np.outer(score_vector, score_vector)
 
@@ -1994,6 +1995,7 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
         primary_columns = df.columns.difference([self.duration_col, event_col]).tolist()
 
         if isinstance(ancillary_df, pd.DataFrame):
+            self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
             regressors = {
                 self._primary_parameter_name: primary_columns,
@@ -2154,6 +2156,7 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
         primary_columns = df.columns.difference([self.lower_bound_col, self.upper_bound_col, event_col]).tolist()
 
         if isinstance(ancillary_df, pd.DataFrame):
+            self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
             regressors = {
                 self._primary_parameter_name: primary_columns,
@@ -2286,6 +2289,7 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
 
         primary_columns = df.columns.difference([duration_col, event_col]).tolist()
         if isinstance(ancillary_df, pd.DataFrame):
+            self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
             regressors = {
                 self._primary_parameter_name: primary_columns,
@@ -2363,12 +2367,17 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
             ]
         )
 
-    def _add_penalty(self, ll, params, *args):
+    @staticmethod
+    def _dict_to_array(dict):
+        return np.concatenate(list(dict.values()))
+
+    def _add_penalty(self, params, neg_ll, *args):
+        params = self._dict_to_array(params)
         if self.penalizer > 0:
             penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
         else:
             penalty = 0
-        return ll + self.penalizer * penalty
+        return neg_ll + self.penalizer * penalty
 
     @property
     def _ll_null(self):
@@ -2554,24 +2563,6 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
     def _prep_inputs_for_prediction_and_return_scores(self, X, ancillary_X):
         X = X.copy()
 
-        if isinstance(ancillary_X, pd.DataFrame):
-            ancillary_X = ancillary_X.copy()
-            if self.fit_intercept:
-                ancillary_X["_intercept"] = 1.0
-            ancillary_X = ancillary_X[self.params_.loc[self._ancillary_parameter_name].index]
-        elif ancillary_X is None and not self.model_ancillary:
-            ancillary_X = pd.DataFrame(np.ones((X.shape[0], 1)), columns=["_intercept"])
-        elif ancillary_X is None and self.model_ancillary:
-            ancillary_X = pd.DataFrame(X).copy()
-            if self.fit_intercept:
-                ancillary_X["_intercept"] = 1.0
-            ancillary_X = ancillary_X[self.params_.loc[self._ancillary_parameter_name].index]
-        else:
-            # provided numpy array
-            assert ancillary_X.shape[1] == (
-                self.params_.loc[self._ancillary_parameter_name].shape[0] + 1
-            )  # 1 for _intercept
-
         if isinstance(X, pd.DataFrame):
             if self.fit_intercept:
                 X["_intercept"] = 1.0
@@ -2580,8 +2571,21 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
             # provided numpy array
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
 
-        primary_params = self.params_[self._LOOKUP_SLICE[self._primary_parameter_name]]
-        ancillary_params = self.params_[self._LOOKUP_SLICE[self._ancillary_parameter_name]]
+        if isinstance(ancillary_X, pd.DataFrame):
+            ancillary_X = ancillary_X.copy()
+            if self.fit_intercept:
+                ancillary_X["_intercept"] = 1.0
+            ancillary_X = ancillary_X[self.regressors[self._ancillary_parameter_name]]
+        elif ancillary_X is None:
+            ancillary_X = X[self.regressors[self._ancillary_parameter_name]]
+        else:
+            # provided numpy array
+            assert ancillary_X.shape[1] == (
+                self.params_.loc[self._ancillary_parameter_name].shape[0] + 1
+            )  # 1 for _intercept
+
+        primary_params = self.params_[self._primary_parameter_name]
+        ancillary_params = self.params_[self._ancillary_parameter_name]
 
         primary_scores = np.exp(np.dot(X, primary_params))
         ancillary_scores = np.exp(np.dot(ancillary_X, ancillary_params))
@@ -2624,7 +2628,7 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
 
         Parameters
         ----------
-        X: numpy array or DataFrame
+        df: DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
@@ -2648,7 +2652,7 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
         return qth_survival_times(p, self.predict_survival_function(df, ancillary_df=ancillary_df))
 
     def predict_cumulative_hazard(self, df, ancillary_df=None, times=None):
-
+        df = df.copy()
         times = coalesce(times, self.timeline, np.unique(self.durations))
         n = df.shape[0]
 
@@ -2657,7 +2661,6 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
             df = pd.concat([df, ancillary_df[ancillary_df.columns.difference(df.columns)]], axis=1)
 
         if self.fit_intercept:
-            assert "_intercept" not in df
             df["_intercept"] = 1.0
 
         Xs = self._create_Xs_dict(df)

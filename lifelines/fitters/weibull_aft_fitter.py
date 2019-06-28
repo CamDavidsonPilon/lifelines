@@ -84,7 +84,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
 
         return log_rho_ - log_lambda_ + np.expm1(log_rho_) * (np.log(T) - log_lambda_)
 
-    def predict_percentile(self, X, ancillary_X=None, p=0.5):
+    def predict_percentile(self, df, ancillary_df=None, p=0.5):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -92,12 +92,12 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
 
         Parameters
         ----------
-        X:  numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        df:  DataFrame
+            a (n,d)  DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        ancillary_df: DataFrame, optional
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         p: float, optional (default=0.5)
@@ -112,22 +112,22 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
 
-        return pd.DataFrame(lambda_ * np.power(-np.log(p), 1 / rho_), index=_get_index(X))
+        return pd.DataFrame(lambda_ * np.power(-np.log(p), 1 / rho_), index=_get_index(df))
 
-    def predict_expectation(self, X, ancillary_X=None):
+    def predict_expectation(self, df, ancillary_df=None):
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
         Parameters
         ----------
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        ancillary_df:  DataFrame, optional
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
@@ -142,5 +142,5 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         --------
         predict_median
         """
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(X))
+        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        return pd.DataFrame((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(df))

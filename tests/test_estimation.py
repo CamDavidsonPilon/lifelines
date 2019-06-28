@@ -1881,10 +1881,10 @@ class TestWeibullAFTFitter:
     def test_passing_in_additional_ancillary_df_in_predict_methods_if_fitted_with_one(self, rossi):
 
         aft = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=True)
-        aft.predict_median(rossi, ancillary_X=rossi)
-        aft.predict_percentile(rossi, ancillary_X=rossi)
-        aft.predict_cumulative_hazard(rossi, ancillary_X=rossi)
-        aft.predict_survival_function(rossi, ancillary_X=rossi)
+        aft.predict_median(rossi, ancillary_df=rossi)
+        aft.predict_percentile(rossi, ancillary_df=rossi)
+        aft.predict_cumulative_hazard(rossi, ancillary_df=rossi)
+        aft.predict_survival_function(rossi, ancillary_df=rossi)
 
         aft.predict_median(rossi)
         aft.predict_percentile(rossi)
@@ -1894,10 +1894,10 @@ class TestWeibullAFTFitter:
     def test_passing_in_additional_ancillary_df_in_predict_methods_okay_if_not_fitted_with_one(self, rossi, aft):
 
         aft.fit(rossi, "week", "arrest", ancillary_df=False)
-        aft.predict_median(rossi, ancillary_X=rossi)
-        aft.predict_percentile(rossi, ancillary_X=rossi)
-        aft.predict_cumulative_hazard(rossi, ancillary_X=rossi)
-        aft.predict_survival_function(rossi, ancillary_X=rossi)
+        aft.predict_median(rossi, ancillary_df=rossi)
+        aft.predict_percentile(rossi, ancillary_df=rossi)
+        aft.predict_cumulative_hazard(rossi, ancillary_df=rossi)
+        aft.predict_survival_function(rossi, ancillary_df=rossi)
 
     def test_robust_errors_against_R(self, rossi, aft):
         # r = survreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio + age, data=df, dist='weibull', robust=TRUE)

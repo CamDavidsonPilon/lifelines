@@ -1411,11 +1411,6 @@ class DataframeSliceDict:
     def __init__(self, df, mappings):
         self.df = df
         self.mappings = mappings
-        if len(self.mappings["lambda_"]) == 3:
-            import pdb
-
-            pdb.set_trace()
-
         self.size = sum(len(v) for v in self.mappings.values())
 
     def __getitem__(self, key):
@@ -1426,9 +1421,9 @@ class DataframeSliceDict:
             yield (k, self[k])
 
     def filter(self, ix):
+        ix = _to_array(ix)
         return DataframeSliceDict(self.df[ix], self.mappings)
 
     def iterdicts(self):
         for _, x in self.df.iterrows():
             yield DataframeSliceDict(x.to_frame().T, self.mappings)
-            # yield {key: x[cols].values for key, cols in self.mappings.items()}
