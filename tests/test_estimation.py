@@ -1500,10 +1500,12 @@ class TestPiecewiseExponentialRegressionFitter:
         )  # 110 is the end of observation, eg. current time.
 
         df = pd.DataFrame(X[:, :-1], columns=["var1", "var2"])
+        df["_intercept"] = 1.0
+
         df["T"] = np.round(np.maximum(np.minimum(T, T_censor), 0.1), 1)
         df["E"] = T <= T_censor
 
-        pew = PiecewiseExponentialRegressionFitter(breakpoints=breakpoints, penalizer=0.0001).fit(df, "T", "E")
+        pew = PiecewiseExponentialRegressionFitter(breakpoints=breakpoints, penalizer=0.00001).fit(df, "T", "E")
 
         def assert_allclose(variable_name_tuple, actual):
             npt.assert_allclose(

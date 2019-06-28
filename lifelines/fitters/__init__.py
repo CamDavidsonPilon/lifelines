@@ -1310,9 +1310,13 @@ class ParametericRegressionFitter(BaseFitter):
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
-        self.regressors = {
-            name: list(df.columns.intersection(cols)) for name, cols in regressors.items()
-        }  # the .intersection preserves order, important!
+
+        if regressors is not None:
+            # the .intersection preserves order, important!
+            self.regressors = {name: list(df.columns.intersection(cols)) for name, cols in regressors.items()}
+        else:
+            self.regressors = {name: df.columns.to_list() for name in self._fitted_parameter_names}
+
         self._LOOKUP_SLICE = self._create_slicer()
 
         df = df.astype(float)
@@ -1352,8 +1356,17 @@ class ParametericRegressionFitter(BaseFitter):
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return np.zeros(Xs.size)
 
-    def _add_penalty(self, params, neg_ll, *args):
-        return neg_ll
+    @staticmethod
+    def _dict_to_array(dict):
+        return np.concatenate(list(dict.values()))
+
+    def _add_penalty(self, params, neg_ll):
+        params = self._dict_to_array(params)
+        if self.penalizer > 0:
+            penalty = (params ** 2).sum()
+        else:
+            penalty = 0
+        return neg_ll + self.penalizer * penalty
 
     def _wrap_function_to_covert_array_to_dict(self, function):
         def f(params_array, *args):
@@ -1374,7 +1387,7 @@ class ParametericRegressionFitter(BaseFitter):
 
         self._neg_likelihood_with_penalty_function = lambda params, *args: self._wrap_function_to_covert_array_to_dict(
             self._add_penalty
-        )(params, -self._wrap_function_to_covert_array_to_dict(likelihood)(params, *args), *args)
+        )(params, -self._wrap_function_to_covert_array_to_dict(likelihood)(params, *args))
 
         results = minimize(
             # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
@@ -1794,7 +1807,7 @@ class ParametericRegressionFitter(BaseFitter):
             tick_labels = [i for i in hazards.index]
 
         plt.yticks(yaxis_locations, tick_labels)
-        plt.xlabel("log(accelerated failure rate) (%g%% CI)" % ((1 - self.alpha) * 100))
+        plt.xlabel("coef (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
 
@@ -2367,11 +2380,7 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
             ]
         )
 
-    @staticmethod
-    def _dict_to_array(dict):
-        return np.concatenate(list(dict.values()))
-
-    def _add_penalty(self, params, neg_ll, *args):
+    def _add_penalty(self, params, neg_ll):
         params = self._dict_to_array(params)
         if self.penalizer > 0:
             penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()

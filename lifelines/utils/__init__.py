@@ -1414,7 +1414,11 @@ class DataframeSliceDict:
         self.size = sum(len(v) for v in self.mappings.values())
 
     def __getitem__(self, key):
-        return self.df[self.mappings[key]].values
+        columns = self.mappings[key]
+        if columns == "*":
+            return self.df.values
+        else:
+            return self.df[columns].values
 
     def __iter__(self):
         for k in self.mappings:
