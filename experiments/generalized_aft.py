@@ -7,20 +7,17 @@ import matplotlib.pyplot as plt
 
 class Custom(ParametericRegressionFitter):
 
-    # TODO: check if _fitted_parameter_names is equal to keys in regressors!!
     _fitted_parameter_names = ["lambda_", "rho_", "delta_"]
 
     def _cumulative_hazard(self, params, T, Xs):
-        """
-        One problem with this is that the dict Xs is going to be very memory consuming. Maybe I can create a new
-        "dict" that has shared df and dynamically creates the df on indexing with [], that's cool
 
-        """
         lambda_ = anp.exp(anp.dot(Xs["lambda_"], params["lambda_"]))  # > 0
         rho_ = anp.exp(anp.dot(Xs["rho_"], params["rho_"]))  # > 0
         delta_ = anp.exp(anp.dot(Xs["delta_"], params["delta_"]))  # > 0
 
         return (T / lambda_) + (T / rho_) ** 0.5 + (T / delta_) ** 2
+
+    # def _add_penalty(self, params, neg_ll):
 
 
 from lifelines.datasets import load_rossi

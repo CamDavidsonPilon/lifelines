@@ -162,31 +162,3 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         v = (alpha_ * np.pi / beta_) / np.sin(np.pi / beta_)
         v = np.where(beta_ > 1, v, np.nan)
         return pd.DataFrame(v, index=_get_index(df))
-
-    def predict_cumulative_hazard(self, df, times=None, ancillary_df=None):
-        """
-        Return the cumulative hazard rate of subjects in X at time points.
-
-        Parameters
-        ----------
-        X:  DataFrame
-            a (n,d)  DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        times: iterable, optional
-            an iterable of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations (observed and unobserved). Uses a linear interpolation if
-            points in time are not in the index.
-        ancillary_X: DataFrame, optional
-            a (n,d) DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-        Returns
-        -------
-        cumulative_hazard_ : DataFrame
-            the cumulative hazard of individuals over the timeline
-        """
-        times = coalesce(times, self.timeline, np.unique(self.durations))
-        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
-        return pd.DataFrame(np.log1p(np.outer(times, 1 / alpha_) ** beta_), columns=_get_index(df), index=times)

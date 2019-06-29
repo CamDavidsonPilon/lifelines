@@ -189,36 +189,3 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         """
         exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
         return pd.DataFrame(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(X))
-
-    def predict_cumulative_hazard(self, X, times=None, ancillary_X=None):
-        """
-        Return the cumulative hazard rate of subjects in X at time points.
-
-        Parameters
-        ----------
-
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        times: iterable, optional
-            an iterable of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations (observed and unobserved). Uses a linear interpolation if
-            points in time are not in the index.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-        Returns
-        -------
-        cumulative_hazard_ : DataFrame
-            the cumulative hazard of individuals over the timeline
-        """
-        import numpy as np
-
-        times = coalesce(times, self.timeline, np.unique(self.durations))
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        mu_ = np.log(exp_mu_)
-        Z = np.subtract.outer(np.log(times), mu_) / sigma_
-        return pd.DataFrame(-logsf(Z), columns=_get_index(X), index=times)

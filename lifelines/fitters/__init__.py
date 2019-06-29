@@ -1812,7 +1812,6 @@ class ParametericRegressionFitter(BaseFitter):
         return ax
 
     def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
-        # TODO
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
