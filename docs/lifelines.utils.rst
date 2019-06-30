@@ -1,4 +1,4 @@
-lifelines.utils
+utils
 ===============
 
 .. automodule:: lifelines.utils
