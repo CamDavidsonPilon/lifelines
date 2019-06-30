@@ -1533,6 +1533,15 @@ class TestAFTFitters:
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
 
+    def test_fit_intercept_can_be_false(self, rossi):
+        rossi["intercept"] = 1.0
+        for fitter in [
+            WeibullAFTFitter(fit_intercept=False),
+            LogNormalAFTFitter(fit_intercept=False),
+            LogLogisticAFTFitter(fit_intercept=False),
+        ]:
+            fitter.fit(rossi, "week", "arrest")
+
     def test_warning_is_present_if_entry_greater_than_duration(self, rossi, models):
         rossi["start"] = 10
         for fitter in models:

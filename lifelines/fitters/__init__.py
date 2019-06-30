@@ -1351,7 +1351,10 @@ class ParametericRegressionFitter(BaseFitter):
             Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        self._predicted_median = self.predict_median(df)
+
+        if self._KNOWN_MODEL:
+            # too slow for non-KNOWN models
+            self._predicted_median = self.predict_median(df)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return np.zeros(Xs.size)
@@ -1400,11 +1403,11 @@ class ParametericRegressionFitter(BaseFitter):
         )
         if show_progress or not results.success:
             print(results)
-
         if results.success:
             sum_weights = weights.sum()
             # pylint: disable=no-value-for-parameter
             hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
+
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
         name = self._class_name
@@ -1629,7 +1632,7 @@ class ParametericRegressionFitter(BaseFitter):
         )
 
         print("---")
-        if CensoringType.is_right_censoring(self):
+        if CensoringType.is_right_censoring(self) and self._KNOWN_MODEL:
             print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
 
         with np.errstate(invalid="ignore", divide="ignore"):
@@ -2048,7 +2051,6 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
             initial_point=initial_point,
             entry_col=entry_col,
         )
-
         return self
 
     @CensoringType.interval_censoring
@@ -2371,6 +2373,7 @@ class ParametericAFTRegressionFitter(ParametericRegressionFitter):
         # we may use this later in print_summary
         self._ll_null_ = uni_model._log_likelihood
 
+        # TODO: this fails with fit_intercept=False
         return np.concatenate(
             [
                 # tack on as the intercept
