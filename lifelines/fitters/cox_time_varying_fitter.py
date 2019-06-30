@@ -264,11 +264,14 @@ class CoxTimeVaryingFitter(BaseFitter):
         return stats.chi2.sf(U, 1)
 
     def _compute_confidence_intervals(self):
+        ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
+            np.c_[hazards - z * se, hazards + z * se],
+            columns=["%g%% lower-bound" % ci, "%g%% upper-bound" % ci],
+            index=self.hazards_.index,
         )
 
     @property
@@ -281,6 +284,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df: DataFrame
             contains columns coef, exp(coef), se(coef), z, p, lower, upper
         """
+        ci = 100 * (1 - self.alpha)
         with np.errstate(invalid="ignore", divide="ignore"):
             df = pd.DataFrame(index=self.hazards_.index)
             df["coef"] = self.hazards_
@@ -289,8 +293,8 @@ class CoxTimeVaryingFitter(BaseFitter):
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %g" % (1 - self.alpha)] = self.confidence_intervals_["lower-bound"]
-            df["upper %g" % (1 - self.alpha)] = self.confidence_intervals_["upper-bound"]
+            df["lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
+            df["upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
             return df
 
     def _newton_rhaphson(

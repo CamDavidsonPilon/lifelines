@@ -1166,11 +1166,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         return resids
 
     def _compute_confidence_intervals(self):
+        ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
+            np.c_[hazards - z * se, hazards + z * se],
+            columns=["%g%% lower-bound" % ci, "%g%% upper-bound" % ci],
+            index=self.hazards_.index,
         )
 
     def _compute_standard_errors(self, X, T, E, weights):
@@ -1206,7 +1209,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         -------
         df : DataFrame
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
-        ci = 1 - self.alpha
+        ci = 100 * (1 - self.alpha)
         with np.errstate(invalid="ignore", divide="ignore"):
             df = pd.DataFrame(index=self.hazards_.index)
             df["coef"] = self.hazards_
@@ -1215,8 +1218,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %g" % ci] = self.confidence_intervals_["lower-bound"]
-            df["upper %g" % ci] = self.confidence_intervals_["upper-bound"]
+            df["lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
+            df["upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
             return df
 
     def print_summary(self, decimals=2, **kwargs):
