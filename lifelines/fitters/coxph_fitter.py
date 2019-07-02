@@ -1166,11 +1166,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         return resids
 
     def _compute_confidence_intervals(self):
+        ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.hazards_.values
         return pd.DataFrame(
-            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
+            np.c_[hazards - z * se, hazards + z * se],
+            columns=["%g%% lower-bound" % ci, "%g%% upper-bound" % ci],
+            index=self.hazards_.index,
         )
 
     def _compute_standard_errors(self, X, T, E, weights):
@@ -1206,17 +1209,20 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         -------
         df : DataFrame
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
-        ci = 1 - self.alpha
+        ci = 100 * (1 - self.alpha)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         with np.errstate(invalid="ignore", divide="ignore"):
             df = pd.DataFrame(index=self.hazards_.index)
             df["coef"] = self.hazards_
             df["exp(coef)"] = np.exp(self.hazards_)
             df["se(coef)"] = self.standard_errors_
+            df["coef lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
+            df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
+            df["exp(coef) lower %g%%" % ci] = np.exp(self.hazards_) * np.exp(-z * self.standard_errors_)
+            df["exp(coef) upper %g%%" % ci] = np.exp(self.hazards_) * np.exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %g" % ci] = self.confidence_intervals_["lower-bound"]
-            df["upper %g" % ci] = self.confidence_intervals_["upper-bound"]
             return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -1267,11 +1273,28 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         print("---")
 
         df = self.summary
-        # Significance codes as last column
+
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
+                formatters={"exp(coef)": format_exp_floats(decimals)},
+                columns=[
+                    "coef",
+                    "exp(coef)",
+                    "se(coef)",
+                    "coef lower 95%",
+                    "coef upper 95%",
+                    "exp(coef) lower 95%",
+                    "exp(coef) upper 95%",
+                ],
+            )
+        )
+        print()
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals)},
+                columns=["z", "p", "-log2(p)"],
             )
         )
 

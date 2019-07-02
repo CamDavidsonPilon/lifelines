@@ -405,12 +405,13 @@ It's important to know that the naive variance estimates of the coefficients are
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def _compute_confidence_intervals(self):
+        ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         std_error = np.sqrt(self.cumulative_variance_)
         return pd.concat(
             {
-                "lower-bound": self.cumulative_hazards_ - z * std_error,
-                "upper-bound": self.cumulative_hazards_ + z * std_error,
+                "%g%% lower-bound" % ci: self.cumulative_hazards_ - z * std_error,
+                "%g%% upper-bound" % ci: self.cumulative_hazards_ + z * std_error,
             }
         )
 

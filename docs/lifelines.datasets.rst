@@ -1,4 +1,4 @@
-lifelines.datasets
+datasets
 ==================
 
 

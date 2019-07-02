@@ -1,4 +1,4 @@
-lifelines.plotting
+plotting
 ==================
 
 

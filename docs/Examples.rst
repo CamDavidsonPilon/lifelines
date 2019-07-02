@@ -777,3 +777,23 @@ In both cases, the reported standard errors from a unadjusted Cox model will be 
     cph.fit(rossi, 'week', 'arrest', cluster_col='id')
 
 Specifying ``cluster_col`` will handle correlations, and invoke the robust sandwich estimator for standard errors (the same as setting ``robust=True``).
+
+
+
+Serialize a *lifelines* model to disk
+##########################################
+
+When you want to save (and later load) a *lifelines* model to disk, the suggested tool is ``dill`` (available by ``pip install dill``). ``dill`` works a lot like ``pickle`` and ``joblib``:
+
+.. code-block:: python
+
+    from dill import loads, dumps
+
+    s_cph = dumps(cph)
+    cph_new = loads(s_cph)
+    cph.summary
+
+
+    s_kmf = dumps(kmf)
+    kmf_new = loads(s_kmf)
+    kmf.summary
