@@ -414,8 +414,8 @@ there is a catch. The derivation involves a kernel smoother (to smooth
 out the differences of the cumulative hazard curve) , and this requires
 us to specify a bandwidth parameter that controls the amount of
 smoothing. This functionality is in the ``smoothed_hazard_``
-and ``hazard_confidence_intervals_`` methods. Why methods? They require
-an argument representing the bandwidth.
+and ``smoothed_hazard_confidence_intervals_`` methods. Why methods?
+They require an argument representing the bandwidth.
 
 
 There is also a ``plot_hazard`` function (that also requires a
