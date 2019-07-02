@@ -9,6 +9,8 @@
  - for parametric univariate models, the `conditional_time_to_event_` is now exact instead of an approximation.
 
 ##### API changes
+ - In Cox models, the attribute `hazards_` has been renamed to `params_`. This aligns better with the other regression models, and is more clear (what is a hazard anyways?)
+ - In Cox models, a new `hazard_ratios_` attribute is available which is the exponentiation of `params_`.
  - In regression models, the column names in `confidence_intervals_` has changed to include the alpha value.
  - In regression models, some column names in `.summary` and `.print_summary` has changed to include the alpha value.
  - In regression models, some column names in `.summary` and `.print_summary` includes confidence intervals for the exponential of the value.

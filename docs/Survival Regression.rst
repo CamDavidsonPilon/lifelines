@@ -98,7 +98,7 @@ The implementation of the Cox model in *lifelines* is called ``CoxPHFitter``. Li
     Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
     """
 
-To access the coefficients and the baseline hazard directly, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. Taking a look at these coefficients for a moment, ``prio`` (the number of prior arrests) has a coefficient of about 0.09. Thus, a one unit increase in ``prio`` means the the baseline hazard will increase by a factor of :math:`\exp{(0.09)} = 1.10` - about a 10% increase. Recall, in the Cox proportional hazard model, a higher hazard means more at risk of the event occurring. The value :math:`\exp{(0.09)}` is called the *hazard ratio*, a name that will be clear with another example.
+To access the coefficients and the baseline hazard directly, you can use ``cph.params_`` and ``cph.baseline_hazard_`` respectively. Taking a look at these coefficients for a moment, ``prio`` (the number of prior arrests) has a coefficient of about 0.09. Thus, a one unit increase in ``prio`` means the the baseline hazard will increase by a factor of :math:`\exp{(0.09)} = 1.10` - about a 10% increase. Recall, in the Cox proportional hazard model, a higher hazard means more at risk of the event occurring. The value :math:`\exp{(0.09)}` is called the *hazard ratio*, a name that will be clear with another example.
 
 Consider the coefficient of ``mar`` (whether the subject is married or not). The values in the column are binary: 0 or 1, representing either not married or married. The value of the coefficient associated with ``mar``, :math:`\exp{(-.43)}`, is the value of ratio of *hazards* associated with being married, that is:
 
