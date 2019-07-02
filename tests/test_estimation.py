@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from scipy.stats import weibull_min, norm, logistic
+from autograd.scipy.special import expit
+from autograd import numpy as anp
 
 from flaky import flaky
 
@@ -35,7 +37,7 @@ from lifelines.utils import (
     StatisticalWarning,
 )
 
-from lifelines.fitters import BaseFitter, ParametericUnivariateFitter
+from lifelines.fitters import BaseFitter, ParametericUnivariateFitter, ParametricRegressionFitter
 
 from lifelines import (
     WeibullFitter,
@@ -106,6 +108,25 @@ def data_pred1():
 class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
     def __init__(self, **kwargs):
         super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
+
+
+class CustomRegressionModelTesting(ParametricRegressionFitter):
+
+    _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
+
+    def __init__(self, **kwargs):
+        cols = load_rossi().drop(["week", "arrest"], axis=1).columns
+        self.regressors = {"lambda_": cols, "beta_": cols, "rho_": cols}
+        super(CustomRegressionModelTesting, self).__init__(**kwargs)
+
+    def _cumulative_hazard(self, params, T, Xs):
+        c = expit(anp.dot(Xs["beta_"], params["beta_"]))
+
+        lambda_ = anp.exp(anp.dot(Xs["lambda_"], params["lambda_"]))
+        rho_ = anp.exp(anp.dot(Xs["rho_"], params["rho_"]))
+        cdf = 1 - anp.exp(-(T / lambda_) ** rho_)
+
+        return -anp.log((1 - c) + c * (1 - cdf))
 
 
 @pytest.fixture
@@ -302,6 +323,12 @@ class TestUnivariateFitters:
             f().fit(t_2d)
             f().fit(t_df)
 
+    def test_has_percentile_function(self, univariate_fitters, positive_sample_lifetimes):
+        for fitter in univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes[0])
+            if hasattr(f, "survival_function_"):
+                assert f.percentile(0.5) == f.median_
+
     def test_default_alpha_is_005(self, univariate_fitters):
         for f in univariate_fitters:
             assert f().alpha == 0.05
@@ -316,6 +343,7 @@ class TestUnivariateFitters:
         self, positive_sample_lifetimes, univariate_fitters
     ):
         for fitter in univariate_fitters:
+
             f = fitter().fit(positive_sample_lifetimes[0])
             if hasattr(f, "survival_function_"):
                 assert all(f.conditional_time_to_event_.index == f.survival_function_.index)
@@ -1282,6 +1310,7 @@ class TestRegressionFitters:
             LogNormalAFTFitter(),
             LogLogisticAFTFitter(),
             PiecewiseExponentialRegressionFitter(breakpoints=[25.0]),
+            CustomRegressionModelTesting(penalizer=1.0),
         ]
 
     def test_dill_serialization(self, rossi, regression_models):
@@ -1315,18 +1344,19 @@ class TestRegressionFitters:
             f = fitter.fit(rossi, "week", "arrest")
             dump(f, output)
 
-    def test_fit_will_accept_object_dtype_as_event_col(self, regression_models):
+    def test_fit_will_accept_object_dtype_as_event_col(self, regression_models, rossi):
         # issue #638
-        df = pd.DataFrame({"T": np.arange(1, 11), "E": [True] * 9 + [None]})
+        rossi["arrest"] = rossi["arrest"].astype(object)
+        rossi["arrest"].iloc[0] = None
 
-        assert df["E"].dtype == object
-        df = df.dropna()
-        assert df["E"].dtype == object
+        assert rossi["arrest"].dtype == object
+        rossi = rossi.dropna()
+        assert rossi["arrest"].dtype == object
 
         for fitter in regression_models:
             if getattr(fitter, "strata", False):
                 continue
-            fitter.fit(df, "T", "E")
+            fitter.fit(rossi, "week", "arrest")
 
     def test_fit_raise_an_error_if_nan_in_event_col(self, regression_models):
         df = pd.DataFrame({"T": np.arange(1, 11), "E": [True] * 9 + [None]})
@@ -1372,7 +1402,9 @@ class TestRegressionFitters:
         normalized_rossi["week"] = (normalized_rossi["week"]) / t.std()
 
         for fitter in regression_models:
-            if isinstance(fitter, PiecewiseExponentialRegressionFitter):
+            if isinstance(fitter, PiecewiseExponentialRegressionFitter) or isinstance(
+                fitter, CustomRegressionModelTesting
+            ):
                 continue
 
             # we drop indexes since aaf will have a different "time" index.
@@ -1500,10 +1532,12 @@ class TestPiecewiseExponentialRegressionFitter:
         )  # 110 is the end of observation, eg. current time.
 
         df = pd.DataFrame(X[:, :-1], columns=["var1", "var2"])
+        df["_intercept"] = 1.0
+
         df["T"] = np.round(np.maximum(np.minimum(T, T_censor), 0.1), 1)
         df["E"] = T <= T_censor
 
-        pew = PiecewiseExponentialRegressionFitter(breakpoints=breakpoints, penalizer=0.0001).fit(df, "T", "E")
+        pew = PiecewiseExponentialRegressionFitter(breakpoints=breakpoints, penalizer=0.00001).fit(df, "T", "E")
 
         def assert_allclose(variable_name_tuple, actual):
             npt.assert_allclose(
@@ -1530,6 +1564,15 @@ class TestAFTFitters:
     @pytest.fixture
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
+
+    def test_fit_intercept_can_be_false(self, rossi):
+        rossi["intercept"] = 1.0
+        for fitter in [
+            WeibullAFTFitter(fit_intercept=False),
+            LogNormalAFTFitter(fit_intercept=False),
+            LogLogisticAFTFitter(fit_intercept=False),
+        ]:
+            fitter.fit(rossi, "week", "arrest")
 
     def test_warning_is_present_if_entry_greater_than_duration(self, rossi, models):
         rossi["start"] = 10
@@ -1859,7 +1902,7 @@ class TestWeibullAFTFitter:
         aft1 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=True)
         aft2 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=rossi)
 
-        assert_frame_equal(aft1.summary, aft2.summary)
+        assert_frame_equal(aft1.summary, aft2.summary, check_like=True)
 
     def test_ancillary_None_is_same_as_False(self, rossi):
 
@@ -1881,10 +1924,10 @@ class TestWeibullAFTFitter:
     def test_passing_in_additional_ancillary_df_in_predict_methods_if_fitted_with_one(self, rossi):
 
         aft = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=True)
-        aft.predict_median(rossi, ancillary_X=rossi)
-        aft.predict_percentile(rossi, ancillary_X=rossi)
-        aft.predict_cumulative_hazard(rossi, ancillary_X=rossi)
-        aft.predict_survival_function(rossi, ancillary_X=rossi)
+        aft.predict_median(rossi, ancillary_df=rossi)
+        aft.predict_percentile(rossi, ancillary_df=rossi)
+        aft.predict_cumulative_hazard(rossi, ancillary_df=rossi)
+        aft.predict_survival_function(rossi, ancillary_df=rossi)
 
         aft.predict_median(rossi)
         aft.predict_percentile(rossi)
@@ -1894,10 +1937,10 @@ class TestWeibullAFTFitter:
     def test_passing_in_additional_ancillary_df_in_predict_methods_okay_if_not_fitted_with_one(self, rossi, aft):
 
         aft.fit(rossi, "week", "arrest", ancillary_df=False)
-        aft.predict_median(rossi, ancillary_X=rossi)
-        aft.predict_percentile(rossi, ancillary_X=rossi)
-        aft.predict_cumulative_hazard(rossi, ancillary_X=rossi)
-        aft.predict_survival_function(rossi, ancillary_X=rossi)
+        aft.predict_median(rossi, ancillary_df=rossi)
+        aft.predict_percentile(rossi, ancillary_df=rossi)
+        aft.predict_cumulative_hazard(rossi, ancillary_df=rossi)
+        aft.predict_survival_function(rossi, ancillary_df=rossi)
 
     def test_robust_errors_against_R(self, rossi, aft):
         # r = survreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio + age, data=df, dist='weibull', robust=TRUE)
@@ -1943,7 +1986,7 @@ class TestWeibullAFTFitter:
         aft.fit_right_censoring(rossi, "week", event_col="arrest")
         right_censored_results = aft.summary.copy()
 
-        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=4)
+        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=3)
 
     def test_weibull_interval_censoring_inference_on_known_R_output(self, aft):
         """
@@ -1958,7 +2001,7 @@ class TestWeibullAFTFitter:
         df["E"] = df["left"] == df["right"]
 
         aft.fit_interval_censoring(df, "left", "right", "E")
-
+        print(aft.summary)
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "coef"], 0.04576, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], np.log(18.31971), rtol=1e-4)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], np.log(2.82628), rtol=1e-4)

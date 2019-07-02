@@ -66,21 +66,21 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         self._primary_parameter_name = "alpha_"
         super(LogLogisticAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept)
 
-    def _cumulative_hazard(self, params, T, *Xs):
-        alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
-        alpha_ = np.exp(np.dot(Xs[0], alpha_params))
+    def _cumulative_hazard(self, params, T, Xs):
+        alpha_params = params["alpha_"]
+        alpha_ = np.exp(np.dot(Xs["alpha_"], alpha_params))
 
-        beta_params = params[self._LOOKUP_SLICE["beta_"]]
-        beta_ = np.exp(np.dot(Xs[1], beta_params))
+        beta_params = params["beta_"]
+        beta_ = np.exp(np.dot(Xs["beta_"], beta_params))
         return np.logaddexp(beta_ * (np.log(np.clip(T, 1e-25, np.inf)) - np.log(alpha_)), 0)
 
-    def _log_hazard(self, params, T, *Xs):
-        alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
-        log_alpha_ = np.dot(Xs[0], alpha_params)
+    def _log_hazard(self, params, T, Xs):
+        alpha_params = params["alpha_"]
+        log_alpha_ = np.dot(Xs["alpha_"], alpha_params)
         alpha_ = np.exp(log_alpha_)
 
-        beta_params = params[self._LOOKUP_SLICE["beta_"]]
-        log_beta_ = np.dot(Xs[1], beta_params)
+        beta_params = params["beta_"]
+        log_beta_ = np.dot(Xs["beta_"], beta_params)
         beta_ = np.exp(log_beta_)
 
         return (
@@ -90,17 +90,17 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
             - np.logaddexp(beta_ * (np.log(T) - np.log(alpha_)), 0)
         )
 
-    def _log_1m_sf(self, params, T, *Xs):
-        alpha_params = params[self._LOOKUP_SLICE["alpha_"]]
-        log_alpha_ = np.dot(Xs[0], alpha_params)
+    def _log_1m_sf(self, params, T, Xs):
+        alpha_params = params["alpha_"]
+        log_alpha_ = np.dot(Xs["alpha_"], alpha_params)
         alpha_ = np.exp(log_alpha_)
 
-        beta_params = params[self._LOOKUP_SLICE["beta_"]]
-        log_beta_ = np.dot(Xs[1], beta_params)
+        beta_params = params["beta_"]
+        log_beta_ = np.dot(Xs["beta_"], beta_params)
         beta_ = np.exp(log_beta_)
         return -np.logaddexp(-beta_ * (np.log(T) - np.log(alpha_)), 0)
 
-    def predict_percentile(self, X, ancillary_X=None, p=0.5):
+    def predict_percentile(self, df, ancillary_df=None, p=0.5):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -108,12 +108,12 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
 
         Parameters
         ----------
-        X:  numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        X:  DataFrame
+            a (n,d)  DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        ancillary_X: DataFrame, optional
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         p: float, optional (default=0.5)
@@ -128,22 +128,22 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
-        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
 
-        return pd.DataFrame(alpha_ * (1 / p - 1) ** beta_, index=_get_index(X))
+        return pd.DataFrame(alpha_ * (1 / p - 1) ** beta_, index=_get_index(df))
 
-    def predict_expectation(self, X, ancillary_X=None):
+    def predict_expectation(self, df, ancillary_df=None):
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
         Parameters
         ----------
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        X:  DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        ancillary_X: DataFrame, optional
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
@@ -158,35 +158,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         --------
         predict_median
         """
-        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
         v = (alpha_ * np.pi / beta_) / np.sin(np.pi / beta_)
         v = np.where(beta_ > 1, v, np.nan)
-        return pd.DataFrame(v, index=_get_index(X))
-
-    def predict_cumulative_hazard(self, X, times=None, ancillary_X=None):
-        """
-        Return the cumulative hazard rate of subjects in X at time points.
-
-        Parameters
-        ----------
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        times: iterable, optional
-            an iterable of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations (observed and unobserved). Uses a linear interpolation if
-            points in time are not in the index.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-        Returns
-        -------
-        cumulative_hazard_ : DataFrame
-            the cumulative hazard of individuals over the timeline
-        """
-        times = coalesce(times, self.timeline, np.unique(self.durations))
-        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame(np.log1p(np.outer(times, 1 / alpha_) ** beta_), columns=_get_index(X), index=times)
+        return pd.DataFrame(v, index=_get_index(df))

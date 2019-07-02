@@ -122,7 +122,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
 
-    q = pd.Series(q)
+    q = pd.Series(np.asarray(q).squeeze())
 
     if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError("q must be between 0 and 1")
@@ -1405,3 +1405,29 @@ def safe_zip(first, second):
         yield from ((x, None) for x in first)
     else:
         yield from zip(first, second)
+
+
+class DataframeSliceDict:
+    def __init__(self, df, mappings):
+        self.df = df
+        self.mappings = mappings
+        self.size = sum(len(v) for v in self.mappings.values())
+
+    def __getitem__(self, key):
+        columns = self.mappings[key]
+        if columns == "*":
+            return self.df.values
+        else:
+            return self.df[columns].values
+
+    def __iter__(self):
+        for k in self.mappings:
+            yield (k, self[k])
+
+    def filter(self, ix):
+        ix = _to_array(ix)
+        return DataframeSliceDict(self.df[ix], self.mappings)
+
+    def iterdicts(self):
+        for _, x in self.df.iterrows():
+            yield DataframeSliceDict(x.to_frame().T, self.mappings)
