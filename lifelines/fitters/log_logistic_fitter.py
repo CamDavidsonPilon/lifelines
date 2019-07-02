@@ -76,6 +76,11 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
     """
     _fitted_parameter_names = ["alpha_", "beta_"]
 
+    def percentile(self, p):
+        a = self.alpha_
+        b = self.beta_
+        return a * (1 / (1 - p) - 1) ** (-1 / b)
+
     @property
     def median_(self):
         return self.alpha_

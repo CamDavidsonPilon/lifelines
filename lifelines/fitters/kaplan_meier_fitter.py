@@ -11,6 +11,7 @@ from lifelines.utils import (
     StatError,
     inv_normal_cdf,
     median_survival_times,
+    qth_survival_time,
     check_nans_or_infs,
     StatisticalWarning,
     coalesce,
@@ -262,7 +263,8 @@ class KaplanMeierFitter(UnivariateFitter):
 
         self.__estimate = getattr(self, primary_estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
-        self.median_ = median_survival_times(self.__estimate, left_censorship=is_left_censoring)
+        self._median = median_survival_times(self.__estimate, left_censorship=is_left_censoring)
+        self.percentile = lambda p: qth_survival_time(p, self.__estimate, cdf=is_left_censoring)
         self._cumulative_sq_ = cumulative_sq_
 
         setattr(self, "confidence_interval_" + primary_estimate_name, self.confidence_interval_)
@@ -274,6 +276,10 @@ class KaplanMeierFitter(UnivariateFitter):
         self._update_docstrings()
 
         return self
+
+    @property
+    def median_(self):
+        return self._median
 
     def _check_values(self, array):
         check_nans_or_infs(array)

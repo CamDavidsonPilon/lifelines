@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-from lifelines.fitters import ParametericRegressionFitter
+from lifelines.fitters import ParametricRegressionFitter
 import numpy as np
 import autograd.numpy as anp
 import matplotlib.pyplot as plt
 
 
-class Custom(ParametericRegressionFitter):
+class Custom(ParametricRegressionFitter):
 
     _fitted_parameter_names = ["lambda_", "rho_", "delta_"]
 

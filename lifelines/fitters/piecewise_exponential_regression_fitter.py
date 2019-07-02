@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
 from lifelines.utils import coalesce, _get_index, CensoringType
-from lifelines.fitters import ParametericRegressionFitter
+from lifelines.fitters import ParametricRegressionFitter
 import pandas as pd
 
 
-class PiecewiseExponentialRegressionFitter(ParametericRegressionFitter):
+class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
     def __init__(self, breakpoints, alpha=0.05, penalizer=0.0):
         super(PiecewiseExponentialRegressionFitter, self).__init__(alpha=alpha)
 

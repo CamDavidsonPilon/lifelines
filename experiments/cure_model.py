@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from lifelines.fitters import ParametericRegressionFitter
+from lifelines.fitters import ParametricRegressionFitter
 import autograd.numpy as np
 from autograd.scipy.special import expit
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
 
 
-class CureModel(ParametericRegressionFitter):
+class CureModel(ParametricRegressionFitter):
 
     _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
 

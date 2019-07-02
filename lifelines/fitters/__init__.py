@@ -24,6 +24,7 @@ from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle, set_kwargs_
 
 from lifelines.utils import (
     qth_survival_times,
+    qth_survival_time,
     _to_array,
     _to_list,
     safe_zip,
@@ -48,6 +49,7 @@ from lifelines.utils import (
     concordance_index,
     CensoringType,
     DataframeSliceDict,
+    _get_index,
 )
 
 __all__ = []
@@ -230,7 +232,7 @@ class UnivariateFitter(BaseFitter):
 
         """
         age = self.survival_function_.index.values[:, None]
-        columns = ["%s - Conditional time remaining to event" % self._label]
+        columns = ["%s - Conditional median duration remaining to event" % self._label]
         return (
             pd.DataFrame(
                 qth_survival_times(self.survival_function_[self._label] * 0.5, self.survival_function_)
@@ -265,6 +267,28 @@ class UnivariateFitter(BaseFitter):
 
     def plot_cumulative_density(self, **kwargs):
         raise NotImplementedError()
+
+    @property
+    def median_(self):
+        """
+        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
+        robust summary statistic for the population, if it exists.
+
+        For known parametric models, this should be overwritten by something more accurate.
+        """
+        return self.percentile(0.5)
+
+    def percentile(self, p):
+        """
+        Return the unique time point, t, such that S(t) = p.
+
+        For known parametric models, this should be overwritten by something more accurate.
+        """
+        warnings.warn(
+            "Approximating using `survival_function_`. Try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
+            StatisticalWarning,
+        )
+        return qth_survival_times(p, self.survival_function_)
 
 
 class ParametericUnivariateFitter(UnivariateFitter):
@@ -601,7 +625,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             "{} = {}".format(
                 justify("hypothesis"),
                 ", ".join(
-                    "%s != %d" % (name, iv) for (name, iv) in zip(self._fitted_parameter_names, self._initial_values)
+                    "%s != %g" % (name, iv) for (name, iv) in zip(self._fitted_parameter_names, self._initial_values)
                 ),
             )
         )
@@ -980,20 +1004,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         return pd.Series(self._hazard(self._fitted_parameters_, times), index=_to_array(times), name=label)
 
     @property
-    def median_(self):
-        """
-        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
-        robust summary statistic for the population, if it exists.
-
-        For known parametric models, this should be overwritten by something more accurate.
-        """
-        warnings.warn(
-            "Approximating the median using `survival_function_`. Try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
-            StatisticalWarning,
-        )
-        return median_survival_times(self.survival_function_)
-
-    @property
     def confidence_interval_(self):
         """
         The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_cumulative_hazard_``.
@@ -1065,18 +1075,38 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self, estimate=getattr(self, "hazard_"), confidence_intervals=self.confidence_interval_hazard_, **kwargs
         )
 
+    def _conditional_time_to_event_(self):
+        """
+        Return a DataFrame, with index equal to survival_function_, that estimates the median
+        duration remaining until the death event, given survival up until time t. For example, if an
+        individual exists until age 1, their expected life remaining *given they lived to time 1*
+        might be 9 years.
+
+        Returns
+        -------
+        conditional_time_to_: DataFrame
+            with index equal to survival_function_'s index
+
+        """
+        age = self.timeline
+        columns = ["%s - Conditional median duration remaining to event" % self._label]
+
+        return pd.DataFrame(
+            self.percentile(0.5 * self.survival_function_.values) - age[:, None], index=age, columns=columns
+        )
+
 
 class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 
     _KNOWN_MODEL = True
 
 
-class ParametericRegressionFitter(BaseFitter):
+class ParametricRegressionFitter(BaseFitter):
 
     _KNOWN_MODEL = False
 
     def __init__(self, alpha=0.05, penalizer=0.0):
-        super(ParametericRegressionFitter, self).__init__(alpha=alpha)
+        super(ParametricRegressionFitter, self).__init__(alpha=alpha)
         self._hazard = egrad(self._cumulative_hazard, argnum=1)  # pylint: disable=unexpected-keyword-arg
         self.penalizer = penalizer
 
@@ -1327,9 +1357,12 @@ class ParametericRegressionFitter(BaseFitter):
         _norm_std = df.std(0)
         _norm_std[_norm_std < 1e-8] = 1.0
 
-        _index = pd.MultiIndex.from_tuples(
-            sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
-        )
+        try:
+            _index = pd.MultiIndex.from_tuples(
+                sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
+            )
+        except TypeError:
+            raise ValueError("Must have at least one column provided. Perhaps you meant to include a constant column?")
 
         self._norm_mean = df.mean(0)
         self._norm_std = pd.Series([_norm_std.loc[variable_name] for _, variable_name in _index], index=_index)
@@ -1510,7 +1543,7 @@ class ParametericRegressionFitter(BaseFitter):
         initial_point = np.zeros(len(self._fitted_parameter_names))
         regressors = {name: ["intercept"] for name in self._fitted_parameter_names}
 
-        model = self.__class__()
+        model = self.__class__(penalizer=self.penalizer)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
@@ -1699,7 +1732,8 @@ class ParametericRegressionFitter(BaseFitter):
         return self.predict_percentile(df, p=0.5)
 
     def predict_percentile(self, df, p=0.5):
-        return qth_survival_times(p, self.predict_survival_function(df))
+        subjects = _get_index(df)
+        return qth_survival_times(p, self.predict_survival_function(df)[subjects]).T
 
     def predict_cumulative_hazard(self, df, times=None):
 
@@ -1898,7 +1932,7 @@ class ParametericRegressionFitter(BaseFitter):
         return ax
 
 
-class ParametericAFTRegressionFitter(ParametericRegressionFitter):
+class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     _KNOWN_MODEL = True
 

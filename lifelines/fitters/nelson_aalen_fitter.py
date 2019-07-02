@@ -256,3 +256,6 @@ class NelsonAalenFitter(UnivariateFitter):
     @property
     def conditional_time_to_event_(self):
         raise NotImplementedError
+
+    def percentile(self, p):
+        raise NotImplementedError()

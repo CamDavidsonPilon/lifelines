@@ -16,6 +16,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from scipy.stats import weibull_min, norm, logistic
+from autograd.scipy.special import expit
+from autograd import numpy as anp
 
 from flaky import flaky
 
@@ -35,7 +37,7 @@ from lifelines.utils import (
     StatisticalWarning,
 )
 
-from lifelines.fitters import BaseFitter, ParametericUnivariateFitter
+from lifelines.fitters import BaseFitter, ParametericUnivariateFitter, ParametricRegressionFitter
 
 from lifelines import (
     WeibullFitter,
@@ -106,6 +108,25 @@ def data_pred1():
 class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
     def __init__(self, **kwargs):
         super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
+
+
+class CustomRegressionModelTesting(ParametricRegressionFitter):
+
+    _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
+
+    def __init__(self, **kwargs):
+        cols = load_rossi().drop(["week", "arrest"], axis=1).columns
+        self.regressors = {"lambda_": cols, "beta_": cols, "rho_": cols}
+        super(CustomRegressionModelTesting, self).__init__(**kwargs)
+
+    def _cumulative_hazard(self, params, T, Xs):
+        c = expit(anp.dot(Xs["beta_"], params["beta_"]))
+
+        lambda_ = anp.exp(anp.dot(Xs["lambda_"], params["lambda_"]))
+        rho_ = anp.exp(anp.dot(Xs["rho_"], params["rho_"]))
+        cdf = 1 - anp.exp(-(T / lambda_) ** rho_)
+
+        return -anp.log((1 - c) + c * (1 - cdf))
 
 
 @pytest.fixture
@@ -302,6 +323,12 @@ class TestUnivariateFitters:
             f().fit(t_2d)
             f().fit(t_df)
 
+    def test_has_percentile_function(self, univariate_fitters, positive_sample_lifetimes):
+        for fitter in univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes[0])
+            if hasattr(f, "survival_function_"):
+                assert f.percentile(0.5) == f.median_
+
     def test_default_alpha_is_005(self, univariate_fitters):
         for f in univariate_fitters:
             assert f().alpha == 0.05
@@ -316,6 +343,7 @@ class TestUnivariateFitters:
         self, positive_sample_lifetimes, univariate_fitters
     ):
         for fitter in univariate_fitters:
+
             f = fitter().fit(positive_sample_lifetimes[0])
             if hasattr(f, "survival_function_"):
                 assert all(f.conditional_time_to_event_.index == f.survival_function_.index)
@@ -1282,6 +1310,7 @@ class TestRegressionFitters:
             LogNormalAFTFitter(),
             LogLogisticAFTFitter(),
             PiecewiseExponentialRegressionFitter(breakpoints=[25.0]),
+            CustomRegressionModelTesting(penalizer=1.0),
         ]
 
     def test_dill_serialization(self, rossi, regression_models):
@@ -1315,18 +1344,19 @@ class TestRegressionFitters:
             f = fitter.fit(rossi, "week", "arrest")
             dump(f, output)
 
-    def test_fit_will_accept_object_dtype_as_event_col(self, regression_models):
+    def test_fit_will_accept_object_dtype_as_event_col(self, regression_models, rossi):
         # issue #638
-        df = pd.DataFrame({"T": np.arange(1, 11), "E": [True] * 9 + [None]})
+        rossi["arrest"] = rossi["arrest"].astype(object)
+        rossi["arrest"].iloc[0] = None
 
-        assert df["E"].dtype == object
-        df = df.dropna()
-        assert df["E"].dtype == object
+        assert rossi["arrest"].dtype == object
+        rossi = rossi.dropna()
+        assert rossi["arrest"].dtype == object
 
         for fitter in regression_models:
             if getattr(fitter, "strata", False):
                 continue
-            fitter.fit(df, "T", "E")
+            fitter.fit(rossi, "week", "arrest")
 
     def test_fit_raise_an_error_if_nan_in_event_col(self, regression_models):
         df = pd.DataFrame({"T": np.arange(1, 11), "E": [True] * 9 + [None]})
@@ -1372,7 +1402,9 @@ class TestRegressionFitters:
         normalized_rossi["week"] = (normalized_rossi["week"]) / t.std()
 
         for fitter in regression_models:
-            if isinstance(fitter, PiecewiseExponentialRegressionFitter):
+            if isinstance(fitter, PiecewiseExponentialRegressionFitter) or isinstance(
+                fitter, CustomRegressionModelTesting
+            ):
                 continue
 
             # we drop indexes since aaf will have a different "time" index.
