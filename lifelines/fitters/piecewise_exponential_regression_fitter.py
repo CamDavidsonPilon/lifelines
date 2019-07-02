@@ -92,7 +92,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
 
         initial_point = np.zeros(len(self._fitted_parameter_names))
 
-        model = self.__class__(breakpoints=self.breakpoints[:-1])
+        model = self.__class__(breakpoints=self.breakpoints[:-1], penalizer=self.penalizer)
         regressors = {param_name: ["_intercept"] for param_name in self._fitted_parameter_names}
         if CensoringType.is_right_censoring(self):
             df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry, "_intercept": 1.0})

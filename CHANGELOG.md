@@ -4,19 +4,24 @@
 #### 0.22.0
 
 ##### New features
- - Ability to create custom parametric regression models by specifying the cumulative hazard. This enables lots more AFT models.
+ - Ability to create custom parametric regression models by specifying the cumulative hazard. This enables new and extensions of AFT models.
+ - `percentile(p)` method added to univariate models that solves the equation `p = S(t⃰)` for `t⃰`
+ - for parametric univariate models, the `conditional_time_to_event_` is now exact instead of an approximation.
 
 ##### API changes
  - In regression models, the column names in `confidence_intervals_` has changed to include the alpha value.
  - In regression models, some column names in `.summary` and `.print_summary` has changed to include the alpha value.
+ - In regression models, some column names in `.summary` and `.print_summary` includes confidence intervals for the exponential of the value.
  - Significant changes to internal AFT code.
+ - A change to how `fit_intercept` works in AFT models. Previously one could set `fit_intercept` to False and not have to set `ancillary_df` - now one must specify a DataFrame.
 
 ##### Bug fixes
+ - for parametric univariate models, the `conditional_time_to_event_` is now exact instead of an approximation.
 
 
 #### 0.21.5 - 2019-06-22
 
-I'm skipping 0 .21.4 version because of deployment issues.
+I'm skipping 0.21.4 version because of deployment issues.
 
 ##### New features
  - `scoring_method` now a kwarg on `sklearn_adapter`

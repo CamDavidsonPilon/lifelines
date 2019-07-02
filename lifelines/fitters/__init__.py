@@ -1346,6 +1346,9 @@ class ParametricRegressionFitter(BaseFitter):
             self.regressors = {name: list(df.columns.intersection(cols)) for name, cols in regressors.items()}
         else:
             self.regressors = {name: df.columns.to_list() for name in self._fitted_parameter_names}
+        assert all(
+            len(cols) > 0 for cols in self.regressors.values()
+        ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
 
         self._LOOKUP_SLICE = self._create_slicer()
 
@@ -1357,12 +1360,9 @@ class ParametricRegressionFitter(BaseFitter):
         _norm_std = df.std(0)
         _norm_std[_norm_std < 1e-8] = 1.0
 
-        try:
-            _index = pd.MultiIndex.from_tuples(
-                sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
-            )
-        except TypeError:
-            raise ValueError("Must have at least one column provided. Perhaps you meant to include a constant column?")
+        _index = pd.MultiIndex.from_tuples(
+            sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
+        )
 
         self._norm_mean = df.mean(0)
         self._norm_std = pd.Series([_norm_std.loc[variable_name] for _, variable_name in _index], index=_index)
