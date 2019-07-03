@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
-import pandas as pd
 from lifelines.fitters import KnownModelParametericUnivariateFitter
 
 

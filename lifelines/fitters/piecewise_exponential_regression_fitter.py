@@ -53,7 +53,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
 
         return np.array([np.exp(np.dot(X, self.params_["lambda_%d_" % i])) for i in range(self.n_breakpoints)])
 
-    def predict_cumulative_hazard(self, X, times=None):
+    def predict_cumulative_hazard(self, df, times=None):
         """
         Return the cumulative hazard rate of subjects in X at time points.
 
@@ -77,13 +77,13 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         n = times.shape[0]
         times = times.reshape((n, 1))
 
-        lambdas_ = self._prep_inputs_for_prediction_and_return_parameters(X)
+        lambdas_ = self._prep_inputs_for_prediction_and_return_parameters(df)
 
         bp = self.breakpoints
         M = np.minimum(np.tile(bp, (n, 1)), times)
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
 
-        return pd.DataFrame(np.dot(M, (1 / lambdas_)), columns=_get_index(X), index=times[:, 0])
+        return pd.DataFrame(np.dot(M, (1 / lambdas_)), columns=_get_index(df), index=times[:, 0])
 
     @property
     def _ll_null(self):

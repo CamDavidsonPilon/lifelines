@@ -33,7 +33,7 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
     def _eventColumn(self):
         return self._params["event_col"]
 
-    def fit(self, X, y=None, sample_weight=None):
+    def fit(self, X, y=None):
         """
 
         Parameters

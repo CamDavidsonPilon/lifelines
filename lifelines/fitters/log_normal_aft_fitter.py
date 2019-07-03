@@ -4,7 +4,7 @@ from autograd.scipy.stats import norm
 from scipy.special import erfinv
 import pandas as pd
 
-from lifelines.utils import _get_index, coalesce
+from lifelines.utils import _get_index
 from lifelines.fitters import ParametericAFTRegressionFitter
 from lifelines.utils.logsf import logsf
 
@@ -99,7 +99,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         Z = (np.log(T) - mu_) / sigma_
         return norm.logcdf(Z, loc=0, scale=1)
 
-    def predict_percentile(self, X, ancillary_X=None, p=0.5):
+    def predict_percentile(self, df, ancillary_df=None, p=0.5):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -127,10 +127,10 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * p - 1)), index=_get_index(X))
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        return pd.DataFrame(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * p - 1)), index=_get_index(df))
 
-    def predict_median(self, X, ancillary_X=None):
+    def predict_median(self, df, ancillary_df=None):
         """
         Returns the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -158,10 +158,10 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         predict_percentile
 
         """
-        exp_mu_, _ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame(exp_mu_, index=_get_index(X))
+        exp_mu_, _ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        return pd.DataFrame(exp_mu_, index=_get_index(df))
 
-    def predict_expectation(self, X, ancillary_X=None):
+    def predict_expectation(self, df, ancillary_df=None):
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -187,5 +187,5 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         --------
         predict_median
         """
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(X))
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        return pd.DataFrame(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(df))

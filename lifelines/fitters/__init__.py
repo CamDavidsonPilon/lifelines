@@ -15,6 +15,7 @@ import autograd.numpy as anp
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
 from autograd.differential_operators import make_jvp_reversemode
 from scipy.optimize import minimize
+from scipy.integrate import trapz
 from scipy import stats
 import pandas as pd
 from numpy.linalg import inv, pinv
@@ -200,8 +201,7 @@ class UnivariateFitter(BaseFitter):
         estimate = getattr(self, self._estimation_method)
         if not interpolate:
             return estimate.asof(times).squeeze()
-        else:
-            return dataframe_interpolate_at_times(estimate, times)
+        return dataframe_interpolate_at_times(estimate, times)
 
     @property
     def conditional_time_to_event_(self):
@@ -1393,8 +1393,8 @@ class ParametricRegressionFitter(BaseFitter):
         return np.zeros(Xs.size)
 
     @staticmethod
-    def _dict_to_array(dict):
-        return np.concatenate(list(dict.values()))
+    def _dict_to_array(d):
+        return np.concatenate(list(d.values()))
 
     def _add_penalty(self, params, neg_ll):
         params = self._dict_to_array(params)
@@ -1749,6 +1749,37 @@ class ParametricRegressionFitter(BaseFitter):
         return pd.DataFrame(
             self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
         )
+
+    def predict_expectation(self, X):
+        r"""
+        Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
+        to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapizoidal rule to approximate the integral.
+        Caution
+        --------
+        However, if the survival function doesn't converge to 0, the the expectation is really infinity and the returned
+        values are meaningless/too large. In that case, using ``predict_median`` or ``predict_percentile`` would be better.
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        Returns
+        -------
+        expectations : DataFrame
+        Notes
+        -----
+        If X is a DataFrame, the order of the columns do not matter. But
+        if X is an array, then the column ordering is assumed to be the
+        same as the training dataset.
+        See Also
+        --------
+        predict_median
+        predict_percentile
+        """
+        subjects = _get_index(X)
+        v = self.predict_survival_function(X)[subjects]
+        return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
     @property
     def score_(self):
@@ -2383,7 +2414,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         name = self._class_name.replace("AFT", "")
         try:
             uni_model = getattr(lifelines, name)()
-        except:
+        except AttributeError:
             # some custom AFT model if univariate model is not defined.
             return np.concatenate([[0] * _X.shape[1] for _X in enumerate(Xs)])
 
@@ -2588,9 +2619,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             X["_intercept"] = 1.0
             ancillary_X["_intercept"] = 1.0
 
-        self.predict_survival_function(X, ancillary_X=ancillary_X).plot(ax=ax, **kwargs)
+        self.predict_survival_function(X, ancillary_df=ancillary_X).plot(ax=ax, **kwargs)
         if plot_baseline:
-            self.predict_survival_function(x_bar, ancillary_X=x_bar_anc).rename(columns={0: "baseline survival"}).plot(
+            self.predict_survival_function(x_bar, ancillary_df=x_bar_anc).rename(columns={0: "baseline survival"}).plot(
                 ax=ax, ls=":", color="k"
             )
         return ax

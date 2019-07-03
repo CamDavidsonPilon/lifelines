@@ -778,7 +778,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         symmetric_errors = z * self.standard_errors_[columns].values.copy()
         hazards = self.params_[columns].values.copy()
 
-        order = list(range(len(columns) - 1, -1, -1)) if user_supplied_columns else np.argsort(log_hazards)
+        order = list(range(len(columns) - 1, -1, -1)) if user_supplied_columns else np.argsort(hazards)
 
         ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
         best_ylim = ax.get_ylim()

@@ -69,11 +69,12 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
 
     def _cumulative_hazard(self, params, T, Xs):
         lambda_params = params["lambda_"]
-        lambda_ = np.exp(np.dot(Xs["lambda_"], lambda_params))
+        log_lambda_ = np.dot(Xs["lambda_"], lambda_params)
 
         rho_params = params["rho_"]
         rho_ = np.exp(np.dot(Xs["rho_"], rho_params))
-        return np.exp(rho_ * (np.log(np.clip(T, 1e-25, np.inf)) - np.log(lambda_)))
+
+        return np.exp(rho_ * (np.log(np.clip(T, 1e-25, np.inf)) - log_lambda_))
 
     def _log_hazard(self, params, T, Xs):
         lambda_params = params["lambda_"]
