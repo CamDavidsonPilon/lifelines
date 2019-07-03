@@ -1365,6 +1365,11 @@ class ParametricRegressionFitter(BaseFitter):
         )
 
         self._norm_mean = df.mean(0)
+        if hasattr(self, "_ancillary_parameter_name") and hasattr(self, "_primary_parameter_name"):
+            # Known AFT model
+            self._norm_mean_ = df[self.regressors[self._primary_parameter_name]].mean(0)
+            self._norm_mean_ancillary = df[self.regressors[self._ancillary_parameter_name]].mean(0)
+
         self._norm_std = pd.Series([_norm_std.loc[variable_name] for _, variable_name in _index], index=_index)
 
         _params, self._log_likelihood, self._hessian_ = self._fit_model(
@@ -2724,7 +2729,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         if isinstance(ancillary_df, pd.DataFrame):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            df = pd.concat([df, ancillary_df[ancillary_df.columns.difference(df.columns)]], axis=1)
+            for c in ancillary_df.columns.difference(df.columns):
+                df[c] = ancillary_df[c]
 
         if self.fit_intercept:
             df["_intercept"] = 1.0
