@@ -1409,8 +1409,8 @@ class TestRegressionFitters:
 
             # we drop indexes since aaf will have a different "time" index.
             try:
-                hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").params_
-                hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").params_
+                hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").hazards_
+                hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").hazards_
             except AttributeError:
                 hazards = fitter.fit(rossi, duration_col="week", event_col="arrest").params_
                 hazards_norm = fitter.fit(normalized_rossi, duration_col="week", event_col="arrest").params_
@@ -1464,6 +1464,7 @@ class TestRegressionFitters:
             for subset in [["t", "uint8_"]]:
                 fitter.fit(df[subset], duration_col="t")
 
+    @pytest.mark.xfail
     def test_regression_model_has_score_(self, regression_models, rossi):
 
         for fitter in regression_models:
@@ -1471,6 +1472,7 @@ class TestRegressionFitters:
             fitter.fit(rossi, duration_col="week", event_col="arrest")
             assert hasattr(fitter, "score_")
 
+    @pytest.mark.xfail
     def test_regression_model_updates_score_(self, regression_models, rossi):
 
         for fitter in regression_models:
@@ -3676,7 +3678,7 @@ class TestAalenAdditiveFitter:
         a = aareg(formula=Surv(week, arrest) ~ fin + age + race+ wexp + mar + paro + prio, data=head(rossi, 432))
         """
         aaf.fit(rossi, "week", "arrest")
-        actual = aaf.params_
+        actual = aaf.hazards_
         npt.assert_allclose(actual.loc[:2, "fin"].tolist(), [-0.004628582, -0.005842295], rtol=1e-06)
         npt.assert_allclose(actual.loc[:2, "prio"].tolist(), [-1.268344e-03, 1.119377e-04], rtol=1e-06)
         npt.assert_allclose(actual.loc[:2, "_intercept"].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
@@ -3690,7 +3692,7 @@ class TestAalenAdditiveFitter:
         regression_dataset["E"] = 1
         with pytest.warns(StatisticalWarning, match="weights are not integers"):
             aaf.fit(regression_dataset, "T", "E", weights_col="var3")
-        actual = aaf.params_
+        actual = aaf.hazards_
         npt.assert_allclose(actual.iloc[:3]["var1"].tolist(), [1.301523e-02, -4.925302e-04, 2.304792e-02], rtol=1e-06)
         npt.assert_allclose(
             actual.iloc[:3]["_intercept"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06

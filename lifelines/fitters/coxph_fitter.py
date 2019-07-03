@@ -89,9 +89,9 @@ class CoxPHFitter(BaseFitter):
 
       strata: list, optional
         specify a list of columns to use in stratification. This is useful if a
-         categorical covariate does not obey the proportional hazard assumption. This
-         is used similar to the `strata` expression in R.
-         See http://courses.washington.edu/b515/l17.pdf.
+        categorical covariate does not obey the proportional hazard assumption. This
+        is used similar to the `strata` expression in R.
+        See http://courses.washington.edu/b515/l17.pdf.
 
     Examples
     --------
@@ -105,7 +105,7 @@ class CoxPHFitter(BaseFitter):
     Attributes
     ----------
     params_ : Series
-        The estimated coefficients
+        The estimated coefficients. Changed in version 0.22.0: use to be ``.hazards_``
     hazard_ratios_ : Series
         The exp(coefficients)
     confidence_intervals_ : DataFrame
@@ -1368,7 +1368,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to :math:`(x - mean(x_{train}))'\beta `
+        baseline hazard is not included. Equal to :math:`(x - \text{mean}(x_{\text{train}})) \beta`
 
 
         Parameters

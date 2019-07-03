@@ -61,7 +61,7 @@ class CoxTimeVaryingFitter(BaseFitter):
     Attributes
     ----------
     params_ : Series
-        The estimated coefficients
+        The estimated coefficients. Changed in version 0.22.0: use to be ``.hazards_``
     hazard_ratios_ : Series
         The exp(coefficients)
     confidence_intervals_ : DataFrame

@@ -1914,16 +1914,6 @@ class ParametricRegressionFitter(BaseFitter):
         for covariate, value in zip(covariates, values.T):
             X[covariate] = value
 
-        # model ancillary X
-        x_bar_anc = self._norm_mean_ancillary.to_frame().T
-        ancillary_X = pd.concat([x_bar_anc] * values.shape[0])
-        for covariate, value in zip(covariates, values.T):
-            ancillary_X[covariate] = value
-
-        if self.fit_intercept:
-            X["_intercept"] = 1.0
-            ancillary_X["_intercept"] = 1.0
-
         self.predict_survival_function(X).plot(ax=ax, **kwargs)
         if plot_baseline:
             self.predict_survival_function(x_bar).rename(columns={0: "baseline survival"}).plot(
