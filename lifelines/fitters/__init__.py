@@ -1345,7 +1345,7 @@ class ParametricRegressionFitter(BaseFitter):
             # the .intersection preserves order, important!
             self.regressors = {name: list(df.columns.intersection(cols)) for name, cols in regressors.items()}
         else:
-            self.regressors = {name: df.columns.to_list() for name in self._fitted_parameter_names}
+            self.regressors = {name: df.columns.tolist() for name in self._fitted_parameter_names}
         assert all(
             len(cols) > 0 for cols in self.regressors.values()
         ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
