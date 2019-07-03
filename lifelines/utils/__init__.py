@@ -121,8 +121,8 @@ def qth_survival_times(q, survival_functions, cdf=False):
     qth_survival_time, median_survival_times
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
-
-    q = pd.Series(_to_array(q).squeeze(), dtype=float)
+    q = _to_array(q)
+    q = pd.Series(q.reshape(q.size), dtype=float)
 
     if not ((q <= 1).all() and (0 <= q).all()):
         raise ValueError("q must be between 0 and 1")
