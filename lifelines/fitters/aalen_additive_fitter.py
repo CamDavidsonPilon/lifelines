@@ -405,12 +405,13 @@ It's important to know that the naive variance estimates of the coefficients are
         return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def _compute_confidence_intervals(self):
+        ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         std_error = np.sqrt(self.cumulative_variance_)
         return pd.concat(
             {
-                "lower-bound": self.cumulative_hazards_ - z * std_error,
-                "upper-bound": self.cumulative_hazards_ + z * std_error,
+                "%g%% lower-bound" % ci: self.cumulative_hazards_ - z * std_error,
+                "%g%% upper-bound" % ci: self.cumulative_hazards_ + z * std_error,
             }
         )
 
@@ -459,10 +460,11 @@ It's important to know that the naive variance estimates of the coefficients are
         x = subset_df(self.cumulative_hazards_).index.values.astype(float)
 
         for column in columns:
+            ci = (1 - self.alpha) * 100
             y = subset_df(self.cumulative_hazards_[column]).values
             index = subset_df(self.cumulative_hazards_[column]).index
-            y_upper = subset_df(self.confidence_intervals_[column].loc["upper-bound"]).values
-            y_lower = subset_df(self.confidence_intervals_[column].loc["lower-bound"]).values
+            y_upper = subset_df(self.confidence_intervals_[column].loc["%g%% upper-bound" % ci]).values
+            y_lower = subset_df(self.confidence_intervals_[column].loc["%g%% lower-bound" % ci]).values
             shaded_plot(ax, x, y, y_upper, y_lower, label=column, **kwargs)
 
         plt.hlines(0, index.min() - 1, index.max(), color="k", linestyles="--", alpha=0.5)

@@ -69,9 +69,8 @@ class ExponentialFitter(KnownModelParametericUnivariateFitter):
 
     _fitted_parameter_names = ["lambda_"]
 
-    @property
-    def median_(self):
-        return np.log(2) / self.lambda_
+    def percentile(self, p):
+        return -self.lambda_ * np.log(p)
 
     def _cumulative_hazard(self, params, times):
         lambda_ = params[0]

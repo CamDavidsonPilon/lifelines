@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
-
 from lifelines.fitters import KnownModelParametericUnivariateFitter
 
 
@@ -91,6 +90,5 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
         lambda_, rho_ = params
         return np.exp(rho_ * (np.log(np.clip(times, 1e-25, np.inf)) - np.log(lambda_)))
 
-    @property
-    def median_(self):
-        return self.lambda_ * (np.log(2) ** (1.0 / self.rho_))
+    def percentile(self, p):
+        return self.lambda_ * (np.log(1 / p) ** (1.0 / self.rho_))

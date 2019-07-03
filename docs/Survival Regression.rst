@@ -98,7 +98,7 @@ The implementation of the Cox model in *lifelines* is called ``CoxPHFitter``. Li
     Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
     """
 
-To access the coefficients and the baseline hazard directly, you can use ``cph.hazards_`` and ``cph.baseline_hazard_`` respectively. Taking a look at these coefficients for a moment, ``prio`` (the number of prior arrests) has a coefficient of about 0.09. Thus, a one unit increase in ``prio`` means the the baseline hazard will increase by a factor of :math:`\exp{(0.09)} = 1.10` - about a 10% increase. Recall, in the Cox proportional hazard model, a higher hazard means more at risk of the event occurring. The value :math:`\exp{(0.09)}` is called the *hazard ratio*, a name that will be clear with another example.
+To access the coefficients and the baseline hazard directly, you can use ``cph.params_`` and ``cph.baseline_hazard_`` respectively. Taking a look at these coefficients for a moment, ``prio`` (the number of prior arrests) has a coefficient of about 0.09. Thus, a one unit increase in ``prio`` means the the baseline hazard will increase by a factor of :math:`\exp{(0.09)} = 1.10` - about a 10% increase. Recall, in the Cox proportional hazard model, a higher hazard means more at risk of the event occurring. The value :math:`\exp{(0.09)}` is called the *hazard ratio*, a name that will be clear with another example.
 
 Consider the coefficient of ``mar`` (whether the subject is married or not). The values in the column are binary: 0 or 1, representing either not married or married. The value of the coefficient associated with ``mar``, :math:`\exp{(-.43)}`, is the value of ratio of *hazards* associated with being married, that is:
 
@@ -907,6 +907,12 @@ Prime Minister Stephen Harper.
 .. note:: Because of the nature of the model, estimated survival functions of individuals can increase. This is an expected artifact of Aalen's additive model.
 
 
+Custom Parametric Regression Models
+=======================================
+
+*lifelines* has a very general syntax for creating your own parametric regression models. If you are looking to create your own custom models, see docs `Custom Regression Models`_.
+
+
 Model selection in survival regression
 =========================================
 
@@ -921,7 +927,9 @@ Above, we've displayed two *semi-parametric* models (Cox model and Aalen's model
 Model selection based on residuals
 -----------------------------------------------
 
-The sections `Testing the Proportional Hazard Assumptions`_ and `Assessing Cox model fit using residuals`_ may be useful for modelling your data better.
+The sections `Testing the Proportional Hazard Assumptions`_ and `Assessing Cox model fit using residuals`_ may be useful for modeling your data better.
+
+.. note:: Work is being done to extend residual methods to AFT models. Stay tuned.
 
 
 Model selection based on predictive power
@@ -989,5 +997,6 @@ Also, lifelines has wrappers for `compatibility with scikit learn`_ for making c
 
 .. _Assessing Cox model fit using residuals: jupyter_notebooks/Cox%20residuals.html
 .. _Testing the Proportional Hazard Assumptions: jupyter_notebooks/Proportional%20hazard%20assumption.html
+.. _Custom Regression Models: jupyter_notebooksCustom%20Regression%20Models.html
 .. _time varying model: Time%20varying%20survival%20regression.html
 .. _compatibility with scikit learn: Compatibility%20with%20scikit-learn.html

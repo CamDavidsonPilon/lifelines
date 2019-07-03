@@ -67,24 +67,25 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         self._primary_parameter_name = "lambda_"
         super(WeibullAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
-    def _cumulative_hazard(self, params, T, *Xs):
-        lambda_params = params[self._LOOKUP_SLICE["lambda_"]]
-        lambda_ = np.exp(np.dot(Xs[0], lambda_params))
+    def _cumulative_hazard(self, params, T, Xs):
+        lambda_params = params["lambda_"]
+        log_lambda_ = np.dot(Xs["lambda_"], lambda_params)
 
-        rho_params = params[self._LOOKUP_SLICE["rho_"]]
-        rho_ = np.exp(np.dot(Xs[1], rho_params))
-        return np.exp(rho_ * (np.log(np.clip(T, 1e-25, np.inf)) - np.log(lambda_)))
+        rho_params = params["rho_"]
+        rho_ = np.exp(np.dot(Xs["rho_"], rho_params))
 
-    def _log_hazard(self, params, T, *Xs):
-        lambda_params = params[self._LOOKUP_SLICE["lambda_"]]
-        log_lambda_ = np.dot(Xs[0], lambda_params)
+        return np.exp(rho_ * (np.log(np.clip(T, 1e-25, np.inf)) - log_lambda_))
 
-        rho_params = params[self._LOOKUP_SLICE["rho_"]]
-        log_rho_ = np.dot(Xs[1], rho_params)
+    def _log_hazard(self, params, T, Xs):
+        lambda_params = params["lambda_"]
+        log_lambda_ = np.dot(Xs["lambda_"], lambda_params)
+
+        rho_params = params["rho_"]
+        log_rho_ = np.dot(Xs["rho_"], rho_params)
 
         return log_rho_ - log_lambda_ + np.expm1(log_rho_) * (np.log(T) - log_lambda_)
 
-    def predict_percentile(self, X, ancillary_X=None, p=0.5):
+    def predict_percentile(self, df, ancillary_df=None, p=0.5):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -92,12 +93,12 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
 
         Parameters
         ----------
-        X:  numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        df:  DataFrame
+            a (n,d)  DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        ancillary_df: DataFrame, optional
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         p: float, optional (default=0.5)
@@ -112,22 +113,22 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
+        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
 
-        return pd.DataFrame(lambda_ * np.power(-np.log(p), 1 / rho_), index=_get_index(X))
+        return pd.DataFrame(lambda_ * np.power(-np.log(p), 1 / rho_), index=_get_index(df))
 
-    def predict_expectation(self, X, ancillary_X=None):
+    def predict_expectation(self, df, ancillary_df=None):
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
         Parameters
         ----------
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        ancillary_df:  DataFrame, optional
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
@@ -142,34 +143,5 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         --------
         predict_median
         """
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(X))
-
-    def predict_cumulative_hazard(self, X, times=None, ancillary_X=None):
-        """
-        Return the cumulative hazard rate of subjects in X at time points.
-
-        Parameters
-        ----------
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        times: iterable, optional
-            an iterable of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations (observed and unobserved). Uses a linear interpolation if
-            points in time are not in the index.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-        Returns
-        -------
-        cumulative_hazard_ : DataFrame
-            the cumulative hazard of individuals over the timeline
-        """
-        times = coalesce(times, self.timeline, np.unique(self.durations))
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-
-        return pd.DataFrame(np.outer(times, 1 / lambda_) ** rho_, columns=_get_index(X), index=times)
+        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        return pd.DataFrame((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(df))

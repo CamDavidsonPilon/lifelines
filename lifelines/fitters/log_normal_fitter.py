@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-
+from scipy.special import erfinv
 import autograd.numpy as np
 from autograd.scipy.stats import norm
 from lifelines.fitters import KnownModelParametericUnivariateFitter
@@ -70,6 +70,9 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
     @property
     def median_(self):
         return np.exp(self.mu_)
+
+    def percentile(self, p):
+        return np.exp(self.mu_ + np.sqrt(2 * self.sigma_ ** 2) * erfinv(1 - 2 * p))
 
     def _cumulative_hazard(self, params, times):
         mu_, sigma_ = params

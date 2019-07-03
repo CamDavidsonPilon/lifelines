@@ -13,7 +13,7 @@ def get_distribution_name_of_lifelines_model(model):
 
 
 def create_scipy_stats_model_from_lifelines_model(model):
-    from lifelines.fitters import KnownModelParametericUnivariateFitter, ParametericAFTRegressionFitter
+    from lifelines.fitters import KnownModelParametericUnivariateFitter
 
     is_univariate_model = isinstance(model, KnownModelParametericUnivariateFitter)
     dist = get_distribution_name_of_lifelines_model(model)

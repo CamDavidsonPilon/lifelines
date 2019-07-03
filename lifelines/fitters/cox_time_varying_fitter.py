@@ -60,8 +60,10 @@ class CoxTimeVaryingFitter(BaseFitter):
 
     Attributes
     ----------
-    hazards_ : Series
-        The estimated hazards
+    params_ : Series
+        The estimated coefficients. Changed in version 0.22.0: use to be ``.hazards_``
+    hazard_ratios_ : Series
+        The exp(coefficients)
     confidence_intervals_ : DataFrame
         The lower and upper confidence intervals for the hazard coefficients
     event_observed: Series
@@ -199,7 +201,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self._norm_mean = df.mean(0)
         self._norm_std = df.std(0)
 
-        hazards_ = self._newton_rhaphson(
+        params_ = self._newton_rhaphson(
             normalize(df, self._norm_mean, self._norm_std),
             events,
             start,
@@ -210,7 +212,8 @@ class CoxTimeVaryingFitter(BaseFitter):
             step_size=step_size,
         )
 
-        self.hazards_ = pd.Series(hazards_, index=df.columns, name="coef") / self._norm_std
+        self.params_ = pd.Series(params_, index=df.columns, name="coef") / self._norm_std
+        self.hazard_ratios_ = pd.Series(np.exp(self.params_), index=df.columns, name="exp(coef)")
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
@@ -257,40 +260,46 @@ class CoxTimeVaryingFitter(BaseFitter):
             yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
 
     def _compute_z_values(self):
-        return self.hazards_ / self.standard_errors_
+        return self.params_ / self.standard_errors_
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
     def _compute_confidence_intervals(self):
+        ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
-        hazards = self.hazards_.values
+        hazards = self.params_.values
         return pd.DataFrame(
-            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
+            np.c_[hazards - z * se, hazards + z * se],
+            columns=["%g%% lower-bound" % ci, "%g%% upper-bound" % ci],
+            index=self.params_.index,
         )
 
     @property
     def summary(self):
-        """
-        Summary statistics describing the fit.
+        """Summary statistics describing the fit.
+        Set alpha property in the object before calling.
 
         Returns
         -------
-        df: DataFrame
-            contains columns coef, exp(coef), se(coef), z, p, lower, upper
-        """
+        df : DataFrame
+            Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
+        ci = 100 * (1 - self.alpha)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         with np.errstate(invalid="ignore", divide="ignore"):
-            df = pd.DataFrame(index=self.hazards_.index)
-            df["coef"] = self.hazards_
-            df["exp(coef)"] = np.exp(self.hazards_)
+            df = pd.DataFrame(index=self.params_.index)
+            df["coef"] = self.params_
+            df["exp(coef)"] = self.hazard_ratios_
             df["se(coef)"] = self.standard_errors_
+            df["coef lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
+            df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
+            df["exp(coef) lower %g%%" % ci] = self.hazard_ratios_ * np.exp(-z * self.standard_errors_)
+            df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * np.exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %g" % (1 - self.alpha)] = self.confidence_intervals_["lower-bound"]
-            df["upper %g" % (1 - self.alpha)] = self.confidence_intervals_["upper-bound"]
             return df
 
     def _newton_rhaphson(
@@ -576,14 +585,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         same as the training dataset.
         """
         if isinstance(X, pd.DataFrame):
-            order = self.hazards_.index
+            order = self.params_.index
             X = X[order]
             check_for_numeric_dtypes_or_raise(X)
 
         X = X.astype(float)
         index = _get_index(X)
         X = normalize(X, self._norm_mean.values, 1)
-        return pd.DataFrame(np.dot(X, self.hazards_), index=index)
+        return pd.DataFrame(np.dot(X, self.params_), index=index)
 
     def predict_partial_hazard(self, X):
         r"""
@@ -652,11 +661,28 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         print("---")
 
         df = self.summary
-        # Significance codes last
+
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
+                formatters={"exp(coef)": format_exp_floats(decimals)},
+                columns=[
+                    "coef",
+                    "exp(coef)",
+                    "se(coef)",
+                    "coef lower 95%",
+                    "coef upper 95%",
+                    "exp(coef) lower 95%",
+                    "exp(coef) upper 95%",
+                ],
+            )
+        )
+        print()
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals)},
+                columns=["z", "p", "-log2(p)"],
             )
         )
 
@@ -702,7 +728,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         ll_alt = self._log_likelihood
         test_stat = 2 * (ll_alt - ll_null)
-        degrees_freedom = self.hazards_.shape[0]
+        degrees_freedom = self.params_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
             p_value,
@@ -744,15 +770,15 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         if columns is None:
             user_supplied_columns = False
-            columns = self.hazards_.index
+            columns = self.params_.index
         else:
             user_supplied_columns = True
 
         yaxis_locations = list(range(len(columns)))
         symmetric_errors = z * self.standard_errors_[columns].values.copy()
-        hazards = self.hazards_[columns].values.copy()
+        hazards = self.params_[columns].values.copy()
 
-        order = list(range(len(columns) - 1, -1, -1)) if user_supplied_columns else np.argsort(log_hazards)
+        order = list(range(len(columns) - 1, -1, -1)) if user_supplied_columns else np.argsort(hazards)
 
         ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
         best_ylim = ax.get_ylim()
@@ -838,4 +864,4 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             se = np.sqrt(self._compute_sandwich_estimator(X, events, start, stop, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.Series(se, index=self.hazards_.index, name="se")
+        return pd.Series(se, index=self.params_.index, name="se")

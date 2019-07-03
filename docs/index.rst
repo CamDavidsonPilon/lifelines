@@ -45,13 +45,14 @@ Contents:
   :caption: Regression Models
 
   Survival Regression
+  jupyter_notebooks/Custom Regression Models.ipynb
   Compatibility with scikit-learn
   Time varying survival regression
   jupyter_notebooks/Proportional hazard assumption.ipynb
 
 .. toctree::
   :maxdepth: 1
-  :caption: Detailed documentation
+  :caption: Additional documentation
 
   Examples
   References

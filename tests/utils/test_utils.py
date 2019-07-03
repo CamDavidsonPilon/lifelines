@@ -957,15 +957,11 @@ class TestSklearnAdapter:
 
         base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
 
-        grid_params = {
-            "penalizer": 10.0 ** np.arange(-2, 3),
-            "l1_ratio": [0.05, 0.5, 0.95],
-            "model_ancillary": [True, False],
-        }
+        grid_params = {"penalizer": 10.0 ** np.arange(-2, 3), "model_ancillary": [True, False]}
         clf = GridSearchCV(base_model(), grid_params, cv=4)
         clf.fit(X, Y)
 
-        assert clf.best_params_ == {"l1_ratio": 0.5, "model_ancillary": False, "penalizer": 0.01}
+        assert clf.best_params_ == {"model_ancillary": False, "penalizer": 0.01}
         assert clf.predict(X).shape[0] == X.shape[0]
 
     def test_model_can_accept_things_like_strata(self, X, Y):

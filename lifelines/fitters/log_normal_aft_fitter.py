@@ -4,7 +4,7 @@ from autograd.scipy.stats import norm
 from scipy.special import erfinv
 import pandas as pd
 
-from lifelines.utils import _get_index, coalesce
+from lifelines.utils import _get_index
 from lifelines.fitters import ParametericAFTRegressionFitter
 from lifelines.utils.logsf import logsf
 
@@ -67,39 +67,39 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         self._ancillary_parameter_name = "sigma_"
         super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
-    def _cumulative_hazard(self, params, T, *Xs):
-        mu_params = params[self._LOOKUP_SLICE["mu_"]]
-        mu_ = np.dot(Xs[0], mu_params)
+    def _cumulative_hazard(self, params, T, Xs):
+        mu_params = params["mu_"]
+        mu_ = np.dot(Xs["mu_"], mu_params)
 
-        sigma_params = params[self._LOOKUP_SLICE["sigma_"]]
-        sigma_ = np.exp(np.dot(Xs[1], sigma_params))
+        sigma_params = params["sigma_"]
+        sigma_ = np.exp(np.dot(Xs["sigma_"], sigma_params))
         Z = (np.log(T) - mu_) / sigma_
         return -logsf(Z)
 
-    def _log_hazard(self, params, T, *Xs):
-        mu_params = params[self._LOOKUP_SLICE["mu_"]]
-        mu_ = np.dot(Xs[0], mu_params)
+    def _log_hazard(self, params, T, Xs):
+        mu_params = params["mu_"]
+        mu_ = np.dot(Xs["mu_"], mu_params)
 
-        sigma_params = params[self._LOOKUP_SLICE["sigma_"]]
+        sigma_params = params["sigma_"]
 
-        log_sigma_ = np.dot(Xs[1], sigma_params)
+        log_sigma_ = np.dot(Xs["sigma_"], sigma_params)
         sigma_ = np.exp(log_sigma_)
         Z = (np.log(T) - mu_) / sigma_
 
         return norm.logpdf(Z) - log_sigma_ - np.log(T) - logsf(Z)
 
-    def _log_1m_sf(self, params, T, *Xs):
-        mu_params = params[self._LOOKUP_SLICE["mu_"]]
-        mu_ = np.dot(Xs[0], mu_params)
+    def _log_1m_sf(self, params, T, Xs):
+        mu_params = params["mu_"]
+        mu_ = np.dot(Xs["mu_"], mu_params)
 
-        sigma_params = params[self._LOOKUP_SLICE["sigma_"]]
+        sigma_params = params["sigma_"]
 
-        log_sigma_ = np.dot(Xs[1], sigma_params)
+        log_sigma_ = np.dot(Xs["sigma_"], sigma_params)
         sigma_ = np.exp(log_sigma_)
         Z = (np.log(T) - mu_) / sigma_
         return norm.logcdf(Z, loc=0, scale=1)
 
-    def predict_percentile(self, X, ancillary_X=None, p=0.5):
+    def predict_percentile(self, df, ancillary_df=None, p=0.5):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -127,10 +127,10 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * p - 1)), index=_get_index(X))
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        return pd.DataFrame(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * p - 1)), index=_get_index(df))
 
-    def predict_median(self, X, ancillary_X=None):
+    def predict_median(self, df, ancillary_df=None):
         """
         Returns the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -158,10 +158,10 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         predict_percentile
 
         """
-        exp_mu_, _ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame(exp_mu_, index=_get_index(X))
+        exp_mu_, _ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        return pd.DataFrame(exp_mu_, index=_get_index(df))
 
-    def predict_expectation(self, X, ancillary_X=None):
+    def predict_expectation(self, df, ancillary_df=None):
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -187,38 +187,5 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         --------
         predict_median
         """
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        return pd.DataFrame(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(X))
-
-    def predict_cumulative_hazard(self, X, times=None, ancillary_X=None):
-        """
-        Return the cumulative hazard rate of subjects in X at time points.
-
-        Parameters
-        ----------
-
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        times: iterable, optional
-            an iterable of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations (observed and unobserved). Uses a linear interpolation if
-            points in time are not in the index.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-
-        Returns
-        -------
-        cumulative_hazard_ : DataFrame
-            the cumulative hazard of individuals over the timeline
-        """
-        import numpy as np
-
-        times = coalesce(times, self.timeline, np.unique(self.durations))
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X)
-        mu_ = np.log(exp_mu_)
-        Z = np.subtract.outer(np.log(times), mu_) / sigma_
-        return pd.DataFrame(-logsf(Z), columns=_get_index(X), index=times)
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        return pd.DataFrame(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(df))

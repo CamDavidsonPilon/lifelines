@@ -3,7 +3,7 @@
 import numpy as np
 from lifelines.utils import concordance_index
 
-__all__ = ["concordance_index", "uncensored_l2_log_loss", "uncensored_l1_log_loss", "isometry_index"]
+__all__ = ["concordance_index", "uncensored_l2_log_loss", "uncensored_l1_log_loss"]
 
 
 def uncensored_l1_log_loss(event_times, predicted_event_times, event_observed=None):

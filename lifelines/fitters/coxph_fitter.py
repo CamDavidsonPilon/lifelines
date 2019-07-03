@@ -89,9 +89,9 @@ class CoxPHFitter(BaseFitter):
 
       strata: list, optional
         specify a list of columns to use in stratification. This is useful if a
-         categorical covariate does not obey the proportional hazard assumption. This
-         is used similar to the `strata` expression in R.
-         See http://courses.washington.edu/b515/l17.pdf.
+        categorical covariate does not obey the proportional hazard assumption. This
+        is used similar to the `strata` expression in R.
+        See http://courses.washington.edu/b515/l17.pdf.
 
     Examples
     --------
@@ -104,8 +104,10 @@ class CoxPHFitter(BaseFitter):
 
     Attributes
     ----------
-    hazards_ : Series
-        The estimated hazards
+    params_ : Series
+        The estimated coefficients. Changed in version 0.22.0: use to be ``.hazards_``
+    hazard_ratios_ : Series
+        The exp(coefficients)
     confidence_intervals_ : DataFrame
         The lower and upper confidence intervals for the hazard coefficients
     durations: Series
@@ -284,11 +286,12 @@ class CoxPHFitter(BaseFitter):
         self._norm_std = X.std(0)
         X_norm = normalize(X, self._norm_mean, self._norm_std)
 
-        hazards_ = self._fit_model(
+        params_ = self._fit_model(
             X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size
         )
 
-        self.hazards_ = pd.Series(hazards_, index=X.columns, name="coef") / self._norm_std
+        self.params_ = pd.Series(params_, index=X.columns, name="coef") / self._norm_std
+        self.hazard_ratios_ = pd.Series(np.exp(self.params_), index=X.columns, name="exp(coef)")
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(X_norm, T, E, weights)
@@ -956,7 +959,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             self.variance_matrix_
         )
 
-        scaled_schoenfeld_resids.columns = self.hazards_.index
+        scaled_schoenfeld_resids.columns = self.params_.index
         return scaled_schoenfeld_resids
 
     def _compute_schoenfeld(self, X, T, E, weights, index=None):
@@ -979,7 +982,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T.values, E.values, weights.values)
 
         # schoenfeld residuals are only defined for subjects with a non-zero event.
-        df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.hazards_.index, index=index[E])
+        df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.params_.index, index=index[E])
         return df
 
     def _compute_schoenfeld_within_strata(self, X, T, E, weights):
@@ -1004,7 +1007,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         weight_count = 0.0
         tie_count = 0
 
-        scores = weights * np.exp(np.dot(X, self.hazards_))
+        scores = weights * np.exp(np.dot(X, self.params_))
 
         diff_against = []
 
@@ -1080,7 +1083,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         scaled_variance_matrix = self.variance_matrix_ * np.tile(self._norm_std.values, (d, 1)).T
 
         delta_betas = score_residuals.dot(scaled_variance_matrix)
-        delta_betas.columns = self.hazards_.index
+        delta_betas.columns = self.params_.index
 
         return delta_betas
 
@@ -1099,7 +1102,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         else:
             score_residuals = self._compute_score_within_strata(X.values, T, E.values, weights.values)
 
-        return pd.DataFrame(score_residuals, columns=self.hazards_.index, index=index)
+        return pd.DataFrame(score_residuals, columns=self.params_.index, index=index)
 
     def _compute_score_within_strata(self, X, _T, E, weights):
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
@@ -1113,7 +1116,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         # we already unnormalized the betas in `fit`, so we need normalize them again since X is
         # normalized.
-        beta = self.hazards_.values * self._norm_std
+        beta = self.params_.values * self._norm_std
 
         E = E.astype(int)
         score_residuals = np.zeros((n, d))
@@ -1166,11 +1169,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         return resids
 
     def _compute_confidence_intervals(self):
+        ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
-        hazards = self.hazards_.values
+        hazards = self.params_.values
         return pd.DataFrame(
-            np.c_[hazards - z * se, hazards + z * se], columns=["lower-bound", "upper-bound"], index=self.hazards_.index
+            np.c_[hazards - z * se, hazards + z * se],
+            columns=["%g%% lower-bound" % ci, "%g%% upper-bound" % ci],
+            index=self.params_.index,
         )
 
     def _compute_standard_errors(self, X, T, E, weights):
@@ -1178,7 +1184,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             se = np.sqrt(self._compute_sandwich_estimator(X, T, E, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.Series(se, name="se", index=self.hazards_.index)
+        return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_estimator(self, X, T, E, weights):
         delta_betas = self._compute_delta_beta(X, T, E, weights)
@@ -1191,7 +1197,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         return sandwich_estimator.values
 
     def _compute_z_values(self):
-        return self.hazards_ / self.standard_errors_
+        return self.params_ / self.standard_errors_
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -1206,17 +1212,20 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         -------
         df : DataFrame
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
-        ci = 1 - self.alpha
+        ci = 100 * (1 - self.alpha)
+        z = inv_normal_cdf(1 - self.alpha / 2)
         with np.errstate(invalid="ignore", divide="ignore"):
-            df = pd.DataFrame(index=self.hazards_.index)
-            df["coef"] = self.hazards_
-            df["exp(coef)"] = np.exp(self.hazards_)
+            df = pd.DataFrame(index=self.params_.index)
+            df["coef"] = self.params_
+            df["exp(coef)"] = self.hazard_ratios_
             df["se(coef)"] = self.standard_errors_
+            df["coef lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
+            df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
+            df["exp(coef) lower %g%%" % ci] = self.hazard_ratios_ * np.exp(-z * self.standard_errors_)
+            df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * np.exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %g" % ci] = self.confidence_intervals_["lower-bound"]
-            df["upper %g" % ci] = self.confidence_intervals_["upper-bound"]
             return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -1267,11 +1276,28 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         print("---")
 
         df = self.summary
-        # Significance codes as last column
+
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
+                formatters={"exp(coef)": format_exp_floats(decimals)},
+                columns=[
+                    "coef",
+                    "exp(coef)",
+                    "se(coef)",
+                    "coef lower 95%",
+                    "coef upper 95%",
+                    "exp(coef) lower 95%",
+                    "exp(coef) upper 95%",
+                ],
+            )
+        )
+        print()
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals)},
+                columns=["z", "p", "-log2(p)"],
             )
         )
 
@@ -1305,7 +1331,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 )
         ll_alt = self._log_likelihood
         test_stat = 2 * ll_alt - 2 * ll_null
-        degrees_freedom = self.hazards_.shape[0]
+        degrees_freedom = self.params_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
             p_value,
@@ -1342,7 +1368,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to :math:`(x - mean(x_{train}))'\beta `
+        baseline hazard is not included. Equal to :math:`(x - \text{mean}(x_{\text{train}})) \beta`
 
 
         Parameters
@@ -1363,7 +1389,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
-        hazard_names = self.hazards_.index
+        hazard_names = self.params_.index
 
         if isinstance(X, pd.Series) and ((X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))):
             X = X.to_frame().T
@@ -1384,7 +1410,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         X = X.astype(float)
 
         X = normalize(X, self._norm_mean.values, 1)
-        return pd.DataFrame(np.dot(X, self.hazards_), index=index)
+        return pd.DataFrame(np.dot(X, self.params_), index=index)
 
     def predict_cumulative_hazard(self, X, times=None):
         """
@@ -1652,10 +1678,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         if columns is None:
             user_supplied_columns = False
-            columns = self.hazards_.index
+            columns = self.params_.index
 
         yaxis_locations = list(range(len(columns)))
-        log_hazards = self.hazards_.loc[columns].values.copy()
+        log_hazards = self.params_.loc[columns].values.copy()
 
         order = list(range(len(columns) - 1, -1, -1)) if user_supplied_columns else np.argsort(log_hazards)
 
@@ -1743,7 +1769,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             raise ValueError("The number of covariates must equal to second dimension of the values array.")
 
         for covariate in covariates:
-            if covariate not in self.hazards_.index:
+            if covariate not in self.params_.index:
                 raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
         set_kwargs_drawstyle(kwargs, "steps-post")
@@ -1863,7 +1889,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         counter = 0
         n = residuals_and_duration.shape[0]
 
-        for variable in self.hazards_.index.intersection(columns or self.hazards_.index):
+        for variable in self.params_.index.intersection(columns or self.params_.index):
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if np.round(minumum_observed_p_value, 2) > p_value_threshold:
                 continue
