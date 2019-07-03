@@ -997,6 +997,6 @@ Also, lifelines has wrappers for `compatibility with scikit learn`_ for making c
 
 .. _Assessing Cox model fit using residuals: jupyter_notebooks/Cox%20residuals.html
 .. _Testing the Proportional Hazard Assumptions: jupyter_notebooks/Proportional%20hazard%20assumption.html
-.. _Custom Regression Models: jupyter_notebooksCustom%20Regression%20Models.html
+.. _Custom Regression Models: jupyter_notebooks/Custom%20Regression%20Models.html
 .. _time varying model: Time%20varying%20survival%20regression.html
 .. _compatibility with scikit learn: Compatibility%20with%20scikit-learn.html
