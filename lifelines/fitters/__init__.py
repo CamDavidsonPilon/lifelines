@@ -1812,7 +1812,6 @@ class ParametricRegressionFitter(BaseFitter):
         return self.predict_expectation(self._norm_mean.to_frame().T).squeeze()
 
     def plot(self, columns=None, parameter=None, **errorbar_kwargs):
-        # TODO
         """
         Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
