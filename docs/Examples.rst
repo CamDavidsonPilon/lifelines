@@ -13,10 +13,10 @@ Statistically compare two populations
 
 Often researchers want to compare survival-ness between different populations. Here are some techniques to do that:
 
-Subtraction and division between survival curves
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Subtraction and division between survival functions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you are interested in taking the difference between two survival curves, simply trying to
+If you are interested in taking the difference between two survival functions, simply trying to
 subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
 the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built-in ``subtract`` method:
 
@@ -30,7 +30,7 @@ will produce the difference at every relevant time point. A similar function exi
 Logrank test
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival curves cross, the logrank test will give an inaccurate assessment of differences.
+.. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival functions cross, the logrank test will give an inaccurate assessment of differences.
 
 
 The ``lifelines.statistics.logrank_test`` function compares whether the "death" generation process of the two populations are equal:

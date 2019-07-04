@@ -128,8 +128,8 @@ are relative: individuals may start at different times.
 (We actually only need the *duration* of the observation, and not
 necessarily the start and end time.)
 
-We next introduce the two fundamental objects in survival analysis, the
-*survival function* and the *hazard function*.
+We next introduce the three fundamental objects in survival analysis, the
+*survival function*, *hazard function* and the *cumulative hazard function*.
 
 --------------
 
@@ -154,8 +154,8 @@ In plain English: the survival function defines the probability the death event 
 3. :math:`S(t)` is a non-increasing function of :math:`t`.
 
 
-Hazard curve
-------------
+Hazard function
+-----------------
 
 
 We are also interested in the probability of the death event occurring at time :math:`t`,
@@ -178,14 +178,21 @@ equation!), we get:
 
 .. math:: S(t) = \exp\left( -\int_0^t h(z) \mathrm{d}z \right)
 
+The integral has a more common name: the *cumulative hazard function*, denoted :math:`H(t)`. We can rewrite the above as:
+
+
+.. math:: S(t) = \exp\left( H(t) \right)
+
+
 What I love about the above equation is that it defines **all** survival
 functions. Notice that we can now speak either about the
-survival function, :math:`S(t)`, or the hazard function,
-:math:`h(t)`, and we can convert back and forth quite easily. It
-also gives us another, albeit not as useful, expression for :math:`T`.
-Upon differentiation and some algebra, we recover:
+survival function, :math:`S(t)`, or the cumulative hazard function,
+:math:`H(t)`, and we can convert back and forth quite easily.
 
-.. math:: f_T(t) = h(t)\exp\left( -\int_0^t h(z) \mathrm{d}z \right) = h(t) S(t)
 
-Of course, we do not observe the true survival curve of a population. We
+Next steps
+-----------------
+
+
+Of course, we do not observe the true survival function of a population. We
 must use the observed data to estimate it. There are many ways to estimate the survival function and the hazard rate, which brings us to :doc:`estimation using lifelines</Survival analysis with lifelines>`.

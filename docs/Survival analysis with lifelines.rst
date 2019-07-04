@@ -213,7 +213,7 @@ Here the difference between survival functions is very obvious, and
 performing a statistical test seems pedantic. If the curves are more
 similar, or we possess less data, we may be interested in performing a
 statistical test. In this case, *lifelines* contains routines in
-``lifelines.statistics`` to compare two survival curves. Below we
+``lifelines.statistics`` to compare two survival functions. Below we
 demonstrate this routine. The function ``logrank_test`` is a common
 statistical test in survival analysis that compares two event series'
 generators. If the value returned exceeds some pre-specified value, then
@@ -265,7 +265,7 @@ Lets compare the different *types* of regimes present in the dataset:
 .. image:: images/lifelines_intro_all_regimes.png
 
 
-There are alternative (and sometimes better) tests of survival curves, and we explain more here: `Statistically compare two populations`_
+There are alternative (and sometimes better) tests of survival functions, and we explain more here: `Statistically compare two populations`_
 
 --------------
 
@@ -313,7 +313,7 @@ keywords to tinker with.
 Estimating hazard rates using Nelson-Aalen
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-The survival curve is a great way to summarize and visualize the
+The survival functions is a great way to summarize and visualize the
 survival dataset, however it is not the only way. If we are curious about the hazard function :math:`h(t)` of a
 population, we unfortunately cannot transform the Kaplan Meier estimate
 -- statistics doesn't work quite that well. Fortunately, there is a
@@ -369,10 +369,10 @@ a DataFrame:
 .. image:: images/lifelines_intro_naf_fitter.png
 
 
-The cumulative hazard has less immediate understanding than the survival
-curve, but the hazard curve is the basis of more advanced techniques in
+The cumulative hazard has less obvious understanding than the survival
+functions, but the hazard functions is the basis of more advanced techniques in
 survival analysis. Recall that we are estimating *cumulative hazard
-curve*, :math:`H(t)`. (Why? The sum of estimates is much more
+functions*, :math:`H(t)`. (Why? The sum of estimates is much more
 stable than the point-wise estimates.) Thus we know the *rate of change*
 of this curve is an estimate of the hazard function.
 
@@ -401,17 +401,17 @@ Looking at the rates of change, I would say that both political
 philosophies have a constant hazard, albeit democratic regimes have a
 much *higher* constant hazard.
 
-Smoothing the hazard curve
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Smoothing the hazard function
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Interpretation of the cumulative hazard function can be difficult -- it
 is not how we usually interpret functions. On the other hand, most
 survival analysis is done using the cumulative hazard function, so understanding
 it is recommended.
 
-Alternatively, we can derive the more-interpretable hazard curve, but
+Alternatively, we can derive the more-interpretable hazard function, but
 there is a catch. The derivation involves a kernel smoother (to smooth
-out the differences of the cumulative hazard curve) , and this requires
+out the differences of the cumulative hazard function) , and this requires
 us to specify a bandwidth parameter that controls the amount of
 smoothing. This functionality is in the ``smoothed_hazard_``
 and ``smoothed_hazard_confidence_intervals_`` methods. Why methods?
@@ -762,7 +762,7 @@ Another situation with left-truncation occurs when subjects are exposed before e
 .. image:: images/lifetimes_mcas.png
 
 
-So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, but wasn't in our study for the first 4.5 years. From this point-of-view, why can't we "fill in" the dashed lines and say, for example, "subject #77 lived for 7.5 years"? If we did this, we would severely underestimate chance of dying early on after diagnosis. Why? It's possible that there were individuals who were diagnosed and then died shortly after, and never had a chance to enter our study. If we did manage to observe them however, they would have depressed the survival curve early on. Thus, "filling in" the dashed lines makes us over confident about what occurs in the early period after diagnosis. We can see this below when we model the survival curve with and without taking into account late entries.
+So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, but wasn't in our study for the first 4.5 years. From this point-of-view, why can't we "fill in" the dashed lines and say, for example, "subject #77 lived for 7.5 years"? If we did this, we would severely underestimate chance of dying early on after diagnosis. Why? It's possible that there were individuals who were diagnosed and then died shortly after, and never had a chance to enter our study. If we did manage to observe them however, they would have depressed the survival function early on. Thus, "filling in" the dashed lines makes us over confident about what occurs in the early period after diagnosis. We can see this below when we model the survival function with and without taking into account late entries.
 
 
 .. code:: python
