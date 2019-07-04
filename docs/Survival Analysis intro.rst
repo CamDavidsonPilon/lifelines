@@ -181,7 +181,7 @@ equation!), we get:
 The integral has a more common name: the *cumulative hazard function*, denoted :math:`H(t)`. We can rewrite the above as:
 
 
-.. math:: S(t) = \exp\left( H(t) \right)
+.. math:: S(t) = \exp\left(-H(t) \right)
 
 
 What I love about the above equation is that it defines **all** survival
