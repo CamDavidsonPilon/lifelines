@@ -153,6 +153,10 @@ In plain English: the survival function defines the probability the death event 
 2. :math:`F_T(t) = 1 - S(t)`, where :math:`F_T(t)` is the CDF of :math:`T`, which implies
 3. :math:`S(t)` is a non-increasing function of :math:`t`.
 
+Here's an example of a survival function:
+
+.. image:: images/intro_survival_function.png
+
 
 Hazard function
 -----------------
@@ -189,10 +193,13 @@ functions. Notice that we can now speak either about the
 survival function, :math:`S(t)`, or the cumulative hazard function,
 :math:`H(t)`, and we can convert back and forth quite easily.
 
+The below figures represent the hazard and the cumulative hazard of the survival function in the figure above.
+
+.. image:: images/intro_hazards.png
+
 
 Next steps
 -----------------
 
-
 Of course, we do not observe the true survival function of a population. We
-must use the observed data to estimate it. There are many ways to estimate the survival function and the hazard rate, which brings us to :doc:`estimation using lifelines</Survival analysis with lifelines>`.
+must use the observed data to estimate it. There are many ways to estimate the survival function and the hazard functions, which brings us to :doc:`estimation using lifelines</Survival analysis with lifelines>`.
