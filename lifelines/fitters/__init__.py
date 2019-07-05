@@ -363,6 +363,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 Cumulative hazard is not strictly non-decreasing. For example, try:
 
                 >>> fitter = {0}()
+                >>> # Recall: the hazard is the derivative of the cumulative hazard
                 >>> fitter._hazard({1}, np.sort(durations))
 
                 This may harm convergence, or return nonsensical results.
