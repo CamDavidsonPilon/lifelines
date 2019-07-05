@@ -1,30 +1,29 @@
 # -*- coding: utf-8 -*-
 from autograd import numpy as np
 from lifelines.fitters import KnownModelParametericUnivariateFitter, ParametericUnivariateFitter
-from lifelines.utils.gamma import lower_inc_gamma
-from autograd.scipy.special import gamma
+from lifelines.utils.gamma import gammainc, gammaincc
 
-"""
+
 class GG(ParametericUnivariateFitter):
 
     _fitted_parameter_names = ["alpha_", "lambda_", "rho_"]
+    _bounds = [(0.0, None), (0.0, None), (0.0, None)]
+    # _initial_values = np.array([1.0, 79., 1.])
 
     def _cumulative_hazard(self, params, times):
         alpha_, lambda_, rho_ = params
-        return -log_regularized_upper_inc_gamma(alpha_ / rho_, (times / lambda_) ** rho_)
+        lg = np.clip(gammaincc(alpha_ / rho_, (times / lambda_) ** rho_), 1e-20, 1 - 1e-20)
+        return -np.log(lg)
 
-
-
-gg = GG()
-gg.fit(df['T'].astype(np.float64)/70., df['E'])
-
-gg.print_summary()
-
-"""
 
 from lifelines.datasets import load_waltons
 
 df = load_waltons()
+
+gg = GG()
+gg.fit(df["T"], df["E"])
+
+gg.print_summary()
 
 
 class LogGammaFitter(ParametericUnivariateFitter):
@@ -32,17 +31,17 @@ class LogGammaFitter(ParametericUnivariateFitter):
     _fitted_parameter_names = ["lambda_", "delta_", "kappa_"]
 
     _bounds = [(0.0, None), (0.0, None), (0.0, None)]
+    # _initial_values = np.array([10., 10., 10.])
 
     def _cumulative_hazard(self, params, times):
-
         lambda_, delta_, kappa_ = params
         z = np.exp((times - delta_) / lambda_)
-        v = -log_regularized_upper_inc_gamma(kappa_, z)
-
+        lg = np.clip(gammaincc(kappa_, z), 1e-20, 1 - 1e-20)
+        v = -np.log(lg)
         return v
 
 
 lg = LogGammaFitter()
-lg.fit(df["T"] / 70.0, df["E"])
+lg.fit(df["T"] / 70, df["E"])
 
 lg.print_summary()
