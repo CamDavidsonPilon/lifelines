@@ -56,6 +56,7 @@ from lifelines import (
     LogNormalAFTFitter,
     LogLogisticAFTFitter,
     PiecewiseExponentialRegressionFitter,
+    GeneralizedGammaFitter,
 )
 
 from lifelines.datasets import (
@@ -172,7 +173,14 @@ def regression_dataset():
 
 @pytest.fixture
 def known_parametric_univariate_fitters():
-    return [ExponentialFitter, WeibullFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitterTesting]
+    return [
+        ExponentialFitter,
+        WeibullFitter,
+        LogNormalFitter,
+        LogLogisticFitter,
+        PiecewiseExponentialFitterTesting,
+        GeneralizedGammaFitter,
+    ]
 
 
 class TestBaseFitter:
