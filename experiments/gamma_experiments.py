@@ -8,9 +8,9 @@ class GG(ParametericUnivariateFitter):
 
     _fitted_parameter_names = ["alpha_", "lambda_", "rho_"]
     _bounds = [(0.0, None), (0.0, None), (0.0, None)]
-    # _initial_values = np.array([1.0, 79., 1.])
 
     def _cumulative_hazard(self, params, times):
+        times = times / 100
         alpha_, lambda_, rho_ = params
         lg = np.clip(gammaincc(alpha_ / rho_, (times / lambda_) ** rho_), 1e-20, 1 - 1e-20)
         return -np.log(lg)
