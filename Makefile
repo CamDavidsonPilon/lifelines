@@ -2,7 +2,7 @@ init:
 ifeq ($(TRAVIS), true)
 		pip install -r reqs/travis-requirements.txt
 		pip install pandas==${PANDAS_VERSION}
-		pip install pandas==${NUMPY_VERSION}
+		pip install numpy==${NUMPY_VERSION}
 		pip list --local
 else
 		pip install -r reqs/dev-requirements.txt
