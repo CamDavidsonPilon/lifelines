@@ -606,15 +606,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
         --------
         ``print_summary``
         """
-        ci = 1 - self.alpha
-        lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
-        df = pd.DataFrame(index=self._fitted_parameter_names)
-        df["coef"] = self._fitted_parameters_
-        df["se(coef)"] = self._compute_standard_errors().loc["se"]
-        df["lower %g" % ci] = lower_upper_bounds["lower-bound"]
-        df["upper %g" % ci] = lower_upper_bounds["upper-bound"]
-        df["p"] = self._compute_p_values()
         with np.errstate(invalid="ignore", divide="ignore"):
+            ci = 1 - self.alpha
+            lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
+            df = pd.DataFrame(index=self._fitted_parameter_names)
+            df["coef"] = self._fitted_parameters_
+            df["se(coef)"] = self._compute_standard_errors().loc["se"]
+            df["lower %g" % ci] = lower_upper_bounds["lower-bound"]
+            df["upper %g" % ci] = lower_upper_bounds["upper-bound"]
+            df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
         return df
 
