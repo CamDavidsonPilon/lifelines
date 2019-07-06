@@ -1,19 +1,27 @@
 ### Changelog
 
+### 0.22.1
+
+
+##### API changes
+ - In AFT models, the column names in `confidence_intervals_` has changed to include the alpha value.
+ - In AFT models, some column names in `.summary` and `.print_summary` has changed to include the alpha value.
+ - In AFT models, some column names in `.summary` and `.print_summary` includes confidence intervals for the exponential of the value.
+
 
 #### 0.22.0
 
 ##### New features
  - Ability to create custom parametric regression models by specifying the cumulative hazard. This enables new and extensions of AFT models.
- - `percentile(p)` method added to univariate models that solves the equation `p = S(t⃰)` for `t⃰`
+ - `percentile(p)` method added to univariate models that solves the equation `p = S(t)` for `t`
  - for parametric univariate models, the `conditional_time_to_event_` is now exact instead of an approximation.
 
 ##### API changes
  - In Cox models, the attribute `hazards_` has been renamed to `params_`. This aligns better with the other regression models, and is more clear (what is a hazard anyways?)
  - In Cox models, a new `hazard_ratios_` attribute is available which is the exponentiation of `params_`.
- - In regression models, the column names in `confidence_intervals_` has changed to include the alpha value.
- - In regression models, some column names in `.summary` and `.print_summary` has changed to include the alpha value.
- - In regression models, some column names in `.summary` and `.print_summary` includes confidence intervals for the exponential of the value.
+ - In Cox models, the column names in `confidence_intervals_` has changed to include the alpha value.
+ - In Cox models, some column names in `.summary` and `.print_summary` has changed to include the alpha value.
+ - In Cox models, some column names in `.summary` and `.print_summary` includes confidence intervals for the exponential of the value.
  - Significant changes to internal AFT code.
  - A change to how `fit_intercept` works in AFT models. Previously one could set `fit_intercept` to False and not have to set `ancillary_df` - now one must specify a DataFrame.
 
