@@ -43,20 +43,12 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
     ----------
     cumulative_hazard_ : DataFrame
         The estimated cumulative hazard (with custom timeline if provided)
-    confidence_interval_cumulative_hazard_ : DataFrame
-        The lower and upper confidence intervals for the cumulative hazard
     hazard_ : DataFrame
         The estimated hazard (with custom timeline if provided)
-    confidence_interval_hazard_ : DataFrame
-        The lower and upper confidence intervals for the hazard
     survival_function_ : DataFrame
         The estimated survival function (with custom timeline if provided)
-    confidence_interval_survival_function_ : DataFrame
-        The lower and upper confidence intervals for the survival function
     cumumlative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
-    confidence_interval_cumulative_density_ : DataFrame
-        The lower and upper confidence intervals for the cumulative density
     variance_matrix_ : numpy array
         The variance matrix of the coefficients
     median_: float

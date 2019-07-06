@@ -55,7 +55,7 @@ class KaplanMeierFitter(UnivariateFitter):
         ``confidence_interval_``
     cumumlative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
-    confidence_interval_cumumlative_density_ : DataFrame
+    confidence_interval_cumulative_density_ : DataFrame
         The lower and upper confidence intervals for the cumulative density
     durations: array
         The durations provided
