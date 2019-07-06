@@ -10,7 +10,6 @@ class GG(ParametericUnivariateFitter):
     _bounds = [(0.0, None), (0.0, None), (0.0, None)]
 
     def _cumulative_hazard(self, params, times):
-        times = times / 100
         alpha_, lambda_, rho_ = params
         lg = np.clip(gammaincc(alpha_ / rho_, (times / lambda_) ** rho_), 1e-20, 1 - 1e-20)
         return -np.log(lg)
@@ -23,7 +22,7 @@ df = load_waltons()
 gg = GG()
 gg.fit(df["T"], df["E"])
 
-gg.print_summary()
+gg.print_summary(3)
 
 
 class LogGammaFitter(ParametericUnivariateFitter):
@@ -31,7 +30,7 @@ class LogGammaFitter(ParametericUnivariateFitter):
     _fitted_parameter_names = ["lambda_", "delta_", "kappa_"]
 
     _bounds = [(0.0, None), (0.0, None), (0.0, None)]
-    # _initial_values = np.array([10., 10., 10.])
+    _initial_values = np.array([10.0, 10.0, 10.0])
 
     def _cumulative_hazard(self, params, times):
         lambda_, delta_, kappa_ = params
@@ -42,6 +41,6 @@ class LogGammaFitter(ParametericUnivariateFitter):
 
 
 lg = LogGammaFitter()
-lg.fit(df["T"] / 70, df["E"])
+lg.fit(df["T"], df["E"])
 
-lg.print_summary()
+lg.print_summary(3)
