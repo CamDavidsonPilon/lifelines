@@ -1041,14 +1041,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
     @property
     def confidence_interval_survival_function_(self):
         """
-        The confidence interval of the survival function.
+        The lower and upper confidence intervals for the survival function
         """
         return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
 
     @property
     def confidence_interval_cumulative_density_(self):
         """
-        The confidence interval of the survival function.
+        The lower and upper confidence intervals for the cumulative density
         """
         return self._compute_confidence_bounds_of_transform(self._cumulative_density, self.alpha, self._ci_labels)
 
@@ -1557,10 +1557,13 @@ class ParametricRegressionFitter(BaseFitter):
 
     def _compute_confidence_intervals(self):
         z = inv_normal_cdf(1 - self.alpha / 2)
+        ci = (1 - self.alpha) * 100
         se = self.standard_errors_
         params = self.params_.values
         return pd.DataFrame(
-            np.c_[params - z * se, params + z * se], index=self.params_.index, columns=["lower-bound", "upper-bound"]
+            np.c_[params - z * se, params + z * se],
+            index=self.params_.index,
+            columns=["%g%% lower-bound" % ci, "%g%% upper-bound" % ci],
         )
 
     @property
@@ -1631,17 +1634,20 @@ class ParametricRegressionFitter(BaseFitter):
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper
         """
 
-        ci = 1 - self.alpha
+        ci = (1 - self.alpha) * 100
+        z = inv_normal_cdf(1 - self.alpha / 2)
         with np.errstate(invalid="ignore", divide="ignore"):
             df = pd.DataFrame(index=self.params_.index)
             df["coef"] = self.params_
             df["exp(coef)"] = np.exp(self.params_)
             df["se(coef)"] = self.standard_errors_
+            df["coef lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
+            df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
+            df["exp(coef) lower %g%%" % ci] = np.exp(self.params_) * np.exp(-z * self.standard_errors_)
+            df["exp(coef) upper %g%%" % ci] = np.exp(self.params_) * np.exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
-            df["lower %g" % ci] = self.confidence_intervals_["lower-bound"]
-            df["upper %g" % ci] = self.confidence_intervals_["upper-bound"]
             return df
 
     def print_summary(self, decimals=2, **kwargs):
@@ -1685,10 +1691,28 @@ class ParametricRegressionFitter(BaseFitter):
         print("---")
 
         df = self.summary
+
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
+                formatters={"exp(coef)": format_exp_floats(decimals)},
+                columns=[
+                    "coef",
+                    "exp(coef)",
+                    "se(coef)",
+                    "coef lower 95%",
+                    "coef upper 95%",
+                    "exp(coef) lower 95%",
+                    "exp(coef) upper 95%",
+                ],
+            )
+        )
+        print()
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={"p": format_p_value(decimals)},
+                columns=["z", "p", "-log2(p)"],
             )
         )
 
@@ -1828,10 +1852,12 @@ class ParametricRegressionFitter(BaseFitter):
 
     @property
     def median_survival_time_(self):
+        # TODO
         return self.predict_median(self._norm_mean.to_frame().T).squeeze()
 
     @property
     def mean_survival_time_(self):
+        # TODO
         return self.predict_expectation(self._norm_mean.to_frame().T).squeeze()
 
     def plot(self, columns=None, parameter=None, **errorbar_kwargs):
@@ -2150,7 +2176,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         entry_col=None,
     ):
         """
-        Fit the accelerated failure time model to a left-censored dataset.
+        Fit the accelerated failure time model to a interval-censored dataset.
 
         Parameters
         ----------
@@ -2742,6 +2768,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         return qth_survival_times(p, self.predict_survival_function(df, ancillary_df=ancillary_df))
 
     def predict_cumulative_hazard(self, df, ancillary_df=None, times=None):
+        """
+        TODO
+        """
         df = df.copy()
         times = coalesce(times, self.timeline, np.unique(self.durations))
         n = df.shape[0]

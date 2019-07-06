@@ -91,7 +91,8 @@ def qq_plot(model, **plot_kwargs):
 
     Returns
     --------
-    ax: axis object
+    ax:
+        The axes which was used.
 
     Examples
     ---------
@@ -217,7 +218,8 @@ def add_at_risk_counts(*fitters, **kwargs):
 
     Returns
     --------
-      ax: The axes which was used.
+      ax:
+        The axes which was used.
 
     Examples
     --------
@@ -344,7 +346,7 @@ def plot_lifetimes(
 
     Returns
     -------
-    ax
+    ax:
 
     Examples
     ---------

@@ -195,7 +195,7 @@ def group_survival_table_from_events(
 ):  # pylint: disable=too-many-locals
     """
     Joins multiple event series together into DataFrames. A generalization of
-    `survival_table_from_events` to data with groups. Previously called `group_event_series` pre 0.2.3.
+    `survival_table_from_events` to data with groups.
 
     Parameters
     ----------
