@@ -16,7 +16,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
 
     The cumulative hazard rate is
 
-    .. math:: H(t; x , y) = \log\left(1 + \left(\frac{t}{\alpha(x)}\right)^ \beta(y)\right)
+    .. math:: H(t; x , y) = \log\left(1 + \left(\frac{t}{\alpha(x)}\right)^{\beta(y)}\right)
 
     After calling the ``.fit`` method, you have access to properties like:
     ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.

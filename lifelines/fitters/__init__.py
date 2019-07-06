@@ -81,6 +81,12 @@ class BaseFitter(object):
 
     @CensoringType.right_censoring
     def fit_right_censoring(self, *args, **kwargs):
+        """ Alias for ``fit``
+
+        See Also
+        ---------
+        ``fit``
+        """
         return self.fit(*args, **kwargs)
 
 
@@ -144,7 +150,11 @@ class UnivariateFitter(BaseFitter):
 
         Parameters
         ----------
-        other: an {1} fitted instance.
+        other: same object as self
+
+        Returns
+        --------
+        DataFrame
         """
         self_estimate = getattr(self, self._estimate_name)
         other_estimate = getattr(other, other._estimate_name)
@@ -163,7 +173,11 @@ class UnivariateFitter(BaseFitter):
 
         Parameters
         ----------
-        other: an {1} fitted instance.
+        other: same object as self
+
+        Returns
+        --------
+        DataFrame
 
         """
         self_estimate = getattr(self, self._estimate_name)
@@ -1206,6 +1220,16 @@ class ParametricRegressionFitter(BaseFitter):
         return ll
 
     @CensoringType.right_censoring
+    def fit_left_censoring():
+        # TODO
+        pass
+
+    @CensoringType.interval_censoring
+    def fit_interval_censoring():
+        # TODO
+        pass
+
+    @CensoringType.right_censoring
     def fit(
         self,
         df,
@@ -1263,7 +1287,6 @@ class ParametricRegressionFitter(BaseFitter):
 
         Returns
         -------
-        self:
             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
@@ -2032,8 +2055,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Returns
         -------
-        self:
-            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
         Examples
@@ -2176,7 +2198,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Returns
         -------
-        self:
             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
@@ -2330,7 +2351,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Returns
         -------
-        self:
             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
