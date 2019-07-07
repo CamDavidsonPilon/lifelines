@@ -42,6 +42,7 @@ setup(
         "matplotlib>=3.0",
         "bottleneck>=1.0",
         "autograd>=1.2",
+        "autograd-gamma>=0.0",
     ],
     package_data={"lifelines": ["../README.md", "../README.txt", "../LICENSE", "../MANIFEST.in", "datasets/*"]},
 )

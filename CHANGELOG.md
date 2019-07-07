@@ -19,7 +19,7 @@
 
 ##### Bug fixes
  - for parametric univariate models, the `conditional_time_to_event_` is now exact instead of an approximation.
-
+ - fixed a name error bug in `CoxTimeVaryingFitter.plot`
 
 #### 0.21.5 - 2019-06-22
 

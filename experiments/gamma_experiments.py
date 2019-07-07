@@ -30,7 +30,7 @@ class LogGammaFitter(ParametericUnivariateFitter):
     _fitted_parameter_names = ["lambda_", "delta_", "kappa_"]
 
     _bounds = [(0.0, None), (0.0, None), (0.0, None)]
-    _initial_values = np.array([10.0, 10.0, 10.0])
+    _initial_values = np.array([1.0, 1.0, 1.0])
 
     def _cumulative_hazard(self, params, times):
         lambda_, delta_, kappa_ = params
