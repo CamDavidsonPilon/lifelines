@@ -4,3 +4,4 @@ pandas>=0.23.0
 matplotlib>=3.0
 bottleneck>=1.0
 autograd>=1.2
+autograd-gamma>=0.0
