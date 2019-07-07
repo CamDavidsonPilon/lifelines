@@ -338,7 +338,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         class_name = self._class_name
 
         cumulative_hazard = self._cumulative_hazard(values, durations)
-        if not np.all(cumulative_hazard > 0):
+        if not np.all(cumulative_hazard >= 0):
             warnings.warn(
                 dedent(
                     """\
