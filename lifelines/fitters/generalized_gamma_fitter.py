@@ -12,13 +12,22 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
     This class implements a Generalized Gamma model for univariate data. The model has parameterized
     form:
 
-    The cumulative hazard rate is
+    The survival function is:
 
-    .. math:: H(t) = \left(\frac{t}{\lambda}\right)^\rho,
+    .. math:: S(t) = 1-\text{RLG}(\alpha, \left(\frac{t}{\lambda}\right)^{\rho \alpha})
 
-    and the hazard rate is:
+    Where RLG is the regularized lower incomplete gamma function. The cumulative hazard rate is
 
-    .. math::  h(t) = \frac{\rho}{\lambda}\left(\frac{t}{\lambda}\right)^{\rho-1}
+    .. math:: H(t) = -\log(1-\text{RLG}(\alpha, \left(\frac{t}{\lambda}\right)^{\rho \alpha}))
+
+    This model has the Exponential, Weibull, Gamma and LogNormal as sub-models, and thus can be used as a way to test which
+    model to use.
+
+    1. When :math:`\alpha \approx 1` and :math:`\rho \approx 1`, then the data is likely Exponential.
+    2. When :math:`\alpha \approx 1` then the data is likely Weibull.
+    3. When :math:`\alpha \approx \frac{1}{\rho}` then the data is likely Gamma.
+    4. When :math:`\alpha >> 1, \lambda \approx 0, \rho \approx 0` then the data is likely LogNormal.
+
 
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``, ``alpha_``, ``lambda_`` and ``rho_``.
     A summary of the fit is available with the method ``print_summary()``.
@@ -73,11 +82,10 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     _fitted_parameter_names = ["alpha_", "lambda_", "rho_"]
     _bounds = [(0.0, None), (0.0, None), (0.0, None)]
-    _initial_point = np.array([1.0, 1.0, 1.0])
 
     def _survival_function(self, params, times):
         alpha_, lambda_, rho_ = params
-        ug = gammaincc(alpha_ / rho_, (times / lambda_) ** rho_)
+        ug = gammaincc(alpha_, (times / lambda_) ** (alpha_ * rho_))
         ug = np.clip(ug, 1e-17, 1 - 1e-17)
         return ug
 
@@ -90,4 +98,4 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
         return np.log1p(-sf)
 
     def percentile(self, p):
-        return self.lambda_ * gammainccinv(self.alpha_ / self.rho_, p) ** (1 / self.rho_)
+        return self.lambda_ * gammainccinv(self.alpha_, p) ** (1 / self.rho_ / self.alpha_)
