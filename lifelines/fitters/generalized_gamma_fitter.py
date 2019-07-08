@@ -2,11 +2,10 @@
 import autograd.numpy as np
 from scipy.special import gammainccinv
 from lifelines.fitters import KnownModelParametericUnivariateFitter
-from lifelines.utils.gamma import gammaincc, gammainc, gammaln
+from lifelines.utils.gamma import gammaincc, gammainc, gamma, gammaln
 
 
 class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
-
     r"""
 
     This class implements a Generalized Gamma model for univariate data. The model has parameterized
@@ -14,19 +13,19 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     The survival function is:
 
-    .. math:: S(t) = 1-\text{RLG}(\alpha, \left(\frac{t}{\lambda}\right)^{\rho \alpha})
+    .. math:: S(t) = 1-\text{RLG}(\frac{\alpha}{\rho}, \left(\frac{t}{\lambda}\right)^{\rho})
 
     Where RLG is the regularized lower incomplete gamma function. The cumulative hazard rate is
 
-    .. math:: H(t) = -\log(1-\text{RLG}(\alpha, \left(\frac{t}{\lambda}\right)^{\rho \alpha}))
+    .. math:: H(t) = -\log(1-\text{RLG}(\frac{\alpha}{\rho}, \left(\frac{t}{\lambda}\right)^{\rho}))
 
     This model has the Exponential, Weibull, Gamma and LogNormal as sub-models, and thus can be used as a way to test which
     model to use.
 
     1. When :math:`\alpha \approx 1` and :math:`\rho \approx 1`, then the data is likely Exponential.
-    2. When :math:`\alpha \approx 1` then the data is likely Weibull.
-    3. When :math:`\alpha \approx \frac{1}{\rho}` then the data is likely Gamma.
-    4. When :math:`\alpha >> 1, \lambda \approx 0, \rho \approx 0` then the data is likely LogNormal.
+    2. When :math:`\alpha \approx \rho` then the data is likely Weibull.
+    3. When :math:`\rho \approx 1` then the data is likely Gamma.
+    4. When :math:`\alpha >> 0, \lambda \approx 0, \rho > 0` then the data is likely LogNormal.
 
 
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``, ``alpha_``, ``lambda_`` and ``rho_``.
@@ -85,8 +84,8 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     def _survival_function(self, params, times):
         alpha_, lambda_, rho_ = params
-        ug = gammaincc(alpha_, (times / lambda_) ** (alpha_ * rho_))
-        ug = np.clip(ug, 1e-17, 1 - 1e-17)
+        ug = gammaincc(alpha_ / rho_, (times / lambda_) ** rho_)
+        ug = np.clip(ug, 1e-20, 1 - 1e-20)
         return ug
 
     def _cumulative_hazard(self, params, times):
@@ -94,8 +93,25 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
         return -np.log(sf)
 
     def _log_1m_sf(self, params, times):
-        sf = self._survival_function(params, times)
-        return np.log1p(-sf)
+        alpha_, lambda_, rho_ = params
+        lg = gammainc(alpha_ / rho_, (times / lambda_) ** rho_)
+        lg = np.clip(lg, 1e-20, 1 - 1e-20)
+        return np.log(lg)
+
+    def _log_hazard(self, params, times):
+        log = np.log
+        alpha_, lambda_, rho_ = params
+        ug = gammaincc(alpha_ / rho_, (times / lambda_) ** rho_)
+        ug = np.clip(ug, 1e-20, 1 - 1e-20)
+        return (
+            log(rho_)
+            - (times / lambda_) ** rho_
+            + alpha_ * log(times)
+            - alpha_ * log(lambda_)
+            - log(times)
+            - gammaln(alpha_ / rho_)
+            - log(ug)
+        )
 
     def percentile(self, p):
-        return self.lambda_ * gammainccinv(self.alpha_, p) ** (1 / self.rho_ / self.alpha_)
+        return self.lambda_ * gammainccinv(self.alpha_ / self.rho_, p) ** (1 / self.rho_)
