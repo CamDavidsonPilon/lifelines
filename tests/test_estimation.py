@@ -247,7 +247,7 @@ class TestParametricUnivariateFitters:
         T = np.minimum(T1, T2)
 
         for fitter in known_parametric_univariate_fitters:
-            fitter().fit(T, E)
+            fitter().fit(T, E).print_summary(5)
 
     def test_models_can_handle_really_small_duration_values_for_left_censorship(
         self, known_parametric_univariate_fitters
@@ -322,6 +322,7 @@ class TestUnivariateFitters:
             LogNormalFitter,
             LogLogisticFitter,
             PiecewiseExponentialFitterTesting,
+            GeneralizedGammaFitter,
         ]
 
     def test_allow_dataframes(self, univariate_fitters):
