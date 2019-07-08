@@ -523,17 +523,14 @@ Similarly, there are other parametric models in *lifelines*. Generally, which pa
 
 .. code:: python
 
-    from lifelines import WeibullFitter
-    from lifelines import ExponentialFitter
-    from lifelines import LogNormalFitter
-    from lifelines import LogLogisticFitter
-    from lifelines import NelsonAalenFitter
-    from lifelines import PiecewiseExponentialFitter
+    from lifelines import (WeibullFitter, ExponentialFitter,
+    LogNormalFitter, LogLogisticFitter, NelsonAalenFitter,
+    PiecewiseExponentialFitter, GeneralizedGammaFitter)
 
     from lifelines.datasets import load_waltons
     data = load_waltons()
 
-    fig, axes = plt.subplots(2, 3, figsize=(9, 5))
+    fig, axes = plt.subplots(3, 3, figsize=(10, 7.5))
 
     T = data['T']
     E = data['E']
@@ -544,6 +541,7 @@ Similarly, there are other parametric models in *lifelines*. Generally, which pa
     naf = NelsonAalenFitter().fit(T, E, label='NelsonAalenFitter')
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
     pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
+    gg = GeneralizedGammaFitter().fit(T, E, label='GeneralizedGammaFitter')
 
     wbf.plot_cumulative_hazard(ax=axes[0][0])
     exf.plot_cumulative_hazard(ax=axes[0][1])
@@ -551,6 +549,8 @@ Similarly, there are other parametric models in *lifelines*. Generally, which pa
     naf.plot_cumulative_hazard(ax=axes[1][0])
     llf.plot_cumulative_hazard(ax=axes[1][1])
     pwf.plot_cumulative_hazard(ax=axes[1][2])
+    gg.plot_cumulative_hazard(ax=axes[2][0])
+
 
 .. image:: images/waltons_cumulative_hazard.png
 
@@ -562,7 +562,7 @@ Parametric models can also be used to create and plot the survival function, too
 
     from lifelines import KaplanMeierFitter
 
-    fig, axes = plt.subplots(2, 3, figsize=(9, 5))
+    fig, axes = plt.subplots(3, 3, figsize=(10, 7.5))
 
     T = data['T']
     E = data['E']
@@ -573,6 +573,7 @@ Parametric models can also be used to create and plot the survival function, too
     lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
     pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
+    gg = GeneralizedGammaFitter().fit(T, E, label='GeneralizedGammaFitter')
 
     wbf.plot_survival_function(ax=axes[0][0])
     exf.plot_survival_function(ax=axes[0][1])
@@ -580,6 +581,7 @@ Parametric models can also be used to create and plot the survival function, too
     kmf.plot_survival_function(ax=axes[1][0])
     llf.plot_survival_function(ax=axes[1][1])
     pwf.plot_survival_function(ax=axes[1][2])
+    gg.plot_survival_function(ax=axes[2][0])
 
 .. image:: images/waltons_survival_function.png
 

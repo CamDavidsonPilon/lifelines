@@ -1152,7 +1152,7 @@ class ParametricRegressionFitter(BaseFitter):
                 warnings.warn("""There exist %d rows where entry > duration.""")
 
     def _log_hazard(self, params, T, *Xs):
-        # can be overwritten to improve convergence, see WeibullAFTFitter
+        # can be overwritten to improve convergence, see example in WeibullAFTFitter
         hz = self._hazard(params, T, *Xs)
         hz = anp.clip(hz, 1e-20, np.inf)
         return anp.log(hz)
@@ -1245,7 +1245,7 @@ class ParametricRegressionFitter(BaseFitter):
         entry_col=None,
     ):
         """
-        Fit the accelerated failure time model to a right-censored dataset.
+        Fit the regression model to a right-censored dataset.
 
         Parameters
         ----------
@@ -1737,12 +1737,8 @@ class ParametricRegressionFitter(BaseFitter):
         Parameters
         ----------
 
-        X: numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         times: iterable, optional
@@ -1789,7 +1785,27 @@ class ParametricRegressionFitter(BaseFitter):
         return qth_survival_times(p, self.predict_survival_function(df)[subjects]).T
 
     def predict_cumulative_hazard(self, df, times=None):
+        """
+        Predict the cumulative hazard for individuals, given their covariates.
 
+        Parameters
+        ----------
+
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        times: iterable, optional
+            an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations in the training dataset (observed and unobserved).
+
+
+        Returns
+        -------
+         DataFrame
+            the cumulative hazards of individuals over the timeline
+
+        """
         times = coalesce(times, self.timeline, np.unique(self.durations))
         n = df.shape[0]
         Xs = self._create_Xs_dict(df)
@@ -1853,12 +1869,16 @@ class ParametricRegressionFitter(BaseFitter):
 
     @property
     def median_survival_time_(self):
-        # TODO
+        """
+        The median survival time of the average subject in the training dataset.
+        """
         return self.predict_median(self._norm_mean.to_frame().T).squeeze()
 
     @property
     def mean_survival_time_(self):
-        # TODO
+        """
+        The mean survival time of the average subject in the training dataset.
+        """
         return self.predict_expectation(self._norm_mean.to_frame().T).squeeze()
 
     def plot(self, columns=None, parameter=None, **errorbar_kwargs):
@@ -2770,7 +2790,26 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     def predict_cumulative_hazard(self, df, ancillary_df=None, times=None):
         """
-        TODO
+        Predict the median lifetimes for the individuals. If the survival curve of an
+        individual does not cross 0.5, then the result is infinity.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+
+        Returns
+        -------
+        DataFrame
+            the median lifetimes for the individuals. If the survival curve of an
+            individual does not cross 0.5, then the result is infinity.
+
+
+        See Also
+        --------
+        predict_percentile, predict_expectation, predict_survival_function
         """
         df = df.copy()
         times = coalesce(times, self.timeline, np.unique(self.durations))

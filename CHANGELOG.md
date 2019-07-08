@@ -2,6 +2,8 @@
 
 ### 0.22.1
 
+##### New features
+ - New univariate model, `GeneralizedGammaFitter`. This model contains many submodels, so it is a good model to check fits.
 
 ##### API changes
  - In AFT models, the column names in `confidence_intervals_` has changed to include the alpha value.

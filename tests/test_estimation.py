@@ -912,29 +912,30 @@ class TestWeibullFitter:
 
 class TestGeneralizedGammaFitter:
     def test_exponential_data_inference(self):
-        T = np.random.exponential(5, size=5000)
+        T = np.random.exponential(5, size=10000)
         gg = GeneralizedGammaFitter().fit(T)
         assert gg.summary.loc["alpha_"]["lower 0.95"] < 1 < gg.summary.loc["alpha_"]["upper 0.95"]
         assert gg.summary.loc["rho_"]["lower 0.95"] < 1 < gg.summary.loc["rho_"]["upper 0.95"]
 
     def test_weibull_data_inference(self):
-        T = 5 * np.random.exponential(1, size=10000) ** 0.5
+        T = 5 * np.random.exponential(1, size=40000) ** 0.5
         gg = GeneralizedGammaFitter().fit(T)
-        assert gg.summary.loc["alpha_"]["lower 0.95"] < 1 < gg.summary.loc["alpha_"]["upper 0.95"]
+        gg.print_summary()
+        std = np.sqrt(gg.summary.loc["rho_", "se(coef)"] ** 2 + gg.summary.loc["rho_", "se(coef)"] ** 2)
+        assert abs((gg.summary.loc["rho_", "coef"] - gg.summary.loc["alpha_", "coef"])) < 1.96 * std
 
     def test_gamma_data_inference(self):
-        shape = 2
-        T = np.random.gamma(shape=shape, scale=2, size=10000)
+        T = np.random.gamma(shape=2, scale=2, size=60000)
         gg = GeneralizedGammaFitter().fit(T)
-        assert gg.summary.loc["rho_"]["lower 0.95"] < 1 / shape < gg.summary.loc["rho_"]["upper 0.95"]
-        assert gg.summary.loc["alpha_"]["lower 0.95"] < shape < gg.summary.loc["alpha_"]["upper 0.95"]
+        gg.print_summary()
+        assert gg.summary.loc["rho_"]["lower 0.95"] < 1 < gg.summary.loc["rho_"]["upper 0.95"]
 
     def test_lognormal_data_inference(self):
-        T = np.exp(0.5 * np.random.randn(10000) + 1)
+        T = np.exp(0.5 * np.random.randn(20000) + 1)
         gg = GeneralizedGammaFitter().fit(T)
-        assert gg.summary.loc["rho_"]["coef"] < 0.05
+        gg.print_summary(4)
         assert gg.summary.loc["lambda_"]["coef"] < 0.05
-        assert gg.summary.loc["alpha_"]["coef"] > 10.0
+        assert gg.summary.loc["alpha_"]["coef"] > 4
 
 
 class TestExponentialFitter:
