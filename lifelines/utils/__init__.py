@@ -1238,7 +1238,11 @@ def add_covariate_to_timeline(
         final_state = bool(df[event_col].iloc[-1])
         final_stop_time = df[stop_col].iloc[-1]
         df = df.drop([id_col, event_col, stop_col], axis=1).set_index(start_col)
-        cv = cv.drop([id_col], axis=1).set_index(start_col).loc[:final_stop_time]
+
+        # we subtract a small time because of 1) pandas slicing is _inclusive_, and 2) the degeneracy
+        # of the final row have instant time. See https://github.com/CamDavidsonPilon/lifelines/issues/768
+        EPSILON = 1e-8
+        cv = cv.drop([id_col], axis=1).set_index(start_col).loc[: final_stop_time - EPSILON]
 
         if cumulative_sum:
             cv = cv.cumsum()
@@ -1277,9 +1281,9 @@ def add_covariate_to_timeline(
     cv[duration_col] += delay
     cv = cv.dropna()
     cv = cv.sort_values([id_col, duration_col])
-    cvs = cv.pipe(remove_redundant_rows).pipe(transform_cv_to_long_format).groupby(id_col)
+    cvs = cv.pipe(remove_redundant_rows).pipe(transform_cv_to_long_format).groupby(id_col, sort=True)
 
-    long_form_df = long_form_df.groupby(id_col, group_keys=False).apply(expand, cvs=cvs)
+    long_form_df = long_form_df.groupby(id_col, group_keys=False, sort=True).apply(expand, cvs=cvs)
     return long_form_df.reset_index(drop=True)
 
 
@@ -1389,7 +1393,7 @@ class StepSizer:
 
 
 def _to_array(x):
-    if not isinstance(x, collections.Iterable):
+    if not isinstance(x, collections.abc.Iterable):
         return np.array([x])
     return np.asarray(x)
 
