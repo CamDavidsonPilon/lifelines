@@ -3947,6 +3947,22 @@ class TestCoxTimeVaryingFitter:
         with pytest.warns(ConvergenceWarning, match="complete separation") as w:
             ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
+    def test_warning_is_raised_if_df_has_start_eq_stop_at_event_time(self, ctv):
+        df = pd.DataFrame.from_records(
+            [
+                {"id": 1, "start": 0, "stop": 5, "event": 0},
+                {"id": 1, "start": 5, "stop": 5, "event": 1},
+                {"id": 2, "start": 0, "stop": 2, "event": 0},
+                {"id": 2, "start": 2, "stop": 5, "event": 1},
+                {"id": 3, "start": 0, "stop": 5, "event": 0},
+                {"id": 3, "start": 6, "stop": 6, "event": 1},
+            ]
+        )
+
+        with pytest.warns(ConvergenceWarning, match="with start and stop equal and a death event") as w:
+            with pytest.raises(ZeroDivisionError):
+                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
     def test_summary_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
         library(survival)

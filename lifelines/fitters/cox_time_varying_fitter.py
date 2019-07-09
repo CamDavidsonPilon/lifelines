@@ -25,7 +25,8 @@ from lifelines.utils import (
     check_low_var,
     check_complete_separation_low_variance,
     check_for_immediate_deaths,
-    check_for_instantaneous_events,
+    check_for_instantaneous_events_at_time_zero,
+    check_for_instantaneous_events_at_death_time,
     pass_for_numeric_dtypes_or_raise_array,
     ConvergenceError,
     ConvergenceWarning,
@@ -236,7 +237,8 @@ class CoxTimeVaryingFitter(BaseFitter):
         check_complete_separation_low_variance(df, events, self.event_col)
         check_for_numeric_dtypes_or_raise(df)
         check_for_immediate_deaths(events, start, stop)
-        check_for_instantaneous_events(start, stop)
+        check_for_instantaneous_events_at_time_zero(start, stop)
+        check_for_instantaneous_events_at_death_time(events, start, stop)
 
     def _partition_by_strata(self, X, events, start, stop, weights):
         for stratum, stratified_X in X.groupby(self.strata):
@@ -511,7 +513,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             # Calculate the sums of Tie set
             deaths = events_at_t & (stops_events_at_t == t)
 
-            tied_death_counts = array_sum_to_scalar(deaths.astype(int))  # should always at least 1
+            tied_death_counts = array_sum_to_scalar(deaths.astype(int))  # should always at least 1. Why? TODO
 
             xi_deaths = X_at_t[deaths]
 

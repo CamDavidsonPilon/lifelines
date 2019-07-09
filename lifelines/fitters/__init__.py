@@ -51,6 +51,7 @@ from lifelines.utils import (
     CensoringType,
     DataframeSliceDict,
     _get_index,
+    survival_table_from_events,
 )
 
 __all__ = []
@@ -140,9 +141,7 @@ class UnivariateFitter(BaseFitter):
         ax:
             a pyplot axis object
         """
-        return _plot_estimate(
-            self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
-        )
+        return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
     def subtract(self, other):
         """
@@ -891,6 +890,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.entry = np.asarray(entry) if entry is not None else np.zeros(n)
         self.weights = np.asarray(weights) if weights is not None else np.ones(n)
 
+        if CensoringType.is_right_censoring(self):
+            self.event_table = survival_table_from_events(
+                coalesce(*Ts), self.event_observed, self.entry, weights=self.weights
+            )
+
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline).astype(float))
         else:
@@ -1058,9 +1062,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         Produce a pretty-plot of the estimate.
         """
         set_kwargs_drawstyle(kwargs, "default")
-        return _plot_estimate(
-            self, estimate=getattr(self, self._estimate_name), confidence_intervals=self.confidence_interval_, **kwargs
-        )
+        return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
     def plot_cumulative_hazard(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
@@ -1068,27 +1070,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def plot_survival_function(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
-        return _plot_estimate(
-            self,
-            estimate=getattr(self, "survival_function_"),
-            confidence_intervals=self.confidence_interval_survival_function_,
-            **kwargs
-        )
+        return _plot_estimate(self, estimate="survival_function_", **kwargs)
 
     def plot_cumulative_density(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
-        return _plot_estimate(
-            self,
-            estimate=getattr(self, "cumulative_density_"),
-            confidence_intervals=self.confidence_interval_cumulative_density_,
-            **kwargs
-        )
+        return _plot_estimate(self, estimate="cumulative_density_", **kwargs)
 
     def plot_hazard(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
-        return _plot_estimate(
-            self, estimate=getattr(self, "hazard_"), confidence_intervals=self.confidence_interval_hazard_, **kwargs
-        )
+        return _plot_estimate(self, estimate="hazard_", **kwargs)
 
     def _conditional_time_to_event_(self):
         """

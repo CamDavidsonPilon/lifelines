@@ -324,12 +324,7 @@ class KaplanMeierFitter(UnivariateFitter):
 
     def plot_survival_function(self, **kwargs):
         """Alias of ``plot``"""
-        return _plot_estimate(
-            self,
-            estimate=self.survival_function_,
-            confidence_intervals=self.confidence_interval_survival_function_,
-            **kwargs
-        )
+        return _plot_estimate(self, estimate="survival_function_", **kwargs)
 
     def plot_cumulative_density(self, **kwargs):
         """

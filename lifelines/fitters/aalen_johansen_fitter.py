@@ -154,6 +154,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
         self._label = label
         self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])
+        self.confidence_interval_cumulative_density_ = self.cumulative_density_
 
         # Technically, cumulative incidence, but consistent with KaplanMeierFitter
         self.event_table = aj[

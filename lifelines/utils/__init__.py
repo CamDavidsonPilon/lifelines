@@ -4,6 +4,7 @@ import warnings
 import collections
 from datetime import datetime
 from functools import wraps
+from textwrap import dedent
 
 
 import numpy as np
@@ -841,27 +842,60 @@ def check_for_immediate_deaths(events, start, stop):
     # Only used in CTV. This checks for deaths immediately, that is (0,0) lives.
     if ((start == stop) & (stop == 0) & events).any():
         raise ValueError(
-            """The dataset provided has subjects that die on the day of entry. (0, 0)
+            dedent(
+                """The dataset provided has subjects that die on the day of entry. (0, 0)
 is not allowed in CoxTimeVaryingFitter. If suffices to add a small non-zero value to their end - example Pandas code:
 
-> df.loc[ (df[start_col] == df[stop_col]) & (df[start_col] == 0) & df[event_col], stop_col] = 0.5
+>>> df.loc[ (df[start_col] == df[stop_col]) & (df[start_col] == 0) & df[event_col], stop_col] = 0.5
 
-Alternatively, add 1 to every subjects' final end period.
-"""
+Alternatively, add 1 to every subjects' final end period."""
+            )
         )
 
 
-def check_for_instantaneous_events(start, stop):
+def check_for_instantaneous_events_at_time_zero(start, stop):
     if ((start == stop) & (stop == 0)).any():
-        warning_text = """There exist rows in your dataframe with start and stop both at time 0:
+        warning_text = dedent(
+            """There exist rows in your DataFrame with start and stop both at time 0:
 
-        > df.loc[(df[start_col] == df[stop_col]) & (df[start_col] == 0)]
+        >>> df.loc[(df[start_col] == df[stop_col]) & (df[start_col] == 0)]
 
-        These can be safely dropped, which will improve performance.
+        These can be safely dropped, which should improve performance.
 
-        > df = df.loc[~((df[start_col] == df[stop_col]) & (df[start_col] == 0))]
-"""
+        >>> df = df.loc[~((df[start_col] == df[stop_col]) & (df[start_col] == 0))]"""
+        )
         warnings.warn(warning_text, RuntimeWarning)
+
+
+def check_for_instantaneous_events_at_death_time(events, start, stop):
+    """
+    avoid rows like
+        start=1, stop=5, event=False
+        start=5, stop=5, event=True
+    """
+    if ((start == stop) & (events)).any():
+
+        warning_text = (
+            dedent(
+                """There exist rows in your DataFrame with start and stop equal and a death event.
+
+            This will likely throw an
+        error during convergence. For example, investigate subjects with id's: %s.
+
+        You can fix this by collapsing this row into the subject's previous row. Example:
+
+        start=1, stop=5, event=False
+        start=5, stop=5, event=True
+
+        to
+
+        start=1, stop=5, event=True
+
+        """
+            )
+            % events.index[(start == stop) & (events)].tolist()[:5]
+        )
+        warnings.warn(warning_text, ConvergenceWarning)
 
 
 def check_for_overlapping_intervals(df):
@@ -872,7 +906,7 @@ def check_for_overlapping_intervals(df):
         raise ValueError(
             "The dataset provided contains overlapping intervals. Check the start and stop col by id carefully. Try using this code snippet\
 to help find:\
-df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic)"
+>>> df.groupby(level=1).apply(lambda g: g.index.get_level_values(0).is_non_overlapping_monotonic)"
         )
 
 
@@ -897,7 +931,7 @@ This may harm convergence. Try dropping this redundant column before fitting \
 if convergence fails.%s"
             % (prescript, cols, postscript)
         )
-        warnings.warn(warning_text, ConvergenceWarning)
+        warnings.warn(dedent(warning_text), ConvergenceWarning)
 
 
 def check_complete_separation_low_variance(df, events, event_col):
@@ -917,7 +951,7 @@ def check_complete_separation_low_variance(df, events, event_col):
 A very low variance means that the column {cols} completely determines whether a subject dies or not. See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression """.format(
             cols=problem_columns[0], event_col=event_col
         )
-        warnings.warn(warning_text, ConvergenceWarning)
+        warnings.warn(dedent(warning_text), ConvergenceWarning)
 
 
 def correlation(x, y):
@@ -944,7 +978,7 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
     See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression"
                     % (col)
                 )
-                warnings.warn(warning_text, ConvergenceWarning)
+                warnings.warn(dedent(warning_text), ConvergenceWarning)
 
 
 def check_complete_separation(df, events, durations, event_col):

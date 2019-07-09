@@ -410,11 +410,16 @@ def set_kwargs_label(kwargs, cls):
     kwargs["label"] = kwargs.get("label", cls._label)
 
 
-def create_dataframe_slicer(iloc, loc):
-    user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
-    user_submitted_slice = slice(None) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
+def create_dataframe_slicer(iloc, loc, timeline):
+    if (loc is not None) and (iloc is not None):
+        raise ValueError("Cannot set both loc and iloc in call to .plot().")
 
-    get_method = "loc" if loc is not None else "iloc"
+    user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
+    user_submitted_slice = (
+        slice(timeline.min(), timeline.max()) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
+    )
+
+    get_method = "iloc" if iloc is not None else "loc"
     return lambda df: getattr(df, get_method)[user_submitted_slice]
 
 
@@ -437,7 +442,7 @@ def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     set_kwargs_drawstyle(kwargs)
     kwargs["logx"] = True
 
-    dataframe_slicer = create_dataframe_slicer(iloc, loc)
+    dataframe_slicer = create_dataframe_slicer(iloc, loc, cls.timeline)
 
     # plot censors
     ax = kwargs["ax"]
@@ -460,8 +465,7 @@ def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
 
 def _plot_estimate(
     cls,
-    estimate=None,
-    confidence_intervals=None,
+    estimate=None,  # string like "survival_function_", "cumulative_density_", "hazard_", "cumulative_hazard_"
     loc=None,
     iloc=None,
     show_censors=False,
@@ -513,23 +517,22 @@ def _plot_estimate(
     ax:
         a pyplot axis object
     """
-    plot_estimate_config = PlotEstimateConfig(
-        cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, **kwargs
-    )
+    plot_estimate_config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, **kwargs)
 
-    dataframe_slicer = create_dataframe_slicer(iloc, loc)
+    dataframe_slicer = create_dataframe_slicer(iloc, loc, cls.timeline)
 
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(plot_estimate_config.censor_styles)
-        times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
-        v = cls.predict(times)
-        plot_estimate_config.ax.plot(times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
+        censored_times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(
+            float
+        )
+        v = plot_estimate_config.predict_at_times(censored_times).values
+        plot_estimate_config.ax.plot(censored_times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
 
     dataframe_slicer(plot_estimate_config.estimate_).rename(
         columns=lambda _: plot_estimate_config.kwargs.pop("label")
     ).plot(**plot_estimate_config.kwargs)
-
     # plot confidence intervals
     if ci_show:
         if ci_force_lines:
@@ -563,7 +566,7 @@ def _plot_estimate(
 
 
 class PlotEstimateConfig:
-    def __init__(self, cls, estimate, confidence_intervals, loc, iloc, show_censors, censor_styles, **kwargs):
+    def __init__(self, cls, estimate, loc, iloc, show_censors, censor_styles, **kwargs):
 
         self.censor_styles = coalesce(censor_styles, {})
 
@@ -580,8 +583,10 @@ class PlotEstimateConfig:
         self.colour = kwargs["c"]
         self.kwargs = kwargs
 
-        if (self.loc is not None) and (self.iloc is not None):
-            raise ValueError("Cannot set both loc and iloc in call to .plot().")
+        if isinstance(estimate, str):
+            self.estimate_ = getattr(cls, estimate)
+            self.confidence_interval_ = getattr(cls, "confidence_interval_" + estimate)
+            self.predict_at_times = getattr(cls, estimate + "at_times")
         else:
             self.estimate_ = estimate
-            self.confidence_interval_ = confidence_intervals
+            self.confidence_interval_ = kwargs.pop("confidence_intervals")
