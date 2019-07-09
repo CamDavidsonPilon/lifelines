@@ -4,11 +4,15 @@
 
 ##### New features
  - New univariate model, `GeneralizedGammaFitter`. This model contains many submodels, so it is a good model to check fits.
+ - added a warning when a time-varying dataset had instantaneous deaths.
 
 ##### API changes
  - In AFT models, the column names in `confidence_intervals_` has changed to include the alpha value.
  - In AFT models, some column names in `.summary` and `.print_summary` has changed to include the alpha value.
  - In AFT models, some column names in `.summary` and `.print_summary` includes confidence intervals for the exponential of the value.
+
+##### Bug fixes
+ - when using `censors_show` in plotting functions, the censor ticks are now reactive to the estimate being shown.
 
 
 #### 0.22.0
