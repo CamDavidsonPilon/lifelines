@@ -270,6 +270,25 @@ class TestPlotting:
         self.plt.show(block=block)
         return
 
+    def test_parametric_plotting_with_show_censors(self, block):
+        n = 200
+        T = 50 * np.random.exponential(1, size=(n, 1)) ** 2
+        E = np.random.rand(n) > 0.2
+
+        wf = WeibullFitter().fit(T, E, timeline=np.linspace(0, 5, 1000))
+        wf.plot_cumulative_density(show_censors=True)
+        self.plt.title("test_parametric_plotting_with_show_censors:cumulative_density")
+        self.plt.show(block=block)
+
+        wf.plot_survival_function(show_censors=True)
+        self.plt.title("test_parametric_plotting_with_show_censors:survival_function")
+        self.plt.show(block=block)
+
+        wf.plot_cumulative_hazard(show_censors=True)
+        self.plt.title("test_parametric_plotting_with_show_censors:cumulative_hazard")
+        self.plt.show(block=block)
+        return
+
     def test_label_can_be_changed_on_univariate_fitters(self, block):
         T = np.random.exponential(5, size=(2000, 1)) ** 2
         wf = WeibullFitter().fit(T, timeline=np.linspace(0, 5))

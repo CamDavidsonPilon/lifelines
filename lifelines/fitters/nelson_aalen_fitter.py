@@ -138,6 +138,7 @@ class NelsonAalenFitter(UnivariateFitter):
         self._label = label
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
+        self.confidence_interval_cumulative_hazard_ = self.confidence_interval_
         self._cumulative_sq = cumulative_sq_
 
         # estimation methods
@@ -158,7 +159,7 @@ class NelsonAalenFitter(UnivariateFitter):
         bandwidth = kwargs.pop("bandwidth")
         estimate = self.smoothed_hazard_(bandwidth)
         confidence_intervals = self.smoothed_hazard_confidence_intervals_(bandwidth, estimate.values[:, 0])
-        return _plot_estimate(self, estimate, confidence_intervals, **kwargs)
+        return _plot_estimate(self, estimate, confidence_intervals=confidence_intervals, **kwargs)
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         z = inv_normal_cdf(1 - alpha / 2)
