@@ -2,7 +2,7 @@
 import autograd.numpy as np
 from scipy.special import gammainccinv
 from lifelines.fitters import KnownModelParametericUnivariateFitter
-from lifelines.utils.gamma import gammaincc, gammainc, gamma, gammaln
+from lifelines.utils.gamma import gammaincc, gammainc, gamma, gammaln, gammainccln, gammaincln
 
 
 class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
@@ -81,29 +81,25 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     _fitted_parameter_names = ["alpha_", "lambda_", "rho_"]
     _bounds = [(0.0, None), (0.0, None), (0.0, None)]
-    _initial_values = np.array([1.0, 1.0, 1.0])
 
     def _survival_function(self, params, times):
         alpha_, lambda_, rho_ = params
         ug = gammaincc(alpha_ / rho_, (times / lambda_) ** rho_)
-        ug = np.clip(ug, 1e-20, 1 - 1e-20)
+        ug = np.clip(ug, 1e-40, 1 - 1e-40)
         return ug
 
     def _cumulative_hazard(self, params, times):
         sf = self._survival_function(params, times)
-        return -np.log(sf)
+        alpha_, lambda_, rho_ = params
+        return -gammainccln(alpha_ / rho_, (times / lambda_) ** rho_)
 
     def _log_1m_sf(self, params, times):
         alpha_, lambda_, rho_ = params
-        lg = gammainc(alpha_ / rho_, (times / lambda_) ** rho_)
-        lg = np.clip(lg, 1e-20, 1 - 1e-20)
-        return np.log(lg)
+        return gammaincln(alpha_ / rho_, (times / lambda_) ** rho_)
 
     def _log_hazard(self, params, times):
         log = np.log
         alpha_, lambda_, rho_ = params
-        ug = gammaincc(alpha_ / rho_, (times / lambda_) ** rho_)
-        ug = np.clip(ug, 1e-20, 1 - 1e-20)
         return (
             log(rho_)
             - (times / lambda_) ** rho_
@@ -111,7 +107,7 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
             - alpha_ * log(lambda_)
             - log(times)
             - gammaln(alpha_ / rho_)
-            - log(ug)
+            - gammainccln(alpha_ / rho_, (times / lambda_) ** rho_)
         )
 
     def percentile(self, p):

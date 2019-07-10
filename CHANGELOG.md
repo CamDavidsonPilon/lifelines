@@ -3,8 +3,9 @@
 ### 0.22.1
 
 ##### New features
- - New univariate model, `GeneralizedGammaFitter`. This model contains many submodels, so it is a good model to check fits.
+ - New univariate model, `GeneralizedGammaFitter`. This model contains many sub-models, so it is a good model to check fits.
  - added a warning when a time-varying dataset had instantaneous deaths.
+ - added a `initial_point` option in univariate parametric fitters.
 
 ##### API changes
  - In AFT models, the column names in `confidence_intervals_` has changed to include the alpha value.
