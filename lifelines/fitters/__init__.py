@@ -486,12 +486,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
 
         # pylint: disable=no-value-for-parameter
-        gradient_of_cum_hazard_at_mle = make_jvp_reversemode(transform)(
+        gradient_of_transform_at_mle = make_jvp_reversemode(transform)(
             self._fitted_parameters_, self.timeline.astype(float)
         )
 
         gradient_at_times = np.vstack(
-            [gradient_of_cum_hazard_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_), dtype=float)]
+            [gradient_of_transform_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_), dtype=float)]
         )
 
         std_cumulative_hazard = np.sqrt(
@@ -671,6 +671,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         left_censorship=False,
+        initial_point=None,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -724,6 +725,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             show_progress=show_progress,
             entry=entry,
             weights=weights,
+            initial_point=initial_point,
         )
 
     @CensoringType.left_censoring
@@ -738,6 +740,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         show_progress=False,
         entry=None,
         weights=None,
+        initial_point=None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the model to a left-censored dataset
@@ -764,6 +767,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             entered study when they were "born": time zero.
         weights: an array, or pd.Series, of length n
             integer weights per observation
+
         Returns
         -------
           self
@@ -784,6 +788,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             show_progress=show_progress,
             entry=entry,
             weights=weights,
+            initial_point=initial_point,
         )
 
     @CensoringType.interval_censoring
@@ -799,6 +804,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         show_progress=False,
         entry=None,
         weights=None,
+        initial_point=None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the model to an interval censored dataset.
@@ -861,6 +867,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             show_progress=show_progress,
             entry=entry,
             weights=weights,
+            initial_point=initial_point,
         )
 
     def _fit(
@@ -874,6 +881,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         show_progress=False,
         entry=None,
         weights=None,
+        initial_point=None,
     ):
 
         label = coalesce(label, self._class_name.replace("Fitter", "") + "_estimate")
@@ -903,6 +911,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self._label = label
         self._ci_labels = ci_labels
         self.alpha = coalesce(alpha, self.alpha)
+        self._initial_values = coalesce(initial_point, self._initial_values)
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
@@ -936,6 +945,20 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 """
             )
             warnings.warn(warning_text, StatisticalWarning)
+        finally:
+            if (self.variance_matrix_.diagonal() < 0).any():
+                warning_text = dedent(
+                    """\
+                    The diagonal of the variance_matrix_ has negative values. This could be a problem with the model's fit to the data.
+
+                    It's advisable to not trust the variances reported, and to be suspicious of the
+                    fitted parameters too. Perform plots of the cumulative hazard to help understand
+                    the latter's bias.
+
+                    To fix this, try specifying an `initial_point` kwarg in `fit`.
+                    """
+                )
+                warnings.warn(warning_text, StatisticalWarning)
 
         self._update_docstrings()
 

@@ -81,6 +81,7 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     _fitted_parameter_names = ["alpha_", "lambda_", "rho_"]
     _bounds = [(0.0, None), (0.0, None), (0.0, None)]
+    _initial_values = np.array([1.0, 1.0, 1.0])
 
     def _survival_function(self, params, times):
         alpha_, lambda_, rho_ = params
