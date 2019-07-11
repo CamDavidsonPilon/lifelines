@@ -396,6 +396,7 @@ class KaplanMeierFitter(UnivariateFitter):
 
     def _additive_var(self, population, deaths):
         np.seterr(divide="ignore")
+        population = population.astype("uint64")
         return (deaths / (population * (population - deaths))).replace([np.inf], 0)
 
     def plot_cumulative_hazard(self, **kwargs):

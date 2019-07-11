@@ -735,7 +735,6 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     if reverse:
         events = events.sort_index(ascending=False)
         at_risk = events["entrance"].sum() - events["removed"].cumsum().shift(1).fillna(0)
-        at_risk = at_risk.astype("uint64")  # to avoid overflow errors
 
         deaths = events["observed"]
 
@@ -751,7 +750,6 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         entrances = events["entrance"].copy()
         entrances.iloc[0] = 0
         population = events["at_risk"] - entrances
-        population = population.astype("uint64")  # to avoid overflow errors
 
         estimate_ = np.cumsum(_additive_f(population, deaths))
         var_ = np.cumsum(_additive_var(population, deaths))
