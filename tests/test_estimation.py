@@ -980,6 +980,14 @@ class TestKaplanMeierFitter:
             km = np.insert(km, 0, 1.0)
         return km.reshape(len(km), 1)
 
+    def test_kmf_overflow_error(self):
+        N = int(1e6)
+        T = np.random.exponential(size=N)
+        E = T < 0.001
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, E)
+        assert True
+
     def test_left_truncation_against_Cole_and_Hudgens(self):
         df = load_multicenter_aids_cohort_study()
         kmf = KaplanMeierFitter()
