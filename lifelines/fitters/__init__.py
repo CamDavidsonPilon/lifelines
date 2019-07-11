@@ -311,6 +311,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     _KNOWN_MODEL = False
     _MIN_PARAMETER_VALUE = 1e-9
+    _scipy_fit_method = "L-BFGS-B"
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
@@ -521,12 +522,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
                 self._initial_values,
                 jac=True,
-                method="SLSQP",
+                method=self._scipy_fit_method,
                 args=(Ts, E, entry, weights),
                 bounds=self._bounds,
                 options={"disp": show_progress},
             )
-            print(grad(negative_log_likelihood)(results.x, Ts, E, entry, weights))
 
             if results.success:
                 # pylint: disable=no-value-for-parameter
