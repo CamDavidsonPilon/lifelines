@@ -521,11 +521,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
                 self._initial_values,
                 jac=True,
-                method="L-BFGS-B",
+                method="SLSQP",
                 args=(Ts, E, entry, weights),
                 bounds=self._bounds,
                 options={"disp": show_progress},
             )
+            print(grad(negative_log_likelihood)(results.x, Ts, E, entry, weights))
 
             if results.success:
                 # pylint: disable=no-value-for-parameter

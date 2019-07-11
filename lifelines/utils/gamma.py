@@ -14,7 +14,8 @@ __all__ = [
 ]
 
 
-DELTA = 1e-6
+DELTA = 1e-10
+EPISILON = 1e-100
 
 gammainc = primitive(_scipy_gammainc)
 gammaincc = primitive(_scipy_gammaincc)
@@ -22,12 +23,12 @@ gammaincc = primitive(_scipy_gammaincc)
 
 @primitive
 def gammainccln(a, x):
-    return np.log(np.clip(gammaincc(a, x), 1e-50, 1 - 1e-50))
+    return np.log(np.clip(gammaincc(a, x), EPISILON, 1 - EPISILON))
 
 
 @primitive
 def gammaincln(a, x):
-    return np.log(np.clip(gammainc(a, x), 1e-50, 1 - 1e-50))
+    return np.log(np.clip(gammainc(a, x), EPISILON, 1 - EPISILON))
 
 
 def central_difference_of_(f):
