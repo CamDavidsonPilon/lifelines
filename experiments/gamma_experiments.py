@@ -10,31 +10,33 @@ from lifelines.datasets import load_waltons
 df = load_waltons()
 
 T = np.arange(1, 100)
+# using another minimization algo, my best values are:
+"""
 
+
+<lifelines.GeneralizedGammaFitter: fitted with 99 observations, 0 censored>
+number of subjects = 99
+  number of events = 99
+    log-likelihood = -471.299
+        hypothesis = mu_ != 10.6449, sigma_ != 5.09977, lambda_ != 21.497
+
+---
+         coef  se(coef)  lower 0.95  upper 0.95       p  -log2(p)
+mu_     4.021     0.063       3.897       4.145 <0.0005       inf
+sigma_  0.593     0.052       0.492       0.695 <0.0005       inf
+lambda_ 1.018     0.037       0.945       1.091 <0.0005       inf
+[[ 0.00400668 -0.00102151  0.0004146 ]
+ [-0.00102151  0.00266154 -0.00035838]
+ [ 0.0004146  -0.00035838  0.00138457]]
+
+
+
+
+
+"""
 gg = GeneralizedGammaFitter()
-gg.fit(T, initial_point=np.array([1.0, 1.0, 1.0]), show_progress=True)
+gg.fit(T, show_progress=True)
+# gg.fit(T, initial_point=np.array([0., 0.6, 1.]), show_progress=True)
 
 gg.print_summary(3)
 print(gg.variance_matrix_)
-
-"""
-class LogGammaFitter(ParametericUnivariateFitter):
-
-    _fitted_parameter_names = ["lambda_", "delta_", "kappa_"]
-
-    _bounds = [(0.0, None), (0.0, None), (0.0, None)]
-    _initial_values = np.array([1.0, 10.0, 1.0])
-
-    def _cumulative_hazard(self, params, times):
-        lambda_, delta_, kappa_ = params
-        z = np.exp((times - delta_) / lambda_)
-        lg = np.clip(gammaincc(kappa_, z), 1e-20, 1 - 1e-20)
-        v = -np.log(lg)
-        return v
-
-
-lg = LogGammaFitter()
-lg.fit(df["T"], df["E"])
-
-lg.print_summary(3)
-"""
