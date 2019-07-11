@@ -14,8 +14,9 @@ __all__ = [
 ]
 
 
-DELTA = 1e-10
-EPISILON = 1e-100
+DELTA = 1e-7
+LOG_EPISILON = 1e-35
+MACHINE_EPISLON_POWER = np.finfo(float).eps ** (1 / 2)
 
 gammainc = primitive(_scipy_gammainc)
 gammaincc = primitive(_scipy_gammaincc)
@@ -23,21 +24,30 @@ gammaincc = primitive(_scipy_gammaincc)
 
 @primitive
 def gammainccln(a, x):
-    return np.log(np.clip(gammaincc(a, x), EPISILON, 1 - EPISILON))
+    return np.log(np.clip(gammaincc(a, x), LOG_EPISILON, 1 - LOG_EPISILON))
 
 
 @primitive
 def gammaincln(a, x):
-    return np.log(np.clip(gammainc(a, x), EPISILON, 1 - EPISILON))
+    return np.log(np.clip(gammainc(a, x), LOG_EPISILON, 1 - LOG_EPISILON))
 
 
 def central_difference_of_(f):
     def _central_difference(ans, a, x):
+        # Why do we calculate a * MACHINE_EPSILON_POWER?
+        # consider if a is massive, like, 2**100. Then even for a simple
+        # function like the identity function, (2**100 + h) - 2**100 = 0  due
+        # to floating points. (the correct answer should be 1.0)
+
+        # another thing to consider (and later to add) is that x is machine representable, but x + h is
+        # rarely, and will be rounded to be machine representable. This (x + h) - x != h.
+
+        delta = DELTA  # np.where(a != 0, a * MACHINE_EPISLON_POWER, DELTA)
         return unbroadcast_f(
             a,
             lambda g: g
-            * (-f(a + 2 * DELTA, x) + 8 * f(a + DELTA, x) - 8 * f(a - DELTA, x) + f(a - 2 * DELTA, x))
-            / (12 * DELTA),
+            * (-f(a + 2 * delta, x) + 8 * f(a + delta, x) - 8 * f(a - delta, x) + f(a - 2 * delta, x))
+            / (12 * delta),
         )
 
     return _central_difference

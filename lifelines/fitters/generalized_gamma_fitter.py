@@ -82,6 +82,9 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
     _fitted_parameter_names = ["mu_", "sigma_", "lambda_"]
     _bounds = [(None, None), (0, None), (0, None)]
 
+    # the model wasn't behaving well with L-BFGS-B...
+    _scipy_fit_method = "SLSQP"
+
     def _survival_function(self, params, times):
         mu_, sigma_, lambda_ = params
         Z = (np.log(times) - mu_) / sigma_
