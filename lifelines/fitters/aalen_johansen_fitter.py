@@ -150,6 +150,7 @@ class AalenJohansenFitter(UnivariateFitter):
         # Setting attributes
         self._estimation_method = "cumulative_density_"
         self._estimate_name = "cumulative_density_"
+        self.timeline = km.timeline
         self._update_docstrings()
 
         self._label = label
