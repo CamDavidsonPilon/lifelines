@@ -38,6 +38,7 @@ from lifelines.utils import (
     format_exp_floats,
     coalesce,
     check_nans_or_infs,
+    check_entry_times,
     pass_for_numeric_dtypes_or_raise_array,
     check_for_numeric_dtypes_or_raise,
     check_complete_separation,
@@ -540,11 +541,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
                     dedent(
                         """\
                     Fitting did not converge. This is mostly a lifelines problem, but a few things you can check:
+
                     1. Are there any extreme values in the durations column?
                       - Try scaling your durations to a more reasonable values closer to 1 (multiplying or dividing by some 10^n).
                       - Try dropping them to see if the model converges.
-                    2. The parametric model chosen may just be a poor model of the data. Try another parametric model.
+                    2. %s may just be a poor model of the data. Try another parametric model.
                 """
+                        % self._class_name
                     )
                 )
 
@@ -562,9 +565,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
                     1. Are there any extreme values in the durations column?
                         - Try scaling your durations to a more reasonable value closer to 1 (multiplying or dividing by a large constant).
                         - Try dropping them to see if the model converges.
-                    2. The parametric model chosen may just be a poor model of the data. Try another parametric model.
+                    2. %s may just be a poor model of the data. Try another parametric model.
 
                     """
+                        % self._class_name
                     )
                 )
 
@@ -932,7 +936,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             warning_text = dedent(
                 """\
 
-                The Hessian was not invertible. This could be a model problem:
+                The Hessian for %s's fit was not invertible. This could be a modeling problem:
 
                 1. Are two parameters in the model collinear / exchangeable?
                 2. Is the cumulative hazard always non-negative and always non-decreasing?
@@ -944,13 +948,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
                 the latter's bias.
                 """
+                % self._class_name
             )
             warnings.warn(warning_text, StatisticalWarning)
         finally:
             if (self.variance_matrix_.diagonal() < 0).any():
                 warning_text = dedent(
                     """\
-                    The diagonal of the variance_matrix_ has negative values. This could be a problem with the model's fit to the data.
+                    The diagonal of the variance_matrix_ has negative values. This could be a problem with %s's fit to the data.
 
                     It's advisable to not trust the variances reported, and to be suspicious of the
                     fitted parameters too. Perform plots of the cumulative hazard to help understand
@@ -958,6 +963,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
                     To fix this, try specifying an `initial_point` kwarg in `fit`.
                     """
+                    % self._class_name
                 )
                 warnings.warn(warning_text, StatisticalWarning)
 
@@ -1161,9 +1167,7 @@ class ParametricRegressionFitter(BaseFitter):
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
         if self.entry_col:
-            count_invalid_rows = (entries > T).sum()
-            if count_invalid_rows:
-                warnings.warn("""There exist %d rows where entry > duration.""")
+            check_entry_times(T, entries)
 
     def _log_hazard(self, params, T, *Xs):
         # can be overwritten to improve convergence, see example in WeibullAFTFitter

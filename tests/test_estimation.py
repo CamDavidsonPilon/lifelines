@@ -912,30 +912,29 @@ class TestWeibullFitter:
 
 class TestGeneralizedGammaFitter:
     def test_exponential_data_inference(self):
-        T = np.random.exponential(5, size=10000)
+        T = np.random.exponential(2.0, size=10000)
         gg = GeneralizedGammaFitter().fit(T)
-        assert gg.summary.loc["alpha_"]["lower 0.95"] < 1 < gg.summary.loc["alpha_"]["upper 0.95"]
-        assert gg.summary.loc["rho_"]["lower 0.95"] < 1 < gg.summary.loc["rho_"]["upper 0.95"]
+        gg.print_summary()
+        assert gg.summary.loc["lambda_"]["lower 0.95"] < 1 < gg.summary.loc["lambda_"]["upper 0.95"]
+        assert gg.summary.loc["sigma_"]["lower 0.95"] < 1 < gg.summary.loc["sigma_"]["upper 0.95"]
 
     def test_weibull_data_inference(self):
-        T = 5 * np.random.exponential(1, size=40000) ** 0.5
+        T = 5 * np.random.exponential(1, size=10000) ** 0.5
         gg = GeneralizedGammaFitter().fit(T)
         gg.print_summary()
-        std = np.sqrt(gg.summary.loc["rho_", "se(coef)"] ** 2 + gg.summary.loc["rho_", "se(coef)"] ** 2)
-        assert abs((gg.summary.loc["rho_", "coef"] - gg.summary.loc["alpha_", "coef"])) < 1.96 * std
+        assert gg.summary.loc["lambda_"]["lower 0.95"] < 1 < gg.summary.loc["lambda_"]["upper 0.95"]
 
     def test_gamma_data_inference(self):
-        T = np.random.gamma(shape=2, scale=2, size=60000)
+        T = np.random.gamma(shape=4, scale=0.5, size=15000)
         gg = GeneralizedGammaFitter().fit(T)
         gg.print_summary()
-        assert gg.summary.loc["rho_"]["lower 0.95"] < 1 < gg.summary.loc["rho_"]["upper 0.95"]
+        assert abs(gg.summary.loc["lambda_", "coef"] - np.exp(gg.summary.loc["ln_sigma_", "coef"])) < 0.15
 
     def test_lognormal_data_inference(self):
-        T = np.exp(0.5 * np.random.randn(20000) + 1)
+        T = np.exp(np.random.randn(20000))
         gg = GeneralizedGammaFitter().fit(T)
         gg.print_summary(4)
         assert gg.summary.loc["lambda_"]["coef"] < 0.05
-        assert gg.summary.loc["alpha_"]["coef"] > 4
 
 
 class TestExponentialFitter:
@@ -1624,7 +1623,7 @@ class TestAFTFitters:
     def test_warning_is_present_if_entry_greater_than_duration(self, rossi, models):
         rossi["start"] = 10
         for fitter in models:
-            with pytest.warns(Warning, match="entry > duration"):
+            with pytest.raises(ValueError, match="entry > duration"):
                 fitter.fit(rossi, "week", "arrest", entry_col="start")
 
     def test_weights_col_and_start_col_is_not_included_in_the_output(self, models, rossi):

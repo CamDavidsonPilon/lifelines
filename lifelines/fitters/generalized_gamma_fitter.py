@@ -79,41 +79,66 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     """
 
-    _fitted_parameter_names = ["mu_", "sigma_", "lambda_"]
-    _bounds = [(None, None), (0, None), (0, None)]
-
-    # the model wasn't behaving well with L-BFGS-B...
-    _scipy_fit_method = "SLSQP"
+    _fitted_parameter_names = ["mu_", "ln_sigma_", "lambda_"]
+    _bounds = [(None, None), (None, None), (None, None)]
+    _initial_values = np.array([0.0, 0.0, 1.0])
 
     def _survival_function(self, params, times):
-        mu_, sigma_, lambda_ = params
+        mu_, ln_sigma_, lambda_ = params
+        sigma_ = np.exp(ln_sigma_)
         Z = (np.log(times) - mu_) / sigma_
-        return gammaincc(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+        if lambda_ > 0:
+            return gammaincc(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+        else:
+            return gammainc(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
 
     def _cumulative_hazard(self, params, times):
-        mu_, sigma_, lambda_ = params
+        mu_, ln_sigma_, lambda_ = params
+        sigma_ = np.exp(ln_sigma_)
         Z = (np.log(times) - mu_) / sigma_
-        return -gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+
+        if lambda_ > 0:
+            v = -gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+        else:
+            v = -gammaincln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+        return v
 
     def _log_1m_sf(self, params, times):
-        mu_, sigma_, lambda_ = params
+        mu_, ln_sigma_, lambda_ = params
+        sigma_ = np.exp(ln_sigma_)
+
         Z = (np.log(times) - mu_) / sigma_
-        return gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+        if lambda_ > 0:
+            v = gammaincln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+        else:
+            v = gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+        return v
 
     def _log_hazard(self, params, times):
         log = np.log
-        mu_, sigma_, lambda_ = params
-        Z = (log(times) - mu_) / sigma_
+        mu_, ln_sigma_, lambda_ = params
+        sigma_ = np.exp(ln_sigma_)
 
-        return (
-            log(lambda_)
-            - log(times)
-            - log(sigma_)
-            - gammaln(1 / lambda_ ** 2)
-            - 2 * log(lambda_)
-            + (lambda_ * Z - np.exp(lambda_ * Z)) / lambda_ ** 2
-            - gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
-        )
+        Z = (log(times) - mu_) / sigma_
+        if lambda_ > 0:
+            v = (
+                log(np.abs(lambda_))
+                - log(times)
+                - log(sigma_)
+                - gammaln(1 / lambda_ ** 2)
+                + (lambda_ * Z - np.exp(lambda_ * Z) - 2 * log(lambda_)) / lambda_ ** 2
+                - gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+            )
+        else:
+            v = (
+                log(np.abs(lambda_))
+                - log(times)
+                - log(sigma_)
+                - gammaln(1 / lambda_ ** 2)
+                + (lambda_ * Z - np.exp(lambda_ * Z) - 2 * log(np.abs(lambda_))) / lambda_ ** 2
+                - gammaincln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+            )
+        return v
 
     def percentile(self, p):
         # TODO
