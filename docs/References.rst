@@ -1,4 +1,4 @@
-Reference library for *lifelines*
+API for *lifelines*
 ==================================
 
 .. toctree::

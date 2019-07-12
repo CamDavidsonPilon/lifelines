@@ -13,23 +13,32 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     The survival function is:
 
-    .. math:: S(t) = 1-\text{RLG}(\frac{\alpha}{\rho}, \left(\frac{t}{\lambda}\right)^{\rho})
+    .. math::
+        S(t)=\left\{ \begin{array}{}
+           1-{{\Gamma }_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{ if }\lambda >0  \\
+           {{\Gamma }_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{       if }\lambda \le 0  \\
+        \end{array} \right.\,\!
 
-    Where RLG is the regularized lower incomplete gamma function. The cumulative hazard rate is
+    where :math:`\Gamma_{RL}` is the regularized lower incomplete Gamma function.
 
-    .. math:: H(t) = -\log(1-\text{RLG}(\frac{\alpha}{\rho}, \left(\frac{t}{\lambda}\right)^{\rho}))
-
-    This model has the Exponential, Weibull, Gamma and LogNormal as sub-models, and thus can be used as a way to test which
+    This model has the Exponential, Weibull, Gamma and Log-Normal as sub-models, and thus can be used as a way to test which
     model to use.
 
-    1. When :math:`\alpha \approx 1` and :math:`\rho \approx 1`, then the data is likely Exponential.
-    2. When :math:`\alpha \approx \rho` then the data is likely Weibull.
-    3. When :math:`\rho \approx 1` then the data is likely Gamma.
-    4. When :math:`\alpha >> 0, \lambda \approx 0, \rho > 0` then the data is likely LogNormal.
+    1. When :math:`\lambda = 1` and :math:`\sigma = 1`, then the data is Exponential.
+    2. When :math:`\lambda = 1` then the data is Weibull.
+    3. When :math:`\sigma = \lambda` then the data is Gamma.
+    4. When :math:`\lambda = 0` then the data is  Log-Normal.
 
 
-    After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``, ``alpha_``, ``lambda_`` and ``rho_``.
+    After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``,
     A summary of the fit is available with the method ``print_summary()``.
+
+
+    Important
+    -------------
+    The parameterization implemented has :math:`\log\sigma`, thus there is a `ln_sigma_` in the output. Exponentiate this parameter
+    to recover :math:`\sigma`.
+
 
     Parameters
     -----------

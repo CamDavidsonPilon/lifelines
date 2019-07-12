@@ -14,6 +14,8 @@
 
 ##### Bug fixes
  - when using `censors_show` in plotting functions, the censor ticks are now reactive to the estimate being shown.
+ - fixed an overflow bug in `KaplanMeierFitter` confidence intervals
+ -
 
 
 #### 0.22.0
