@@ -6,6 +6,9 @@
  - New univariate model, `GeneralizedGammaFitter`. This model contains many sub-models, so it is a good model to check fits.
  - added a warning when a time-varying dataset had instantaneous deaths.
  - added a `initial_point` option in univariate parametric fitters.
+ - `initial_point` kwarg is present in parametric univariate fitters `.fit`
+ - `event_table` is now an attribute on all univariate fitters (if right censoring)
+ - improvements to `lifelines.utils.gamma`
 
 ##### API changes
  - In AFT models, the column names in `confidence_intervals_` has changed to include the alpha value.
@@ -15,7 +18,6 @@
 ##### Bug fixes
  - when using `censors_show` in plotting functions, the censor ticks are now reactive to the estimate being shown.
  - fixed an overflow bug in `KaplanMeierFitter` confidence intervals
- -
 
 
 #### 0.22.0
