@@ -958,6 +958,12 @@ def correlation(x, y):
     return np.corrcoef(x, y)[1, 0]
 
 
+def check_entry_times(T, entries):
+    count_invalid_rows = (entries > T).sum()
+    if count_invalid_rows:
+        raise ValueError("""There exist %d rows where entry > duration.""" % count_invalid_rows)
+
+
 def check_complete_separation_close_to_perfect_correlation(df, durations):
     # slow for many columns
     THRESHOLD = 0.99

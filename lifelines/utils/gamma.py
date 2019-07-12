@@ -14,7 +14,6 @@ __all__ = [
 ]
 
 
-DELTA = 1e-7
 LOG_EPISILON = 1e-35
 MACHINE_EPISLON_POWER = np.finfo(float).eps ** (1 / 2)
 
@@ -42,7 +41,7 @@ def central_difference_of_(f):
         # another thing to consider (and later to add) is that x is machine representable, but x + h is
         # rarely, and will be rounded to be machine representable. This (x + h) - x != h.
 
-        delta = DELTA  # np.where(a != 0, a * MACHINE_EPISLON_POWER, DELTA)
+        delta = np.maximum(a * MACHINE_EPISLON_POWER, 1e-8)
         return unbroadcast_f(
             a,
             lambda g: g
