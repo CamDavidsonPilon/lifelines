@@ -916,7 +916,7 @@ class TestGeneralizedGammaFitter:
         gg = GeneralizedGammaFitter().fit(T)
         gg.print_summary()
         assert gg.summary.loc["lambda_"]["lower 0.95"] < 1 < gg.summary.loc["lambda_"]["upper 0.95"]
-        assert gg.summary.loc["sigma_"]["lower 0.95"] < 1 < gg.summary.loc["sigma_"]["upper 0.95"]
+        assert gg.summary.loc["ln_sigma_"]["lower 0.95"] < 0 < gg.summary.loc["ln_sigma_"]["upper 0.95"]
 
     def test_weibull_data_inference(self):
         T = 5 * np.random.exponential(1, size=10000) ** 0.5
