@@ -903,11 +903,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.entry = np.asarray(entry) if entry is not None else np.zeros(n)
         self.weights = np.asarray(weights) if weights is not None else np.ones(n)
 
-        if CensoringType.is_right_censoring(self):
-            self.event_table = survival_table_from_events(
-                coalesce(*Ts), self.event_observed, self.entry, weights=self.weights
-            )
-
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline).astype(float))
         else:
@@ -975,6 +970,19 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.cumulative_density_ = self.cumulative_density_at_times(self.timeline).to_frame()
 
         return self
+
+    @property
+    def event_table(self):
+        if hasattr(self, "_event_table"):
+            return self._event_table
+        else:
+            if CensoringType.is_right_censoring(self):
+                self._event_table = survival_table_from_events(
+                    self.durations, self.event_observed, self.entry, weights=self.weights
+                )
+            else:
+                self._event_table = None
+            return self.event_table
 
     def survival_function_at_times(self, times, label=None):
         """
@@ -1714,7 +1722,11 @@ class ParametricRegressionFitter(BaseFitter):
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"exp(coef)": format_exp_floats(decimals)},
+                formatters={
+                    "exp(coef)": format_exp_floats(decimals),
+                    "exp(coef) lower 95%": format_exp_floats(decimals),
+                    "exp(coef) upper 95%": format_exp_floats(decimals),
+                },
                 columns=[
                     "coef",
                     "exp(coef)",

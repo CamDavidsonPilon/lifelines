@@ -1280,7 +1280,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"exp(coef)": format_exp_floats(decimals)},
+                formatters={
+                    "exp(coef)": format_exp_floats(decimals),
+                    "exp(coef) lower 95%": format_exp_floats(decimals),
+                    "exp(coef) upper 95%": format_exp_floats(decimals),
+                },
                 columns=[
                     "coef",
                     "exp(coef)",

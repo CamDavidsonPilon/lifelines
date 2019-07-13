@@ -912,7 +912,7 @@ class TestWeibullFitter:
 
 class TestGeneralizedGammaFitter:
     def test_exponential_data_inference(self):
-        T = np.random.exponential(2.0, size=10000)
+        T = np.random.exponential(1.0, size=20000)
         gg = GeneralizedGammaFitter().fit(T)
         gg.print_summary()
         assert gg.summary.loc["lambda_"]["lower 0.95"] < 1 < gg.summary.loc["lambda_"]["upper 0.95"]
