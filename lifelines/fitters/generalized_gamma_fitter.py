@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
-from scipy.special import gammainccinv
+from autograd.numpy import exp, abs, log
+from scipy.special import gammainccinv, gammaincinv
 from lifelines.fitters import KnownModelParametericUnivariateFitter
 from lifelines.utils.gamma import gammaincc, gammainc, gamma, gammaln, gammainccln, gammaincln
 
@@ -85,7 +86,6 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
         The time line to use for plotting and indexing
     entry: array or None
         The entry array provided, or None
-
     """
 
     _fitted_parameter_names = ["mu_", "ln_sigma_", "lambda_"]
@@ -94,61 +94,66 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     def _survival_function(self, params, times):
         mu_, ln_sigma_, lambda_ = params
-        sigma_ = np.exp(ln_sigma_)
-        Z = (np.log(times) - mu_) / sigma_
+        sigma_ = exp(ln_sigma_)
+        Z = (log(times) - mu_) / sigma_
         if lambda_ > 0:
-            return gammaincc(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+            return gammaincc(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
         else:
-            return gammainc(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+            return gammainc(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
 
     def _cumulative_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
-        sigma_ = np.exp(ln_sigma_)
-        Z = (np.log(times) - mu_) / sigma_
+        sigma_ = exp(ln_sigma_)
+        Z = (log(times) - mu_) / sigma_
 
         if lambda_ > 0:
-            v = -gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+            v = -gammainccln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
         else:
-            v = -gammaincln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+            v = -gammaincln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+
         return v
 
     def _log_1m_sf(self, params, times):
         mu_, ln_sigma_, lambda_ = params
-        sigma_ = np.exp(ln_sigma_)
-
-        Z = (np.log(times) - mu_) / sigma_
-        if lambda_ > 0:
-            v = gammaincln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
-        else:
-            v = gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
-        return v
-
-    def _log_hazard(self, params, times):
-        log = np.log
-        mu_, ln_sigma_, lambda_ = params
-        sigma_ = np.exp(ln_sigma_)
+        sigma_ = exp(ln_sigma_)
 
         Z = (log(times) - mu_) / sigma_
         if lambda_ > 0:
+            v = gammaincln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+        else:
+            v = gammainccln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+        return v
+
+    def _log_hazard(self, params, times):
+        mu_, ln_sigma_, lambda_ = params
+
+        Z = (log(times) - mu_) / exp(ln_sigma_)
+        if lambda_ > 0:
             v = (
-                log(np.abs(lambda_))
+                log(lambda_)
                 - log(times)
-                - log(sigma_)
+                - ln_sigma_
                 - gammaln(1 / lambda_ ** 2)
-                + (lambda_ * Z - np.exp(lambda_ * Z) - 2 * log(lambda_)) / lambda_ ** 2
-                - gammainccln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+                + (lambda_ * Z - exp(lambda_ * Z) - 2 * log(lambda_)) / lambda_ ** 2
+                - gammainccln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
             )
         else:
             v = (
-                log(np.abs(lambda_))
+                log(abs(lambda_))
                 - log(times)
-                - log(sigma_)
+                - ln_sigma_
                 - gammaln(1 / lambda_ ** 2)
-                + (lambda_ * Z - np.exp(lambda_ * Z) - 2 * log(np.abs(lambda_))) / lambda_ ** 2
-                - gammaincln(1 / lambda_ ** 2, np.exp(lambda_ * Z) / lambda_ ** 2)
+                + (lambda_ * Z - exp(lambda_ * Z) - 2 * log(abs(lambda_))) / lambda_ ** 2
+                - gammaincln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
             )
         return v
 
     def percentile(self, p):
-        # TODO
-        return 0.5
+        lambda_ = self.lambda_
+        if lambda_ > 0:
+            return np.exp(
+                np.exp(self.ln_sigma_) * log(gammainccinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_
+            ) * np.exp(self.mu_)
+        return np.exp(np.exp(self.ln_sigma_) * log(gammaincinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * np.exp(
+            self.mu_
+        )

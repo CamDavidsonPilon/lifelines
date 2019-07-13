@@ -13,7 +13,12 @@ T = np.arange(1, 100)
 
 gg = GeneralizedGammaFitter()
 # gg.fit(T, show_progress=True)
-gg.fit(T, show_progress=True)  # initial_point=np.array([4.5, 0.1, 9]))
+gg.fit(T)
+print(gg.percentile(0.5))
+print(gg.percentile(0.4))
+print(gg.percentile(0.3))
+print(gg.percentile(0.2))
+print(gg.survival_function_)
 
 gg.print_summary(3)
 
