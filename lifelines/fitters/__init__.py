@@ -701,6 +701,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
             entered study when they were "born": time zero.
         weights: an array, or pd.Series, of length n
             integer weights per observation
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
         Returns
         -------
           self
@@ -772,6 +776,9 @@ class ParametericUnivariateFitter(UnivariateFitter):
             entered study when they were "born": time zero.
         weights: an array, or pd.Series, of length n
             integer weights per observation
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
 
         Returns
         -------
@@ -839,6 +846,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
             entered study when they were "born": time zero.
         weights: an array, or pd.Series, of length n
             integer weights per observation
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
         Returns
         -------
           self

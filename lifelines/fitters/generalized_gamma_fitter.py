@@ -41,6 +41,11 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
     to recover :math:`\sigma`.
 
 
+    Important
+    -------------
+    This model is experimental. It's API may change in the future. Also, it's convergence is not very stable.
+
+
     Parameters
     -----------
     alpha: float, optional (default=0.05)
