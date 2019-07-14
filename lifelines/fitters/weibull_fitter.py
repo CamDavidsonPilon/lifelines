@@ -71,7 +71,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     entry: array or None
         The entry array provided, or None
 
-    See Also
+    Notes
     ----------
     Looking for a 3-parameter Weibull model? See notes here: https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html#3-parameter-Weibull-distribution
     """

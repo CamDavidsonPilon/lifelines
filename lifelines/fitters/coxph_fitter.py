@@ -11,6 +11,7 @@ from scipy.linalg import solve as spsolve, LinAlgError
 from scipy.integrate import trapz
 from scipy import stats
 from bottleneck import nansum as array_sum_to_scalar
+from numpy import sum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter
 from lifelines.plotting import set_kwargs_ax, set_kwargs_drawstyle
@@ -58,7 +59,17 @@ class BatchVsSingle:
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
-            and (0.712085 + -0.000025 * n_total + 0.579359 * frac_dups + 0.000044 * n_total * frac_dups < 1)
+            and (
+                (
+                    5.302813e-01
+                    + -1.789398e-06 * n_total
+                    + -3.496285e-11 * n_total ** 2
+                    + 2.756569e00 * frac_dups
+                    + -1.306258e00 * frac_dups ** 2
+                    + 9.535042e-06 * n_total * frac_dups
+                )
+                < 1
+            )
         ):
             return "batch"
         return "single"
@@ -616,19 +627,22 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         tied_death_counts = 0
         scores = weights * np.exp(np.dot(X, beta))
 
+        phi_x_is = scores[:, None] * X
+        phi_x_x_i = np.empty((d, d))
+
         # Iterate backwards to utilize recursive relationship
         for i in range(n - 1, -1, -1):
             # Doing it like this to preserve shape
             ti = T[i]
             ei = E[i]
             xi = X[i]
-            score = scores[i]
             w = weights[i]
 
             # Calculate phi values
-            phi_i = score
-            phi_x_i = phi_i * xi
-            phi_x_x_i = np.outer(xi, phi_x_i)
+            phi_i = scores[i]
+            phi_x_i = phi_x_is[i]
+            # https://stackoverflow.com/a/51481295/1895939
+            phi_x_x_i = np.multiply.outer(xi, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + phi_i

@@ -14,7 +14,7 @@ ROSSI_ROWS = 432
 results = {}
 
 
-for n_copies in [1, 2, 4, 6, 8, 10, 13, 17, 20, 25]:
+for n_copies in [1, 2, 4, 6, 8, 10, 15, 20, 50, 100, 150]:
 
     # lower percents means more ties.
     # original rossi dataset has 0.113
@@ -56,8 +56,10 @@ results.to_csv("perf_results.csv", index=False)
 
 
 results["N * frac"] = results["N"] * results["frac"]
+results["N**2"] = results["N"] ** 2
+results["frac**2"] = results["frac"] ** 2
 
-X = results[["N", "frac", "N * frac"]]
+X = results[["N", "frac", "N * frac", "frac**2", "N**2"]]
 X = sm.add_constant(X)
 
 Y = results["ratio"]

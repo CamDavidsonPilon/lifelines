@@ -1,6 +1,6 @@
 ### Changelog
 
-### 0.22.1
+#### 0.22.1
 
 ##### New features
  - New univariate model, `GeneralizedGammaFitter`. This model contains many sub-models, so it is a good model to check fits.
