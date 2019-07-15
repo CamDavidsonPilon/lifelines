@@ -8,6 +8,10 @@ def filepath(fname):
     return os.path.join(os.path.dirname(__file__), fname)
 
 
+with open("reqs/base-requirements.txt") as f:
+    requirements = f.read().splitlines()
+
+
 exec(compile(open("lifelines/version.py").read(), "lifelines/version.py", "exec"))
 
 with open("README.md") as f:
@@ -35,14 +39,6 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Topic :: Scientific/Engineering",
     ],
-    install_requires=[
-        "numpy>=1.6.0",
-        "scipy>=1.0,<=1.2.1",
-        "pandas>=0.23.0",
-        "matplotlib>=3.0",
-        "bottleneck>=1.0",
-        "autograd>=1.2",
-        "autograd-gamma>=0.3",
-    ],
+    install_requires=requirements,
     package_data={"lifelines": ["../README.md", "../README.txt", "../LICENSE", "../MANIFEST.in", "datasets/*"]},
 )
