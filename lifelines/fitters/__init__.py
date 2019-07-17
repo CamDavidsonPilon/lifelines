@@ -1587,7 +1587,6 @@ class ParametricRegressionFitter(BaseFitter):
             J = np.zeros((n_params, n_params))
 
             for ts, e, w, s, xs in zip(safe_zip(*Ts), E, weights, entries, Xs.iterdicts()):
-                print(ts, e, w, s, xs)
                 score_vector = ll_gradient(params, ts, e, w, s, xs)
                 J += np.outer(score_vector, score_vector)
 
