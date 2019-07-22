@@ -131,8 +131,3 @@ PiecewiseExponentialRegressionFitter
 .. automodule:: lifelines.fitters.piecewise_exponential_regression_fitter
     :members:
     :undoc-members:
-
-
-.. automodule:: lifelines.fitters
-    :members:
-    :undoc-members:

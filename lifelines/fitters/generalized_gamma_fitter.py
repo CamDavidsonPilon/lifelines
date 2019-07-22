@@ -31,7 +31,7 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
     3. When :math:`\sigma = \lambda` then the data is Gamma.
     4. When :math:`\lambda = 0` then the data is  Log-Normal.
     5. When :math:`\lambda = -1` then the data is Inverse-Weibull.
-    3. When :math:`-\sigma = \lambda` then the data is Inverse-Gamma.
+    6. When :math:`-\sigma = \lambda` then the data is Inverse-Gamma.
 
 
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``,
