@@ -15,7 +15,7 @@ from io import StringIO, BytesIO as stringio
 import numpy as np
 import pandas as pd
 import pytest
-from scipy.stats import weibull_min, norm, logistic
+from scipy.stats import weibull_min, norm, logistic, invweibull, invgamma
 from autograd.scipy.special import expit
 from autograd import numpy as anp
 
@@ -934,7 +934,19 @@ class TestGeneralizedGammaFitter:
         T = np.exp(np.random.randn(20000))
         gg = GeneralizedGammaFitter().fit(T)
         gg.print_summary(4)
-        assert gg.summary.loc["lambda_"]["coef"] < 0.05
+        assert abs(gg.summary.loc["lambda_"]["coef"]) < 0.05
+
+    def test_inverse_weibull_inference(self):
+        T = invweibull(5).rvs(10000)
+        gg = GeneralizedGammaFitter().fit(T)
+        gg.print_summary(4)
+        assert abs(gg.summary.loc["lambda_"]["coef"] - -1.0) < 0.05
+
+    def test_inverse_gamma_inference(self):
+        T = invgamma(0.5).rvs(20000)
+        gg = GeneralizedGammaFitter().fit(T)
+        gg.print_summary(4)
+        assert abs(gg.summary.loc["lambda_", "coef"] - -np.exp(gg.summary.loc["ln_sigma_", "coef"])) < 0.15
 
 
 class TestExponentialFitter:

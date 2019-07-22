@@ -17,19 +17,21 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     .. math::
         S(t)=\left\{ \begin{array}{}
-           1-{{\Gamma }_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{ if }\lambda >0  \\
-           {{\Gamma }_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{       if }\lambda \le 0  \\
+           1-{{\Gamma}_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{ if }\lambda >0  \\
+           {{\Gamma}_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{       if }\lambda < 0  \\
         \end{array} \right.\,\!
 
     where :math:`\Gamma_{RL}` is the regularized lower incomplete Gamma function.
 
     This model has the Exponential, Weibull, Gamma and Log-Normal as sub-models, and thus can be used as a way to test which
-    model to use.
+    model to use:
 
     1. When :math:`\lambda = 1` and :math:`\sigma = 1`, then the data is Exponential.
     2. When :math:`\lambda = 1` then the data is Weibull.
     3. When :math:`\sigma = \lambda` then the data is Gamma.
     4. When :math:`\lambda = 0` then the data is  Log-Normal.
+    5. When :math:`\lambda = -1` then the data is Inverse-Weibull.
+    3. When :math:`-\sigma = \lambda` then the data is Inverse-Gamma.
 
 
     After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``,
@@ -101,13 +103,11 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
     def _get_initial_values(self, Ts, E, *args):
         if CensoringType.is_right_censoring(self):
             log_data = np.log(Ts[0])
-            return np.array([log_data.mean(), np.log(log_data.std()), 1.0])
         elif CensoringType.is_left_censoring(self):
             log_data = np.log(Ts[1])
-            return np.array([log_data.mean(), np.log(log_data.std()), 1.0])
-        else:
+        elif CensoringType.is_interval_censoring(self):
             log_data = np.log(Ts[1] - Ts[0])
-            return np.array([log_data.mean(), np.log(log_data.std()), 1.0])
+        return np.array([log_data.mean(), np.log(log_data.std()), 1.0])
 
     def _survival_function(self, params, times):
         mu_, ln_sigma_, lambda_ = params
@@ -127,7 +127,6 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
             v = -gammainccln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
         else:
             v = -gammaincln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
-
         return v
 
     def _log_1m_sf(self, params, times):
