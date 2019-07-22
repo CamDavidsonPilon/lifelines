@@ -1,6 +1,6 @@
 ### Changelog
 
-#### 0.22.1
+#### 0.22.1 - 2019-07-14
 
 ##### New features
  - New univariate model, `GeneralizedGammaFitter`. This model contains many sub-models, so it is a good model to check fits.
@@ -21,7 +21,7 @@
  - improvements in data validation for `CoxTimeVaryingFitter`
 
 
-#### 0.22.0
+#### 0.22.0 - 2019-07-03
 
 ##### New features
  - Ability to create custom parametric regression models by specifying the cumulative hazard. This enables new and extensions of AFT models.

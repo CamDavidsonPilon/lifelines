@@ -324,16 +324,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self._bounds = [(0.0, None)] * len(self._fitted_parameter_names)
         self._bounds = list(self._buffer_bounds(self._bounds))
 
-        if not hasattr(self, "_initial_values"):
-            self._initial_values = np.array(list(self._initial_values_from_bounds()))
-
         if "alpha" in self._fitted_parameter_names:
             raise NameError("'alpha' in _fitted_parameter_names is a lifelines reserved word. Try 'alpha_' instead.")
-
-        if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
-            raise ValueError(
-                "_bounds must be the same shape as _fitted_parameter_names must be the same shape as _initial_values"
-            )
 
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
         class_name = self._class_name
@@ -508,13 +500,29 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
         return df
 
-    def _fit_model(self, Ts, E, entry, weights, show_progress=True):
+    def _get_initial_values(self, *args):
+        # this can be overwritten in the model class.
+        # *args has terms like Ts, E, entry, weights
+        if not hasattr(self, "_initial_values"):
+            _initial_values = np.array(list(self._initial_values_from_bounds()))
+        return _initial_values
+
+    def _fit_model(self, Ts, E, entry, weights, initial_point=None, show_progress=True):
+
         if CensoringType.is_left_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
         elif CensoringType.is_interval_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_interval_censoring
         elif CensoringType.is_right_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_right_censoring
+
+        self._initial_values = self._compare_to_values = initial_point or self._get_initial_values(
+            Ts, E, entry, weights
+        )
+        if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
+            raise ValueError(
+                "_bounds must be the same shape as _fitted_parameter_names must be the same shape as _initial_values"
+            )
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -594,7 +602,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         )
 
     def _compute_z_values(self):
-        return (self._fitted_parameters_ - self._initial_values) / self._compute_standard_errors().loc["se"]
+        return (self._fitted_parameters_ - self._compare_to_values) / self._compute_standard_errors().loc["se"]
 
     @property
     def summary(self):
@@ -922,11 +930,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self._label = label
         self._ci_labels = ci_labels
         self.alpha = coalesce(alpha, self.alpha)
-        self._initial_values = coalesce(initial_point, self._initial_values)
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
-            Ts, self.event_observed.astype(bool), self.entry, self.weights, show_progress=show_progress
+            Ts, self.event_observed.astype(bool), self.entry, self.weights, initial_point, show_progress=show_progress
         )
 
         if not self._KNOWN_MODEL:

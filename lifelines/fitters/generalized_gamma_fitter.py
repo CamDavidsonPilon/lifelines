@@ -4,6 +4,7 @@ from autograd.numpy import exp, abs, log
 from scipy.special import gammainccinv, gammaincinv
 from lifelines.fitters import KnownModelParametericUnivariateFitter
 from lifelines.utils.gamma import gammaincc, gammainc, gamma, gammaln, gammainccln, gammaincln
+from lifelines.utils import coalesce
 
 
 class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
@@ -95,7 +96,10 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     _fitted_parameter_names = ["mu_", "ln_sigma_", "lambda_"]
     _bounds = [(None, None), (None, None), (None, None)]
-    _initial_values = np.array([0.0, 0.0, 1.0])
+    _compare_to_values = np.array([0, 0, 1])
+
+    def _get_initial_values(self, Ts, E, *args):
+        return np.array([np.log(coalesce(Ts[0])).mean(), np.log(np.log(coalesce(Ts[0])).std()), 1.0])
 
     def _survival_function(self, params, times):
         mu_, ln_sigma_, lambda_ = params
@@ -155,10 +159,8 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     def percentile(self, p):
         lambda_ = self.lambda_
+        sigma_ = exp(self.ln_sigma_)
+
         if lambda_ > 0:
-            return np.exp(
-                np.exp(self.ln_sigma_) * log(gammainccinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_
-            ) * np.exp(self.mu_)
-        return np.exp(np.exp(self.ln_sigma_) * log(gammaincinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * np.exp(
-            self.mu_
-        )
+            return np.exp(sigma_ * log(gammainccinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * np.exp(self.mu_)
+        return np.exp(sigma_ * log(gammaincinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * np.exp(self.mu_)
