@@ -4,7 +4,7 @@ from autograd.numpy import exp, abs, log
 from scipy.special import gammainccinv, gammaincinv
 from lifelines.fitters import KnownModelParametericUnivariateFitter
 from lifelines.utils.gamma import gammaincc, gammainc, gamma, gammaln, gammainccln, gammaincln
-from lifelines.utils import coalesce
+from lifelines.utils import coalesce, CensoringType
 
 
 class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
@@ -99,7 +99,15 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
     _compare_to_values = np.array([0, 0, 1])
 
     def _get_initial_values(self, Ts, E, *args):
-        return np.array([np.log(coalesce(Ts[0])).mean(), np.log(np.log(coalesce(Ts[0])).std()), 1.0])
+        if CensoringType.is_right_censoring(self):
+            log_data = np.log(Ts[0])
+            return np.array([log_data.mean(), np.log(log_data.std()), 1.0])
+        elif CensoringType.is_left_censoring(self):
+            log_data = np.log(Ts[1])
+            return np.array([log_data.mean(), np.log(log_data.std()), 1.0])
+        else:
+            log_data = np.log(Ts[1] - Ts[0])
+            return np.array([log_data.mean(), np.log(log_data.std()), 1.0])
 
     def _survival_function(self, params, times):
         mu_, ln_sigma_, lambda_ = params

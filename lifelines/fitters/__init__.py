@@ -503,9 +503,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def _get_initial_values(self, *args):
         # this can be overwritten in the model class.
         # *args has terms like Ts, E, entry, weights
-        if not hasattr(self, "_initial_values"):
-            _initial_values = np.array(list(self._initial_values_from_bounds()))
-        return _initial_values
+        return np.array(list(self._initial_values_from_bounds()))
 
     def _fit_model(self, Ts, E, entry, weights, initial_point=None, show_progress=True):
 
@@ -515,14 +513,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
             negative_log_likelihood = self._negative_log_likelihood_interval_censoring
         elif CensoringType.is_right_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_right_censoring
-
-        self._initial_values = self._compare_to_values = initial_point or self._get_initial_values(
-            Ts, E, entry, weights
-        )
-        if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
-            raise ValueError(
-                "_bounds must be the same shape as _fitted_parameter_names must be the same shape as _initial_values"
-            )
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -914,9 +904,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
         if event_observed is not None:
             check_nans_or_infs(event_observed)
 
-        if not self._KNOWN_MODEL:
-            self._check_cumulative_hazard_is_monotone_and_positive(coalesce(*Ts), self._initial_values)
-
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones(n)
 
         self.entry = np.asarray(entry) if entry is not None else np.zeros(n)
@@ -930,6 +917,15 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self._label = label
         self._ci_labels = ci_labels
         self.alpha = coalesce(alpha, self.alpha)
+
+        # create some initial values, and test them in the hazard.
+        self._initial_values = self._compare_to_values = initial_point or self._get_initial_values(
+            Ts, self.event_observed, self.entry, self.weights
+        )
+        self._check_bounds_initial_point_names_shape()
+
+        if not self._KNOWN_MODEL:
+            self._check_cumulative_hazard_is_monotone_and_positive(coalesce(*Ts), self._initial_values)
 
         # estimation
         self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
@@ -988,6 +984,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.cumulative_density_ = self.cumulative_density_at_times(self.timeline).to_frame()
 
         return self
+
+    def _check_bounds_initial_point_names_shape(self):
+        if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
+            raise ValueError(
+                "_bounds must be the same shape as _fitted_parameter_names must be the same shape as _initial_values"
+            )
 
     @property
     def event_table(self):
