@@ -642,7 +642,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             "{} = {}".format(
                 justify("hypothesis"),
                 ", ".join(
-                    "%s != %g" % (name, iv) for (name, iv) in zip(self._fitted_parameter_names, self._initial_values)
+                    "%s != %g" % (name, iv) for (name, iv) in zip(self._fitted_parameter_names, self._compare_to_values)
                 ),
             )
         )
@@ -919,10 +919,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.alpha = coalesce(alpha, self.alpha)
 
         # create some initial values, and test them in the hazard.
-        self._initial_values = self._compare_to_values = initial_point or self._get_initial_values(
+        self._initial_values = initial_point or self._get_initial_values(
             Ts, self.event_observed, self.entry, self.weights
         )
         self._check_bounds_initial_point_names_shape()
+
+        if not hasattr(self, "_compare_to_values"):
+            self._compare_to_values = self._initial_values
 
         if not self._KNOWN_MODEL:
             self._check_cumulative_hazard_is_monotone_and_positive(coalesce(*Ts), self._initial_values)

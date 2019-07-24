@@ -107,7 +107,7 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
             log_data = np.log(Ts[1])
         elif CensoringType.is_interval_censoring(self):
             log_data = np.log(Ts[1] - Ts[0])
-        return np.array([log_data.mean(), np.log(log_data.std()), 1.0])
+        return np.array([log_data.mean(), np.log(log_data.std()), 0.1])
 
     def _survival_function(self, params, times):
         mu_, ln_sigma_, lambda_ = params
@@ -122,11 +122,11 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
         mu_, ln_sigma_, lambda_ = params
         sigma_ = exp(ln_sigma_)
         Z = (log(times) - mu_) / sigma_
-
+        ilambda_2 = 1 / lambda_ ** 2
         if lambda_ > 0:
-            v = -gammainccln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+            v = -gammainccln(ilambda_2, exp(lambda_ * Z) * ilambda_2)
         else:
-            v = -gammaincln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+            v = -gammaincln(ilambda_2, exp(lambda_ * Z) * ilambda_2)
         return v
 
     def _log_1m_sf(self, params, times):
@@ -142,25 +142,25 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     def _log_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
-
+        ilambda_2 = 1 / lambda_ ** 2
         Z = (log(times) - mu_) / exp(ln_sigma_)
         if lambda_ > 0:
             v = (
                 log(lambda_)
                 - log(times)
                 - ln_sigma_
-                - gammaln(1 / lambda_ ** 2)
-                + (lambda_ * Z - exp(lambda_ * Z) - 2 * log(lambda_)) / lambda_ ** 2
-                - gammainccln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+                - gammaln(ilambda_2)
+                + (lambda_ * Z - exp(lambda_ * Z) - 2 * log(lambda_)) * ilambda_2
+                - gammainccln(ilambda_2, exp(lambda_ * Z) * ilambda_2)
             )
         else:
             v = (
-                log(abs(lambda_))
+                log(-lambda_)
                 - log(times)
                 - ln_sigma_
-                - gammaln(1 / lambda_ ** 2)
-                + (lambda_ * Z - exp(lambda_ * Z) - 2 * log(abs(lambda_))) / lambda_ ** 2
-                - gammaincln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+                - gammaln(ilambda_2)
+                + (lambda_ * Z - exp(lambda_ * Z) - 2 * log(-lambda_)) * ilambda_2
+                - gammaincln(ilambda_2, exp(lambda_ * Z) * ilambda_2)
             )
         return v
 

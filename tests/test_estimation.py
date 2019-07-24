@@ -485,6 +485,10 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0])
+            try:
+                fitter.print_summary()
+            except:
+                pass
             assert not (pd.isnull(fitter.confidence_interval_)).all().all()
 
     def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):

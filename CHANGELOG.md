@@ -1,5 +1,12 @@
 ### Changelog
 
+#### 0.22.2
+
+##### Bug fixes
+ - fixed printing error when using robust=True in regression models
+ - `GeneralizedGammaFitter` is more stable.
+
+
 #### 0.22.1 - 2019-07-14
 
 ##### New features
