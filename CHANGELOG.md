@@ -8,7 +8,7 @@
 ##### Bug fixes
  - fixed printing error when using robust=True in regression models
  - `GeneralizedGammaFitter` is more stable, maybe.
- - lifelines was allowing old version of numpy (1.6), but this caused errors when using the library. The correcty numpy has been pinned (to 1.14.0+)
+ - lifelines was allowing old version of numpy (1.6), but this caused errors when using the library. The correctly numpy has been pinned (to 1.14.0+)
 
 
 
