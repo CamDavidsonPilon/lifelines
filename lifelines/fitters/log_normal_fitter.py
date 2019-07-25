@@ -4,7 +4,6 @@ from scipy.special import erfinv
 import autograd.numpy as np
 from autograd.scipy.stats import norm
 from lifelines.fitters import KnownModelParametericUnivariateFitter
-from lifelines.utils.logsf import logsf
 
 
 class LogNormalFitter(KnownModelParametericUnivariateFitter):
@@ -69,14 +68,14 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
     def _cumulative_hazard(self, params, times):
         mu_, sigma_ = params
         Z = (np.log(times) - mu_) / sigma_
-        return -logsf(Z)
+        return -norm.logsf(Z)
 
     def _log_hazard(self, params, times):
         mu_, sigma_ = params
         Z = (np.log(times) - mu_) / sigma_
-        return norm.logpdf(Z, loc=0, scale=1) - np.log(sigma_) - np.log(times) - logsf(Z)
+        return norm.logpdf(Z, loc=0, scale=1) - np.log(sigma_) - np.log(times) - norm.logsf(Z)
 
     def _log_1m_sf(self, params, times):
         mu_, sigma_ = params
         Z = (np.log(times) - mu_) / sigma_
-        return norm.logcdf(Z, loc=0, scale=1)
+        return norm.logcdf(Z)

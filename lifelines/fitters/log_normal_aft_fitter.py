@@ -6,7 +6,6 @@ import pandas as pd
 
 from lifelines.utils import _get_index
 from lifelines.fitters import ParametericAFTRegressionFitter
-from lifelines.utils.logsf import logsf
 
 
 class LogNormalAFTFitter(ParametericAFTRegressionFitter):
@@ -74,7 +73,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         sigma_params = params["sigma_"]
         sigma_ = np.exp(np.dot(Xs["sigma_"], sigma_params))
         Z = (np.log(T) - mu_) / sigma_
-        return -logsf(Z)
+        return -norm.logsf(Z)
 
     def _log_hazard(self, params, T, Xs):
         mu_params = params["mu_"]
@@ -86,7 +85,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         sigma_ = np.exp(log_sigma_)
         Z = (np.log(T) - mu_) / sigma_
 
-        return norm.logpdf(Z) - log_sigma_ - np.log(T) - logsf(Z)
+        return norm.logpdf(Z) - log_sigma_ - np.log(T) - norm.logsf(Z)
 
     def _log_1m_sf(self, params, T, Xs):
         mu_params = params["mu_"]
@@ -97,7 +96,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         log_sigma_ = np.dot(Xs["sigma_"], sigma_params)
         sigma_ = np.exp(log_sigma_)
         Z = (np.log(T) - mu_) / sigma_
-        return norm.logcdf(Z, loc=0, scale=1)
+        return norm.logcdf(Z)
 
     def predict_percentile(self, df, ancillary_df=None, p=0.5):
         """
