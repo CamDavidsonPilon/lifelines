@@ -12,6 +12,7 @@ from textwrap import dedent
 
 import numpy as np
 import autograd.numpy as anp
+from autograd.misc import flatten
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
 from autograd.differential_operators import make_jvp_reversemode
 from scipy.optimize import minimize
@@ -1423,12 +1424,8 @@ class ParametricRegressionFitter(BaseFitter):
             len(cols) > 0 for cols in self.regressors.values()
         ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
 
-        self._LOOKUP_SLICE = self._create_slicer()
-
         df = df.astype(float)
         self._check_values(df, coalesce(Ts[1], Ts[0]), E, weights, entries)
-        check_for_numeric_dtypes_or_raise(df)
-        check_nans_or_infs(df)
 
         _norm_std = df.std(0)
         _norm_std[_norm_std < 1e-8] = 1.0
@@ -1468,27 +1465,23 @@ class ParametricRegressionFitter(BaseFitter):
             self._predicted_median = self.predict_median(df)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
-        return np.zeros(Xs.size)
-
-    @staticmethod
-    def _dict_to_array(d):
-        return np.concatenate(list(d.values()))
+        return {
+            parameter_name: np.zeros(len(Xs.mappings[parameter_name]))
+            for parameter_name in self._fitted_parameter_names
+        }
 
     def _add_penalty(self, params, neg_ll):
-        params = self._dict_to_array(params)
+        params, _ = flatten(params)
         if self.penalizer > 0:
             penalty = (params ** 2).sum()
         else:
             penalty = 0
         return neg_ll + self.penalizer * penalty
 
-    def _wrap_function_to_covert_array_to_dict(self, function):
+    def _create_neg_likelihood_with_penalty_function(self, unflatten, likelihood, penalty):
         def f(params_array, *args):
-            params_dict = {
-                parameter_name: params_array[self._LOOKUP_SLICE[parameter_name]]
-                for parameter_name in self._fitted_parameter_names
-            }
-            return function(params_dict, *args)
+            params_dict = unflatten(params_array)
+            return penalty(params_dict, -likelihood(params_dict, *args))
 
         return f
 
@@ -1497,16 +1490,17 @@ class ParametricRegressionFitter(BaseFitter):
         if initial_point is None:
             initial_point = self._create_initial_point(Ts, E, entries, weights, Xs)
 
-        assert initial_point.shape[0] == Xs.size, "initial_point is not the correct shape."
+        initial_point_array, unflatten = flatten(initial_point)
+        assert initial_point_array.shape[0] == Xs.size, "initial_point is not the correct shape."
 
-        self._neg_likelihood_with_penalty_function = lambda params, *args: self._wrap_function_to_covert_array_to_dict(
-            self._add_penalty
-        )(params, -self._wrap_function_to_covert_array_to_dict(likelihood)(params, *args))
+        self._neg_likelihood_with_penalty_function = self._create_neg_likelihood_with_penalty_function(
+            unflatten, likelihood, self._add_penalty
+        )
 
         results = minimize(
             # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
             value_and_grad(self._neg_likelihood_with_penalty_function),
-            initial_point,
+            initial_point_array,
             method=None,
             jac=True,
             args=(Ts, E, weights, entries, Xs),
@@ -1536,17 +1530,6 @@ class ParametricRegressionFitter(BaseFitter):
                 % name
             )
         )
-
-    def _create_slicer(self):
-        lookup = {}
-        position = 0
-
-        for name, cols in self.regressors.items():
-            size = len(cols)
-            lookup[name] = slice(position, position + size)
-            position += size
-
-        return lookup
 
     def _compute_variance_matrix(self):
         try:
@@ -1863,8 +1846,7 @@ class ParametricRegressionFitter(BaseFitter):
         Xs = self._create_Xs_dict(df)
 
         params_dict = {
-            parameter_name: self.params_.values[self._LOOKUP_SLICE[parameter_name]]
-            for parameter_name in self._fitted_parameter_names
+            parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
         }
 
         return pd.DataFrame(
@@ -2552,16 +2534,14 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         self._ll_null_ = uni_model._log_likelihood
 
         # TODO: this fails with fit_intercept=False
-        return np.concatenate(
-            [
-                # tack on as the intercept
-                [0] * (_X.shape[1] - 1) + [self._transform_ith_param(uni_model, i)]
-                for i, (_, _X) in enumerate(Xs)
-            ]
-        )
+        return {
+            # tack on as the intercept
+            parameter_name: np.array([0] * (_X.shape[1] - 1) + [self._transform_ith_param(uni_model, i)])
+            for i, (parameter_name, _X) in enumerate(Xs)
+        }
 
     def _add_penalty(self, params, neg_ll):
-        params = self._dict_to_array(params)
+        params, _ = flatten(params)
         if self.penalizer > 0:
             penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
         else:
@@ -2878,8 +2858,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         Xs = self._create_Xs_dict(df)
 
         params_dict = {
-            parameter_name: self.params_.values[self._LOOKUP_SLICE[parameter_name]]
-            for parameter_name in self._fitted_parameter_names
+            parameter_name: self.params_.loc[parameter_name] for parameter_name in self._fitted_parameter_names
         }
 
         return pd.DataFrame(
