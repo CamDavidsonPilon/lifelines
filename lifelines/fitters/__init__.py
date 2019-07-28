@@ -1450,23 +1450,27 @@ class ParametricRegressionFitter(BaseFitter):
             penalty = 0
         return neg_ll + self.penalizer * penalty
 
-    def _create_neg_likelihood_with_penalty_function(self, unflatten, likelihood, penalty):
-        def f(params_array, *args):
-            params_dict = unflatten(params_array)
-            return penalty(params_dict, -likelihood(params_dict, *args))
+    @staticmethod
+    def _create_neg_likelihood_with_penalty_function(self, likelihood, penalty, param_transform=lambda x: x):
+        def function_to_optimize(params_array, *args):
+            params = param_transform(params)
+            return penalty(params, -likelihood(params, *args))
 
-        return f
+        return function_to_optimize
 
     def _fit_model(self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, initial_point=None):
 
-        if initial_point is None:
-            initial_point = self._create_initial_point(Ts, E, entries, weights, Xs)
+        # TODO: this should all go in a function or something...
+        initial_point_dict = self._create_initial_point(Ts, E, entries, weights, Xs)
+        initial_point_array, unflatten = flatten(initial_point_dict)
 
-        initial_point_array, unflatten = flatten(initial_point)
+        if initial_point is None and isinstance(initial_point, dict):
+            initial_point_array = flatten(initial_point)
+
         assert initial_point_array.shape[0] == Xs.size, "initial_point is not the correct shape."
 
         self._neg_likelihood_with_penalty_function = self._create_neg_likelihood_with_penalty_function(
-            unflatten, likelihood, self._add_penalty
+            likelihood, self._add_penalty, flatten
         )
 
         results = minimize(
@@ -1484,14 +1488,12 @@ class ParametricRegressionFitter(BaseFitter):
             sum_weights = weights.sum()
             # pylint: disable=no-value-for-parameter
             hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
-
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
-        name = self._class_name
         raise utils.ConvergenceError(
             dedent(
                 """\
-            Fitting did not converge. This could be a problem with your dataset:
+            Fitting did not converge. Try checking the following:
 
             0. Are there any lifelines warnings outputted during the `fit`?
             1. Inspect your DataFrame: does everything look as expected?
@@ -1499,7 +1501,7 @@ class ParametricRegressionFitter(BaseFitter):
             3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
             4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
         """
-                % name
+                % self._class_name
             )
         )
 
