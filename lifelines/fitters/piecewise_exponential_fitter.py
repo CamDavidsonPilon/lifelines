@@ -82,8 +82,6 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
         super(PiecewiseExponentialFitter, self).__init__(*args, **kwargs)
 
     def _cumulative_hazard(self, params, times):
-        warnings.simplefilter(action="ignore", category=FutureWarning)
-
         n = times.shape[0]
         times = times.reshape((n, 1))
         bp = self.breakpoints
