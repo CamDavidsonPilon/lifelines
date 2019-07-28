@@ -1453,7 +1453,7 @@ class ParametricRegressionFitter(BaseFitter):
     @staticmethod
     def _create_neg_likelihood_with_penalty_function(self, likelihood, penalty, param_transform=lambda x: x):
         def function_to_optimize(params_array, *args):
-            params = param_transform(params)
+            params = param_transform(params_array)
             return penalty(params, -likelihood(params, *args))
 
         return function_to_optimize
