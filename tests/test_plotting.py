@@ -315,10 +315,11 @@ class TestPlotting:
         self.plt.show(block=block)
         return
 
-    def test_flat_style_with_customer_censor_styles(self, block, kmf):
+    def test_flat_style_with_custom_censor_styles(self, block, kmf):
         data1 = np.random.exponential(10, size=200)
-        kmf.fit(data1, label="test label 1")
-        kmf.plot(ci_force_lines=True, show_censors=True, censor_styles={"marker": "+", "mew": 2, "ms": 7})
+        E = np.random.rand(200) < 0.8
+        kmf.fit(data1, E, label="test label 1")
+        kmf.plot(ci_force_lines=True, show_censors=True, censor_styles={"marker": "|", "mew": 1, "ms": 10})
         self.plt.title("test_flat_style_no_censor")
         self.plt.show(block=block)
         return

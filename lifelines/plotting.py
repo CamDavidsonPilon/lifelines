@@ -449,7 +449,7 @@ def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     colour = kwargs["c"]
 
     if show_censors and cls.event_table["censored"].sum() > 0:
-        cs = {"marker": "+", "ms": 12, "mew": 1}
+        cs = {"marker": "|", "ms": 12, "mew": 1}
         cs.update(censor_styles)
         times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
