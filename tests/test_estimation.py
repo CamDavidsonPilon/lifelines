@@ -2,7 +2,6 @@
 import warnings
 
 # pylint: disable=wrong-import-position
-warnings.simplefilter(action="ignore", category=FutureWarning)
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
 
 from collections import Counter, Iterable

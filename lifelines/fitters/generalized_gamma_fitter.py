@@ -2,8 +2,8 @@
 import autograd.numpy as np
 from autograd.numpy import exp, abs, log
 from scipy.special import gammainccinv, gammaincinv
+from autograd_gamma import gammaincc, gammainc, gammaln, gammainccln, gammaincln
 from lifelines.fitters import KnownModelParametericUnivariateFitter
-from lifelines.utils.gamma import gammaincc, gammainc, gamma, gammaln, gammainccln, gammaincln
 from lifelines.utils import coalesce, CensoringType
 
 
@@ -102,12 +102,12 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     def _get_initial_values(self, Ts, E, *args):
         if CensoringType.is_right_censoring(self):
-            log_data = np.log(Ts[0])
+            log_data = log(Ts[0])
         elif CensoringType.is_left_censoring(self):
-            log_data = np.log(Ts[1])
+            log_data = log(Ts[1])
         elif CensoringType.is_interval_censoring(self):
-            log_data = np.log(Ts[1] - Ts[0])
-        return np.array([log_data.mean(), np.log(log_data.std()), 0.1])
+            log_data = log(Ts[1] - Ts[0])
+        return np.array([log_data.mean(), log(log_data.std()), 0.1])
 
     def _survival_function(self, params, times):
         mu_, ln_sigma_, lambda_ = params
@@ -169,5 +169,5 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
         sigma_ = exp(self.ln_sigma_)
 
         if lambda_ > 0:
-            return np.exp(sigma_ * log(gammainccinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * np.exp(self.mu_)
-        return np.exp(sigma_ * log(gammaincinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * np.exp(self.mu_)
+            return exp(sigma_ * log(gammainccinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * exp(self.mu_)
+        return exp(sigma_ * log(gammaincinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * exp(self.mu_)
