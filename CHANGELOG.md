@@ -1,5 +1,15 @@
 ### Changelog
 
+#### 0.22.3
+
+##### API changes
+ - removed `lifelines.utils.gamma` - use `autograd_gamma` library instead.
+
+##### Bug fixes
+ - AFT log-likelihood ratio test was not using weights correctly.
+ - corrected (by bumping) scipy and autograd dependencies
+
+
 #### 0.22.2
 
 ##### New features
