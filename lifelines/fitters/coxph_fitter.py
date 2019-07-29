@@ -473,7 +473,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 # this is a neat optimization, the null partial likelihood
                 # is the same as the full partial but evaluated at zero.
                 # if the user supplied a non-trivial initial point, we need to delay this.
-                self._log_likelihood_null = ll
+                self._ll_null_ = ll
 
             if self.penalizer > 0:
                 # add the gradient and hessian of the l2 term
@@ -1336,8 +1336,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
         """
-        if hasattr(self, "_log_likelihood_null"):
-            ll_null = self._log_likelihood_null
+        if hasattr(self, "_ll_null_"):
+            ll_null = self._ll_null_
         else:
             if self._batch_mode:
                 ll_null = self._trivial_log_likelihood_batch(

@@ -1451,7 +1451,7 @@ class ParametricRegressionFitter(BaseFitter):
         return neg_ll + self.penalizer * penalty
 
     @staticmethod
-    def _create_neg_likelihood_with_penalty_function(self, likelihood, penalty, param_transform=lambda x: x):
+    def _create_neg_likelihood_with_penalty_function(likelihood, penalty, param_transform=lambda x: x):
         def function_to_optimize(params_array, *args):
             params = param_transform(params_array)
             return penalty(params, -likelihood(params, *args))
@@ -1470,7 +1470,7 @@ class ParametricRegressionFitter(BaseFitter):
         assert initial_point_array.shape[0] == Xs.size, "initial_point is not the correct shape."
 
         self._neg_likelihood_with_penalty_function = self._create_neg_likelihood_with_penalty_function(
-            likelihood, self._add_penalty, flatten
+            likelihood, self._add_penalty, unflatten
         )
 
         results = minimize(
@@ -1577,33 +1577,24 @@ class ParametricRegressionFitter(BaseFitter):
         if hasattr(self, "_ll_null_"):
             return self._ll_null_
 
-        initial_point = np.zeros(len(self._fitted_parameter_names))
         regressors = {name: ["intercept"] for name in self._fitted_parameter_names}
-
+        df = pd.DataFrame({"entry": self.entry, "intercept": 1, "w": self.weights})
         model = self.__class__(penalizer=self.penalizer)
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
             if utils.CensoringType.is_right_censoring(self):
-                df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry, "intercept": 1})
-                model.fit_right_censoring(
-                    df, "T", "E", initial_point=initial_point, entry_col="entry", regressors=regressors
-                )
+                df["T"], df["E"] = self.durations, self.event_observed
+                model.fit_right_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
             elif utils.CensoringType.is_interval_censoring(self):
-                df = pd.DataFrame(
-                    {
-                        "lb": self.lower_bound,
-                        "ub": self.upper_bound,
-                        "E": self.event_observed,
-                        "entry": self.entry,
-                        "intercept": 1,
-                    }
-                )
+                df["lb"], df["ub"], df["E"] = self.lower_bound, self.upper_bound, self.event_observed
                 model.fit_interval_censoring(
-                    df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry", regressors=regressors
+                    df, "lb", "ub", "E", entry_col="entry", weights_col="w", regressors=regressors
                 )
             if utils.CensoringType.is_left_censoring(self):
-                raise NotImplementedError()
+                df["T"], df["E"] = self.durations, self.event_observed
+                model.fit_left_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
 
         self._ll_null_ = model._log_likelihood
         return self._ll_null_
@@ -2497,7 +2488,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             uni_model = getattr(lifelines, name)()
         except AttributeError:
             # some custom AFT model if univariate model is not defined.
-            return np.concatenate([[0] * _X.shape[1] for _X in enumerate(Xs)])
+            return super(ParametericAFTRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)
 
         if utils.CensoringType.is_right_censoring(self):
             uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
@@ -2523,32 +2514,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         else:
             penalty = 0
         return neg_ll + self.penalizer * penalty
-
-    @property
-    def _ll_null(self):
-        if hasattr(self, "_ll_null_"):
-            return self._ll_null_
-
-        initial_point = np.zeros(len(self._fitted_parameter_names))
-
-        model = self.__class__()
-        with warnings.catch_warnings():
-            # ignore all warnings during this fitting. Maybe change later TODO
-            warnings.simplefilter("ignore")
-
-            if utils.CensoringType.is_right_censoring(self):
-                df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry})
-                model.fit_right_censoring(df, "T", "E", initial_point=initial_point, entry_col="entry")
-            elif utils.CensoringType.is_interval_censoring(self):
-                df = pd.DataFrame(
-                    {"lb": self.lower_bound, "ub": self.upper_bound, "E": self.event_observed, "entry": self.entry}
-                )
-                model.fit_interval_censoring(df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry")
-            if utils.CensoringType.is_left_censoring(self):
-                raise NotImplementedError()
-
-        self._ll_null_ = model._log_likelihood
-        return self._ll_null_
 
     def plot(self, columns=None, parameter=None, **errorbar_kwargs):
         """
