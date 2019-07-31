@@ -46,10 +46,8 @@ Let's start by importing some data. We need the durations that individuals are o
     T = df['T']
     E = df['E']
 
-``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed or not (alternatively an individual can be censored).
+``T`` is an array of durations, ``E`` is a either boolean or binary array representing whether the "death" was observed or not (alternatively an individual can be censored). We will fit a Kaplan Meier model to this, implemented as :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter`:
 
-
-.. note:: *lifelines* assumes all "deaths" are observed unless otherwise specified.
 
 
 .. code:: python
@@ -58,7 +56,7 @@ Let's start by importing some data. We need the durations that individuals are o
     kmf = KaplanMeierFitter()
     kmf.fit(T, event_observed=E)  # or, more succinctly, kmf.fit(T, E)
 
-After calling the ``fit`` method, we have access to new properties like ``survival_function_`` and methods like ``plot()``. The latter is a wrapper around Panda's internal plotting library.
+After calling the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit` method, we have access to new properties like :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.survival_function_`` and methods like :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.plot`. The latter is a wrapper around Panda's internal plotting library.
 
 .. code:: python
 
@@ -79,7 +77,7 @@ Alternatively, you can plot the cumulative density function:
 .. image:: images/quickstart_kmf_cdf.png
 
 
-By specifying the ``timeline`` keyword argument in ``fit``, we can change how the above models are indexed:
+By specifying the ``timeline`` keyword argument in :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit`, we can change how the above models are indexed:
 
 .. code:: python
 
@@ -146,7 +144,7 @@ Alternatively, for many more groups and more "pandas-esque":
         kmf.plot(ax=ax)
 
 
-Similar functionality exists for the ``NelsonAalenFitter``:
+Similar functionality exists for the :class:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter`:
 
 .. code:: python
 
@@ -206,7 +204,7 @@ Perhaps you are interested in viewing the survival table given some durations an
 Survival regression
 -------------------
 
-While the above ``KaplanMeierFitter`` model is useful, it only gives us an "average" view of the population. Often we have specific data at the individual level that we would like to use. For this, we turn to **survival regression**.
+While the above :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` model is useful, it only gives us an "average" view of the population. Often we have specific data at the individual level that we would like to use. For this, we turn to **survival regression**.
 
 .. note:: More detailed documentation and tutorials are available in `Survival Regression`_.
 
