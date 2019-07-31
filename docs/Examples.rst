@@ -18,7 +18,7 @@ Subtraction and division between survival functions
 
 If you are interested in taking the difference between two survival functions, simply trying to
 subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
-the ``KaplanMeierFitter`` and ``NelsonAalenFitter`` have a built-in ``subtract`` method:
+the :class:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
 
 .. code-block:: python
 
@@ -61,8 +61,8 @@ The :func:`lifelines.statistics.logrank_test` function compares whether the "dea
     print(results.test_statistic) # 0.528
 
 
-If you have more than two populations, you can use :func:`lifelines.statistics.pairwise_logrank_test` (which compares
-each pair in the same manner as above), or :func:`lifelines.statistics.multivariate_logrank_test` (which tests the
+If you have more than two populations, you can use :func:`~lifelines.statistics.pairwise_logrank_test` (which compares
+each pair in the same manner as above), or :func:`~lifelines.statistics.multivariate_logrank_test` (which tests the
 hypothesis that all the populations have the same "death" generation process).
 
 
@@ -368,7 +368,7 @@ Set the index/timeline of a estimate
 ##############################################
 
 Suppose your dataset has lifetimes grouped near time 60, thus after fitting
-``KaplanMeierFitter``, you survival function might look something like:
+:class:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter`, you survival function might look something like:
 
 .. code-block:: python
 
@@ -551,7 +551,7 @@ In Pandas, this may look like:
     2   3     3.0     5.0    7.0
     ...
 
-Initially, this can't be added to our baseline time-varying dataset. Using ``utils.covariates_from_event_matrix`` we can convert a DataFrame like this into one that can be easily added.
+Initially, this can't be added to our baseline time-varying dataset. Using :func:`lifelines.utils.covariates_from_event_matrix` we can convert a DataFrame like this into one that can be easily added.
 
 .. code-block:: python
 
@@ -633,7 +633,7 @@ Sample size determination under a CoxPH model
 ##############################################
 
 Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. That is, we want to evaluate the hypothesis
-H0: relative hazard ratio = 1 vs H1: relative hazard ratio != 1, where the relative hazard ratio is :math:`\exp{\left(\beta\right)}` for the experiment group vs the control group. A priori, we are interested in the sample sizes of the two groups necessary to achieve a certain statistical power. To do this in lifelines, there is the ``lifelines.statistics.sample_size_necessary_under_cph`` function. For example:
+H0: relative hazard ratio = 1 vs H1: relative hazard ratio != 1, where the relative hazard ratio is :math:`\exp{\left(\beta\right)}` for the experiment group vs the control group. A priori, we are interested in the sample sizes of the two groups necessary to achieve a certain statistical power. To do this in lifelines, there is the :func:`lifelines.statistics.sample_size_necessary_under_cph` function. For example:
 
 .. code-block:: python
 
@@ -722,7 +722,7 @@ The original dataset has 432 rows, while the grouped dataset has 387 rows plus a
     cph.fit(rossi_weights, 'week', 'arrest', weights_col='weights')
 
 
-The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the ``CoxTimeVaryingFitter``.
+The fitting should be faster, and the results identical to the unweighted dataset. This option is also available in the :class:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter`.
 
 
 The second use of weights is sampling weights. These are typically positive, non-integer weights that represent some artificial under/over sampling of observations (ex: inverse probability of treatment weights). It is recommended to set ``robust=True`` in the call to the ``fit`` as the usual standard error is incorrect for sampling weights. The ``robust`` flag will use the sandwich estimator for the standard error.

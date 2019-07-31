@@ -56,7 +56,7 @@ Let's start by importing some data. We need the durations that individuals are o
     kmf = KaplanMeierFitter()
     kmf.fit(T, event_observed=E)  # or, more succinctly, kmf.fit(T, E)
 
-After calling the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit` method, we have access to new properties like :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.survival_function_`` and methods like :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.plot`. The latter is a wrapper around Panda's internal plotting library.
+After calling the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit` method, we have access to new properties like :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.survival_function_` and methods like :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.plot`. The latter is a wrapper around Panda's internal plotting library.
 
 .. code:: python
 
