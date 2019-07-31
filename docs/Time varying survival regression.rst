@@ -11,7 +11,7 @@ We can incorporate changes over time into our survival analysis by using a modif
 
 .. math::  h(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i (x_i(t) - \overline{x_i}) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in *lifelines* as ``CoxTimeVaryingFitter``. The dataset schema required is different than previous models, so we will spend some time describing this.
+Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in *lifelines* as :class:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter`. The dataset schema required is different than previous models, so we will spend some time describing this.
 
 Dataset creation for time-varying regression
 #############################################
@@ -90,7 +90,7 @@ Example:
     | 2|   0| 1.6|
     +--+----+----+
 
-where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at the end of time 4 and at the end of time 8. We can use ``add_covariate_to_timeline`` to fold the covariate dataset into the original dataset.
+where ``time`` is the duration from the entry event. Here we see subject 1 had a change in their ``var2`` covariate at the end of time 4 and at the end of time 8. We can use :func:`lifelines.utils.add_covariate_to_timeline` to fold the covariate dataset into the original dataset.
 
 
 .. code:: python
@@ -140,7 +140,7 @@ If your dataset is of the second type, that is, event-based, your dataset may lo
     2   3     3.0
     ...
 
-Initially, this can't be added to our baseline DataFrame. However, using ``utils.covariates_from_event_matrix`` we can convert a DataFrame like this into one that can be easily added.
+Initially, this can't be added to our baseline DataFrame. However, using :func:`lifelines.utils.covariates_from_event_matrix` we can convert a DataFrame like this into one that can be easily added.
 
 
 .. code-block:: python
@@ -164,12 +164,12 @@ For an example of pulling datasets like this from a SQL-store, and other helper 
 Cumulative sums
 #############################################
 
-One additional flag on ``add_covariate_to_timeline`` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want the covariate to reflect how much we have administered since the start. Event columns do make sense to cumulative sum as well. In contrast, a covariate to measure the temperature of the patient is a state update, and should not be summed.  See :ref:`Example cumulative sums over time-varying covariates` to see an example of this.
+One additional flag on :func:`~lifelines.utils.add_covariate_to_timeline` that is of interest is the ``cumulative_sum`` flag. By default it is False, but turning it to True will perform a cumulative sum on the covariate before joining. This is useful if the covariates describe an incremental change, instead of a state update. For example, we may have measurements of drugs administered to a patient, and we want the covariate to reflect how much we have administered since the start. Event columns do make sense to cumulative sum as well. In contrast, a covariate to measure the temperature of the patient is a state update, and should not be summed.  See :ref:`Example cumulative sums over time-varying covariates` to see an example of this.
 
 Delaying time-varying covariates
 #############################################
 
-``add_covariate_to_timeline`` also has an option for delaying, or shifting, a covariate so it changes later than originally observed. One may ask, why should one delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknown-st to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
+:func:`~lifelines.utils.add_covariate_to_timeline` also has an option for delaying, or shifting, a covariate so it changes later than originally observed. One may ask, why should one delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknown-st to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
 
 To handle this, you can delay the observations by time periods:
 
@@ -185,7 +185,7 @@ To handle this, you can delay the observations by time periods:
 Fitting the model
 ################################################
 
-Once your dataset is in the correct orientation, we can use ``CoxTimeVaryingFitter`` to fit the model to your data. The method is similar to ``CoxPHFitter``, expect we need to tell the ``fit`` about the additional time columns.
+Once your dataset is in the correct orientation, we can use :class:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter` to fit the model to your data. The method is similar to ``CoxPHFitter``, expect we need to tell the ``fit`` about the additional time columns.
 
 Fitting the Cox model to the data involves using gradient descent. *lifelines* takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
 
@@ -203,4 +203,4 @@ Fitting the Cox model to the data involves using gradient descent. *lifelines* t
 Short note on prediction
 ################################################
 
-Unlike the other regression models, prediction in a time-varying setting is not trivial. To predict, we would need to know the covariates values beyond the observed times, but if we knew that, we would also know if the subject was still alive or not! However, it is still possible to compute the hazard values of subjects at known observations, the baseline cumulative hazard rate, and baseline survival function. So while ``CoxTimeVaryingFitter`` exposes prediction methods, there are logical limitations to what these predictions mean.
+Unlike the other regression models, prediction in a time-varying setting is not trivial. To predict, we would need to know the covariates values beyond the observed times, but if we knew that, we would also know if the subject was still alive or not! However, it is still possible to compute the hazard values of subjects at known observations, the baseline cumulative hazard rate, and baseline survival function. So while :class:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter` exposes prediction methods, there are logical limitations to what these predictions mean.

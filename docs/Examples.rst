@@ -33,7 +33,7 @@ Logrank test
 .. note:: The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival functions cross, the logrank test will give an inaccurate assessment of differences.
 
 
-The ``lifelines.statistics.logrank_test`` function compares whether the "death" generation process of the two populations are equal:
+The :func:`lifelines.statistics.logrank_test` function compares whether the "death" generation process of the two populations are equal:
 
 .. code-block:: python
 
@@ -61,8 +61,8 @@ The ``lifelines.statistics.logrank_test`` function compares whether the "death" 
     print(results.test_statistic) # 0.528
 
 
-If you have more than two populations, you can use ``pairwise_logrank_test`` (which compares
-each pair in the same manner as above), or ``multivariate_logrank_test`` (which tests the
+If you have more than two populations, you can use :func:`lifelines.statistics.pairwise_logrank_test` (which compares
+each pair in the same manner as above), or :func:`lifelines.statistics.multivariate_logrank_test` (which tests the
 hypothesis that all the populations have the same "death" generation process).
 
 
@@ -95,7 +95,7 @@ Survival differences at a point in time
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other.  For example, analysts may be interested in 5-year survival. Statistically comparing the naive Kaplan-Meier points at a specific time
-actually has reduced power. By transforming the Kaplan-Meier curve, we can recover more power. The function ``statistics.survival_difference_at_fixed_point_in_time_test`` uses
+actually has reduced power. By transforming the Kaplan-Meier curve, we can recover more power. The function :func:`lifelines.statistics.survival_difference_at_fixed_point_in_time_test` uses
 the log(-log) transformation implicitly and compares the survival-ness of populations at a specific point in time.
 
 
@@ -141,7 +141,7 @@ From these results, Aalen's Additive model with a penalizer of 10 is best model 
 Selecting a parametric model using QQ plots
 ###############################################
 
-QQ plots normally are constructed by sorting the values. However, this isn't appropriate when there is censored data. In *lifelines*, there are routines to still create QQ plots with censored data. These are available under ``lifelines.plotting.qq_plots``, and accepts fitted a parametric lifelines model.
+QQ plots normally are constructed by sorting the values. However, this isn't appropriate when there is censored data. In *lifelines*, there are routines to still create QQ plots with censored data. These are available under :func:`lifelines.plotting.qq_plots`, and accepts fitted a parametric lifelines model.
 
 .. code-block:: python
 
@@ -167,7 +167,7 @@ QQ plots normally are constructed by sorting the values. However, this isn't app
 
 This graphical test can be used to invalidate models. For example, in the above figure, we can see that only the log-normal parametric model is appropriate (we expect deviance in the tails, but not too much). Another use case is choosing the correct parametric AFT model.
 
-The ``qq_plot`` also works with left censorship as well.
+The :func:`~lifelines.plotting.qq_plots` also works with left censorship as well.
 
 
 Plotting multiple figures on a plot
@@ -368,7 +368,7 @@ Set the index/timeline of a estimate
 ##############################################
 
 Suppose your dataset has lifetimes grouped near time 60, thus after fitting
-`KaplanMeierFitter`, you survival function might look something like:
+``KaplanMeierFitter``, you survival function might look something like:
 
 .. code-block:: python
 
@@ -647,12 +647,12 @@ H0: relative hazard ratio = 1 vs H1: relative hazard ratio != 1, where the relat
     n_exp, n_con = sample_size_necessary_under_cph(desired_power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio)
     # (421, 421)
 
-This assumes you have estimates of the probability of event occuring for both the experiment and control group. This could be determined from previous experiments.
+This assumes you have estimates of the probability of event occurring for both the experiment and control group. This could be determined from previous experiments.
 
 Power determination under a CoxPH model
 ##############################################
 
-Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. To determine the statistical power of a hazard ratio hypothesis test, under the CoxPH model, we can use ``lifelines.statistics.power_under_cph``. That is, suppose we want to know the probability that we reject the null hypothesis that the relative hazard ratio is 1, assuming the relative hazard ratio is truly different from 1. This function will give you that probability.
+Suppose you wish to measure the hazard ratio between two populations under the CoxPH model. To determine the statistical power of a hazard ratio hypothesis test, under the CoxPH model, we can use :func:`lifelines.statistics.power_under_cph`. That is, suppose we want to know the probability that we reject the null hypothesis that the relative hazard ratio is 1, assuming the relative hazard ratio is truly different from 1. This function will give you that probability.
 
 
 .. code-block:: python
@@ -681,7 +681,7 @@ Since the estimation of the coefficients in the Cox proportional hazard model is
    2. using the variance inflation factor (VIF) to find redundant variables.
    3. looking at the correlation matrix of your dataset, or
 
-4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are ``nan``'s in the results. This can be seen using the ``print_summary`` method on a fitted ``CoxPHFitter`` object.
+4. Some coefficients are many orders of magnitude larger than others, and the standard error of the coefficient is also large *or* there are ``nan``'s in the results. This can be seen using the ``print_summary`` method on a fitted :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter` object.
 
    1. Look for a ``ConvergenceWarning`` about variances being too small. The dataset may contain a constant column, which provides no information for the regression (Cox model doesn't have a traditional "intercept" term like other regression models).
 
@@ -712,7 +712,7 @@ There are two common uses for weights in a model. The first is as a data size re
                                  .reset_index()
 
 
-The original dataset has 432 rows, while the grouped dataset has 387 rows plus an additional ``weights`` column. ``CoxPHFitter`` has an additional parameter to specify which column is the weight column.
+The original dataset has 432 rows, while the grouped dataset has 387 rows plus an additional ``weights`` column. :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter` has an additional parameter to specify which column is the weight column.
 
 .. code-block:: python
 
@@ -738,7 +738,7 @@ There are cases when your dataset contains correlated subjects, which breaks the
 1. If a subject appears more than once in the dataset (common when subjects can have the event more than once)
 2. If using a matching technique, like propensity-score matching, there is a correlation between pairs.
 
-In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in ``CoxPHFitter.fit`` that allows you to specify the column in the DataFrame that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
+In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in :meth:`lifelines.fitters.coxph_fitter.CoxPHFitter.fit` that allows you to specify the column in the DataFrame that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
 
 .. code-block:: python
 

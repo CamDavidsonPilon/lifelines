@@ -564,12 +564,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         # report to the user problems that we detect.
         if completed and norm_delta > 0.1:
             warnings.warn(
-                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?"
+                "Newton-Rhaphson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?"
                 % norm_delta,
                 ConvergenceWarning,
             )
         elif not completed:
-            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
+            warnings.warn(
+                "Newton-Rhaphson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning
+            )
 
         return beta
 

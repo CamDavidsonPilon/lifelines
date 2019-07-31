@@ -72,8 +72,8 @@ Let's bring in our dataset.
 
 
 
-From the ``lifelines`` library, we'll need the
-``KaplanMeierFitter`` for this exercise:
+From the *lifelines* library, we'll need the
+:class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` for this exercise:
 
 .. code:: python
 
@@ -87,12 +87,10 @@ office, and whether or not they were observed to have left office
 (leaders who died in office or were in office in 2008, the latest date
 this data was record at, do not have observed death events)
 
-We next use the ``KaplanMeierFitter`` method ``fit`` to fit the model to
-the data. (This is similar to, and inspired by,
-`scikit-learn's <http://scikit-learn.org/stable/>`__
-fit/predict API).
+We next use the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` method :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit` to fit the model to
+the data. (This is similar to, and inspired by, `scikit-learn's <http://scikit-learn.org/stable/>`__ fit/predict API).
 
-Below we fit our data with the ``KaplanMeierFitter``:
+Below we fit our data with the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter`:
 
 
 .. code:: python
@@ -103,10 +101,10 @@ Below we fit our data with the ``KaplanMeierFitter``:
     kmf.fit(T, event_observed=E)
 
 
-After calling the ``fit`` method, the ``KaplanMeierFitter`` has a property
-called ``survival_function_`` (again, we follow the styling of
+After calling the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit` method, the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` has a property
+called :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.survival_function_` (again, we follow the styling of
 scikit-learn, and append an underscore to all properties that were computational estimated).
-The property is a Pandas DataFrame, so we can call ``plot`` on it:
+The property is a Pandas DataFrame, so we can call :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.plot` on it:
 
 .. code:: python
 
@@ -120,13 +118,12 @@ around after :math:`t` years, where :math:`t` years is on the x-axis. We
 see that very few leaders make it past 20 years in office. Of course,
 like all good stats, we need to report how uncertain we are about these
 point estimates, i.e., we need confidence intervals. They are computed in
-the call to ``fit``, and located under the ``confidence_interval_``
+the call to :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit`, and located under the :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.confidence_interval_`
 property. (The method uses exponential Greenwood confidence interval. The mathematics are found in `these notes <https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf>`_.)
 
 .. math::  S(t) = Pr( T > t)
 
-Alternatively, we can call ``plot`` on the ``KaplanMeierFitter`` itself
-to plot both the KM estimate and its confidence intervals:
+Alternatively, we can call :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.plot` on the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` itself to plot both the KM estimate and its confidence intervals:
 
 .. code:: python
 
@@ -213,8 +210,8 @@ Here the difference between survival functions is very obvious, and
 performing a statistical test seems pedantic. If the curves are more
 similar, or we possess less data, we may be interested in performing a
 statistical test. In this case, *lifelines* contains routines in
-``lifelines.statistics`` to compare two survival functions. Below we
-demonstrate this routine. The function ``logrank_test`` is a common
+:mod:`lifelines.statistics` to compare two survival functions. Below we
+demonstrate this routine. The function :func:`lifelines.statistics.logrank_test` is a common
 statistical test in survival analysis that compares two event series'
 generators. If the value returned exceeds some pre-specified value, then
 we rule that the series have different generators.
@@ -285,8 +282,8 @@ respectively. For example:
 
 The raw data is not always available in this format -- *lifelines*
 includes some helper functions to transform data formats to *lifelines*
-format. These are located in the ``lifelines.utils`` sub-library. For
-example, the function ``datetimes_to_durations`` accepts an array or
+format. These are located in the :mod:`lifelines.utils` sub-library. For
+example, the function :func:`~lifelines.utils.datetimes_to_durations` accepts an array or
 Pandas object of start times/dates, and an array or Pandas objects of
 end times/dates (or ``None`` if not observed):
 
@@ -306,7 +303,7 @@ end times/dates (or ``None`` if not observed):
     E (event_observed):  [ True  True False]
 
 
-The function ``datetimes_to_durations`` is very flexible, and has many
+The function :func:`~lifelines.utils.datetimes_to_durations` is very flexible, and has many
 keywords to tinker with.
 
 
@@ -332,7 +329,7 @@ The estimator for this quantity is called the Nelson Aalen estimator:
 where :math:`d_i` is the number of deaths at time :math:`t_i` and
 :math:`n_i` is the number of susceptible individuals.
 
-In *lifelines*, this estimator is available as the ``NelsonAalenFitter``. Let's use the regime dataset from above:
+In *lifelines*, this estimator is available as the :class:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter`. Let's use the regime dataset from above:
 
 .. code:: python
 
@@ -345,7 +342,7 @@ In *lifelines*, this estimator is available as the ``NelsonAalenFitter``. Let's 
     naf.fit(T,event_observed=E)
 
 
-After fitting, the class exposes the property ``cumulative_hazard_`` as
+After fitting, the class exposes the property :meth:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter.cumulative_hazard_`` as
 a DataFrame:
 
 .. code:: python
@@ -413,14 +410,14 @@ Alternatively, we can derive the more-interpretable hazard function, but
 there is a catch. The derivation involves a kernel smoother (to smooth
 out the differences of the cumulative hazard function) , and this requires
 us to specify a bandwidth parameter that controls the amount of
-smoothing. This functionality is in the ``smoothed_hazard_``
-and ``smoothed_hazard_confidence_intervals_`` methods. Why methods?
+smoothing. This functionality is in the :meth:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter.smoothed_hazard_`
+and :meth:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter.smoothed_hazard_confidence_intervals_` methods. Why methods?
 They require an argument representing the bandwidth.
 
 
-There is also a ``plot_hazard`` function (that also requires a
+There is also a :meth:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter.plot_hazard` function (that also requires a
 ``bandwidth`` keyword) that will plot the estimate plus the confidence
-intervals, similar to the traditional ``plot`` functionality.
+intervals, similar to the traditional :meth:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter.plot` functionality.
 
 .. code:: python
 
@@ -482,7 +479,7 @@ A priori, we do not know what :math:`\lambda` and :math:`\rho` are, but we use t
 
 .. math::  H(t) = \left(\frac{t}{\lambda}\right)^\rho
 
-In lifelines, estimation is available using the ``WeibullFitter`` class. The ``plot`` method will plot the cumulative hazard.
+In lifelines, estimation is available using the :class:`lifelines.fitters.weibull_fitter.WeibullFitter` class. The :meth:`~lifelines.fitters.weibull_fitter.WeibullFitter.plot` method will plot the cumulative hazard.
 
 .. code:: python
 
@@ -643,7 +640,7 @@ instruments could only detect the measurement was *less* than some upper bound. 
     """
 
 
-*lifelines* has support for left-censored datasets in most univariate models, including the ``KaplanMeierFitter`` class, by using the ``fit_left_censoring`` method.
+*lifelines* has support for left-censored datasets in most univariate models, including the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` class, by using the ``fit_left_censoring`` method.
 
 .. code:: python
 
@@ -735,7 +732,7 @@ Left truncated (late entry) data
 
 Another form of bias that is introduced into a dataset is called left-truncation (or late entry). Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. So it's possible there are some counter-factual individuals who *would* have entered into your study (that is, went to prison), but instead died early.
 
-All univariate fitters, like ``KaplanMeierFitter`` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between actual "birth" (or "exposure") to entering the study.
+All univariate fitters, like :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between actual "birth" (or "exposure") to entering the study.
 
  .. note:: Nothing changes in the duration array: it still measures time from "birth" to time exited study (either by death or censoring). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
 
