@@ -22,7 +22,7 @@ The dataset for regression
 The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. There may be a column denoting the event status of each observation (1 if event occurred, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial.
 
 
-An example dataset we will use is the Rossi recidivism dataset, available in *lifelines* as ``datasets.load_rossi``.
+An example dataset we will use is the Rossi recidivism dataset, available in *lifelines* as :meth:`~lifelines.datasets.load_rossi`.
 
 .. code:: python
 
@@ -47,8 +47,7 @@ If you need to first clean or transform your dataset (encode categorical variabl
 Cox's proportional hazard model
 =================================
 
-*lifelines* has an implementation of the Cox proportional hazards regression model (implemented in
-R as ``coxph``). The idea behind the model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
+The idea behind Cox's proportional hazard model model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
 .. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
@@ -60,7 +59,7 @@ Note a few facts about this model: the only time component is in the baseline ha
 Running the regression
 -----------------------
 
-The implementation of the Cox model in *lifelines* is called :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. Like R, it has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
+The implementation of the Cox model in *lifelines* is under :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. Like R, it has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
 
 
 .. code:: python
@@ -230,7 +229,7 @@ Plotting the effect of varying a covariate
 -------------------------------------------
 
 After fitting, we can plot what the survival curves look like as we vary a single covariate while
-holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the :meth:`lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups`` method and give it the covariate of interest, and the values to display.
+holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method and give it the covariate of interest, and the values to display.
 
 .. code:: python
 
@@ -246,7 +245,7 @@ holding everything else equal. This is useful to understand the impact of a cova
 .. image:: images/coxph_plot_covarite_groups.png
 
 
-The :meth:`lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups`` method can accept multiple covariates as well. This is useful for two purposes:
+The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method can accept multiple covariates as well. This is useful for two purposes:
 
 1. There are derivative features in your dataset. For example, suppose you have included ``year`` and ``year**2`` in your dataset. It doesn't make sense to just vary ``year`` and leave ``year**2`` fixed. You'll need to specify manually the values the covariates take on in a N-d array or list (where N is the number of covariates being varied.)
 
@@ -551,7 +550,7 @@ The plotting API is the same as in :class:`~lifelines.fitters.coxph_fitter.CoxPH
 .. image:: images/weibull_aft_forest.png
 
 
-We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using :meth:`lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_covariate_groups``, and this is also a nice time to observe the effects of modeling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
+We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_covariate_groups`, and this is also a nice time to observe the effects of modeling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
 
 .. code:: python
 
