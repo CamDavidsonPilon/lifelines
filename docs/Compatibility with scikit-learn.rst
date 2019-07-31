@@ -87,4 +87,4 @@ The wrapped classes can even be used in more complex scikit-learn functions (ex:
     """
 
 
-.. note:: The ``sklearn_adapter`` is currently only designed to work with right-censored data.
+.. note:: The :func:`lifelines.utils.sklearn_adapter` is currently only designed to work with right-censored data.
