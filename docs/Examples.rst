@@ -738,7 +738,7 @@ There are cases when your dataset contains correlated subjects, which breaks the
 1. If a subject appears more than once in the dataset (common when subjects can have the event more than once)
 2. If using a matching technique, like propensity-score matching, there is a correlation between pairs.
 
-In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in :meth:`lifelines.fitters.coxph_fitter.CoxPHFitter.fit` that allows you to specify the column in the DataFrame that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
+In both cases, the reported standard errors from a unadjusted Cox model will be wrong. In order to adjust for these correlations, there is a ``cluster_col`` keyword in :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit` that allows you to specify the column in the DataFrame that contains designations for correlated subjects. For example, if subjects in rows 1 & 2 are correlated, but no other subjects are correlated, then ``cluster_col`` column should have the same value for rows 1 & 2, and all others unique. Another example: for matched pairs, each subject in the pair should have the same value.
 
 .. code-block:: python
 
