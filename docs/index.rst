@@ -62,6 +62,7 @@ Contents:
   :caption: About lifelines
 
   Changelog
+  Development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>
   Citing lifelines <https://doi.org/10.5281/zenodo.805993>
 
 .. toctree::
@@ -70,7 +71,6 @@ Contents:
 
   Gitter channel <https://gitter.im/python-lifelines/Lobby>
   Create a GitHub issue <https://github.com/camdavidsonpilon/lifelines/issues>
-  Development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>
 
 Installation
 ------------------------------
