@@ -9,7 +9,7 @@ authors:
    orcid: 0000-0003-1794-9143
    affiliation: 1
 affiliations:
- - name: University of Waterloo
+ - name: Independent researcher
    index: 1
 date: 07 March 2019
 bibliography: paper.bib
@@ -63,8 +63,9 @@ class ThreeParamHazardFitter(ParametericUnivariateFitter):
     _bounds = [(0, None), (75, None), (0, None)]
 
     # this is the only function we need to define. It always takes two arguments:
-    #   params: an iterable that unpacks the parameters you'll need in the order of _fitted_parameter_names
-    #   times: a numpy vector of times that will be passed in by the optimizer
+    #   params: an iterable that unpacks the parameters you'll need in the
+    #           order of _fitted_parameter_names
+    #   times: a NumPy vector of durations
     def _cumulative_hazard(self, params, times):
         a, b, c = params
         return a / (b - times) ** c
@@ -72,11 +73,11 @@ class ThreeParamHazardFitter(ParametericUnivariateFitter):
 ```
 
 
-Some more examples of user-defined cumulative hazards are in the main documentation.
+Some more examples of user-defined cumulative hazards are in the main documentation, including how to add covariates.
 
 
 # Acknowledgments
 
-I'd like to acknowledge all the researchers in survival analysis, specifically Terry Therneau. I'd also like to acknowledge the contributers to the *lifelines* projects.
+I'd like to acknowledge all the researchers in survival analysis, specifically Terry Therneau and the other authors of R's *survival* package. I'd also like to acknowledge the contributers to the *lifelines* projects.
 
 # References
