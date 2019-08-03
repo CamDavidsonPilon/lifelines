@@ -1145,6 +1145,7 @@ class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 
 class ParametricRegressionFitter(BaseFitter):
 
+    _scipy_fit_method = "BFGS"
     _KNOWN_MODEL = False
 
     def __init__(self, alpha=0.05, penalizer=0.0):
@@ -1477,7 +1478,7 @@ class ParametricRegressionFitter(BaseFitter):
             # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
             value_and_grad(self._neg_likelihood_with_penalty_function),
             initial_point_array,
-            method=None,
+            method=self._scipy_fit_method,
             jac=True,
             args=(Ts, E, weights, entries, Xs),
             options={"disp": show_progress},

@@ -112,6 +112,8 @@ The property is a Pandas DataFrame, so we can call :meth:`~lifelines.fitters.kap
     plt.title('Survival function of political regimes');
 
 .. image:: images/lifelines_intro_kmf_curve.png
+    :width: 700px
+    :align: center
 
 How do we interpret this? The y-axis represents the probability a leader is still
 around after :math:`t` years, where :math:`t` years is on the x-axis. We
@@ -130,7 +132,8 @@ Alternatively, we can call :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanM
     kmf.plot()
 
 .. image:: images/lifelines_intro_kmf_fitter.png
-
+    :width: 700px
+    :align: center
 
 The median time in office, which defines the point in time where on
 average 1/2 of the population has expired, is a property:
@@ -165,7 +168,8 @@ an ``axis`` object, that can be used for plotting further estimates:
 
 
 .. image:: images/lifelines_intro_multi_kmf_fitter.png
-
+    :width: 650px
+    :align: center
 
 We might be interested in estimating the probabilities in between some
 points. We can do that with the ``timeline`` argument. We specify the
@@ -194,7 +198,8 @@ probabilities of survival at those points:
     """
 
 .. image:: images/lifelines_intro_multi_kmf_fitter_2.png
-
+    :width: 650px
+    :align: center
 
 It is incredible how much longer these non-democratic regimes exist for.
 A democratic regime does have a natural bias towards death though: both
@@ -364,7 +369,8 @@ a DataFrame:
 
 
 .. image:: images/lifelines_intro_naf_fitter.png
-
+    :width: 650px
+    :align: center
 
 The cumulative hazard has less obvious understanding than the survival
 functions, but the hazard functions is the basis of more advanced techniques in
@@ -392,7 +398,8 @@ years:
 
 
 .. image:: images/lifelines_intro_naf_fitter_multi.png
-
+    :width: 650px
+    :align: center
 
 Looking at the rates of change, I would say that both political
 philosophies have a constant hazard, albeit democratic regimes have a
@@ -510,7 +517,8 @@ In lifelines, estimation is available using the :class:`~lifelines.fitters.weibu
     """
 
 .. image:: images/survival_weibull.png
-
+    :width: 650px
+    :align: center
 
 
 Other parametric models: Exponential, Log-Logistic & Log-Normal
@@ -603,7 +611,8 @@ With parametric models, we have a functional form that allows us to extend the s
     wbf.plot_survival_function()
 
 .. image:: images/weibull_extrapolation.png
-
+    :width: 650px
+    :align: center
 
 To aid model selection, *lifelines* has provided qq-plots, `Selecting a parametric model using QQ plots`_.
 
@@ -759,7 +768,8 @@ Another situation with left-truncation occurs when subjects are exposed before e
 
 
 .. image:: images/lifetimes_mcas.png
-
+    :width: 670px
+    :align: center
 
 So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, but wasn't in our study for the first 4.5 years. From this point-of-view, why can't we "fill in" the dashed lines and say, for example, "subject #77 lived for 7.5 years"? If we did this, we would severely underestimate chance of dying early on after diagnosis. Why? It's possible that there were individuals who were diagnosed and then died shortly after, and never had a chance to enter our study. If we did manage to observe them however, they would have depressed the survival function early on. Thus, "filling in" the dashed lines makes us over confident about what occurs in the early period after diagnosis. We can see this below when we model the survival function with and without taking into account late entries.
 
@@ -777,7 +787,8 @@ So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, b
 
 
 .. image:: images/kmf_mcas.png
-
+    :width: 650px
+    :align: center
 
 
 .. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html

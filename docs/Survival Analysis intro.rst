@@ -88,7 +88,8 @@ that we would be severely underestimating the true average lifespan.
 
 
 .. image:: images/survival_analysis_intro_censoring.png
-
+    :width: 750px
+    :align: center
 
 .. parsed-literal::
 
@@ -112,7 +113,8 @@ information at :math:`t=10`).
 
 
 .. image:: images/survival_analysis_intro_censoring_revealed.png
-
+    :width: 750px
+    :align: center
 
 Survival analysis was originally developed to solve this type of
 problem, that is, to deal with estimation when our data is
@@ -156,7 +158,8 @@ In plain English: the survival function defines the probability the death event 
 Here's an example of a survival function:
 
 .. image:: images/intro_survival_function.png
-
+    :width: 650px
+    :align: center
 
 Hazard function
 -----------------
@@ -193,9 +196,23 @@ functions. Notice that we can now speak either about the
 survival function, :math:`S(t)`, or the cumulative hazard function,
 :math:`H(t)`, and we can convert back and forth quite easily.
 
-The below figures represent the hazard and the cumulative hazard of the survival function in the figure above.
+
+.. figure:: images/map.png
+    :width: 550px
+    :figwidth: 600px
+    :align: center
+    :figclass: align-center
+
+    Map of the mathematical entities used in the survival analysis and the transforms between them.
+    Don't panic: *lifelines* does this all for you.
+
+
+The two figures below represent the hazard and the cumulative hazard of the survival function in the figure above.
 
 .. image:: images/intro_hazards.png
+    :width: 650px
+    :align: center
+
 
 
 Next steps

@@ -226,7 +226,8 @@ Standard
     kmf.plot()
 
 .. image:: /images/normal_plot.png
-
+    :width: 500px
+    :align: center
 
 Show censors and edit markers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -237,7 +238,8 @@ Show censors and edit markers
     kmf.plot(show_censors=True, censor_styles={'ms': 6, 'marker': 's'})
 
 .. image:: images/flat_plot.png
-
+    :width: 500px
+    :align: center
 
 
 Hide confidence intervals
@@ -249,7 +251,8 @@ Hide confidence intervals
     kmf.plot(ci_show=False)
 
 .. image:: /images/ci_show_plot.png
-
+    :width: 500px
+    :align: center
 
 
 Invert axis
@@ -261,6 +264,8 @@ Invert axis
     kmf.plot(invert_y_axis=True)
 
 .. image:: /images/invert_y_axis.png
+    :width: 500px
+    :align: center
 
 .. note:: This is deprecated and we suggest to use `kmf.plot_cumulative_density()` instead.
 
@@ -274,7 +279,8 @@ Displaying at-risk counts below plots
     kmf.plot(at_risk_counts=True)
 
 .. image:: /images/single_at_risk_plots.png
-
+    :width: 500px
+    :align: center
 
 Displaying multiple at-risk counts below plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -304,7 +310,8 @@ The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add 
 will display
 
 .. image:: /images/add_at_risk.png
-
+    :width: 500px
+    :align: center
 
 Transforming survival-table data into *lifelines* format
 #########################################################

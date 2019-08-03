@@ -67,6 +67,8 @@ After calling the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitte
 
 
 .. image:: images/quickstart_kmf.png
+    :width: 620px
+    :align: center
 
 Alternatively, you can plot the cumulative density function:
 
@@ -75,7 +77,8 @@ Alternatively, you can plot the cumulative density function:
     kmf.plot_cumulative_density()
 
 .. image:: images/quickstart_kmf_cdf.png
-
+    :width: 620px
+    :align: center
 
 By specifying the ``timeline`` keyword argument in :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit`, we can change how the above models are indexed:
 
@@ -128,7 +131,8 @@ Multiple groups
 
 
 .. image:: images/quickstart_multi.png
-
+    :width: 620px
+    :align: center
 
 Alternatively, for many more groups and more "pandas-esque":
 
@@ -255,7 +259,8 @@ The input of the ``fit`` method's API in a regression model is different. All th
     cph.plot()
 
 .. image:: images/coxph_plot_quickstart.png
-
+    :width: 620px
+    :align: center
 
 The same dataset, but with a *Weibull accelerated failure time model*. This model was two parameters (see docs `here <https://lifelines.readthedocs.io/en/latest/lifelines.fitters.html#module-lifelines.fitters.weibull_aft_fitter>`_), and we can choose to model both using our covariates or just one. Below we model just the scale parameter, ``lambda_``.
 
@@ -297,7 +302,8 @@ The same dataset, but with a *Weibull accelerated failure time model*. This mode
     wft.plot()
 
 .. image:: images/waft_plot_quickstart.png
-
+    :width: 620px
+    :align: center
 
 Other AFT models are available as well, see `here <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#the-log-normal-and-log-logistic-aft-model>`_. An alternative regression model is Aalen's Additive model, which has time-varying hazards:
 
@@ -317,6 +323,8 @@ Along with :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter` and :class:`~lif
     aaf.predict_survival_function(X.iloc[10:12]).plot()  # get the unique survival functions of two subjects
 
 .. image:: images/quickstart_predict_aaf.png
+    :width: 620px
+    :align: center
 
 Like the above estimators, there is also a built-in plotting method:
 
@@ -325,6 +333,8 @@ Like the above estimators, there is also a built-in plotting method:
     aaf.plot()
 
 .. image:: images/quickstart_aaf.png
+    :width: 620px
+    :align: center
 
 .. note:: More detailed documentation and tutorials are available in `Survival Regression`_.
 

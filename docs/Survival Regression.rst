@@ -243,7 +243,8 @@ holding everything else equal. This is useful to understand the impact of a cova
     cph.plot_covariate_groups('prio', [0, 2, 4, 6, 8, 10], cmap='coolwarm')
 
 .. image:: images/coxph_plot_covarite_groups.png
-
+    :width: 650px
+    :align: center
 
 The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method can accept multiple covariates as well. This is useful for two purposes:
 
