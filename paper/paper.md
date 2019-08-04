@@ -62,9 +62,10 @@ class ThreeParamHazardFitter(ParametericUnivariateFitter):
     _fitted_parameter_names = ['alpha_', 'beta_', 'gamma_']
     _bounds = [(0, None), (75, None), (0, None)]
 
-    # this is the only function we need to define. It always takes two arguments:
-    #   params: an iterable that unpacks the parameters you'll need in the
-    #           order of _fitted_parameter_names
+    # this is the only function we need to define.
+    # It always takes two arguments:
+    #   params: an iterable that unpacks the parameters you'll need
+    #           in the order of _fitted_parameter_names
     #   times: a NumPy vector of durations
     def _cumulative_hazard(self, params, times):
         a, b, c = params
