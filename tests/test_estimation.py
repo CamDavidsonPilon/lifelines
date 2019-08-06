@@ -1626,7 +1626,24 @@ class TestAFTFitters:
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
 
-    def test_fit_intercept_can_be_false(self, rossi):
+    def test_fit_intercept_can_be_false_and_not_provided(self, rossi):
+        # nonsensical data
+        interval_rossi = rossi.copy()
+        interval_rossi["start"] = 0
+        interval_rossi["end"] = rossi["week"]
+        interval_rossi["arrest"] = False
+        interval_rossi = interval_rossi.drop("week", axis=1)
+
+        # nonsensical data
+        left_rossi = rossi.copy()
+        left_rossi["week"] = 1 / rossi["week"] + 1
+
+        for fitter in [WeibullAFTFitter(fit_intercept=False)]:
+            fitter.fit_right_censoring(rossi, "week", "arrest")
+            fitter.fit_left_censoring(left_rossi, "week", "arrest")
+            fitter.fit_interval_censoring(interval_rossi, "start", "end", "arrest")
+
+    def test_fit_intercept_can_be_false_but_provided(self, rossi):
         rossi["intercept"] = 1.0
         for fitter in [
             WeibullAFTFitter(fit_intercept=False),
