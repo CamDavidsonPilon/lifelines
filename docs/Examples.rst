@@ -5,7 +5,14 @@
 More examples and recipes
 ==================================
 
-This section goes through some examples and recipes to help you use *lifelines*. If you are looking for some full example usage of *lifelines*, `there are full Jupyter notebooks here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_ and `examples and ideas on the development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>`_.
+This section goes through some examples and recipes to help you use *lifelines*.
+
+
+
+Worked Examples
+####################
+
+If you are looking for some full examples of *lifelines*, `there are full Jupyter notebooks and scripts here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_ and `examples and ideas on the development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>`_.
 
 
 Statistically compare two populations

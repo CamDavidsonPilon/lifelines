@@ -104,6 +104,7 @@ Instead of the Kaplan-Meier estimator, you may be interested in a parametric mod
     lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
     pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
+    ggf = GeneralizedGammaFitter().fit(T, E, label='GeneralizedGammaFitter')
 
     wbf.plot_survival_function(ax=axes[0][0])
     exf.plot_survival_function(ax=axes[0][1])
@@ -111,6 +112,7 @@ Instead of the Kaplan-Meier estimator, you may be interested in a parametric mod
     kmf.plot_survival_function(ax=axes[1][0])
     llf.plot_survival_function(ax=axes[1][1])
     pwf.plot_survival_function(ax=axes[1][2])
+    ggf.plot_survival_function(ax=axes[1][2])
 
 .. image:: images/waltons_survival_function.png
 

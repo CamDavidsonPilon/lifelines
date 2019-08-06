@@ -2104,7 +2104,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Returns
         -------
-             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+             self with additional new properties ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
         Examples
@@ -2247,7 +2247,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Returns
         -------
-            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+            self with additional new properties ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
         Examples
@@ -2400,7 +2400,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Returns
         -------
-            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+            self with additional new properties ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
         Examples
