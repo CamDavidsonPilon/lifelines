@@ -114,7 +114,7 @@ Convergence
 
 Fitting the Cox model to the data involves using iterative methods. *lifelines* takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence and decrease the number of iterative steps required. If you wish to see the fitting, there is a ``show_progress`` parameter in :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit` function. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
 
-After fitting, the value of the maximum log-likelihood this available using :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter._log_likelihood`. The variance matrix of the coefficients is available under :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.variance_matrix_`.
+After fitting, the value of the maximum log-likelihood this available using :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.log_likelihood`. The variance matrix of the coefficients is available under :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.variance_matrix_`.
 
 
 Goodness of fit
@@ -669,9 +669,9 @@ Often, you don't know *a priori* which AFT model to use. Each model has some ass
     lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest')
     wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
 
-    print(llf._log_likelihood)  # -679.938
-    print(lnf._log_likelihood)  # -683.234
-    print(wf._log_likelihood)   # -679.916, slightly the best model.
+    print(llf.log_likelihood_)  # -679.938
+    print(lnf.log_likelihood_)  # -683.234
+    print(wf.log_likelihood_)   # -679.916, slightly the best model.
 
 
     # with some heterogeneity in the ancillary parameters
@@ -680,9 +680,9 @@ Often, you don't know *a priori* which AFT model to use. Each model has some ass
     lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
     wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
 
-    print(llf._log_likelihood) # -678.94, slightly the best model.
-    print(lnf._log_likelihood) # -680.39
-    print(wf._log_likelihood)  # -679.60
+    print(llf.log_likelihood_) # -678.94, slightly the best model.
+    print(lnf.log_likelihood_) # -680.39
+    print(wf.log_likelihood_)  # -679.60
 
 
 Left, right and interval censored data

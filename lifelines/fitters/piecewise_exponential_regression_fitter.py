@@ -115,5 +115,5 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         if CensoringType.is_left_censoring(self):
             raise NotImplementedError()
 
-        self._ll_null_ = model._log_likelihood
+        self._ll_null_ = model.log_likelihood_
         return self._ll_null_

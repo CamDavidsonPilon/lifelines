@@ -1,6 +1,8 @@
-### Examples
+## Examples
 
 In this folder are some examples of lifelines usage, some with and some without comments and context. You can see some common patterns using lifelines and survival analysis.
+
+
 
 
 #### Other examples
