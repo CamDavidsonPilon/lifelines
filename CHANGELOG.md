@@ -1,5 +1,12 @@
 ### Changelog
 
+#### 0.22.4
+
+
+##### New features
+ - model's now expose a `log_likelihood_` property.
+
+
 #### 0.22.3
 
 ##### API changes

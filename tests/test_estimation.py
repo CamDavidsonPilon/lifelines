@@ -1684,8 +1684,8 @@ class TestAFTFitters:
         lnf = LogNormalAFTFitter().fit(df, "T")
         llf = LogLogisticAFTFitter().fit(df, "T")
 
-        assert wf._log_likelihood > lnf._log_likelihood
-        assert wf._log_likelihood > llf._log_likelihood
+        assert wf.log_likelihood_ > lnf.log_likelihood_
+        assert wf.log_likelihood_ > llf.log_likelihood_
 
         # lognormal should have the best fit -> largest ll
         W = norm.rvs(scale=1, loc=0, size=N)
@@ -1699,8 +1699,8 @@ class TestAFTFitters:
         lnf = LogNormalAFTFitter().fit(df, "T")
         llf = LogLogisticAFTFitter().fit(df, "T")
 
-        assert lnf._log_likelihood > wf._log_likelihood
-        assert lnf._log_likelihood > llf._log_likelihood
+        assert lnf.log_likelihood_ > wf.log_likelihood_
+        assert lnf.log_likelihood_ > llf.log_likelihood_
 
         # loglogistic should have the best fit -> largest ll
         W = logistic.rvs(scale=1, loc=0, size=N)
@@ -1714,8 +1714,8 @@ class TestAFTFitters:
         lnf = LogNormalAFTFitter().fit(df, "T")
         llf = LogLogisticAFTFitter().fit(df, "T")
 
-        assert llf._log_likelihood > wf._log_likelihood
-        assert llf._log_likelihood > lnf._log_likelihood
+        assert llf.log_likelihood_ > wf.log_likelihood_
+        assert llf.log_likelihood_ > lnf.log_likelihood_
 
     def test_aft_median_behaviour(self, models, rossi):
         for aft in models:
@@ -3396,7 +3396,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cp_with_strata_in_fit.fit(rossi, "week", "arrest", strata=strata)
         assert cp_with_strata_in_fit.strata == strata
 
-        assert cp_with_strata_in_init._log_likelihood == cp_with_strata_in_fit._log_likelihood
+        assert cp_with_strata_in_init.log_likelihood_ == cp_with_strata_in_fit.log_likelihood_
 
     def test_baseline_survival_is_the_same_indp_of_location(self, regression_dataset):
         df = regression_dataset.copy()

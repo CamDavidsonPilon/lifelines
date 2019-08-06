@@ -454,7 +454,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         self._hessian_ = hessian
         self._score_ = gradient
-        self._log_likelihood = ll
+        self.log_likelihood_ = ll
 
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
@@ -472,6 +472,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
         return beta
+
+    @property
+    def _log_likelihood(self):
+        warnings.warn(
+            "Please use `log_likelihood` property instead. `_log_likelihood` will be removed in a future version of lifelines",
+            DeprecationWarning,
+        )
+        return self.log_likelihood_
 
     def _get_gradients(self, X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
         """
@@ -729,10 +737,10 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                     weights_col="__weights",
                     strata=self.strata,
                 )
-                ._log_likelihood
+                .log_likelihood_
             )
 
-        ll_alt = self._log_likelihood
+        ll_alt = self.log_likelihood_
         test_stat = 2 * (ll_alt - ll_null)
         degrees_freedom = self.params_.shape[0]
         p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)

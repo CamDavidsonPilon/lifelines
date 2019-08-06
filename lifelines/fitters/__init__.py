@@ -607,7 +607,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         print(self)
         print("{} = {}".format(justify("number of subjects"), self.event_observed.shape[0]))
         print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
-        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
+        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print(
             "{} = {}".format(
                 justify("hypothesis"),
@@ -901,7 +901,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self._check_cumulative_hazard_is_monotone_and_positive(utils.coalesce(*Ts), self._initial_values)
 
         # estimation
-        self._fitted_parameters_, self._log_likelihood, self._hessian_ = self._fit_model(
+        self._fitted_parameters_, self.log_likelihood_, self._hessian_ = self._fit_model(
             Ts, self.event_observed.astype(bool), self.entry, self.weights, initial_point, show_progress=show_progress
         )
 
@@ -957,6 +957,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.cumulative_density_ = self.cumulative_density_at_times(self.timeline).to_frame()
 
         return self
+
+    @property
+    def _log_likelihood(self):
+        warnings.warn(
+            "Please use `log_likelihood` property instead. `_log_likelihood` will be removed in a future version of lifelines",
+            DeprecationWarning,
+        )
+        return self.log_likelihood_
 
     def _check_bounds_initial_point_names_shape(self):
         if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
@@ -1415,7 +1423,7 @@ class ParametricRegressionFitter(BaseFitter):
 
         self._norm_std = pd.Series([_norm_std.loc[variable_name] for _, variable_name in _index], index=_index)
 
-        _params, self._log_likelihood, self._hessian_ = self._fit_model(
+        _params, self.log_likelihood_, self._hessian_ = self._fit_model(
             log_likelihood_function,
             Ts,
             self._create_Xs_dict(utils.normalize(df, 0, _norm_std)),
@@ -1442,6 +1450,14 @@ class ParametricRegressionFitter(BaseFitter):
             parameter_name: np.zeros(len(Xs.mappings[parameter_name]))
             for parameter_name in self._fitted_parameter_names
         }
+
+    @property
+    def _log_likelihood(self):
+        warnings.warn(
+            "Please use `log_likelihood_` property instead. `_log_likelihood` will be removed in a future version of lifelines",
+            DeprecationWarning,
+        )
+        return self.log_likelihood_
 
     def _add_penalty(self, params, neg_ll):
         params, _ = flatten(params)
@@ -1597,7 +1613,7 @@ class ParametricRegressionFitter(BaseFitter):
                 df["T"], df["E"] = self.durations, self.event_observed
                 model.fit_left_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
 
-        self._ll_null_ = model._log_likelihood
+        self._ll_null_ = model.log_likelihood_
         return self._ll_null_
 
     def log_likelihood_ratio_test(self):
@@ -1609,7 +1625,7 @@ class ParametricRegressionFitter(BaseFitter):
         from lifelines.statistics import chisq_test, StatisticalResult
 
         ll_null = self._ll_null
-        ll_alt = self._log_likelihood
+        ll_alt = self.log_likelihood_
 
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.params_.shape[0] - 2  # delta in number of parameters between models
@@ -1679,7 +1695,7 @@ class ParametricRegressionFitter(BaseFitter):
 
         print("{} = {}".format(justify("number of subjects"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
-        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
+        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 
         for k, v in kwargs.items():
@@ -2499,7 +2515,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
         # we may use this later in print_summary
-        self._ll_null_ = uni_model._log_likelihood
+        self._ll_null_ = uni_model.log_likelihood_
 
         # TODO: this fails with fit_intercept=False
         return {
