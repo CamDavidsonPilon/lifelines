@@ -2179,9 +2179,17 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
 
         if self.fit_intercept:
-            assert "_intercept" not in df
+            assert (
+                "_intercept" not in df
+            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
             df["_intercept"] = 1.0
             regressors[self._primary_parameter_name].append("_intercept")
+            regressors[self._ancillary_parameter_name].append("_intercept")
+        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df == False) or not self.model_ancillary):
+            assert (
+                "_intercept" not in df
+            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
+            df["_intercept"] = 1.0
             regressors[self._ancillary_parameter_name].append("_intercept")
 
         super(ParametericAFTRegressionFitter, self)._fit(
@@ -2333,9 +2341,17 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
 
         if self.fit_intercept:
-            assert "_intercept" not in df
+            assert (
+                "_intercept" not in df
+            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
             df["_intercept"] = 1.0
             regressors[self._primary_parameter_name].append("_intercept")
+            regressors[self._ancillary_parameter_name].append("_intercept")
+        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df == False) or not self.model_ancillary):
+            assert (
+                "_intercept" not in df
+            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
+            df["_intercept"] = 1.0
             regressors[self._ancillary_parameter_name].append("_intercept")
 
         super(ParametericAFTRegressionFitter, self)._fit(
@@ -2465,9 +2481,17 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
 
         if self.fit_intercept:
-            assert "_intercept" not in df
+            assert (
+                "_intercept" not in df
+            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
             df["_intercept"] = 1.0
             regressors[self._primary_parameter_name].append("_intercept")
+            regressors[self._ancillary_parameter_name].append("_intercept")
+        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df == False) or not self.model_ancillary):
+            assert (
+                "_intercept" not in df
+            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
+            df["_intercept"] = 1.0
             regressors[self._ancillary_parameter_name].append("_intercept")
 
         super(ParametericAFTRegressionFitter, self)._fit(
@@ -2691,9 +2715,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            if self.fit_intercept:
-                X["_intercept"] = 1.0
-            X = X[self.params_.loc[self._primary_parameter_name].index]
+            X["_intercept"] = 1.0
+            primary_X = X[self.params_.loc[self._primary_parameter_name].index]
         else:
             # provided numpy array
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
@@ -2714,7 +2737,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         primary_params = self.params_[self._primary_parameter_name]
         ancillary_params = self.params_[self._ancillary_parameter_name]
 
-        primary_scores = np.exp(np.dot(X, primary_params))
+        primary_scores = np.exp(np.dot(primary_X, primary_params))
         ancillary_scores = np.exp(np.dot(ancillary_X, ancillary_params))
 
         return primary_scores, ancillary_scores
