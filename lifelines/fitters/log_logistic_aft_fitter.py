@@ -101,7 +101,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         beta_ = safe_exp(log_beta_)
         return -np.logaddexp(-beta_ * (np.log(T) - np.log(alpha_)), 0)
 
-    def predict_percentile(self, df, ancillary_df=None, p=0.5):
+    def predict_percentile(self, df, ancillary_df=None, p=0.5, conditional_after=None):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -131,7 +131,12 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         """
         alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
 
-        return pd.DataFrame(alpha_ * (1 / p - 1) ** beta_, index=_get_index(df))
+        if conditional_after is None:
+            return pd.DataFrame(alpha_ * (1 / (p) - 1) ** (1 / beta_), index=_get_index(df))
+        else:
+            conditional_after = np.asarray(conditional_after)
+            S = 1 / (1 + (conditional_after / alpha_) ** beta_)
+            return pd.DataFrame(alpha_ * (1 / (p * S) - 1) ** (1 / beta_) - conditional_after, index=_get_index(df))
 
     def predict_expectation(self, df, ancillary_df=None):
         """
