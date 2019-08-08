@@ -1440,7 +1440,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.params_), index=index)
 
-    def predict_cumulative_hazard(self, X, times=None):
+    def predict_cumulative_hazard(self, X, times=None, conditional_after=None):
         """
         Parameters
         ----------
@@ -1453,18 +1453,30 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
+        conditional_after: iterable, optional
+            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
         Returns
         -------
         cumulative_hazard_ : DataFrame
             the cumulative hazard of individuals over the timeline
         """
+        if conditional_after is None:
+            conditional_after = np.zeros(X.shape[0])
+        else:
+            conditional_after = np.asarray(conditional_after)
 
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
             for stratum, stratified_X in X.groupby(self.strata):
                 try:
-                    c_0 = self.baseline_cumulative_hazard_[[stratum]]
+                    c_0 = self.baseline_cumulative_hazard_[[stratum]] - dataframe_interpolate_at_times(
+                        self.baseline_cumulative_hazard_[[stratum]], conditional_after
+                    )
+                    c_0 = np.clip(c_0, 0, np.inf)
                 except KeyError:
                     raise StatError(
                         """The stratum %s was not found in the original training data. For example, try
@@ -1481,8 +1493,12 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     left_index=True,
                 )
         else:
+            # TODO this needs to be shifted by conditional_after
+            c_0 = self.baseline_cumulative_hazard_ - dataframe_interpolate_at_times(
+                self.baseline_cumulative_hazard_, conditional_after
+            )
+            c_0 = np.clip(c_0, 0, np.inf)
 
-            c_0 = self.baseline_cumulative_hazard_
             v = self.predict_partial_hazard(X)
             col = _get_index(v)
             cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
@@ -1492,7 +1508,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             return dataframe_interpolate_at_times(cumulative_hazard_, times)
         return cumulative_hazard_
 
-    def predict_survival_function(self, X, times=None):
+    def predict_survival_function(self, X, times=None, conditional_after=None):
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -1508,6 +1524,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
+        conditional_after: iterable, optional
+            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
 
         Returns
@@ -1515,9 +1536,9 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         survival_function : DataFrame
             the survival probabilities of individuals over the timeline
         """
-        return np.exp(-self.predict_cumulative_hazard(X, times=times))
+        return np.exp(-self.predict_cumulative_hazard(X, times=times, conditional_after=conditional_after))
 
-    def predict_percentile(self, X, p=0.5):
+    def predict_percentile(self, X, p=0.5, conditional_after=None):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1531,6 +1552,11 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
             same order as the training data.
         p: float, optional (default=0.5)
             the percentile, must be between 0 and 1.
+        conditional_after: iterable, optional
+            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
         Returns
         -------
@@ -1542,7 +1568,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         """
         subjects = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X)[subjects]).T
+        return qth_survival_times(p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]).T
 
     def predict_median(self, X):
         """
@@ -2070,7 +2096,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 # https://stats.stackexchange.com/questions/133817/stratified-concordance-index-survivalsurvconcordance
                 num_correct, num_tied, num_pairs = 0, 0, 0
                 for _, _df in self._predicted_partial_hazards_.groupby(self.strata):
-                    if _df.shape[0] == 1:
+                    if _X.shape[0] == 1:
                         continue
                     _num_correct, _num_tied, _num_pairs = _concordance_summary_statistics(
                         _df["T"].values, -_df["P"].values, _df["E"].values
