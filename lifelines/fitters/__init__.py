@@ -1498,7 +1498,7 @@ class ParametricRegressionFitter(BaseFitter):
             method=self._scipy_fit_method,
             jac=True,
             args=(Ts, E, weights, entries, Xs),
-            options={**{"disp": show_progress, "gtol": 1e-6}, **self._scipy_fit_options},
+            options={**{"disp": show_progress}, **self._scipy_fit_options},
         )
         if show_progress or not results.success:
             print(results)
