@@ -6,6 +6,7 @@ import pandas as pd
 
 from lifelines.utils import _get_index
 from lifelines.fitters import ParametericAFTRegressionFitter
+from lifelines.utils.safe_exp import safe_exp
 
 
 class LogNormalAFTFitter(ParametericAFTRegressionFitter):
@@ -71,7 +72,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         mu_ = np.dot(Xs["mu_"], mu_params)
 
         sigma_params = params["sigma_"]
-        sigma_ = np.exp(np.dot(Xs["sigma_"], sigma_params))
+        sigma_ = safe_exp(np.dot(Xs["sigma_"], sigma_params))
         Z = (np.log(T) - mu_) / sigma_
         return -norm.logsf(Z)
 
@@ -82,7 +83,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         sigma_params = params["sigma_"]
 
         log_sigma_ = np.dot(Xs["sigma_"], sigma_params)
-        sigma_ = np.exp(log_sigma_)
+        sigma_ = safe_exp(log_sigma_)
         Z = (np.log(T) - mu_) / sigma_
 
         return norm.logpdf(Z) - log_sigma_ - np.log(T) - norm.logsf(Z)
@@ -94,7 +95,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         sigma_params = params["sigma_"]
 
         log_sigma_ = np.dot(Xs["sigma_"], sigma_params)
-        sigma_ = np.exp(log_sigma_)
+        sigma_ = safe_exp(log_sigma_)
         Z = (np.log(T) - mu_) / sigma_
         return norm.logcdf(Z)
 

@@ -5,6 +5,7 @@ import pandas as pd
 
 from lifelines.utils import _get_index, coalesce
 from lifelines.fitters import ParametericAFTRegressionFitter
+from lifelines.utils.safe_exp import safe_exp
 
 
 class WeibullAFTFitter(ParametericAFTRegressionFitter):
@@ -72,9 +73,9 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         log_lambda_ = Xs["lambda_"] @ lambda_params
 
         rho_params = params["rho_"]
-        rho_ = np.exp(Xs["rho_"] @ rho_params)
+        rho_ = safe_exp(Xs["rho_"] @ rho_params)
 
-        return np.exp(rho_ * (np.log(np.clip(T, 1e-25, np.inf)) - log_lambda_))
+        return safe_exp(rho_ * (np.log(np.clip(T, 1e-25, np.inf)) - log_lambda_))
 
     def _log_hazard(self, params, T, Xs):
         lambda_params = params["lambda_"]
