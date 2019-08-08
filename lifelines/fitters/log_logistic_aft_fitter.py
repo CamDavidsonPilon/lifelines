@@ -6,6 +6,7 @@ import pandas as pd
 
 from lifelines.utils import _get_index, coalesce
 from lifelines.fitters import ParametericAFTRegressionFitter
+from lifelines.utils.safe_exp import safe_exp
 
 
 class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
@@ -68,7 +69,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
 
     def _cumulative_hazard(self, params, T, Xs):
         alpha_params = params["alpha_"]
-        alpha_ = np.exp(np.dot(Xs["alpha_"], alpha_params))
+        alpha_ = safe_exp(np.dot(Xs["alpha_"], alpha_params))
 
         beta_params = params["beta_"]
         beta_ = np.exp(np.dot(Xs["beta_"], beta_params))
@@ -77,11 +78,11 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
     def _log_hazard(self, params, T, Xs):
         alpha_params = params["alpha_"]
         log_alpha_ = np.dot(Xs["alpha_"], alpha_params)
-        alpha_ = np.exp(log_alpha_)
+        alpha_ = safe_exp(log_alpha_)
 
         beta_params = params["beta_"]
         log_beta_ = np.dot(Xs["beta_"], beta_params)
-        beta_ = np.exp(log_beta_)
+        beta_ = safe_exp(log_beta_)
 
         return (
             log_beta_
@@ -93,11 +94,11 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
     def _log_1m_sf(self, params, T, Xs):
         alpha_params = params["alpha_"]
         log_alpha_ = np.dot(Xs["alpha_"], alpha_params)
-        alpha_ = np.exp(log_alpha_)
+        alpha_ = safe_exp(log_alpha_)
 
         beta_params = params["beta_"]
         log_beta_ = np.dot(Xs["beta_"], beta_params)
-        beta_ = np.exp(log_beta_)
+        beta_ = safe_exp(log_beta_)
         return -np.logaddexp(-beta_ * (np.log(T) - np.log(alpha_)), 0)
 
     def predict_percentile(self, df, ancillary_df=None, p=0.5):

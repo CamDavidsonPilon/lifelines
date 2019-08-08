@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
 from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.utils.safe_exp import safe_exp
 
 
 class WeibullFitter(KnownModelParametericUnivariateFitter):
@@ -80,7 +81,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
 
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params
-        return np.exp(rho_ * (np.log(np.clip(times, 1e-25, np.inf)) - np.log(lambda_)))
+        return safe_exp(rho_ * (np.log(np.clip(times, 1e-25, np.inf)) - np.log(lambda_)))
 
     def percentile(self, p):
         return self.lambda_ * (np.log(1 / p) ** (1.0 / self.rho_))
