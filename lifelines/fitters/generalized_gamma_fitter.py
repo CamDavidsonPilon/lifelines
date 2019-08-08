@@ -5,6 +5,7 @@ from scipy.special import gammainccinv, gammaincinv
 from autograd_gamma import gammaincc, gammainc, gammaln, gammainccln, gammaincln
 from lifelines.fitters import KnownModelParametericUnivariateFitter
 from lifelines.utils import coalesce, CensoringType
+from lifelines.utils.safe_exp import safe_exp
 
 
 class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
@@ -111,47 +112,47 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
 
     def _survival_function(self, params, times):
         mu_, ln_sigma_, lambda_ = params
-        sigma_ = exp(ln_sigma_)
+        sigma_ = safe_exp(ln_sigma_)
         Z = (log(times) - mu_) / sigma_
         if lambda_ > 0:
-            return gammaincc(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+            return gammaincc(1 / lambda_ ** 2, safe_exp(lambda_ * Z - 2 * np.log(lambda_)))
         else:
-            return gammainc(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+            return gammainc(1 / lambda_ ** 2, safe_exp(lambda_ * Z - 2 * np.log(-lambda_)))
 
     def _cumulative_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
-        sigma_ = exp(ln_sigma_)
+        sigma_ = safe_exp(ln_sigma_)
         Z = (log(times) - mu_) / sigma_
         ilambda_2 = 1 / lambda_ ** 2
         if lambda_ > 0:
-            v = -gammainccln(ilambda_2, exp(lambda_ * Z) * ilambda_2)
+            v = -gammainccln(ilambda_2, safe_exp(lambda_ * Z - 2 * np.log(lambda_)))
         else:
-            v = -gammaincln(ilambda_2, exp(lambda_ * Z) * ilambda_2)
+            v = -gammaincln(ilambda_2, safe_exp(lambda_ * Z - 2 * np.log(-lambda_)))
         return v
 
     def _log_1m_sf(self, params, times):
         mu_, ln_sigma_, lambda_ = params
-        sigma_ = exp(ln_sigma_)
+        sigma_ = safe_exp(ln_sigma_)
 
         Z = (log(times) - mu_) / sigma_
         if lambda_ > 0:
-            v = gammaincln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+            v = gammaincln(1 / lambda_ ** 2, safe_exp(lambda_ * Z - 2 * np.log(lambda_)))
         else:
-            v = gammainccln(1 / lambda_ ** 2, exp(lambda_ * Z) / lambda_ ** 2)
+            v = gammainccln(1 / lambda_ ** 2, safe_exp(lambda_ * Z - 2 * np.log(-lambda_)))
         return v
 
     def _log_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
         ilambda_2 = 1 / lambda_ ** 2
-        Z = (log(times) - mu_) / exp(ln_sigma_)
+        Z = (log(times) - mu_) / safe_exp(ln_sigma_)
         if lambda_ > 0:
             v = (
                 log(lambda_)
                 - log(times)
                 - ln_sigma_
                 - gammaln(ilambda_2)
-                + (lambda_ * Z - exp(lambda_ * Z) - 2 * log(lambda_)) * ilambda_2
-                - gammainccln(ilambda_2, exp(lambda_ * Z) * ilambda_2)
+                + (lambda_ * Z - safe_exp(lambda_ * Z) - 2 * log(lambda_)) * ilambda_2
+                - gammainccln(ilambda_2, safe_exp(lambda_ * Z - 2 * np.log(lambda_)))
             )
         else:
             v = (
@@ -159,8 +160,8 @@ class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
                 - log(times)
                 - ln_sigma_
                 - gammaln(ilambda_2)
-                + (lambda_ * Z - exp(lambda_ * Z) - 2 * log(-lambda_)) * ilambda_2
-                - gammaincln(ilambda_2, exp(lambda_ * Z) * ilambda_2)
+                + (lambda_ * Z - safe_exp(lambda_ * Z) - 2 * log(-lambda_)) * ilambda_2
+                - gammaincln(ilambda_2, safe_exp(lambda_ * Z - 2 * np.log(-lambda_)))
             )
         return v
 
