@@ -99,7 +99,7 @@ class GeneralizedGammaAFTFitter(ParametricRegressionFitter):
         The entry array provided, or None
     """
     _fitted_parameter_names = ["sigma_", "mu_", "lambda_"]
-    _scipy_fit_method = "trust-exact"
+    _scipy_fit_method = "SLSQP"
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         import lifelines
