@@ -99,7 +99,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         Z = (np.log(T) - mu_) / sigma_
         return norm.logcdf(Z)
 
-    def predict_percentile(self, df, ancillary_df=None, p=0.5):
+    def predict_percentile(self, df, ancillary_df=None, p=0.5, conditional_after=None):
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -117,6 +117,12 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
             same order as the training data.
         p: float, optional (default=0.5)
             the percentile, must be between 0 and 1.
+        conditional_after: iterable, optional
+            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
+
 
         Returns
         -------
@@ -128,38 +134,18 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
 
         """
         exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
-        return pd.DataFrame(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * p - 1)), index=_get_index(df))
 
-    def predict_median(self, df, ancillary_df=None):
-        """
-        Returns the median lifetimes for the individuals. If the survival curve of an
-        individual does not cross 0.5, then the result is infinity.
-        http://stats.stackexchange.com/questions/102986/percentile-loss-functions
+        if conditional_after is None:
+            return pd.DataFrame(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p) - 1)), index=_get_index(df))
+        else:
+            conditional_after = np.asarray(conditional_after)
+            Z = (np.log(conditional_after) - np.log(exp_mu_)) / sigma_
+            S = norm.sf(Z)
 
-        Parameters
-        ----------
-        X:  numpy array or DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
-        p: float, optional (default=0.5)
-            the percentile, must be between 0 and 1.
-
-        Returns
-        -------
-        DataFrame
-
-        See Also
-        --------
-        predict_percentile
-
-        """
-        exp_mu_, _ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
-        return pd.DataFrame(exp_mu_, index=_get_index(df))
+            return pd.DataFrame(
+                exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after,
+                index=_get_index(df),
+            )
 
     def predict_expectation(self, df, ancillary_df=None):
         """

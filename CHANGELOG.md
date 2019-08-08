@@ -5,6 +5,11 @@
 
 ##### New features
  - model's now expose a `log_likelihood_` property.
+ - new `conditional_after` argument on `predict_*` methods that make prediction on censored subjects easier.
+
+##### Bug fixes
+ - convergence is improved for most models, and many overflow warnings have been eliminated.
+ - Fixed an error in the `predict_percentile` of `LogLogisticAFTFitter`. New tests have been added around this.
 
 
 #### 0.22.3

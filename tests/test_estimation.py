@@ -34,6 +34,7 @@ from lifelines.utils import (
     ConvergenceError,
     median_survival_times,
     StatisticalWarning,
+    qth_survival_time,
 )
 
 from lifelines.fitters import BaseFitter, ParametericUnivariateFitter, ParametricRegressionFitter
@@ -1625,6 +1626,29 @@ class TestAFTFitters:
     @pytest.fixture
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
+
+    def test_percentile_gives_proper_result_compared_to_survival_function(self, rossi, models):
+        for model in models:
+            model.fit(rossi, "week", "arrest")
+            times = np.linspace(1, 2000, 5000)
+            p = 0.1
+            subject = rossi.loc[[400]]
+            assert (
+                abs(
+                    model.predict_percentile(subject, p=p)
+                    - qth_survival_time(p, model.predict_survival_function(subject, times=times))
+                ).loc[400, 0]
+                < 0.5
+            )
+            assert (
+                abs(
+                    model.predict_percentile(subject, p=p, conditional_after=[50])
+                    - qth_survival_time(
+                        p, model.predict_survival_function(subject, times=times, conditional_after=[50])
+                    )
+                ).loc[400, 0]
+                < 0.5
+            )
 
     def test_fit_intercept_can_be_false_and_not_provided(self, rossi):
         # nonsensical data

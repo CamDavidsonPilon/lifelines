@@ -1760,7 +1760,7 @@ class ParametricRegressionFitter(BaseFitter):
                 )
             )
 
-    def predict_survival_function(self, df, times=None):
+    def predict_survival_function(self, df, times=None, conditional_after=None):
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -1776,6 +1776,10 @@ class ParametricRegressionFitter(BaseFitter):
             an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
+        conditional_after: iterable, optional
+            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
 
 
         Returns
@@ -1783,9 +1787,9 @@ class ParametricRegressionFitter(BaseFitter):
         survival_function : DataFrame
             the survival probabilities of individuals over the timeline
         """
-        return np.exp(-self.predict_cumulative_hazard(df, times=times))
+        return np.exp(-self.predict_cumulative_hazard(df, times=times, conditional_after=conditional_after))
 
-    def predict_median(self, df):
+    def predict_median(self, df, conditional_after=None):
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1796,6 +1800,11 @@ class ParametricRegressionFitter(BaseFitter):
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        conditional_after: iterable, optional
+            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
         Returns
         -------
@@ -1809,13 +1818,13 @@ class ParametricRegressionFitter(BaseFitter):
         predict_percentile, predict_expectation
 
         """
-        return self.predict_percentile(df, p=0.5)
+        return self.predict_percentile(df, p=0.5, conditional_after=conditional_after)
 
-    def predict_percentile(self, df, p=0.5):
+    def predict_percentile(self, df, p=0.5, conditional_after=None):
         subjects = utils._get_index(df)
         return utils.qth_survival_times(p, self.predict_survival_function(df)[subjects]).T
 
-    def predict_cumulative_hazard(self, df, times=None):
+    def predict_cumulative_hazard(self, df, times=None, conditional_after=None):
         """
         Predict the cumulative hazard for individuals, given their covariates.
 
@@ -1827,9 +1836,13 @@ class ParametricRegressionFitter(BaseFitter):
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         times: iterable, optional
-            an iterable of increasing times to predict the cumulative hazard at. Default
+            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
             is the set of all durations in the training dataset (observed and unobserved).
-
+        conditional_after: iterable, optional
+            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
         Returns
         -------
@@ -1845,9 +1858,23 @@ class ParametricRegressionFitter(BaseFitter):
             parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
         }
 
-        return pd.DataFrame(
-            self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
-        )
+        if conditional_after is None:
+            return pd.DataFrame(
+                self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
+            )
+        else:
+            conditional_after = np.asarray(conditional_after)
+            times_to_evaluate_at = (conditional_after[:, None] + np.tile(times, (n, 1))).T
+            return pd.DataFrame(
+                np.clip(
+                    self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
+                    - self._cumulative_hazard(params_dict, conditional_after, Xs),
+                    0,
+                    np.inf,
+                ),
+                index=times,
+                columns=df.index,
+            )
 
     def predict_expectation(self, X):
         r"""
@@ -2756,7 +2783,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return primary_scores, ancillary_scores
 
-    def predict_survival_function(self, df, ancillary_df=None, times=None):
+    def predict_survival_function(self, df, ancillary_df=None, times=None, conditional_after=None):
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -2773,9 +2800,13 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         times: iterable, optional
-            an iterable of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations (observed and unobserved). Uses a linear interpolation if
-            points in time are not in the index.
+            an iterable of increasing times to predict the survival function at. Default
+            is the set of all durations (observed and unobserved).
+        conditional_after: iterable, optional
+            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
 
         Returns
@@ -2783,9 +2814,13 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         survival_function : DataFrame
             the survival probabilities of individuals over the timeline
         """
-        return np.exp(-self.predict_cumulative_hazard(df, ancillary_df=ancillary_df, times=times))
+        return np.exp(
+            -self.predict_cumulative_hazard(
+                df, ancillary_df=ancillary_df, times=times, conditional_after=conditional_after
+            )
+        )
 
-    def predict_median(self, df, ancillary_df=None):
+    def predict_median(self, df, ancillary_df=None, conditional_after=None):
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -2796,6 +2831,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        conditional_after: iterable, optional
+            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
+
 
         Returns
         -------
@@ -2810,12 +2851,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         """
 
-        return self.predict_percentile(df, ancillary_df=ancillary_df, p=0.5)
+        return self.predict_percentile(df, ancillary_df=ancillary_df, p=0.5, conditional_after=conditional_after)
 
     def predict_percentile(self, df, ancillary_df=None, p=0.5):
         return utils.qth_survival_times(p, self.predict_survival_function(df, ancillary_df=ancillary_df))
 
-    def predict_cumulative_hazard(self, df, ancillary_df=None, times=None):
+    def predict_cumulative_hazard(self, df, ancillary_df=None, times=None, conditional_after=None):
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -2826,6 +2867,15 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        times: iterable, optional
+            an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved).
+        conditional_after: iterable, optional
+            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
+
 
         Returns
         -------
@@ -2856,6 +2906,20 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             parameter_name: self.params_.loc[parameter_name] for parameter_name in self._fitted_parameter_names
         }
 
-        return pd.DataFrame(
-            self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
-        )
+        if conditional_after is None:
+            return pd.DataFrame(
+                self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
+            )
+        else:
+            conditional_after = np.asarray(conditional_after)
+            times_to_evaluate_at = (conditional_after[:, None] + np.tile(times, (n, 1))).T
+            return pd.DataFrame(
+                np.clip(
+                    self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
+                    - self._cumulative_hazard(params_dict, conditional_after, Xs),
+                    0,
+                    np.inf,
+                ),
+                index=times,
+                columns=df.index,
+            )
