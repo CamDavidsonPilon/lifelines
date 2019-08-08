@@ -283,6 +283,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     _KNOWN_MODEL = False
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
+    _scipy_fit_options = dict()
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
@@ -494,7 +495,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 method=self._scipy_fit_method,
                 args=(Ts, E, entry, weights),
                 bounds=self._bounds,
-                options={"disp": show_progress},
+                options={**{"disp": show_progress}, **self._scipy_fit_options},
             )
 
             if results.success:
@@ -910,7 +911,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
-
         try:
             self.variance_matrix_ = inv(self._hessian_)
         except np.linalg.LinAlgError:
@@ -1154,6 +1154,7 @@ class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 class ParametricRegressionFitter(BaseFitter):
 
     _scipy_fit_method = "BFGS"
+    _scipy_fit_options = dict()
     _KNOWN_MODEL = False
 
     def __init__(self, alpha=0.05, penalizer=0.0):
@@ -1497,7 +1498,7 @@ class ParametricRegressionFitter(BaseFitter):
             method=self._scipy_fit_method,
             jac=True,
             args=(Ts, E, weights, entries, Xs),
-            options={"disp": show_progress},
+            options={**{"disp": show_progress}, **self._scipy_fit_options},
         )
         if show_progress or not results.success:
             print(results)
@@ -1545,6 +1546,18 @@ class ParametricRegressionFitter(BaseFitter):
                 % self._class_name
             )
             warnings.warn(warning_text, utils.StatisticalWarning)
+        finally:
+            if (unit_scaled_variance_matrix_.diagonal() < 0).any():
+                warning_text = dedent(
+                    """\
+                    The diagonal of the variance_matrix_ has negative values. This could be a problem with %s's fit to the data.
+
+                    It's advisable to not trust the variances reported, and to be suspicious of the
+                    fitted parameters too.
+                    """
+                    % self._class_name
+                )
+                warnings.warn(warning_text, utils.StatisticalWarning)
 
         return unit_scaled_variance_matrix_ / np.outer(self._norm_std, self._norm_std)
 
@@ -1556,14 +1569,15 @@ class ParametricRegressionFitter(BaseFitter):
         return stats.chi2.sf(U, 1)
 
     def _compute_standard_errors(self, Ts, E, weights, entries, Xs):
-        if self.robust:
-            se = np.sqrt(self._compute_sandwich_errors(Ts, E, weights, entries, Xs).diagonal())
-        else:
-            se = np.sqrt(self.variance_matrix_.diagonal())
-        return pd.Series(se, name="se", index=self.params_.index)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if self.robust:
+                se = np.sqrt(self._compute_sandwich_errors(Ts, E, weights, entries, Xs).diagonal())
+            else:
+                se = np.sqrt(self.variance_matrix_.diagonal())
+            return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):
-
         with np.errstate(all="ignore"):
             # convergence will fail catastrophically elsewhere.
 
@@ -2185,7 +2199,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             df["_intercept"] = 1.0
             regressors[self._primary_parameter_name].append("_intercept")
             regressors[self._ancillary_parameter_name].append("_intercept")
-        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df == False) or not self.model_ancillary):
+        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
             assert (
                 "_intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
@@ -2347,7 +2361,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             df["_intercept"] = 1.0
             regressors[self._primary_parameter_name].append("_intercept")
             regressors[self._ancillary_parameter_name].append("_intercept")
-        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df == False) or not self.model_ancillary):
+        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
             assert (
                 "_intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
@@ -2487,7 +2501,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             df["_intercept"] = 1.0
             regressors[self._primary_parameter_name].append("_intercept")
             regressors[self._ancillary_parameter_name].append("_intercept")
-        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df == False) or not self.model_ancillary):
+        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
             assert (
                 "_intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
@@ -2737,8 +2751,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         primary_params = self.params_[self._primary_parameter_name]
         ancillary_params = self.params_[self._ancillary_parameter_name]
 
-        primary_scores = np.exp(np.dot(primary_X, primary_params))
-        ancillary_scores = np.exp(np.dot(ancillary_X, ancillary_params))
+        primary_scores = np.exp(primary_X @ primary_params)
+        ancillary_scores = np.exp(ancillary_X @ ancillary_params)
 
         return primary_scores, ancillary_scores
 
