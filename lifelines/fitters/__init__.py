@@ -500,6 +500,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
             if results.success:
                 # pylint: disable=no-value-for-parameter
                 hessian_ = hessian(negative_log_likelihood)(results.x, Ts, E, entry, weights)
+                # see issue https://github.com/CamDavidsonPilon/lifelines/issues/801
+                hessian_ = (hessian_ + hessian_.T) / 2
                 return results.x, -results.fun * weights.sum(), hessian_ * weights.sum()
 
             # convergence failed.
@@ -1508,6 +1510,8 @@ class ParametricRegressionFitter(BaseFitter):
             sum_weights = weights.sum()
             # pylint: disable=no-value-for-parameter
             hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
+            # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
+            hessian_ = (hessian_ + hessian_.T) / 2
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
 
         raise utils.ConvergenceError(
