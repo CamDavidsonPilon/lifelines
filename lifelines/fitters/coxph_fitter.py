@@ -1464,19 +1464,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         cumulative_hazard_ : DataFrame
             the cumulative hazard of individuals over the timeline
         """
-        if conditional_after is None:
-            conditional_after = np.zeros(X.shape[0])
-        else:
-            conditional_after = np.asarray(conditional_after)
+        if conditional_after is not None:
+            raise NotImplementedError("Sorry, conditional_after for Cox is tricky to do. It's not implemented yet.")
 
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
             for stratum, stratified_X in X.groupby(self.strata):
                 try:
-                    c_0 = self.baseline_cumulative_hazard_[[stratum]] - dataframe_interpolate_at_times(
-                        self.baseline_cumulative_hazard_[[stratum]], conditional_after
-                    )
-                    c_0 = np.clip(c_0, 0, np.inf)
+                    c_0 = self.baseline_cumulative_hazard_[[stratum]]
                 except KeyError:
                     raise StatError(
                         """The stratum %s was not found in the original training data. For example, try
@@ -1493,14 +1488,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     left_index=True,
                 )
         else:
-            # TODO this needs to be shifted by conditional_after
-            c_0 = self.baseline_cumulative_hazard_ - dataframe_interpolate_at_times(
-                self.baseline_cumulative_hazard_, conditional_after
-            )
-            c_0 = np.clip(c_0, 0, np.inf)
-
+            c_0 = self.baseline_cumulative_hazard_
             v = self.predict_partial_hazard(X)
             col = _get_index(v)
+
             cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
 
         if times is not None:
