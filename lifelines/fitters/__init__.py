@@ -1299,7 +1299,10 @@ class ParametricRegressionFitter(BaseFitter):
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
-        regressors: TODO
+        regressors: dict, optional
+            a dictionary of parameter names -> list of column names that maps model parameters
+            to a linear combination of variables. If left as None, all variables
+            will be used for all parameters.
 
         timeline: array, optional
             Specify a timeline that will be used for plotting and prediction
@@ -2105,6 +2108,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         duration_col,
         event_col=None,
         ancillary_df=None,
+        fit_intercept=None,
         show_progress=False,
         timeline=None,
         weights_col=None,
@@ -2141,6 +2145,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+
+        fit_intercept: bool, optional
+            If true, add a constant column to the regression. Overrides value set in class instantiation.
 
         timeline: array, optional
             Specify a timeline that will be used for plotting and prediction
@@ -2187,6 +2194,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
         self.duration_col = duration_col
         self._time_cols = [duration_col]
+        self.fit_intercept = utils.coalesce(fit_intercept, self.fit_intercept)
 
         df = df.copy()
 
@@ -2255,6 +2263,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         upper_bound_col,
         event_col=None,
         ancillary_df=None,
+        fit_intercept=None,
         show_progress=False,
         timeline=None,
         weights_col=None,
@@ -2283,15 +2292,18 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, will be inferred from the start and stop columns (lower_bound==upper_bound means uncensored)
 
-        show_progress: boolean, optional (default=False)
-            since the fitter is iterative, show convergence
-            diagnostics. Useful if convergence is failing.
-
         ancillary_df: None, boolean, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+
+        fit_intercept: bool, optional
+            If true, add a constant column to the regression. Overrides value set in class instantiation.
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
 
         timeline: array, optional
             Specify a timeline that will be used for plotting and prediction
@@ -2339,6 +2351,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         self.lower_bound_col = lower_bound_col
         self.upper_bound_col = upper_bound_col
+        self.fit_intercept = utils.coalesce(fit_intercept, self.fit_intercept)
         self._time_cols = [lower_bound_col, upper_bound_col]
 
         df = df.copy()
@@ -2417,6 +2430,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         duration_col=None,
         event_col=None,
         ancillary_df=None,
+        fit_intercept=None,
         show_progress=False,
         timeline=None,
         weights_col=None,
@@ -2444,15 +2458,19 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
-        show_progress: boolean, optional (default=False)
-            since the fitter is iterative, show convergence
-            diagnostics. Useful if convergence is failing.
-
         ancillary_df: None, boolean, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+
+        fit_intercept: bool, optional
+            If true, add a constant column to the regression. Overrides value set in class instantiation.
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
 
         timeline: array, optional
             Specify a timeline that will be used for plotting and prediction
@@ -2500,6 +2518,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         T = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
         self.durations = T.copy()
+        self.fit_intercept = utils.coalesce(fit_intercept, self.fit_intercept)
 
         primary_columns = df.columns.difference([duration_col, event_col]).tolist()
         if isinstance(ancillary_df, pd.DataFrame):
@@ -2550,18 +2569,18 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return self
 
-    @staticmethod
-    def _transform_ith_param(model, i):
-        param = model._fitted_parameters_[i]
-        if param <= 0:
-            return param
-        # technically this is suboptimal for log normal mu, but that's okay.
-        return np.log(param)
-
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
+        constant_col = (Xs.df.var(0) < 1e-8).idxmax()
+
+        def _transform_ith_param(param):
+            if param <= 0:
+                return param
+            # technically this is suboptimal for log normal mu, but that's okay.
+            return np.log(param)
+
         import lifelines  # kinda hacky but lol
 
         name = self._class_name.replace("AFT", "")
@@ -2581,12 +2600,13 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         # we may use this later in print_summary
         self._ll_null_ = uni_model.log_likelihood_
 
-        # TODO: this fails with fit_intercept=False
-        return {
-            # tack on as the intercept
-            parameter_name: np.array([0] * (_X.shape[1] - 1) + [self._transform_ith_param(uni_model, i)])
-            for i, (parameter_name, _X) in enumerate(Xs)
-        }
+        d = {}
+
+        for param, mapping in Xs.mappings.items():
+            d[param] = np.array([0.0] * (len(mapping)))
+            if constant_col in mapping:
+                d[param][mapping.index(constant_col)] = _transform_ith_param(getattr(uni_model, param))
+        return d
 
     def _add_penalty(self, params, neg_ll):
         params, _ = flatten(params)
