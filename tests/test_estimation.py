@@ -2012,7 +2012,7 @@ class TestWeibullAFTFitter:
     def test_fitted_log_likelihood_match_with_flexsurv_has(self, aft, rossi):
         # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
         aft.fit(rossi, "week", "arrest")
-        npt.assert_allclose(aft._log_likelihood, -679.9166)
+        npt.assert_allclose(aft.log_likelihood_, -679.9166)
 
     def test_fitted_log_likelihood_ratio_test_match_with_flexsurv_has(self, aft, rossi):
         # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
@@ -2143,7 +2143,7 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], np.log(18.31971), rtol=1e-4)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], np.log(2.82628), rtol=1e-4)
 
-        npt.assert_allclose(aft._log_likelihood, -2027.196, rtol=1e-3)
+        npt.assert_allclose(aft.log_likelihood_, -2027.196, rtol=1e-3)
 
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "se(coef)"], 0.02823, rtol=1e-1)
         # npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.42273, rtol=1e-1)
@@ -2151,7 +2151,7 @@ class TestWeibullAFTFitter:
 
         aft.fit_interval_censoring(df, "left", "right", "E", ancillary_df=True)
 
-        npt.assert_allclose(aft._log_likelihood, -2025.813, rtol=1e-3)
+        npt.assert_allclose(aft.log_likelihood_, -2025.813, rtol=1e-3)
         # npt.assert_allclose(aft.summary.loc[("rho_", "gender"), "coef"], 0.1670, rtol=1e-4)
 
     def test_aft_weibull_with_weights(self, rossi, aft):
@@ -2517,7 +2517,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
     def test_log_likelihood(self, data_nus, cph):
         cph.fit(data_nus, duration_col="t", event_col="E")
-        assert abs(cph._log_likelihood - -12.7601409152) < 0.001
+        assert abs(cph.log_likelihood_ - -12.7601409152) < 0.001
 
     def test_single_efron_computed_by_hand_examples(self, data_nus, cph):
 
@@ -3181,7 +3181,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             assert_series_equal(cph.summary["se(coef)"], expected_std, check_less_precise=2, check_names=False)
 
             expected_ll = -1.142397
-            assert abs(cph._log_likelihood - expected_ll) < 0.001
+            assert abs(cph.log_likelihood_ - expected_ll) < 0.001
 
     def test_less_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -3431,7 +3431,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cp.fit(rossi, "week", "arrest", strata=["race", "paro", "mar", "wexp"])
 
         npt.assert_almost_equal(cp.summary["coef"].values, [-0.335, -0.059, 0.100], decimal=3)
-        assert abs(cp._log_likelihood - -436.9339) / 436.9339 < 0.01
+        assert abs(cp.log_likelihood_ - -436.9339) / 436.9339 < 0.01
 
     def test_baseline_hazard_works_with_strata_against_R_output(self, rossi):
         """
@@ -4309,11 +4309,11 @@ Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
         npt.assert_allclose(summary["coef"].tolist(), [0.0293, -0.6176, -0.1527], atol=0.001)
         npt.assert_allclose(summary["se(coef)"].tolist(), [0.0139, 0.3707, 0.0710], atol=0.001)
         npt.assert_allclose(summary["z"].tolist(), [2.11, -1.67, -2.15], atol=0.01)
-        npt.assert_allclose(ctv._log_likelihood, -254.7144, atol=0.01)
+        npt.assert_allclose(ctv.log_likelihood_, -254.7144, atol=0.01)
 
     def test_ctv_with_multiple_strata(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant", "surgery"])
-        npt.assert_allclose(ctv._log_likelihood, -230.6726, atol=0.01)
+        npt.assert_allclose(ctv.log_likelihood_, -230.6726, atol=0.01)
 
     def test_ctv_ratio_test_with_strata(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"])

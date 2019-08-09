@@ -2922,7 +2922,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         Xs = self._create_Xs_dict(df)
 
         params_dict = {
-            parameter_name: self.params_.loc[parameter_name] for parameter_name in self._fitted_parameter_names
+            parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
         }
 
         if conditional_after is None:

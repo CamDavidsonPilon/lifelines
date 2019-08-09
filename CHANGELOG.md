@@ -12,6 +12,7 @@
 
 ##### API changes
  - removed `lifelines.utils.gamma` - use `autograd_gamma` library instead.
+ - removed bottleneck as a dependency. It offered slight performance gains only in Cox models, and only a small fraction of the API was being used.
 
 ##### Bug fixes
  - AFT log-likelihood ratio test was not using weights correctly.

@@ -13,7 +13,7 @@ from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve, LinAlgError
 
 
-from bottleneck import nansum as array_sum_to_scalar
+from numpy import sum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter
 from lifelines.statistics import chisq_test, StatisticalResult
@@ -661,7 +661,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         print("{} = {}".format(justify("number of subjects"), self._n_unique))
         print("{} = {}".format(justify("number of periods"), self._n_examples))
         print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
-        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self._log_likelihood, prec=decimals))
+        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print("{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called))
 
         for k, v in kwargs.items():
