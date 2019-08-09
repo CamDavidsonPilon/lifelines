@@ -100,9 +100,12 @@ class GeneralizedGammaAFTFitter(ParametricRegressionFitter):
     """
     _fitted_parameter_names = ["sigma_", "mu_", "lambda_"]
     _scipy_fit_method = "SLSQP"
-    _scipy_fit_options = {"disp": True, "ftol": 1e-8, "maxiter": 200}
+    _scipy_fit_options = {"ftol": 1e-6, "maxiter": 200}
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
+        # detect constant columns
+        constant_col = (Xs.df.var(0) < 1e-8).idxmax()
+
         import lifelines
 
         uni_model = lifelines.GeneralizedGammaFitter()
@@ -120,15 +123,25 @@ class GeneralizedGammaAFTFitter(ParametricRegressionFitter):
             # we may use this later in print_summary
             self._ll_null_ = uni_model.log_likelihood_
 
-            return {
-                # tack on as the intercept
-                "mu_": np.array([0] * (Xs["mu_"].shape[1] - 1) + [uni_model.mu_]),
-                "sigma_": np.array([0] * (Xs["sigma_"].shape[1] - 1) + [uni_model.ln_sigma_]),
-                "lambda_": np.array([0] * (Xs["lambda_"].shape[1] - 1) + [uni_model.lambda_]),
-            }
+            d = {}
+
+            d["mu_"] = np.array([0.0] * (len(Xs.mappings["mu_"])))
+            if constant_col in Xs.mappings["mu_"]:
+                d["mu_"][Xs.mappings["mu_"].index(constant_col)] = uni_model.mu_
+
+            d["sigma_"] = np.array([0.0] * (len(Xs.mappings["sigma_"])))
+            if constant_col in Xs.mappings["mu_"]:
+                d["sigma_"][Xs.mappings["sigma_"].index(constant_col)] = uni_model.ln_sigma_
+
+            # this needs to be non-zero because we divide by it
+            d["lambda_"] = np.array([0.01] * (len(Xs.mappings["lambda_"])))
+            if constant_col in Xs.mappings["lambda_"]:
+                d["lambda_"][Xs.mappings["lambda_"].index(constant_col)] = uni_model.lambda_
+
+            return d
 
     def _survival_function(self, params, T, Xs):
-        lambda_ = Xs["lambda_"] @ params["lambda_"]
+        lambda_ = np.clip(Xs["lambda_"] @ params["lambda_"], 1e-25, 1e10)
         sigma_ = safe_exp(Xs["sigma_"] @ params["sigma_"])
         mu_ = Xs["mu_"] @ params["mu_"]
 
@@ -144,7 +157,7 @@ class GeneralizedGammaAFTFitter(ParametricRegressionFitter):
         mu_ = Xs["mu_"] @ params["mu_"]
 
         ilambda_2 = 1 / lambda_ ** 2
-        Z = (log(T) - mu_) / sigma_
+        Z = (log(T) - mu_) / np.clip(sigma_, 1e-10, 1e20)
         exp_term = np.clip(safe_exp(lambda_ * Z - 2 * log(np.abs(lambda_))), 1e-300, np.inf)
 
         return -np.where(lambda_ > 0, gammainccln(ilambda_2, exp_term), gammaincln(ilambda_2, exp_term))
@@ -155,7 +168,7 @@ class GeneralizedGammaAFTFitter(ParametricRegressionFitter):
         mu_ = Xs["mu_"] @ params["mu_"]
 
         ilambda_2 = 1 / lambda_ ** 2
-        Z = (log(T) - mu_) / safe_exp(ln_sigma_)
+        Z = (log(T) - mu_) / np.clip(safe_exp(ln_sigma_), 1e-10, 1e20)
         exp_term = np.clip(safe_exp(lambda_ * Z - 2 * log(np.abs(lambda_))), 1e-300, np.inf)
 
         return (

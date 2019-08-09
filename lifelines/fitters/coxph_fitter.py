@@ -2087,7 +2087,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                 # https://stats.stackexchange.com/questions/133817/stratified-concordance-index-survivalsurvconcordance
                 num_correct, num_tied, num_pairs = 0, 0, 0
                 for _, _df in self._predicted_partial_hazards_.groupby(self.strata):
-                    if _X.shape[0] == 1:
+                    if _df.shape[0] == 1:
                         continue
                     _num_correct, _num_tied, _num_pairs = _concordance_summary_statistics(
                         _df["T"].values, -_df["P"].values, _df["E"].values

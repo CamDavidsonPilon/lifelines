@@ -57,6 +57,7 @@ from lifelines import (
     LogLogisticAFTFitter,
     PiecewiseExponentialRegressionFitter,
     GeneralizedGammaFitter,
+    GeneralizedGammaAFTFitter,
 )
 
 from lifelines.datasets import (
@@ -1393,23 +1394,29 @@ class TestBreslowFlemingHarringtonFitter:
 
 class TestRegressionFitters:
     @pytest.fixture
+    def rossi(self):
+        rossi = load_rossi()
+        return rossi
+
+    @pytest.fixture
     def regression_models(self):
         return [
-            CoxPHFitter(),
-            CoxPHFitter(penalizer=1.0),
-            AalenAdditiveFitter(coef_penalizer=1.0, smoothing_penalizer=1.0),
+            CoxPHFitter(penalizer=10.0),
             CoxPHFitter(strata=["race", "paro", "mar", "wexp"]),
-            WeibullAFTFitter(),
-            LogNormalAFTFitter(),
-            LogLogisticAFTFitter(),
+            AalenAdditiveFitter(coef_penalizer=1.0, smoothing_penalizer=1.0),
+            WeibullAFTFitter(fit_intercept=True),
+            LogNormalAFTFitter(fit_intercept=True),
+            LogLogisticAFTFitter(fit_intercept=True),
             PiecewiseExponentialRegressionFitter(breakpoints=[25.0]),
             CustomRegressionModelTesting(penalizer=1.0),
+            GeneralizedGammaAFTFitter(penalizer=0),
         ]
 
     def test_dill_serialization(self, rossi, regression_models):
         from dill import dumps, loads
 
         for fitter in regression_models:
+            print(fitter)
             fitter.fit(rossi, "week", "arrest")
 
             unpickled = loads(dumps(fitter))
@@ -1466,11 +1473,12 @@ class TestRegressionFitters:
                 fitter.fit(rossi)
 
     def test_fit_methods_can_accept_optional_event_col_param(self, regression_models, rossi):
+        rossi_without_arrest = rossi.copy().drop("arrest", axis=1)
         for model in regression_models:
             model.fit(rossi, "week", event_col="arrest")
             assert_series_equal(model.event_observed.sort_index(), rossi["arrest"].astype(bool), check_names=False)
 
-            model.fit(rossi, "week")
+            model.fit(rossi_without_arrest, "week")
             npt.assert_array_equal(model.event_observed.values, np.ones(rossi.shape[0]))
 
     def test_predict_methods_in_regression_return_same_types(self, regression_models, rossi):
@@ -1495,8 +1503,10 @@ class TestRegressionFitters:
         normalized_rossi["week"] = (normalized_rossi["week"]) / t.std()
 
         for fitter in regression_models:
-            if isinstance(fitter, PiecewiseExponentialRegressionFitter) or isinstance(
-                fitter, CustomRegressionModelTesting
+            if (
+                isinstance(fitter, PiecewiseExponentialRegressionFitter)
+                or isinstance(fitter, CustomRegressionModelTesting)
+                or isinstance(fitter, GeneralizedGammaAFTFitter)
             ):
                 continue
 
@@ -1536,14 +1546,14 @@ class TestRegressionFitters:
     def test_error_is_raised_if_using_non_numeric_data_in_fit(self, regression_models):
         df = pd.DataFrame.from_dict(
             {
-                "t": [1.0, 2.0, 5.0],
-                "bool_": [True, True, False],
-                "int_": [1, -1, 0],
-                "uint8_": pd.Series([1, 3, 2], dtype="uint8"),
-                "string_": ["test", "a", "2.5"],
-                "float_": [1.2, -0.5, 0.0],
-                "categorya_": pd.Series([1, 2, 3], dtype="category"),
-                "categoryb_": pd.Series(["a", "b", "a"], dtype="category"),
+                "t": [1.0, 6.0, 3.0, 4.0],
+                "bool_": [True, True, False, True],
+                "int_": [1, -1, 0, 2],
+                "uint8_": pd.Series([1, 3, 2, 5], dtype="uint8"),
+                "string_": ["test", "a", "2.5", ""],
+                "float_": [1.2, -0.5, 0.0, 2.2],
+                "categorya_": pd.Series([1, 2, 3, 1], dtype="category"),
+                "categoryb_": pd.Series(["a", "b", "a", "b"], dtype="category"),
             }
         )
 

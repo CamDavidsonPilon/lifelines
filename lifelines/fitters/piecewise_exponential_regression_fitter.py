@@ -54,7 +54,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
 
         return np.array([np.exp(np.dot(X, self.params_["lambda_%d_" % i])) for i in range(self.n_breakpoints)])
 
-    def predict_cumulative_hazard(self, df, times=None):
+    def predict_cumulative_hazard(self, df, times=None, conditional_after=None):
         """
         Return the cumulative hazard rate of subjects in X at time points.
 
@@ -74,6 +74,10 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         cumulative_hazard_ : DataFrame
             the cumulative hazard of individuals over the timeline
         """
+
+        if conditional_after is not None:
+            raise NotImplementedError()
+
         times = np.asarray(coalesce(times, self.timeline, np.unique(self.durations)))
         n = times.shape[0]
         times = times.reshape((n, 1))
