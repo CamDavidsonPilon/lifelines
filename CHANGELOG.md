@@ -6,6 +6,7 @@
 ##### New features
  - model's now expose a `log_likelihood_` property.
  - new `conditional_after` argument on `predict_*` methods that make prediction on censored subjects easier.
+ - new `lifelines.utils.safe_exp` to make `exp` overflows easier to handle.
 
 ##### API changes
  - removed `lifelines.utils.gamma` - use `autograd_gamma` library instead.
