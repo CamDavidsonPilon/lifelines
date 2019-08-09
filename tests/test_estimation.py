@@ -952,6 +952,39 @@ class TestGeneralizedGammaFitter:
         gg.print_summary(4)
         assert abs(gg.summary.loc["lambda_", "coef"] - -np.exp(gg.summary.loc["ln_sigma_", "coef"])) < 0.15
 
+    def test_against_reliability_software(self):
+        # From http://reliawiki.org/index.php/The_Generalized_Gamma_Distribution
+        T = [
+            17.88,
+            28.92,
+            33,
+            41.52,
+            42.12,
+            45.6,
+            48.4,
+            51.84,
+            51.96,
+            54.12,
+            55.56,
+            67.8,
+            68.64,
+            68.64,
+            68.88,
+            84.12,
+            93.12,
+            98.64,
+            105.12,
+            105.84,
+            127.92,
+            128.04,
+            173.4,
+        ]
+
+        gg = GeneralizedGammaFitter().fit(T)
+        npt.assert_allclose(gg.summary.loc["mu_", "coef"], 4.23064, rtol=0.001)
+        npt.assert_allclose(gg.summary.loc["lambda_", "coef"], 0.307639, rtol=1e-5)
+        npt.assert_allclose(np.exp(gg.summary.loc["ln_sigma_", "coef"]), 0.509982, rtol=1e-6)
+
 
 class TestExponentialFitter:
     def test_fit_computes_correct_lambda_(self):

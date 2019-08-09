@@ -361,7 +361,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 yield (lb + self._MIN_PARAMETER_VALUE, ub - self._MIN_PARAMETER_VALUE)
 
     def _cumulative_hazard(self, params, times):
-        raise NotImplementedError("Subclass implements this.")
+        return -anp.log(self._survival_function(params, times))
 
     def _survival_function(self, params, times):
         return anp.exp(-self._cumulative_hazard(params, times))
@@ -371,13 +371,12 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _log_hazard(self, params, times):
         hz = self._hazard(params, times)
-        hz = anp.clip(hz, 1e-18, np.inf)
+        hz = anp.clip(hz, 1e-50, np.inf)
         return anp.log(hz)
 
     def _log_1m_sf(self, params, times):
         # equal to log(cdf), but often easier to express with sf.
-        cum_haz = self._cumulative_hazard(params, times)
-        return anp.log1p(-anp.exp(-cum_haz))
+        return anp.log1p(-self._survival_function(params, times))
 
     def _negative_log_likelihood_left_censoring(self, params, Ts, E, entry, W):
         T = Ts[1]
