@@ -4066,8 +4066,7 @@ class TestCoxTimeVaryingFitter:
         )
 
         with pytest.warns(ConvergenceWarning, match="with start and stop equal and a death event") as w:
-            with pytest.raises(ZeroDivisionError):
-                ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+            ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
     def test_summary_output_versus_Rs_against_standford_heart_transplant(self, ctv, heart):
         """
