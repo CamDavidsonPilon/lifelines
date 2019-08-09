@@ -100,6 +100,7 @@ class GeneralizedGammaAFTFitter(ParametricRegressionFitter):
     """
     _fitted_parameter_names = ["sigma_", "mu_", "lambda_"]
     _scipy_fit_method = "SLSQP"
+    _scipy_fit_options = {"disp": True, "ftol": 1e-8, "maxiter": 200}
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         import lifelines
