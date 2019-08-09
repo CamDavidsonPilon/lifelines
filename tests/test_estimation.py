@@ -57,7 +57,7 @@ from lifelines import (
     LogLogisticAFTFitter,
     PiecewiseExponentialRegressionFitter,
     GeneralizedGammaFitter,
-    GeneralizedGammaAFTFitter,
+    GeneralizedGammaRegressionFitter,
 )
 
 from lifelines.datasets import (
@@ -1409,7 +1409,7 @@ class TestRegressionFitters:
             LogLogisticAFTFitter(fit_intercept=True),
             PiecewiseExponentialRegressionFitter(breakpoints=[25.0]),
             CustomRegressionModelTesting(penalizer=1.0),
-            GeneralizedGammaAFTFitter(penalizer=0),
+            GeneralizedGammaRegressionFitter(penalizer=0),
         ]
 
     def test_dill_serialization(self, rossi, regression_models):
@@ -1506,7 +1506,7 @@ class TestRegressionFitters:
             if (
                 isinstance(fitter, PiecewiseExponentialRegressionFitter)
                 or isinstance(fitter, CustomRegressionModelTesting)
-                or isinstance(fitter, GeneralizedGammaAFTFitter)
+                or isinstance(fitter, GeneralizedGammaRegressionFitter)
             ):
                 continue
 
