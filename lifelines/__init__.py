@@ -18,7 +18,7 @@ from lifelines.fitters.log_logistic_aft_fitter import LogLogisticAFTFitter
 from lifelines.fitters.log_normal_aft_fitter import LogNormalAFTFitter
 from lifelines.fitters.piecewise_exponential_regression_fitter import PiecewiseExponentialRegressionFitter
 from lifelines.fitters.generalized_gamma_fitter import GeneralizedGammaFitter
-from lifelines.fitters.generalized_gamma_aft_fitter import GeneralizedGammaAFTFitter
+from lifelines.fitters.generalized_gamma_regression_fitter import GeneralizedGammaRegressionFitter
 
 
 from lifelines.version import __version__
@@ -40,7 +40,7 @@ __all__ = [
     "WeibullAFTFitter",
     "LogLogisticAFTFitter",
     "LogNormalAFTFitter",
-    "GeneralizedGammaAFTFitter",
+    "GeneralizedGammaRegressionFitter",
     "PiecewiseExponentialFitter",
     "PiecewiseExponentialRegressionFitter",
 ]

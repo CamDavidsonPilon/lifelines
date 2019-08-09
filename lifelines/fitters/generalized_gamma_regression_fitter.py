@@ -10,21 +10,21 @@ from lifelines.utils.safe_exp import safe_exp
 from lifelines import utils
 
 
-class GeneralizedGammaAFTFitter(ParametricRegressionFitter):
+class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
     r"""
 
-    This class implements a Generalized Gamma model for univariate data. The model has parameterized
+    This class implements a Generalized Gamma model for regression data. The model has parameterized
     form:
 
     The survival function is:
 
     .. math::
-        S(t)=\left\{ \begin{array}{}
+        S(t \;|\; x)=\left\{ \begin{array}{}
            1-{{\Gamma}_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{ if }\lambda >0  \\
            {{\Gamma}_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{       if }\lambda < 0  \\
         \end{array} \right.\,\!
 
-    where :math:`\Gamma_{RL}` is the regularized lower incomplete Gamma function.
+    where :math:`\Gamma_{RL}` is the regularized lower incomplete Gamma function, and :math:`\sigma = \exp(\alpha x^T), \lambda = \beta x^T, \mu = \gamma x^T`.
 
     This model has the Exponential, Weibull, Gamma and Log-Normal as sub-models, and thus can be used as a way to test which
     model to use:

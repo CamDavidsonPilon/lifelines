@@ -8,6 +8,7 @@
  - new `conditional_after` argument on `predict_*` methods that make prediction on censored subjects easier.
  - new `lifelines.utils.safe_exp` to make `exp` overflows easier to handle.
  - smarter initial conditions for parametric regression models.
+ - New regression model: `GeneralizedGammaRegressionFitter`
 
 ##### API changes
  - removed `lifelines.utils.gamma` - use `autograd_gamma` library instead.
