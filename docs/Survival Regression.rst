@@ -158,7 +158,7 @@ Thus we scale the original survival function by the survival function at time :m
 
 Back to our original problem of predicting the event time of censored individuals, *lifelines* has all this math and logic built in when using the `conditional_after` kwarg.
 
-.. code::
+.. code:: python
 
 
     censored_subjects = rossi.loc[~rossi['arrest'].astype(bool)]
@@ -567,6 +567,8 @@ Given a new subject, we ask questions about their future survival? When are they
 
 When predicting time remaining for uncensored individuals, you can use the `conditional_after` kwarg:
 
+
+.. code:: python
 
     censored_X = rossi.loc[~rossi['arrest'].astype(bool)]
     censored_subjects_last_obs = censored_X['week']
