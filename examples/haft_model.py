@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 Reimplementation of "A Heteroscedastic Accelerated Failure Time Model
-for Survival Analysis", Wang et al., 2019
+for Survival Analysis", Wang, You, Lysy, 2019
 """
-from lifelines.fitters import ParametricRegressionFitter
 import pandas as pd
-from lifelines import CoxPHFitter, LogNormalFitter
+from patsy import dmatrix
 import autograd.numpy as np
-import matplotlib.pyplot as plt
 from autograd.scipy.stats import norm
+from lifelines.fitters import ParametricRegressionFitter
+from lifelines import CoxPHFitter, LogNormalAFTFitter
 
 
+# this is all that's need to implement the HAFT model.
+# Lifelines handles all estimation.
 class HAFT(ParametricRegressionFitter):
 
     _fitted_parameter_names = ["mu_", "sigma_"]
@@ -28,7 +30,7 @@ class HAFT(ParametricRegressionFitter):
 df = pd.read_csv("colon.csv", index_col=0).dropna()
 df = df[df["etype"] == 2]
 
-
+# Cox model
 cph_string = """{extent} +
     {rx} +
     {differ} +
@@ -48,7 +50,7 @@ cph_df_ = dmatrix(cph_string, df, return_type="dataframe")
 cph = CoxPHFitter().fit(cph_df_.drop("Intercept", axis=1), "time", "status")
 cph.print_summary()
 
-
+# Log Normal model
 aft_string = """{extent} +
     {rx} +
     {differ} +
@@ -64,10 +66,12 @@ aft_string = """{extent} +
     rx="C(rx, Treatment('Obs'))", differ="C(differ, Treatment(1))", extent="C(extent, Treatment(1))"
 )
 aft_df_ = dmatrix(aft_string, df, return_type="dataframe")
-lnf = LogNormalAFTFitter(fit_intercept=True).fit(aft_df_.drop("Intercept", axis=1), "time", "status")
+lnf = LogNormalAFTFitter().fit(aft_df_, "time", "status")
 lnf.print_summary()
 
-haft = HAFT(penalizer=0.0)
+
+# H-AFT log normal model
+haft = HAFT()
 covariates = {
     "mu_": aft_df_.columns,
     "sigma_": ["Intercept", "C(rx, Treatment('Obs'))[T.Lev]", "C(rx, Treatment('Obs'))[T.Lev+5FU]"],
