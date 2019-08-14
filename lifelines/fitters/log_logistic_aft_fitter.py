@@ -62,6 +62,9 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         the concordance index of the model.
     """
 
+    # about 25% faster than BFGS
+    _scipy_fit_method = "SLSQP"
+
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         self._ancillary_parameter_name = "beta_"
         self._primary_parameter_name = "alpha_"

@@ -7,6 +7,22 @@ from lifelines.utils.safe_exp import safe_exp
 
 
 class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
+    """
+    TODO: docs
+
+
+
+    Examples
+    ----------
+
+    See blog post <here https://dataorigami.net/blogs/napkin-folding/churn>_.
+
+
+    """
+
+    # about 50% faster than BFGS
+    _scipy_fit_method = "SLSQP"
+
     def __init__(self, breakpoints, alpha=0.05, penalizer=0.0):
         super(PiecewiseExponentialRegressionFitter, self).__init__(alpha=alpha)
 
