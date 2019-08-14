@@ -65,6 +65,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
 
     # about 25% faster than BFGS
     _scipy_fit_method = "SLSQP"
+    _scipy_fit_options = {"ftol": 1e-10, "maxiter": 200}
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         self._ancillary_parameter_name = "rho_"
