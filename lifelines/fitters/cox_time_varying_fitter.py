@@ -227,7 +227,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.weights = weights
 
         self._n_examples = df.shape[0]
-        self._n_unique = df.index.unique().shape[0]
+        self._n_unique = df.index.nunique()
         return self
 
     def _check_values(self, df, events, start, stop):
