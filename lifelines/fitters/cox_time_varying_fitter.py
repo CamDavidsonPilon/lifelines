@@ -77,8 +77,6 @@ class CoxTimeVaryingFitter(BaseFitter):
         the strata provided
     standard_errors_: Series
         the standard errors of the estimates
-    score_: float
-        the concordance index of the model.
     baseline_cumulative_hazard_: DataFrame
     baseline_survival_: DataFrame
     """

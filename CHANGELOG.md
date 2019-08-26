@@ -1,6 +1,12 @@
 ### Changelog
 
 
+#### 0.22.4
+
+##### New features
+ - Some performance improvements to parametric regression models.
+
+
 #### 0.22.3
 
 ##### New features
