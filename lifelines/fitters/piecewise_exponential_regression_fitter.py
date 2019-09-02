@@ -45,8 +45,9 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         coef_penalty = 0
 
         if self.penalizer > 0:
-            for i in range(params_stacked.shape[1] - 1):  # assuming the intercept col is the last column...
-                coef_penalty = coef_penalty + (params_stacked[:, i]).var()
+            for i in range(params_stacked.shape[1]):
+                if not self._constant_cols[i]:
+                    coef_penalty = coef_penalty + (params_stacked[:, i]).var()
 
         return neg_ll + self.penalizer * coef_penalty
 

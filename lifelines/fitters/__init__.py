@@ -1413,9 +1413,6 @@ class ParametricRegressionFitter(BaseFitter):
         df = df.astype(float)
         self._check_values(df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
-        _norm_std = df.std(0)
-        _norm_std[_norm_std < 1e-8] = 1.0
-
         _index = pd.MultiIndex.from_tuples(
             sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
         )
@@ -1426,7 +1423,13 @@ class ParametricRegressionFitter(BaseFitter):
             self._norm_mean_ = df[self.regressors[self._primary_parameter_name]].mean(0)
             self._norm_mean_ancillary = df[self.regressors[self._ancillary_parameter_name]].mean(0)
 
-        self._norm_std = pd.Series([_norm_std.loc[variable_name] for _, variable_name in _index], index=_index)
+        _norm_std = df.std(0)
+        self._constant_cols = pd.Series(
+            [(_norm_std.loc[variable_name] < 1e-8) for (_, variable_name) in _index], index=_index
+        )
+        self._norm_std = pd.Series([_norm_std.loc[variable_name] for (_, variable_name) in _index], index=_index)
+        self._norm_std[self._constant_cols] = 1.0
+        _norm_std[_norm_std < 1e-8] = 1.0
 
         _params, self.log_likelihood_, self._hessian_ = self._fit_model(
             log_likelihood_function,
@@ -1466,6 +1469,8 @@ class ParametricRegressionFitter(BaseFitter):
 
     def _add_penalty(self, params, neg_ll):
         params, _ = flatten(params)
+        # remove constant cols from being penalized
+        params = params[~self._constant_cols]
         if self.penalizer > 0:
             penalty = (params ** 2).sum()
         else:
@@ -1487,7 +1492,7 @@ class ParametricRegressionFitter(BaseFitter):
         initial_point_array, unflatten = flatten(initial_point_dict)
 
         if initial_point is None and isinstance(initial_point, dict):
-            initial_point_array = flatten(initial_point)
+            initial_point_array, _ = flatten(initial_point)  # TODO: test
 
         assert initial_point_array.shape[0] == Xs.size, "initial_point is not the correct shape."
 
@@ -2577,7 +2582,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
-        constant_col = (Xs.df.var(0) < 1e-8).idxmax()
+        constant_col = (Xs.df.std(0) < 1e-8).idxmax()
 
         def _transform_ith_param(param):
             if param <= 0:
@@ -2614,8 +2619,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     def _add_penalty(self, params, neg_ll):
         params, _ = flatten(params)
-        if self.penalizer > 0:
+        # remove intercepts from being penalized
+        params = params[~self._constant_cols]
+        if self.penalizer > 0 and self.l1_ratio > 0:
             penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
+        elif self.penalizer > 0 and self.l1_ratio <= 0:
+            penalty = 0.5 * (params ** 2).sum()
         else:
             penalty = 0
         return neg_ll + self.penalizer * penalty

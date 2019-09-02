@@ -961,7 +961,7 @@ class TestSklearnAdapter:
         clf = GridSearchCV(base_model(), grid_params, cv=4)
         clf.fit(X, Y)
 
-        assert clf.best_params_ == {"model_ancillary": False, "penalizer": 0.01}
+        assert clf.best_params_ == {"model_ancillary": False, "penalizer": 100.0}
         assert clf.predict(X).shape[0] == X.shape[0]
 
     def test_model_can_accept_things_like_strata(self, X, Y):
