@@ -263,4 +263,9 @@ def _preprocess_scoring_data(event_times, predicted_scores, event_observed):
         if event_observed.shape != event_times.shape:
             raise ValueError("Observed events must be 1-dimensional of same length as event times")
 
+    # check for NaNs
+    for a in [event_times, predicted_scores, event_observed]:
+        if np.isnan(a).any():
+            raise ValueError("NaNs detected in inputs, please correct or drop.")
+
     return event_times, predicted_scores, event_observed
