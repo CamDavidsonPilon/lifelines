@@ -48,7 +48,7 @@ __all__ = ["CoxPHFitter"]
 
 class BatchVsSingle:
     @staticmethod
-    def decide(batch_mode, n_unique, n_vars, n_total):
+    def decide(batch_mode, n_unique, n_total, n_vars):
         frac_dups = n_unique / n_total
         if batch_mode or (
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
