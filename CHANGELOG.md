@@ -5,6 +5,7 @@
 
 ##### New features
  - Some performance improvements to regression models.
+ - lifelines will avoid penalizing the intercept (aka bias) variables in regression models.
 
 ##### Bug fixes
  - Fixed issue where `concordance_index` would never exit if NaNs in dataset.
