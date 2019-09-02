@@ -4,7 +4,10 @@
 #### 0.22.4
 
 ##### New features
- - Some performance improvements to parametric regression models.
+ - Some performance improvements to regression models.
+
+##### Bug fixes
+ - Fixed issue where `concordance_index` would never exit if NaNs in dataset.
 
 
 #### 0.22.3
