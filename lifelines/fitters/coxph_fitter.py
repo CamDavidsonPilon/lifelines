@@ -45,14 +45,10 @@ from lifelines.utils import (
 
 __all__ = ["CoxPHFitter"]
 
-matrix_axis_0_sum_to_array = lambda m: np.sum(m, 0)
-
 
 class BatchVsSingle:
     @staticmethod
-    def decide(batch_mode, T):
-        n_total = T.shape[0]
-        n_unique = T.unique().shape[0]
+    def decide(batch_mode, n_unique, n_total, n_vars):
         frac_dups = n_unique / n_total
         if batch_mode or (
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
@@ -60,12 +56,14 @@ class BatchVsSingle:
             (batch_mode is None)
             and (
                 (
-                    5.302813e-01
-                    + -1.789398e-06 * n_total
-                    + -3.496285e-11 * n_total ** 2
-                    + 2.756569e00 * frac_dups
-                    + -1.306258e00 * frac_dups ** 2
-                    + 9.535042e-06 * n_total * frac_dups
+                    6.876218e-01
+                    + -1.796993e-06 * n_total
+                    + -1.204271e-11 * n_total ** 2
+                    + 1.912500e00 * frac_dups
+                    + -8.121036e-01 * frac_dups ** 2
+                    + 4.916605e-06 * n_total * frac_dups
+                    + -5.888875e-03 * n_vars
+                    + 5.473434e-09 * n_vars * n_total
                 )
                 < 1
             )
@@ -439,7 +437,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # Method of choice is just efron right now
         if self.tie_method == "Efron":
-            decision = BatchVsSingle.decide(self._batch_mode, T)
+            decision = BatchVsSingle.decide(self._batch_mode, T.nunique(), X.shape[0], X.shape[1])
             get_gradients = getattr(self, "_get_efron_values_%s" % decision)
             self._batch_mode = decision == "batch"
         else:
@@ -677,9 +675,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
-            #
             # This code is near identical to the _batch algorithm below. In fact, see _batch for comments.
-            #
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
@@ -730,22 +726,22 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             phi_i = weights_at_t
 
             # Calculate sums of Risk set
-            risk_phi = risk_phi + array_sum_to_scalar(phi_i)
+            risk_phi = risk_phi + phi_i.sum()
 
             # Calculate the sums of Tie set
             deaths = E[slice_]
 
-            tied_death_counts = array_sum_to_scalar(deaths.astype(int))
+            tied_death_counts = deaths.astype(int).sum()
             if tied_death_counts == 0:
                 # no deaths, can continue
                 pos -= count_of_removals
                 continue
 
             weights_deaths = weights_at_t[deaths]
-            weight_count = array_sum_to_scalar(weights_deaths)
+            weight_count = weights_deaths.sum()
 
             if tied_death_counts > 1:
-                tie_phi = array_sum_to_scalar(phi_i[deaths])
+                tie_phi = phi_i[deaths].sum()
                 factor = np.log(risk_phi - np.arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
             else:
                 factor = np.log(risk_phi)
@@ -840,6 +836,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         _, counts = np.unique(-T, return_counts=True)
         scores = weights * np.exp(np.dot(X, beta))
         pos = n
+        ZERO_TO_N = np.arange(counts.max())
 
         for count_of_removals in counts:
 
@@ -847,31 +844,34 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
             X_at_t = X[slice_]
             weights_at_t = weights[slice_]
+            deaths = E[slice_]
 
             phi_i = scores[slice_, None]
             phi_x_i = phi_i * X_at_t
             phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
-            risk_phi = risk_phi + array_sum_to_scalar(phi_i)
-            risk_phi_x = risk_phi_x + matrix_axis_0_sum_to_array(phi_x_i)
+            risk_phi = risk_phi + phi_i.sum()
+            risk_phi_x = risk_phi_x + (phi_x_i).sum(0)
             risk_phi_x_x = risk_phi_x_x + phi_x_x_i
 
             # Calculate the sums of Tie set
-            deaths = E[slice_]
-
-            tied_death_counts = array_sum_to_scalar(deaths.astype(int))
+            tied_death_counts = deaths.sum()
             if tied_death_counts == 0:
                 # no deaths, can continue
                 pos -= count_of_removals
                 continue
 
+            """
+            I think there is another optimization that can be made if we sort on
+            T and E. Using some accounting, we can skip all the [death] indexing below.
+            """
             xi_deaths = X_at_t[deaths]
             weights_deaths = weights_at_t[deaths]
 
-            x_death_sum = matrix_axis_0_sum_to_array(weights_deaths[:, None] * xi_deaths)
+            x_death_sum = np.einsum("a,ab->b", weights_deaths, xi_deaths)
 
-            weight_count = array_sum_to_scalar(weights_deaths)
+            weight_count = weights_deaths.sum()
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
@@ -880,11 +880,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/coxph_fitter.py#L755-L789
 
                 # it's faster if we can skip computing these when we don't need to.
-                tie_phi = array_sum_to_scalar(phi_i[deaths])
-                tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
-                tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths] * xi_deaths)
+                phi_x_i_deaths = phi_x_i[deaths]
+                tie_phi = phi_i[deaths].sum()
+                tie_phi_x = (phi_x_i_deaths).sum(0)
+                tie_phi_x_x = np.dot(xi_deaths.T, phi_x_i_deaths)
 
-                increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
+                increasing_proportion = ZERO_TO_N[:tied_death_counts] / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
                 numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
 
@@ -1157,12 +1158,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             xi = X[i : i + 1]
             phi_i = phi_s[i]
 
-            score = -phi_i * matrix_axis_0_sum_to_array(
+            score = -phi_i * (
                 (
                     E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T
                 ).T  # this is constant-ish, and could be cached
                 * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1])
-            )
+            ).sum(0)
 
             if E[i]:
                 score = score + (xi - risk_phi_x_history[i] / risk_phi_history[i])
