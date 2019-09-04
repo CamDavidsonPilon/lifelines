@@ -241,6 +241,10 @@ def restricted_mean_survival_time(model_or_survival_function, t=np.inf):
     >>> restricted_mean_survival_time(wf)
     >>> restricted_mean_survival_time(wf.survival_function_)
 
+    References
+    -------
+    https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-13-152#Sec27
+
     """
     import lifelines
 
