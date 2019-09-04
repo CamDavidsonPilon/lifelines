@@ -20,18 +20,6 @@ Statistically compare two populations
 
 Often researchers want to compare survival-ness between different populations. Here are some techniques to do that:
 
-Subtraction and division between survival functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you are interested in taking the difference between two survival functions, simply trying to
-subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
-the :class:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
-
-.. code-block:: python
-
-    kmf1.subtract(kmf2)
-
-will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, *lifelines* comes with a statistics library. See below.
 
 
 Logrank test
@@ -116,6 +104,23 @@ the log(-log) transformation implicitly and compares the survival-ness of popula
     results.print_summary()
 
 
+Subtraction and division between survival functions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you are interested in taking the difference between two survival functions, simply trying to
+subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
+the :class:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
+
+.. code-block:: python
+
+    kmf1.subtract(kmf2)
+
+will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, *lifelines* comes with a statistics library. See below.
+
+
+Restriced mean survival times (RMST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO
 
 Model selection using lifelines
 #####################################################
