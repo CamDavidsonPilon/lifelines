@@ -1059,3 +1059,18 @@ def test_rmst_exactely_with_known_solution():
 
     assert abs(utils.restricted_mean_survival_time(exp) - lambda_) < 0.001
     assert abs(utils.restricted_mean_survival_time(exp, t=lambda_) - lambda_ * (np.e - 1) / np.e) < 0.001
+
+
+def test_rmst_approximate_solution():
+
+    T = np.random.exponential(2, 1000)
+    exp = ExponentialFitter().fit(T)
+    lambda_ = exp.lambda_
+
+    assert (
+        abs(
+            utils.restricted_mean_survival_time(exp, t=lambda_)
+            - utils.restricted_mean_survival_time(exp.survival_function_, t=lambda_)
+        )
+        < 0.001
+    )
