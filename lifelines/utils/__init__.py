@@ -10,6 +10,7 @@ from textwrap import dedent
 import numpy as np
 from scipy.linalg import solve
 from scipy import stats
+from scipy.integrate import quad, trapz
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
@@ -170,7 +171,7 @@ def qth_survival_time(q, survival_function, cdf=False):
     --------
     qth_survival_times, median_survival_times
     """
-    if type(survival_function) is pd.DataFrame:  # pylint: disable=unidiomatic-typecheck
+    if isinstance(survival_function, pd.DataFrame):
         if survival_function.shape[1] > 1:
             raise ValueError(
                 "Expecting a dataframe (or series) with a single column. Provide that or use utils.qth_survival_times."
@@ -189,13 +190,27 @@ def qth_survival_time(q, survival_function, cdf=False):
 
 
 def median_survival_times(model_or_density_or_survival_function, left_censorship=False):
+    """
+    Compute the median survival time of survival function(s).
+
+    Parameters
+    -----------
+
+    model_or_density_or_survival_function: lifelines model or DataFrame
+        This can be a univariate lifelines model, or a DataFrame of one or more survival functions.
+
+    """
+    import lifelines
+
     if isinstance(model_or_density_or_survival_function, pd.DataFrame):
-        return qth_survival_times(0.5, density_or_survival_function, cdf=left_censorship)
-    else:
+        return qth_survival_times(0.5, model_or_density_or_survival_function, cdf=left_censorship)
+    elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         return model.median_
+    else:
+        raise ValueError("Can't compute median surviva time of object %s" % model_or_survival_function)
 
 
-def restricted_mean_survival_time(model_or_survival_function, upper_limit=np.inf):
+def restricted_mean_survival_time(model_or_survival_function, t=np.inf):
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
@@ -209,7 +224,7 @@ def restricted_mean_survival_time(model_or_survival_function, upper_limit=np.inf
 
     model_or_survival_function: lifelines model or DataFrame
         This can be a univariate model, or a pandas DataFrame. The former will provide a more accurate estimate however.
-    upper_limit: float
+    t: float
         The upper limit of the integration in the RMST.
 
     Example
@@ -219,8 +234,8 @@ def restricted_mean_survival_time(model_or_survival_function, upper_limit=np.inf
     >>> from lifelines.utils import restricted_mean_survival_time
     >>>
     >>> kmf = KaplanMeierFitter().fit(T, E)
-    >>> restricted_mean_survival_time(kmf, upper_limit=3.5)
-    >>> restricted_mean_survival_time(kmf.survival_function_, upper_limit=3.5)
+    >>> restricted_mean_survival_time(kmf, t=3.5)
+    >>> restricted_mean_survival_time(kmf.survival_function_, t=3.5)
     >>>
     >>> wf = WeibullFitter().fit(T, E)
     >>> restricted_mean_survival_time(wf)
@@ -234,7 +249,7 @@ def restricted_mean_survival_time(model_or_survival_function, upper_limit=np.inf
             "Approximating RMST using the precomputed survival function. You likely will get a more accurate estimate if you provide the fitted Model instead of the survival function.",
             UserWarning,
         )
-        sf = model_or_survival_function.loc[:upper_limit]
+        sf = model_or_survival_function.loc[:t]
         sf = sf.append(pd.DataFrame([1], index=[0], columns=sf.columns)).sort_index()
         return trapz(y=sf.values[:, 0], x=sf.index)
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
@@ -242,14 +257,12 @@ def restricted_mean_survival_time(model_or_survival_function, upper_limit=np.inf
         model = model_or_survival_function
         # if KM, we can compute exactly
         if isinstance(model, lifelines.KaplanMeierFitter):
-            sf = model.survival_function_.loc[:upper_limit]
-            sf = sf.append(
-                pd.DataFrame([model.predict(upper_limit)], index=[upper_limit], columns=sf.columns)
-            ).sort_index()
+            sf = model.survival_function_.loc[:t]
+            sf = sf.append(pd.DataFrame([model.predict(t)], index=[t], columns=sf.columns)).sort_index()
             sf = sf.reset_index()
             return (sf["index"].diff().shift(-1) * sf[model._label]).sum()
         else:
-            return quad(model.survival_function_at_times, 0, upper_limit)[0]
+            return quad(model.survival_function_at_times, 0, t)[0]
     else:
         raise ValueError("Can't compute RMST of object %s" % model_or_survival_function)
 
