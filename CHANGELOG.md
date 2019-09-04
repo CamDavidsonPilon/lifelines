@@ -1,7 +1,7 @@
 ### Changelog
 
 
-#### 0.22.4
+#### 0.22.4 - 2019-09-04
 
 ##### New features
  - Some performance improvements to regression models.
@@ -15,7 +15,7 @@
  - Fixed issue where `concordance_index` would never exit if NaNs in dataset.
 
 
-#### 0.22.3
+#### 0.22.3 - 2019-08-08
 
 ##### New features
  - model's now expose a `log_likelihood_` property.
