@@ -20,18 +20,6 @@ Statistically compare two populations
 
 Often researchers want to compare survival-ness between different populations. Here are some techniques to do that:
 
-Subtraction and division between survival functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you are interested in taking the difference between two survival functions, simply trying to
-subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
-the :class:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
-
-.. code-block:: python
-
-    kmf1.subtract(kmf2)
-
-will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, *lifelines* comes with a statistics library. See below.
 
 
 Logrank test
@@ -114,6 +102,78 @@ the log(-log) transformation implicitly and compares the survival-ness of popula
 
     results = survival_difference_at_fixed_point_in_time_test(point_in_time, T1, T2, event_observed_A=E1, event_observed_B=E2)
     results.print_summary()
+
+
+Subtraction and division between survival functions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you are interested in taking the difference between two survival functions, simply trying to
+subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
+the :class:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
+
+.. code-block:: python
+
+    kmf1.subtract(kmf2)
+
+will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, *lifelines* comes with a statistics library. See below.
+
+
+Restricted mean survival times (RMST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+*lifelines* has a function to accurately compute the restricted mean survival time, defined as
+
+
+    .. math::  \text{RMST}(t) = \int_0^t S(\tau) d\tau
+
+
+This is a good metric for comparing two survival curves, as their difference represents the area between the curves (see figure below). The upper limit is often finite because the tail of the estimated survival curve has high variance and can strongly influence the integral.
+
+.. code-block:: python
+
+    from lifelines.utils import restricted_mean_survival_time
+    from lifelines.datasets import load_waltons
+
+    df = load_waltons()
+    ix = df['group'] == 'miR-137'
+    T, E = df['T'], df['E']
+
+    kmf_exp = KaplanMeierFitter().fit(T[ix], E[ix], label='exp')
+    kmf_con = KaplanMeierFitter().fit(T[~ix], E[~ix], label='control')
+
+    limit = 50
+
+    rmst_exp = restricted_mean_survival_time(kmf_exp, t=limit)
+    rmst_con = restricted_mean_survival_time(kmf_con, t=limit)
+
+    ax = plt.subplot(311)
+    kmf_exp.plot(ax=ax, c="#0C7BDC", ci_show=False)
+    sf_exp_at_limit = kmf_exp.predict(np.append(kmf_exp.timeline, limit)).sort_index().loc[:limit]
+    ax.fill_between(sf_exp_at_limit.index, sf_exp_at_limit.values, step='post', color="#0C7BDC", alpha=0.20)
+    ax.axvline(limit, ls='--', c='k')
+    ax.text(10, 0.3, "%.3f" % rmst_exp)
+    ax.set_xlim(0, 65)
+
+
+    ax = plt.subplot(312)
+    kmf_con.plot(ax=ax, c="#FFC20A", ci_show=False)
+    sf_con_at_limit = kmf_con.predict(np.append(kmf_con.timeline, limit)).sort_index().loc[:limit]
+    ax.fill_between(sf_con_at_limit.index, sf_con_at_limit.values, step='post', color="#FFC20A", alpha=0.20)
+    ax.axvline(limit, ls='--', c='k')
+    ax.text(10, 0.4, "%.3f" % rmst_con)
+    ax.set_xlim(0, 65)
+
+
+    ax = plt.subplot(313)
+    kmf_con.plot(ax=ax, c="#FFC20A", ci_show=False)
+    kmf_exp.plot(ax=ax, c="#0C7BDC", ci_show=False)
+    timeline = np.unique(T.tolist() + [limit])
+    ax.axvline(limit, ls='--', c='k')
+    ax.fill_between(timeline[timeline<=limit], kmf_con.predict(timeline).loc[:limit], kmf_exp.predict(timeline).loc[:limit], step="post", color='k', alpha=0.10)
+    ax.text(34, 0.4, "%.3f" % (rmst_con - rmst_exp))
+    ax.set_xlim(0, 65)
+
+
+.. image:: images/rmst_example.png
 
 
 

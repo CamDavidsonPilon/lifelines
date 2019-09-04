@@ -1392,6 +1392,34 @@ class TestBreslowFlemingHarringtonFitter:
         bfh.fit(observations, entry=births)
 
 
+class TestParametricRegressionFitter:
+    @pytest.fixture
+    def rossi(self):
+        rossi = load_rossi()
+        rossi["_int"] = 1.0
+        return rossi
+
+    def test_custom_weibull_model_gives_the_same_data_as_implemented_weibull_model(self, rossi):
+        class CustomWeibull(ParametricRegressionFitter):
+
+            _fitted_parameter_names = ["lambda_", "rho_"]
+
+            def _cumulative_hazard(self, params, T, Xs):
+                lambda_ = anp.exp(anp.dot(Xs["lambda_"], params["lambda_"]))
+                rho_ = anp.exp(anp.dot(Xs["rho_"], params["rho_"]))
+
+                return (T / lambda_) ** rho_
+
+        cb = CustomWeibull()
+        wf = WeibullAFTFitter(fit_intercept=False)
+
+        cb.fit(rossi, "week", "arrest", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
+        wf.fit(rossi, "week", "arrest")
+
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=2)
+        npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
+
+
 class TestRegressionFitters:
     @pytest.fixture
     def rossi(self):

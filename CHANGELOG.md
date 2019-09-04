@@ -1,13 +1,21 @@
 ### Changelog
 
 
-#### 0.22.4
+#### 0.22.4 - 2019-09-04
 
 ##### New features
- - Some performance improvements to parametric regression models.
+ - Some performance improvements to regression models.
+ - lifelines will avoid penalizing the intercept (aka bias) variables in regression models.
+ - new `utils.restricted_mean_survival_time` that approximates the RMST using numerical integration against survival functions.
+
+##### API changes
+ - `KaplanMeierFitter.survival_function_`'s' index is no longer given the name "timeline".
+
+##### Bug fixes
+ - Fixed issue where `concordance_index` would never exit if NaNs in dataset.
 
 
-#### 0.22.3
+#### 0.22.3 - 2019-08-08
 
 ##### New features
  - model's now expose a `log_likelihood_` property.

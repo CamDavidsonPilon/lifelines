@@ -10,7 +10,7 @@ import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
 
-from lifelines import CoxPHFitter, WeibullAFTFitter
+from lifelines import CoxPHFitter, WeibullAFTFitter, KaplanMeierFitter, ExponentialFitter
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
 from lifelines import utils
 from lifelines import metrics
@@ -961,7 +961,7 @@ class TestSklearnAdapter:
         clf = GridSearchCV(base_model(), grid_params, cv=4)
         clf.fit(X, Y)
 
-        assert clf.best_params_ == {"model_ancillary": False, "penalizer": 0.01}
+        assert clf.best_params_ == {"model_ancillary": False, "penalizer": 100.0}
         assert clf.predict(X).shape[0] == X.shape[0]
 
     def test_model_can_accept_things_like_strata(self, X, Y):
@@ -1036,3 +1036,41 @@ class TestSklearnAdapter:
         clf.fit(X, Y)
         dump(clf, "filename.joblib")
         clf = load("filename.joblib")
+
+
+def test_rmst_works_at_kaplan_meier_edge_case():
+
+    T = [1, 2, 3, 4, 10]
+    kmf = KaplanMeierFitter().fit(T)
+
+    # when S(t)=0, doesn't matter about extending past
+    assert utils.restricted_mean_survival_time(kmf, t=10) == utils.restricted_mean_survival_time(kmf, t=10.001)
+
+    assert utils.restricted_mean_survival_time(kmf, t=9.9) <= utils.restricted_mean_survival_time(kmf, t=10.0)
+
+    assert abs((utils.restricted_mean_survival_time(kmf, t=4) - (1.0 + 0.8 + 0.6 + 0.4))) < 0.0001
+    assert abs((utils.restricted_mean_survival_time(kmf, t=4 + 0.1) - (1.0 + 0.8 + 0.6 + 0.4 + 0.2 * 0.1))) < 0.0001
+
+
+def test_rmst_exactely_with_known_solution():
+    T = np.random.exponential(2, 100)
+    exp = ExponentialFitter().fit(T)
+    lambda_ = exp.lambda_
+
+    assert abs(utils.restricted_mean_survival_time(exp) - lambda_) < 0.001
+    assert abs(utils.restricted_mean_survival_time(exp, t=lambda_) - lambda_ * (np.e - 1) / np.e) < 0.001
+
+
+def test_rmst_approximate_solution():
+
+    T = np.random.exponential(2, 1000)
+    exp = ExponentialFitter().fit(T)
+    lambda_ = exp.lambda_
+
+    assert (
+        abs(
+            utils.restricted_mean_survival_time(exp, t=lambda_)
+            - utils.restricted_mean_survival_time(exp.survival_function_, t=lambda_)
+        )
+        < 0.001
+    )
