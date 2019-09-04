@@ -497,6 +497,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 options={**{"disp": show_progress}, **self._scipy_fit_options},
             )
 
+            # convergence successful.
             if results.success:
                 # pylint: disable=no-value-for-parameter
                 hessian_ = hessian(negative_log_likelihood)(results.x, Ts, E, entry, weights)
