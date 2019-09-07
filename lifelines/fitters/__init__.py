@@ -892,8 +892,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         self.alpha = utils.coalesce(alpha, self.alpha)
 
         # create some initial values, and test them in the hazard.
-        self._initial_values = initial_point or self._get_initial_values(
-            Ts, self.event_observed, self.entry, self.weights
+        self._initial_values = utils.coalesce(
+            initial_point, self._get_initial_values(Ts, self.event_observed, self.entry, self.weights)
         )
         self._check_bounds_initial_point_names_shape()
 
