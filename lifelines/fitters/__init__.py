@@ -257,8 +257,18 @@ class UnivariateFitter(BaseFitter):
         """
         Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
         robust summary statistic for the population, if it exists.
+        """
+        warnings.warn(
+            """Please use `median_survival_time_` property instead. Future property `median_` will be removed.""",
+            FutureWarning,
+        )
+        return self.percentile(0.5)
 
-        For known parametric models, this should be overwritten by something more accurate.
+    @property
+    def median_survival_time_(self):
+        """
+        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
+        robust summary statistic for the population, if it exists.
         """
         return self.percentile(0.5)
 
@@ -827,11 +837,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        utils.check_nans_or_infs(lower_bound)
-        utils.check_positivity(upper_bound)
+        self.upper_bound = np.atleast_1d(utils.pass_for_numeric_dtypes_or_raise_array(upper_bound))
+        self.lower_bound = np.atleast_1d(utils.pass_for_numeric_dtypes_or_raise_array(lower_bound))
 
-        self.upper_bound = np.asarray(utils.pass_for_numeric_dtypes_or_raise_array(upper_bound))
-        self.lower_bound = np.asarray(utils.pass_for_numeric_dtypes_or_raise_array(lower_bound))
+        utils.check_nans_or_infs(self.lower_bound)
+        utils.check_positivity(self.upper_bound)
 
         if (self.upper_bound < self.lower_bound).any():
             raise ValueError("All upper_bound times must be greater than or equal to lower_bound times.")
@@ -2026,7 +2036,7 @@ class ParametricRegressionFitter(BaseFitter):
 
     def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
         """
-        Produces a visual representation comparing the baseline survival curve of the model versus
+        Produces a plot comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
         subjects' survival as we vary covariate(s), all else being held equal. The baseline survival
         curve is equal to the predicted survival curve at all average values in the original dataset.
@@ -2053,7 +2063,9 @@ class ParametricRegressionFitter(BaseFitter):
         >>> from lifelines import datasets, WeibullAFTFitter
         >>> rossi = datasets.load_rossi()
         >>> wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
-        >>> wf.plot_covariate_groups('prio', values=np.arange(0, 15), cmap='coolwarm')
+        >>> wf.plot_covariate_groups('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
+
+        .. image:: images/covariate_groups_example3.png
 
         >>> # multiple variables at once
         >>> wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')

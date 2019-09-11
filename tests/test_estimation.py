@@ -496,14 +496,27 @@ class TestUnivariateFitters:
         T, C = positive_sample_lifetimes
         for f in univariate_fitters:
             fitter = f()
-            if hasattr(fitter, "survival_function_"):
-                with_array = fitter.fit(T, C).survival_function_
-                with_list = fitter.fit(list(T), list(C)).survival_function_
-                assert_frame_equal(with_list, with_array)
-            if hasattr(fitter, "cumulative_hazard_"):
+
+            if isinstance(fitter, NelsonAalenFitter):
                 with_array = fitter.fit(T, C).cumulative_hazard_
                 with_list = fitter.fit(list(T), list(C)).cumulative_hazard_
                 assert_frame_equal(with_list, with_array)
+
+            else:
+                with_array = fitter.fit(T, C).survival_function_
+                with_list = fitter.fit(list(T), list(C)).survival_function_
+                assert_frame_equal(with_list, with_array)
+
+                if isinstance(fitter, ParametericUnivariateFitter):
+                    with_array = fitter.fit_interval_censoring(T, T + 1, (T == T + 1)).survival_function_
+                    with_list = fitter.fit_interval_censoring(
+                        list(T), list(T + 1), list((T == T + 1))
+                    ).survival_function_
+                    assert_frame_equal(with_list, with_array)
+
+                    with_array = fitter.fit_left_censoring(T, C).survival_function_
+                    with_list = fitter.fit_left_censoring(list(T), list(C)).survival_function_
+                    assert_frame_equal(with_list, with_array)
 
     def test_subtraction_function(self, positive_sample_lifetimes, univariate_fitters):
         T2 = np.arange(1, 50)

@@ -1758,7 +1758,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
     def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
         """
-        Produces a visual representation comparing the baseline survival curve of the model versus
+        Produces a plot comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
         subjects' survival as we vary covariate(s), all else being held equal. The baseline survival
         curve is equal to the predicted survival curve at all average values in the original dataset.
@@ -1768,7 +1768,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         covariates: string or list
             a string (or list of strings) of the covariate(s) in the original dataset that we wish to vary.
         values: 1d or 2d iterable
-            an iterable of the values we wish the covariate(s) to take on.
+            an iterable of the specific values we wish the covariate(s) to take on.
         plot_baseline: bool
             also display the baseline survival, defined as the survival at the mean of the original dataset.
         kwargs:
@@ -1785,7 +1785,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>> from lifelines import datasets, CoxPHFitter
         >>> rossi = datasets.load_rossi()
         >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
-        >>> cph.plot_covariate_groups('prio', values=np.arange(0, 15), cmap='coolwarm')
+        >>> cph.plot_covariate_groups('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
+
+        .. image:: images/covariate_groups_example1.png
+
 
         >>> # multiple variables at once
         >>> cph.plot_covariate_groups(['prio', 'paro'], values=[
@@ -1796,10 +1799,16 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>>  [5,  1],
         >>>  [10, 1]
         >>> ], cmap='coolwarm')
-        >>>
 
-        >>> # if you have categorical variables, you can simply things:
+        .. image:: images/covariate_groups_example2.png
+
+
+        >>> # if you have categorical variables, you can do the following to see the
+        >>> # effect of all the categories on one plot.
+        >>> cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        >>> # same as:
         >>> cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
+
 
         """
         from matplotlib import pyplot as plt
