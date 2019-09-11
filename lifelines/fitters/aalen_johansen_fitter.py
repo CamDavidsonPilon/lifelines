@@ -39,10 +39,12 @@ class AalenJohansenFitter(UnivariateFitter):
 
     Example
     -------
+
+    >>> from lifelines import AalenJohansenFitter
     >>> from lifelines.datasets import load_waltons
     >>> T, E = load_waltons()['T'], load_waltons()['E']
     >>> ajf = AalenJohansenFitter(calculate_variance=True)
-    >>> ajf.fit(T, E)
+    >>> ajf.fit(T, E, event_of_interest=1)
     >>> ajf.cumulative_density_
     >>> ajf.plot()
 
@@ -155,7 +157,6 @@ class AalenJohansenFitter(UnivariateFitter):
 
         self._label = label
         self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])
-        self.confidence_interval_cumulative_density_ = self.cumulative_density_
 
         # Technically, cumulative incidence, but consistent with KaplanMeierFitter
         self.event_table = aj[
@@ -169,6 +170,7 @@ class AalenJohansenFitter(UnivariateFitter):
         else:
             self.variance_, self.confidence_interval_ = None, None
 
+        self.confidence_interval_cumulative_density_ = self.confidence_interval_
         return self
 
     def _jitter(self, durations, event, jitter_level, seed=None):
