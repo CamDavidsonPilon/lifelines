@@ -2065,7 +2065,7 @@ class ParametricRegressionFitter(BaseFitter):
         >>> wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
         >>> wf.plot_covariate_groups('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
 
-        .. image:: images/covariate_groups_example3.png
+        .. image:: images/plot_covariate_example3.png
 
         >>> # multiple variables at once
         >>> wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')

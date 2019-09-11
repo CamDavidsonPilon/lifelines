@@ -1787,7 +1787,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
         >>> cph.plot_covariate_groups('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
 
-        .. image:: images/covariate_groups_example1.png
+        .. image:: images/plot_covariate_example1.png
 
 
         >>> # multiple variables at once
@@ -1800,7 +1800,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>>  [10, 1]
         >>> ], cmap='coolwarm')
 
-        .. image:: images/covariate_groups_example2.png
+        .. image:: images/plot_covariate_example2.png
 
 
         >>> # if you have categorical variables, you can do the following to see the
