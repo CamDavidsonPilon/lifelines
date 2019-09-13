@@ -34,10 +34,11 @@ class BaseFitter(object):
     def __repr__(self):
         classname = self._class_name
         try:
-            s = """<lifelines.%s: fitted with %d observations, %d censored>""" % (
+            s = """<lifelines.%s: fitted with %g total observations, %g %s-censored observations>""" % (
                 classname,
-                self.event_observed.shape[0],
-                self.event_observed.shape[0] - np.where(self.event_observed)[0].shape[0],
+                self.weights.sum(),
+                self.weights.sum() - self.weights[self.event_observed > 0].sum(),
+                utils.CensoringType.get_human_readable_censoring_type(self),
             )
         except AttributeError:
             s = """<lifelines.%s>""" % classname
@@ -480,7 +481,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
         return df
 
-    def _get_initial_values(self, *args):
+    def _create_initial_point(self, *args):
         # this can be overwritten in the model class.
         # *args has terms like Ts, E, entry, weights
         return np.array(list(self._initial_values_from_bounds()))
@@ -524,7 +525,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
                     Fitting did not converge. This is mostly a lifelines problem, but a few things you can check:
 
                     1. Are there any extreme values in the durations column?
-                      - Try scaling your durations to a more reasonable values closer to 1 (multiplying or dividing by some 10^n).
+                      - Try scaling your durations to a more reasonable values closer to 1 (multiplying or dividing by some 10^n). If this works,
+                        then likely you just need to specify good initial values with `initial_point` argument in the call to `fit`.
                       - Try dropping them to see if the model converges.
                     2. %s may just be a poor model of the data. Try another parametric model.
                 """
@@ -618,8 +620,8 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         justify = utils.string_justify(18)
         print(self)
-        print("{} = {}".format(justify("number of subjects"), self.event_observed.shape[0]))
-        print("{} = {}".format(justify("number of events"), np.where(self.event_observed)[0].shape[0]))
+        print("{} = {}".format(justify("number of observations"), self.weights.sum()))
+        print("{} = {}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print(
             "{} = {}".format(
@@ -903,7 +905,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         # create some initial values, and test them in the hazard.
         self._initial_values = utils.coalesce(
-            initial_point, self._get_initial_values(Ts, self.event_observed, self.entry, self.weights)
+            initial_point, self._create_initial_point(Ts, self.event_observed, self.entry, self.weights)
         )
         self._check_bounds_initial_point_names_shape()
 
@@ -1729,8 +1731,8 @@ class ParametricRegressionFitter(BaseFitter):
         if self.robust:
             print("{} = {}".format(justify("robust variance"), True))
 
-        print("{} = {}".format(justify("number of subjects"), self._n_examples))
-        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
+        print("{} = {}".format(justify("number of observations"), self.weights.sum()))
+        print("{} = {}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 

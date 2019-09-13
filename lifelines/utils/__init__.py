@@ -79,6 +79,15 @@ class CensoringType:
     def is_interval_censoring(cls, model):
         return model._censoring_type == cls.INTERVAL
 
+    @classmethod
+    def get_human_readable_censoring_type(cls, model):
+        if cls.is_interval_censoring(model):
+            return "interval"
+        elif cls.is_right_censoring(model):
+            return "right"
+        else:
+            return left
+
 
 class StatError(Exception):
     pass

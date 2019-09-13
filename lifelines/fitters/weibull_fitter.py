@@ -2,6 +2,7 @@
 import autograd.numpy as np
 from lifelines.fitters import KnownModelParametericUnivariateFitter
 from lifelines.utils.safe_exp import safe_exp
+from lifelines import utils
 
 
 class WeibullFitter(KnownModelParametericUnivariateFitter):
@@ -72,12 +73,15 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     entry: array or None
         The entry array provided, or None
 
-    Notes
+    See Also
     ----------
     Looking for a 3-parameter Weibull model? See notes `here <https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html#3-parameter-Weibull-distribution>`_.
     """
 
     _fitted_parameter_names = ["lambda_", "rho_"]
+
+    def _create_initial_point(self, Ts, E, entry, weights):
+        return np.array([utils.coalesce(Ts).std(), 1.0])
 
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params

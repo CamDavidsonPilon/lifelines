@@ -2,10 +2,15 @@
 
 #### 0.22.5 - unreleased
 
+##### New features
+ - Improvements to the __repr__ of models that takes into accounts weights.
+
 ##### Bug fixes
  - Fixed issue where `fit_interval_censoring` wouldn't accept lists.
  - Fixed an issue with `AalenJohansenFitter` failing to plot confidence intervals.
 
+##### API Changes
+ - `_get_initial_value` in parametric univariate models is renamed `_create_initial_point`
 
 #### 0.22.4 - 2019-09-04
 

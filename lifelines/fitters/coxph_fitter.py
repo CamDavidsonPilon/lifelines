@@ -1288,8 +1288,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if self.penalizer > 0:
             print("{} = {}".format(justify("penalizer"), self.penalizer))
 
-        print("{} = {}".format(justify("number of subjects"), self._n_examples))
-        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
+        print("{} = {}".format(justify("number of observations"), self.weights.sum()))
+        print("{} = {}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
         print("{} = {:.{prec}f}".format(justify("partial log-likelihood"), self.log_likelihood_, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 
