@@ -866,6 +866,10 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     n = len(durations)
     durations = np.asarray(pass_for_numeric_dtypes_or_raise_array(durations)).reshape((n,))
 
+    if weights is None:
+        weights = np.ones_like(durations)
+    weights = np.asarray(weights).reshape((n,))
+
     # set to all observed if event_observed is none
     if event_observed is None:
         event_observed = np.ones(n, dtype=int)
@@ -881,7 +885,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     else:
         timeline = np.asarray(timeline)
 
-    return (durations, event_observed, timeline.astype(float), entry, event_table)
+    return durations, event_observed, timeline.astype(float), entry, event_table, weights
 
 
 def _get_index(X):

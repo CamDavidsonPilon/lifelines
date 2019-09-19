@@ -2,6 +2,7 @@
 import autograd.numpy as np
 
 from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.utils import CensoringType
 
 
 class LogLogisticFitter(KnownModelParametericUnivariateFitter):
@@ -72,6 +73,15 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
         a = self.alpha_
         b = self.beta_
         return a * (1 / (1 - p) - 1) ** (-1 / b)
+
+    def _create_initial_point(self, Ts, E, *args):
+        if CensoringType.is_right_censoring(self):
+            T = Ts[0]
+        elif CensoringType.is_left_censoring(self):
+            T = Ts[1]
+        elif CensoringType.is_interval_censoring(self):
+            T = Ts[1] - Ts[0]
+        return np.array([np.median(T), 1.0])
 
     @property
     def median_(self):

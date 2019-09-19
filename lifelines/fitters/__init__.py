@@ -40,7 +40,7 @@ class BaseFitter(object):
                 self.weights.sum() - self.weights[self.event_observed > 0].sum(),
                 utils.CensoringType.get_human_readable_censoring_type(self),
             )
-        except AttributeError:
+        except AttributeError as e:
             s = """<lifelines.%s>""" % classname
         return s
 
@@ -256,6 +256,8 @@ class UnivariateFitter(BaseFitter):
     @property
     def median_(self):
         """
+        Deprecated, use .median_survival_time_
+
         Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
         robust summary statistic for the population, if it exists.
         """
@@ -1874,7 +1876,13 @@ class ParametricRegressionFitter(BaseFitter):
             the cumulative hazards of individuals over the timeline
 
         """
+        df = df.copy().astype(float)
         times = utils.coalesce(times, self.timeline, np.unique(self.durations))
+        times = np.atleast_1d(times).astype(float)
+
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
+
         n = df.shape[0]
         Xs = self._create_Xs_dict(df)
 
@@ -2935,8 +2943,13 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         --------
         predict_percentile, predict_expectation, predict_survival_function
         """
-        df = df.copy()
+        df = df.copy().astype(float)
         times = utils.coalesce(times, self.timeline, np.unique(self.durations))
+        times = np.atleast_1d(times).astype(float)
+
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
+
         n = df.shape[0]
 
         if isinstance(ancillary_df, pd.DataFrame):

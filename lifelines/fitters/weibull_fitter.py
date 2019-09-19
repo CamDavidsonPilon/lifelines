@@ -81,7 +81,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     _fitted_parameter_names = ["lambda_", "rho_"]
 
     def _create_initial_point(self, Ts, E, entry, weights):
-        return np.array([utils.coalesce(Ts).std(), 1.0])
+        return np.array([utils.coalesce(*Ts).std(), 1.0])
 
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params

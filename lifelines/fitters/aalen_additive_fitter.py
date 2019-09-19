@@ -317,13 +317,16 @@ It's important to know that the naive variance estimates of the coefficients are
             same order as the training data.
 
         """
-        n, _ = X.shape
+        n = X.shape[0]
+        X = X.astype(float)
 
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):
             order = self.cumulative_hazards_.columns
             order = order.drop("_intercept") if self.fit_intercept else order
             X_ = X[order].values
+        elif isinstance(X, pd.Series):
+            return self.predict_cumulative_hazard(X.to_frame().T)
         else:
             X_ = X
 
@@ -341,7 +344,7 @@ It's important to know that the naive variance estimates of the coefficients are
         check_nans_or_infs(T)
         check_nans_or_infs(X)
 
-    def predict_survival_function(self, X):
+    def predict_survival_function(self, X, times=None):
         """
         Returns the survival functions for the individuals
 
@@ -351,6 +354,8 @@ It's important to know that the naive variance estimates of the coefficients are
             If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        times:
+            Not implemented yet
 
         """
         return np.exp(-self.predict_cumulative_hazard(X))

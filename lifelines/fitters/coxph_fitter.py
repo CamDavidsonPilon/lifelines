@@ -10,7 +10,6 @@ from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve, LinAlgError
 from scipy.integrate import trapz
 from scipy import stats
-from numpy import sum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter
 from lifelines.plotting import set_kwargs_ax, set_kwargs_drawstyle
@@ -1432,7 +1431,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if isinstance(X, pd.DataFrame):
             order = hazard_names
             X = X.reindex(order, axis="columns")
-            check_for_numeric_dtypes_or_raise(X)
+            X = X.astype(float)
             X = X.values
 
         X = X.astype(float)
@@ -1496,6 +1495,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         if times is not None:
             # non-linear interpolations can push the survival curves above 1 and below 0.
+            times = np.atleast_1d(times).astype(float)
             return dataframe_interpolate_at_times(cumulative_hazard_, times)
         return cumulative_hazard_
 

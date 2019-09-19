@@ -38,6 +38,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         label="BFH_estimate",
         alpha=None,
         ci_labels=None,
+        weights=None,
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -73,12 +74,13 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         naf.fit(
             durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels
         )
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = (
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = (
             naf.durations,
             naf.event_observed,
             naf.timeline,
             naf.entry,
             naf.event_table,
+            naf.weights,
         )
 
         # estimation

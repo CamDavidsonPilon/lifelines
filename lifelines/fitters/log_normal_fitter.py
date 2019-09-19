@@ -4,6 +4,7 @@ from scipy.special import erfinv
 import autograd.numpy as np
 from autograd.scipy.stats import norm
 from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.utils import CensoringType
 
 
 class LogNormalFitter(KnownModelParametericUnivariateFitter):
@@ -57,6 +58,15 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
 
     _fitted_parameter_names = ["mu_", "sigma_"]
     _bounds = [(None, None), (0, None)]
+
+    def _create_initial_point(self, Ts, E, *args):
+        if CensoringType.is_right_censoring(self):
+            log_T = np.log(Ts[0])
+        elif CensoringType.is_left_censoring(self):
+            log_T = np.log(Ts[1])
+        elif CensoringType.is_interval_censoring(self):
+            log_T = np.log(Ts[1] - Ts[0])
+        return np.array([np.median(log_T), 1.0])
 
     @property
     def median_(self):

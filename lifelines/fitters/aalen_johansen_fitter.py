@@ -137,7 +137,7 @@ class AalenJohansenFitter(UnivariateFitter):
 
         # Setting up table for calculations and to return to user
         event_spec = pd.Series(event_observed) == event_of_interest
-        self.durations, self.event_observed, *_, event_table = _preprocess_inputs(
+        self.durations, self.event_observed, *_, event_table, weights = _preprocess_inputs(
             durations=durations, event_observed=event_spec, timeline=timeline, entry=entry, weights=weights
         )
         event_spec_times = event_table["observed"]

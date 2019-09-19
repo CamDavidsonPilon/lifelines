@@ -119,7 +119,7 @@ class NelsonAalenFitter(UnivariateFitter):
         if weights is not None:
             if (weights.astype(int) != weights).any():
                 warnings.warn(
-                    """It looks like your weights are not integers, possibly prospenity scores then?
+                    """It looks like your weights are not integers, possibly propensity scores then?
   It's important to know that the naive variance estimates of the coefficients are biased. Instead use Monte Carlo to
   estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
   or "Adjusted Kaplan-Meier estimator and log-rank test with inverse probability of treatment weighting for survival data."
@@ -127,14 +127,15 @@ class NelsonAalenFitter(UnivariateFitter):
                     StatisticalWarning,
                 )
 
-        v = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = v
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = _preprocess_inputs(
+            durations, event_observed, timeline, entry, weights
+        )
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline, self._additive_f, self._variance_f, False
         )
 
-        # esimates
+        # estimates
         self._label = label
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)

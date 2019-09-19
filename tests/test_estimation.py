@@ -189,15 +189,6 @@ class TestBaseFitter:
         bf = BaseFitter()
         assert bf.__repr__() == "<lifelines.BaseFitter>"
 
-    def test_repr_with_fitter(self, sample_lifetimes):
-        T, C = sample_lifetimes
-        bf = BaseFitter()
-        bf.event_observed = C
-        assert bf.__repr__() == "<lifelines.BaseFitter: fitted with %d observations, %d censored>" % (
-            C.shape[0],
-            C.shape[0] - C.sum(),
-        )
-
 
 class TestParametricUnivariateFitters:
     @flaky
@@ -242,8 +233,8 @@ class TestParametricUnivariateFitters:
             fitter().fit(T, E)
 
     def test_models_can_handle_really_small_duration_values(self, known_parametric_univariate_fitters):
-        T1 = np.random.exponential(1e-12, size=1000)
-        T2 = np.random.exponential(1e-12, size=1000)
+        T1 = np.random.exponential(1e-6, size=1000)
+        T2 = np.random.exponential(1e-6, size=1000)
         E = T1 < T2
         T = np.minimum(T1, T2)
 
@@ -253,8 +244,8 @@ class TestParametricUnivariateFitters:
     def test_models_can_handle_really_small_duration_values_for_left_censorship(
         self, known_parametric_univariate_fitters
     ):
-        T1 = np.random.exponential(1e-12, size=1000)
-        T2 = np.random.exponential(1e-12, size=1000)
+        T1 = np.random.exponential(1e-6, size=1000)
+        T2 = np.random.exponential(1e-6, size=1000)
         E = T1 > T2
         T = np.maximum(T1, T2)
 
@@ -325,6 +316,17 @@ class TestUnivariateFitters:
             PiecewiseExponentialFitterTesting,
             GeneralizedGammaFitter,
         ]
+
+    def test_repr_with_fitter(self, sample_lifetimes, univariate_fitters):
+        T, E = sample_lifetimes
+        for f in univariate_fitters:
+            f = f()
+            f.fit(T, E)
+            assert f.__repr__() == "<lifelines.%s: fitted with %d total observations, %d right-censored observations>" % (
+                f._class_name,
+                E.shape[0],
+                E.shape[0] - E.sum(),
+            )
 
     def test_allow_dataframes(self, univariate_fitters):
         t_2d = np.random.exponential(5, size=(2000, 1)) ** 2
@@ -1440,24 +1442,27 @@ class TestRegressionFitters:
         return rossi
 
     @pytest.fixture
-    def regression_models(self):
+    def regression_models_sans_strata_model(self):
         return [
             CoxPHFitter(penalizer=10.0),
-            CoxPHFitter(strata=["race", "paro", "mar", "wexp"]),
             AalenAdditiveFitter(coef_penalizer=1.0, smoothing_penalizer=1.0),
             WeibullAFTFitter(fit_intercept=True),
             LogNormalAFTFitter(fit_intercept=True),
             LogLogisticAFTFitter(fit_intercept=True),
             PiecewiseExponentialRegressionFitter(breakpoints=[25.0]),
             CustomRegressionModelTesting(penalizer=1.0),
-            GeneralizedGammaRegressionFitter(penalizer=0),
+            GeneralizedGammaRegressionFitter(penalizer=5.0),
         ]
+
+    @pytest.fixture
+    def regression_models(self, regression_models_sans_strata_model):
+        regression_models_sans_strata_model.append(CoxPHFitter(strata=["race", "paro", "mar", "wexp"]))
+        return regression_models_sans_strata_model
 
     def test_dill_serialization(self, rossi, regression_models):
         from dill import dumps, loads
 
         for fitter in regression_models:
-            print(fitter)
             fitter.fit(rossi, "week", "arrest")
 
             unpickled = loads(dumps(fitter))
@@ -1485,7 +1490,7 @@ class TestRegressionFitters:
             f = fitter.fit(rossi, "week", "arrest")
             dump(f, output)
 
-    def test_fit_will_accept_object_dtype_as_event_col(self, regression_models, rossi):
+    def test_fit_will_accept_object_dtype_as_event_col(self, regression_models_sans_strata_model, rossi):
         # issue #638
         rossi["arrest"] = rossi["arrest"].astype(object)
         rossi["arrest"].iloc[0] = None
@@ -1494,17 +1499,13 @@ class TestRegressionFitters:
         rossi = rossi.dropna()
         assert rossi["arrest"].dtype == object
 
-        for fitter in regression_models:
-            if getattr(fitter, "strata", False):
-                continue
+        for fitter in regression_models_sans_strata_model:
             fitter.fit(rossi, "week", "arrest")
 
-    def test_fit_raise_an_error_if_nan_in_event_col(self, regression_models):
+    def test_fit_raise_an_error_if_nan_in_event_col(self, regression_models_sans_strata_model):
         df = pd.DataFrame({"T": np.arange(1, 11), "E": [True] * 9 + [None]})
 
-        for fitter in regression_models:
-            if getattr(fitter, "strata", False):
-                continue
+        for fitter in regression_models_sans_strata_model:
             with pytest.raises(TypeError, match="NaNs were detected in the dataset"):
                 fitter.fit(df, "T", "E")
 
@@ -1584,7 +1585,7 @@ class TestRegressionFitters:
             except AttributeError:
                 pass
 
-    def test_error_is_raised_if_using_non_numeric_data_in_fit(self, regression_models):
+    def test_error_is_raised_if_using_non_numeric_data_in_fit(self, regression_models_sans_strata_model):
         df = pd.DataFrame.from_dict(
             {
                 "t": [1.0, 6.0, 3.0, 4.0],
@@ -1598,9 +1599,7 @@ class TestRegressionFitters:
             }
         )
 
-        for fitter in regression_models:
-            if getattr(fitter, "strata", False):
-                continue
+        for fitter in regression_models_sans_strata_model:
             for subset in [["t", "categoryb_"], ["t", "string_"]]:
                 with pytest.raises(ValueError):
                     fitter.fit(df[subset], duration_col="t")
@@ -1644,6 +1643,23 @@ class TestRegressionFitters:
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
             assert hasattr(fitter, "_censoring_type")
+
+    def test_regression_models_will_not_fail_when_provided_int_times_on_prediction(
+        self, regression_models_sans_strata_model, rossi
+    ):
+        # reported an issue
+        for fitter in regression_models_sans_strata_model:
+            df = rossi.copy()
+
+            fitter.fit(df, duration_col="week", event_col="arrest")
+
+            # select only censored items
+            df = df[df["arrest"] == 0]
+
+            func = lambda row: fitter.predict_survival_function(row, times=row["week"])
+            df.apply(func, axis=1)
+
+        assert True
 
 
 class TestPiecewiseExponentialRegressionFitter:

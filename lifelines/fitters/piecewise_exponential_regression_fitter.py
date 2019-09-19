@@ -93,10 +93,13 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
             the cumulative hazard of individuals over the timeline
         """
 
+        if isinstance(df, pd.Series):
+            return self.predict_cumulative_hazard(df.to_frame().T)
+
         if conditional_after is not None:
             raise NotImplementedError()
 
-        times = np.asarray(coalesce(times, self.timeline, np.unique(self.durations)))
+        times = np.atleast_1d(coalesce(times, self.timeline, np.unique(self.durations))).astype(float)
         n = times.shape[0]
         times = times.reshape((n, 1))
 

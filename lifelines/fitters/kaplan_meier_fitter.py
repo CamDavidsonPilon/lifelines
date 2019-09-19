@@ -229,13 +229,15 @@ class KaplanMeierFitter(UnivariateFitter):
                   """,
                     StatisticalWarning,
                 )
+        else:
+            weights = np.ones_like(durations, dtype=float)
 
         # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
         is_left_censoring = CensoringType.is_left_censoring(self)
         primary_estimate_name = "survival_function_" if not is_left_censoring else "cumulative_density_"
         secondary_estimate_name = "cumulative_density_" if not is_left_censoring else "survival_function_"
 
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table = _preprocess_inputs(
+        self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = _preprocess_inputs(
             durations, event_observed, timeline, entry, weights
         )
 
