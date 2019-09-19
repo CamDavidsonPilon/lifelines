@@ -919,7 +919,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self.log_likelihood_, self._hessian_ = self._fit_model(
-            Ts, self.event_observed.astype(bool), self.entry, self.weights, initial_point, show_progress=show_progress
+            Ts, self.event_observed.astype(bool), self.entry, self.weights, show_progress=show_progress
         )
 
         if not self._KNOWN_MODEL:
