@@ -40,7 +40,7 @@ class BaseFitter(object):
                 self.weights.sum() - self.weights[self.event_observed > 0].sum(),
                 utils.CensoringType.get_human_readable_censoring_type(self),
             )
-        except AttributeError as e:
+        except AttributeError:
             s = """<lifelines.%s>""" % classname
         return s
 
@@ -488,7 +488,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         # *args has terms like Ts, E, entry, weights
         return np.array(list(self._initial_values_from_bounds()))
 
-    def _fit_model(self, Ts, E, entry, weights, initial_point=None, show_progress=True):
+    def _fit_model(self, Ts, E, entry, weights, show_progress=True):
 
         if utils.CensoringType.is_left_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
@@ -1202,9 +1202,9 @@ class ParametricRegressionFitter(BaseFitter):
         if self.entry_col:
             utils.check_entry_times(T, entries)
 
-    def _log_hazard(self, params, T, *Xs):
+    def _log_hazard(self, params, T, Xs):
         # can be overwritten to improve convergence, see example in WeibullAFTFitter
-        hz = self._hazard(params, T, *Xs)
+        hz = self._hazard(params, T, Xs)
         hz = anp.clip(hz, 1e-20, np.inf)
         return anp.log(hz)
 
@@ -1848,7 +1848,9 @@ class ParametricRegressionFitter(BaseFitter):
 
     def predict_percentile(self, df, p=0.5, conditional_after=None):
         subjects = utils._get_index(df)
-        return utils.qth_survival_times(p, self.predict_survival_function(df)[subjects]).T
+        return utils.qth_survival_times(
+            p, self.predict_survival_function(df, conditional_after=conditional_after)[subjects]
+        ).T
 
     def predict_cumulative_hazard(self, df, times=None, conditional_after=None):
         """

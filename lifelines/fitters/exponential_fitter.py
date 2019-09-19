@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import numpy as np
 from lifelines.fitters import KnownModelParametericUnivariateFitter
 

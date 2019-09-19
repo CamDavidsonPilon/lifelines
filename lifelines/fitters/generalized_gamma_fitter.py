@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
-from autograd.numpy import exp, abs, log
+from autograd.numpy import exp, log
 from scipy.special import gammainccinv, gammaincinv
 from autograd_gamma import gammaincc, gammainc, gammaln, gammainccln, gammaincln
 from lifelines.fitters import KnownModelParametericUnivariateFitter
-from lifelines.utils import coalesce, CensoringType
+from lifelines.utils import CensoringType
 from lifelines.utils.safe_exp import safe_exp
 
 

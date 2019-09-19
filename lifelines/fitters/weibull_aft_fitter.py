@@ -3,7 +3,7 @@ from autograd import numpy as np
 from scipy.special import gamma
 import pandas as pd
 
-from lifelines.utils import _get_index, coalesce
+from lifelines.utils import _get_index
 from lifelines.fitters import ParametericAFTRegressionFitter
 from lifelines.utils.safe_exp import safe_exp
 
