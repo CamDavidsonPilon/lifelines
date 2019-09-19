@@ -65,7 +65,7 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
         elif CensoringType.is_left_censoring(self):
             log_T = np.log(Ts[1])
         elif CensoringType.is_interval_censoring(self):
-            log_T = np.log(Ts[1] - Ts[0])
+            log_T = np.log(Ts[1])
         return np.array([np.median(log_T), 1.0])
 
     @property

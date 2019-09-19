@@ -2486,16 +2486,6 @@ class TestCoxPHFitter:
         npt.assert_allclose(results.loc[1, "martingale"], 0.774216356429, rtol=1e-05)
         npt.assert_allclose(results.loc[199, "martingale"], 0.868510420157, rtol=1e-05)
 
-    def test_error_is_raised_if_using_non_numeric_data_in_prediction(self, cph):
-        df = pd.DataFrame({"t": [1.0, 2.0, 3.0, 4.0], "int_": [1, -1, 0, 0], "float_": [1.2, -0.5, 0.0, 0.1]})
-
-        cph.fit(df, duration_col="t")
-
-        df_predict_on = pd.DataFrame({"int_": ["1", "-1", "0"], "float_": [1.2, -0.5, 0.0]})
-
-        with pytest.raises(TypeError):
-            cph.predict_partial_hazard(df_predict_on)
-
     def test_strata_will_work_with_matched_pairs(self, rossi, cph):
         rossi["matched_pairs"] = np.floor(rossi.index / 2.0).astype(int)
         cph.fit(rossi, duration_col="week", event_col="arrest", strata=["matched_pairs"], show_progress=True)
