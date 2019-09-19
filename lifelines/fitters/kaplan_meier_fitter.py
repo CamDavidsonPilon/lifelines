@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import functools
 import warnings
 import numpy as np
 import pandas as pd
@@ -266,7 +267,7 @@ class KaplanMeierFitter(UnivariateFitter):
         self.__estimate = getattr(self, primary_estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self._median = median_survival_times(self.__estimate, left_censorship=is_left_censoring)
-        self.percentile = lambda p: qth_survival_time(p, self.__estimate, cdf=is_left_censoring)
+        self.percentile = functools.partial(qth_survival_time, survival_function=self.__estimate, cdf=is_left_censoring)
         self._cumulative_sq_ = cumulative_sq_
 
         setattr(self, "confidence_interval_" + primary_estimate_name, self.confidence_interval_)
