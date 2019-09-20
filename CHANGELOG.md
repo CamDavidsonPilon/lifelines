@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.22.5 - unreleased
+#### 0.22.5 - 2019-09-20
 
 ##### New features
  - Improvements to the __repr__ of models that takes into accounts weights.
