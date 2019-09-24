@@ -1,5 +1,16 @@
 ## Changelog
 
+#### 0.22.6
+
+##### New features
+
+##### Bug fixes
+
+##### API Changes
+ - `CoxPHFitter.baseline_cumulative_hazard_`'s column is renamed `"baseline cumulative hazard"` - previously it was `"baseline hazard"`. (Only applies if the model has no strata.)
+
+
+
 #### 0.22.5 - 2019-09-20
 
 ##### New features

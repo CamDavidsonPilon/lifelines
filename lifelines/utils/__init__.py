@@ -1535,7 +1535,12 @@ def format_floats(decimals):
 
 
 def dataframe_interpolate_at_times(df, times):
-    return df.reindex(df.index.union(_to_array(times))).interpolate(method="index").loc[times].squeeze()
+    return (
+        df.reindex(df.index.union(_to_array(times)))
+        .interpolate(method="index", limit_direction="both")
+        .loc[times]
+        .squeeze()
+    )
 
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")
