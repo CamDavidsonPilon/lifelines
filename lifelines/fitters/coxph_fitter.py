@@ -1463,8 +1463,10 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         cumulative_hazard_ : DataFrame
             the cumulative hazard of individuals over the timeline
         """
-        if conditional_after is not None:
-            raise NotImplementedError("Sorry, conditional_after for Cox is tricky to do. It's not implemented yet.")
+        if conditional_after is not None and self.strata is not None:
+            raise NotImplementedError(
+                "Sorry, conditional_after for Cox with strata is tricky to do. It's not implemented yet."
+            )
 
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
@@ -1487,11 +1489,24 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
                     left_index=True,
                 )
         else:
-            c_0 = self.baseline_cumulative_hazard_
+
+            c_0 = self.baseline_cumulative_hazard_["baseline hazard"].values
             v = self.predict_partial_hazard(X)
             col = _get_index(v)
 
-            cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
+            if conditional_after is not None:
+                c_0_conditional_after = dataframe_interpolate_at_times(
+                    self.baseline_cumulative_hazard_, conditional_after
+                )[:, None]
+                c_0 = np.clip((c_0 - c_0_conditional_after).T, 0, np.inf)
+
+            cumulative_hazard_ = pd.DataFrame(
+                c_0 * v.values[:, 0], columns=col, index=self.baseline_cumulative_hazard_.index
+            )
+
+            if conditional_after is not None:
+                ix = (cumulative_hazard_ > 0).idxmax(0)
+                cumulative_hazard_ = cumulative_hazard_.apply(lambda s: s.shift(-int(ix.loc[s.name]))).ffill()
 
         if times is not None:
             # non-linear interpolations can push the survival curves above 1 and below 0.
@@ -1655,7 +1670,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return self._compute_baseline_hazard(self._predicted_partial_hazards_, name="baseline hazard")
 
     def _compute_baseline_cumulative_hazard(self):
-        return self.baseline_hazard_.cumsum()
+        cumulative = self.baseline_hazard_.cumsum()
+        if self.strata is None:
+            cumulative = cumulative.rename({"baseline hazard": "baseline cumulative hazard"})
+        return cumulative
 
     def _compute_baseline_survival(self):
         """
@@ -1677,7 +1695,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         """
         survival_df = np.exp(-self.baseline_cumulative_hazard_)
         if self.strata is None:
-            survival_df.columns = ["baseline survival"]
+            survival_df = survival_df.rename({"baseline cumulative hazard": "baseline survival"})
         return survival_df
 
     def plot(self, columns=None, hazard_ratios=False, **errorbar_kwargs):

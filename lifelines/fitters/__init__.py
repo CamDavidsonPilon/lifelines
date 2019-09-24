@@ -1867,7 +1867,7 @@ class ParametricRegressionFitter(BaseFitter):
             an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
             is the set of all durations in the training dataset (observed and unobserved).
         conditional_after: iterable, optional
-            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            Must be equal is size to (df.shape[0],) (`n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
@@ -1897,8 +1897,8 @@ class ParametricRegressionFitter(BaseFitter):
                 self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
             )
         else:
-            conditional_after = np.asarray(conditional_after)
-            times_to_evaluate_at = (conditional_after[:, None] + np.tile(times, (n, 1))).T
+            conditional_after = np.asarray(conditional_after).reshape((n, 1))
+            times_to_evaluate_at = (conditional_after + np.tile(times, (n, 1))).T
             return pd.DataFrame(
                 np.clip(
                     self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
