@@ -6,7 +6,7 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines import NelsonAalenFitter
-from lifelines.utils import _to_array, coalesce, CensoringType
+from lifelines.utils import _to_1d_array, coalesce, CensoringType
 
 
 class BreslowFlemingHarringtonFitter(UnivariateFitter):
@@ -110,4 +110,4 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
         """
         label = coalesce(label, self._label)
-        return pd.Series(self.predict(times), index=_to_array(times), name=label)
+        return pd.Series(self.predict(times), index=_to_1d_array(times), name=label)

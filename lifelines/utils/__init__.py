@@ -133,7 +133,7 @@ def qth_survival_times(q, survival_functions, cdf=False):
     qth_survival_time, median_survival_times
     """
     # pylint: disable=cell-var-from-loop,misplaced-comparison-constant,no-else-return
-    q = _to_array(q)
+    q = _to_1d_array(q)
     q = pd.Series(q.reshape(q.size), dtype=float)
 
     if not ((q <= 1).all() and (0 <= q).all()):
@@ -1497,10 +1497,14 @@ class StepSizer:
         return self.step_size
 
 
-def _to_array(x):
-    if not isinstance(x, collections.abc.Iterable):
-        return np.array([x])
-    return np.asarray(x)
+def _to_1d_array(x):
+    v = np.atleast_1d(x)
+    try:
+        if v.shape[0] > 1 and v.shape[1] > 1:
+            raise ValueError("Wrong shape (2d) given to _to_1d_array")
+    except IndexError:
+        pass
+    return v
 
 
 def _to_list(x):
@@ -1534,13 +1538,32 @@ def format_floats(decimals):
     return lambda f: "{:4.{prec}f}".format(f, prec=decimals)
 
 
-def dataframe_interpolate_at_times(df, times):
-    return (
-        df.reindex(df.index.union(_to_array(times)))
-        .interpolate(method="index", limit_direction="both")
-        .loc[times]
-        .squeeze()
-    )
+def interpolate_at_times(df_or_series, new_times):
+    """
+
+
+    Parameters
+    -----------
+    df_or_series: Pandas DataFrame or Series
+    new_times: iterable, numpy array
+         can be a n-d array, list.
+
+    """
+
+    assert df_or_series.index.is_monotonic_increasing, "df_or_series must be a increasing index."
+    t = df_or_series.index.values
+    y = df_or_series.values.reshape(df_or_series.shape[0])
+    return np.interp(new_times, t, y)
+
+
+def interpolate_at_times_and_return_pandas(df_or_series, new_times):
+    """
+    TODO
+    """
+    new_times = _to_1d_array(new_times)
+    return pd.DataFrame(
+        interpolate_at_times(df_or_series, new_times), index=new_times, cols=df_or_series.columns
+    ).squeeze()
 
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")
@@ -1573,7 +1596,7 @@ class DataframeSliceDict:
             yield (k, self[k])
 
     def filter(self, ix):
-        ix = _to_array(ix)
+        ix = _to_1d_array(ix)
         return DataframeSliceDict(self.df[ix], self.mappings)
 
     def iterdicts(self):

@@ -2248,6 +2248,64 @@ class TestCoxPHFitter:
     def cph(self):
         return CoxPHFitter()
 
+    def test_conditional_after_in_prediction(self, rossi, cph):
+        rossi.loc[rossi["week"] == 1, "week"] = 0
+        cph.fit(rossi, "week", "arrest")
+        p1 = cph.predict_survival_function(rossi.iloc[0])
+        p2 = cph.predict_survival_function(rossi.iloc[0], conditional_after=[8])
+
+        explicit = p1 / p1.loc[8]
+
+        npt.assert_allclose(explicit.loc[8.0, 0], p2.loc[0.0, 0])
+        npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
+        npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
+        npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+    def test_conditional_after_with_strata_in_prediction(self, rossi, cph):
+        rossi.loc[rossi["week"] == 1, "week"] = 0
+        cph.fit(rossi, "week", "arrest", strata=["fin"])
+        p1 = cph.predict_survival_function(rossi.iloc[0])
+        p2 = cph.predict_survival_function(rossi.iloc[0], conditional_after=[8])
+
+        explicit = p1 / p1.loc[8]
+
+        npt.assert_allclose(explicit.loc[8.0, 0], p2.loc[0.0, 0])
+        npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
+        npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
+        npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+    def test_conditional_after_in_prediction_multiple_subjects(self, rossi, cph):
+        rossi.loc[rossi["week"] == 1, "week"] = 0
+        cph.fit(rossi, "week", "arrest", strata=["fin"])
+        p1 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]])
+        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0])
+
+        explicit = p1 / p1.loc[8]
+
+        npt.assert_allclose(explicit.loc[8.0, 0], p2.loc[0.0, 0])
+        npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
+        npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
+        npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+        # no strata
+        cph.fit(rossi, "week", "arrest")
+        p1 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]])
+        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0])
+
+        explicit = p1 / p1.loc[8]
+
+        npt.assert_allclose(explicit.loc[8.0, 0], p2.loc[0.0, 0])
+        npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
+        npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
+        npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+    def test_conditional_after_in_prediction_multiple_subjects_with_custom_times(self, rossi, cph):
+
+        cph.fit(rossi, "week", "arrest")
+        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0], times=[10, 20, 30])
+
+        assert p2.index.tolist() == [10.0, 20.0, 30.0]
+
     def test_that_a_convergence_warning_is_not_thrown_if_using_compute_residuals(self, rossi):
         rossi["c"] = rossi["week"] + np.random.exponential(rossi.shape[0])
 

@@ -178,7 +178,7 @@ class UnivariateFitter(BaseFitter):
         """
         if callable(self._estimation_method):
             return (
-                pd.DataFrame(self._estimation_method(utils._to_array(times)), index=utils._to_array(times))
+                pd.DataFrame(self._estimation_method(utils._to_1d_array(times)), index=utils._to_1d_array(times))
                 .loc[times]
                 .squeeze()
             )
@@ -186,7 +186,7 @@ class UnivariateFitter(BaseFitter):
         estimate = getattr(self, self._estimation_method)
         if not interpolate:
             return estimate.asof(times).squeeze()
-        return utils.dataframe_interpolate_at_times(estimate, times)
+        return utils.interpolate_at_times_and_return_pandas(estimate, times)
 
     @property
     def conditional_time_to_event_(self):
@@ -1019,7 +1019,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
-            self._survival_function(self._fitted_parameters_, times), index=utils._to_array(times), name=label
+            self._survival_function(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
     def cumulative_density_at_times(self, times, label=None):
@@ -1040,7 +1040,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
-            self._cumulative_density(self._fitted_parameters_, times), index=utils._to_array(times), name=label
+            self._cumulative_density(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
     def cumulative_hazard_at_times(self, times, label=None):
@@ -1061,7 +1061,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
-            self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_array(times), name=label
+            self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
     def hazard_at_times(self, times, label=None):
@@ -1081,7 +1081,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         """
         label = utils.coalesce(label, self._label)
-        return pd.Series(self._hazard(self._fitted_parameters_, times), index=utils._to_array(times), name=label)
+        return pd.Series(self._hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     @property
     def confidence_interval_(self):
@@ -2090,7 +2090,7 @@ class ParametricRegressionFitter(BaseFitter):
         from matplotlib import pyplot as plt
 
         covariates = utils._to_list(covariates)
-        values = utils._to_array(values)
+        values = utils._to_1d_array(values)
         if len(values.shape) == 1:
             values = values[None, :].T
 
@@ -2768,7 +2768,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         from matplotlib import pyplot as plt
 
         covariates = utils._to_list(covariates)
-        values = utils._to_array(values)
+        values = utils._to_1d_array(values)
         if len(values.shape) == 1:
             values = values[None, :].T
 
