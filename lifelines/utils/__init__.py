@@ -1562,7 +1562,7 @@ def interpolate_at_times_and_return_pandas(df_or_series, new_times):
     """
     new_times = _to_1d_array(new_times)
     return pd.DataFrame(
-        interpolate_at_times(df_or_series, new_times), index=new_times, cols=df_or_series.columns
+        interpolate_at_times(df_or_series, new_times), index=new_times, columns=df_or_series.columns
     ).squeeze()
 
 
