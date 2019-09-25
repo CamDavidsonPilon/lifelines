@@ -1848,7 +1848,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         covariates = _to_list(covariates)
         n_covariates = len(covariates)
-        values = _to_1d_array(values)
+        values = np.asarray(values)
         if len(values.shape) == 1:
             values = values[None, :].T
 
