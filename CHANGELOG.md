@@ -3,7 +3,7 @@
 #### 0.22.6
 
 ##### New features
- - `conditional_after` works for `CoxPHFitter` models 😅
+ - `conditional_after` works for `CoxPHFitter` prediction models 😅
 
 ##### Bug fixes
 
