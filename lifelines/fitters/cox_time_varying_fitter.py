@@ -43,7 +43,7 @@ from lifelines.utils import (
 
 __all__ = ["CoxTimeVaryingFitter"]
 
-matrix_axis_0_sum_to_array = lambda m: np.sum(m, 0)
+matrix_axis_0_sum_to_1d_array = lambda m: np.sum(m, 0)
 
 
 class CoxTimeVaryingFitter(BaseFitter):
@@ -513,7 +513,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
             # Calculate sums of Risk set
             risk_phi = array_sum_to_scalar(phi_i)
-            risk_phi_x = matrix_axis_0_sum_to_array(phi_x_i)
+            risk_phi_x = matrix_axis_0_sum_to_1d_array(phi_x_i)
             risk_phi_x_x = phi_x_x_i
 
             # Calculate the sums of Tie set
@@ -523,7 +523,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
             xi_deaths = X_at_t[deaths]
 
-            x_death_sum = matrix_axis_0_sum_to_array(weights_at_t[deaths, None] * xi_deaths)
+            x_death_sum = matrix_axis_0_sum_to_1d_array(weights_at_t[deaths, None] * xi_deaths)
 
             weight_count = array_sum_to_scalar(weights_at_t[deaths])
             weighted_average = weight_count / tied_death_counts
@@ -543,7 +543,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/cox_time_varying_fitter.py#L458-L490
 
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
-                tie_phi_x = matrix_axis_0_sum_to_array(phi_x_i[deaths])
+                tie_phi_x = matrix_axis_0_sum_to_1d_array(phi_x_i[deaths])
                 tie_phi_x_x = np.dot(xi_deaths.T, phi_i[deaths, None] * xi_deaths)
 
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts

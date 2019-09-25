@@ -3,12 +3,13 @@
 #### 0.22.6
 
 ##### New features
+ - `conditional_after` works for `CoxPHFitter` models 😅
 
 ##### Bug fixes
 
 ##### API Changes
  - `CoxPHFitter.baseline_cumulative_hazard_`'s column is renamed `"baseline cumulative hazard"` - previously it was `"baseline hazard"`. (Only applies if the model has no strata.)
-
+ - `utils.dataframe_interpolate_at_times` renamed to `utils.interpolate_at_times_and_return_pandas`.
 
 
 #### 0.22.5 - 2019-09-20
