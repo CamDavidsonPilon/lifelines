@@ -3570,10 +3570,18 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         rossi = rossi[["week", "arrest", "fin", "age"]]
         cp = CoxPHFitter()
         cp.fit(rossi, "week", "arrest", weights_col="age")
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[1.0], 0.00183466, decimal=4)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[2.0], 0.005880265, decimal=4)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[10.0], 0.035425868, decimal=4)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[52.0], 0.274341397, decimal=3)
+        npt.assert_almost_equal(
+            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[1.0], 0.00183466, decimal=4
+        )
+        npt.assert_almost_equal(
+            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[2.0], 0.005880265, decimal=4
+        )
+        npt.assert_almost_equal(
+            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[10.0], 0.035425868, decimal=4
+        )
+        npt.assert_almost_equal(
+            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[52.0], 0.274341397, decimal=3
+        )
 
     def test_strata_from_init_is_used_in_fit_later(self, rossi):
         strata = ["race", "paro", "mar"]

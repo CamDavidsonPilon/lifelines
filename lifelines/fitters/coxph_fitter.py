@@ -935,7 +935,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         partial_hazard = self.predict_partial_hazard(X)[0].values
 
         if not self.strata:
-            baseline_at_T = self.baseline_cumulative_hazard_.loc[T, "baseline hazard"].values
+            baseline_at_T = self.baseline_cumulative_hazard_.loc[T, "baseline cumulative hazard"].values
         else:
             baseline_at_T = np.empty(0)
             for name, T_ in T.groupby(by=self.strata):
@@ -1490,16 +1490,16 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 col = _get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
                 times_ = coalesce(times, self.baseline_cumulative_hazard_.index)
-
+                n_ = stratified_X.shape[0]
                 if conditional_after is not None:
-                    times_to_evaluate_at = np.tile(times_, (n, 1)) + conditional_after
+                    times_to_evaluate_at = np.tile(times_, (n_, 1)) + conditional_after
 
                     c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at)
                     c_0_conditional_after = interpolate_at_times(strata_c_0, conditional_after)
                     c_0_ = np.clip((c_0_ - c_0_conditional_after).T, 0, np.inf)
 
                 else:
-                    times_to_evaluate_at = np.tile(times_, (n, 1))
+                    times_to_evaluate_at = np.tile(times_, (n_, 1))
                     c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at).T
 
                 cumulative_hazard_ = cumulative_hazard_.merge(
@@ -1686,8 +1686,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
     def _compute_baseline_cumulative_hazard(self):
         cumulative = self.baseline_hazard_.cumsum()
-        if self.strata is None:
-            cumulative = cumulative.rename({"baseline hazard": "baseline cumulative hazard"})
+        if not self.strata:
+            cumulative = cumulative.rename(columns={"baseline hazard": "baseline cumulative hazard"})
         return cumulative
 
     def _compute_baseline_survival(self):
@@ -1709,8 +1709,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         >>> kmf.plot(ax=ax)
         """
         survival_df = np.exp(-self.baseline_cumulative_hazard_)
-        if self.strata is None:
-            survival_df = survival_df.rename({"baseline cumulative hazard": "baseline survival"})
+        if not self.strata:
+            survival_df = survival_df.rename(columns={"baseline cumulative hazard": "baseline survival"})
         return survival_df
 
     def plot(self, columns=None, hazard_ratios=False, **errorbar_kwargs):
