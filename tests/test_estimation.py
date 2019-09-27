@@ -295,6 +295,14 @@ class TestParametricUnivariateFitters:
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit_interval_censoring(df["left"], df["right"])
 
+    def test_parameteric_models_all_can_do_interval_censoring_with_prediction(
+        self, known_parametric_univariate_fitters
+    ):
+        df = load_diabetes()
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit_interval_censoring(df["left"], df["right"])
+            f.predict(3.0)
+
     def test_parameteric_models_fail_if_passing_in_bad_event_data(self, known_parametric_univariate_fitters):
         df = load_diabetes()
         for fitter in known_parametric_univariate_fitters:
@@ -2195,7 +2203,6 @@ class TestWeibullAFTFitter:
         df["E"] = df["left"] == df["right"]
 
         aft.fit_interval_censoring(df, "left", "right", "E")
-        print(aft.summary)
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "coef"], 0.04576, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], np.log(18.31971), rtol=1e-4)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], np.log(2.82628), rtol=1e-4)
@@ -2228,7 +2235,6 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 4.93041526, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 0.28612353, rtol=1e-4)
 
-    @pytest.mark.xfail()
     def test_aft_weibull_with_ancillary_model_and_with_weights(self, rossi):
         """
         library('flexsurv')
@@ -2237,10 +2243,19 @@ class TestWeibullAFTFitter:
         """
         wf = WeibullAFTFitter(penalizer=0).fit(rossi, "week", "arrest", weights_col="age", ancillary_df=rossi[["prio"]])
 
-        npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.360792647, rtol=1e-3)
-        npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], -0.025505680, rtol=1e-4)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "_intercept"), "coef"], 4.707300215, rtol=1e-2)
-        npt.assert_allclose(wf.summary.loc[("rho_", "_intercept"), "coef"], 0.367701670, rtol=1e-4)
+        npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.39347, rtol=1e-3)
+        npt.assert_allclose(wf.summary.loc[("lambda_", "_intercept"), "coef"], np.log(140.55112), rtol=1e-2)
+        npt.assert_allclose(wf.summary.loc[("rho_", "_intercept"), "coef"], np.log(1.25981), rtol=1e-4)
+        npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], 0.01485, rtol=1e-4)
+
+    def test_aft_weibull_can_do_interval_prediction(self, aft):
+        # https://github.com/CamDavidsonPilon/lifelines/issues/839
+        df = load_diabetes()
+        df["gender"] = df["gender"] == "male"
+        df["E"] = df["left"] == df["right"]
+
+        aft.fit_interval_censoring(df, "left", "right", "E")
+        aft.predict_survival_function(df)
 
 
 class TestCoxPHFitter:

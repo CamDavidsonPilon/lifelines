@@ -620,10 +620,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
             multiple outputs.
 
         """
-        justify = utils.string_justify(18)
+        justify = utils.string_justify(25)
         print(self)
-        print("{} = {}".format(justify("number of observations"), self.weights.sum()))
-        print("{} = {}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
+        print("{} = {:g}".format(justify("number of observations"), self.weights.sum()))
+        print("{} = {:g}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print(
             "{} = {}".format(
@@ -1721,7 +1721,7 @@ class ParametricRegressionFitter(BaseFitter):
         """
 
         # Print information about data first
-        justify = utils.string_justify(18)
+        justify = utils.string_justify(25)
         print(self)
         if self.event_col:
             print("{} = '{}'".format(justify("event col"), self.event_col))
@@ -1733,8 +1733,8 @@ class ParametricRegressionFitter(BaseFitter):
         if self.robust:
             print("{} = {}".format(justify("robust variance"), True))
 
-        print("{} = {}".format(justify("number of observations"), self.weights.sum()))
-        print("{} = {}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
+        print("{} = {:g}".format(justify("number of observations"), self.weights.sum()))
+        print("{} = {:g}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 
@@ -1879,7 +1879,7 @@ class ParametricRegressionFitter(BaseFitter):
 
         """
         df = df.copy().astype(float)
-        times = utils.coalesce(times, self.timeline, np.unique(self.durations))
+        times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
         if isinstance(df, pd.Series):
@@ -2946,7 +2946,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         predict_percentile, predict_expectation, predict_survival_function
         """
         df = df.copy().astype(float)
-        times = utils.coalesce(times, self.timeline, np.unique(self.durations))
+        times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
         if isinstance(df, pd.Series):
