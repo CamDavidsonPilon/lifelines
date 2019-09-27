@@ -17,10 +17,10 @@ from lifelines.utils.concordance import concordance_index
 
 
 __all__ = [
-    "qth_survival_times",
     "qth_survival_time",
-    "median_survival_times",
     "restricted_mean_survival_time",
+    "median_survival_times",
+    "qth_survival_times",
     "survival_table_from_events",
     "group_survival_table_from_events",
     "survival_events_from_table",
@@ -108,7 +108,11 @@ class StatisticalWarning(RuntimeWarning):
     pass
 
 
-def qth_survival_times(q, survival_functions, cdf=False):
+class ApproximationWarning(RuntimeWarning):
+    pass
+
+
+def qth_survival_times(q, survival_functions):
     """
     Find the times when one or more survival functions reach the qth percentile.
 
@@ -119,8 +123,6 @@ def qth_survival_times(q, survival_functions, cdf=False):
     survival_functions: a (n,d) DataFrame or numpy array.
       If DataFrame, will return index values (actual times)
       If numpy array, will return indices.
-    cdf: boolean, optional
-      When doing left-censored data, cdf=True is used.
 
     Returns
     -------
@@ -146,9 +148,9 @@ def qth_survival_times(q, survival_functions, cdf=False):
         # If you add print statements to `qth_survival_time`, you'll see it's called
         # once too many times. This is expected Pandas behavior
         # https://stackoverflow.com/questions/21635915/why-does-pandas-apply-calculate-twice
-        return survival_functions.apply(lambda s: qth_survival_time(q, s, cdf=cdf)).iloc[0]
+        return survival_functions.apply(lambda s: qth_survival_time(q, s)).iloc[0]
     else:
-        d = {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s, cdf=cdf)) for _q in q}
+        d = {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}
         survival_times = pd.DataFrame(d).T
 
         #  Typically, one would expect that the output should equal the "height" of q.
@@ -160,17 +162,17 @@ def qth_survival_times(q, survival_functions, cdf=False):
         return survival_times
 
 
-def qth_survival_time(q, survival_function, cdf=False):
+def qth_survival_time(q, model_or_survival_function):
     """
-    Returns the time when a single survival function reaches the qth percentile.
+    Returns the time when a single survival function reaches the qth percentile, that is,
+    solves  :math:`q = S(t)` for :math:`t`.
 
     Parameters
     ----------
     q: float
-      a float between 0 and 1 that represents the time when the survival function hit's the qth percentile.
-    survival_function: Series or single-column DataFrame.
-    cdf: boolean, optional
-      When doing left-censored data, cdf=True is used.
+      value between 0 and 1.
+    model_or_survival_function: Pandas Series or single-column DataFrame, or lifelines model
+
 
     Returns
     -------
@@ -180,46 +182,49 @@ def qth_survival_time(q, survival_function, cdf=False):
     --------
     qth_survival_times, median_survival_times
     """
-    if isinstance(survival_function, pd.DataFrame):
-        if survival_function.shape[1] > 1:
-            raise ValueError(
-                "Expecting a dataframe (or series) with a single column. Provide that or use utils.qth_survival_times."
-            )
+    import lifelines
 
-        survival_function = survival_function.T.squeeze()
-    if cdf:
-        if survival_function.iloc[0] > q:
-            return -np.inf
-        v = survival_function.index[survival_function.searchsorted([q])[0]]
-    else:
-        if survival_function.iloc[-1] > q:
+    if isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
+        return model.percentile(q)
+    elif isinstance(model_or_survival_function, pd.DataFrame):
+        if model_or_survival_function.shape[1] > 1:
+            raise ValueError(
+                "Expecting a DataFrame (or Series) with a single column. Provide that or use utils.qth_survival_times."
+            )
+        return qth_survival_time(q, model_or_survival_function.T.squeeze())
+    elif isinstance(model_or_survival_function, pd.Series):
+        if model_or_survival_function.iloc[-1] > q:
             return np.inf
-        v = survival_function.index[(-survival_function).searchsorted([-q])[0]]
+        v = model_or_survival_function.index[(-model_or_survival_function).searchsorted([-q])[0]]
+    else:
+        raise ValueError(
+            "Unable to compute median of object %s - should be a DataFrame, Series or lifelines univariate model"
+            % model_or_survival_function
+        )
     return v
 
 
-def median_survival_times(model_or_density_or_survival_function, left_censorship=False):
+def median_survival_times(model_or_survival_function):
     """
     Compute the median survival time of survival function(s).
 
     Parameters
     -----------
 
-    model_or_density_or_survival_function: lifelines model or DataFrame
+    model_or_survival_function: lifelines model or DataFrame
         This can be a univariate lifelines model, or a DataFrame of one or more survival functions.
-
     """
     import lifelines
 
-    if isinstance(model_or_density_or_survival_function, pd.DataFrame):
-        return qth_survival_times(0.5, model_or_density_or_survival_function, cdf=left_censorship)
+    if isinstance(model_or_survival_function, pd.DataFrame):
+        return qth_survival_times(0.5, model_or_survival_function)
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
-        return model.median_
+        return model.median_survival_time_
     else:
-        raise ValueError("Can't compute median surviva time of object %s" % model_or_survival_function)
+        raise ValueError("Can't compute median survival time of object %s" % model_or_survival_function)
 
 
-def restricted_mean_survival_time(model_or_survival_function, t=np.inf):
+def restricted_mean_survival_time(model_or_survival_function, t=np.inf, return_ci=False):
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
@@ -260,7 +265,7 @@ def restricted_mean_survival_time(model_or_survival_function, t=np.inf):
     if isinstance(model_or_survival_function, pd.DataFrame):
         warnings.warn(
             "Approximating RMST using the precomputed survival function. You likely will get a more accurate estimate if you provide the fitted Model instead of the survival function.",
-            UserWarning,
+            ApproximationWarning,
         )
         sf = model_or_survival_function.loc[:t]
         sf = sf.append(pd.DataFrame([1], index=[0], columns=sf.columns)).sort_index()
@@ -446,7 +451,6 @@ def survival_table_from_events(
     >>> 15              2         2         0         0         2
     >>> #Collapsed output
     >>>          removed observed censored at_risk
-    >>>              sum      sum      sum     max
     >>> event_at
     >>> (0, 2]        34       33        1     312
     >>> (2, 4]        84       42       42     278

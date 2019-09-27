@@ -266,8 +266,8 @@ class KaplanMeierFitter(UnivariateFitter):
 
         self.__estimate = getattr(self, primary_estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
-        self._median = median_survival_times(self.__estimate, left_censorship=is_left_censoring)
-        self.percentile = functools.partial(qth_survival_time, survival_function=self.__estimate, cdf=is_left_censoring)
+        self._median = median_survival_times(self.survival_function_)
+        self.percentile = functools.partial(qth_survival_time, model_or_survival_function=self.survival_function_)
         self._cumulative_sq_ = cumulative_sq_
 
         setattr(self, "confidence_interval_" + primary_estimate_name, self.confidence_interval_)
@@ -282,6 +282,10 @@ class KaplanMeierFitter(UnivariateFitter):
 
     @property
     def median_(self):
+        warnings.warn(
+            """Please use `median_survival_time_` property instead. Future property `median_` will be removed.""",
+            FutureWarning,
+        )
         return self._median
 
     def _check_values(self, array):

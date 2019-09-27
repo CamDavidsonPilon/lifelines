@@ -282,8 +282,8 @@ class UnivariateFitter(BaseFitter):
         For known parametric models, this should be overwritten by something more accurate.
         """
         warnings.warn(
-            "Approximating using `survival_function_`. Try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
-            utils.StatisticalWarning,
+            "Approximating using `survival_function_`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
+            utils.ApproximationWarning,
         )
         return utils.qth_survival_times(p, self.survival_function_)
 
@@ -948,7 +948,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 """
                 % self._class_name
             )
-            warnings.warn(warning_text, utils.StatisticalWarning)
+            warnings.warn(warning_text, utils.ApproximationWarning)
         finally:
             if (self.variance_matrix_.diagonal() < 0).any():
                 warning_text = dedent(
@@ -1571,7 +1571,7 @@ class ParametricRegressionFitter(BaseFitter):
                 """
                 % self._class_name
             )
-            warnings.warn(warning_text, utils.StatisticalWarning)
+            warnings.warn(warning_text, utils.ApproximationWarning)
         finally:
             if (unit_scaled_variance_matrix_.diagonal() < 0).any():
                 warning_text = dedent(
@@ -1937,6 +1937,7 @@ class ParametricRegressionFitter(BaseFitter):
         predict_median
         predict_percentile
         """
+        warnings.warn("""Approximating the expected value using trapezoid rule.""", utils.ApproximationWarning)
         subjects = utils._get_index(X)
         v = self.predict_survival_function(X)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
