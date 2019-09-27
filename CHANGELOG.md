@@ -1,6 +1,19 @@
 ## Changelog
 
-#### 0.22.6
+#### 0.22.7
+
+##### New features
+ - new `ApproximationWarning` to tell you if the package is making an potentially mislead approximation.
+
+##### Bug fixes
+ - fixed a bug in parametric prediction for interval censored data.
+ - realigned values in `print_summary`.
+
+##### API Changes
+ -`utils.qth_survival_time` no longer takes a `cdf` argument - users should take the compliment (1-cdf).
+ - Some previous `StatisticalWarnings` have been replaced by `ApproximationWarning`
+
+#### 0.22.6 - 2019-09-25
 
 ##### New features
  - `conditional_after` works for `CoxPHFitter` prediction models 😅

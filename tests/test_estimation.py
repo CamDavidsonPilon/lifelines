@@ -347,7 +347,7 @@ class TestUnivariateFitters:
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             if hasattr(f, "survival_function_"):
-                assert f.percentile(0.5) == f.median_
+                assert f.percentile(0.5) == f.median_survival_time_
 
     def test_default_alpha_is_005(self, univariate_fitters):
         for f in univariate_fitters:
