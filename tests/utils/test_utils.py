@@ -1069,10 +1069,12 @@ def test_rmst_approximate_solution():
     exp = ExponentialFitter().fit(T)
     lambda_ = exp.lambda_
 
-    assert (
-        abs(
-            utils.restricted_mean_survival_time(exp, t=lambda_)
-            - utils.restricted_mean_survival_time(exp.survival_function_, t=lambda_)
+    with pytest.warns(ApproximationWarning) as w:
+
+        assert (
+            abs(
+                utils.restricted_mean_survival_time(exp, t=lambda_)
+                - utils.restricted_mean_survival_time(exp.survival_function_, t=lambda_)
+            )
+            < 0.001
         )
-        < 0.001
-    )

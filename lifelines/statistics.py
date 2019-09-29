@@ -685,7 +685,7 @@ def proportional_hazard_test(
         {'all', 'km', 'rank', 'identity', 'log'}
         One of the strings above, a list of strings, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms.
     precomputed_residuals: DataFrame, optional
-        specify the residuals, if already computed.
+        specify the scaled schoenfeld residuals, if already computed.
     kwargs:
         additional parameters to add to the StatisticalResult
 

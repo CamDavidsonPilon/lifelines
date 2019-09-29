@@ -347,6 +347,7 @@ class TestUnivariateFitters:
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             if hasattr(f, "survival_function_"):
+                print(f)
                 assert f.percentile(0.5) == f.median_survival_time_
 
     def test_default_alpha_is_005(self, univariate_fitters):
@@ -913,8 +914,8 @@ class TestWeibullFitter:
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01
         assert abs(wf.lambda_ / 5 - 1) < 0.01
-        assert abs(wf.median_ - 5 * np.log(2) ** 2) < 0.1  # worse convergence
-        assert abs(wf.median_ - np.median(T)) < 0.1
+        assert abs(wf.median_survival_time_ - 5 * np.log(2) ** 2) < 0.1  # worse convergence
+        assert abs(wf.median_survival_time_ - np.median(T)) < 0.1
 
     def test_exponential_data_produces_correct_inference_with_censorship(self):
         wf = WeibullFitter()
@@ -925,7 +926,7 @@ class TestWeibullFitter:
         wf.fit(np.minimum(T, T_), (T < T_))
         assert abs(wf.rho_ - 1.0) < 0.05
         assert abs(wf.lambda_ / factor - 1) < 0.05
-        assert abs(wf.median_ - factor * np.log(2)) < 0.1
+        assert abs(wf.median_survival_time_ - factor * np.log(2)) < 0.1
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):
         wf = WeibullFitter()

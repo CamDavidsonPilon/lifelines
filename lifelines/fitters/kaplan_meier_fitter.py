@@ -288,12 +288,16 @@ class KaplanMeierFitter(UnivariateFitter):
         )
         return self._median
 
+    @property
+    def median_survival_time_(self):
+        return self._median
+
     def _check_values(self, array):
         check_nans_or_infs(array)
 
     def plot_loglogs(self, *args, **kwargs):
         r"""
-        Plot :math:`\log(S(t))` against :math:`\log(t)`
+        Plot :math:`\log(S(t))` against :math:`\log(t)`. Same arguments as ``.plot``.
         """
         return plot_loglogs(self, *args, **kwargs)
 
