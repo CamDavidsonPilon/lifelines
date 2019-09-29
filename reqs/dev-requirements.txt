@@ -13,3 +13,4 @@ dill
 statsmodels
 flaky
 scikit-learn
+easydev
