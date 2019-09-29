@@ -8,6 +8,7 @@
 ##### Bug fixes
  - fixed a bug in parametric prediction for interval censored data.
  - realigned values in `print_summary`.
+ - fixed bug in `survival_difference_at_fixed_point_in_time_test`
 
 ##### API Changes
  -`utils.qth_survival_time` no longer takes a `cdf` argument - users should take the compliment (1-cdf).

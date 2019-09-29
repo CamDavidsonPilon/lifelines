@@ -1565,9 +1565,12 @@ def interpolate_at_times_and_return_pandas(df_or_series, new_times):
     TODO
     """
     new_times = _to_1d_array(new_times)
-    return pd.DataFrame(
-        interpolate_at_times(df_or_series, new_times), index=new_times, columns=df_or_series.columns
-    ).squeeze()
+    try:
+        cols = df_or_series.columns
+    except AttributeError:
+        cols = None
+
+    return pd.DataFrame(interpolate_at_times(df_or_series, new_times), index=new_times, columns=cols).squeeze()
 
 
 string_justify = lambda width: lambda s: s.rjust(width, " ")
