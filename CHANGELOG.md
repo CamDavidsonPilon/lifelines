@@ -11,7 +11,8 @@
  - fixed bug in `survival_difference_at_fixed_point_in_time_test`
 
 ##### API Changes
- -`utils.qth_survival_time` no longer takes a `cdf` argument - users should take the compliment (1-cdf).
+
+ - `utils.qth_survival_time` no longer takes a `cdf` argument - users should take the compliment (1-cdf).
  - Some previous `StatisticalWarnings` have been replaced by `ApproximationWarning`
 
 #### 0.22.6 - 2019-09-25
