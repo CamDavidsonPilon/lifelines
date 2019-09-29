@@ -934,13 +934,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
             warning_text = dedent(
                 """\
 
-                The Hessian for %s's fit was not invertible. This could be a modeling problem:
+                The Hessian for %s's fit was not invertible. We will instead approximate it using the pseudo-inverse.
+                This could be a modeling problem:
 
                 1. Are two parameters in the model collinear / exchangeable?
                 2. Is the cumulative hazard always non-negative and always non-decreasing?
                 3. Are there cusps/ in the cumulative hazard?
 
-                We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
