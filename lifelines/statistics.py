@@ -7,13 +7,13 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils import (
-    _to_array,
+    _to_1d_array,
     _to_list,
     group_survival_table_from_events,
     string_justify,
     format_p_value,
     format_floats,
-    dataframe_interpolate_at_times,
+    interpolate_at_times_and_return_pandas,
 )
 
 from lifelines import KaplanMeierFitter
@@ -229,8 +229,8 @@ def survival_difference_at_fixed_point_in_time_test(
     sB_t = kmfB.predict(point_in_time)
 
     # this is doing a prediction/interpolation between the kmf's index.
-    sigma_sqA = dataframe_interpolate_at_times(kmfA._cumulative_sq_, point_in_time)
-    sigma_sqB = dataframe_interpolate_at_times(kmfB._cumulative_sq_, point_in_time)
+    sigma_sqA = interpolate_at_times_and_return_pandas(kmfA._cumulative_sq_, point_in_time)
+    sigma_sqB = interpolate_at_times_and_return_pandas(kmfB._cumulative_sq_, point_in_time)
 
     log = np.log
     clog = lambda s: log(-log(s))
@@ -546,8 +546,8 @@ class StatisticalResult(object):
         self.p_value = p_value
         self.test_statistic = test_statistic
 
-        self._p_value = _to_array(p_value)
-        self._test_statistic = _to_array(test_statistic)
+        self._p_value = _to_1d_array(p_value)
+        self._test_statistic = _to_1d_array(test_statistic)
 
         assert len(self._p_value) == len(self._test_statistic)
 
@@ -685,7 +685,7 @@ def proportional_hazard_test(
         {'all', 'km', 'rank', 'identity', 'log'}
         One of the strings above, a list of strings, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms.
     precomputed_residuals: DataFrame, optional
-        specify the residuals, if already computed.
+        specify the scaled schoenfeld residuals, if already computed.
     kwargs:
         additional parameters to add to the StatisticalResult
 
@@ -726,7 +726,7 @@ def proportional_hazard_test(
         for transform_name, transform in ((_, TimeTransformers().get(_)) for _ in time_transform):
             times = transform(durations, events, weights)[events.values]
             T = compute_statistic(times, scaled_resids)
-            p_values = _to_array([chisq_test(t, 1) for t in T])
+            p_values = _to_1d_array([chisq_test(t, 1) for t in T])
             result += StatisticalResult(
                 p_values,
                 T,
@@ -747,7 +747,7 @@ def proportional_hazard_test(
 
         T = compute_statistic(times, scaled_resids)
 
-        p_values = _to_array([chisq_test(t, 1) for t in T])
+        p_values = _to_1d_array([chisq_test(t, 1) for t in T])
         result = StatisticalResult(
             p_values,
             T,

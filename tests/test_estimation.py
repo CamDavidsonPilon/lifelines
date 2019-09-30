@@ -295,6 +295,14 @@ class TestParametricUnivariateFitters:
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit_interval_censoring(df["left"], df["right"])
 
+    def test_parameteric_models_all_can_do_interval_censoring_with_prediction(
+        self, known_parametric_univariate_fitters
+    ):
+        df = load_diabetes()
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit_interval_censoring(df["left"], df["right"])
+            f.predict(3.0)
+
     def test_parameteric_models_fail_if_passing_in_bad_event_data(self, known_parametric_univariate_fitters):
         df = load_diabetes()
         for fitter in known_parametric_univariate_fitters:
@@ -339,7 +347,8 @@ class TestUnivariateFitters:
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0])
             if hasattr(f, "survival_function_"):
-                assert f.percentile(0.5) == f.median_
+                print(f)
+                assert f.percentile(0.5) == f.median_survival_time_
 
     def test_default_alpha_is_005(self, univariate_fitters):
         for f in univariate_fitters:
@@ -905,8 +914,8 @@ class TestWeibullFitter:
         wf.fit(T)
         assert abs(wf.rho_ - 0.5) < 0.01
         assert abs(wf.lambda_ / 5 - 1) < 0.01
-        assert abs(wf.median_ - 5 * np.log(2) ** 2) < 0.1  # worse convergence
-        assert abs(wf.median_ - np.median(T)) < 0.1
+        assert abs(wf.median_survival_time_ - 5 * np.log(2) ** 2) < 0.1  # worse convergence
+        assert abs(wf.median_survival_time_ - np.median(T)) < 0.1
 
     def test_exponential_data_produces_correct_inference_with_censorship(self):
         wf = WeibullFitter()
@@ -917,7 +926,7 @@ class TestWeibullFitter:
         wf.fit(np.minimum(T, T_), (T < T_))
         assert abs(wf.rho_ - 1.0) < 0.05
         assert abs(wf.lambda_ / factor - 1) < 0.05
-        assert abs(wf.median_ - factor * np.log(2)) < 0.1
+        assert abs(wf.median_survival_time_ - factor * np.log(2)) < 0.1
 
     def test_convergence_completes_for_ever_increasing_data_sizes(self):
         wf = WeibullFitter()
@@ -2195,7 +2204,6 @@ class TestWeibullAFTFitter:
         df["E"] = df["left"] == df["right"]
 
         aft.fit_interval_censoring(df, "left", "right", "E")
-        print(aft.summary)
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "coef"], 0.04576, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], np.log(18.31971), rtol=1e-4)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], np.log(2.82628), rtol=1e-4)
@@ -2228,7 +2236,6 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 4.93041526, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 0.28612353, rtol=1e-4)
 
-    @pytest.mark.xfail()
     def test_aft_weibull_with_ancillary_model_and_with_weights(self, rossi):
         """
         library('flexsurv')
@@ -2237,16 +2244,83 @@ class TestWeibullAFTFitter:
         """
         wf = WeibullAFTFitter(penalizer=0).fit(rossi, "week", "arrest", weights_col="age", ancillary_df=rossi[["prio"]])
 
-        npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.360792647, rtol=1e-3)
-        npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], -0.025505680, rtol=1e-4)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "_intercept"), "coef"], 4.707300215, rtol=1e-2)
-        npt.assert_allclose(wf.summary.loc[("rho_", "_intercept"), "coef"], 0.367701670, rtol=1e-4)
+        npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.39347, rtol=1e-3)
+        npt.assert_allclose(wf.summary.loc[("lambda_", "_intercept"), "coef"], np.log(140.55112), rtol=1e-2)
+        npt.assert_allclose(wf.summary.loc[("rho_", "_intercept"), "coef"], np.log(1.25981), rtol=1e-4)
+        npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], 0.01485, rtol=1e-4)
+
+    def test_aft_weibull_can_do_interval_prediction(self, aft):
+        # https://github.com/CamDavidsonPilon/lifelines/issues/839
+        df = load_diabetes()
+        df["gender"] = df["gender"] == "male"
+        df["E"] = df["left"] == df["right"]
+
+        aft.fit_interval_censoring(df, "left", "right", "E")
+        aft.predict_survival_function(df)
 
 
 class TestCoxPHFitter:
     @pytest.fixture
     def cph(self):
         return CoxPHFitter()
+
+    def test_conditional_after_in_prediction(self, rossi, cph):
+        rossi.loc[rossi["week"] == 1, "week"] = 0
+        cph.fit(rossi, "week", "arrest")
+        p1 = cph.predict_survival_function(rossi.iloc[0])
+        p2 = cph.predict_survival_function(rossi.iloc[0], conditional_after=[8])
+
+        explicit = p1 / p1.loc[8]
+
+        npt.assert_allclose(explicit.loc[8.0, 0], p2.loc[0.0, 0])
+        npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
+        npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
+        npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+    def test_conditional_after_with_strata_in_prediction(self, rossi, cph):
+        rossi.loc[rossi["week"] == 1, "week"] = 0
+        cph.fit(rossi, "week", "arrest", strata=["fin"])
+        p1 = cph.predict_survival_function(rossi.iloc[0])
+        p2 = cph.predict_survival_function(rossi.iloc[0], conditional_after=[8])
+
+        explicit = p1 / p1.loc[8]
+
+        npt.assert_allclose(explicit.loc[8.0, 0], p2.loc[0.0, 0])
+        npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
+        npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
+        npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+    def test_conditional_after_in_prediction_multiple_subjects(self, rossi, cph):
+        rossi.loc[rossi["week"] == 1, "week"] = 0
+        cph.fit(rossi, "week", "arrest", strata=["fin"])
+        p1 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]])
+        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0])
+
+        explicit = p1 / p1.loc[8]
+
+        npt.assert_allclose(explicit.loc[8.0, 0], p2.loc[0.0, 0])
+        npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
+        npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
+        npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+        # no strata
+        cph.fit(rossi, "week", "arrest")
+        p1 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]])
+        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0])
+
+        explicit = p1 / p1.loc[8]
+
+        npt.assert_allclose(explicit.loc[8.0, 0], p2.loc[0.0, 0])
+        npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
+        npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
+        npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+    def test_conditional_after_in_prediction_multiple_subjects_with_custom_times(self, rossi, cph):
+
+        cph.fit(rossi, "week", "arrest")
+        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0], times=[10, 20, 30])
+
+        assert p2.index.tolist() == [10.0, 20.0, 30.0]
 
     def test_that_a_convergence_warning_is_not_thrown_if_using_compute_residuals(self, rossi):
         rossi["c"] = rossi["week"] + np.random.exponential(rossi.shape[0])
@@ -3512,10 +3586,18 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         rossi = rossi[["week", "arrest", "fin", "age"]]
         cp = CoxPHFitter()
         cp.fit(rossi, "week", "arrest", weights_col="age")
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[1.0], 0.00183466, decimal=4)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[2.0], 0.005880265, decimal=4)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[10.0], 0.035425868, decimal=4)
-        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline hazard"].loc[52.0], 0.274341397, decimal=3)
+        npt.assert_almost_equal(
+            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[1.0], 0.00183466, decimal=4
+        )
+        npt.assert_almost_equal(
+            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[2.0], 0.005880265, decimal=4
+        )
+        npt.assert_almost_equal(
+            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[10.0], 0.035425868, decimal=4
+        )
+        npt.assert_almost_equal(
+            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[52.0], 0.274341397, decimal=3
+        )
 
     def test_strata_from_init_is_used_in_fit_later(self, rossi):
         strata = ["race", "paro", "mar"]

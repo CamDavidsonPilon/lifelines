@@ -440,3 +440,12 @@ def test_proportional_hazard_test_with_list():
     cph.fit(df, "T", "E")
     results = stats.proportional_hazard_test(cph, df, time_transform=["rank", "km"])
     assert results.summary.shape[0] == 2 * 2
+
+
+def test_survival_difference_at_fixed_point_in_time_test():
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    waltonT1 = df.loc[ix]["T"]
+    waltonT2 = df.loc[~ix]["T"]
+    result = stats.survival_difference_at_fixed_point_in_time_test(10, waltonT1, waltonT2)
+    assert result.p_value < 0.05

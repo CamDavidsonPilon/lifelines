@@ -178,7 +178,7 @@ class UnivariateFitter(BaseFitter):
         """
         if callable(self._estimation_method):
             return (
-                pd.DataFrame(self._estimation_method(utils._to_array(times)), index=utils._to_array(times))
+                pd.DataFrame(self._estimation_method(utils._to_1d_array(times)), index=utils._to_1d_array(times))
                 .loc[times]
                 .squeeze()
             )
@@ -186,7 +186,7 @@ class UnivariateFitter(BaseFitter):
         estimate = getattr(self, self._estimation_method)
         if not interpolate:
             return estimate.asof(times).squeeze()
-        return utils.dataframe_interpolate_at_times(estimate, times)
+        return utils.interpolate_at_times_and_return_pandas(estimate, times)
 
     @property
     def conditional_time_to_event_(self):
@@ -282,8 +282,8 @@ class UnivariateFitter(BaseFitter):
         For known parametric models, this should be overwritten by something more accurate.
         """
         warnings.warn(
-            "Approximating using `survival_function_`. Try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
-            utils.StatisticalWarning,
+            "Approximating using `survival_function_`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
+            utils.ApproximationWarning,
         )
         return utils.qth_survival_times(p, self.survival_function_)
 
@@ -620,10 +620,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
             multiple outputs.
 
         """
-        justify = utils.string_justify(18)
+        justify = utils.string_justify(25)
         print(self)
-        print("{} = {}".format(justify("number of observations"), self.weights.sum()))
-        print("{} = {}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
+        print("{} = {:g}".format(justify("number of observations"), self.weights.sum()))
+        print("{} = {:g}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print(
             "{} = {}".format(
@@ -934,13 +934,13 @@ class ParametericUnivariateFitter(UnivariateFitter):
             warning_text = dedent(
                 """\
 
-                The Hessian for %s's fit was not invertible. This could be a modeling problem:
+                The Hessian for %s's fit was not invertible. We will instead approximate it using the pseudo-inverse.
+                This could be a modeling problem:
 
                 1. Are two parameters in the model collinear / exchangeable?
                 2. Is the cumulative hazard always non-negative and always non-decreasing?
                 3. Are there cusps/ in the cumulative hazard?
 
-                We will instead approximate it using the pseudo-inverse.
 
                 It's advisable to not trust the variances reported, and to be suspicious of the
                 fitted parameters too. Perform plots of the cumulative hazard to help understand
@@ -948,7 +948,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
                 """
                 % self._class_name
             )
-            warnings.warn(warning_text, utils.StatisticalWarning)
+            warnings.warn(warning_text, utils.ApproximationWarning)
         finally:
             if (self.variance_matrix_.diagonal() < 0).any():
                 warning_text = dedent(
@@ -1019,7 +1019,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
-            self._survival_function(self._fitted_parameters_, times), index=utils._to_array(times), name=label
+            self._survival_function(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
     def cumulative_density_at_times(self, times, label=None):
@@ -1040,7 +1040,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
-            self._cumulative_density(self._fitted_parameters_, times), index=utils._to_array(times), name=label
+            self._cumulative_density(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
     def cumulative_hazard_at_times(self, times, label=None):
@@ -1061,7 +1061,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
-            self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_array(times), name=label
+            self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
     def hazard_at_times(self, times, label=None):
@@ -1081,7 +1081,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
         """
         label = utils.coalesce(label, self._label)
-        return pd.Series(self._hazard(self._fitted_parameters_, times), index=utils._to_array(times), name=label)
+        return pd.Series(self._hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     @property
     def confidence_interval_(self):
@@ -1571,7 +1571,7 @@ class ParametricRegressionFitter(BaseFitter):
                 """
                 % self._class_name
             )
-            warnings.warn(warning_text, utils.StatisticalWarning)
+            warnings.warn(warning_text, utils.ApproximationWarning)
         finally:
             if (unit_scaled_variance_matrix_.diagonal() < 0).any():
                 warning_text = dedent(
@@ -1721,7 +1721,7 @@ class ParametricRegressionFitter(BaseFitter):
         """
 
         # Print information about data first
-        justify = utils.string_justify(18)
+        justify = utils.string_justify(25)
         print(self)
         if self.event_col:
             print("{} = '{}'".format(justify("event col"), self.event_col))
@@ -1733,8 +1733,8 @@ class ParametricRegressionFitter(BaseFitter):
         if self.robust:
             print("{} = {}".format(justify("robust variance"), True))
 
-        print("{} = {}".format(justify("number of observations"), self.weights.sum()))
-        print("{} = {}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
+        print("{} = {:g}".format(justify("number of observations"), self.weights.sum()))
+        print("{} = {:g}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
         print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 
@@ -1867,7 +1867,7 @@ class ParametricRegressionFitter(BaseFitter):
             an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
             is the set of all durations in the training dataset (observed and unobserved).
         conditional_after: iterable, optional
-            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            Must be equal is size to (df.shape[0],) (`n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
@@ -1879,7 +1879,7 @@ class ParametricRegressionFitter(BaseFitter):
 
         """
         df = df.copy().astype(float)
-        times = utils.coalesce(times, self.timeline, np.unique(self.durations))
+        times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
         if isinstance(df, pd.Series):
@@ -1897,8 +1897,8 @@ class ParametricRegressionFitter(BaseFitter):
                 self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
             )
         else:
-            conditional_after = np.asarray(conditional_after)
-            times_to_evaluate_at = (conditional_after[:, None] + np.tile(times, (n, 1))).T
+            conditional_after = np.asarray(conditional_after).reshape((n, 1))
+            times_to_evaluate_at = (conditional_after + np.tile(times, (n, 1))).T
             return pd.DataFrame(
                 np.clip(
                     self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
@@ -1937,6 +1937,7 @@ class ParametricRegressionFitter(BaseFitter):
         predict_median
         predict_percentile
         """
+        warnings.warn("""Approximating the expected value using trapezoid rule.""", utils.ApproximationWarning)
         subjects = utils._get_index(X)
         v = self.predict_survival_function(X)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
@@ -2090,7 +2091,7 @@ class ParametricRegressionFitter(BaseFitter):
         from matplotlib import pyplot as plt
 
         covariates = utils._to_list(covariates)
-        values = utils._to_array(values)
+        values = utils._to_1d_array(values)
         if len(values.shape) == 1:
             values = values[None, :].T
 
@@ -2768,7 +2769,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         from matplotlib import pyplot as plt
 
         covariates = utils._to_list(covariates)
-        values = utils._to_array(values)
+        values = utils._to_1d_array(values)
         if len(values.shape) == 1:
             values = values[None, :].T
 
@@ -2946,7 +2947,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         predict_percentile, predict_expectation, predict_survival_function
         """
         df = df.copy().astype(float)
-        times = utils.coalesce(times, self.timeline, np.unique(self.durations))
+        times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
         if isinstance(df, pd.Series):

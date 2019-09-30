@@ -20,7 +20,7 @@ from lifelines.utils import (
     _get_index,
     _to_list,
     _to_tuple,
-    _to_array,
+    _to_1d_array,
     inv_normal_cdf,
     normalize,
     qth_survival_times,
@@ -38,8 +38,9 @@ from lifelines.utils import (
     format_p_value,
     format_floats,
     format_exp_floats,
-    dataframe_interpolate_at_times,
+    interpolate_at_times_and_return_pandas,
     CensoringType,
+    interpolate_at_times,
 )
 
 __all__ = ["CoxPHFitter"]
@@ -934,7 +935,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         partial_hazard = self.predict_partial_hazard(X)[0].values
 
         if not self.strata:
-            baseline_at_T = self.baseline_cumulative_hazard_.loc[T, "baseline hazard"].values
+            baseline_at_T = self.baseline_cumulative_hazard_.loc[T, "baseline cumulative hazard"].values
         else:
             baseline_at_T = np.empty(0)
             for name, T_ in T.groupby(by=self.strata):
@@ -1266,7 +1267,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         """
 
         # Print information about data first
-        justify = string_justify(18)
+        justify = string_justify(25)
         print(self)
         print("{} = '{}'".format(justify("duration col"), self.duration_col))
 
@@ -1287,8 +1288,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if self.penalizer > 0:
             print("{} = {}".format(justify("penalizer"), self.penalizer))
 
-        print("{} = {}".format(justify("number of observations"), self.weights.sum()))
-        print("{} = {}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
+        print("{} = {:g}".format(justify("number of observations"), self.weights.sum()))
+        print("{} = {:g}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
         print("{} = {:.{prec}f}".format(justify("partial log-likelihood"), self.log_likelihood_, prec=decimals))
         print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
 
@@ -1456,47 +1457,76 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
-            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
+            The new timeline is the remaining duration of the subject, i.e. reset back to starting at 0.
 
         Returns
         -------
         cumulative_hazard_ : DataFrame
             the cumulative hazard of individuals over the timeline
         """
+        if isinstance(X, pd.Series):
+            return self.predict_cumulative_hazard(X.to_frame().T, times=times, conditional_after=conditional_after)
+
+        n = X.shape[0]
+
+        if times is not None:
+            times = np.atleast_1d(times).astype(float)
         if conditional_after is not None:
-            raise NotImplementedError("Sorry, conditional_after for Cox is tricky to do. It's not implemented yet.")
+            conditional_after = _to_1d_array(conditional_after).reshape(n, 1)
 
         if self.strata:
             cumulative_hazard_ = pd.DataFrame()
             for stratum, stratified_X in X.groupby(self.strata):
                 try:
-                    c_0 = self.baseline_cumulative_hazard_[[stratum]]
+                    strata_c_0 = self.baseline_cumulative_hazard_[[stratum]]
                 except KeyError:
                     raise StatError(
-                        """The stratum %s was not found in the original training data. For example, try
-the following on the original dataset, df: `df.groupby(%s).size()`. Expected is that %s is not present in the output.
-"""
-                        % (stratum, self.strata, stratum)
+                        dedent(
+                            """The stratum %s was not found in the original training data. For example, try
+                            the following on the original dataset, df: `df.groupby(%s).size()`. Expected is that %s is not present in the output."""
+                            % (stratum, self.strata, stratum)
+                        )
                     )
                 col = _get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
+                times_ = coalesce(times, self.baseline_cumulative_hazard_.index)
+                n_ = stratified_X.shape[0]
+                if conditional_after is not None:
+                    times_to_evaluate_at = np.tile(times_, (n_, 1)) + conditional_after
+
+                    c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at)
+                    c_0_conditional_after = interpolate_at_times(strata_c_0, conditional_after)
+                    c_0_ = np.clip((c_0_ - c_0_conditional_after).T, 0, np.inf)
+
+                else:
+                    times_to_evaluate_at = np.tile(times_, (n_, 1))
+                    c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at).T
+
                 cumulative_hazard_ = cumulative_hazard_.merge(
-                    pd.DataFrame(np.dot(c_0, v.T), index=c_0.index, columns=col),
+                    pd.DataFrame(c_0_ * v.values[:, 0], columns=col, index=times_),
                     how="outer",
                     right_index=True,
                     left_index=True,
                 )
         else:
-            c_0 = self.baseline_cumulative_hazard_
+
             v = self.predict_partial_hazard(X)
             col = _get_index(v)
+            times_ = coalesce(times, self.baseline_cumulative_hazard_.index)
 
-            cumulative_hazard_ = pd.DataFrame(np.dot(c_0, v.T), columns=col, index=c_0.index)
+            if conditional_after is not None:
+                times_to_evaluate_at = np.tile(times_, (n, 1)) + conditional_after
 
-        if times is not None:
-            # non-linear interpolations can push the survival curves above 1 and below 0.
-            times = np.atleast_1d(times).astype(float)
-            return dataframe_interpolate_at_times(cumulative_hazard_, times)
+                c_0 = interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at)
+                c_0_conditional_after = interpolate_at_times(self.baseline_cumulative_hazard_, conditional_after)
+                c_0 = np.clip((c_0 - c_0_conditional_after).T, 0, np.inf)
+
+            else:
+                times_to_evaluate_at = np.tile(times_, (n, 1))
+                c_0 = interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at).T
+
+            cumulative_hazard_ = pd.DataFrame(c_0 * v.values[:, 0], columns=col, index=times_)
+
         return cumulative_hazard_
 
     def predict_survival_function(self, X, times=None, conditional_after=None):
@@ -1655,7 +1685,10 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         return self._compute_baseline_hazard(self._predicted_partial_hazards_, name="baseline hazard")
 
     def _compute_baseline_cumulative_hazard(self):
-        return self.baseline_hazard_.cumsum()
+        cumulative = self.baseline_hazard_.cumsum()
+        if not self.strata:
+            cumulative = cumulative.rename(columns={"baseline hazard": "baseline cumulative hazard"})
+        return cumulative
 
     def _compute_baseline_survival(self):
         """
@@ -1676,8 +1709,8 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
         >>> kmf.plot(ax=ax)
         """
         survival_df = np.exp(-self.baseline_cumulative_hazard_)
-        if self.strata is None:
-            survival_df.columns = ["baseline survival"]
+        if not self.strata:
+            survival_df = survival_df.rename(columns={"baseline cumulative hazard": "baseline survival"})
         return survival_df
 
     def plot(self, columns=None, hazard_ratios=False, **errorbar_kwargs):
@@ -1815,7 +1848,7 @@ the following on the original dataset, df: `df.groupby(%s).size()`. Expected is 
 
         covariates = _to_list(covariates)
         n_covariates = len(covariates)
-        values = _to_array(values)
+        values = np.asarray(values)
         if len(values.shape) == 1:
             values = values[None, :].T
 

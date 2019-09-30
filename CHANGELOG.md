@@ -1,5 +1,32 @@
 ## Changelog
 
+#### 0.22.7
+
+##### New features
+ - new `ApproximationWarning` to tell you if the package is making an potentially mislead approximation.
+
+##### Bug fixes
+ - fixed a bug in parametric prediction for interval censored data.
+ - realigned values in `print_summary`.
+ - fixed bug in `survival_difference_at_fixed_point_in_time_test`
+
+##### API Changes
+
+ - `utils.qth_survival_time` no longer takes a `cdf` argument - users should take the compliment (1-cdf).
+ - Some previous `StatisticalWarnings` have been replaced by `ApproximationWarning`
+
+#### 0.22.6 - 2019-09-25
+
+##### New features
+ - `conditional_after` works for `CoxPHFitter` prediction models 😅
+
+##### Bug fixes
+
+##### API Changes
+ - `CoxPHFitter.baseline_cumulative_hazard_`'s column is renamed `"baseline cumulative hazard"` - previously it was `"baseline hazard"`. (Only applies if the model has no strata.)
+ - `utils.dataframe_interpolate_at_times` renamed to `utils.interpolate_at_times_and_return_pandas`.
+
+
 #### 0.22.5 - 2019-09-20
 
 ##### New features

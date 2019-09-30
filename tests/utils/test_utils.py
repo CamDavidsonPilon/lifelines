@@ -202,16 +202,6 @@ def test_qth_survival_times_with_duplicate_q_returns_valid_index_and_shape():
     npt.assert_almost_equal(actual.index.values, q.values)
 
 
-def test_qth_survival_time_with_cdf_instead_of_survival_function():
-    cdf = np.linspace(0, 1, 50)
-    assert utils.qth_survival_times(0.5, cdf, cdf=True) == 25
-    assert utils.qth_survival_times(0.05, cdf, cdf=True) == 3
-
-    cdf = np.linspace(0.1, 1, 50)
-    assert utils.qth_survival_times(0.05, cdf, cdf=True) == -np.inf
-    assert utils.qth_survival_times(0.50, cdf, cdf=True) == 22
-
-
 def test_datetimes_to_durations_with_different_frequencies():
     # days
     start_date = ["2013-10-10 0:00:00", "2013-10-09", "2012-10-10"]
@@ -1067,10 +1057,12 @@ def test_rmst_approximate_solution():
     exp = ExponentialFitter().fit(T)
     lambda_ = exp.lambda_
 
-    assert (
-        abs(
-            utils.restricted_mean_survival_time(exp, t=lambda_)
-            - utils.restricted_mean_survival_time(exp.survival_function_, t=lambda_)
+    with pytest.warns(utils.ApproximationWarning) as w:
+
+        assert (
+            abs(
+                utils.restricted_mean_survival_time(exp, t=lambda_)
+                - utils.restricted_mean_survival_time(exp.survival_function_, t=lambda_)
+            )
+            < 0.001
         )
-        < 0.001
-    )
