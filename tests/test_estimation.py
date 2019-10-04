@@ -1736,6 +1736,16 @@ class TestAFTFitters:
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
 
+    def test_heterogenous_initial_point(self, rossi):
+        aft = WeibullAFTFitter()
+        aft.fit(rossi, "week", "arrest", initial_point={"lambda_": np.zeros(8), "rho_": np.zeros(1)})
+        with pytest.raises(ValueError):
+            aft.fit(rossi, "week", "arrest", initial_point={"lambda_": np.zeros(7), "rho_": np.zeros(1)})
+
+        aft.fit(rossi, "week", "arrest", initial_point=np.zeros(9))
+        with pytest.raises(ValueError):
+            aft.fit(rossi, "week", "arrest", initial_point=np.zeros(10))
+
     def test_percentile_gives_proper_result_compared_to_survival_function(self, rossi, models):
         for model in models:
             model.fit(rossi, "week", "arrest")

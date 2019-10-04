@@ -1506,10 +1506,13 @@ class ParametricRegressionFitter(BaseFitter):
         initial_point_dict = self._create_initial_point(Ts, E, entries, weights, Xs)
         initial_point_array, unflatten = flatten(initial_point_dict)
 
-        if initial_point is None and isinstance(initial_point, dict):
+        if initial_point is not None and isinstance(initial_point, dict):
             initial_point_array, _ = flatten(initial_point)  # TODO: test
+        elif initial_point is not None and isinstance(initial_point, np.ndarray):
+            initial_point_array = initial_point  # TODO: test
 
-        assert initial_point_array.shape[0] == Xs.size, "initial_point is not the correct shape."
+        if initial_point_array.shape[0] != Xs.size:
+            raise ValueError("initial_point is not the correct shape.")
 
         self._neg_likelihood_with_penalty_function = self._create_neg_likelihood_with_penalty_function(
             likelihood, self._add_penalty, unflatten
@@ -2625,12 +2628,15 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             # some custom AFT model if univariate model is not defined.
             return super(ParametericAFTRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)
 
-        if utils.CensoringType.is_right_censoring(self):
-            uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
-        elif utils.CensoringType.is_interval_censoring(self):
-            uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
-        elif utils.CensoringType.is_left_censoring(self):
-            uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            if utils.CensoringType.is_right_censoring(self):
+                uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
+            elif utils.CensoringType.is_interval_censoring(self):
+                uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
+            elif utils.CensoringType.is_left_censoring(self):
+                uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model.log_likelihood_
