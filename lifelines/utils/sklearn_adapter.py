@@ -44,7 +44,7 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
 
         """
         if not isinstance(X, pd.DataFrame):
-            raise ValueError("X must be a DataFrame")
+            raise ValueError("X must be a DataFrame. Got type: {}".format(type(X)))
 
         X = X.copy()
 
