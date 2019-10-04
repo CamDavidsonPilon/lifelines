@@ -41,6 +41,7 @@ from lifelines.utils import (
     interpolate_at_times_and_return_pandas,
     CensoringType,
     interpolate_at_times,
+    leading_space,
 )
 
 __all__ = ["CoxPHFitter"]
@@ -1268,6 +1269,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         # Print information about data first
         justify = string_justify(25)
+
         print(self)
         print("{} = '{}'".format(justify("duration col"), self.duration_col))
 
@@ -1300,23 +1302,24 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         print("---")
 
         df = self.summary
+        df.columns = [leading_space(c) for c in df.columns]
 
         print(
             df.to_string(
                 float_format=format_floats(decimals),
                 formatters={
-                    "exp(coef)": format_exp_floats(decimals),
-                    "exp(coef) lower 95%": format_exp_floats(decimals),
-                    "exp(coef) upper 95%": format_exp_floats(decimals),
+                    leading_space("exp(coef)"): format_exp_floats(decimals),
+                    leading_space("exp(coef) lower 95%"): format_exp_floats(decimals),
+                    leading_space("exp(coef) upper 95%"): format_exp_floats(decimals),
                 },
                 columns=[
-                    "coef",
-                    "exp(coef)",
-                    "se(coef)",
-                    "coef lower 95%",
-                    "coef upper 95%",
-                    "exp(coef) lower 95%",
-                    "exp(coef) upper 95%",
+                    leading_space("coef"),
+                    leading_space("exp(coef)"),
+                    leading_space("se(coef)"),
+                    leading_space("coef lower 95%"),
+                    leading_space("coef upper 95%"),
+                    leading_space("exp(coef) lower 95%"),
+                    leading_space("exp(coef) upper 95%"),
                 ],
             )
         )
@@ -1324,8 +1327,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         print(
             df.to_string(
                 float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals)},
-                columns=["z", "p", "-log2(p)"],
+                formatters={leading_space("p"): format_p_value(decimals)},
+                columns=[leading_space("z"), leading_space("p"), leading_space("-log2(p)")],
             )
         )
 

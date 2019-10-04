@@ -1075,7 +1075,7 @@ class TestKaplanMeierFitter:
         assert event_table.loc[4.688, "at_risk"] == 11
 
         assert kmf.survival_function_.loc[0.7909999999999999, "KM_estimate"] == 0.9540043290043292
-        assert abs(kmf.median_ - 3) < 0.1
+        assert abs(kmf.median_survival_time_ - 3) < 0.1
 
     def test_kaplan_meier_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes

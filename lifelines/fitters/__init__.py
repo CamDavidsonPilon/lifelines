@@ -1748,32 +1748,35 @@ class ParametricRegressionFitter(BaseFitter):
         print("---")
 
         df = self.summary
+        df.columns = utils.map_leading_space(df.columns)
 
         print(
             df.to_string(
                 float_format=utils.format_floats(decimals),
                 formatters={
-                    "exp(coef)": utils.format_exp_floats(decimals),
-                    "exp(coef) lower 95%": utils.format_exp_floats(decimals),
-                    "exp(coef) upper 95%": utils.format_exp_floats(decimals),
+                    utils.leading_space("exp(coef)"): utils.format_exp_floats(decimals),
+                    utils.leading_space("exp(coef) lower 95%"): utils.format_exp_floats(decimals),
+                    utils.leading_space("exp(coef) upper 95%"): utils.format_exp_floats(decimals),
                 },
-                columns=[
-                    "coef",
-                    "exp(coef)",
-                    "se(coef)",
-                    "coef lower 95%",
-                    "coef upper 95%",
-                    "exp(coef) lower 95%",
-                    "exp(coef) upper 95%",
-                ],
+                columns=utils.map_leading_space(
+                    [
+                        "coef",
+                        "exp(coef)",
+                        "se(coef)",
+                        "coef lower 95%",
+                        "coef upper 95%",
+                        "exp(coef) lower 95%",
+                        "exp(coef) upper 95%",
+                    ]
+                ),
             )
         )
         print()
         print(
             df.to_string(
                 float_format=utils.format_floats(decimals),
-                formatters={"p": utils.format_p_value(decimals)},
-                columns=["z", "p", "-log2(p)"],
+                formatters={utils.leading_space("p"): utils.format_p_value(decimals)},
+                columns=utils.map_leading_space(["z", "p", "-log2(p)"]),
             )
         )
 
