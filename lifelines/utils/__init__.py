@@ -1542,6 +1542,14 @@ def format_floats(decimals):
     return lambda f: "{:4.{prec}f}".format(f, prec=decimals)
 
 
+def leading_space(s):
+    return " %s" % s
+
+
+def map_leading_space(list):
+    return [leading_space(c) for c in list]
+
+
 def interpolate_at_times(df_or_series, new_times):
     """
 
