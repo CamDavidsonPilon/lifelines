@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import collections
-from functools import wraps
+from functools import partial, wraps
 import sys
 import warnings
 from datetime import datetime
@@ -1495,27 +1495,28 @@ class ParametricRegressionFitter(BaseFitter):
             penalty = 0
         return neg_ll + self.penalizer * penalty
 
-    @staticmethod
-    def _create_neg_likelihood_with_penalty_function(likelihood, penalty, param_transform=lambda x: x):
-        def function_to_optimize(params_array, *args):
-            params = param_transform(params_array)
-            return penalty(params, -likelihood(params, *args))
+    def _create_neg_likelihood_with_penalty_function(self, params_array, *args, likelihood=None):
+        assert likelihood is not None, "kwarg likelihood is required"
+        penalty = self._add_penalty
+        _, param_transform = flatten(self._initial_point_dict)
 
-        return function_to_optimize
+        params = param_transform(params_array)
+        return penalty(params, -likelihood(params, *args))
 
     def _fit_model(self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, initial_point=None):
 
         # TODO: this should all go in a function or something...
         initial_point_dict = self._create_initial_point(Ts, E, entries, weights, Xs)
-        initial_point_array, unflatten = flatten(initial_point_dict)
+        self._initial_point_dict = initial_point_dict
+        initial_point_array, unflatten = flatten(self._initial_point_dict)
 
         if initial_point is None and isinstance(initial_point, dict):
             initial_point_array, _ = flatten(initial_point)  # TODO: test
 
         assert initial_point_array.shape[0] == Xs.size, "initial_point is not the correct shape."
 
-        self._neg_likelihood_with_penalty_function = self._create_neg_likelihood_with_penalty_function(
-            likelihood, self._add_penalty, unflatten
+        self._neg_likelihood_with_penalty_function = partial(
+            self._create_neg_likelihood_with_penalty_function, likelihood=likelihood
         )
 
         results = minimize(
