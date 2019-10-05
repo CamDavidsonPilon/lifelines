@@ -600,7 +600,6 @@ class TestUnivariateFitters:
             with pytest.raises(TypeError):
                 fitter().fit(T, E)
 
-    @pytest.mark.xfail()
     def test_pickle_serialization(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
@@ -620,6 +619,19 @@ class TestUnivariateFitters:
             fitter.fit(T)
 
             unpickled = loads(dumps(fitter))
+            dif = (fitter.durations - unpickled.durations).sum()
+            assert dif == 0
+
+    def test_joblib_serialization(self, positive_sample_lifetimes, univariate_fitters):
+        from joblib import dump, load
+
+        T = positive_sample_lifetimes[0]
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(T)
+
+            dump(fitter, "filename.joblib")
+            unpickled = load("filename.joblib")
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
