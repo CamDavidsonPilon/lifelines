@@ -1,6 +1,18 @@
 ## Changelog
 
-#### 0.22.7
+
+#### 0.22.8
+
+##### New features
+ - Serializing lifelines is better supported. Packages like joblib and pickle are now supported. Thanks @AbdealiJK!
+ - `conditional_after` now available in `CoxPHFitter.predict_median`
+ - Suppressed some unimportant warnings.
+
+##### Bug fixes
+ - fixed initial_point being ignored in AFT models.
+
+
+#### 0.22.7 - 2019-09-29
 
 ##### New features
  - new `ApproximationWarning` to tell you if the package is making an potentially mislead approximation.
