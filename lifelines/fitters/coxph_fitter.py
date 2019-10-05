@@ -1594,7 +1594,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         subjects = _get_index(X)
         return qth_survival_times(p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]).T
 
-    def predict_median(self, X):
+    def predict_median(self, X, conditional_after=None):
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1618,7 +1618,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         predict_percentile
 
         """
-        return self.predict_percentile(X, 0.5)
+        return self.predict_percentile(X, 0.5, conditional_after=conditional_after)
 
     def predict_expectation(self, X):
         r"""
