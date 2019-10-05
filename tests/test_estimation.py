@@ -600,7 +600,6 @@ class TestUnivariateFitters:
             with pytest.raises(TypeError):
                 fitter().fit(T, E)
 
-    @pytest.mark.xfail()
     def test_pickle_serialization(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
@@ -620,6 +619,19 @@ class TestUnivariateFitters:
             fitter.fit(T)
 
             unpickled = loads(dumps(fitter))
+            dif = (fitter.durations - unpickled.durations).sum()
+            assert dif == 0
+
+    def test_joblib_serialization(self, positive_sample_lifetimes, univariate_fitters):
+        from joblib import dump, load
+
+        T = positive_sample_lifetimes[0]
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(T)
+
+            dump(fitter, "filename.joblib")
+            unpickled = load("filename.joblib")
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
@@ -1468,6 +1480,14 @@ class TestRegressionFitters:
         regression_models_sans_strata_model.append(CoxPHFitter(strata=["race", "paro", "mar", "wexp"]))
         return regression_models_sans_strata_model
 
+    def test_pickle_serialization(self, rossi, regression_models):
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+
+            unpickled = pickle.loads(pickle.dumps(fitter))
+            dif = (fitter.durations - unpickled.durations).sum()
+            assert dif == 0
+
     def test_dill_serialization(self, rossi, regression_models):
         from dill import dumps, loads
 
@@ -1478,7 +1498,6 @@ class TestRegressionFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
-    @pytest.mark.xfail()
     def test_joblib_serialization(self, rossi, regression_models):
         from joblib import dump, load
 
@@ -1489,15 +1508,6 @@ class TestRegressionFitters:
             unpickled = load("filename.joblib")
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
-
-    @pytest.mark.xfail()
-    def test_pickle(self, rossi, regression_models):
-        from pickle import dump
-
-        for fitter in regression_models:
-            output = stringio()
-            f = fitter.fit(rossi, "week", "arrest")
-            dump(f, output)
 
     def test_fit_will_accept_object_dtype_as_event_col(self, regression_models_sans_strata_model, rossi):
         # issue #638
