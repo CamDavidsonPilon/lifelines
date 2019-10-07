@@ -1303,23 +1303,23 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         df = self.summary
         df.columns = [leading_space(c) for c in df.columns]
-
+        ci = 100 * (1 - self.alpha)
         print(
             df.to_string(
                 float_format=format_floats(decimals),
                 formatters={
                     leading_space("exp(coef)"): format_exp_floats(decimals),
-                    leading_space("exp(coef) lower 95%"): format_exp_floats(decimals),
-                    leading_space("exp(coef) upper 95%"): format_exp_floats(decimals),
+                    leading_space("exp(coef) lower %g%%" % ci): format_exp_floats(decimals),
+                    leading_space("exp(coef) upper %g%%" % ci): format_exp_floats(decimals),
                 },
                 columns=[
                     leading_space("coef"),
                     leading_space("exp(coef)"),
                     leading_space("se(coef)"),
-                    leading_space("coef lower 95%"),
-                    leading_space("coef upper 95%"),
-                    leading_space("exp(coef) lower 95%"),
-                    leading_space("exp(coef) upper 95%"),
+                    leading_space("coef lower %g%%" % ci),
+                    leading_space("coef upper %g%%" % ci),
+                    leading_space("exp(coef) lower %g%%" % ci),
+                    leading_space("exp(coef) upper %g%%" % ci),
                 ],
             )
         )
