@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import collections
-from functools import wraps
+from functools import partial, wraps
 import sys
 import warnings
 from datetime import datetime
@@ -301,9 +301,6 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
         self._estimate_name = "cumulative_hazard_"
-        if not hasattr(self, "_hazard"):
-            # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
-            self._hazard = egrad(self._cumulative_hazard, argnum=1)
         if not hasattr(self, "_bounds"):
             self._bounds = [(0.0, None)] * len(self._fitted_parameter_names)
         self._bounds = list(self._buffer_bounds(self._bounds))
@@ -375,6 +372,10 @@ class ParametericUnivariateFitter(UnivariateFitter):
 
     def _cumulative_hazard(self, params, times):
         return -anp.log(self._survival_function(params, times))
+
+    def _hazard(self, *args, **kwargs):
+        # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
+        return egrad(self._cumulative_hazard, argnum=1)(*args, **kwargs)
 
     def _survival_function(self, params, times):
         return anp.exp(-self._cumulative_hazard(params, times))
@@ -1175,7 +1176,6 @@ class ParametricRegressionFitter(BaseFitter):
 
     def __init__(self, alpha=0.05, penalizer=0.0):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha)
-        self._hazard = egrad(self._cumulative_hazard, argnum=1)  # pylint: disable=unexpected-keyword-arg
         self.penalizer = penalizer
 
     def _check_values(self, df, T, E, weights, entries):
@@ -1201,6 +1201,9 @@ class ParametricRegressionFitter(BaseFitter):
 
         if self.entry_col:
             utils.check_entry_times(T, entries)
+
+    def _hazard(self, *args, **kwargs):
+        return egrad(self._cumulative_hazard, argnum=1)(*args, **kwargs)  # pylint: disable=unexpected-keyword-arg
 
     def _log_hazard(self, params, T, Xs):
         # can be overwritten to improve convergence, see example in WeibullAFTFitter
@@ -1492,27 +1495,31 @@ class ParametricRegressionFitter(BaseFitter):
             penalty = 0
         return neg_ll + self.penalizer * penalty
 
-    @staticmethod
-    def _create_neg_likelihood_with_penalty_function(likelihood, penalty, param_transform=lambda x: x):
-        def function_to_optimize(params_array, *args):
-            params = param_transform(params_array)
-            return penalty(params, -likelihood(params, *args))
+    def _create_neg_likelihood_with_penalty_function(self, params_array, *args, likelihood=None):
+        assert likelihood is not None, "kwarg likelihood is required"
+        penalty = self._add_penalty
+        _, param_transform = flatten(self._initial_point_dict)
 
-        return function_to_optimize
+        params = param_transform(params_array)
+        return penalty(params, -likelihood(params, *args))
 
     def _fit_model(self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, initial_point=None):
 
         # TODO: this should all go in a function or something...
         initial_point_dict = self._create_initial_point(Ts, E, entries, weights, Xs)
-        initial_point_array, unflatten = flatten(initial_point_dict)
+        self._initial_point_dict = initial_point_dict
+        initial_point_array, unflatten = flatten(self._initial_point_dict)
 
-        if initial_point is None and isinstance(initial_point, dict):
+        if initial_point is not None and isinstance(initial_point, dict):
             initial_point_array, _ = flatten(initial_point)  # TODO: test
+        elif initial_point is not None and isinstance(initial_point, np.ndarray):
+            initial_point_array = initial_point  # TODO: test
 
-        assert initial_point_array.shape[0] == Xs.size, "initial_point is not the correct shape."
+        if initial_point_array.shape[0] != Xs.size:
+            raise ValueError("initial_point is not the correct shape.")
 
-        self._neg_likelihood_with_penalty_function = self._create_neg_likelihood_with_penalty_function(
-            likelihood, self._add_penalty, unflatten
+        self._neg_likelihood_with_penalty_function = partial(
+            self._create_neg_likelihood_with_penalty_function, likelihood=likelihood
         )
 
         results = minimize(
@@ -1745,32 +1752,35 @@ class ParametricRegressionFitter(BaseFitter):
         print("---")
 
         df = self.summary
+        df.columns = utils.map_leading_space(df.columns)
 
         print(
             df.to_string(
                 float_format=utils.format_floats(decimals),
                 formatters={
-                    "exp(coef)": utils.format_exp_floats(decimals),
-                    "exp(coef) lower 95%": utils.format_exp_floats(decimals),
-                    "exp(coef) upper 95%": utils.format_exp_floats(decimals),
+                    utils.leading_space("exp(coef)"): utils.format_exp_floats(decimals),
+                    utils.leading_space("exp(coef) lower 95%"): utils.format_exp_floats(decimals),
+                    utils.leading_space("exp(coef) upper 95%"): utils.format_exp_floats(decimals),
                 },
-                columns=[
-                    "coef",
-                    "exp(coef)",
-                    "se(coef)",
-                    "coef lower 95%",
-                    "coef upper 95%",
-                    "exp(coef) lower 95%",
-                    "exp(coef) upper 95%",
-                ],
+                columns=utils.map_leading_space(
+                    [
+                        "coef",
+                        "exp(coef)",
+                        "se(coef)",
+                        "coef lower 95%",
+                        "coef upper 95%",
+                        "exp(coef) lower 95%",
+                        "exp(coef) upper 95%",
+                    ]
+                ),
             )
         )
         print()
         print(
             df.to_string(
                 float_format=utils.format_floats(decimals),
-                formatters={"p": utils.format_p_value(decimals)},
-                columns=["z", "p", "-log2(p)"],
+                formatters={utils.leading_space("p"): utils.format_p_value(decimals)},
+                columns=utils.map_leading_space(["z", "p", "-log2(p)"]),
             )
         )
 
@@ -2129,12 +2139,15 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         super(ParametericAFTRegressionFitter, self).__init__(alpha=alpha)
-        self._hazard = egrad(self._cumulative_hazard, argnum=1)  # pylint: disable=unexpected-keyword-arg
+        # self._hazard = egrad(self._cumulative_hazard, argnum=1)  # pylint: disable=unexpected-keyword-arg
         self._fitted_parameter_names = [self._primary_parameter_name, self._ancillary_parameter_name]
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
         self.fit_intercept = fit_intercept
         self.model_ancillary = model_ancillary
+
+    def _hazard(self, *args, **kwargs):
+        return egrad(self._cumulative_hazard, argnum=1)(*args, **kwargs)  # pylint: disable=unexpected-keyword-arg
 
     @utils.CensoringType.right_censoring
     def fit(
@@ -2625,12 +2638,15 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             # some custom AFT model if univariate model is not defined.
             return super(ParametericAFTRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)
 
-        if utils.CensoringType.is_right_censoring(self):
-            uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
-        elif utils.CensoringType.is_interval_censoring(self):
-            uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
-        elif utils.CensoringType.is_left_censoring(self):
-            uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            if utils.CensoringType.is_right_censoring(self):
+                uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
+            elif utils.CensoringType.is_interval_censoring(self):
+                uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
+            elif utils.CensoringType.is_left_censoring(self):
+                uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model.log_likelihood_

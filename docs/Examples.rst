@@ -857,11 +857,13 @@ Specifying ``cluster_col`` will handle correlations, and invoke the robust sandw
 Serialize a *lifelines* model to disk
 ##########################################
 
-When you want to save (and later load) a *lifelines* model to disk, the suggested tool is ``dill`` (available by ``pip install dill``). ``dill`` works a lot like ``pickle`` and ``joblib``:
+When you want to save (and later load) a *lifelines* model to disk, you can use the `loads` and `dumps` API from any popular serialization library.
 
 .. code-block:: python
 
     from dill import loads, dumps
+    from pickle import loads, dumps
+    from joblib import loads, dumps
 
     s_cph = dumps(cph)
     cph_new = loads(s_cph)

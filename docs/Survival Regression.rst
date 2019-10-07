@@ -70,31 +70,40 @@ The implementation of the Cox model in *lifelines* is under :class:`~lifelines.f
     rossi_dataset = load_rossi()
 
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
     cph.print_summary()  # access the results using cph.summary
 
     """
-    <lifelines.CoxPHFitter: fitted with 432 observations, 318 censored>
-          duration col = 'week'
-             event col = 'arrest'
-    number of subjects = 432
-      number of events = 114
-        log-likelihood = -658.75
-      time fit was run = 2019-01-27 23:10:15 UTC
+    <lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
+                 duration col = 'week'
+                    event col = 'arrest'
+       number of observations = 432
+    number of events observed = 114
+       partial log-likelihood = -658.75
+             time fit was run = 2019-10-05 14:24:44 UTC
 
     ---
-          coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
-    fin  -0.38       0.68      0.19 -1.98   0.05      4.40       -0.75       -0.00
-    age  -0.06       0.94      0.02 -2.61   0.01      6.79       -0.10       -0.01
-    race  0.31       1.37      0.31  1.02   0.31      1.70       -0.29        0.92
-    wexp -0.15       0.86      0.21 -0.71   0.48      1.06       -0.57        0.27
-    mar  -0.43       0.65      0.38 -1.14   0.26      1.97       -1.18        0.31
-    paro -0.08       0.92      0.20 -0.43   0.66      0.59       -0.47        0.30
-    prio  0.09       1.10      0.03  3.19 <0.005      9.48        0.04        0.15
+           coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+    fin   -0.38       0.68       0.19            -0.75            -0.00                 0.47                 1.00
+    age   -0.06       0.94       0.02            -0.10            -0.01                 0.90                 0.99
+    race   0.31       1.37       0.31            -0.29             0.92                 0.75                 2.50
+    wexp  -0.15       0.86       0.21            -0.57             0.27                 0.57                 1.30
+    mar   -0.43       0.65       0.38            -1.18             0.31                 0.31                 1.37
+    paro  -0.08       0.92       0.20            -0.47             0.30                 0.63                 1.35
+    prio   0.09       1.10       0.03             0.04             0.15                 1.04                 1.16
+
+             z      p   -log2(p)
+    fin  -1.98   0.05       4.40
+    age  -2.61   0.01       6.79
+    race  1.02   0.31       1.70
+    wexp -0.71   0.48       1.06
+    mar  -1.14   0.26       1.97
+    paro -0.43   0.66       0.59
+    prio  3.19 <0.005       9.48
     ---
     Concordance = 0.64
-    Likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
+    Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
     """
 
 To access the coefficients and the baseline hazard directly, you can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.params_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` respectively. Taking a look at these coefficients for a moment, ``prio`` (the number of prior arrests) has a coefficient of about 0.09. Thus, a one unit increase in ``prio`` means the the baseline hazard will increase by a factor of :math:`\exp{(0.09)} = 1.10` - about a 10% increase. Recall, in the Cox proportional hazard model, a higher hazard means more at risk of the event occurring. The value :math:`\exp{(0.09)}` is called the *hazard ratio*, a name that will be clear with another example.
@@ -131,20 +140,19 @@ Prediction
 -----------------------
 
 
-After fitting, you can use use the suite of prediction methods: :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_partial_hazard`, :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_survival_function`, etc.
+After fitting, you can use use the suite of prediction methods: :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_partial_hazard`, :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_survival_function`, and others.
 
 .. code:: python
 
     X = rossi_dataset
 
     cph.predict_partial_hazard(X)
-
-    cph.predict_survival_function(X, times=[5., 25., 50.])
-
+    cph.predict_survival_function(X)
     cph.predict_median(X)
+    ...
 
 
-A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their survival function. We are interested to know *What is the new survival function, given I know the subject has lived past time s, where s < t?* Mathematically:
+A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their survival function. We are interested to answer the following: *What is a subject's new survival function given I know the subject has lived past time s?* Mathematically:
 
 .. math::
 
@@ -156,18 +164,17 @@ A common use case is to predict the event time of censored subjects. This is eas
 
 Thus we scale the original survival function by the survival function at time :math:`s` (everything prior to :math:`s` should be mapped to 1.0 as well, since we are working with probabilities and we know that the subject was alive before :math:`s`).
 
-Back to our original problem of predicting the event time of censored individuals, *lifelines* has all this math and logic built in when using the `conditional_after` kwarg.
+Back to our original problem of predicting the event time of censored individuals, *lifelines* has all this math and logic built in when using the ``conditional_after`` kwarg.
 
 .. code:: python
 
 
-    censored_subjects = rossi.loc[~rossi['arrest'].astype(bool)]
+    # filter down to just censored subjects to predict remaining survival
+    censored_subjects = X.loc[~X['arrest'].astype(bool)]
     censored_subjects_last_obs = censored_subjects['week']
 
     cph.predict_partial_hazard(censored_subjects, conditional_after=censored_subjects_last_obs)
-
     cph.predict_survival_function(censored_subjects, times=[5., 25., 50.], conditional_after=censored_subjects_last_obs)
-
     cph.predict_median(censored_subjects, conditional_after=censored_subjects_last_obs)
 
 
@@ -184,7 +191,7 @@ With a fitted model, an alternative way to view the coefficients and their range
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
     cph.plot()
 
@@ -204,7 +211,7 @@ holding everything else equal. This is useful to understand the impact of a cova
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest', show_progress=True)
+    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
     cph.plot_covariate_groups('prio', [0, 2, 4, 6, 8, 10], cmap='coolwarm')
 
@@ -265,7 +272,7 @@ To specify variables to be used in stratification, we define them in the call to
 
     rossi_dataset = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'], show_progress=True)
+    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
 
     cph.print_summary()  # access the results using cph.summary
 
