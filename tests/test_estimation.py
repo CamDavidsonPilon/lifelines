@@ -20,7 +20,7 @@ from autograd import numpy as anp
 
 from flaky import flaky
 
-from pandas.util.testing import assert_frame_equal, assert_series_equal
+from pandas.util.testing import assert_frame_equal, assert_series_equal, assert_index_equal
 import numpy.testing as npt
 
 from lifelines.utils import (
@@ -1544,11 +1544,11 @@ class TestRegressionFitters:
 
     def test_predict_methods_in_regression_return_same_types(self, regression_models, rossi):
 
-        fitted_regression_models = map(
-            lambda model: model.fit(rossi, duration_col="week", event_col="arrest"), regression_models
+        fitted_regression_models = list(
+            map(lambda model: model.fit(rossi, duration_col="week", event_col="arrest"), regression_models)
         )
 
-        for fit_method in [
+        for predict_method in [
             "predict_percentile",
             "predict_median",
             "predict_expectation",
@@ -1556,7 +1556,27 @@ class TestRegressionFitters:
             "predict_cumulative_hazard",
         ]:
             for fitter1, fitter2 in combinations(fitted_regression_models, 2):
-                assert isinstance(getattr(fitter1, fit_method)(rossi), type(getattr(fitter2, fit_method)(rossi)))
+                assert isinstance(
+                    getattr(fitter1, predict_method)(rossi), type(getattr(fitter2, predict_method)(rossi))
+                )
+
+    def test_predict_methods_in_regression_return_same_index(self, regression_models, rossi):
+
+        fitted_regression_models = list(
+            map(lambda model: model.fit(rossi, duration_col="week", event_col="arrest"), regression_models)
+        )
+
+        X = rossi.loc[:10]
+
+        for predict_method in [
+            "predict_percentile",
+            "predict_median",
+            "predict_expectation",
+            "predict_survival_function",
+            "predict_cumulative_hazard",
+        ]:
+            for fitter1, fitter2 in combinations(fitted_regression_models, 2):
+                assert_index_equal(getattr(fitter1, predict_method)(X).index, getattr(fitter2, predict_method)(X).index)
 
     def test_duration_vector_can_be_normalized_up_to_an_intercept(self, regression_models, rossi):
         t = rossi["week"]

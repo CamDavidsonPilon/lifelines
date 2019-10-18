@@ -1,6 +1,14 @@
 ## Changelog
 
 
+#### 0.22.9 - unreleased
+
+
+##### Bug fixes
+ - fixed `predict_` methods in AFT models when `timeline` was not specified.
+
+
+
 #### 0.22.8
 
 ##### New features

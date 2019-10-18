@@ -1389,12 +1389,16 @@ class ParametricRegressionFitter(BaseFitter):
     ):
 
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        self._n_examples = df.shape[0]
         self.weights_col = weights_col
         self.entry_col = entry_col
         self.event_col = event_col
-        self._n_examples = df.shape[0]
-        self.timeline = timeline
         self.robust = robust
+
+        if timeline is not None:
+            self.timeline = np.sort(np.asarray(timeline).astype(float))
+        else:
+            self.timeline = np.unique(utils.coalesce(*Ts))
 
         E = (
             utils.pass_for_numeric_dtypes_or_raise_array(df.pop(self.event_col))

@@ -1668,6 +1668,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         baseline_hazard = pd.DataFrame(
             ind_hazards_summed_over_durations["E"] / ind_hazards_summed_over_durations["P"], columns=[name]
         )
+        baseline_hazard.index.name = None
         return baseline_hazard
 
     def _compute_baseline_hazards(self):
