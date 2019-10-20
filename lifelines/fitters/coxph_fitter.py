@@ -1777,11 +1777,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 xerr=np.vstack([lower_errors[order], upper_errors[order]]),
                 **errorbar_kwargs
             )
-            plt.xlabel("HR (%g%% CI)" % ((1 - self.alpha) * 100))
+            ax.set_xlabel("HR (%g%% CI)" % ((1 - self.alpha) * 100))
         else:
             symmetric_errors = z * self.standard_errors_[columns].values
             ax.errorbar(log_hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
-            plt.xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
+            ax.set_xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         best_ylim = ax.get_ylim()
         ax.vlines(1 if hazard_ratios else 0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
@@ -1789,7 +1789,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         tick_labels = [columns[i] for i in order]
 
-        plt.yticks(yaxis_locations, tick_labels)
+        ax.set_yticks(yaxis_locations)
+        ax.set_yticklabels(tick_labels)
 
         return ax
 
