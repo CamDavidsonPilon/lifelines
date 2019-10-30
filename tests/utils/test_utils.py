@@ -160,6 +160,11 @@ def test_qth_survival_time_returns_inf():
     assert utils.qth_survival_time(0.5, sf) == np.inf
 
 
+def test_qth_survival_time_accepts_a_model():
+    kmf = KaplanMeierFitter().fit([1.0, 0.7, 0.6])
+    assert utils.qth_survival_time(0.8, kmf) > 0
+
+
 def test_qth_survival_time_with_dataframe():
     sf_df_no_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0])
     sf_df_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0], index=[10, 20, 30, 40, 50])

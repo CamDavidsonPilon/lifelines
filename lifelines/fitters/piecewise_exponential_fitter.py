@@ -9,7 +9,7 @@ class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
     hazard rate:
 
     .. math::  h(t) = \begin{cases}
-                        1/\lambda_0,  & \text{if $t \le \tau_0$} \\
+                        1/\lambda_0  & \text{if $t \le \tau_0$} \\
                         1/\lambda_1 & \text{if $\tau_0 < t \le \tau_1$} \\
                         1/\lambda_2 & \text{if $\tau_1 < t \le \tau_2$} \\
                         ...

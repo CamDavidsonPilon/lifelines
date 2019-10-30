@@ -126,7 +126,8 @@ def qq_plot(model, **plot_kwargs):
         raise NotImplementedError()
 
     q = np.unique(kmf.cumulative_density_.values[:, 0])
-    quantiles = qth_survival_times(q, kmf.cumulative_density_, cdf=True)
+    # this is equivalent to the old code `qth_survival_times(q, kmf.cumulative_density, cdf=True)`
+    quantiles = qth_survival_times(1 - q, kmf.survival_function_)
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
 

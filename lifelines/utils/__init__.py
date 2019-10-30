@@ -185,7 +185,7 @@ def qth_survival_time(q, model_or_survival_function):
     import lifelines
 
     if isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
-        return model.percentile(q)
+        return model_or_survival_function.percentile(q)
     elif isinstance(model_or_survival_function, pd.DataFrame):
         if model_or_survival_function.shape[1] > 1:
             raise ValueError(
