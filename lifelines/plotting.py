@@ -546,8 +546,8 @@ def _plot_estimate(
             )
         else:
             x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
-            lower = dataframe_slicer(plot_estimate_config.confidence_interval_.filter(like="lower")).values[:, 0]
-            upper = dataframe_slicer(plot_estimate_config.confidence_interval_.filter(like="upper")).values[:, 0]
+            lower = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [0]]).values[:, 0]
+            upper = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [1]]).values[:, 0]
 
             if plot_estimate_config.kwargs["drawstyle"] == "default":
                 step = None

@@ -325,6 +325,16 @@ class TestUnivariateFitters:
             GeneralizedGammaFitter,
         ]
 
+    def test_confidence_interval_has_the_correct_order_so_plotting_doesnt_break(
+        self, sample_lifetimes, univariate_fitters
+    ):
+        T, E = sample_lifetimes
+        for f in univariate_fitters:
+            f = f()
+            f.fit(T, E)
+            assert "lower" in f.confidence_interval_.columns[0]
+            assert "upper" in f.confidence_interval_.columns[1]
+
     def test_repr_with_fitter(self, sample_lifetimes, univariate_fitters):
         T, E = sample_lifetimes
         for f in univariate_fitters:
