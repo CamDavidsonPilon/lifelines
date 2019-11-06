@@ -214,7 +214,7 @@ class TestParametricUnivariateFitters:
                 c, mu_ = params
                 return c * norm.cdf((times - mu_) / 6.3, loc=0, scale=1)
 
-        uaf = UpperAsymptoteFitter().fit(T, E, ci_labels=("u", "l"))
+        uaf = UpperAsymptoteFitter().fit(T, E, ci_labels=("l", "u"))
         upper = uaf.confidence_interval_.iloc[-1]["u"]
         lower = uaf.confidence_interval_.iloc[-1]["l"]
         coef, std = uaf.summary.loc["c_", ["coef", "se(coef)"]]
@@ -493,7 +493,7 @@ class TestUnivariateFitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0], label=label)
             assert fitter._label == label
-            assert fitter.confidence_interval_.columns[0] == "%s_upper_0.95" % label
+            assert fitter.confidence_interval_.columns[0] == "%s_lower_0.95" % label
             assert fitter.confidence_interval_.columns[1] == "%s_lower_0.95" % label
 
     def test_ci_labels(self, positive_sample_lifetimes, univariate_fitters):
