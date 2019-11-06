@@ -32,8 +32,6 @@ from lifelines.utils import (
     CensoringType,
 )
 
-from lifelines.plotting import set_kwargs_ax
-
 
 class AalenAdditiveFitter(BaseFitter):
 
@@ -420,7 +418,7 @@ It's important to know that the naive variance estimates of the coefficients are
             }
         )
 
-    def plot(self, columns=None, loc=None, iloc=None, **kwargs):
+    def plot(self, columns=None, loc=None, iloc=None, ax=None, **kwargs):
         """"
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
@@ -459,8 +457,8 @@ It's important to know that the naive variance estimates of the coefficients are
         else:
             columns = _to_list(columns)
 
-        set_kwargs_ax(kwargs)
-        ax = kwargs.pop("ax")
+        if ax is None:
+            ax = plt.gca()
 
         x = subset_df(self.cumulative_hazards_).index.values.astype(float)
 

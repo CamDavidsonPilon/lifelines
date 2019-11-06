@@ -12,7 +12,7 @@ from scipy.integrate import trapz
 from scipy import stats
 
 from lifelines.fitters import BaseFitter
-from lifelines.plotting import set_kwargs_ax, set_kwargs_drawstyle
+from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers, StatisticalResult
 from lifelines.utils.lowess import lowess
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio
@@ -1717,7 +1717,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             survival_df = survival_df.rename(columns={"baseline cumulative hazard": "baseline survival"})
         return survival_df
 
-    def plot(self, columns=None, hazard_ratios=False, **errorbar_kwargs):
+    def plot(self, columns=None, hazard_ratios=False, ax=None, **errorbar_kwargs):
         """
         Produces a visual representation of the coefficients (i.e. log hazard ratios), including their standard errors and magnitudes.
 
@@ -1746,8 +1746,9 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         """
         from matplotlib import pyplot as plt
 
-        set_kwargs_ax(errorbar_kwargs)
-        ax = errorbar_kwargs.pop("ax")
+        if ax is None:
+            ax = plt.gca()
+
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
         errorbar_kwargs.setdefault("markerfacecolor", "white")

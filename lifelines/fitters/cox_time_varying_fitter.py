@@ -755,7 +755,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             null_distribution="chi squared",
         )
 
-    def plot(self, columns=None, **errorbar_kwargs):
+    def plot(self, columns=None, ax=None, **errorbar_kwargs):
         """
         Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
@@ -774,7 +774,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         """
         from matplotlib import pyplot as plt
 
-        ax = errorbar_kwargs.pop("ax", None) or plt.figure().add_subplot(111)
+        if ax is None:
+            ax = plt.gca()
 
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
