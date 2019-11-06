@@ -53,13 +53,35 @@ class TestPlotting:
 
         self.plt = plt
 
-    def test_parametric_univarite_fitters_has_plotting_methods(self, known_parametric_univariate_fitters):
+    def test_parametric_univarite_fitters_has_hazard_plotting_methods(self, block, known_parametric_univariate_fitters):
+        positive_sample_lifetimes = np.arange(1, 100)
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes)
+            assert f.plot_hazard() is not None
+        self.plt.title("test_parametric_univarite_fitters_has_hazard_plotting_methods")
+        self.plt.show(block=block)
+
+    def test_parametric_univarite_fitters_has_cumhazard_plotting_methods(
+        self, block, known_parametric_univariate_fitters
+    ):
         positive_sample_lifetimes = np.arange(1, 100)
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes)
             assert f.plot_cumulative_hazard() is not None
+
+        self.plt.title("test_parametric_univarite_fitters_has_cumhazard_plotting_methods")
+        self.plt.show(block=block)
+
+    def test_parametric_univarite_fitters_has_survival_plotting_methods(
+        self, block, known_parametric_univariate_fitters
+    ):
+        positive_sample_lifetimes = np.arange(1, 100)
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit(positive_sample_lifetimes)
             assert f.plot_survival_function() is not None
-            assert f.plot_hazard() is not None
+
+        self.plt.title("test_parametric_univarite_fitters_has_survival_plotting_methods")
+        self.plt.show(block=block)
 
     def test_negative_times_still_plots(self, block, kmf):
         n = 40

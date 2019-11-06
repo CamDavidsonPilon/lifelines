@@ -1,4 +1,4 @@
-API for *lifelines*
+API Reference
 ==================================
 
 .. toctree::
