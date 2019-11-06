@@ -1,5 +1,12 @@
 ## Changelog
 
+#### 0.22.10
+
+
+##### Bug fixes
+ - fixed error in plotting models with "lower" or "upper" was in the label name.
+ - fixed bug in plot_covariate_groups for AFT models when >1d arrays were used for values arg.
+
 
 #### 0.22.9 - 2019-10-30
 
