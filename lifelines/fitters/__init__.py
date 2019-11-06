@@ -477,11 +477,11 @@ class ParametericUnivariateFitter(UnivariateFitter):
         )
 
         if ci_labels is None:
-            ci_labels = ["%s_upper_%g" % (self._label, 1 - alpha), "%s_lower_%g" % (self._label, 1 - alpha)]
+            ci_labels = ["%s_lower_%g" % (self._label, 1 - alpha), "%s_upper_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) + z * std_cumulative_hazard
-        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
+        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
+        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) + z * std_cumulative_hazard
         return df
 
     def _create_initial_point(self, *args):
