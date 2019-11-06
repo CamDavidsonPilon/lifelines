@@ -18,7 +18,7 @@ from scipy import stats
 import pandas as pd
 
 
-from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle, set_kwargs_ax
+from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
 from lifelines import utils
 
 __all__ = []
@@ -1989,7 +1989,7 @@ class ParametricRegressionFitter(BaseFitter):
         """
         return self.predict_expectation(self._norm_mean.to_frame().T).squeeze()
 
-    def plot(self, columns=None, parameter=None, **errorbar_kwargs):
+    def plot(self, columns=None, parameter=None, ax=None, **errorbar_kwargs):
         """
         Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
@@ -2008,8 +2008,8 @@ class ParametricRegressionFitter(BaseFitter):
         """
         from matplotlib import pyplot as plt
 
-        set_kwargs_ax(errorbar_kwargs)
-        ax = errorbar_kwargs.pop("ax")
+        if ax is None:
+            ax = plt.gca()
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
         errorbar_kwargs.setdefault("markerfacecolor", "white")
@@ -2061,7 +2061,7 @@ class ParametricRegressionFitter(BaseFitter):
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
+    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, **kwargs):
         """
         Produces a plot comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
@@ -2105,7 +2105,7 @@ class ParametricRegressionFitter(BaseFitter):
         from matplotlib import pyplot as plt
 
         covariates = utils._to_list(covariates)
-        values = utils._to_1d_array(values)
+        values = np.atleast_1d(values)
         if len(values.shape) == 1:
             values = values[None, :].T
 
@@ -2117,7 +2117,8 @@ class ParametricRegressionFitter(BaseFitter):
             if covariate not in original_columns:
                 raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
-        ax = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
+        if ax is None:
+            ax = plt.gca()
 
         # model X
         x_bar = self._norm_mean.to_frame().T
@@ -2675,7 +2676,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             penalty = 0
         return neg_ll + self.penalizer * penalty
 
-    def plot(self, columns=None, parameter=None, **errorbar_kwargs):
+    def plot(self, columns=None, parameter=None, ax=None, **errorbar_kwargs):
         """
         Produces a visual representation of the coefficients, including their standard errors and magnitudes.
 
@@ -2694,8 +2695,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
         from matplotlib import pyplot as plt
 
-        set_kwargs_ax(errorbar_kwargs)
-        ax = errorbar_kwargs.pop("ax")
+        if ax is None:
+            ax = plt.gca()
+
         errorbar_kwargs.setdefault("c", "k")
         errorbar_kwargs.setdefault("fmt", "s")
         errorbar_kwargs.setdefault("markerfacecolor", "white")
@@ -2747,7 +2749,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
+    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, **kwargs):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
@@ -2789,7 +2791,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         from matplotlib import pyplot as plt
 
         covariates = utils._to_list(covariates)
-        values = utils._to_1d_array(values)
+        values = np.atleast_1d(values)
         if len(values.shape) == 1:
             values = values[None, :].T
 
@@ -2801,7 +2803,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             if covariate not in original_columns:
                 raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
-        ax = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
+        if ax is None:
+            ax = plt.gca()
 
         # model X
         x_bar = self._norm_mean.to_frame().T
