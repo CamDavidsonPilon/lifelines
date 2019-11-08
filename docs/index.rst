@@ -80,6 +80,13 @@ Installation
 
     pip install lifelines
 
+or
+
+.. code-block:: console
+
+    conda install -c conda-forge lifelines
+
+
 
 Source code and issue tracker
 ------------------------------

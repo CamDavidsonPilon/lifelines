@@ -25,6 +25,10 @@ You can install *lifelines* using
 
        pip install lifelines
 
+or conda install:
+
+       conda install -c conda-forge lifelines
+
 Or getting the bleeding edge version with:
 
        pip install --upgrade --no-deps git+https://github.com/CamDavidsonPilon/lifelines.git
