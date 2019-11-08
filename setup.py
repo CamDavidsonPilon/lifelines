@@ -4,10 +4,6 @@ import os
 from setuptools import setup, find_packages
 
 
-def filepath(fname):
-    return os.path.join(os.path.dirname(__file__), fname)
-
-
 with open("reqs/base-requirements.txt") as f:
     requirements = f.read().splitlines()
 
