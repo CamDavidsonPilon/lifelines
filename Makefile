@@ -10,7 +10,7 @@ else
 endif
 
 test:
-	py.test tests/ -rfs --cov=lifelines --block=False --cov-report term-missing
+	py.test lifelines/ -rfs --cov=lifelines --block=False --cov-report term-missing
 
 lint:
 ifeq ($(TRAVIS_PYTHON_VERSION), 2.7)
@@ -25,7 +25,6 @@ ifeq ($(TRAVIS_PYTHON_VERSION), 2.7)
 		echo "Skip linting for Python2.7"
 else
 		black lifelines/ -l 120 --fast
-		black tests/ -l 120 --fast
 endif
 
 check_format:

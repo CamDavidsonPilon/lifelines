@@ -494,7 +494,7 @@ class TestUnivariateFitters:
             fitter.fit(positive_sample_lifetimes[0], label=label)
             assert fitter._label == label
             assert fitter.confidence_interval_.columns[0] == "%s_lower_0.95" % label
-            assert fitter.confidence_interval_.columns[1] == "%s_lower_0.95" % label
+            assert fitter.confidence_interval_.columns[1] == "%s_upper_0.95" % label
 
     def test_ci_labels(self, positive_sample_lifetimes, univariate_fitters):
         expected = ["upper", "lower"]
