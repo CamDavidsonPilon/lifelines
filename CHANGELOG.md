@@ -2,6 +2,8 @@
 
 #### 0.22.10
 
+The tests were re-factored to be shipped with the package. Let me know if this causes problems.
+
 
 ##### Bug fixes
  - fixed error in plotting models with "lower" or "upper" was in the label name.
