@@ -6,7 +6,7 @@ import pkg_resources
 
 
 BASE_PATH = Path(__file__).parent.parent.parent
-REQUIREMENTS_PATH = BASE_PATH.joinpath("reqs/base-requirements.txt").absolute()
+REQUIREMENTS_PATH = str(BASE_PATH.joinpath("reqs/base-requirements.txt").absolute())
 
 
 class TestRequirements:
