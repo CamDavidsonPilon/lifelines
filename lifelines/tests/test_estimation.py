@@ -18,7 +18,10 @@ from scipy.stats import weibull_min, norm, logistic, invweibull, invgamma
 from autograd.scipy.special import expit
 from autograd import numpy as anp
 
-from flaky import flaky
+try:
+    from flaky import flaky
+except ImportError:
+    pass
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal, assert_index_equal
 import numpy.testing as npt
