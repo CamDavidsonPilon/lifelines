@@ -19,7 +19,7 @@ from lifelines import (
     AalenJohansenFitter,
 )
 
-from tests.test_estimation import known_parametric_univariate_fitters
+from lifelines.tests.test_estimation import known_parametric_univariate_fitters
 
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
 from lifelines.plotting import plot_lifetimes, cdf_plot, qq_plot
