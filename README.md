@@ -1,6 +1,7 @@
 ![](http://i.imgur.com/EOowdSD.png)
 
 [![PyPI version](https://badge.fury.io/py/lifelines.svg)](https://badge.fury.io/py/lifelines)
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/lifelines/badges/installer/conda.svg)](https://conda.anaconda.org/conda-forge)
 [![Build Status](https://travis-ci.org/CamDavidsonPilon/lifelines.svg?branch=master)](https://travis-ci.org/CamDavidsonPilon/lifelines)
 [![Coverage Status](https://coveralls.io/repos/github/CamDavidsonPilon/lifelines/badge.svg?branch=master)](https://coveralls.io/github/CamDavidsonPilon/lifelines?branch=master)
 [![Join the chat at https://gitter.im/python-lifelines/Lobby](https://badges.gitter.im/python-lifelines/Lobby.svg)](https://gitter.im/python-lifelines/Lobby)
