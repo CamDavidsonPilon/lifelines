@@ -11,7 +11,6 @@ env:
     - export NUMPY_VERSION=1.16.4      && export PANDAS_VERSION=0.25.3
     - export NUMPY_VERSION=1.15.4      && export PANDAS_VERSION=0.25.3
 os:
-  - windows
   - linux
   - osx
 before_install:
