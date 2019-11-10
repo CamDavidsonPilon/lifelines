@@ -23,7 +23,7 @@ CLASSIFIERS = [
     "Topic :: Scientific/Engineering",
 ]
 LICENSE = "MIT"
-PACKAGE_DATA = {"lifelines": ["datasets/*", "../LICENSE"]}
+PACKAGE_DATA = {"lifelines": ["datasets/*"]}
 DESCRIPTION = "Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression"
 URL = "https://github.com/CamDavidsonPilon/lifelines"
 PYTHON_REQ = ">=3.5"
