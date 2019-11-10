@@ -10,9 +10,6 @@ env:
     - export PANDAS_VERSION=0.25.3     && export NUMPY_VERSION=1.17.3
     - export NUMPY_VERSION=1.16.4      && export PANDAS_VERSION=0.25.3
     - export NUMPY_VERSION=1.15.4      && export PANDAS_VERSION=0.25.3
-os:
-  - linux
-  - osx
 before_install:
   - ls
   # - sudo apt-get update
