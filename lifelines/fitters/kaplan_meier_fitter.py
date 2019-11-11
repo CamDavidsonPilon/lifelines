@@ -265,6 +265,7 @@ class KaplanMeierFitter(UnivariateFitter):
         setattr(self, secondary_estimate_name, pd.DataFrame(1 - np.exp(log_estimate), columns=[self._label]))
 
         self.__estimate = getattr(self, primary_estimate_name)
+        self.variance_ = self._greenwood_variance(cumulative_sq_[:,None])
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self._median = median_survival_times(self.survival_function_)
         self.percentile = functools.partial(qth_survival_time, model_or_survival_function=self.survival_function_)
@@ -399,6 +400,15 @@ class KaplanMeierFitter(UnivariateFitter):
 
         df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) - z * np.sqrt(cumulative_sq_) / v))
         df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) + z * np.sqrt(cumulative_sq_) / v))
+        return df
+    
+    def _greenwood_variance(self, cumulative_sq_):
+        # This method calculates variance using the Greenwood formula.
+        # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
+        df = pd.DataFrame(index=self.timeline)
+        v = self.__estimate.values
+
+        df["var"] = v**2 * cumulative_sq_
         return df
 
     def _additive_f(self, population, deaths):
