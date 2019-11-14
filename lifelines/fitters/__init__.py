@@ -262,7 +262,7 @@ class UnivariateFitter(BaseFitter):
         robust summary statistic for the population, if it exists.
         """
         warnings.warn(
-            """Please use `median_survival_time_` property instead. Future property `median_` will be removed.""",
+            """Please use `median_survival_time_` property instead. Future property `median_` will be removed.\n""",
             FutureWarning,
         )
         return self.percentile(0.5)
@@ -282,7 +282,7 @@ class UnivariateFitter(BaseFitter):
         For known parametric models, this should be overwritten by something more accurate.
         """
         warnings.warn(
-            "Approximating using `survival_function_`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.",
+            "Approximating using `survival_function_`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.\n",
             utils.ApproximationWarning,
         )
         return utils.qth_survival_times(p, self.survival_function_)
@@ -596,7 +596,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         --------
         ``print_summary``
         """
-        with np.errstate(invalid="ignore", divide="ignore"):
+        with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
             ci = 1 - self.alpha
             lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
             df = pd.DataFrame(index=self._fitted_parameter_names)
@@ -699,7 +699,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         """
         if left_censorship:
             warnings.warn(
-                "kwarg left_censorship is deprecated and will be removed in a future release. Please use ``.fit_left_censoring`` instead.",
+                "kwarg left_censorship is deprecated and will be removed in a future release. Please use ``.fit_left_censoring`` instead.\n",
                 DeprecationWarning,
             )
             return self.fit_left_censoring(
@@ -978,7 +978,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     @property
     def _log_likelihood(self):
         warnings.warn(
-            "Please use `log_likelihood` property instead. `_log_likelihood` will be removed in a future version of lifelines",
+            "Please use `log_likelihood` property instead. `_log_likelihood` will be removed in a future version of lifelines.\n",
             DeprecationWarning,
         )
         return self.log_likelihood_
@@ -986,7 +986,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     def _check_bounds_initial_point_names_shape(self):
         if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
             raise ValueError(
-                "_bounds must be the same shape as _fitted_parameter_names must be the same shape as _initial_values"
+                "_bounds must be the same shape as _fitted_parameter_names must be the same shape as _initial_values.\n"
             )
 
     @property
@@ -1484,7 +1484,7 @@ class ParametricRegressionFitter(BaseFitter):
     @property
     def _log_likelihood(self):
         warnings.warn(
-            "Please use `log_likelihood_` property instead. `_log_likelihood` will be removed in a future version of lifelines",
+            "Please use `log_likelihood_` property instead. `_log_likelihood` will be removed in a future version of lifelines.\n",
             DeprecationWarning,
         )
         return self.log_likelihood_
@@ -1701,7 +1701,7 @@ class ParametricRegressionFitter(BaseFitter):
 
         ci = (1 - self.alpha) * 100
         z = utils.inv_normal_cdf(1 - self.alpha / 2)
-        with np.errstate(invalid="ignore", divide="ignore"):
+        with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
             df = pd.DataFrame(index=self.params_.index)
             df["coef"] = self.params_
             df["exp(coef)"] = np.exp(self.params_)
@@ -1951,7 +1951,7 @@ class ParametricRegressionFitter(BaseFitter):
         predict_median
         predict_percentile
         """
-        warnings.warn("""Approximating the expected value using trapezoid rule.""", utils.ApproximationWarning)
+        warnings.warn("""Approximating the expected value using trapezoid rule.\n""", utils.ApproximationWarning)
         subjects = utils._get_index(X)
         v = self.predict_survival_function(X)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)

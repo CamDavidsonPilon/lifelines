@@ -264,7 +264,7 @@ def restricted_mean_survival_time(model_or_survival_function, t=np.inf, return_c
 
     if isinstance(model_or_survival_function, pd.DataFrame):
         warnings.warn(
-            "Approximating RMST using the precomputed survival function. You likely will get a more accurate estimate if you provide the fitted Model instead of the survival function.",
+            "Approximating RMST using the precomputed survival function. You likely will get a more accurate estimate if you provide the fitted Model instead of the survival function.\n",
             ApproximationWarning,
         )
         sf = model_or_survival_function.loc[:t]
@@ -640,7 +640,7 @@ def datetimes_to_durations(
 
     T = (end_times_ - start_times_).values.astype(freq_string).astype(float)
     if (T < 0).sum():
-        warnings.warn("Warning: some values of start_times are after end_times", UserWarning)
+        warnings.warn("Warning: some values of start_times are after end_times.\n", UserWarning)
     return T, C.values
 
 
@@ -1031,7 +1031,7 @@ def check_low_var(df, prescript="", postscript=""):
         warning_text = (
             "%sColumn(s) %s have very low variance. \
 This may harm convergence. Try dropping this redundant column before fitting \
-if convergence fails.%s"
+if convergence fails.%s\n"
             % (prescript, cols, postscript)
         )
         warnings.warn(dedent(warning_text), ConvergenceWarning)
@@ -1051,7 +1051,7 @@ def check_complete_separation_low_variance(df, events, event_col):
 >>> print(df.loc[events, '{cols}'].var())
 >>> print(df.loc[~events, '{cols}'].var())
 
-A very low variance means that the column {cols} completely determines whether a subject dies or not. See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression """.format(
+A very low variance means that the column {cols} completely determines whether a subject dies or not. See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression.\n""".format(
             cols=problem_columns[0], event_col=event_col
         )
         warnings.warn(dedent(warning_text), ConvergenceWarning)
@@ -1084,7 +1084,7 @@ def check_complete_separation_close_to_perfect_correlation(df, durations):
             if abs(correlation(rank_durations, rank_series)) >= THRESHOLD:
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
-    See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression"
+    See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression\n"
                     % (col)
                 )
                 warnings.warn(dedent(warning_text), ConvergenceWarning)
