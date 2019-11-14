@@ -290,7 +290,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
         ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
-        with np.errstate(invalid="ignore", divide="ignore"):
+        with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
             df = pd.DataFrame(index=self.params_.index)
             df["coef"] = self.params_
             df["exp(coef)"] = self.hazard_ratios_
@@ -443,7 +443,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn(
                     "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
-See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression",
+See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression\n",
                     ConvergenceWarning,
                 )
                 converging, completed = False, False
