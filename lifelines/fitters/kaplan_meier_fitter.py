@@ -50,14 +50,14 @@ class KaplanMeierFitter(UnivariateFitter):
         The estimated median time to event. np.inf if doesn't exist.
     confidence_interval_ : DataFrame
         The lower and upper confidence intervals for the survival function. An alias of
-        ``confidence_interval_survival_function_``
+        ``confidence_interval_survival_function_``. Uses Greenwood's Exponential formula ("log-log" in R).
     confidence_interval_survival_function_ : DataFrame
         The lower and upper confidence intervals for the survival function. An alias of
-        ``confidence_interval_``
+        ``confidence_interval_``. Uses Greenwood's Exponential formula ("log-log" in R).
     cumumlative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
     confidence_interval_cumulative_density_ : DataFrame
-        The lower and upper confidence intervals for the cumulative density
+        The lower and upper confidence intervals for the cumulative density.
     durations: array
         The durations provided
     event_observed: array
@@ -399,7 +399,7 @@ class KaplanMeierFitter(UnivariateFitter):
 
         df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) - z * np.sqrt(cumulative_sq_) / v))
         df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) + z * np.sqrt(cumulative_sq_) / v))
-        return df
+        return df.fillna(1.0)
 
     def _additive_f(self, population, deaths):
         np.seterr(invalid="ignore", divide="ignore")
