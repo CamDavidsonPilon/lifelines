@@ -24,6 +24,10 @@ from lifelines import utils
 __all__ = []
 
 
+from typing import *
+from lifelines.utils import map_leading_space, leading_space, format_exp_floats, format_floats, format_p_value
+
+
 class BaseFitter(object):
     def __init__(self, alpha=0.05):
         if not (0 < alpha <= 1.0):
@@ -597,13 +601,14 @@ class ParametericUnivariateFitter(UnivariateFitter):
         ``print_summary``
         """
         with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
-            ci = 1 - self.alpha
+            ci = (1 - self.alpha) * 100
             lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
             df = pd.DataFrame(index=self._fitted_parameter_names)
             df["coef"] = self._fitted_parameters_
             df["se(coef)"] = self._compute_standard_errors().loc["se"]
-            df["lower %g" % ci] = lower_upper_bounds["lower-bound"]
-            df["upper %g" % ci] = lower_upper_bounds["upper-bound"]
+            df["coef lower %g%%" % ci] = lower_upper_bounds["lower-bound"]
+            df["coef upper %g%%" % ci] = lower_upper_bounds["upper-bound"]
+            df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
         return df
@@ -621,33 +626,28 @@ class ParametericUnivariateFitter(UnivariateFitter):
             multiple outputs.
 
         """
+
         justify = utils.string_justify(25)
-        print(self)
-        print("{} = {:g}".format(justify("number of observations"), self.weights.sum()))
-        print("{} = {:g}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
-        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
-        print(
-            "{} = {}".format(
-                justify("hypothesis"),
-                ", ".join(
-                    "%s != %g" % (name, iv) for (name, iv) in zip(self._fitted_parameter_names, self._compare_to_values)
+
+        p = Printer(
+            [
+                ("number of observations", "{:g}".format(self.weights.sum())),
+                ("number of events observed", "{:g}".format(self.weights[self.event_observed > 0].sum())),
+                ("log-likelihood", "{:.{prec}f}".format(self.log_likelihood_, prec=decimals)),
+                (
+                    "hypothesis",
+                    ", ".join(
+                        "%s != %g" % (name, iv)
+                        for (name, iv) in zip(self._fitted_parameter_names, self._compare_to_values)
+                    ),
                 ),
-            )
+            ],
+            self,
+            justify,
+            decimals,
+            kwargs,
         )
-
-        for k, v in kwargs.items():
-            print("{} = {}\n".format(justify(k), v))
-
-        print(end="\n")
-        print("---")
-
-        df = self.summary
-        print(
-            df.to_string(
-                float_format=utils.format_floats(decimals),
-                formatters={"p": utils.format_p_value(decimals), "exp(coef)": utils.format_exp_floats(decimals)},
-            )
-        )
+        p.print()
 
     @utils.CensoringType.right_censoring
     def fit(
@@ -3009,3 +3009,111 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
                 index=times,
                 columns=df.index,
             )
+
+
+class Printer:
+    def __init__(
+        self, headers: List[Tuple], model: Type[BaseFitter], justify: Callable, decimals: int, header_kwargs: Dict
+    ):
+        self.headers = headers
+        self.model = model
+        self.decimals = decimals
+        self.justify = justify
+
+        for tuple_ in header_kwargs.items():
+            self.headers.append(tuple_)
+
+    def print(self):
+        try:
+            import IPython.core.getipython.get_ipython
+
+            ip = get_ipython()
+            if ip.has_trait("kernel"):
+                self.html_print()
+            else:
+                self.console_print()
+        except ImportError:
+            self.console_print()
+
+    def html_print(self):
+        pass
+
+    def console_print(self):
+
+        decimals = self.decimals
+        df = self.model.summary
+        justify = self.justify
+
+        print(self.model)
+        for string, value in self.headers:
+            print("{} = {}".format(justify(string), value))
+
+        print(end="\n")
+        print("---")
+
+        df.columns = map_leading_space(df.columns)
+        columns = df.columns
+
+        if len(columns) <= 7:
+            # only need one row of display
+            first_row_set = [
+                "coef",
+                "exp(coef)",
+                "se(coef)",
+                "coef lower 95%",
+                "coef upper 95%",
+                "exp(coef) lower 95%",
+                "exp(coef) upper 95%",
+                "z",
+                "p",
+                "-log2(p)",
+            ]
+            second_row_set = []
+
+        else:
+            first_row_set = [
+                "coef",
+                "exp(coef)",
+                "se(coef)",
+                "coef lower 95%",
+                "coef upper 95%",
+                "exp(coef) lower 95%",
+                "exp(coef) upper 95%",
+            ]
+            second_row_set = ["z", "p", "-log2(p)"]
+
+        print(
+            df.to_string(
+                float_format=format_floats(decimals),
+                formatters={
+                    **{leading_space(c): format_exp_floats(decimals) for c in columns if "exp(" in c},
+                    **{leading_space("p"): format_p_value(decimals)},
+                },
+                columns=[c for c in map_leading_space(first_row_set) if c in columns],
+            )
+        )
+
+        if second_row_set:
+            print()
+            print(
+                df.to_string(
+                    float_format=format_floats(decimals),
+                    formatters={
+                        **{leading_space(c): format_exp_floats(decimals) for c in columns if "exp(" in c},
+                        **{leading_space("p"): format_p_value(decimals)},
+                    },
+                    columns=map_leading_space(second_row_set),
+                )
+            )
+
+        with np.errstate(invalid="ignore", divide="ignore"):
+            try:
+                sr = self.log_likelihood_ratio_test()
+                print("---")
+                print(
+                    "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+                        sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
+                    )
+                )
+            except AttributeError:
+                pass
