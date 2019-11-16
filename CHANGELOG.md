@@ -1,6 +1,21 @@
 ## Changelog
 
-#### 0.22.10
+#### 0.23.0
+
+##### New features
+ - new `print_summary` abstraction that allows HTML printing in Jupyter notebooks!
+ - silenced some warnings.
+
+##### Bug fixes
+ - The "comparison" value of some parametric univariate models wasn't standard, so the null hypothesis p-value may have been wrong. This is now fixed.
+ - fixed a NaN error in confidence intervals for KaplanMeierFitter
+
+##### API Changes
+
+ - To align values across models, the column names for the confidence intervals in parametric univariate models `summary` have changed.
+
+
+#### 0.22.10 - 2019-11-08
 
 The tests were re-factored to be shipped with the package. Let me know if this causes problems.
 
