@@ -648,7 +648,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
         if self.strata:
-            headers.append("strata", self.strata)
+            headers.append(("strata", self.strata))
 
         headers.extend(
             [

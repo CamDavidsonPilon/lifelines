@@ -893,8 +893,8 @@ class TestWeibullFitter:
 
         wf = WeibullFitter().fit_left_censoring(T, E)
 
-        assert wf.summary.loc["rho_", "lower 0.95"] < 5 < wf.summary.loc["rho_", "upper 0.95"]
-        assert wf.summary.loc["lambda_", "lower 0.95"] < 0.5 < wf.summary.loc["lambda_", "upper 0.95"]
+        assert wf.summary.loc["rho_", "coef lower 95%"] < 5 < wf.summary.loc["rho_", "coef upper 95%"]
+        assert wf.summary.loc["lambda_", "coef lower 95%"] < 0.5 < wf.summary.loc["lambda_", "coef upper 95%"]
 
     def test_weibull_with_delayed_entries(self):
         # note the the independence of entry and final time is really important
@@ -969,14 +969,14 @@ class TestGeneralizedGammaFitter:
         T = np.random.exponential(1.0, size=20000)
         gg = GeneralizedGammaFitter().fit(T)
         gg.print_summary()
-        assert gg.summary.loc["lambda_"]["lower 0.95"] < 1 < gg.summary.loc["lambda_"]["upper 0.95"]
-        assert gg.summary.loc["ln_sigma_"]["lower 0.95"] < 0 < gg.summary.loc["ln_sigma_"]["upper 0.95"]
+        assert gg.summary.loc["lambda_"]["coef lower 95%"] < 1 < gg.summary.loc["lambda_"]["coef upper 95%"]
+        assert gg.summary.loc["ln_sigma_"]["coef lower 95%"] < 0 < gg.summary.loc["ln_sigma_"]["coef upper 95%"]
 
     def test_weibull_data_inference(self):
         T = 5 * np.random.exponential(1, size=10000) ** 0.5
         gg = GeneralizedGammaFitter().fit(T)
         gg.print_summary()
-        assert gg.summary.loc["lambda_"]["lower 0.95"] < 1 < gg.summary.loc["lambda_"]["upper 0.95"]
+        assert gg.summary.loc["lambda_"]["coef lower 95%"] < 1 < gg.summary.loc["lambda_"]["coef upper 95%"]
 
     def test_gamma_data_inference(self):
         T = np.random.gamma(shape=4, scale=0.5, size=15000)
@@ -2667,7 +2667,7 @@ number of subjects = 432
   time fit was run = 2018-10-23 02:40:45 UTC
 
 ---
-        coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+        coef  exp(coef)  se(coef)       z      p  coef lower 95%  coef upper 95%
 fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043
 age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143
 race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
@@ -4446,7 +4446,7 @@ number of subjects = 103
   time fit was run = 2018-10-23 02:41:45 UTC
 
 ---
-              coef  exp(coef)  se(coef)       z      p  lower 0.95  upper 0.95
+              coef  exp(coef)  se(coef)       z      p  coef lower 95%  coef upper 95%
 age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540
 year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082
 surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825
