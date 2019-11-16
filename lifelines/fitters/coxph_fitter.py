@@ -11,7 +11,7 @@ from scipy.linalg import solve as spsolve, LinAlgError
 from scipy.integrate import trapz
 from scipy import stats
 
-from lifelines.fitters import BaseFitter
+from lifelines.fitters import BaseFitter, Printer
 from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers, StatisticalResult
 from lifelines.utils.lowess import lowess
@@ -35,13 +35,9 @@ from lifelines.utils import (
     StepSizer,
     ConvergenceError,
     string_justify,
-    format_p_value,
-    format_floats,
-    format_exp_floats,
     interpolate_at_times_and_return_pandas,
     CensoringType,
     interpolate_at_times,
-    leading_space,
 )
 
 __all__ = ["CoxPHFitter"]
@@ -137,6 +133,8 @@ class CoxPHFitter(BaseFitter):
     baseline_cumulative_hazard_: DataFrame
     baseline_survival_: DataFrame
     """
+
+    _KNOWN_MODEL = True
 
     def __init__(self, alpha=0.05, tie_method="Efron", penalizer=0.0, strata=None):
         super(CoxPHFitter, self).__init__(alpha=alpha)
@@ -1270,78 +1268,34 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         # Print information about data first
         justify = string_justify(25)
 
-        print(self)
-        print("{} = '{}'".format(justify("duration col"), self.duration_col))
+        headers = []
+        headers.append(("duration col", "'%s'" % self.duration_col))
 
         if self.event_col:
-            print("{} = '{}'".format(justify("event col"), self.event_col))
+            headers.append(("event col", "'%s'" % self.event_col))
         if self.weights_col:
-            print("{} = '{}'".format(justify("weights col"), self.weights_col))
-
+            headers.append(("weights col", "'%s'" % self.weights_col))
         if self.cluster_col:
-            print("{} = '{}'".format(justify("cluster col"), self.cluster_col))
-
-        if self.robust or self.cluster_col:
-            print("{} = {}".format(justify("robust variance"), True))
-
-        if self.strata:
-            print("{} = {}".format(justify("strata"), self.strata))
-
+            headers.append(("cluster col", "'%s'" % self.cluster_col))
         if self.penalizer > 0:
-            print("{} = {}".format(justify("penalizer"), self.penalizer))
+            headers.append(("penalizer", self.penalizer))
+        if self.robust or self.cluster_col:
+            headers.append("robust variance", True)
+        if self.strata:
+            headers.append("strata", self.strata)
 
-        print("{} = {:g}".format(justify("number of observations"), self.weights.sum()))
-        print("{} = {:g}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
-        print("{} = {:.{prec}f}".format(justify("partial log-likelihood"), self.log_likelihood_, prec=decimals))
-        print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
-
-        for k, v in kwargs.items():
-            print("{} = {}\n".format(justify(k), v))
-
-        print(end="\n")
-        print("---")
-
-        df = self.summary
-        df.columns = [leading_space(c) for c in df.columns]
-        ci = 100 * (1 - self.alpha)
-        print(
-            df.to_string(
-                float_format=format_floats(decimals),
-                formatters={
-                    leading_space("exp(coef)"): format_exp_floats(decimals),
-                    leading_space("exp(coef) lower %g%%" % ci): format_exp_floats(decimals),
-                    leading_space("exp(coef) upper %g%%" % ci): format_exp_floats(decimals),
-                },
-                columns=[
-                    leading_space("coef"),
-                    leading_space("exp(coef)"),
-                    leading_space("se(coef)"),
-                    leading_space("coef lower %g%%" % ci),
-                    leading_space("coef upper %g%%" % ci),
-                    leading_space("exp(coef) lower %g%%" % ci),
-                    leading_space("exp(coef) upper %g%%" % ci),
-                ],
-            )
-        )
-        print()
-        print(
-            df.to_string(
-                float_format=format_floats(decimals),
-                formatters={leading_space("p"): format_p_value(decimals)},
-                columns=[leading_space("z"), leading_space("p"), leading_space("-log2(p)")],
-            )
+        headers.extend(
+            [
+                ("number of observations", "{:g}".format(self.weights.sum())),
+                ("number of events observed", "{:g}".format(self.weights[self.event_observed > 0].sum())),
+                ("partial log-likelihood", "{:.{prec}f}".format(self.log_likelihood_, prec=decimals)),
+                ("time fit was run", self._time_fit_was_called),
+            ]
         )
 
-        # Significance code explanation
-        print("---")
-        print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
-        with np.errstate(invalid="ignore", divide="ignore"):
-            sr = self.log_likelihood_ratio_test()
-            print(
-                "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                    sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
-                )
-            )
+        p = Printer(headers, self, justify, decimals, kwargs)
+
+        p.print()
 
     def log_likelihood_ratio_test(self):
         """
