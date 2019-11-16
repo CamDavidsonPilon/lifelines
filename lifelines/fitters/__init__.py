@@ -22,11 +22,11 @@ import pandas as pd
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
 from lifelines import utils
 
-__all__ = []
+__all__: List[str] = []
 
 
 class BaseFitter(object):
-    def __init__(self, alpha=0.05):
+    def __init__(self, alpha: float = 0.05):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
@@ -61,6 +61,11 @@ class BaseFitter(object):
 
 
 class UnivariateFitter(BaseFitter):
+
+    _estimate_name: str
+    survival_function_: pd.Series
+    _estimation_method: Union[Callable, str]
+
     def _update_docstrings(self):
         # Update their docstrings
         self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self._class_name)
@@ -112,7 +117,7 @@ class UnivariateFitter(BaseFitter):
         """
         return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
-    def subtract(self, other):
+    def subtract(self, other: UnivariateFitter) -> pd.DataFrame:
         """
         Subtract the {0} of two {1} objects.
 
@@ -135,7 +140,7 @@ class UnivariateFitter(BaseFitter):
             columns=["diff"],
         )
 
-    def divide(self, other):
+    def divide(self, other: UnivariateFitter) -> pd.DataFrame:
         """
         Divide the {0} of two {1} objects.
 
@@ -160,7 +165,7 @@ class UnivariateFitter(BaseFitter):
         )
         return t
 
-    def predict(self, times, interpolate=False):
+    def predict(self, times: Union[Iterable[float], float], interpolate=False) -> pd.Series:
         """
         Predict the {0} at certain point in time. Uses a linear interpolation if
         points in time are not in the index.
@@ -276,7 +281,7 @@ class UnivariateFitter(BaseFitter):
         """
         return self.percentile(0.5)
 
-    def percentile(self, p):
+    def percentile(self, p: float):
         """
         Return the unique time point, t, such that S(t) = p.
 
@@ -297,7 +302,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     _KNOWN_MODEL = False
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
-    _scipy_fit_options = dict()
+    _scipy_fit_options: Dict[str, Any] = dict()
 
     def __init__(self, *args, **kwargs):
         super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
@@ -1168,7 +1173,7 @@ class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
 class ParametricRegressionFitter(BaseFitter):
 
     _scipy_fit_method = "BFGS"
-    _scipy_fit_options = dict()
+    _scipy_fit_options: Dict[str, Any] = dict()
     _KNOWN_MODEL = False
 
     def __init__(self, alpha=0.05, penalizer=0.0):
@@ -1269,12 +1274,12 @@ class ParametricRegressionFitter(BaseFitter):
         return ll
 
     @utils.CensoringType.right_censoring
-    def fit_left_censoring():
+    def fit_left_censoring(self):
         # TODO
         pass
 
     @utils.CensoringType.interval_censoring
-    def fit_interval_censoring():
+    def fit_interval_censoring(self):
         # TODO
         pass
 
