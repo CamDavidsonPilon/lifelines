@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: skip-file
 
+from typing import List
 from lifelines.fitters.weibull_fitter import WeibullFitter
 from lifelines.fitters.exponential_fitter import ExponentialFitter
 from lifelines.fitters.nelson_aalen_fitter import NelsonAalenFitter
@@ -23,7 +24,7 @@ from lifelines.fitters.generalized_gamma_regression_fitter import GeneralizedGam
 
 from lifelines.version import __version__
 
-__all__ = [
+__all__: List[str] = [
     "__version__",
     "KaplanMeierFitter",
     "NelsonAalenFitter",

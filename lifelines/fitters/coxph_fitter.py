@@ -2008,9 +2008,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                     )
                     print(
                         fill(
-                            """   Advice 3: try adding an interaction term with your time variable. See documentation in link [C] below.""".format(
-                                var=variable
-                            ),
+                            """   Advice 3: try adding an interaction term with your time variable. See documentation in link [C] below.""",
                             width=100,
                         ),
                         end="\n\n",
