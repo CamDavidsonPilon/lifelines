@@ -68,6 +68,7 @@ class LogLogisticFitter(KnownModelParametericUnivariateFitter):
         The entry array provided, or None
     """
     _fitted_parameter_names = ["alpha_", "beta_"]
+    _compare_to_values = np.array([1.0, 1.0])
 
     def percentile(self, p):
         a = self.alpha_

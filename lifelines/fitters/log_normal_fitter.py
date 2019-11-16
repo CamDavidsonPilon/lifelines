@@ -58,6 +58,7 @@ class LogNormalFitter(KnownModelParametericUnivariateFitter):
 
     _fitted_parameter_names = ["mu_", "sigma_"]
     _bounds = [(None, None), (0, None)]
+    _compare_to_values = np.array([1.0, 1.0])
 
     def _create_initial_point(self, Ts, E, *args):
         if CensoringType.is_right_censoring(self):
