@@ -238,9 +238,14 @@ class KaplanMeierFitter(UnivariateFitter):
         primary_estimate_name = "survival_function_" if not is_left_censoring else "cumulative_density_"
         secondary_estimate_name = "cumulative_density_" if not is_left_censoring else "survival_function_"
 
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = _preprocess_inputs(
-            durations, event_observed, timeline, entry, weights
-        )
+        (
+            self.durations,
+            self.event_observed,
+            self.timeline,
+            self.entry,
+            self.event_table,
+            self.weights,
+        ) = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
 
         alpha = alpha if alpha else self.alpha
         log_estimate, cumulative_sq_ = _additive_estimate(

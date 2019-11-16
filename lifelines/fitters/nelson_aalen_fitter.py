@@ -127,9 +127,14 @@ class NelsonAalenFitter(UnivariateFitter):
                     StatisticalWarning,
                 )
 
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = _preprocess_inputs(
-            durations, event_observed, timeline, entry, weights
-        )
+        (
+            self.durations,
+            self.event_observed,
+            self.timeline,
+            self.entry,
+            self.event_table,
+            self.weights,
+        ) = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline, self._additive_f, self._variance_f, False
