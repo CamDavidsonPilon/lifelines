@@ -117,7 +117,7 @@ class UnivariateFitter(BaseFitter):
         """
         return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
-    def subtract(self, other: UnivariateFitter) -> pd.DataFrame:
+    def subtract(self, other) -> pd.DataFrame:
         """
         Subtract the {0} of two {1} objects.
 
@@ -140,7 +140,7 @@ class UnivariateFitter(BaseFitter):
             columns=["diff"],
         )
 
-    def divide(self, other: UnivariateFitter) -> pd.DataFrame:
+    def divide(self, other) -> pd.DataFrame:
         """
         Divide the {0} of two {1} objects.
 
@@ -2981,7 +2981,7 @@ class Printer:
 
     def print(self):
         try:
-            import IPython.core.getipython.get_ipython
+            from IPython.core.getipython import get_ipython
 
             ip = get_ipython()
             if ip.has_trait("kernel"):
@@ -2992,7 +2992,31 @@ class Printer:
             self.console_print()
 
     def html_print(self):
-        pass
+        from IPython.display import HTML, display
+        import re
+
+        decimals = self.decimals
+        summary_df = self.model.summary
+        columns = summary_df.columns
+        headers = self.headers.copy()
+        headers.insert(0, ("model", "lifelines." + self.model._class_name))
+
+        header_df = pd.DataFrame.from_records(headers).set_index(0)
+        header_html = header_df.to_html()
+        header_html = re.sub("<thead>.*?thead>", "", header_html, flags=re.DOTALL)
+
+        display(HTML(header_html))
+        display(
+            HTML(
+                summary_df.to_html(
+                    float_format=utils.format_floats(decimals),
+                    formatters={
+                        **{c: utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
+                        **{"p": utils.format_p_value(decimals)},
+                    },
+                )
+            )
+        )
 
     def console_print(self):
 
