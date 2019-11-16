@@ -38,6 +38,7 @@ from lifelines.utils import (
     interpolate_at_times_and_return_pandas,
     CensoringType,
     interpolate_at_times,
+    format_p_value,
 )
 
 __all__ = ["CoxPHFitter"]
@@ -1280,9 +1281,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
         if self.robust or self.cluster_col:
-            headers.append("robust variance", True)
+            headers.append(("robust variance", True))
         if self.strata:
-            headers.append("strata", self.strata)
+            headers.append(("strata", self.strata))
 
         headers.extend(
             [
