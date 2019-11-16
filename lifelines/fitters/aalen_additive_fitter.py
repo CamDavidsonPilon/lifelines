@@ -546,39 +546,30 @@ It's important to know that the naive variance estimates of the coefficients are
             multiple outputs.
 
         """
+        justify = string_justify(25)
 
-        # Print information about data first
-        justify = string_justify(18)
-        print(self)
-        print("{} = '{}'".format(justify("duration col"), self.duration_col))
-        print("{} = '{}'".format(justify("event col"), self.event_col))
+        headers = []
+        headers.append(("duration col", "'%s'" % self.duration_col))
+
+        if self.event_col:
+            headers.append(("event col", "'%s'" % self.event_col))
         if self.weights_col:
-            print("{} = '{}'".format(justify("weights col"), self.weights_col))
-
+            headers.append(("weights col", "'%s'" % self.weights_col))
+        if self.cluster_col:
+            headers.append(("cluster col", "'%s'" % self.cluster_col))
         if self.coef_penalizer > 0:
-            print("{} = '{}'".format(justify("coef penalizer"), self.coef_penalizer))
-
+            headers.append(("coef penalizer", self.coef_penalizer))
         if self.smoothing_penalizer > 0:
-            print("{} = '{}'".format(justify("smoothing penalizer"), self.smoothing_penalizer))
+            headers.append(("smoothing penalizer", self.smoothing_penalizer))
 
-        print("{} = {}".format(justify("number of subjects"), self._n_examples))
-        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
-        print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
-
-        for k, v in kwargs.items():
-            print("{} = {}\n".format(justify(k), v))
-
-        print(end="\n")
-        print("---")
-
-        df = self.summary
-        print(
-            df.to_string(
-                float_format=format_floats(decimals),
-                formatters={"p": format_p_value(decimals), "exp(coef)": format_exp_floats(decimals)},
-            )
+        headers.extend(
+            [
+                ("number of subjects", self._n_examples),
+                ("number of events observed", self.event_observed.sum()),
+                ("time fit was run", self._time_fit_was_called),
+            ]
         )
 
-        # Significance code explanation
-        print("---")
-        print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+        p = Printer(headers, self, justify, decimals, kwargs)
+
+        p.print()

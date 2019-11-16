@@ -15,7 +15,7 @@ from scipy.linalg import solve as spsolve, LinAlgError
 
 from numpy import sum as array_sum_to_scalar
 
-from lifelines.fitters import BaseFitter
+from lifelines.fitters import BaseFitter, Printer
 from lifelines.statistics import chisq_test, StatisticalResult
 from lifelines.utils import (
     _get_index,
@@ -35,12 +35,7 @@ from lifelines.utils import (
     StepSizer,
     check_nans_or_infs,
     string_justify,
-    format_p_value,
-    format_exp_floats,
-    format_floats,
     coalesce,
-    leading_space,
-    map_leading_space,
 )
 
 __all__ = ["CoxTimeVaryingFitter"]
@@ -161,7 +156,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         self.id_col = id_col
         self.stop_col = stop_col
         self.start_col = start_col
-        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
 
         df = df.copy()
 
@@ -642,76 +637,32 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             multiple outputs.
 
         """
-
-        # Print information about data first
         justify = string_justify(18)
 
-        print(self)
-        print("{} = '{}'".format(justify("event col"), self.event_col))
+        headers = []
 
+        if self.event_col:
+            headers.append(("event col", "'%s'" % self.event_col))
         if self.weights_col:
-            print("{} = '{}'".format(justify("weights col"), self.weights_col))
-
-        if self.strata:
-            print("{} = {}".format(justify("strata"), self.strata))
-
+            headers.append(("weights col", "'%s'" % self.weights_col))
         if self.penalizer > 0:
-            print("{} = {}".format(justify("penalizer"), self.penalizer))
+            headers.append(("penalizer", self.penalizer))
+        if self.strata:
+            headers.append("strata", self.strata)
 
-        print("{} = {}".format(justify("number of subjects"), self._n_unique))
-        print("{} = {}".format(justify("number of periods"), self._n_examples))
-        print("{} = {}".format(justify("number of events"), self.event_observed.sum()))
-        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
-        print("{} = {} UTC".format(justify("time fit was run"), self._time_fit_was_called))
-
-        for k, v in kwargs.items():
-            print("{} = {}\n".format(justify(k), v))
-
-        print(end="\n")
-        print("---")
-
-        df = self.summary
-        df.columns = map_leading_space(df.columns)
-
-        print(
-            df.to_string(
-                float_format=format_floats(decimals),
-                formatters={
-                    leading_space("exp(coef)"): format_exp_floats(decimals),
-                    leading_space("exp(coef) lower 95%"): format_exp_floats(decimals),
-                    leading_space("exp(coef) upper 95%"): format_exp_floats(decimals),
-                },
-                columns=map_leading_space(
-                    [
-                        "coef",
-                        "exp(coef)",
-                        "se(coef)",
-                        "coef lower 95%",
-                        "coef upper 95%",
-                        "exp(coef) lower 95%",
-                        "exp(coef) upper 95%",
-                    ]
-                ),
-            )
-        )
-        print()
-        print(
-            df.to_string(
-                float_format=format_floats(decimals),
-                formatters={leading_space("p"): format_p_value(decimals)},
-                columns=map_leading_space(["z", "p", "-log2(p)"]),
-            )
+        headers.extend(
+            [
+                ("number of subjects", self._n_unique),
+                ("number of periods", self._n_examples),
+                ("number of events", self.event_observed.sum()),
+                ("partial log-likelihood", "{:.{prec}f}".format(self.log_likelihood_, prec=decimals)),
+                ("time fit was run", self._time_fit_was_called),
+            ]
         )
 
-        # Significance code explanation
-        print("---")
-        with np.errstate(invalid="ignore", divide="ignore"):
-            sr = self.log_likelihood_ratio_test()
-            print(
-                "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                    sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
-                )
-            )
+        p = Printer(headers, self, justify, decimals, kwargs)
+
+        p.print()
 
     def log_likelihood_ratio_test(self):
         """

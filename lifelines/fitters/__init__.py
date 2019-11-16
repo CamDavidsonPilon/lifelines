@@ -5,6 +5,7 @@ import sys
 import warnings
 from datetime import datetime
 from textwrap import dedent
+from typing import *
 
 import numpy as np
 from numpy.linalg import inv, pinv
@@ -22,10 +23,6 @@ from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
 from lifelines import utils
 
 __all__ = []
-
-
-from typing import *
-from lifelines.utils import map_leading_space, leading_space, format_exp_floats, format_floats, format_p_value
 
 
 class BaseFitter(object):
@@ -1723,82 +1720,36 @@ class ParametricRegressionFitter(BaseFitter):
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
-        alpha: float or iterable
-            specify confidence intervals to show
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
 
         """
-
-        # Print information about data first
         justify = utils.string_justify(25)
-        print(self)
+        headers = []
+        headers.append(("duration col", "'%s'" % self.duration_col))
+
         if self.event_col:
-            print("{} = '{}'".format(justify("event col"), self.event_col))
+            headers.append(("event col", "'%s'" % self.event_col))
         if self.weights_col:
-            print("{} = '{}'".format(justify("weights col"), self.weights_col))
+            headers.append(("weights col", self.weights_col))
         if self.penalizer > 0:
-            print("{} = {}".format(justify("penalizer"), self.penalizer))
-
+            headers.append(("penalizer", self.penalizer))
         if self.robust:
-            print("{} = {}".format(justify("robust variance"), True))
+            headers.append(("robust variance", True))
 
-        print("{} = {:g}".format(justify("number of observations"), self.weights.sum()))
-        print("{} = {:g}".format(justify("number of events observed"), self.weights[self.event_observed > 0].sum()))
-        print("{} = {:.{prec}f}".format(justify("log-likelihood"), self.log_likelihood_, prec=decimals))
-        print("{} = {}".format(justify("time fit was run"), self._time_fit_was_called))
-
-        for k, v in kwargs.items():
-            print("{} = {}\n".format(justify(k), v))
-
-        print(end="\n")
-        print("---")
-
-        df = self.summary
-        df.columns = utils.map_leading_space(df.columns)
-
-        print(
-            df.to_string(
-                float_format=utils.format_floats(decimals),
-                formatters={
-                    utils.leading_space("exp(coef)"): utils.format_exp_floats(decimals),
-                    utils.leading_space("exp(coef) lower 95%"): utils.format_exp_floats(decimals),
-                    utils.leading_space("exp(coef) upper 95%"): utils.format_exp_floats(decimals),
-                },
-                columns=utils.map_leading_space(
-                    [
-                        "coef",
-                        "exp(coef)",
-                        "se(coef)",
-                        "coef lower 95%",
-                        "coef upper 95%",
-                        "exp(coef) lower 95%",
-                        "exp(coef) upper 95%",
-                    ]
-                ),
-            )
-        )
-        print()
-        print(
-            df.to_string(
-                float_format=utils.format_floats(decimals),
-                formatters={utils.leading_space("p"): utils.format_p_value(decimals)},
-                columns=utils.map_leading_space(["z", "p", "-log2(p)"]),
-            )
+        headers.extend(
+            [
+                ("number of observations", "{:g}".format(self.weights.sum())),
+                ("number of events observed", "{:g}".format(self.weights[self.event_observed > 0].sum())),
+                ("log-likelihood", "{:.{prec}f}".format(self.log_likelihood_, prec=decimals)),
+                ("time fit was run", self._time_fit_was_called),
+            ]
         )
 
-        print("---")
-        if utils.CensoringType.is_right_censoring(self) and self._KNOWN_MODEL:
-            print("Concordance = {:.{prec}f}".format(self.score_, prec=decimals))
+        p = Printer(headers, self, justify, decimals, kwargs)
 
-        with np.errstate(invalid="ignore", divide="ignore"):
-            sr = self.log_likelihood_ratio_test()
-            print(
-                "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                    sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
-                )
-            )
+        p.print()
 
     def predict_survival_function(self, df, times=None, conditional_after=None):
         """
@@ -3051,7 +3002,7 @@ class Printer:
         print(end="\n")
         print("---")
 
-        df.columns = map_leading_space(df.columns)
+        df.columns = utils.map_leading_space(df.columns)
         columns = df.columns
 
         if len(columns) <= 7:
@@ -3084,12 +3035,12 @@ class Printer:
 
         print(
             df.to_string(
-                float_format=format_floats(decimals),
+                float_format=utils.format_floats(decimals),
                 formatters={
-                    **{leading_space(c): format_exp_floats(decimals) for c in columns if "exp(" in c},
-                    **{leading_space("p"): format_p_value(decimals)},
+                    **{utils.leading_space(c): utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
+                    **{utils.leading_space("p"): utils.format_p_value(decimals)},
                 },
-                columns=[c for c in map_leading_space(first_row_set) if c in columns],
+                columns=[c for c in utils.map_leading_space(first_row_set) if c in columns],
             )
         )
 
@@ -3097,19 +3048,26 @@ class Printer:
             print()
             print(
                 df.to_string(
-                    float_format=format_floats(decimals),
+                    float_format=utils.format_floats(decimals),
                     formatters={
-                        **{leading_space(c): format_exp_floats(decimals) for c in columns if "exp(" in c},
-                        **{leading_space("p"): format_p_value(decimals)},
+                        **{utils.leading_space(c): utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
+                        **{utils.leading_space("p"): utils.format_p_value(decimals)},
                     },
-                    columns=map_leading_space(second_row_set),
+                    columns=utils.map_leading_space(second_row_set),
                 )
             )
 
         with np.errstate(invalid="ignore", divide="ignore"):
+
             try:
-                sr = self.log_likelihood_ratio_test()
                 print("---")
+                if utils.CensoringType.is_right_censoring(self.model) and self.model._KNOWN_MODEL:
+                    print("Concordance = {:.{prec}f}".format(self.model.score_, prec=decimals))
+            except AttributeError:
+                pass
+
+            try:
+                sr = self.model.log_likelihood_ratio_test()
                 print(
                     "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
                         sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
