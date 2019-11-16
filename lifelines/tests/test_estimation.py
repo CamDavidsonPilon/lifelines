@@ -129,7 +129,7 @@ class CustomRegressionModelTesting(ParametricRegressionFitter):
 
         lambda_ = anp.exp(anp.dot(Xs["lambda_"], params["lambda_"]))
         rho_ = anp.exp(anp.dot(Xs["rho_"], params["rho_"]))
-        cdf = 1 - anp.exp(-(T / lambda_) ** rho_)
+        cdf = 1 - anp.exp(-((T / lambda_) ** rho_))
 
         return -anp.log((1 - c) + c * (1 - cdf))
 

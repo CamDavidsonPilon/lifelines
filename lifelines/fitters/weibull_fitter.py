@@ -79,6 +79,7 @@ class WeibullFitter(KnownModelParametericUnivariateFitter):
     """
 
     _fitted_parameter_names = ["lambda_", "rho_"]
+    _compare_to_values = np.array([1.0, 1.0])
 
     def _create_initial_point(self, Ts, E, entry, weights):
         return np.array([utils.coalesce(*Ts).std(), 1.0])

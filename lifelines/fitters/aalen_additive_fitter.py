@@ -437,7 +437,7 @@ It's important to know that the naive variance estimates of the coefficients are
         assert loc is None or iloc is None, "Cannot set both loc and iloc in call to .plot"
 
         def shaded_plot(ax, x, y, y_upper, y_lower, **kwargs):
-            base_line, = ax.plot(x, y, drawstyle="steps-post", **kwargs)
+            (base_line,) = ax.plot(x, y, drawstyle="steps-post", **kwargs)
             ax.fill_between(x, y_lower, y2=y_upper, alpha=0.25, color=base_line.get_color(), linewidth=1.0, step="post")
 
         def create_df_slicer(loc, iloc):
