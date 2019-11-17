@@ -78,6 +78,8 @@ class CoxTimeVaryingFitter(BaseFitter):
     baseline_survival_: DataFrame
     """
 
+    _KNOWN_MODEL = True
+
     def __init__(self, alpha=0.05, penalizer=0.0, strata=None):
         super(CoxTimeVaryingFitter, self).__init__(alpha=alpha)
         if penalizer < 0:
