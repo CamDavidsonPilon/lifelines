@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
-from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametricUnivariateFitter
 
 
-class PiecewiseExponentialFitter(KnownModelParametericUnivariateFitter):
+class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
     r"""
     This class implements an Piecewise Exponential model for univariate data. The model has parameterized
     hazard rate:

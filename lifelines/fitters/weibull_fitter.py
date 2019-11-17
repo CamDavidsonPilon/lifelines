@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
-from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametricUnivariateFitter
 from lifelines.utils.safe_exp import safe_exp
 from lifelines import utils
 
 
-class WeibullFitter(KnownModelParametericUnivariateFitter):
+class WeibullFitter(KnownModelParametricUnivariateFitter):
 
     r"""
 

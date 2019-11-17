@@ -3,11 +3,11 @@
 from scipy.special import erfinv
 import autograd.numpy as np
 from autograd.scipy.stats import norm
-from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametricUnivariateFitter
 from lifelines.utils import CensoringType
 
 
-class LogNormalFitter(KnownModelParametericUnivariateFitter):
+class LogNormalFitter(KnownModelParametricUnivariateFitter):
     r"""
     This class implements an Log Normal model for univariate data. The model has parameterized
     form:
