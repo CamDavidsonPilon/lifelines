@@ -35,7 +35,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         event_observed=None,
         timeline=None,
         entry=None,
-        label="BFH_estimate",
+        label=None,
         alpha=None,
         ci_labels=None,
         weights=None,
@@ -67,12 +67,17 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
           self, with new properties like ``survival_function_``.
 
         """
-        self._label = label
+        self._label = coalesce(label, self._label, "BFH_estimate")
         alpha = coalesce(alpha, self.alpha)
 
         naf = NelsonAalenFitter(alpha=alpha)
         naf.fit(
-            durations, event_observed=event_observed, timeline=timeline, label=label, entry=entry, ci_labels=ci_labels
+            durations,
+            event_observed=event_observed,
+            timeline=timeline,
+            label=self._label,
+            entry=entry,
+            ci_labels=ci_labels,
         )
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = (
             naf.durations,

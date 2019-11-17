@@ -15,6 +15,7 @@ from lifelines.utils import (
     check_nans_or_infs,
     StatisticalWarning,
     CensoringType,
+    coalesce,
 )
 
 
@@ -56,8 +57,8 @@ class NelsonAalenFitter(UnivariateFitter):
 
     """
 
-    def __init__(self, alpha=0.05, nelson_aalen_smoothing=True):
-        super(NelsonAalenFitter, self).__init__(alpha=alpha)
+    def __init__(self, alpha=0.05, nelson_aalen_smoothing=True, **kwargs):
+        super(NelsonAalenFitter, self).__init__(alpha=alpha, **kwargs)
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
@@ -77,7 +78,7 @@ class NelsonAalenFitter(UnivariateFitter):
         event_observed=None,
         timeline=None,
         entry=None,
-        label="NA_estimate",
+        label=None,
         alpha=None,
         ci_labels=None,
         weights=None,
@@ -141,7 +142,7 @@ class NelsonAalenFitter(UnivariateFitter):
         )
 
         # estimates
-        self._label = label
+        self._label = coalesce(label, self._label, "NA_estimate")
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
         self.confidence_interval_cumulative_hazard_ = self.confidence_interval_

@@ -5,7 +5,7 @@ import pandas as pd
 import warnings
 
 from lifelines.fitters import UnivariateFitter
-from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType
+from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType, coalesce
 from lifelines import KaplanMeierFitter
 
 
@@ -56,8 +56,8 @@ class AalenJohansenFitter(UnivariateFitter):
     Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
     """
 
-    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.05, calculate_variance=True):
-        UnivariateFitter.__init__(self, alpha=alpha)
+    def __init__(self, jitter_level=0.0001, seed=None, alpha=0.05, calculate_variance=True, **kwargs):
+        UnivariateFitter.__init__(self, alpha=alpha, **kwargs)
         self._jitter_level = jitter_level
         self._seed = seed  # Seed is for the jittering process
         self._calc_var = calculate_variance  # Optionally skips calculating variance to save time on bootstraps
@@ -70,7 +70,7 @@ class AalenJohansenFitter(UnivariateFitter):
         event_of_interest,
         timeline=None,
         entry=None,
-        label="AJ_estimate",
+        label=None,
         alpha=None,
         ci_labels=None,
         weights=None,
@@ -155,7 +155,7 @@ class AalenJohansenFitter(UnivariateFitter):
         self.timeline = km.timeline
         self._update_docstrings()
 
-        self._label = label
+        self._label = coalesce(label, self._label, "AJ_estimate")
         self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])
 
         # Technically, cumulative incidence, but consistent with KaplanMeierFitter
