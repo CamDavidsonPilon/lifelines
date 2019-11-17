@@ -78,7 +78,6 @@ class KaplanMeierFitter(UnivariateFitter):
         timeline=None,
         entry=None,
         label="KM_estimate",
-        left_censorship=False,
         alpha=None,
         ci_labels=None,
         weights=None,
@@ -101,8 +100,6 @@ class KaplanMeierFitter(UnivariateFitter):
             a string to name the column of the estimate.
           alpha: float, optional
             the alpha value in the confidence intervals. Overrides the initializing alpha for this call to fit only.
-          left_censorship: bool, optional (default=False)
-            Deprecated, use ``fit_left_censoring``
           ci_labels: tuple, optional
                 add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
           weights: an array, list, pd.DataFrame, or pd.Series, optional
@@ -116,11 +113,6 @@ class KaplanMeierFitter(UnivariateFitter):
           self with new properties like ``survival_function_``, ``plot()``, ``median``
 
         """
-        if left_censorship:
-            warnings.warn(
-                "kwarg left_censorship is deprecated and will be removed in a future release. Please use ``.fit_left_censoring`` instead.",
-                DeprecationWarning,
-            )
 
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
@@ -154,8 +146,6 @@ class KaplanMeierFitter(UnivariateFitter):
             a string to name the column of the estimate.
           alpha: float, optional
             the alpha value in the confidence intervals. Overrides the initializing alpha for this call to fit only.
-          left_censorship: bool, optional (default=False)
-            Deprecated, use ``fit_left_censoring``
           ci_labels: tuple, optional
                 add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
           weights: an array, list, pd.DataFrame, or pd.Series, optional
@@ -198,8 +188,6 @@ class KaplanMeierFitter(UnivariateFitter):
             a string to name the column of the estimate.
           alpha: float, optional
             the alpha value in the confidence intervals. Overrides the initializing alpha for this call to fit only.
-          left_censorship: bool, optional (default=False)
-            True if durations and event_observed refer to left censorship events. Default False
           ci_labels: tuple, optional
                 add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<1-alpha/2>
           weights: an array, list, pd.DataFrame, or pd.Series, optional
@@ -286,14 +274,6 @@ class KaplanMeierFitter(UnivariateFitter):
         return self
 
     @property
-    def median_(self):
-        warnings.warn(
-            """Please use `median_survival_time_` property instead. Future property `median_` will be removed.""",
-            FutureWarning,
-        )
-        return self._median
-
-    @property
     def median_survival_time_(self):
         return self._median
 
@@ -376,8 +356,6 @@ class KaplanMeierFitter(UnivariateFitter):
             >>> model.plot(iloc=slice(0,10))
 
             will plot the first 10 time points.
-        invert_y_axis: bool
-            boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs. (Deprecated, use ``plot_cumulative_density()``)
 
         Returns
         -------

@@ -572,14 +572,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return beta
 
-    @property
-    def _log_likelihood(self):
-        warnings.warn(
-            "Please use `log_likelihood` property instead. `_log_likelihood` will be removed in a future version of lifelines.\n",
-            DeprecationWarning,
-        )
-        return self.log_likelihood_
-
     def _get_efron_values_single(self, X, T, E, weights, beta):
         """
         Calculates the first and second order vector differentials, with respect to beta.

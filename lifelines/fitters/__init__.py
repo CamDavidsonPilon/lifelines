@@ -107,8 +107,6 @@ class UnivariateFitter(BaseFitter):
             >>> model.plot(iloc=slice(0,10))
 
             will plot the first 10 time points.
-        invert_y_axis: bool
-            boolean to invert the y-axis, useful to show cumulative graphs instead of survival graphs. (Deprecated, use ``plot_cumulative_density()``)
 
         Returns
         -------
@@ -258,20 +256,6 @@ class UnivariateFitter(BaseFitter):
 
     def plot_cumulative_density(self, **kwargs):
         raise NotImplementedError()
-
-    @property
-    def median_(self):
-        """
-        Deprecated, use .median_survival_time_
-
-        Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
-        robust summary statistic for the population, if it exists.
-        """
-        warnings.warn(
-            """Please use `median_survival_time_` property instead. Future property `median_` will be removed.\n""",
-            FutureWarning,
-        )
-        return self.percentile(0.5)
 
     @property
     def median_survival_time_(self):
@@ -663,7 +647,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
         show_progress=False,
         entry=None,
         weights=None,
-        left_censorship=False,
         initial_point=None,
     ):  # pylint: disable=too-many-arguments
         """
@@ -699,14 +682,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
             self with new properties like ``cumulative_hazard_``, ``survival_function_``
 
         """
-        if left_censorship:
-            warnings.warn(
-                "kwarg left_censorship is deprecated and will be removed in a future release. Please use ``.fit_left_censoring`` instead.\n",
-                DeprecationWarning,
-            )
-            return self.fit_left_censoring(
-                durations, event_observed, timeline, label, alpha, ci_labels, show_progress, entry, weights
-            )
 
         self.durations = np.asarray(utils.pass_for_numeric_dtypes_or_raise_array(durations))
         utils.check_nans_or_infs(self.durations)
@@ -976,14 +951,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
         self.cumulative_density_ = self.cumulative_density_at_times(self.timeline).to_frame()
 
         return self
-
-    @property
-    def _log_likelihood(self):
-        warnings.warn(
-            "Please use `log_likelihood` property instead. `_log_likelihood` will be removed in a future version of lifelines.\n",
-            DeprecationWarning,
-        )
-        return self.log_likelihood_
 
     def _check_bounds_initial_point_names_shape(self):
         if len(self._bounds) != len(self._fitted_parameter_names) != self._initial_values.shape[0]:
@@ -1482,14 +1449,6 @@ class ParametricRegressionFitter(BaseFitter):
             parameter_name: np.zeros(len(Xs.mappings[parameter_name]))
             for parameter_name in self._fitted_parameter_names
         }
-
-    @property
-    def _log_likelihood(self):
-        warnings.warn(
-            "Please use `log_likelihood_` property instead. `_log_likelihood` will be removed in a future version of lifelines.\n",
-            DeprecationWarning,
-        )
-        return self.log_likelihood_
 
     def _add_penalty(self, params, neg_ll):
         params, _ = flatten(params)
