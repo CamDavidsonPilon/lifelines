@@ -294,7 +294,7 @@ class UnivariateFitter(BaseFitter):
         return utils.qth_survival_times(p, self.survival_function_)
 
 
-class ParametericUnivariateFitter(UnivariateFitter):
+class ParametricUnivariateFitter(UnivariateFitter):
     """
     Without overriding anything, assumes all parameters must be greater than 0.
     """
@@ -305,7 +305,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
     _scipy_fit_options: Dict[str, Any] = dict()
 
     def __init__(self, *args, **kwargs):
-        super(ParametericUnivariateFitter, self).__init__(*args, **kwargs)
+        super(ParametricUnivariateFitter, self).__init__(*args, **kwargs)
         self._estimate_name = "cumulative_hazard_"
         if not hasattr(self, "_bounds"):
             self._bounds = [(0.0, None)] * len(self._fitted_parameter_names)
@@ -1165,7 +1165,7 @@ class ParametericUnivariateFitter(UnivariateFitter):
         )
 
 
-class KnownModelParametericUnivariateFitter(ParametericUnivariateFitter):
+class KnownModelParametricUnivariateFitter(ParametricUnivariateFitter):
 
     _KNOWN_MODEL = True
 
@@ -2984,7 +2984,7 @@ class Printer:
             from IPython.core.getipython import get_ipython
 
             ip = get_ipython()
-            if ip.has_trait("kernel"):
+            if ip and ip.has_trait("kernel"):
                 self.html_print()
             else:
                 self.console_print()

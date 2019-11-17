@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
 
-from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametricUnivariateFitter
 from lifelines.utils import CensoringType
 
 
-class LogLogisticFitter(KnownModelParametericUnivariateFitter):
+class LogLogisticFitter(KnownModelParametricUnivariateFitter):
 
     r"""
     This class implements a Log-Logistic model for univariate data. The model has parameterized

@@ -40,7 +40,7 @@ from lifelines.utils import (
     qth_survival_time,
 )
 
-from lifelines.fitters import BaseFitter, ParametericUnivariateFitter, ParametricRegressionFitter
+from lifelines.fitters import BaseFitter, ParametricUnivariateFitter, ParametricRegressionFitter
 
 from lifelines import (
     WeibullFitter,
@@ -207,7 +207,7 @@ class TestParametricUnivariateFitters:
         E = ~np.isnan(T)
         T[np.isnan(T)] = 50
 
-        class UpperAsymptoteFitter(ParametericUnivariateFitter):
+        class UpperAsymptoteFitter(ParametricUnivariateFitter):
 
             _fitted_parameter_names = ["c_", "mu_"]
 
@@ -273,14 +273,14 @@ class TestParametricUnivariateFitters:
             assert f.confidence_interval_hazard_ is not None
 
     def test_warnings_for_problematic_cumulative_hazards(self):
-        class NegativeFitter(ParametericUnivariateFitter):
+        class NegativeFitter(ParametricUnivariateFitter):
 
             _fitted_parameter_names = ["a"]
 
             def _cumulative_hazard(self, params, times):
                 return params[0] * (times - 0.4)
 
-        class DecreasingFitter(ParametericUnivariateFitter):
+        class DecreasingFitter(ParametricUnivariateFitter):
 
             _fitted_parameter_names = ["a"]
 
@@ -531,7 +531,7 @@ class TestUnivariateFitters:
                 with_list = fitter.fit(list(T), list(C)).survival_function_
                 assert_frame_equal(with_list, with_array)
 
-                if isinstance(fitter, ParametericUnivariateFitter):
+                if isinstance(fitter, ParametricUnivariateFitter):
                     with_array = fitter.fit_interval_censoring(T, T + 1, (T == T + 1)).survival_function_
                     with_list = fitter.fit_interval_censoring(
                         list(T), list(T + 1), list((T == T + 1))

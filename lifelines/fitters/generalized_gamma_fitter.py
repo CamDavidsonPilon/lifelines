@@ -3,12 +3,12 @@ import autograd.numpy as np
 from autograd.numpy import exp, log
 from scipy.special import gammainccinv, gammaincinv
 from autograd_gamma import gammaincc, gammainc, gammaln, gammainccln, gammaincln
-from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametricUnivariateFitter
 from lifelines.utils import CensoringType
 from lifelines.utils.safe_exp import safe_exp
 
 
-class GeneralizedGammaFitter(KnownModelParametericUnivariateFitter):
+class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
     r"""
 
     This class implements a Generalized Gamma model for univariate data. The model has parameterized

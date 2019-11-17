@@ -13,6 +13,7 @@
 ##### API Changes
 
  - To align values across models, the column names for the confidence intervals in parametric univariate models `summary` have changed.
+ - Fixed typo in `ParametricUnivariateFitter` name.
 
 
 #### 0.22.10 - 2019-11-08

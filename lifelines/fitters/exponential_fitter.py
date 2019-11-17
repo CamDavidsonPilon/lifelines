@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from lifelines.fitters import KnownModelParametericUnivariateFitter
+from lifelines.fitters import KnownModelParametricUnivariateFitter
 
 
-class ExponentialFitter(KnownModelParametericUnivariateFitter):
+class ExponentialFitter(KnownModelParametricUnivariateFitter):
     r"""
     This class implements an Exponential model for univariate data. The model has parameterized
     form:
