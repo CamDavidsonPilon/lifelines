@@ -70,7 +70,7 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
         return np.array([np.median(log_T), 1.0])
 
     @property
-    def median_(self):
+    def median_survival_time_(self):
         return np.exp(self.mu_)
 
     def percentile(self, p):

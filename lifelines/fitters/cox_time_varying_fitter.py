@@ -468,14 +468,6 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         return beta
 
-    @property
-    def _log_likelihood(self):
-        warnings.warn(
-            "Please use `log_likelihood` property instead. `_log_likelihood` will be removed in a future version of lifelines",
-            DeprecationWarning,
-        )
-        return self.log_likelihood_
-
     def _get_gradients(self, X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.

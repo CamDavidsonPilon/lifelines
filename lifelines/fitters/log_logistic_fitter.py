@@ -85,7 +85,7 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
         return np.array([np.median(T), 1.0])
 
     @property
-    def median_(self):
+    def median_survival_time_(self):
         return self.alpha_
 
     def _cumulative_hazard(self, params, times):
