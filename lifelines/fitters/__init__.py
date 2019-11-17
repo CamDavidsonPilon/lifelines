@@ -2974,8 +2974,7 @@ class Printer:
         headers.insert(0, ("model", "lifelines." + self.model._class_name))
 
         header_df = pd.DataFrame.from_records(headers).set_index(0)
-        header_html = header_df.to_html()
-        header_html = re.sub("<thead>.*?thead>", "", header_html, flags=re.DOTALL)
+        header_html = header_df.to_html(header=False, notebook=True, index_names=False)
 
         display(HTML(header_html))
         display(
