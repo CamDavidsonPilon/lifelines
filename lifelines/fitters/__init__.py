@@ -26,6 +26,9 @@ __all__: List[str] = []
 
 
 class BaseFitter(object):
+
+    _KNOWN_MODEL: bool
+
     def __init__(self, alpha: float = 0.05):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
@@ -63,8 +66,8 @@ class BaseFitter(object):
 class UnivariateFitter(BaseFitter):
 
     _estimate_name: str
-    survival_function_: pd.Series
     _estimation_method: Union[Callable, str]
+    survival_function_: pd.Series
 
     def _update_docstrings(self):
         # Update their docstrings
