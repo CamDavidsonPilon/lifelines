@@ -343,8 +343,9 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             f = f()
             f.fit(T, E)
-            assert f.__repr__() == "<lifelines.%s: fitted with %d total observations, %d right-censored observations>" % (
+            assert f.__repr__() == """<lifelines.%s:"%s", fitted with %d total observations, %d right-censored observations>""" % (
                 f._class_name,
+                f._label,
                 E.shape[0],
                 E.shape[0] - E.sum(),
             )
@@ -732,7 +733,7 @@ class TestLogNormalFitter:
 
         assert abs(mu - lnf.mu_) < 0.05
         assert abs(sigma - lnf.sigma_) < 0.05
-        assert abs(lnf.median_ / np.percentile(X, 50) - 1) < 0.05
+        assert abs(lnf.median_survival_time_ / np.percentile(X, 50) - 1) < 0.05
 
     def test_lnf_inference_with_large_sigma(self, lnf):
         N = 250000

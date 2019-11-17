@@ -28,16 +28,17 @@ class KaplanMeierFitter(UnivariateFitter):
 
     Parameters
     ----------
-    alpha: float, option (default=0.05)
+    alpha: float, optional (default=0.05)
         The alpha value associated with the confidence intervals.
-
+    label: string, optional
+        Provide a new label for the estimate - useful if looking at many groups.
 
     Examples
     --------
     >>> from lifelines import KaplanMeierFitter
     >>> from lifelines.datasets import load_waltons
     >>> waltons = load_waltons()
-    >>> kmf = KaplanMeierFitter()
+    >>> kmf = KaplanMeierFitter(label="waltons_data")
     >>> kmf.fit(waltons['T'], waltons['E'])
     >>> kmf.plot()
 
@@ -77,7 +78,7 @@ class KaplanMeierFitter(UnivariateFitter):
         event_observed=None,
         timeline=None,
         entry=None,
-        label="KM_estimate",
+        label=None,
         alpha=None,
         ci_labels=None,
         weights=None,
@@ -123,7 +124,7 @@ class KaplanMeierFitter(UnivariateFitter):
         event_observed=None,
         timeline=None,
         entry=None,
-        label="KM_estimate",
+        label=None,
         alpha=None,
         ci_labels=None,
         weights=None,
@@ -167,7 +168,7 @@ class KaplanMeierFitter(UnivariateFitter):
         event_observed=None,
         timeline=None,
         entry=None,
-        label="KM_estimate",
+        label=None,
         alpha=None,
         ci_labels=None,
         weights=None,
@@ -205,7 +206,7 @@ class KaplanMeierFitter(UnivariateFitter):
         if event_observed is not None:
             self._check_values(event_observed)
 
-        self._label = label
+        self._label = coalesce(label, self._label, "KM_estimate")
 
         if weights is not None:
             weights = np.asarray(weights)

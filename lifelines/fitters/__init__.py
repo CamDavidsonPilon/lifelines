@@ -29,17 +29,23 @@ class BaseFitter(object):
 
     _KNOWN_MODEL: bool
 
-    def __init__(self, alpha: float = 0.05):
+    def __init__(self, alpha: float = 0.05, label=None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
         self._class_name = self.__class__.__name__
+        self._label = label
 
     def __repr__(self):
         classname = self._class_name
         try:
-            s = """<lifelines.%s: fitted with %g total observations, %g %s-censored observations>""" % (
+            label_string = """"%s",""" % self._label
+        except AttributeError:
+            label_string = ""
+        try:
+            s = """<lifelines.%s:%s fitted with %g total observations, %g %s-censored observations>""" % (
                 classname,
+                label_string,
                 self.weights.sum(),
                 self.weights.sum() - self.weights[self.event_observed > 0].sum(),
                 utils.CensoringType.get_human_readable_censoring_type(self),
@@ -636,6 +642,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             decimals,
             kwargs,
         )
+
         p.print()
 
     @utils.CensoringType.right_censoring
@@ -882,7 +889,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         else:
             self.timeline = np.linspace(utils.coalesce(*Ts).min(), utils.coalesce(*Ts).max(), n)
 
-        self._label = label
+        self._label = utils.coalesce(label, self._label)
         self._ci_labels = ci_labels
         self.alpha = utils.coalesce(alpha, self.alpha)
 
@@ -2939,7 +2946,10 @@ class Printer:
         self.justify = justify
 
         for tuple_ in header_kwargs.items():
-            self.headers.append(tuple_)
+            self.add_to_headers(tuple_)
+
+    def add_to_headers(self, tuple_):
+        self.headers.append(tuple_)
 
     def print(self):
         try:
