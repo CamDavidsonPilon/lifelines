@@ -24,6 +24,10 @@ API Changes
 
 -  To align values across models, the column names for the confidence
    intervals in parametric univariate models ``summary`` have changed.
+-  Fixed typo in ``ParametricUnivariateFitter`` name.
+-  ``median_`` has been removed in favour of ``median_survival_time_``.
+-  ``left_censorship`` in ``fit`` has been removed in favour of
+   ``fit_left_censoring``.
 
 .. _section-1:
 
