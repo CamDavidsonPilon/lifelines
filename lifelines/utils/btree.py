@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 
 
-class _BTree(object):
+class _BTree:
 
     """A simple balanced binary order statistic tree to help compute the concordance.
 

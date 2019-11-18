@@ -873,3 +873,25 @@ When you want to save (and later load) a *lifelines* model to disk, you can use 
     s_kmf = dumps(kmf)
     kmf_new = loads(s_kmf)
     kmf.summary
+
+
+Produce a LaTex or HTML table
+##########################################
+
+New in version 0.23.1, *lifelines* models now have the ability to output a LaTeX or HTML table from the ``print_summary`` option:
+
+
+.. code-block:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi = load_rossi()
+
+    cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+
+    # print a LaTeX table:
+    cph.print_summary(style="latex")
+
+    # print a HTML summary and table:
+    cph.print_summary(style="html")
