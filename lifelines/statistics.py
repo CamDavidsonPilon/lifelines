@@ -521,7 +521,7 @@ def multivariate_logrank_test(
     )
 
 
-class StatisticalResult(object):
+class StatisticalResult:
     """
     This class holds the result of statistical tests with a nice printer wrapper to display the results.
 
@@ -614,9 +614,7 @@ class StatisticalResult(object):
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
-            float_format=format_floats(decimals),
-            index=self.name is not None,
-            formatters={"p": format_p_value(decimals)},
+            float_style=style_floats(decimals), index=self.name is not None, formatters={"p": format_p_value(decimals)}
         )
 
         return s

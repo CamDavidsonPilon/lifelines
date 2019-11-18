@@ -25,7 +25,7 @@ from lifelines import utils
 __all__: List[str] = []
 
 
-class BaseFitter(object):
+class BaseFitter:
 
     _KNOWN_MODEL: bool
 
@@ -608,7 +608,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             df["-log2(p)"] = -np.log2(df["p"])
         return df
 
-    def print_summary(self, decimals=2, **kwargs):
+    def print_summary(self, decimals=2, style=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -616,6 +616,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
+        format: string
+            {html, ascii, latex}
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -643,7 +645,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             kwargs,
         )
 
-        p.print()
+        p.print(style=style)
 
     @utils.CensoringType.right_censoring
     def fit(
@@ -1686,7 +1688,7 @@ class ParametricRegressionFitter(BaseFitter):
             df["-log2(p)"] = -np.log2(df["p"])
             return df
 
-    def print_summary(self, decimals=2, **kwargs):
+    def print_summary(self, decimals=2, style=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -1694,6 +1696,8 @@ class ParametricRegressionFitter(BaseFitter):
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
+        format: string
+            {html, ascii, latex}
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -1723,7 +1727,7 @@ class ParametricRegressionFitter(BaseFitter):
 
         p = Printer(headers, self, justify, decimals, kwargs)
 
-        p.print()
+        p.print(style=style)
 
     def predict_survival_function(self, df, times=None, conditional_after=None):
         """
@@ -2951,20 +2955,46 @@ class Printer:
     def add_to_headers(self, tuple_):
         self.headers.append(tuple_)
 
-    def print(self):
-        try:
-            from IPython.core.getipython import get_ipython
+    def print_specific_style(self, style):
+        if style == "html":
+            return self.html_print()
+        elif style == "ascii":
+            return self.ascii_print()
+        elif style == "latex":
+            return self.latex_print()
+        else:
+            raise ValueError("style not available.")
 
-            ip = get_ipython()
-            if ip and ip.has_trait("kernel"):
-                self.html_print()
-            else:
-                self.console_print()
-        except ImportError:
-            self.console_print()
+    def print(self, style=None):
+        if style is not None:
+            self.print_specific_style(style)
+        else:
+            try:
+                from IPython.core.getipython import get_ipython
+
+                ip = get_ipython()
+                if ip and ip.has_trait("kernel"):
+                    self.html_print_inside_jupyter()
+                else:
+                    self.ascii_print()
+            except ImportError:
+                self.ascii_print()
+
+    def latex_print(self):
+        print(self.to_latex())
+
+    def to_latex(self):
+        return self.model.summary.to_latex()
+
+    def html_print_inside_jupyter(self):
+        from IPython.display import HTML, display
+
+        display(HTML(self.to_html()))
 
     def html_print(self):
-        from IPython.display import HTML, display
+        print(self.to_html())
+
+    def to_html(self):
         import re
 
         decimals = self.decimals
@@ -2975,21 +3005,17 @@ class Printer:
 
         header_df = pd.DataFrame.from_records(headers).set_index(0)
         header_html = header_df.to_html(header=False, notebook=True, index_names=False)
-
-        display(HTML(header_html))
-        display(
-            HTML(
-                summary_df.to_html(
-                    float_format=utils.format_floats(decimals),
-                    formatters={
-                        **{c: utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
-                        **{"p": utils.format_p_value(decimals)},
-                    },
-                )
-            )
+        summary_html = summary_df.to_html(
+            float_format=utils.format_floats(decimals),
+            formatters={
+                **{c: utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
+                **{"p": utils.format_p_value(decimals)},
+            },
         )
 
-    def console_print(self):
+        return header_html + summary_html
+
+    def ascii_print(self):
 
         decimals = self.decimals
         df = self.model.summary

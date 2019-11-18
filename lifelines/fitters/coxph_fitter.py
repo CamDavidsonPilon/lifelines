@@ -1244,7 +1244,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df["-log2(p)"] = -np.log2(df["p"])
             return df
 
-    def print_summary(self, decimals=2, **kwargs):
+    def print_summary(self, decimals=2, style=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -1252,6 +1252,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
+        format: string
+            {html, ascii, latex}
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -1288,7 +1290,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         p = Printer(headers, self, justify, decimals, kwargs)
 
-        p.print()
+        p.print(style=style)
 
     def log_likelihood_ratio_test(self):
         """
