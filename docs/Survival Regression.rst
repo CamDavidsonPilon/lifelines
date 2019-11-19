@@ -56,7 +56,7 @@ Note a few facts about this model: the only time component is in the baseline ha
 .. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
 
 
-Running the regression
+Fitting the regression
 -----------------------
 
 The implementation of the Cox model in *lifelines* is under :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. Like R, it has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
@@ -362,6 +362,12 @@ Residuals
 -----------------------------------------------
 
 After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modeling questions. See `Assessing Cox model fit using residuals`_.
+
+
+Baseline hazard and survival
+-----------------------------------------------
+
+To access the non-parametric baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. These are computed using Breslow's approximation. If you are interested in a _parametric_ baseline hazard, please see `this issue <https://github.com/CamDavidsonPilon/lifelines/issues/812>`_.
 
 
 Accelerated failure time models

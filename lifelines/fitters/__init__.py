@@ -391,7 +391,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         # equal to log(cdf), but often easier to express with sf.
         return anp.log1p(-self._survival_function(params, times))
 
-    def _negative_log_likelihood_left_censoring(self, params, Ts, E, entry, W):
+    def _negative_log_likelihood_left_censoring(self, params, Ts, E, entry, weights):
         T = Ts[1]
         non_zero_entries = entry > 0
 
@@ -399,26 +399,26 @@ class ParametricUnivariateFitter(UnivariateFitter):
         cum_haz = self._cumulative_hazard(params, T)
         log_1m_sf = self._log_1m_sf(params, T)
 
-        ll = (E * W * (log_hz - cum_haz - log_1m_sf)).sum() + (W * log_1m_sf).sum()
-        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
+        ll = (E * weights * (log_hz - cum_haz - log_1m_sf)).sum() + (weights * log_1m_sf).sum()
+        ll = ll + (weights[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
 
-        return -ll / W.sum()
+        return -ll / weights.sum()
 
-    def _negative_log_likelihood_right_censoring(self, params, Ts, E, entry, W):
+    def _negative_log_likelihood_right_censoring(self, params, Ts, E, entry, weights):
         T = Ts[0]
         non_zero_entries = entry > 0
 
         log_hz = self._log_hazard(params, T[E])
         cum_haz = self._cumulative_hazard(params, T)
 
-        ll = (W[E] * log_hz).sum() - (W * cum_haz).sum()
-        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
-        return -ll / W.sum()
+        ll = (weights[E] * log_hz).sum() - (weights * cum_haz).sum()
+        ll = ll + (weights[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
+        return -ll / weights.sum()
 
-    def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry, W):
+    def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry, weights):
         start, stop = Ts
         non_zero_entries = entry > 0
-        observed_weights, censored_weights = W[E], W[~E]
+        observed_weights, censored_weights = weights[E], weights[~E]
         censored_starts = start[~E]
         observed_stops, censored_stops = stop[E], stop[~E]
 
@@ -434,8 +434,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 )
             ).sum()
         )
-        ll = ll + (W[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
-        return -ll / W.sum()
+        ll = ll + (weights[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
+        return -ll / weights.sum()
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
         return self._compute_confidence_bounds_of_transform(self._cumulative_hazard, alpha, ci_labels)
