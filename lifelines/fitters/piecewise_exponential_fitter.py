@@ -18,7 +18,7 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
     You specify the breakpoints, :math:`\tau_i`, and *lifelines* will find the
     optional values for the parameters.
 
-    After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``plot``, ``cumulative_hazard_``
+    After calling the ``.fit`` method, you have access to properties like: ``survival_function_``, ``plot``, ``cumulative_hazard_``
     A summary of the fit is available with the method ``print_summary()``
 
     Parameters

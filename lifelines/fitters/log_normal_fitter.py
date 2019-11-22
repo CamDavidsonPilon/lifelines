@@ -19,7 +19,7 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
 
     .. math::  H(t) = -\log\left(1 - \Phi\left(\frac{\log(t) - \mu}{\sigma}\right)\right)
 
-    After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``mu_``, ``sigma_``.
+    After calling the ``.fit`` method, you have access to properties like: ``survival_function_``, ``mu_``, ``sigma_``.
     A summary of the fit is available with the method ``print_summary()``
 
     Parameters

@@ -18,7 +18,7 @@ class ExponentialFitter(KnownModelParametricUnivariateFitter):
 
     .. math::  h(t) = \frac{1}{\lambda}
 
-    After calling the `.fit` method, you have access to properties like: ``survival_function_``, ``lambda_``, ``cumulative_hazard_``
+    After calling the ``.fit`` method, you have access to properties like: ``survival_function_``, ``lambda_``, ``cumulative_hazard_``
     A summary of the fit is available with the method ``print_summary()``
 
     Parameters

@@ -37,7 +37,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
     6. When :math:`-\sigma = \lambda` then the data is Inverse-Gamma.
 
 
-    After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``,
+    After calling the ``.fit`` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``,
     A summary of the fit is available with the method ``print_summary()``.
 
 

@@ -21,7 +21,7 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
 
     .. math:: H(t) = \log\left(\left(\frac{t}{\alpha}\right) ^ {\beta} + 1\right)
 
-    After calling the `.fit` method, you have access to properties like: ``cumulative_hazard_``, ``plot``, ``survival_function_``, ``alpha_`` and ``beta_``.
+    After calling the ``.fit`` method, you have access to properties like: ``cumulative_hazard_``, ``plot``, ``survival_function_``, ``alpha_`` and ``beta_``.
     A summary of the fit is available with the method 'print_summary()'
 
     Parameters
