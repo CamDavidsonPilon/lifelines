@@ -243,7 +243,7 @@ The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` me
 
     cph.plot_covariate_groups(
         ['d1', 'd2' 'd3', 'd4', 'd5'],
-        np.eye(5)
+        np.eye(5),
         cmap='coolwarm')
 
 The reason why we use ``np.eye`` is because we want each row of the matrix to "turn on" one category and "turn off" the others.
