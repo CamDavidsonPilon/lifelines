@@ -1,6 +1,18 @@
 ## Changelog
 
-#### 0.23.0
+#### 0.23.1
+
+##### New features
+ - new `print_summary` option `style` to print HTML, LaTeX or ASCII output
+ - performance improvements for `CoxPHFitter` - up to 30% performance improvements for some datasets.
+
+
+##### Bug fixes
+ - fixed bug where computed statistics were not being shown in `print_summary` for HTML output.
+ - fixed bug where "None" was displayed in models' `__repr__`
+ - fixed bug in `StatisticalResult.print_summary`
+
+#### 0.23.0 - 2019-11-17
 
 ##### New features
  - new `print_summary` abstraction that allows HTML printing in Jupyter notebooks!
