@@ -102,7 +102,7 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     return int(np.ceil(n_exp)), int(np.ceil(n_con))
 
 
-def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
+def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0.05) -> float:
     """
     This computes the power of the hypothesis test that the two groups, experiment and control,
     have different hazards (that is, the relative hazard ratio is different from 1.)
@@ -157,7 +157,7 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
 
 def survival_difference_at_fixed_point_in_time_test(
     point_in_time, durations_A, durations_B, event_observed_A=None, event_observed_B=None, **kwargs
-):
+) -> StatisticalResult:
     """
 
     Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other.
@@ -243,7 +243,9 @@ def survival_difference_at_fixed_point_in_time_test(
     )
 
 
-def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs):
+def logrank_test(
+    durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs
+) -> StatisticalResult:
     r"""
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -335,7 +337,7 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
 
 def pairwise_logrank_test(
     event_durations, groups, event_observed=None, t_0=-1, **kwargs
-):  # pylint: disable=too-many-locals
+) -> StatisticalResult:  # pylint: disable=too-many-locals
 
     r"""
     Perform the logrank test pairwise for all :math:`n \ge 2` unique groups.
@@ -410,7 +412,7 @@ def pairwise_logrank_test(
 
 def multivariate_logrank_test(
     event_durations, groups, event_observed=None, t_0=-1, **kwargs
-):  # pylint: disable=too-many-locals
+) -> StatisticalResult:  # pylint: disable=too-many-locals
     r"""
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
     be equal when n=2):
@@ -639,12 +641,12 @@ class StatisticalResult:
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
 
 
-def chisq_test(U, degrees_freedom):
+def chisq_test(U, degrees_freedom) -> float:
     p_value = stats.chi2.sf(U, degrees_freedom)
     return p_value
 
 
-def two_sided_z_test(Z):
+def two_sided_z_test(Z) -> float:
     p_value = 1 - np.max(stats.norm.cdf(Z), 1 - stats.norm.cdf(Z))
     return p_value
 
@@ -670,7 +672,7 @@ class TimeTransformers:
 
 def proportional_hazard_test(
     fitted_cox_model, training_df, time_transform="rank", precomputed_residuals=None, **kwargs
-):
+) -> StatisticalResult:
     """
     Test whether any variable in a Cox model breaks the proportional hazard assumption.
 
@@ -688,10 +690,6 @@ def proportional_hazard_test(
         specify the scaled schoenfeld residuals, if already computed.
     kwargs:
         additional parameters to add to the StatisticalResult
-
-    Returns
-    -------
-    StatisticalResult
 
     Notes
     ------
