@@ -22,12 +22,15 @@ import pandas as pd
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
 from lifelines import utils
 
+
 __all__: List[str] = []
 
 
 class BaseFitter:
 
     _KNOWN_MODEL: bool
+    weights: np.array
+    event_observed: np.array
 
     def __init__(self, alpha: float = 0.05, label=None):
         if not (0 < alpha <= 1.0):
@@ -36,7 +39,7 @@ class BaseFitter:
         self._class_name = self.__class__.__name__
         self._label = label
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         classname = self._class_name
         if self._label:
             label_string = """"%s",""" % self._label
@@ -185,9 +188,6 @@ class UnivariateFitter(BaseFitter):
             for methods that produce a stepwise solution (Kaplan-Meier, Nelson-Aalen, etc), turning this to
             True will use an linear interpolation method to provide a more "smooth" answer.
 
-        Returns
-        -------
-        predictions: a scalar if time is a scalar, a numpy array if time in an array.
         """
         if callable(self._estimation_method):
             return (
@@ -202,7 +202,7 @@ class UnivariateFitter(BaseFitter):
         return utils.interpolate_at_times_and_return_pandas(estimate, times)
 
     @property
-    def conditional_time_to_event_(self):
+    def conditional_time_to_event_(self) -> pd.DataFrame:
         """
         Return a DataFrame, with index equal to ``survival_function_``'s index, that estimates the median
         duration remaining until the death event, given survival up until time t. For example, if an
@@ -216,7 +216,7 @@ class UnivariateFitter(BaseFitter):
         """
         return self._conditional_time_to_event_()
 
-    def _conditional_time_to_event_(self):
+    def _conditional_time_to_event_(self) -> pd.DataFrame:
         """
         Return a DataFrame, with index equal to survival_function_, that estimates the median
         duration remaining until the death event, given survival up until time t. For example, if an
@@ -267,14 +267,14 @@ class UnivariateFitter(BaseFitter):
         raise NotImplementedError()
 
     @property
-    def median_survival_time_(self):
+    def median_survival_time_(self) -> float:
         """
         Return the unique time point, t, such that S(t) = 0.5. This is the "half-life" of the population, and a
         robust summary statistic for the population, if it exists.
         """
         return self.percentile(0.5)
 
-    def percentile(self, p: float):
+    def percentile(self, p: float) -> float:
         """
         Return the unique time point, t, such that S(t) = p.
 
@@ -296,6 +296,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
     _scipy_fit_options: Dict[str, Any] = dict()
+    _event_table = pd.DataFrame
+    _fitted_parameter_names = List[str]
+    _compare_to_values = np.array([])
 
     def __init__(self, *args, **kwargs):
         super(ParametricUnivariateFitter, self).__init__(*args, **kwargs)
@@ -391,7 +394,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         # equal to log(cdf), but often easier to express with sf.
         return anp.log1p(-self._survival_function(params, times))
 
-    def _negative_log_likelihood_left_censoring(self, params, Ts, E, entry, weights):
+    def _negative_log_likelihood_left_censoring(self, params, Ts, E, entry, weights) -> float:
         T = Ts[1]
         non_zero_entries = entry > 0
 
@@ -404,7 +407,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         return -ll / weights.sum()
 
-    def _negative_log_likelihood_right_censoring(self, params, Ts, E, entry, weights):
+    def _negative_log_likelihood_right_censoring(self, params, Ts, E, entry, weights) -> float:
         T = Ts[0]
         non_zero_entries = entry > 0
 
@@ -415,7 +418,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         ll = ll + (weights[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
         return -ll / weights.sum()
 
-    def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry, weights):
+    def _negative_log_likelihood_interval_censoring(self, params, Ts, E, entry, weights) -> float:
         start, stop = Ts
         non_zero_entries = entry > 0
         observed_weights, censored_weights = weights[E], weights[~E]
@@ -437,10 +440,10 @@ class ParametricUnivariateFitter(UnivariateFitter):
         ll = ll + (weights[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
         return -ll / weights.sum()
 
-    def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels):
+    def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels) -> pd.DataFrame:
         return self._compute_confidence_bounds_of_transform(self._cumulative_hazard, alpha, ci_labels)
 
-    def _compute_confidence_bounds_of_transform(self, transform, alpha, ci_labels):
+    def _compute_confidence_bounds_of_transform(self, transform, alpha, ci_labels) -> pd.DataFrame:
         """
         This computes the confidence intervals of a transform of the parameters. Ex: take
         the fitted parameters, a function/transform and the variance matrix and give me
@@ -564,12 +567,12 @@ class ParametricUnivariateFitter(UnivariateFitter):
     def _estimation_method(self, t):
         return self.survival_function_at_times(t)
 
-    def _compute_standard_errors(self):
+    def _compute_standard_errors(self) -> pd.DataFrame:
         return pd.DataFrame(
             [np.sqrt(self.variance_matrix_.diagonal())], index=["se"], columns=self._fitted_parameter_names
         )
 
-    def _compute_confidence_bounds_of_parameters(self):
+    def _compute_confidence_bounds_of_parameters(self) -> pd.DataFrame:
         se = self._compute_standard_errors().loc["se"]
         z = utils.inv_normal_cdf(1 - self.alpha / 2.0)
         return pd.DataFrame(
@@ -582,7 +585,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         return (self._fitted_parameters_ - self._compare_to_values) / self._compute_standard_errors().loc["se"]
 
     @property
-    def summary(self):
+    def summary(self) -> pd.DataFrame:
         """
         Summary statistics describing the fit.
 
@@ -660,7 +663,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ):  # pylint: disable=too-many-arguments
+    ) -> UnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Parameters
         ----------
@@ -725,7 +728,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ):  # pylint: disable=too-many-arguments
+    ) -> UnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Fit the model to a left-censored dataset
 
@@ -792,7 +795,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ):  # pylint: disable=too-many-arguments
+    ) -> UnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Fit the model to an interval censored dataset.
 
@@ -873,7 +876,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ):
+    ) -> UnivariateFitter:
 
         label = utils.coalesce(label, self._class_name.replace("Fitter", "") + "_estimate")
         n = len(utils.coalesce(*Ts))
@@ -971,7 +974,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             )
 
     @property
-    def event_table(self):
+    def event_table(self) -> pd.DataFrame:
         if hasattr(self, "_event_table"):
             return self._event_table
         else:
@@ -983,7 +986,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 self._event_table = None
             return self.event_table
 
-    def survival_function_at_times(self, times, label=None):
+    def survival_function_at_times(self, times, label=None) -> pd.Series:
         """
         Return a Pandas series of the predicted survival value at specific times.
 
@@ -1004,7 +1007,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             self._survival_function(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
-    def cumulative_density_at_times(self, times, label=None):
+    def cumulative_density_at_times(self, times, label=None) -> pd.Series:
         """
         Return a Pandas series of the predicted cumulative density function (1-survival function) at specific times.
 
@@ -1025,7 +1028,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             self._cumulative_density(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
-    def cumulative_hazard_at_times(self, times, label=None):
+    def cumulative_hazard_at_times(self, times, label=None) -> pd.Series:
         """
         Return a Pandas series of the predicted cumulative hazard value at specific times.
 
@@ -1046,7 +1049,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
         )
 
-    def hazard_at_times(self, times, label=None):
+    def hazard_at_times(self, times, label=None) -> pd.Series:
         """
         Return a Pandas series of the predicted hazard at specific times.
 
@@ -1066,35 +1069,35 @@ class ParametricUnivariateFitter(UnivariateFitter):
         return pd.Series(self._hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     @property
-    def confidence_interval_(self):
+    def confidence_interval_(self) -> pd.DataFrame:
         """
         The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_cumulative_hazard_``.
         """
         return self._compute_confidence_bounds_of_cumulative_hazard(self.alpha, self._ci_labels)
 
     @property
-    def confidence_interval_cumulative_hazard_(self):
+    def confidence_interval_cumulative_hazard_(self) -> pd.DataFrame:
         """
         The confidence interval of the cumulative hazard. This is an alias for ``confidence_interval_``.
         """
         return self.confidence_interval_
 
     @property
-    def confidence_interval_hazard_(self):
+    def confidence_interval_hazard_(self) -> pd.DataFrame:
         """
         The confidence interval of the hazard.
         """
         return self._compute_confidence_bounds_of_transform(self._hazard, self.alpha, self._ci_labels)
 
     @property
-    def confidence_interval_survival_function_(self):
+    def confidence_interval_survival_function_(self) -> pd.DataFrame:
         """
         The lower and upper confidence intervals for the survival function
         """
         return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
 
     @property
-    def confidence_interval_cumulative_density_(self):
+    def confidence_interval_cumulative_density_(self) -> pd.DataFrame:
         """
         The lower and upper confidence intervals for the cumulative density
         """
@@ -1123,7 +1126,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         set_kwargs_drawstyle(kwargs, "default")
         return _plot_estimate(self, estimate="hazard_", **kwargs)
 
-    def _conditional_time_to_event_(self):
+    def _conditional_time_to_event_(self) -> pd.DataFrame:
         """
         Return a DataFrame, with index equal to survival_function_, that estimates the median
         duration remaining until the death event, given survival up until time t. For example, if an
@@ -1183,8 +1186,11 @@ class ParametricRegressionFitter(BaseFitter):
         if self.entry_col:
             utils.check_entry_times(T, entries)
 
-    def _hazard(self, *args, **kwargs):
-        return egrad(self._cumulative_hazard, argnum=1)(*args, **kwargs)  # pylint: disable=unexpected-keyword-arg
+    def _cumulative_hazard(self, params, T, Xs):
+        return -anp.log(self._survival_function(params, T, Xs))
+
+    def _hazard(self, params, T, Xs):
+        return egrad(self._cumulative_hazard, argnum=1)(params, T, Xs)  # pylint: disable=unexpected-keyword-arg
 
     def _log_hazard(self, params, T, Xs):
         # can be overwritten to improve convergence, see example in WeibullAFTFitter
@@ -1578,7 +1584,7 @@ class ParametricRegressionFitter(BaseFitter):
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
-    def _compute_standard_errors(self, Ts, E, weights, entries, Xs):
+    def _compute_standard_errors(self, Ts, E, weights, entries, Xs) -> pd.Series:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             if self.robust:
@@ -1602,7 +1608,7 @@ class ParametricRegressionFitter(BaseFitter):
 
             return self.variance_matrix_ @ J @ self.variance_matrix_
 
-    def _compute_confidence_intervals(self):
+    def _compute_confidence_intervals(self) -> pd.DataFrame:
         z = utils.inv_normal_cdf(1 - self.alpha / 2)
         ci = (1 - self.alpha) * 100
         se = self.standard_errors_
@@ -1663,7 +1669,7 @@ class ParametricRegressionFitter(BaseFitter):
         )
 
     @property
-    def summary(self):
+    def summary(self) -> pd.DataFrame:
         """Summary statistics describing the fit.
 
         Returns
@@ -1758,7 +1764,7 @@ class ParametricRegressionFitter(BaseFitter):
         """
         return np.exp(-self.predict_cumulative_hazard(df, times=times, conditional_after=conditional_after))
 
-    def predict_median(self, df, conditional_after=None):
+    def predict_median(self, df, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1789,7 +1795,7 @@ class ParametricRegressionFitter(BaseFitter):
         """
         return self.predict_percentile(df, p=0.5, conditional_after=conditional_after)
 
-    def predict_percentile(self, df, p=0.5, conditional_after=None):
+    def predict_percentile(self, df, p=0.5, conditional_after=None) -> pd.DataFrame:
         subjects = utils._get_index(df)
         return utils.qth_survival_times(
             p, self.predict_survival_function(df, conditional_after=conditional_after)[subjects]
@@ -1853,7 +1859,7 @@ class ParametricRegressionFitter(BaseFitter):
                 columns=df.index,
             )
 
-    def predict_expectation(self, X):
+    def predict_expectation(self, X) -> pd.DataFrame:
         r"""
         Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
         to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapizoidal rule to approximate the integral.
@@ -1886,7 +1892,7 @@ class ParametricRegressionFitter(BaseFitter):
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
     @property
-    def score_(self):
+    def score_(self) -> float:
         """
         The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the ROC AUC
         to survival data, including censorships.
@@ -2070,6 +2076,8 @@ class ParametricRegressionFitter(BaseFitter):
 class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     _KNOWN_MODEL = True
+    _ancillary_parameter_name: str
+    _primary_parameter_name: str
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         super(ParametericAFTRegressionFitter, self).__init__(alpha=alpha)
@@ -2079,9 +2087,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         self.l1_ratio = l1_ratio
         self.fit_intercept = fit_intercept
         self.model_ancillary = model_ancillary
-
-    def _hazard(self, *args, **kwargs):
-        return egrad(self._cumulative_hazard, argnum=1)(*args, **kwargs)  # pylint: disable=unexpected-keyword-arg
 
     @utils.CensoringType.right_censoring
     def fit(
@@ -2097,7 +2102,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ):
+    ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a right-censored dataset.
 
@@ -2252,7 +2257,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ):
+    ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a interval-censored dataset.
 
@@ -2419,7 +2424,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ):
+    ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a left-censored dataset.
 
@@ -2793,7 +2798,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return primary_scores, ancillary_scores
 
-    def predict_survival_function(self, df, ancillary_df=None, times=None, conditional_after=None):
+    def predict_survival_function(self, df, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -2817,12 +2822,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
-
-
-        Returns
-        -------
-        survival_function : DataFrame
-            the survival probabilities of individuals over the timeline
         """
         return np.exp(
             -self.predict_cumulative_hazard(
@@ -2830,7 +2829,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             )
         )
 
-    def predict_median(self, df, ancillary_df=None, conditional_after=None):
+    def predict_median(self, df, ancillary_df=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -2848,13 +2847,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
 
-        Returns
-        -------
-        percentiles: DataFrame
-            the median lifetimes for the individuals. If the survival curve of an
-            individual does not cross 0.5, then the result is infinity.
-
-
         See Also
         --------
         predict_percentile, predict_expectation
@@ -2863,10 +2855,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return self.predict_percentile(df, ancillary_df=ancillary_df, p=0.5, conditional_after=conditional_after)
 
-    def predict_percentile(self, df, ancillary_df=None, p=0.5):
-        return utils.qth_survival_times(p, self.predict_survival_function(df, ancillary_df=ancillary_df))
+    def predict_percentile(self, df, ancillary_df=None, p=0.5, conditional_after=None) -> pd.DataFrame:
+        return utils.qth_survival_times(
+            p, self.predict_survival_function(df, ancillary_df=ancillary_df, conditional_after=conditional_after)
+        )
 
-    def predict_cumulative_hazard(self, df, ancillary_df=None, times=None, conditional_after=None):
+    def predict_cumulative_hazard(self, df, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -2885,13 +2879,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
-
-
-        Returns
-        -------
-        DataFrame
-            the median lifetimes for the individuals. If the survival curve of an
-            individual does not cross 0.5, then the result is infinity.
 
 
         See Also

@@ -46,7 +46,7 @@ __all__ = ["CoxPHFitter"]
 
 class BatchVsSingle:
     @staticmethod
-    def decide(batch_mode, n_unique, n_total, n_vars):
+    def decide(batch_mode, n_unique, n_total, n_vars) -> str:
         frac_dups = n_unique / n_total
         if batch_mode or (
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
@@ -922,7 +922,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
-    def _compute_martingale(self, X, T, E, _weights, index=None):
+    def _compute_martingale(self, X, T, E, _weights, index=None) -> pd.DataFrame:
         # TODO: _weights unused
         partial_hazard = self.predict_partial_hazard(X)[0].values
 
@@ -938,7 +938,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             {self.duration_col: T.values, self.event_col: E.values, "martingale": martingale.values}, index=index
         )
 
-    def _compute_deviance(self, X, T, E, weights, index=None):
+    def _compute_deviance(self, X, T, E, weights, index=None) -> pd.DataFrame:
         df = self._compute_martingale(X, T, E, weights, index)
         rmart = df.pop("martingale")
 
@@ -950,7 +950,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df["deviance"] = deviance
         return df
 
-    def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None):
+    def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None) -> pd.DataFrame:
         r"""
         Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0.
         For tests of proportionality, we want to test if \beta_i(t) is \beta_i (constant) or not.
@@ -978,7 +978,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         scaled_schoenfeld_resids.columns = self.params_.index
         return scaled_schoenfeld_resids
 
-    def _compute_schoenfeld(self, X, T, E, weights, index=None):
+    def _compute_schoenfeld(self, X, T, E, weights, index=None) -> pd.DataFrame:
         # TODO: should the index by times, i.e. T[E]?
 
         # Assumes sorted on T and on strata
@@ -1088,7 +1088,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return schoenfeld_residuals[::-1]
 
-    def _compute_delta_beta(self, X, T, E, weights, index=None):
+    def _compute_delta_beta(self, X, T, E, weights, index=None) -> pd.DataFrame:
         """
         approximate change in betas as a result of excluding ith row. Good for finding outliers / specific
         subjects that influence the model disproportionately. Good advice: don't drop these outliers, model them.
@@ -1103,7 +1103,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return delta_betas
 
-    def _compute_score(self, X, T, E, weights, index=None):
+    def _compute_score(self, X, T, E, weights, index=None) -> pd.DataFrame:
 
         _, d = X.shape
 
@@ -1164,12 +1164,12 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return score_residuals * weights[:, None]
 
-    def compute_residuals(self, training_dataframe, kind):
+    def compute_residuals(self, training_dataframe, kind) -> pd.DataFrame:
         """
 
         Parameters
         ----------
-        training_dataframe : pandas DataFrame
+        training_dataframe : DataFrame
             the same training DataFrame given in `fit`
         kind : string
             {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale', 'scaled_schoenfeld'}
@@ -1184,7 +1184,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         resids = getattr(self, "_compute_%s" % kind)(X, T, E, weights, index=shuffled_original_index)
         return resids
 
-    def _compute_confidence_intervals(self):
+    def _compute_confidence_intervals(self) -> pd.DataFrame:
         ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
@@ -1195,7 +1195,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             index=self.params_.index,
         )
 
-    def _compute_standard_errors(self, X, T, E, weights):
+    def _compute_standard_errors(self, X, T, E, weights) -> pd.Series:
         if self.robust or self.cluster_col:
             se = np.sqrt(self._compute_sandwich_estimator(X, T, E, weights).diagonal())
         else:
@@ -1220,7 +1220,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         return stats.chi2.sf(U, 1)
 
     @property
-    def summary(self):
+    def summary(self) -> pd.DataFrame:
         """Summary statistics describing the fit.
         Set alpha property in the object before calling.
 
@@ -1292,7 +1292,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         p.print(style=style)
 
-    def log_likelihood_ratio_test(self):
+    def log_likelihood_ratio_test(self) -> StatisticalResult:
         """
         This function computes the likelihood ratio test for the Cox model. We
         compare the existing model (with all the covariates) to the trivial model
@@ -1321,20 +1321,17 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             degrees_freedom=degrees_freedom,
         )
 
-    def predict_partial_hazard(self, X):
+    def predict_partial_hazard(self, X) -> pd.DataFrame:
         r"""
+        Returns the partial hazard for the individuals, partial since the
+        baseline hazard is not included. Equal to :math:`\exp{(x - mean(x_{train}))'\beta}`
+
         Parameters
         ----------
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-
-        Returns
-        -------
-        partial_hazard: DataFrame
-            Returns the partial hazard for the individuals, partial since the
-            baseline hazard is not included. Equal to :math:`\exp{(x - mean(x_{train}))'\beta}`
 
         Notes
         -----
@@ -1344,7 +1341,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         return np.exp(self.predict_log_partial_hazard(X))
 
-    def predict_log_partial_hazard(self, X):
+    def predict_log_partial_hazard(self, X) -> pd.DataFrame:
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
@@ -1357,11 +1354,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-
-        Returns
-        -------
-        log_partial_hazard: DataFrame
-
 
         Notes
         -----
@@ -1392,7 +1384,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.params_), index=index)
 
-    def predict_cumulative_hazard(self, X, times=None, conditional_after=None):
+    def predict_cumulative_hazard(self, X, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Parameters
         ----------
@@ -1411,10 +1403,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. reset back to starting at 0.
 
-        Returns
-        -------
-        cumulative_hazard_ : DataFrame
-            the cumulative hazard of individuals over the timeline
         """
         if isinstance(X, pd.Series):
             return self.predict_cumulative_hazard(X.to_frame().T, times=times, conditional_after=conditional_after)
@@ -1481,7 +1469,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return cumulative_hazard_
 
-    def predict_survival_function(self, X, times=None, conditional_after=None):
+    def predict_survival_function(self, X, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -1503,15 +1491,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
-
-        Returns
-        -------
-        survival_function : DataFrame
-            the survival probabilities of individuals over the timeline
         """
         return np.exp(-self.predict_cumulative_hazard(X, times=times, conditional_after=conditional_after))
 
-    def predict_percentile(self, X, p=0.5, conditional_after=None):
+    def predict_percentile(self, X, p=0.5, conditional_after=None) -> pd.DataFrame:
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1531,10 +1514,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
-        Returns
-        -------
-        percentiles: DataFrame
-
         See Also
         --------
         predict_median
@@ -1543,7 +1522,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         subjects = _get_index(X)
         return qth_survival_times(p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]).T
 
-    def predict_median(self, X, conditional_after=None):
+    def predict_median(self, X, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1554,12 +1533,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-
-        Returns
-        -------
-        percentiles: DataFrame
-            the median lifetimes for the individuals. If the survival curve of an
-            individual does not cross 0.5, then the result is infinity.
+        conditional_after: iterable, optional
+            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
 
         See Also
@@ -1569,7 +1547,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         return self.predict_percentile(X, 0.5, conditional_after=conditional_after)
 
-    def predict_expectation(self, X):
+    def predict_expectation(self, X, conditional_after=None) -> pd.DataFrame:
         r"""
         Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
         to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapizoidal rule to approximate the integral.
@@ -1586,10 +1564,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-
-        Returns
-        -------
-        expectations : DataFrame
+        conditional_after: iterable, optional
+            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
         Notes
         -----
@@ -1604,7 +1583,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         """
         subjects = _get_index(X)
-        v = self.predict_survival_function(X)[subjects]
+        v = self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
     def _compute_baseline_hazard(self, partial_hazards, name):
@@ -1620,7 +1599,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         baseline_hazard.index.name = None
         return baseline_hazard
 
-    def _compute_baseline_hazards(self):
+    def _compute_baseline_hazards(self) -> pd.DataFrame:
         if self.strata:
 
             index = self.durations.unique()
@@ -1643,7 +1622,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             cumulative = cumulative.rename(columns={"baseline hazard": "baseline cumulative hazard"})
         return cumulative
 
-    def _compute_baseline_survival(self):
+    def _compute_baseline_survival(self) -> pd.DataFrame:
         """
         Importantly, this agrees with what the KaplanMeierFitter produces. Ex:
 
@@ -2063,7 +2042,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             print("Proportional hazard assumption looks okay.")
 
     @property
-    def score_(self):
+    def score_(self) -> float:
         """
         The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the ROC AUC
         to survival data, including censorships.
