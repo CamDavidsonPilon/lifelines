@@ -1602,7 +1602,7 @@ class DataframeSliceDict:
         for k in self.mappings:
             yield (k, self[k])
 
-    def filter(self, ix) -> DataframeSliceDict:
+    def filter(self, ix):
         ix = _to_1d_array(ix)
         return DataframeSliceDict(self.df[ix], self.mappings)
 

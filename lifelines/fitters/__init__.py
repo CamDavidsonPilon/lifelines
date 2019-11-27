@@ -31,6 +31,7 @@ class BaseFitter:
     _KNOWN_MODEL: bool
     weights: np.array
     event_observed: np.array
+    durations: np.array
 
     def __init__(self, alpha: float = 0.05, label=None):
         if not (0 < alpha <= 1.0):
@@ -77,6 +78,7 @@ class UnivariateFitter(BaseFitter):
     _estimate_name: str
     _estimation_method: Union[Callable, str]
     survival_function_: pd.Series
+    confidence_interval_: pd.Series
 
     def _update_docstrings(self):
         # Update their docstrings
@@ -208,11 +210,6 @@ class UnivariateFitter(BaseFitter):
         duration remaining until the death event, given survival up until time t. For example, if an
         individual exists until age 1, their expected life remaining *given they lived to time 1*
         might be 9 years.
-
-        Returns
-        -------
-        conditional_time_to_: DataFrame
-
         """
         return self._conditional_time_to_event_()
 
@@ -222,12 +219,6 @@ class UnivariateFitter(BaseFitter):
         duration remaining until the death event, given survival up until time t. For example, if an
         individual exists until age 1, their expected life remaining *given they lived to time 1*
         might be 9 years.
-
-        Returns
-        -------
-        conditional_time_to_: DataFrame
-            with index equal to survival_function_
-
         """
         age = self.survival_function_.index.values[:, None]
         columns = ["%s - Conditional median duration remaining to event" % self._label]
@@ -278,6 +269,12 @@ class UnivariateFitter(BaseFitter):
         """
         Return the unique time point, t, such that S(t) = p.
 
+        Parameters
+        -----------
+        p: float
+
+        Note
+        -----
         For known parametric models, this should be overwritten by something more accurate.
         """
         warnings.warn(
@@ -296,9 +293,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
     _scipy_fit_options: Dict[str, Any] = dict()
-    _event_table = pd.DataFrame
-    _fitted_parameter_names = List[str]
-    _compare_to_values = np.array([])
+    _event_table: pd.DataFrame
+    _fitted_parameter_names: List[str]
+    _compare_to_values: np.array
 
     def __init__(self, *args, **kwargs):
         super(ParametricUnivariateFitter, self).__init__(*args, **kwargs)
@@ -588,11 +585,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
     def summary(self) -> pd.DataFrame:
         """
         Summary statistics describing the fit.
-
-        Returns
-        -------
-        df : pd.DataFrame
-            Contains columns coef, exp(coef), se(coef), z, p, lower, upper
 
         See Also
         --------
@@ -997,10 +989,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
         label: string, optional
           Rename the series returned. Useful for plotting.
 
-        Returns
-        --------
-        pd.Series
-
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
@@ -1018,10 +1006,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
         label: string, optional
           Rename the series returned. Useful for plotting.
 
-        Returns
-        --------
-        pd.Series
-
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
@@ -1038,11 +1022,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
           values to return the cumulative hazard at.
         label: string, optional
           Rename the series returned. Useful for plotting.
-
-        Returns
-        --------
-        pd.Series
-
         """
         label = utils.coalesce(label, self._label)
         return pd.Series(
@@ -1059,10 +1038,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
           values to return the hazard at.
         label: string, optional
           Rename the series returned. Useful for plotting.
-
-        Returns
-        --------
-        pd.Series
 
         """
         label = utils.coalesce(label, self._label)
@@ -1324,7 +1299,8 @@ class ParametricRegressionFitter(BaseFitter):
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
-        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+        entry_col: string
+            specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
         Returns
@@ -1670,12 +1646,12 @@ class ParametricRegressionFitter(BaseFitter):
 
     @property
     def summary(self) -> pd.DataFrame:
-        """Summary statistics describing the fit.
+        """
+        Summary statistics describing the fit.
 
-        Returns
-        -------
-        df : DataFrame
-            Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper
+        See Also
+        --------
+        ``print_summary``
         """
 
         ci = (1 - self.alpha) * 100
@@ -1754,7 +1730,7 @@ class ParametricRegressionFitter(BaseFitter):
         conditional_after: iterable, optional
             Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
-            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
 
 
         Returns
@@ -1778,7 +1754,7 @@ class ParametricRegressionFitter(BaseFitter):
         conditional_after: iterable, optional
             Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
-            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
         Returns
@@ -1818,7 +1794,7 @@ class ParametricRegressionFitter(BaseFitter):
         conditional_after: iterable, optional
             Must be equal is size to (df.shape[0],) (`n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
-            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
         Returns
@@ -1863,24 +1839,29 @@ class ParametricRegressionFitter(BaseFitter):
         r"""
         Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
         to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapizoidal rule to approximate the integral.
+
         Caution
         --------
-        However, if the survival function doesn't converge to 0, the the expectation is really infinity and the returned
+        If the survival function doesn't converge to 0, the the expectation is really infinity and the returned
         values are meaningless/too large. In that case, using ``predict_median`` or ``predict_percentile`` would be better.
+
         Parameters
         ----------
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+
         Returns
         -------
         expectations : DataFrame
+
         Notes
         -----
         If X is a DataFrame, the order of the columns do not matter. But
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
+
         See Also
         --------
         predict_median
@@ -2102,7 +2083,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> ParametericAFTRegressionFitter:
+    ):
         """
         Fit the accelerated failure time model to a right-censored dataset.
 
@@ -2149,7 +2130,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
-        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+        entry_col: string
+            specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
         Returns
@@ -2257,7 +2239,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> ParametericAFTRegressionFitter:
+    ):
         """
         Fit the accelerated failure time model to a interval-censored dataset.
 
@@ -2305,7 +2287,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
-        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+        entry_col: str
+            specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
         Returns
@@ -2424,7 +2407,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> ParametericAFTRegressionFitter:
+    ):
         """
         Fit the accelerated failure time model to a left-censored dataset.
 
@@ -2472,7 +2455,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
 
-        entry_col: specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+        entry_col: str
+            specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
         Returns
@@ -2820,7 +2804,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         conditional_after: iterable, optional
             Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
-            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
         """
         return np.exp(
@@ -2843,7 +2827,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         conditional_after: iterable, optional
             Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
-            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
 
@@ -2877,7 +2861,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         conditional_after: iterable, optional
             Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
-            :math`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
 

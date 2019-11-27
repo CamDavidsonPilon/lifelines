@@ -563,7 +563,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
-        baseline hazard is not included. Equal to :math:`(x - \bar{x})'\beta `
+        baseline hazard is not included. Equal to :math:`(x - \bar{x})'\beta`
 
 
         Parameters
