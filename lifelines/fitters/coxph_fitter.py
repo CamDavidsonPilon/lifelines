@@ -327,11 +327,15 @@ class CoxPHFitter(BaseFitter):
         df = df.copy()
 
         if self.strata is not None:
-            df = df.sort_values(by=_to_list(self.strata) + [self.duration_col])
+            sort_by = _to_list(self.strata) + (
+                [self.duration_col, self.event_col] if self.event_col else [self.duration_col]
+            )
+            df = df.sort_values(by=sort_by)
             original_index = df.index.copy()
             df = df.set_index(self.strata)
         else:
-            df = df.sort_values(by=self.duration_col)
+            sort_by = [self.duration_col, self.event_col] if self.event_col else [self.duration_col]
+            df = df.sort_values(by=sort_by)
             original_index = df.index.copy()
 
         # Extract time and event
@@ -666,14 +670,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 # Only censored with current time, move on
                 continue
 
-            # There was atleast one event and no more ties remain. Time to sum.
+            # There was at least one event and no more ties remain. Time to sum.
             # This code is near identical to the _batch algorithm below. In fact, see _batch for comments.
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
                 increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
-                numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
+                numer = risk_phi_x - np.multiply.outer(increasing_proportion, tie_phi_x)
                 a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
                     "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
                 )
@@ -836,7 +840,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
             X_at_t = X[slice_]
             weights_at_t = weights[slice_]
-            deaths = E[slice_]
+            tied_death_counts = E[slice_].sum()
 
             phi_i = scores[slice_, None]
             phi_x_i = phi_i * X_at_t
@@ -848,18 +852,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             risk_phi_x_x = risk_phi_x_x + phi_x_x_i
 
             # Calculate the sums of Tie set
-            tied_death_counts = deaths.sum()
             if tied_death_counts == 0:
                 # no deaths, can continue
                 pos -= count_of_removals
                 continue
 
-            """
-            I think there is another optimization that can be made if we sort on
-            T and E. Using some accounting, we can skip all the [death] indexing below.
-            """
-            xi_deaths = X_at_t[deaths]
-            weights_deaths = weights_at_t[deaths]
+            # deaths is sorted like [False, False, False, ..., True, ....] because we sorted early in preprocessing
+            xi_deaths = X_at_t[-tied_death_counts:]
+            weights_deaths = weights_at_t[-tied_death_counts:]
 
             x_death_sum = np.einsum("a,ab->b", weights_deaths, xi_deaths)
 
@@ -872,14 +872,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/coxph_fitter.py#L755-L789
 
                 # it's faster if we can skip computing these when we don't need to.
-                phi_x_i_deaths = phi_x_i[deaths]
-                tie_phi = phi_i[deaths].sum()
+                phi_x_i_deaths = phi_x_i[-tied_death_counts:]
+                tie_phi = phi_i[-tied_death_counts:].sum()
                 tie_phi_x = (phi_x_i_deaths).sum(0)
                 tie_phi_x_x = np.dot(xi_deaths.T, phi_x_i_deaths)
 
                 increasing_proportion = ZERO_TO_N[:tied_death_counts] / tied_death_counts
+                numer = risk_phi_x - np.multiply.outer(increasing_proportion, tie_phi_x)
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
-                numer = risk_phi_x - np.outer(increasing_proportion, tie_phi_x)
 
                 # computes outer products and sums them together.
                 # Naive approach is to
@@ -893,8 +893,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 )
             else:
                 # no tensors here, but do some casting to make it easier in the converging step next.
-                denom = 1.0 / np.array([risk_phi])
                 numer = risk_phi_x
+                denom = 1.0 / np.array([risk_phi])
                 a1 = risk_phi_x_x * denom
 
             summand = numer * denom[:, None]
