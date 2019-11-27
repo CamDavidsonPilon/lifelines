@@ -7,16 +7,33 @@ from lifelines.utils.safe_exp import safe_exp
 
 
 class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
-    """
-    TODO: docs
+    r"""
+    This implements a piecewise constant-hazard model at pre-specified break points.
+
+
+    .. math::  h(t) = \begin{cases}
+                        1/\lambda_0(x)  & \text{if $t \le \tau_0$} \\
+                        1/\lambda_1(x) & \text{if $\tau_0 < t \le \tau_1$} \\
+                        1/\lambda_2(x) & \text{if $\tau_1 < t \le \tau_2$} \\
+                        ...
+                      \end{cases}
+
+    where :math:`\lambda_i(x) = \exp{\beta_i x}`.
+
+    Parameters
+    -----------
+    breakpoints: list
+        a list of times when a new exponential model is constructed.
+    penalizer: float
+        penalize the variance of the :math:`\lambda_i`. See blog post below.
+    alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
 
 
 
     Examples
     ----------
-
-    See blog post <here https://dataorigami.net/blogs/napkin-folding/churn>_.
-
+    See blog post `here <https://dataorigami.net/blogs/napkin-folding/churn>`_.
 
     """
 

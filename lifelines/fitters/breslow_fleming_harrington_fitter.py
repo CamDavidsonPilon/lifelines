@@ -17,9 +17,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
     there are too few early truncation times, it may happen that is the number of patients at risk and
     the number of deaths is the same.
 
-    Mathematically, the NAF estimator is the negative logarithm of the BFH estimator.
-
-    BreslowFlemingHarringtonFitter(alpha=0.05)
+    Mathematically, the Nelson-Aalen estimator is the negative logarithm of the Breslow-Fleming-Harrington estimator.
 
     Parameters
     ----------
@@ -101,17 +99,14 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         self.plot_survival_function = self.plot
         return self
 
-    def survival_function_at_times(self, times, label=None):
+    def survival_function_at_times(self, times, label=None) -> pd.Series:
         """
         Return a Pandas series of the predicted survival value at specific times
 
         Parameters
         -----------
         times: iterable or float
-
-        Returns
-        --------
-        pd.Series
+        label: str
 
         """
         label = coalesce(label, self._label)

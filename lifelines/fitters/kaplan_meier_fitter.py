@@ -93,7 +93,7 @@ class KaplanMeierFitter(UnivariateFitter):
           event_observed: an array, list, pd.DataFrame, or pd.Series, optional
              True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
           timeline: an array, list, pd.DataFrame, or pd.Series, optional
-            return the best estimate at the values in timelines (postively increasing)
+            return the best estimate at the values in timelines (positively increasing)
           entry: an array, list, pd.DataFrame, or pd.Series, optional
              relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
              entered study when they were "born".
@@ -139,7 +139,7 @@ class KaplanMeierFitter(UnivariateFitter):
           event_observed: an array, list, pd.DataFrame, or pd.Series, optional
              True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
           timeline: an array, list, pd.DataFrame, or pd.Series, optional
-            return the best estimate at the values in timelines (postively increasing)
+            return the best estimate at the values in timelines (positively increasing)
           entry: an array, list, pd.DataFrame, or pd.Series, optional
              relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
              entered study when they were "born".
@@ -181,7 +181,7 @@ class KaplanMeierFitter(UnivariateFitter):
           event_observed: an array, list, pd.DataFrame, or pd.Series, optional
              True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
           timeline: an array, list, pd.DataFrame, or pd.Series, optional
-            return the best estimate at the values in timelines (postively increasing)
+            return the best estimate at the values in timelines (positively increasing)
           entry: an array, list, pd.DataFrame, or pd.Series, optional
              relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
              entered study when they were "born".
@@ -275,7 +275,7 @@ class KaplanMeierFitter(UnivariateFitter):
         return self
 
     @property
-    def median_survival_time_(self):
+    def median_survival_time_(self) -> float:
         return self._median
 
     def _check_values(self, array):
@@ -287,7 +287,7 @@ class KaplanMeierFitter(UnivariateFitter):
         """
         return plot_loglogs(self, *args, **kwargs)
 
-    def survival_function_at_times(self, times, label=None):
+    def survival_function_at_times(self, times, label=None) -> pd.Series:
         """
         Return a Pandas series of the predicted survival value at specific times
 
@@ -303,7 +303,7 @@ class KaplanMeierFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(self.predict(times), index=_to_1d_array(times), name=label)
 
-    def cumulative_density_at_times(self, times, label=None):
+    def cumulative_density_at_times(self, times, label=None) -> pd.Series:
         """
         Return a Pandas series of the predicted cumulative density at specific times
 
@@ -325,9 +325,9 @@ class KaplanMeierFitter(UnivariateFitter):
 
     def plot_cumulative_density(self, **kwargs):
         """
-        Plots a pretty figure of {0}.{1}
+        Plots a pretty figure of the cumulative density function.
 
-        Matplotlib plot arguments can be passed in inside the kwargs, plus
+        Matplotlib plot arguments can be passed in inside the kwargs.
 
         Parameters
         -----------

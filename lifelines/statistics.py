@@ -30,6 +30,124 @@ __all__ = [
 ]
 
 
+class StatisticalResult:
+    """
+    This class holds the result of statistical tests with a nice printer wrapper to display the results.
+
+    Note
+    -----
+    This class' API changed in version 0.16.0.
+
+    Parameters
+    ----------
+    p_value: iterable or float
+        the p-values of a statistical test(s)
+    test_statistic: iterable or float
+        the test statistics of a statistical test(s). Must be the same size as p-values if iterable.
+    name: iterable or string
+        if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable.
+    kwargs:
+        additional information to attach to the object and display in ``print_summary()``.
+
+    """
+
+    def __init__(self, p_value, test_statistic, name=None, **kwargs):
+        self.p_value = p_value
+        self.test_statistic = test_statistic
+
+        self._p_value = _to_1d_array(p_value)
+        self._test_statistic = _to_1d_array(test_statistic)
+
+        assert len(self._p_value) == len(self._test_statistic)
+
+        if name is not None:
+            self.name = _to_list(name)
+            assert len(self.name) == len(self._test_statistic)
+        else:
+            self.name = None
+
+        for kw, value in kwargs.items():
+            setattr(self, kw, value)
+
+        self._kwargs = kwargs
+
+    def print_summary(self, decimals=2, **kwargs):
+        """
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
+
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
+        kwargs:
+            print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
+
+        """
+        print(self._to_string(decimals, **kwargs))
+
+    @property
+    def summary(self):
+        """
+
+        Returns
+        -------
+        DataFrame
+            a DataFrame containing the test statistics and the p-value
+
+        """
+        cols = ["test_statistic", "p"]
+
+        # test to see if self.names is a tuple
+        if self.name and isinstance(self.name[0], tuple):
+            index = pd.MultiIndex.from_tuples(self.name)
+        else:
+            index = self.name
+
+        return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
+
+    def __repr__(self):
+        if self.name and len(self.name) == 1:
+            return "<lifelines.StatisticalResult: {0}>".format(self.name[0])
+        return "<lifelines.StatisticalResult>"
+
+    def _to_string(self, decimals=2, **kwargs):
+        extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
+        meta_data = self._stringify_meta_data(extra_kwargs)
+
+        df = self.summary
+        with np.errstate(invalid="ignore", divide="ignore"):
+            df["-log2(p)"] = -np.log2(df["p"])
+
+        s = self.__repr__()
+        s += "\n" + meta_data + "\n"
+        s += "---\n"
+        s += df.to_string(
+            float_format=format_floats(decimals),
+            index=self.name is not None,
+            formatters={"p": format_p_value(decimals)},
+        )
+
+        return s
+
+    def _stringify_meta_data(self, dictionary):
+        longest_key = max([len(k) for k in dictionary])
+        justify = string_justify(longest_key)
+        s = ""
+        for k, v in dictionary.items():
+            s += "{} = {}\n".format(justify(k), v)
+
+        return s
+
+    def __add__(self, other):
+        """useful for aggregating results easily"""
+        p_values = np.r_[self._p_value, other._p_value]
+        test_statistics = np.r_[self._test_statistic, other._test_statistic]
+        names = self.name + other.name
+        kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
+        return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
+
+
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
     """
     This computes the sample size for needed power to compare two groups under a Cox
@@ -521,124 +639,6 @@ def multivariate_logrank_test(
     return StatisticalResult(
         p_value, U, t_0=t_0, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
     )
-
-
-class StatisticalResult:
-    """
-    This class holds the result of statistical tests with a nice printer wrapper to display the results.
-
-    Note
-    -----
-    This class' API changed in version 0.16.0.
-
-    Parameters
-    ----------
-    p_value: iterable or float
-        the p-values of a statistical test(s)
-    test_statistic: iterable or float
-        the test statistics of a statistical test(s). Must be the same size as p-values if iterable.
-    name: iterable or string
-        if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable.
-    kwargs:
-        additional information to attach to the object and display in ``print_summary()``.
-
-    """
-
-    def __init__(self, p_value, test_statistic, name=None, **kwargs):
-        self.p_value = p_value
-        self.test_statistic = test_statistic
-
-        self._p_value = _to_1d_array(p_value)
-        self._test_statistic = _to_1d_array(test_statistic)
-
-        assert len(self._p_value) == len(self._test_statistic)
-
-        if name is not None:
-            self.name = _to_list(name)
-            assert len(self.name) == len(self._test_statistic)
-        else:
-            self.name = None
-
-        for kw, value in kwargs.items():
-            setattr(self, kw, value)
-
-        self._kwargs = kwargs
-
-    def print_summary(self, decimals=2, **kwargs):
-        """
-        Print summary statistics describing the fit, the coefficients, and the error bounds.
-
-        Parameters
-        -----------
-        decimals: int, optional (default=2)
-            specify the number of decimal places to show
-        kwargs:
-            print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
-            multiple outputs.
-
-        """
-        print(self._to_string(decimals, **kwargs))
-
-    @property
-    def summary(self):
-        """
-
-        Returns
-        -------
-        DataFrame
-            a DataFrame containing the test statistics and the p-value
-
-        """
-        cols = ["test_statistic", "p"]
-
-        # test to see if self.names is a tuple
-        if self.name and isinstance(self.name[0], tuple):
-            index = pd.MultiIndex.from_tuples(self.name)
-        else:
-            index = self.name
-
-        return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
-
-    def __repr__(self):
-        if self.name and len(self.name) == 1:
-            return "<lifelines.StatisticalResult: {0}>".format(self.name[0])
-        return "<lifelines.StatisticalResult>"
-
-    def _to_string(self, decimals=2, **kwargs):
-        extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
-        meta_data = self._stringify_meta_data(extra_kwargs)
-
-        df = self.summary
-        with np.errstate(invalid="ignore", divide="ignore"):
-            df["-log2(p)"] = -np.log2(df["p"])
-
-        s = self.__repr__()
-        s += "\n" + meta_data + "\n"
-        s += "---\n"
-        s += df.to_string(
-            float_format=format_floats(decimals),
-            index=self.name is not None,
-            formatters={"p": format_p_value(decimals)},
-        )
-
-        return s
-
-    def _stringify_meta_data(self, dictionary):
-        longest_key = max([len(k) for k in dictionary])
-        justify = string_justify(longest_key)
-        s = ""
-        for k, v in dictionary.items():
-            s += "{} = {}\n".format(justify(k), v)
-
-        return s
-
-    def __add__(self, other):
-        """useful for aggregating results easily"""
-        p_values = np.r_[self._p_value, other._p_value]
-        test_statistics = np.r_[self._test_statistic, other._test_statistic]
-        names = self.name + other.name
-        kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
-        return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
 
 
 def chisq_test(U, degrees_freedom) -> float:
