@@ -224,6 +224,12 @@ def test_StatisticalResult_can_be_added():
     assert "kw3" in sr._kwargs
 
 
+def test_StatisticalResult_can_be_printed():
+
+    sr = stats.StatisticalResult(0.01, 1.0, name=["1"], kw1="some_value1")
+    sr.print_summary()
+
+
 def test_proportional_hazard_test():
     """
     c = coxph(formula=Surv(T, E) ~ var1 + var2 + var3, data=df)

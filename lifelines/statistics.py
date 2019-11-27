@@ -614,7 +614,9 @@ class StatisticalResult:
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
-            float_style=style_floats(decimals), index=self.name is not None, formatters={"p": format_p_value(decimals)}
+            float_format=format_floats(decimals),
+            index=self.name is not None,
+            formatters={"p": format_p_value(decimals)},
         )
 
         return s
