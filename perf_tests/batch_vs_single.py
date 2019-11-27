@@ -15,13 +15,13 @@ ROSSI_ROWS = ROSSI.shape[0]
 results = {}
 
 
-for n_copies in [1, 3, 6, 10, 20, 50, 100, 150]:
-    for additional_x_vars in [0, 10, 50]:
+for n_copies in [1, 3, 6, 10, 20, 50, 100]:
+    for additional_x_vars in [0, 10, 40]:
         # lower percents means more ties.
         # original rossi dataset has 0.113
         for fraction in np.linspace(0.01, 0.99, 8):
             n = n_copies * ROSSI_ROWS
-            print(n, fraction, additional_x_vars)
+            print(n_copies, additional_x_vars, fraction)
 
             df = pd.concat([ROSSI] * n_copies)
             n_unique_durations = int(df.shape[0] * fraction) + 1

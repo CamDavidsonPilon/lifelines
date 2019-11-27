@@ -54,14 +54,14 @@ class BatchVsSingle:
             (batch_mode is None)
             and (
                 (
-                    6.876218e-01
-                    + -1.796993e-06 * n_total
-                    + -1.204271e-11 * n_total ** 2
-                    + 1.912500e00 * frac_dups
-                    + -8.121036e-01 * frac_dups ** 2
-                    + 4.916605e-06 * n_total * frac_dups
-                    + -5.888875e-03 * n_vars
-                    + 5.473434e-09 * n_vars * n_total
+                    6.153952e-01
+                    + -3.927241e-06 * n_total
+                    + 2.544118e-11 * n_total ** 2
+                    + 2.071377e00 * frac_dups
+                    + -9.724922e-01 * frac_dups ** 2
+                    + 9.138711e-06 * n_total * frac_dups
+                    + -5.617844e-03 * n_vars
+                    + -4.402736e-08 * n_vars * n_total
                 )
                 < 1
             )
@@ -727,17 +727,17 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             # Calculate the sums of Tie set
             deaths = E[slice_]
 
-            tied_death_counts = deaths.astype(int).sum()
+            tied_death_counts = deaths.sum()
             if tied_death_counts == 0:
                 # no deaths, can continue
                 pos -= count_of_removals
                 continue
 
-            weights_deaths = weights_at_t[deaths]
+            weights_deaths = weights_at_t[-tied_death_counts:]
             weight_count = weights_deaths.sum()
 
             if tied_death_counts > 1:
-                tie_phi = phi_i[deaths].sum()
+                tie_phi = phi_i[-tied_death_counts:].sum()
                 factor = np.log(risk_phi - np.arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
             else:
                 factor = np.log(risk_phi)
@@ -857,7 +857,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 pos -= count_of_removals
                 continue
 
-            # deaths is sorted like [False, False, False, ..., True, ....] because we sorted early in preprocessing
+            # corresponding deaths are sorted like [False, False, False, ..., True, ....] because we sorted early in preprocessing
             xi_deaths = X_at_t[-tied_death_counts:]
             weights_deaths = weights_at_t[-tied_death_counts:]
 
