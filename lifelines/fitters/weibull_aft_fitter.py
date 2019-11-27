@@ -16,7 +16,12 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
 
     .. math::  S(t; x, y) = \exp\left(-\left(\frac{t}{\lambda(x)}\right)^{\rho(y)}\right),
 
-    which implies the cumulative hazard rate is
+    With no covariates, the Weibull model's parameters has the following interpretations: The :math:`\lambda` (scale) parameter has an
+    applicable interpretation: it represent the time when 37% of the population has died.
+    The :math:`\rho` (shape) parameter controls if the cumulative hazard (see below) is convex or concave, representing accelerating or decelerating
+    hazards.
+
+    The cumulative hazard rate is
 
     .. math:: H(t; x, y) = \left(\frac{t}{\lambda(x)} \right)^{\rho(y)},
 

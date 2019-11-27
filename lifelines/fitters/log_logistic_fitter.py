@@ -13,7 +13,12 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
 
     .. math::  S(t) = \left(1 + \left(\frac{t}{\alpha}\right)^{\beta}\right)^{-1},   \alpha > 0, \beta > 0,
 
-    and the hazard rate is:
+    The :math:`\alpha` (scale) parameter has an interpretation as being equal to the *median* lifetime of the population. The
+    :math:`\beta` parameter influences the shape of the hazard. See figure below:
+
+    .. image:: images/log_normal_alpha.png
+
+    The hazard rate is:
 
     .. math::  h(t) = \frac{\left(\frac{\beta}{\alpha}\right)\left(\frac{t}{\alpha}\right) ^ {\beta-1}}{\left(1 + \left(\frac{t}{\alpha}\right)^{\beta}\right)}
 
