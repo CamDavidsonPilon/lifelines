@@ -14,7 +14,13 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
 
     .. math::  S(t) = \exp\left(-\left(\frac{t}{\lambda}\right)^\rho\right),   \lambda > 0, \rho > 0,
 
-    which implies the cumulative hazard rate is
+    The :math:`\lambda` (scale) parameter has an applicable interpretation: it represent the time when 37% of the population has died.
+    The :math:`\rho` (shape) parameter controls if the cumulative hazard (see below) is convex or concave, representing accelerating or decelerating
+    hazards.
+
+    .. image:: images/weibull_parameters.png
+
+    The cumulative hazard rate is
 
     .. math:: H(t) = \left(\frac{t}{\lambda}\right)^\rho,
 
@@ -24,6 +30,7 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
 
     After calling the ``.fit`` method, you have access to properties like: ``cumulative_hazard_``, ``survival_function_``, ``lambda_`` and ``rho_``.
     A summary of the fit is available with the method ``print_summary()``.
+
 
     Parameters
     -----------
@@ -89,4 +96,4 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
         return safe_exp(rho_ * (np.log(np.clip(times, 1e-25, np.inf)) - np.log(lambda_)))
 
     def percentile(self, p):
-        return self.lambda_ * (np.log(1 / p) ** (1.0 / self.rho_))
+        return self.lambda_ * (np.log(1.0 / p) ** (1.0 / self.rho_))

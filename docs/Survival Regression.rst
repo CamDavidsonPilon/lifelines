@@ -38,7 +38,7 @@ An example dataset we will use is the Rossi recidivism dataset, available in *li
     3      52       0    1   23     1     1    1     1     1
     """
 
-The dataframe ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occurred, and the other columns represent variables we wish to regress against.
+The DataFrame ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occurred, and the other columns represent variables we wish to regress against.
 
 
 If you need to first clean or transform your dataset (encode categorical variables, add interaction terms, etc.), that should happen *before* using *lifelines*. Libraries like Pandas and Patsy help with that.
@@ -252,10 +252,12 @@ The reason why we use ``np.eye`` is because we want each row of the matrix to "t
 Checking the proportional hazards assumption
 -----------------------------------------------
 
-:class:`~lifelines.fitters.coxph_fitter.CoxPHFitter` has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.check_assumptions` method that will output violations of the proportional hazard assumption. For a tutorial on how to fix violations, see `Testing the Proportional Hazard Assumptions`_.
+To make proper inferences, we should ask if our Cox model is appropriate for our dataset. Recall from above that when using the Cox model, we are implicitly applying the proportional hazard assumption. We should ask, does our dataset obey this assumption?
 
 
-Non-proportional hazards is a case of *model misspecification*. Suggestions are to look for ways to *stratify* a column (see docs below), or use a `time varying model`_.
+:class:`~lifelines.fitters.coxph_fitter.CoxPHFitter` has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.check_assumptions` method that will output violations of the proportional hazard assumption. For a tutorial on how to fix violations, see `Testing the Proportional Hazard Assumptions`_. Suggestions are to look for ways to *stratify* a column (see docs below), or use a `time varying model`_.
+
+.. note:: Checking assumptions like this is only necessary if your goal is inference or correlation. That is, you wish to understand the influence of a covariate on the survival duration & outcome. If your goal is prediction, checking model assumptions is less important since your goal is to maximize an accuracy metric, and not learn about *how* the model is making that prediction.
 
 
 Stratification
@@ -779,7 +781,7 @@ located under :class:`~lifelines.fitters.aalen_additive_fitter.AalenAdditiveFitt
 
 
 I'm using the lovely library `Patsy <https://github.com/pydata/patsy>`__ here to create a
-design matrix from my original dataframe.
+design matrix from my original DataFrame.
 
 .. code:: python
 

@@ -15,9 +15,13 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
     form, with :math:`\alpha(x) = \exp\left(a_0 + a_1x_1 + ... + a_n x_n \right)`,
     and optionally, :math:`\beta(y) = \exp\left(b_0 + b_1 y_1 + ... + b_m y_m \right)`,
 
+
     The cumulative hazard rate is
 
     .. math:: H(t; x , y) = \log\left(1 + \left(\frac{t}{\alpha(x)}\right)^{\beta(y)}\right)
+
+    The :math:`\alpha` (scale) parameter has an interpretation as being equal to the *median* lifetime. The
+    :math:`\beta` parameter influences the shape of the hazard.
 
     After calling the ``.fit`` method, you have access to properties like:
     ``params_``, ``print_summary()``. A summary of the fit is available with the method ``print_summary()``.
