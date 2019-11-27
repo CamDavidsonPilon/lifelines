@@ -525,12 +525,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
             if tied_death_counts > 1:
 
-                # A good explaination for how Efron handles ties. Consider three of five subjects who fail at the time.
+                # A good explanation for how Efron handles ties. Consider three of five subjects who fail at the time.
                 # As it is not known a priori that who is the first to fail, so one-third of
                 # (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
                 # of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
 
-                # a lot of this is now in einstien notation for performance, but see original "expanded" code here
+                # a lot of this is now in Einstein notation for performance, but see original "expanded" code here
                 # https://github.com/CamDavidsonPilon/lifelines/blob/e7056e7817272eb5dff5983556954f56c33301b1/lifelines/fitters/cox_time_varying_fitter.py#L458-L490
 
                 tie_phi = array_sum_to_scalar(phi_i[deaths])
@@ -626,7 +626,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
-        format: string
+        style: string
             {html, ascii, latex}
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing

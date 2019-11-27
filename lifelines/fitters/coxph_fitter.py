@@ -1252,7 +1252,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
-        format: string
+        style: string
             {html, ascii, latex}
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing

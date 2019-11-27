@@ -542,7 +542,7 @@ It's important to know that the naive variance estimates of the coefficients are
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
-        format: string
+        style: string
             {html, ascii, latex}
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing

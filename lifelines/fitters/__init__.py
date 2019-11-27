@@ -616,7 +616,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
-        format: string
+        style: string
             {html, ascii, latex}
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
@@ -1696,7 +1696,7 @@ class ParametricRegressionFitter(BaseFitter):
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
-        format: string
+        style: string
             {html, ascii, latex}
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
@@ -3005,6 +3005,7 @@ class Printer:
 
         header_df = pd.DataFrame.from_records(headers).set_index(0)
         header_html = header_df.to_html(header=False, notebook=True, index_names=False)
+
         summary_html = summary_df.to_html(
             float_format=utils.format_floats(decimals),
             formatters={
@@ -3013,7 +3014,32 @@ class Printer:
             },
         )
 
-        return header_html + summary_html
+        footers = []
+        with np.errstate(invalid="ignore", divide="ignore"):
+
+            try:
+                if utils.CensoringType.is_right_censoring(self.model) and self.model._KNOWN_MODEL:
+                    footers.append(("Concordance", "{:.{prec}f}".format(self.model.score_, prec=decimals)))
+            except AttributeError:
+                pass
+
+            try:
+                sr = self.model.log_likelihood_ratio_test()
+                footers.append(
+                    (
+                        "Log-likelihood ratio test",
+                        "{:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
+                            sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
+                        ),
+                    )
+                )
+            except AttributeError:
+                pass
+
+        footer_df = pd.DataFrame.from_records(footers).set_index(0)
+        footer_html = footer_df.to_html(header=False, notebook=True, index_names=False)
+
+        return header_html + summary_html + footer_html
 
     def ascii_print(self):
 
