@@ -11,7 +11,7 @@ if __name__ == "__main__":
     from lifelines.datasets import load_rossi
 
     df = load_rossi()
-    df = pd.concat([df] * 16)
+    df = pd.concat([df] * 1)
     cp = CoxPHFitter()
     start_time = time.time()
     cp.fit(df, duration_col="week", event_col="arrest", batch_mode=True)

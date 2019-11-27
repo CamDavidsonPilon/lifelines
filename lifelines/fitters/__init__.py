@@ -38,9 +38,9 @@ class BaseFitter:
 
     def __repr__(self):
         classname = self._class_name
-        try:
+        if self._label:
             label_string = """"%s",""" % self._label
-        except AttributeError:
+        else:
             label_string = ""
         try:
             s = """<lifelines.%s:%s fitted with %g total observations, %g %s-censored observations>""" % (
