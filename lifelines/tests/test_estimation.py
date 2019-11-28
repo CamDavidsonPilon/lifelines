@@ -297,6 +297,7 @@ class TestParametricUnivariateFitters:
         df = load_diabetes()
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit_interval_censoring(df["left"], df["right"])
+            f.print_summary()
 
     def test_parameteric_models_all_can_do_interval_censoring_with_prediction(
         self, known_parametric_univariate_fitters
@@ -1968,6 +1969,7 @@ class TestAFTFitters:
 
         for model in models:
             model.fit_left_censoring(df, "T", "E")
+            model.print_summary()
 
     def test_model_ancillary_parameter_works_as_expected(self, rossi):
         aft = WeibullAFTFitter(model_ancillary=True)
@@ -2306,11 +2308,21 @@ class TestWeibullAFTFitter:
     def test_aft_weibull_can_do_interval_prediction(self, aft):
         # https://github.com/CamDavidsonPilon/lifelines/issues/839
         df = load_diabetes()
+
+        aft = WeibullAFTFitter()
         df["gender"] = df["gender"] == "male"
         df["E"] = df["left"] == df["right"]
 
         aft.fit_interval_censoring(df, "left", "right", "E")
         aft.predict_survival_function(df)
+        aft.print_summary()
+
+        aft = WeibullAFTFitter()
+        df = df.drop("E", axis=1)
+
+        aft.fit_interval_censoring(df, "left", "right")
+        aft.predict_survival_function(df)
+        aft.print_summary()
 
 
 class TestCoxPHFitter:

@@ -19,6 +19,8 @@ Bug fixes
    ``print_summary`` for HTML output.
 -  fixed bug where “None” was displayed in models’ ``__repr__``
 -  fixed bug in ``StatisticalResult.print_summary``
+-  fixed bug when using ``print_summary`` with left censored models.
+-  lots of minor bug fixes.
 
 .. _section-1:
 
