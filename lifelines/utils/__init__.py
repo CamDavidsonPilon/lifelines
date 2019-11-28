@@ -86,7 +86,7 @@ class CensoringType:
         elif cls.is_right_censoring(model):
             return "right"
         else:
-            return left
+            return "left"
 
 
 class StatError(Exception):

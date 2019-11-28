@@ -1687,7 +1687,14 @@ class ParametricRegressionFitter(BaseFitter):
         """
         justify = utils.string_justify(25)
         headers = []
-        headers.append(("duration col", "'%s'" % self.duration_col))
+
+        if utils.CensoringType.is_interval_censoring(self):
+            headers.extend(
+                [("lower bound col", "'%s'" % self.lower_bound_col), ("upper bound col", "'%s'" % self.upper_bound_col)]
+            )
+
+        else:
+            headers.append(("duration col", "'%s'" % self.duration_col))
 
         if self.event_col:
             headers.append(("event col", "'%s'" % self.event_col))
@@ -2330,8 +2337,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         upper_bound = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(upper_bound_col)).astype(float)
 
         if event_col is None:
-            event_col = "E"
-            df["E"] = lower_bound == upper_bound
+            event_col = "E_lifelines_added"
+            df[event_col] = lower_bound == upper_bound
 
         if ((lower_bound == upper_bound) != df[event_col]).any():
             raise ValueError(
@@ -2490,6 +2497,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         T = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
         self.durations = T.copy()
         self.fit_intercept = utils.coalesce(fit_intercept, self.fit_intercept)
+        self.duration_col = duration_col
 
         primary_columns = df.columns.difference([duration_col, event_col]).tolist()
         if isinstance(ancillary_df, pd.DataFrame):
