@@ -292,7 +292,9 @@ class CoxPHFitter(BaseFitter):
 
         self._norm_mean = X.mean(0)
         self._norm_std = X.std(0)
-        X_norm = normalize(X, self._norm_mean, self._norm_std)
+
+        # this is surprisingly faster to do...
+        X_norm = pd.DataFrame(normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index)
 
         params_ = self._fit_model(
             X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size

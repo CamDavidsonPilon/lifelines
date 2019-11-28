@@ -137,9 +137,6 @@ class UnivariateFitter(BaseFitter):
         ----------
         other: same object as self
 
-        Returns
-        --------
-        DataFrame
         """
         self_estimate = getattr(self, self._estimate_name)
         other_estimate = getattr(other, other._estimate_name)
@@ -159,10 +156,6 @@ class UnivariateFitter(BaseFitter):
         Parameters
         ----------
         other: same object as self
-
-        Returns
-        --------
-        DataFrame
 
         """
         self_estimate = getattr(self, self._estimate_name)
