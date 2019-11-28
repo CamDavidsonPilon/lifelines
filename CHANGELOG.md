@@ -11,6 +11,7 @@
  - fixed bug where computed statistics were not being shown in `print_summary` for HTML output.
  - fixed bug where "None" was displayed in models' `__repr__`
  - fixed bug in `StatisticalResult.print_summary`
+ - lots of bug fixes TBH.
 
 #### 0.23.0 - 2019-11-17
 

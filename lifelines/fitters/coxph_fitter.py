@@ -181,7 +181,7 @@ class CoxPHFitter(BaseFitter):
             lifetimes.
 
         event_col: string, optional
-            the  name of thecolumn in DataFrame that contains the subjects' death
+            the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
         weights_col: string, optional
