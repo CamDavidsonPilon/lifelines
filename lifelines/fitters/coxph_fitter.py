@@ -5,6 +5,7 @@ import warnings
 from textwrap import dedent, fill
 import numpy as np
 import pandas as pd
+from typing import *
 
 from numpy.linalg import norm, inv
 from scipy.linalg import solve as spsolve, LinAlgError
@@ -71,7 +72,6 @@ class BatchVsSingle:
 
 
 class CoxPHFitter(BaseFitter):
-
     r"""
     This class implements fitting Cox's proportional hazard model:
 
@@ -135,10 +135,11 @@ class CoxPHFitter(BaseFitter):
     baseline_survival_: DataFrame
     """
 
-    _KNOWN_MODEL = True
+    _KNOWN_MODEL: bool = True
+    _concordance_score_: float
 
-    def __init__(self, alpha=0.05, tie_method="Efron", penalizer=0.0, strata=None):
-        super(CoxPHFitter, self).__init__(alpha=alpha)
+    def __init__(self, tie_method="Efron", penalizer=0.0, strata=None, **kwargs):
+        super(CoxPHFitter, self).__init__(**kwargs)
         if penalizer < 0:
             raise ValueError("penalizer parameter must be >= 0.")
         if tie_method != "Efron":
@@ -152,17 +153,17 @@ class CoxPHFitter(BaseFitter):
     @CensoringType.right_censoring
     def fit(
         self,
-        df,
-        duration_col=None,
-        event_col=None,
-        show_progress=False,
-        initial_point=None,
-        strata=None,
-        step_size=None,
-        weights_col=None,
-        cluster_col=None,
-        robust=False,
-        batch_mode=None,
+        df: pd.DataFrame,
+        duration_col: str = None,
+        event_col: str = None,
+        show_progress: bool = False,
+        initial_point: np.ndarray = None,
+        strata: Union[str, List[str]] = None,
+        step_size: float = None,
+        weights_col: str = None,
+        cluster_col: str = None,
+        robust: bool = False,
+        batch_mode: Union[bool, None] = None,
     ):
         """
         Fit the Cox proportional hazard model to a dataset.

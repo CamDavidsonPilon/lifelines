@@ -199,15 +199,6 @@ class UnivariateFitter(BaseFitter):
     @property
     def conditional_time_to_event_(self) -> pd.DataFrame:
         """
-        Return a DataFrame, with index equal to ``survival_function_``'s index, that estimates the median
-        duration remaining until the death event, given survival up until time t. For example, if an
-        individual exists until age 1, their expected life remaining *given they lived to time 1*
-        might be 9 years.
-        """
-        return self._conditional_time_to_event_()
-
-    def _conditional_time_to_event_(self) -> pd.DataFrame:
-        """
         Return a DataFrame, with index equal to survival_function_, that estimates the median
         duration remaining until the death event, given survival up until time t. For example, if an
         individual exists until age 1, their expected life remaining *given they lived to time 1*
@@ -648,7 +639,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> UnivariateFitter:  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments
         """
         Parameters
         ----------
@@ -713,7 +704,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> UnivariateFitter:  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments
         """
         Fit the model to a left-censored dataset
 
@@ -780,7 +771,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> UnivariateFitter:  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments
         """
         Fit the model to an interval censored dataset.
 
@@ -959,7 +950,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             )
 
     @property
-    def event_table(self) -> pd.DataFrame:
+    def event_table(self) -> Union[pd.DataFrame, None]:
         if hasattr(self, "_event_table"):
             return self._event_table
         else:
@@ -1125,6 +1116,7 @@ class ParametricRegressionFitter(BaseFitter):
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
     _KNOWN_MODEL = False
+    _concordance_score_: float
 
     def __init__(self, alpha=0.05, penalizer=0.0):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha)
@@ -1166,13 +1158,12 @@ class ParametricRegressionFitter(BaseFitter):
         hz = anp.clip(hz, 1e-20, np.inf)
         return anp.log(hz)
 
-    def _log_1m_sf(self, params, T, *Xs):
+    def _log_1m_sf(self, params, T, Xs):
         # equal to log(cdf), but often easier to express with sf.
-        cum_haz = self._cumulative_hazard(params, T, *Xs)
-        return anp.log1p(-anp.exp(-cum_haz))
+        return anp.log1p(self._survival_function(params, T, Xs))
 
     def _survival_function(self, params, T, Xs):
-        return anp.clip(anp.exp(-self._cumulative_hazard(params, T, Xs)), 1e-25, 1.0)
+        return anp.clip(anp.exp(-self._cumulative_hazard(params, T, Xs)), 1e-12, 1 - 1e-12)
 
     def _log_likelihood_right_censoring(self, params, Ts, E, W, entries, Xs):
 

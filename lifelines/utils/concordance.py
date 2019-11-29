@@ -4,7 +4,7 @@ import numpy as np
 from lifelines.utils.btree import _BTree
 
 
-def concordance_index(event_times, predicted_scores, event_observed=None):
+def concordance_index(event_times, predicted_scores, event_observed=None) -> float:
     """
     Calculates the concordance index (C-index) between two series
     of event times. The first is the real survival times from
@@ -58,7 +58,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None):
     return _concordance_ratio(num_correct, num_tied, num_pairs)
 
 
-def _concordance_ratio(num_correct, num_tied, num_pairs):
+def _concordance_ratio(num_correct: int, num_tied: int, num_pairs: int) -> float:
     if num_pairs == 0:
         raise ZeroDivisionError("No admissable pairs in the dataset.")
     return (num_correct + num_tied / 2) / num_pairs
@@ -229,7 +229,7 @@ def _naive_concordance_summary_statistics(event_times, predicted_event_times, ev
     return (num_correct, num_tied, num_pairs)
 
 
-def naive_concordance_index(event_times, predicted_event_times, event_observed=None):
+def naive_concordance_index(event_times, predicted_event_times, event_observed=None) -> float:
     event_times, predicted_event_times, event_observed = _preprocess_scoring_data(
         event_times, predicted_event_times, event_observed
     )

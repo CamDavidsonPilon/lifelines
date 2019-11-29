@@ -2220,7 +2220,6 @@ class TestWeibullAFTFitter:
         # r = survreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio, data=df, dist='weibull', robust=TRUE, weights=age)
 
         aft.fit(rossi, "week", "arrest", robust=True, weights_col="age")
-        print(aft.summary["se(coef)"])
 
         npt.assert_allclose(aft.summary.loc[("lambda_", "fin"), "se(coef)"], 0.006581, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "race"), "se(coef)"], 0.010367, rtol=1e-3)
@@ -2267,13 +2266,17 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.log_likelihood_, -2027.196, rtol=1e-3)
 
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "se(coef)"], 0.02823, rtol=1e-1)
-        # npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.42273, rtol=1e-1)
-        # npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.08356, rtol=1e-1)
+
+        with pytest.raises(AssertionError):
+            npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.42273, rtol=1e-1)
+            npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.08356, rtol=1e-1)
 
         aft.fit_interval_censoring(df, "left", "right", "E", ancillary_df=True)
 
         npt.assert_allclose(aft.log_likelihood_, -2025.813, rtol=1e-3)
-        # npt.assert_allclose(aft.summary.loc[("rho_", "gender"), "coef"], 0.1670, rtol=1e-4)
+
+        with pytest.raises(AssertionError):
+            npt.assert_allclose(aft.summary.loc[("rho_", "gender"), "coef"], 0.1670, rtol=1e-4)
 
     def test_aft_weibull_with_weights(self, rossi, aft):
         """

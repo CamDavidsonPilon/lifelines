@@ -68,19 +68,19 @@ class CensoringType:
         return f
 
     @classmethod
-    def is_right_censoring(cls, model):
+    def is_right_censoring(cls, model) -> bool:
         return model._censoring_type == cls.RIGHT
 
     @classmethod
-    def is_left_censoring(cls, model):
+    def is_left_censoring(cls, model) -> bool:
         return model._censoring_type == cls.LEFT
 
     @classmethod
-    def is_interval_censoring(cls, model):
+    def is_interval_censoring(cls, model) -> bool:
         return model._censoring_type == cls.INTERVAL
 
     @classmethod
-    def get_human_readable_censoring_type(cls, model):
+    def get_human_readable_censoring_type(cls, model) -> str:
         if cls.is_interval_censoring(model):
             return "interval"
         elif cls.is_right_censoring(model):
@@ -162,7 +162,7 @@ def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
         return survival_times
 
 
-def qth_survival_time(q, model_or_survival_function) -> float:
+def qth_survival_time(q: float, model_or_survival_function) -> float:
     """
     Returns the time when a single survival function reaches the qth percentile, that is,
     solves  :math:`q = S(t)` for :math:`t`.
@@ -191,13 +191,12 @@ def qth_survival_time(q, model_or_survival_function) -> float:
     elif isinstance(model_or_survival_function, pd.Series):
         if model_or_survival_function.iloc[-1] > q:
             return np.inf
-        v = model_or_survival_function.index[(-model_or_survival_function).searchsorted([-q])[0]]
+        return model_or_survival_function.index[(-model_or_survival_function).searchsorted([-q])[0]]
     else:
         raise ValueError(
             "Unable to compute median of object %s - should be a DataFrame, Series or lifelines univariate model"
             % model_or_survival_function
         )
-    return v
 
 
 def median_survival_times(model_or_survival_function) -> float:
@@ -220,7 +219,7 @@ def median_survival_times(model_or_survival_function) -> float:
         raise ValueError("Can't compute median survival time of object %s" % model_or_survival_function)
 
 
-def restricted_mean_survival_time(model_or_survival_function, t=np.inf, return_ci=False) -> float:
+def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf) -> float:
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
