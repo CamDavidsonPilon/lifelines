@@ -5,9 +5,10 @@ import collections
 from datetime import datetime
 from functools import wraps
 from textwrap import dedent
-from typing import Union, Any, Tuple, List, Callable
+from typing import Union, Any, Tuple, List, Callable, Optional
 
 import numpy as np
+from numpy import ndarray
 from scipy.linalg import solve
 from scipy import stats
 from scipy.integrate import quad, trapz
@@ -41,7 +42,7 @@ class CensoringType:
     RIGHT = 3
 
     @classmethod
-    def right_censoring(cls, function):
+    def right_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
         def f(self, *args, **kwargs):
             self._censoring_type = cls.RIGHT
@@ -50,7 +51,7 @@ class CensoringType:
         return f
 
     @classmethod
-    def left_censoring(cls, function):
+    def left_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
         def f(self, *args, **kwargs):
             self._censoring_type = cls.LEFT
@@ -59,7 +60,7 @@ class CensoringType:
         return f
 
     @classmethod
-    def interval_censoring(cls, function):
+    def interval_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
         def f(self, *args, **kwargs):
             self._censoring_type = cls.INTERVAL
@@ -639,7 +640,7 @@ def datetimes_to_durations(
     return T, C.values
 
 
-def coalesce(*args) -> Union[Any, None]:
+def coalesce(*args) -> Optional[Any]:
     for arg in args:
         if arg is not None:
             return arg
@@ -1449,14 +1450,15 @@ class StepSizer:
     ATM it contains lots of "magic constants"
     """
 
-    def __init__(self, initial_step_size):
-        initial_step_size = coalesce(initial_step_size, 0.95)
-        self.initial_step_size = initial_step_size
-        self.step_size = initial_step_size
-        self.temper_back_up = False
-        self.norm_of_deltas = []
+    def __init__(self, initial_step_size: Optional[float]) -> None:
+        initial_step_size = initial_step_size or 0.95
 
-    def update(self, norm_of_delta):
+        self.initial_step_size: float = initial_step_size
+        self.step_size: float = initial_step_size
+        self.temper_back_up: bool = False
+        self.norm_of_deltas: List[float] = []
+
+    def update(self, norm_of_delta: float) -> "StepSizer":
         SCALE = 1.2
         LOOKBACK = 3
 
@@ -1487,7 +1489,7 @@ class StepSizer:
         return self
 
     @staticmethod
-    def _is_monotonically_decreasing(array) -> bool:
+    def _is_monotonically_decreasing(array: Union[List[float], List[float]]) -> bool:
         return np.all(np.diff(array) < 0)
 
     def next(self) -> float:
@@ -1543,7 +1545,7 @@ def map_leading_space(list) -> List[str]:
     return [leading_space(c) for c in list]
 
 
-def interpolate_at_times(df_or_series, new_times):
+def interpolate_at_times(df_or_series, new_times) -> ndarray:
     """
 
 
@@ -1603,7 +1605,7 @@ class DataframeSliceDict:
         for k in self.mappings:
             yield (k, self[k])
 
-    def filter(self, ix):
+    def filter(self, ix) -> "DataframeSliceDict":
         ix = _to_1d_array(ix)
         return DataframeSliceDict(self.df[ix], self.mappings)
 

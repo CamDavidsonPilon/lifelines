@@ -467,7 +467,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) + z * std_cumulative_hazard
         return df
 
-    def _create_initial_point(self, *args):
+    def _create_initial_point(self, *args) -> np.ndarray:
         # this can be overwritten in the model class.
         # *args has terms like Ts, E, entry, weights
         return np.array(list(self._initial_values_from_bounds()))
@@ -639,7 +639,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ):  # pylint: disable=too-many-arguments
+    ) -> "ParametricUnivariateFitter":  # pylint: disable=too-many-arguments
         """
         Parameters
         ----------
@@ -704,7 +704,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ):  # pylint: disable=too-many-arguments
+    ) -> "ParametricUnivariateFitter":  # pylint: disable=too-many-arguments
         """
         Fit the model to a left-censored dataset
 
@@ -771,7 +771,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ):  # pylint: disable=too-many-arguments
+    ) -> "ParametricUnivariateFitter":  # pylint: disable=too-many-arguments
         """
         Fit the model to an interval censored dataset.
 
@@ -852,7 +852,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> UnivariateFitter:
+    ) -> "ParametricUnivariateFitter":
 
         label = utils.coalesce(label, self._class_name.replace("Fitter", "") + "_estimate")
         n = len(utils.coalesce(*Ts))
@@ -1117,6 +1117,7 @@ class ParametricRegressionFitter(BaseFitter):
     _scipy_fit_options: Dict[str, Any] = dict()
     _KNOWN_MODEL = False
     _concordance_score_: float
+    _fitted_parameter_names: List[str]
 
     def __init__(self, alpha=0.05, penalizer=0.0):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha)
@@ -1240,7 +1241,7 @@ class ParametricRegressionFitter(BaseFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ):
+    ) -> "ParametricRegressionFitter":
         """
         Fit the regression model to a right-censored dataset.
 
@@ -1333,7 +1334,7 @@ class ParametricRegressionFitter(BaseFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ):
+    ) -> "ParametricRegressionFitter":
 
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self._n_examples = df.shape[0]
@@ -1387,7 +1388,11 @@ class ParametricRegressionFitter(BaseFitter):
         )
 
         self._norm_mean = df.mean(0)
-        if hasattr(self, "_ancillary_parameter_name") and hasattr(self, "_primary_parameter_name"):
+        if (
+            self._KNOWN_MODEL
+            and hasattr(self, "_ancillary_parameter_name")
+            and hasattr(self, "_primary_parameter_name")
+        ):
             # Known AFT model
             self._norm_mean_ = df[self.regressors[self._primary_parameter_name]].mean(0)
             self._norm_mean_ancillary = df[self.regressors[self._ancillary_parameter_name]].mean(0)
@@ -1421,6 +1426,7 @@ class ParametricRegressionFitter(BaseFitter):
         if self._KNOWN_MODEL:
             # too slow for non-KNOWN models
             self._predicted_median = self.predict_median(df)
+        return self
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return {
@@ -1702,7 +1708,7 @@ class ParametricRegressionFitter(BaseFitter):
 
         p.print(style=style)
 
-    def predict_survival_function(self, df, times=None, conditional_after=None):
+    def predict_survival_function(self, df, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -1731,7 +1737,7 @@ class ParametricRegressionFitter(BaseFitter):
         """
         return np.exp(-self.predict_cumulative_hazard(df, times=times, conditional_after=conditional_after))
 
-    def predict_median(self, df, conditional_after=None) -> pd.DataFrame:
+    def predict_median(self, df, *, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1762,13 +1768,13 @@ class ParametricRegressionFitter(BaseFitter):
         """
         return self.predict_percentile(df, p=0.5, conditional_after=conditional_after)
 
-    def predict_percentile(self, df, p=0.5, conditional_after=None) -> pd.DataFrame:
+    def predict_percentile(self, df, *, p=0.5, conditional_after=None) -> pd.DataFrame:
         subjects = utils._get_index(df)
         return utils.qth_survival_times(
             p, self.predict_survival_function(df, conditional_after=conditional_after)[subjects]
         ).T
 
-    def predict_cumulative_hazard(self, df, times=None, conditional_after=None):
+    def predict_cumulative_hazard(self, df, *, times=None, conditional_after=None):
         """
         Predict the cumulative hazard for individuals, given their covariates.
 
@@ -2037,7 +2043,7 @@ class ParametricRegressionFitter(BaseFitter):
         for covariate, value in zip(covariates, values.T):
             X[covariate] = value
 
-        self.predict_survival_function(X).plot(ax=ax, **kwargs)
+        self.predict_survival_function(X).plot(ax=ax)
         if plot_baseline:
             self.predict_survival_function(x_bar).rename(columns={0: "baseline survival"}).plot(
                 ax=ax, ls=":", color="k"
@@ -2074,7 +2080,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ):
+    ) -> "ParametericAFTRegressionFitter":
         """
         Fit the accelerated failure time model to a right-censored dataset.
 
@@ -2230,7 +2236,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ):
+    ) -> "ParametericAFTRegressionFitter":
         """
         Fit the accelerated failure time model to a interval-censored dataset.
 
@@ -2381,7 +2387,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             initial_point=initial_point,
             entry_col=entry_col,
         )
-
         return self
 
     @utils.CensoringType.left_censoring
@@ -2398,7 +2403,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ):
+    ) -> "ParametericAFTRegressionFitter":
         """
         Fit the accelerated failure time model to a left-censored dataset.
 
@@ -2736,7 +2741,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             X["_intercept"] = 1.0
             ancillary_X["_intercept"] = 1.0
 
-        self.predict_survival_function(X, ancillary_df=ancillary_X).plot(ax=ax, **kwargs)
+        self.predict_survival_function(X, ancillary_df=ancillary_X).plot(ax=ax)
         if plot_baseline:
             self.predict_survival_function(x_bar, ancillary_df=x_bar_anc).rename(columns={0: "baseline survival"}).plot(
                 ax=ax, ls=":", color="k"
@@ -2778,7 +2783,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return primary_scores, ancillary_scores
 
-    def predict_survival_function(self, df, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
+    def predict_survival_function(self, df, times=None, conditional_after=None, ancillary_df=None) -> pd.DataFrame:
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -2809,7 +2814,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             )
         )
 
-    def predict_median(self, df, ancillary_df=None, conditional_after=None) -> pd.DataFrame:
+    def predict_median(self, df, *, ancillary_df=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -2835,12 +2840,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return self.predict_percentile(df, ancillary_df=ancillary_df, p=0.5, conditional_after=conditional_after)
 
-    def predict_percentile(self, df, ancillary_df=None, p=0.5, conditional_after=None) -> pd.DataFrame:
+    def predict_percentile(self, df, *, ancillary_df=None, p=0.5, conditional_after=None) -> pd.DataFrame:
         return utils.qth_survival_times(
             p, self.predict_survival_function(df, ancillary_df=ancillary_df, conditional_after=conditional_after)
         )
 
-    def predict_cumulative_hazard(self, df, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
+    def predict_cumulative_hazard(self, df, *, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -2909,7 +2914,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
 class Printer:
     def __init__(
-        self, headers: List[Tuple], model: Type[BaseFitter], justify: Callable, decimals: int, header_kwargs: Dict
+        self,
+        headers: List[Tuple[str, Any]],
+        model: Type[BaseFitter],
+        justify: Callable,
+        decimals: int,
+        header_kwargs: Dict,
     ):
         self.headers = headers
         self.model = model

@@ -8,6 +8,13 @@ from lifelines.utils import _get_index
 from lifelines.fitters import ParametericAFTRegressionFitter
 from lifelines.utils.safe_exp import safe_exp
 
+from autograd.builtins import DictBox
+from autograd.numpy.numpy_boxes import ArrayBox
+from lifelines.utils import DataframeSliceDict
+from numpy import ndarray
+from pandas.core.frame import DataFrame
+from typing import Dict, List, Optional, Union
+
 
 class LogNormalAFTFitter(ParametericAFTRegressionFitter):
     r"""
@@ -67,7 +74,9 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         self._ancillary_parameter_name = "sigma_"
         super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
-    def _cumulative_hazard(self, params, T, Xs):
+    def _cumulative_hazard(
+        self, params: Union[DictBox, Dict[str, ndarray]], T: Union[float, ndarray], Xs: DataframeSliceDict
+    ) -> Union[ndarray, ArrayBox]:
         mu_params = params["mu_"]
         mu_ = np.dot(Xs["mu_"], mu_params)
 
@@ -76,7 +85,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         Z = (np.log(T) - mu_) / sigma_
         return -norm.logsf(Z)
 
-    def _log_hazard(self, params, T, Xs):
+    def _log_hazard(self, params: DictBox, T: Union[float, ndarray], Xs: DataframeSliceDict) -> ArrayBox:
         mu_params = params["mu_"]
         mu_ = np.dot(Xs["mu_"], mu_params)
 
@@ -99,7 +108,14 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         Z = (np.log(T) - mu_) / sigma_
         return norm.logcdf(Z)
 
-    def predict_percentile(self, df, ancillary_df=None, p=0.5, conditional_after=None):
+    def predict_percentile(
+        self,
+        df: DataFrame,
+        *,
+        ancillary_df: Optional[DataFrame] = None,
+        p: float = 0.5,
+        conditional_after: Optional[ndarray] = None
+    ) -> DataFrame:
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -147,7 +163,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
                 index=_get_index(df),
             )
 
-    def predict_expectation(self, df, ancillary_df=None):
+    def predict_expectation(self, df: DataFrame, ancillary_df: Optional[DataFrame] = None) -> DataFrame:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
