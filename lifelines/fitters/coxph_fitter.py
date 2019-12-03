@@ -42,12 +42,18 @@ from lifelines.utils import (
     format_p_value,
 )
 
+from numpy import ndarray
+from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
+from pandas.core.series import Series
+from typing import Callable, Iterator, List, Optional, Tuple, Union
+
 __all__ = ["CoxPHFitter"]
 
 
 class BatchVsSingle:
     @staticmethod
-    def decide(batch_mode, n_unique, n_total, n_vars) -> str:
+    def decide(batch_mode: Optional[bool], n_unique: int, n_total: int, n_vars: int) -> str:
         frac_dups = n_unique / n_total
         if batch_mode or (
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
@@ -138,7 +144,13 @@ class CoxPHFitter(BaseFitter):
     _KNOWN_MODEL: bool = True
     _concordance_score_: float
 
-    def __init__(self, tie_method="Efron", penalizer=0.0, strata=None, **kwargs):
+    def __init__(
+        self,
+        tie_method: str = "Efron",
+        penalizer: float = 0.0,
+        strata: Optional[Union[List[str], str]] = None,
+        **kwargs
+    ) -> None:
         super(CoxPHFitter, self).__init__(**kwargs)
         if penalizer < 0:
             raise ValueError("penalizer parameter must be >= 0.")
@@ -153,17 +165,17 @@ class CoxPHFitter(BaseFitter):
     def fit(
         self,
         df: pd.DataFrame,
-        duration_col: str = None,
-        event_col: str = None,
+        duration_col: Optional[str] = None,
+        event_col: Optional[str] = None,
         show_progress: bool = False,
-        initial_point: np.ndarray = None,
-        strata: Union[str, List[str]] = None,
-        step_size: float = None,
-        weights_col: str = None,
-        cluster_col: str = None,
+        initial_point: Optional[ndarray] = None,
+        strata: Optional[Union[str, List[str]]] = None,
+        step_size: Optional[float] = None,
+        weights_col: Optional[str] = None,
+        cluster_col: Optional[str] = None,
         robust: bool = False,
-        batch_mode: Union[bool, None] = None,
-    ):
+        batch_mode: Optional[bool] = None,
+    ) -> "CoxPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
 
@@ -323,7 +335,7 @@ class CoxPHFitter(BaseFitter):
 
         return self
 
-    def _preprocess_dataframe(self, df):
+    def _preprocess_dataframe(self, df: DataFrame) -> Tuple[DataFrame, Series, Series, Series, Index, Optional[Series]]:
         # this should be a pure function
 
         df = df.copy()
@@ -366,7 +378,7 @@ class CoxPHFitter(BaseFitter):
 
         return X, T, E, W, original_index, _clusters
 
-    def _check_values(self, X, T, E, W):
+    def _check_values(self, X: DataFrame, T: Series, E: Series, W: Series) -> None:
         check_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(X)
@@ -387,16 +399,16 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
     def _fit_model(
         self,
-        X,
-        T,
-        E,
-        weights=None,
-        initial_point=None,
-        step_size=None,
-        precision=1e-07,
-        show_progress=True,
-        max_steps=50,
-    ):  # pylint: disable=too-many-statements,too-many-branches
+        X: DataFrame,
+        T: Series,
+        E: Series,
+        weights: Series,
+        initial_point: Optional[ndarray] = None,
+        step_size: Optional[float] = None,
+        precision: float = 1e-07,
+        show_progress: bool = True,
+        max_steps: int = 50,
+    ) -> ndarray:  # pylint: disable=too-many-statements,too-many-branches
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -427,7 +439,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         -------
         beta: (1,d) numpy array.
         """
-        self.path = []
+        self.path: List[ndarray] = []
         assert precision <= 1.0, "precision must be less than or equal to 1."
         _, d = X.shape
 
@@ -578,7 +590,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return beta
 
-    def _get_efron_values_single(self, X, T, E, weights, beta):
+    def _get_efron_values_single(
+        self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
+    ) -> Tuple[ndarray, ndarray, float]:
         """
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
@@ -802,7 +816,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             tie_phi = 0
         return log_lik
 
-    def _get_efron_values_batch(self, X, T, E, weights, beta):  # pylint: disable=too-many-locals
+    def _get_efron_values_batch(
+        self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
+    ) -> Tuple[ndarray, ndarray, float]:  # pylint: disable=too-many-locals
         """
         Assumes sorted on ascending on T
         Calculates the first and second order vector differentials, with respect to beta.
@@ -912,7 +928,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return hessian, gradient, log_lik
 
-    def _partition_by_strata(self, X, T, E, weights, as_dataframes=False):
+    def _partition_by_strata(self, X: DataFrame, T: Series, E: Series, weights: Series, as_dataframes: bool = False):
         for stratum, stratified_X in X.groupby(self.strata):
             stratified_E, stratified_T, stratified_W = (E.loc[[stratum]], T.loc[[stratum]], weights.loc[[stratum]])
             if not as_dataframes:
@@ -920,11 +936,15 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             else:
                 yield (stratified_X, stratified_T, stratified_E, stratified_W), stratum
 
-    def _partition_by_strata_and_apply(self, X, T, E, weights, function, *args):
+    def _partition_by_strata_and_apply(
+        self, X: DataFrame, T: Series, E: Series, weights: Series, function: Callable, *args
+    ):
         for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
-    def _compute_martingale(self, X, T, E, _weights, index=None) -> pd.DataFrame:
+    def _compute_martingale(
+        self, X: DataFrame, T: Series, E: Series, _weights: Series, index: Optional[Index] = None
+    ) -> pd.DataFrame:
         # TODO: _weights unused
         partial_hazard = self.predict_partial_hazard(X)[0].values
 
@@ -940,7 +960,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             {self.duration_col: T.values, self.event_col: E.values, "martingale": martingale.values}, index=index
         )
 
-    def _compute_deviance(self, X, T, E, weights, index=None) -> pd.DataFrame:
+    def _compute_deviance(
+        self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None
+    ) -> pd.DataFrame:
         df = self._compute_martingale(X, T, E, weights, index)
         rmart = df.pop("martingale")
 
@@ -952,7 +974,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df["deviance"] = deviance
         return df
 
-    def _compute_scaled_schoenfeld(self, X, T, E, weights, index=None) -> pd.DataFrame:
+    def _compute_scaled_schoenfeld(
+        self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None
+    ) -> pd.DataFrame:
         r"""
         Let s_k be the kth schoenfeld residuals. Then E[s_k] = 0.
         For tests of proportionality, we want to test if \beta_i(t) is \beta_i (constant) or not.
@@ -980,7 +1004,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         scaled_schoenfeld_resids.columns = self.params_.index
         return scaled_schoenfeld_resids
 
-    def _compute_schoenfeld(self, X, T, E, weights, index=None) -> pd.DataFrame:
+    def _compute_schoenfeld(
+        self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None
+    ) -> pd.DataFrame:
         # TODO: should the index by times, i.e. T[E]?
 
         # Assumes sorted on T and on strata
@@ -1003,7 +1029,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.params_.index, index=index[E])
         return df
 
-    def _compute_schoenfeld_within_strata(self, X, T, E, weights):
+    def _compute_schoenfeld_within_strata(self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray) -> ndarray:
         """
         A positive value of the residual shows an X value that is higher than expected at that death time.
         """
@@ -1090,7 +1116,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return schoenfeld_residuals[::-1]
 
-    def _compute_delta_beta(self, X, T, E, weights, index=None) -> pd.DataFrame:
+    def _compute_delta_beta(
+        self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None
+    ) -> pd.DataFrame:
         """
         approximate change in betas as a result of excluding ith row. Good for finding outliers / specific
         subjects that influence the model disproportionately. Good advice: don't drop these outliers, model them.
@@ -1105,7 +1133,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return delta_betas
 
-    def _compute_score(self, X, T, E, weights, index=None) -> pd.DataFrame:
+    def _compute_score(
+        self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None
+    ) -> pd.DataFrame:
 
         _, d = X.shape
 
@@ -1122,7 +1152,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return pd.DataFrame(score_residuals, columns=self.params_.index, index=index)
 
-    def _compute_score_within_strata(self, X, _T, E, weights):
+    def _compute_score_within_strata(
+        self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray
+    ) -> ndarray:
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -1166,7 +1198,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return score_residuals * weights[:, None]
 
-    def compute_residuals(self, training_dataframe, kind) -> pd.DataFrame:
+    def compute_residuals(self, training_dataframe: DataFrame, kind: str) -> pd.DataFrame:
         """
 
         Parameters
@@ -1197,14 +1229,16 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             index=self.params_.index,
         )
 
-    def _compute_standard_errors(self, X, T, E, weights) -> pd.Series:
+    def _compute_standard_errors(
+        self, X: Optional[DataFrame], T: Optional[Series], E: Optional[Series], weights: Optional[Series]
+    ) -> pd.Series:
         if self.robust or self.cluster_col:
             se = np.sqrt(self._compute_sandwich_estimator(X, T, E, weights).diagonal())
         else:
             se = np.sqrt(self.variance_matrix_.diagonal())
         return pd.Series(se, name="se", index=self.params_.index)
 
-    def _compute_sandwich_estimator(self, X, T, E, weights):
+    def _compute_sandwich_estimator(self, X: DataFrame, T: Series, E: Series, weights: Series) -> ndarray:
         delta_betas = self._compute_delta_beta(X, T, E, weights)
 
         if self.cluster_col:
@@ -1214,10 +1248,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return sandwich_estimator.values
 
-    def _compute_z_values(self):
+    def _compute_z_values(self) -> Series:
         return self.params_ / self.standard_errors_
 
-    def _compute_p_values(self):
+    def _compute_p_values(self) -> ndarray:
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
@@ -1246,7 +1280,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df["-log2(p)"] = -np.log2(df["p"])
             return df
 
-    def print_summary(self, decimals=2, style=None, **kwargs):
+    def print_summary(self, decimals: int = 2, style: Optional[str] = None, **kwargs) -> None:
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -1265,7 +1299,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         # Print information about data first
         justify = string_justify(25)
 
-        headers = []
+        headers: List[Tuple[str, Any]] = []
         headers.append(("duration col", "'%s'" % self.duration_col))
 
         if self.event_col:
@@ -1323,7 +1357,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             degrees_freedom=degrees_freedom,
         )
 
-    def predict_partial_hazard(self, X) -> pd.DataFrame:
+    def predict_partial_hazard(self, X: Union[ndarray, DataFrame]) -> pd.DataFrame:
         r"""
         Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to :math:`\exp{(x - mean(x_{train}))'\beta}`
@@ -1343,7 +1377,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         return np.exp(self.predict_log_partial_hazard(X))
 
-    def predict_log_partial_hazard(self, X) -> pd.DataFrame:
+    def predict_log_partial_hazard(self, X: Union[ndarray, DataFrame]) -> pd.DataFrame:
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
@@ -1386,7 +1420,12 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         X = normalize(X, self._norm_mean.values, 1)
         return pd.DataFrame(np.dot(X, self.params_), index=index)
 
-    def predict_cumulative_hazard(self, X, times=None, conditional_after=None) -> pd.DataFrame:
+    def predict_cumulative_hazard(
+        self,
+        X: Union[Series, DataFrame],
+        times: Optional[Union[ndarray, List[float]]] = None,
+        conditional_after: Optional[List[int]] = None,
+    ) -> pd.DataFrame:
         """
         Parameters
         ----------
@@ -1471,7 +1510,12 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return cumulative_hazard_
 
-    def predict_survival_function(self, X, times=None, conditional_after=None) -> pd.DataFrame:
+    def predict_survival_function(
+        self,
+        X: Union[Series, DataFrame],
+        times: Optional[Union[List[float], ndarray]] = None,
+        conditional_after: Optional[List[int]] = None,
+    ) -> pd.DataFrame:
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -1496,7 +1540,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         return np.exp(-self.predict_cumulative_hazard(X, times=times, conditional_after=conditional_after))
 
-    def predict_percentile(self, X, p=0.5, conditional_after=None) -> pd.DataFrame:
+    def predict_percentile(
+        self, X: DataFrame, p: float = 0.5, conditional_after: Optional[ndarray] = None
+    ) -> pd.DataFrame:
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1524,7 +1570,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         subjects = _get_index(X)
         return qth_survival_times(p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]).T
 
-    def predict_median(self, X, conditional_after=None) -> pd.DataFrame:
+    def predict_median(self, X: DataFrame, conditional_after: Optional[ndarray] = None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1549,7 +1595,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         return self.predict_percentile(X, 0.5, conditional_after=conditional_after)
 
-    def predict_expectation(self, X, conditional_after=None) -> pd.DataFrame:
+    def predict_expectation(self, X: DataFrame, conditional_after: Optional[ndarray] = None) -> pd.DataFrame:
         r"""
         Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
         to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapizoidal rule to approximate the integral.
@@ -1588,7 +1634,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         v = self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
         return pd.DataFrame(trapz(v.values.T, v.index), index=subjects)
 
-    def _compute_baseline_hazard(self, partial_hazards, name):
+    def _compute_baseline_hazard(self, partial_hazards: DataFrame, name: Any) -> DataFrame:
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
         ind_hazards = partial_hazards.copy()
         ind_hazards["P"] *= ind_hazards["W"]
@@ -1618,7 +1664,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return self._compute_baseline_hazard(self._predicted_partial_hazards_, name="baseline hazard")
 
-    def _compute_baseline_cumulative_hazard(self):
+    def _compute_baseline_cumulative_hazard(self) -> DataFrame:
         cumulative = self.baseline_hazard_.cumsum()
         if not self.strata:
             cumulative = cumulative.rename(columns={"baseline hazard": "baseline cumulative hazard"})
@@ -1840,8 +1886,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         return axes
 
     def check_assumptions(
-        self, training_df, advice=True, show_plots=False, p_value_threshold=0.01, plot_n_bootstraps=10, columns=None
-    ):
+        self,
+        training_df: DataFrame,
+        advice: bool = True,
+        show_plots: bool = False,
+        p_value_threshold: float = 0.01,
+        plot_n_bootstraps: int = 10,
+        columns: Optional[List[str]] = None,
+    ) -> None:
         """
         Use this function to test the proportional hazards assumption. See usage example at
         https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html
