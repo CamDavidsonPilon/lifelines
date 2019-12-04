@@ -62,7 +62,6 @@ After calling the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitte
 
     kmf.survival_function_
     kmf.cumulative_density_
-    kmf.median_survival_time_
     kmf.plot_survival_function() # or just kmf.plot()
 
 
@@ -88,6 +87,16 @@ By specifying the ``timeline`` keyword argument in :meth:`~lifelines.fitters.kap
 
     kmf.survival_function_   # index is now the same as range(0, 100, 2)
     kmf.confidence_interval_ # index is now the same as range(0, 100, 2)
+
+
+A useful summary stat is the median survival time, which represents when 50% of the population has died:
+
+.. code:: python
+
+    from lifelines.utils import median_survival_times
+
+    median_ = kmf.median_survival_time_
+    median_confidence_interval_ = median_survival_times(kmf.confidence_interval_))
 
 
 Instead of the Kaplan-Meier estimator, you may be interested in a parametric model. *lifelines* has builtin parametric models. For example, Weibull, Log-Normal, Log-Logistic, and more.

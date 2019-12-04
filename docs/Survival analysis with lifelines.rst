@@ -136,17 +136,23 @@ Alternatively, we can call :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanM
     :align: center
 
 The median time in office, which defines the point in time where on
-average 1/2 of the population has expired, is a property:
+average 50% of the population has expired, is a property:
 
 .. code:: python
 
-    kmf.median_
+    kmf.median_survival_time_
     #   4.0
 
 
 
 Interesting that it is only four years. That means, around the world, elected leaders
-have a 50% chance of cessation in four years or less!
+have a 50% chance of cessation in four years or less! To get the confidence interval of the median, you can use:
+
+.. code:: python
+
+    from lifelines.utils import median_survival_times
+    median_ci = median_survival_times(kmf.confidence_interval_)
+
 
 Let's segment on democratic regimes vs non-democratic regimes. Calling
 ``plot`` on either the estimate itself or the fitter object will return
