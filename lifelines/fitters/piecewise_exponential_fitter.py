@@ -45,7 +45,7 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
         The estimated cumulative density function (with custom timeline if provided)
     variance_matrix_ : numpy array
         The variance matrix of the coefficients
-    median_: float
+    median_survival_time_: float
         The median time to event
     lambda_i_: float
         The fitted parameter in the model, for i = 0, 1 ... n-1 breakpoints
