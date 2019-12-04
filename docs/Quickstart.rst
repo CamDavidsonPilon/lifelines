@@ -62,7 +62,7 @@ After calling the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitte
 
     kmf.survival_function_
     kmf.cumulative_density_
-    kmf.median_
+    kmf.median_survival_time_
     kmf.plot_survival_function() # or just kmf.plot()
 
 
