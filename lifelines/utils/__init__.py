@@ -1085,7 +1085,7 @@ if convergence fails.%s\n"
         warnings.warn(dedent(warning_text), ConvergenceWarning)
 
 
-def check_complete_separation_low_variance(df, events, event_col):
+def check_complete_separation_low_variance(df: pd.DataFrame, events: np.ndarray, event_col: str):
 
     events = events.astype(bool)
     deaths_only = df.columns[_low_var(df.loc[events])]
@@ -1105,8 +1105,8 @@ A very low variance means that the column {cols} completely determines whether a
         warnings.warn(dedent(warning_text), ConvergenceWarning)
 
 
-def correlation(x, y):
-    return np.corrcoef(x, y)[1, 0]
+def pearson_correlation(x: np.ndarray, y: np.ndarray):
+    return stats.pearsonr(x, y)[0]
 
 
 def check_entry_times(T, entries):
@@ -1115,21 +1115,28 @@ def check_entry_times(T, entries):
         raise ValueError("""There exist %d rows where entry > duration.""" % count_invalid_rows)
 
 
-def check_complete_separation_close_to_perfect_correlation(df, durations):
+def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, durations: pd.Series):
+    """
+    This computes Spearman's rank correlation between df columns and the duration vector.
+
+    Reference
+    ----------
+    https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient
+    """
+
     # slow for many columns
     THRESHOLD = 0.99
     n, _ = df.shape
-
     if n > 500:
         # let's sample to speed this up.
-        df = df.sample(n=500, random_state=0).copy()
-        durations = pd.Series(durations).sample(n=500, random_state=0).copy()
+        df = df.sample(n=500, random_state=0)
+        durations = durations.sample(n=500, random_state=0)
 
-    rank_durations = durations.argsort()
+    rank_durations = durations.values.argsort()
     for col, series in df.iteritems():
         with np.errstate(invalid="ignore", divide="ignore"):
             rank_series = series.values.argsort()
-            if abs(correlation(rank_durations, rank_series)) >= THRESHOLD:
+            if abs(pearson_correlation(rank_durations, rank_series)) >= THRESHOLD:
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
     See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression\n"

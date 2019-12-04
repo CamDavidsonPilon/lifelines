@@ -1124,13 +1124,15 @@ class ParametricRegressionFitter(BaseFitter):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha)
         self.penalizer = penalizer
 
-    def _check_values(self, df, T, E, weights, entries):
+    def _check_values_post_fitting(self, df, T, E, weights, entries):
+        utils.check_complete_separation(df, E, T, self.event_col)
+
+    def _check_values_pre_fitting(self, df, T, E, weights, entries):
         utils.check_for_numeric_dtypes_or_raise(df)
         utils.check_nans_or_infs(df)
         utils.check_nans_or_infs(T)
         utils.check_nans_or_infs(E)
         utils.check_positivity(T)
-        utils.check_complete_separation(df, E, T, self.event_col)
 
         if self.weights_col:
             if (weights.astype(int) != weights).any() and not self.robust:
@@ -1382,7 +1384,7 @@ class ParametricRegressionFitter(BaseFitter):
         ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
 
         df = df.astype(float)
-        self._check_values(df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
+        self._check_values_pre_fitting(df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
         _index = pd.MultiIndex.from_tuples(
             sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
@@ -1481,7 +1483,7 @@ class ParametricRegressionFitter(BaseFitter):
             args=(Ts, E, weights, entries, Xs),
             options={**{"disp": show_progress}, **self._scipy_fit_options},
         )
-        if show_progress or not results.success:
+        if show_progress:
             print(results)
         if results.success:
             sum_weights = weights.sum()
@@ -1490,21 +1492,23 @@ class ParametricRegressionFitter(BaseFitter):
             # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
             hessian_ = (hessian_ + hessian_.T) / 2
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
+        else:
+            self._check_values_post_fitting(Xs.df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
+            print(results)
+            raise utils.ConvergenceError(
+                dedent(
+                    """\
+                Fitting did not converge. Try checking the following:
 
-        raise utils.ConvergenceError(
-            dedent(
-                """\
-            Fitting did not converge. Try checking the following:
-
-            0. Are there any lifelines warnings outputted during the `fit`?
-            1. Inspect your DataFrame: does everything look as expected?
-            2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
-            3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
-            4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
-        """
-                % self._class_name
+                0. Are there any lifelines warnings outputted during the `fit`?
+                1. Inspect your DataFrame: does everything look as expected?
+                2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
+                3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
+                4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
+            """
+                    % self._class_name
+                )
             )
-        )
 
     def _compute_variance_matrix(self):
         try:
