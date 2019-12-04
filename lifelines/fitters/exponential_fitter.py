@@ -47,7 +47,7 @@ class ExponentialFitter(KnownModelParametricUnivariateFitter):
         The lower and upper confidence intervals for the survival function
     variance_matrix_ : numpy array
         The variance matrix of the coefficients
-    median_: float
+    median_survival_time_: float
         The median time to event
     lambda_: float
         The fitted parameter in the model
