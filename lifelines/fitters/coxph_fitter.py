@@ -145,7 +145,6 @@ class CoxPHFitter(BaseFitter):
         if tie_method != "Efron":
             raise NotImplementedError("Only Efron is available at the moment.")
 
-        self.alpha = alpha
         self.tie_method = tie_method
         self.penalizer = penalizer
         self.strata = strata
