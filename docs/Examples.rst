@@ -322,21 +322,6 @@ Hide confidence intervals
     :align: center
 
 
-Invert axis
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-    kmf.fit(T, E, label="kmf.plot(invert_y_axis=True)")
-    kmf.plot(invert_y_axis=True)
-
-.. image:: /images/invert_y_axis.png
-    :width: 500px
-    :align: center
-
-.. note:: This is deprecated and we suggest to use `kmf.plot_cumulative_density()` instead.
-
-
 Displaying at-risk counts below plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
