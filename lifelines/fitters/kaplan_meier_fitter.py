@@ -47,7 +47,7 @@ class KaplanMeierFitter(UnivariateFitter):
     ----------
     survival_function_ : DataFrame
         The estimated survival function (with custom timeline if provided)
-    median_ : float
+    median_survival_time_ : float
         The estimated median time to event. np.inf if doesn't exist.
     confidence_interval_ : DataFrame
         The lower and upper confidence intervals for the survival function. An alias of
@@ -111,7 +111,7 @@ class KaplanMeierFitter(UnivariateFitter):
         Returns
         -------
         self: KaplanMeierFitter
-          self with new properties like ``survival_function_``, ``plot()``, ``median``
+          self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
 
         """
 
@@ -157,7 +157,7 @@ class KaplanMeierFitter(UnivariateFitter):
         Returns
         -------
         self: KaplanMeierFitter
-          self with new properties like ``survival_function_``, ``plot()``, ``median``
+          self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
 
         """
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
@@ -199,7 +199,7 @@ class KaplanMeierFitter(UnivariateFitter):
         Returns
         -------
         self: KaplanMeierFitter
-          self with new properties like ``survival_function_``, ``plot()``, ``median``
+          self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
 
         """
         self._check_values(durations)
