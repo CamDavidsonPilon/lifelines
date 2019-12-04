@@ -1781,6 +1781,39 @@ class TestAFTFitters:
     def models(self):
         return [WeibullAFTFitter(), LogNormalAFTFitter(), LogLogisticAFTFitter()]
 
+    def test_predict_median_takes_dataframe_with_bools(self):
+
+        df = pd.DataFrame(
+            [
+                {"dep_y_obs": 1.0, "dep_y_cens": False, "idp_x1_obs": 5.0, "idp_x1_cens": True},
+                {"dep_y_obs": 3.0, "dep_y_cens": True, "idp_x1_obs": 3.0, "idp_x1_cens": False},
+                {"dep_y_obs": 2.0, "dep_y_cens": True, "idp_x1_obs": 2.0, "idp_x1_cens": False},
+                {"dep_y_obs": 2.0, "dep_y_cens": False, "idp_x1_obs": 6.0, "idp_x1_cens": True},
+                {"dep_y_obs": 2.5, "dep_y_cens": True, "idp_x1_obs": 7.0, "idp_x1_cens": True},
+                {"dep_y_obs": 2.7, "dep_y_cens": True, "idp_x1_obs": 8.0, "idp_x1_cens": True},
+            ]
+        )
+
+        wf = WeibullAFTFitter()
+        wf.fit_left_censoring(df, "dep_y_obs", "dep_y_cens")
+        wf.predict_median(df)
+
+    def test_predict_median_accepts_series(self, rossi):
+        df = pd.DataFrame(
+            [
+                {"dep_y_obs": 1.0, "dep_y_cens": False, "idp_x1_obs": 5.0, "idp_x1_cens": True},
+                {"dep_y_obs": 3.0, "dep_y_cens": True, "idp_x1_obs": 3.0, "idp_x1_cens": False},
+                {"dep_y_obs": 2.0, "dep_y_cens": True, "idp_x1_obs": 2.0, "idp_x1_cens": False},
+                {"dep_y_obs": 2.0, "dep_y_cens": False, "idp_x1_obs": 6.0, "idp_x1_cens": True},
+                {"dep_y_obs": 2.5, "dep_y_cens": True, "idp_x1_obs": 7.0, "idp_x1_cens": True},
+                {"dep_y_obs": 2.7, "dep_y_cens": True, "idp_x1_obs": 8.0, "idp_x1_cens": True},
+            ]
+        )
+
+        wf = WeibullAFTFitter()
+        wf.fit_left_censoring(df, "dep_y_obs", "dep_y_cens")
+        wf.predict_median(df.loc[1])
+
     def test_heterogenous_initial_point(self, rossi):
         aft = WeibullAFTFitter()
         aft.fit(rossi, "week", "arrest", initial_point={"lambda_": np.zeros(8), "rho_": np.zeros(1)})

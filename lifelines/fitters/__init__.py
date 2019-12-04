@@ -2749,6 +2749,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if isinstance(X, pd.DataFrame):
             X["_intercept"] = 1.0
             primary_X = X[self.params_.loc[self._primary_parameter_name].index]
+        elif isinstance(X, pd.Series):
+            return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T, ancillary_X)
         else:
             # provided numpy array
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
@@ -2758,6 +2760,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             if self.fit_intercept:
                 ancillary_X["_intercept"] = 1.0
             ancillary_X = ancillary_X[self.regressors[self._ancillary_parameter_name]]
+        elif isinstance(ancillary_X, pd.Series):
+            return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T)
         elif ancillary_X is None:
             ancillary_X = X[self.regressors[self._ancillary_parameter_name]]
         else:
@@ -2769,8 +2773,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         primary_params = self.params_[self._primary_parameter_name]
         ancillary_params = self.params_[self._ancillary_parameter_name]
 
-        primary_scores = np.exp(primary_X @ primary_params)
-        ancillary_scores = np.exp(ancillary_X @ ancillary_params)
+        primary_scores = np.exp(primary_X.astype(float) @ primary_params)
+        ancillary_scores = np.exp(ancillary_X.astype(float) @ ancillary_params)
 
         return primary_scores, ancillary_scores
 

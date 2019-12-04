@@ -887,10 +887,12 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     return durations, event_observed, timeline.astype(float), entry, event_table, weights
 
 
-def _get_index(X):
+def _get_index(X) -> List[Any]:
     # we need a unique index because these are about to become column names.
     if isinstance(X, pd.DataFrame) and X.index.is_unique:
         index = list(X.index)
+    elif isinstance(X, pd.Series):
+        return [0]
     else:
         # If it's not a dataframe, order is up to user
         index = list(range(X.shape[0]))

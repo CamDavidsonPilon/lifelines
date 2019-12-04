@@ -123,10 +123,14 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
+
         lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
 
-        if conditional_after is None:
+        if conditional_after is None and len(df.shape) == 2:
             conditional_after = np.zeros(df.shape[0])
+        elif conditional_after is None and len(df.shape) == 1:
+            conditional_after = np.zeros(1)
+
         return pd.DataFrame(
             lambda_ * np.power(-np.log(p) + (conditional_after / lambda_) ** rho_, 1 / rho_) - conditional_after,
             index=_get_index(df),
