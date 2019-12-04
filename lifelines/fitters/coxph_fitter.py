@@ -145,7 +145,6 @@ class CoxPHFitter(BaseFitter):
         if tie_method != "Efron":
             raise NotImplementedError("Only Efron is available at the moment.")
 
-        self.alpha = alpha
         self.tie_method = tie_method
         self.penalizer = penalizer
         self.strata = strata
@@ -295,7 +294,9 @@ class CoxPHFitter(BaseFitter):
         self._norm_std = X.std(0)
 
         # this is surprisingly faster to do...
-        X_norm = pd.DataFrame(normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index)
+        X_norm = pd.DataFrame(
+            normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index, columns=X.columns
+        )
 
         params_ = self._fit_model(
             X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size
@@ -363,16 +364,21 @@ class CoxPHFitter(BaseFitter):
         check_nans_or_infs(E)
         E = E.astype(bool)
 
-        self._check_values(X, T, E, W)
+        self._check_values_pre_fitting(X, T, E, W)
 
         return X, T, E, W, original_index, _clusters
 
-    def _check_values(self, X, T, E, W):
+    def _check_values_post_fitting(self, X, T, E, W):
+        """
+        Functions here check why a fit may have non-obviously failed
+        """
+        check_complete_separation(X, E, T, self.event_col)
+
+    def _check_values_pre_fitting(self, X, T, E, W):
+        check_low_var(X)
         check_for_numeric_dtypes_or_raise(X)
         check_nans_or_infs(T)
         check_nans_or_infs(X)
-        check_low_var(X)
-        check_complete_separation(X, E, T, self.event_col)
         # check to make sure their weights are okay
         if self.weights_col:
             if (W.astype(int) != W).any() and not self.robust:
@@ -428,9 +434,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         -------
         beta: (1,d) numpy array.
         """
-        self.path = []
-        assert precision <= 1.0, "precision must be less than or equal to 1."
+        decision = BatchVsSingle.decide(self._batch_mode, T.nunique(), X.shape[0], X.shape[1])
+        get_gradients = getattr(self, "_get_efron_values_%s" % decision)
+        self._batch_mode = decision == "batch"
+
         _, d = X.shape
+        self.path = []
 
         # make sure betas are correct size.
         if initial_point is not None:
@@ -442,20 +451,15 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         step_sizer = StepSizer(step_size)
         step_size = step_sizer.next()
 
-        # Method of choice is just efron right now
-        if self.tie_method == "Efron":
-            decision = BatchVsSingle.decide(self._batch_mode, T.nunique(), X.shape[0], X.shape[1])
-            get_gradients = getattr(self, "_get_efron_values_%s" % decision)
-            self._batch_mode = decision == "batch"
-        else:
-            raise NotImplementedError("Only Efron is available.")
-
-        i = 0
+        delta = np.zeros_like(beta)
         converging = True
-        ll, previous_ll = 0, 0
+        ll, previous_ll = 0.0, 0.0
         start = time.time()
+        i = 0
 
         while converging:
+            beta += step_size * delta
+
             self.path.append(beta.copy())
 
             i += 1
@@ -487,32 +491,32 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
                 inv_h_dot_g_T = spsolve(-h, g, assume_a="pos", check_finite=False)
-            except ValueError as e:
+            except (ValueError, ConvergenceError) as e:
+                self._check_values_post_fitting(X, T, E, weights)
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
-                        """Hessian or gradient contains nan or inf value(s). Convergence halted. Please see the following tips in the lifelines documentation:
-https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-""",
+                        """Hessian or gradient contains nan or inf value(s). Convergence halted. {1}""".format(
+                            CONVERGENCE_DOCS
+                        ),
+                        e,
+                    )
+                elif isinstance(e, ConvergenceError):
+                    raise ConvergenceError(
+                        """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. {1}""".format(
+                            CONVERGENCE_DOCS
+                        ),
                         e,
                     )
                 else:
                     # something else?
                     raise e
-            except LinAlgError as e:
-                raise ConvergenceError(
-                    """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. Please see the following tips in the lifelines documentation:
-https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-""",
-                    e,
-                )
 
             delta = inv_h_dot_g_T
 
             if np.any(np.isnan(delta)):
+                self._check_values_post_fitting(X, T, E, weights)
                 raise ConvergenceError(
-                    """delta contains nan value(s). Convergence halted. Please see the following tips in the lifelines documentation:
-https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
-"""
+                    """delta contains nan value(s). Convergence halted. {1}""".format(CONVERGENCE_DOCS)
                 )
 
             # Save these as pending result
@@ -525,33 +529,30 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             if show_progress:
                 print(
                     "\rIteration %d: norm_delta = %.5f, step_size = %.4f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
-                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start),
-                    end="",
+                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start)
                 )
 
             # convergence criteria
             if norm_delta < precision:
-                converging, completed = False, True
+                converging, success = False, True
             elif previous_ll != 0 and abs(ll - previous_ll) / (-previous_ll) < 1e-09:
                 # this is what R uses by default
-                converging, completed = False, True
+                converging, success = False, True
             elif newton_decrement < precision:
-                converging, completed = False, True
+                converging, success = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
                 # Expected convergence is ~10 steps
-                converging, completed = False, False
+                converging, success = False, False
             elif step_size <= 0.00001:
-                converging, completed = False, False
+                converging, success = False, False
             elif abs(ll) < 0.0001 and norm_delta > 1.0:
                 warnings.warn(
                     "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                     ConvergenceWarning,
                 )
-                converging, completed = False, False
-
-            beta += step_size * delta
+                converging, success = False, False
 
             previous_ll = ll
             step_size = step_sizer.update(norm_delta).next()
@@ -560,19 +561,21 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         self._score_ = gradient
         self.log_likelihood_ = ll
 
-        if show_progress and completed:
-            print("Convergence completed after %d iterations." % (i))
-        elif show_progress and not completed:
+        if show_progress and success:
+            print("Convergence success after %d iterations." % (i))
+        elif show_progress and not success:
             print("Convergence failed. See any warning messages.")
 
         # report to the user problems that we detect.
-        if completed and norm_delta > 0.1:
+        if success and norm_delta > 0.1:
+            self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
-                "Newton-Rhaphson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
+                "Newton-Rhaphson convergence completed successfully but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
                 % norm_delta,
                 ConvergenceWarning,
             )
-        elif not completed:
+        elif not success:
+            self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
                 "Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, ConvergenceWarning
             )

@@ -2392,11 +2392,10 @@ class TestCoxPHFitter:
         assert p2.index.tolist() == [10.0, 20.0, 30.0]
 
     def test_that_a_convergence_warning_is_not_thrown_if_using_compute_residuals(self, rossi):
-        rossi["c"] = rossi["week"] + np.random.exponential(rossi.shape[0])
+        rossi["c"] = rossi["week"]
 
         cph = CoxPHFitter(penalizer=1.0)
-        with pytest.warns(ConvergenceWarning):
-            cph.fit(rossi, "week", "arrest")
+        cph.fit(rossi, "week", "arrest")
 
         with pytest.warns(None) as record:
             cph.compute_residuals(rossi, "martingale")
@@ -3792,7 +3791,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             cph.fit(df, "T")
 
         df = pd.DataFrame.from_records(zip(np.arange(0, 100), np.arange(0, 100)), columns=["x", "T"])
-        df["x"] += np.random.randn(100)
+        df["x"] += 0.01 * np.random.randn(100)
         with pytest.warns(ConvergenceWarning, match="complete separation") as w:
             cph.fit(df, "T")
 
@@ -3801,11 +3800,12 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cp = CoxPHFitter()
         ix = rossi["arrest"] == 1
         rossi.loc[ix, "paro"] = 1
+
         with pytest.warns(ConvergenceWarning) as w:
             cp.fit(rossi, "week", "arrest", show_progress=True)
+
             assert cp.summary.loc["paro", "exp(coef)"] > 100
-            events = rossi["arrest"].astype(bool)
-            rossi.loc[events, ["paro"]].var()
+
             assert "paro have very low variance" in w[0].message.args[0]
             assert "norm(delta)" in w[1].message.args[0]
 
