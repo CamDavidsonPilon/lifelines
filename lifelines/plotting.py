@@ -78,6 +78,42 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
     return ax
 
 
+def rmst_plot(model, t=np.inf, model2=None, ax=None):
+
+    from lifelines.utils import restricted_mean_survival_time
+
+    if ax is None:
+        ax = plt.gca()
+
+    rmst = restricted_mean_survival_time(model, t=t)
+    c = ax._get_lines.get_next_color()
+    model.plot_survival_function(ax=ax, color=c, ci_show=False)
+
+    if model2 is not None:
+        c2 = ax._get_lines.get_next_color()
+        rmst2 = restricted_mean_survival_time(model2, t=t)
+        model2.plot_survival_function(ax=ax, color=c2, ci_show=False)
+        timeline = np.unique(model.timeline.tolist() + model2.timeline.tolist() + [t])
+        ax.fill_between(
+            timeline[timeline <= t],
+            model.predict(timeline).loc[:t],
+            model2.predict(timeline).loc[:t],
+            step="post",
+            color="k",
+            alpha=0.20,
+        )
+        ax.text(34, 0.4, r"$\Delta=%.3f$" % (rmst - rmst2))  # dynamically pick this.
+    else:
+        rmst = restricted_mean_survival_time(model, t=t)
+        sf_exp_at_limit = model.predict(np.append(model.timeline, t)).sort_index().loc[:t]
+        ax.fill_between(sf_exp_at_limit.index, sf_exp_at_limit.values, step="post", color=c, alpha=0.25)
+        ax.text(10, 0.3, "RMST=%.3f" % rmst)  # dynamically pick this.
+
+    ax.axvline(t, ls="--", color="k")
+    ax.set_ylim(0, 1)
+    return ax
+
+
 def qq_plot(model, ax=None, **plot_kwargs):
     """
     Produces a quantile-quantile plot of the empirical CDF against
@@ -394,7 +430,7 @@ def plot_lifetimes(
 
 
 def set_kwargs_color(kwargs):
-    kwargs["c"] = coalesce(kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color())
+    kwargs["color"] = coalesce(kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color())
 
 
 def set_kwargs_drawstyle(kwargs, default="steps-post"):
@@ -443,7 +479,7 @@ def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     dataframe_slicer = create_dataframe_slicer(iloc, loc, cls.timeline)
 
     # plot censors
-    colour = kwargs["c"]
+    colour = kwargs["color"]
 
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "|", "ms": 12, "mew": 1}
@@ -582,7 +618,7 @@ class PlotEstimateConfig:
         self.show_censors = show_censors
         # plot censors
         self.ax = ax
-        self.colour = kwargs["c"]
+        self.colour = kwargs["color"]
         self.kwargs = kwargs
 
         if isinstance(estimate, str):
