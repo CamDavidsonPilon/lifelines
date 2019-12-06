@@ -14,6 +14,8 @@ from lifelines.utils import (
     format_p_value,
     format_floats,
     interpolate_at_times_and_return_pandas,
+    _expected_value_of_survival_up_to_t,
+    _expected_value_of_survival_squared_up_to_t,
 )
 
 from lifelines import KaplanMeierFitter
@@ -354,7 +356,7 @@ def survival_difference_at_fixed_point_in_time_test(
     clog = lambda s: log(-log(s))
 
     X = (clog(sA_t) - clog(sB_t)) ** 2 / (sigma_sqA / log(sA_t) ** 2 + sigma_sqB / log(sB_t) ** 2)
-    p_value = chisq_test(X, 1)
+    p_value = _chisq_test_p_value(X, 1)
 
     return StatisticalResult(
         p_value, X, null_distribution="chi squared", degrees_of_freedom=1, point_in_time=point_in_time, **kwargs
@@ -634,20 +636,15 @@ def multivariate_logrank_test(
     U = Z_j.iloc[:-1] @ np.linalg.pinv(V[:-1, :-1]) @ Z_j.iloc[:-1]  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
-    p_value = chisq_test(U, n_groups - 1)
+    p_value = _chisq_test_p_value(U, n_groups - 1)
 
     return StatisticalResult(
         p_value, U, t_0=t_0, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
     )
 
 
-def chisq_test(U, degrees_freedom) -> float:
+def _chisq_test_p_value(U, degrees_freedom) -> float:
     p_value = stats.chi2.sf(U, degrees_freedom)
-    return p_value
-
-
-def two_sided_z_test(Z) -> float:
-    p_value = 1 - np.max(stats.norm.cdf(Z), 1 - stats.norm.cdf(Z))
     return p_value
 
 
@@ -687,7 +684,7 @@ def proportional_hazard_test(
         {'all', 'km', 'rank', 'identity', 'log'}
         One of the strings above, a list of strings, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms.
     precomputed_residuals: DataFrame, optional
-        specify the scaled schoenfeld residuals, if already computed.
+        specify the scaled Schoenfeld residuals, if already computed.
     kwargs:
         additional parameters to add to the StatisticalResult
 
@@ -724,7 +721,7 @@ def proportional_hazard_test(
         for transform_name, transform in ((_, TimeTransformers().get(_)) for _ in time_transform):
             times = transform(durations, events, weights)[events.values]
             T = compute_statistic(times, scaled_resids)
-            p_values = _to_1d_array([chisq_test(t, 1) for t in T])
+            p_values = _to_1d_array([_chisq_test_p_value(t, 1) for t in T])
             result += StatisticalResult(
                 p_values,
                 T,
@@ -745,7 +742,7 @@ def proportional_hazard_test(
 
         T = compute_statistic(times, scaled_resids)
 
-        p_values = _to_1d_array([chisq_test(t, 1) for t in T])
+        p_values = _to_1d_array([_chisq_test_p_value(t, 1) for t in T])
         result = StatisticalResult(
             p_values,
             T,

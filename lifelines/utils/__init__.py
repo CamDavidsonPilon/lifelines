@@ -153,7 +153,6 @@ def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
     else:
         d = {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}
         survival_times = pd.DataFrame(d).T
-
         #  Typically, one would expect that the output should equal the "height" of q.
         #  An issue can arise if the Series q contains duplicate values. We solve
         #  this by duplicating the entire row.
@@ -172,7 +171,7 @@ def qth_survival_time(q: float, model_or_survival_function) -> float:
     ----------
     q: float
       value between 0 and 1.
-    model_or_survival_function: Pandas Series or single-column DataFrame, or lifelines model
+    model_or_survival_function: Series, single-column DataFrame, or lifelines model
 
 
     See Also
@@ -220,7 +219,7 @@ def median_survival_times(model_or_survival_function) -> float:
         raise ValueError("Can't compute median survival time of object %s" % model_or_survival_function)
 
 
-def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf) -> float:
+def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf, return_variance=False) -> float:
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
@@ -256,6 +255,16 @@ def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf)
     https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-13-152#Sec27
 
     """
+    mean = _expected_value_of_survival_up_to_t(model_or_survival_function, t)
+    if return_variance:
+        sq = _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t)
+        return (mean, sq - mean ** 2)
+    else:
+        return mean
+
+
+def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = np.inf) -> float:
+
     import lifelines
 
     if isinstance(model_or_survival_function, pd.DataFrame):
@@ -276,9 +285,47 @@ def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf)
             sf = sf.reset_index()
             return (sf["index"].diff().shift(-1) * sf[model._label]).sum()
         else:
-            return quad(model.survival_function_at_times, 0, t)[0]
+            return quad(model.predict, 0, t)[0]
     else:
         raise ValueError("Can't compute RMST of object %s" % model_or_survival_function)
+
+
+def _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t: float = np.inf) -> float:
+    r"""
+    Compute the restricted mean survival time, RMST, of a survival function. This is defined as
+
+    .. math::  E[t]^2 = 2 \int_0^t \tau S(\tau) d\tau
+
+    For reason why we use an upper bound and not always :math:`\infty` is because the tail of a survival
+    function has high variance and strongly effects the RMST.
+
+    Parameters
+    -----------
+
+    model_or_survival_function: lifelines model or DataFrame
+        This can be a univariate model, or a pandas DataFrame. The former will provide a more accurate estimate however.
+    t: float
+        The upper limit of the integration in the RMST.
+
+
+    References
+    -------
+    https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-13-152#Sec27
+
+    """
+    import lifelines
+
+    if isinstance(model_or_survival_function, pd.DataFrame):
+        sf = model_or_survival_function.loc[:t]
+        sf = sf.append(pd.DataFrame([1], index=[0], columns=sf.columns)).sort_index()
+        sf_tau = sf * sf.index.values[:, None]
+        return 2 * trapz(y=sf_tau.values[:, 0], x=sf_tau.index)
+    elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
+        # lifelines model
+        model = model_or_survival_function
+        return 2 * quad(lambda tau: (tau * model.predict(tau)), 0, t)[0]
+    else:
+        raise ValueError("Can't compute value for object %s" % model_or_survival_function)
 
 
 def group_survival_table_from_events(

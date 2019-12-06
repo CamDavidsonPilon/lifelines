@@ -1071,3 +1071,18 @@ def test_rmst_approximate_solution():
             )
             < 0.001
         )
+
+
+def test_rmst_variance():
+
+    T = np.random.exponential(2, 1000)
+    expf = ExponentialFitter().fit(T)
+    hazard = 1 / expf.lambda_
+    t = 1
+
+    sq = 2 * 1 / hazard ** 2 * (1 - np.exp(-hazard * t) * (1 + hazard * t))
+    actual_mean = 1 / hazard * (1 - np.exp(-hazard * t))
+    actual_var = sq - actual_mean ** 2
+
+    assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[0] - actual_mean) < 0.01
+    assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[1] - actual_var) < 0.01

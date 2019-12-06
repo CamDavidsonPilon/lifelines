@@ -14,7 +14,7 @@ from scipy import stats
 
 from lifelines.fitters import BaseFitter, Printer
 from lifelines.plotting import set_kwargs_drawstyle
-from lifelines.statistics import chisq_test, proportional_hazard_test, TimeTransformers, StatisticalResult
+from lifelines.statistics import _chisq_test_p_value, proportional_hazard_test, TimeTransformers, StatisticalResult
 from lifelines.utils.lowess import lowess
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio
 from lifelines.utils import (
@@ -1005,7 +1005,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         return scaled_schoenfeld_resids
 
     def _compute_schoenfeld(
-        self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None
+        self, X: pd.DataFrame, T: pd.Series, E: pd.Series, weights: pd.Series, index: pd.Index
     ) -> pd.DataFrame:
         # TODO: should the index by times, i.e. T[E]?
 
@@ -1348,7 +1348,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         ll_alt = self.log_likelihood_
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.params_.shape[0]
-        p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
+        p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
             p_value,
             test_stat,
