@@ -78,16 +78,16 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
     return ax
 
 
-def rmst_plot(model, t=np.inf, model2=None, ax=None, text_position=None):
+def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_kwargs):
     """
 
     Parameters
     -----------
     model: lifelines.UnivariateFitter
+    model2: lifelines.UnivariateFitter, optional
+        used to compute the delta RMST of two models
     t: float
         the upper bound of the expectation
-    model2: lifelines.UnivariateFitter
-        used to compute the delta RMST of two models
     ax: axis
     text_position: tuple
         move the text position of the RMST.
@@ -100,7 +100,7 @@ def rmst_plot(model, t=np.inf, model2=None, ax=None, text_position=None):
 
     rmst = restricted_mean_survival_time(model, t=t)
     c = ax._get_lines.get_next_color()
-    model.plot_survival_function(ax=ax, color=c, ci_show=False)
+    model.plot_survival_function(ax=ax, color=c, ci_show=False, **plot_kwargs)
 
     if text_position is None:
         text_position = (np.percentile(model.timeline, 10), 0.15)
@@ -108,7 +108,7 @@ def rmst_plot(model, t=np.inf, model2=None, ax=None, text_position=None):
     if model2 is not None:
         c2 = ax._get_lines.get_next_color()
         rmst2 = restricted_mean_survival_time(model2, t=t)
-        model2.plot_survival_function(ax=ax, color=c2, ci_show=False)
+        model2.plot_survival_function(ax=ax, color=c2, ci_show=False, **plot_kwargs)
         timeline = np.unique(model.timeline.tolist() + model2.timeline.tolist() + [t])
         predict1 = model.predict(timeline).loc[:t]
         predict2 = model2.predict(timeline).loc[:t]
@@ -139,13 +139,13 @@ def rmst_plot(model, t=np.inf, model2=None, ax=None, text_position=None):
         ax.text(
             text_position[0],
             text_position[1],
-            "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
-        )  # dynamically pick this.
+            "RMST(%s) -\n    RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
+        )
     else:
         rmst = restricted_mean_survival_time(model, t=t)
         sf_exp_at_limit = model.predict(np.append(model.timeline, t)).sort_index().loc[:t]
         ax.fill_between(sf_exp_at_limit.index, sf_exp_at_limit.values, step="post", color=c, alpha=0.25)
-        ax.text(text_position[0], text_position[1], "RMST=%.3f" % rmst)  # dynamically pick this.
+        ax.text(text_position[0], text_position[1], "RMST=%.3f" % rmst)
 
     ax.axvline(t, ls="--", color="k")
     ax.set_ylim(0, 1)

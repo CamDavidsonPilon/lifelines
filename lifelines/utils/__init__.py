@@ -218,7 +218,9 @@ def median_survival_times(model_or_survival_function) -> float:
         raise ValueError("Can't compute median survival time of object %s" % model_or_survival_function)
 
 
-def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf, return_variance=False) -> float:
+def restricted_mean_survival_time(
+    model_or_survival_function, t: float = np.inf, return_variance: bool = False
+) -> float:
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
@@ -230,10 +232,12 @@ def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf,
     Parameters
     -----------
 
-    model_or_survival_function: lifelines model or DataFrame
+    model_or_survival_function: lifelines.UnivariateFitter model or DataFrame
         This can be a univariate model, or a pandas DataFrame. The former will provide a more accurate estimate however.
     t: float
         The upper limit of the integration in the RMST.
+    return_variance: bool
+        return the variance of the RMST
 
     Example
     --------

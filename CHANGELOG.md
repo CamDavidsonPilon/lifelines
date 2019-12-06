@@ -1,5 +1,11 @@
 ## Changelog
 
+#### 0.23.2 - not released
+
+##### New features
+ - new plotting function `lifelines.plotting.rmst_plot` to plot lovely figures of RMST and diffence-of-RMST.
+ - `lifelines.utils.restricted_mean_survival_time` has a new option, `return_variance`, to return the variance of the estimate.
+
 #### 0.23.1
 
 ##### New features
