@@ -1612,14 +1612,14 @@ class ParametricRegressionFitter(BaseFitter):
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
         """
-        from lifelines.statistics import chisq_test, StatisticalResult
+        from lifelines.statistics import _chisq_test_p_value, StatisticalResult
 
         ll_null = self._ll_null
         ll_alt = self.log_likelihood_
 
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.params_.shape[0] - 2  # delta in number of parameters between models
-        p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
+        p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
             p_value,
             test_stat,
