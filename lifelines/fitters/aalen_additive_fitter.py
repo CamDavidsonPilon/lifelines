@@ -559,8 +559,6 @@ It's important to know that the naive variance estimates of the coefficients are
             headers.append(("event col", "'%s'" % self.event_col))
         if self.weights_col:
             headers.append(("weights col", "'%s'" % self.weights_col))
-        if self.cluster_col:
-            headers.append(("cluster col", "'%s'" % self.cluster_col))
         if self.coef_penalizer > 0:
             headers.append(("coef penalizer", self.coef_penalizer))
         if self.smoothing_penalizer > 0:
