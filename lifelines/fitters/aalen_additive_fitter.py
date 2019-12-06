@@ -11,6 +11,7 @@ from numpy.linalg import LinAlgError
 from scipy.integrate import trapz
 
 from lifelines.fitters import BaseFitter
+from lifelines.utils.printer import Printer
 from lifelines.utils import (
     _get_index,
     inv_normal_cdf,

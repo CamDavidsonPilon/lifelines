@@ -12,10 +12,11 @@ from scipy.linalg import solve as spsolve, LinAlgError
 from scipy.integrate import trapz
 from scipy import stats
 
-from lifelines.fitters import BaseFitter, Printer
+from lifelines.fitters import BaseFitter
 from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.statistics import _chisq_test_p_value, proportional_hazard_test, TimeTransformers, StatisticalResult
 from lifelines.utils.lowess import lowess
+from lifelines.utils.printer import Printer
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio
 from lifelines.utils import (
     _get_index,

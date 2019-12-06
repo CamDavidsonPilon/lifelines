@@ -15,7 +15,8 @@ from scipy.linalg import solve as spsolve, LinAlgError
 
 from numpy import sum as array_sum_to_scalar
 
-from lifelines.fitters import BaseFitter, Printer
+from lifelines.fitters import BaseFitter
+from lifelines.utils.printer import Printer
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
 from lifelines.utils import (
     _get_index,
