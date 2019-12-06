@@ -530,6 +530,10 @@ def pairwise_logrank_test(
     return result
 
 
+def difference_of_restricted_mean_survival_time_test(model1, model2, t):
+    pass
+
+
 def multivariate_logrank_test(
     event_durations, groups, event_observed=None, t_0=-1, **kwargs
 ) -> StatisticalResult:  # pylint: disable=too-many-locals
