@@ -254,6 +254,9 @@ def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf,
     https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-13-152#Sec27
 
     """
+    if t is None:
+        t = np.inf
+
     mean = _expected_value_of_survival_up_to_t(model_or_survival_function, t)
     if return_variance:
         sq = _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t)
