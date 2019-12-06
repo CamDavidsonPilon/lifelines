@@ -78,7 +78,7 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
     return ax
 
 
-def rmst_plot(model, t=np.inf, model2=None, ax=None, text_position=None):
+def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_kwargs):
     """
 
     Parameters
@@ -100,7 +100,7 @@ def rmst_plot(model, t=np.inf, model2=None, ax=None, text_position=None):
 
     rmst = restricted_mean_survival_time(model, t=t)
     c = ax._get_lines.get_next_color()
-    model.plot_survival_function(ax=ax, color=c, ci_show=False)
+    model.plot_survival_function(ax=ax, color=c, ci_show=False, **plot_kwargs)
 
     if text_position is None:
         text_position = (np.percentile(model.timeline, 10), 0.15)
@@ -108,7 +108,7 @@ def rmst_plot(model, t=np.inf, model2=None, ax=None, text_position=None):
     if model2 is not None:
         c2 = ax._get_lines.get_next_color()
         rmst2 = restricted_mean_survival_time(model2, t=t)
-        model2.plot_survival_function(ax=ax, color=c2, ci_show=False)
+        model2.plot_survival_function(ax=ax, color=c2, ci_show=False, **plot_kwargs)
         timeline = np.unique(model.timeline.tolist() + model2.timeline.tolist() + [t])
         predict1 = model.predict(timeline).loc[:t]
         predict2 = model2.predict(timeline).loc[:t]
