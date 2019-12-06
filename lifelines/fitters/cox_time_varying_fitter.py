@@ -16,7 +16,7 @@ from scipy.linalg import solve as spsolve, LinAlgError
 from numpy import sum as array_sum_to_scalar
 
 from lifelines.fitters import BaseFitter, Printer
-from lifelines.statistics import chisq_test, StatisticalResult
+from lifelines.statistics import _chisq_test_p_value, StatisticalResult
 from lifelines.utils import (
     _get_index,
     _to_list,
@@ -693,7 +693,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         ll_alt = self.log_likelihood_
         test_stat = 2 * (ll_alt - ll_null)
         degrees_freedom = self.params_.shape[0]
-        p_value = chisq_test(test_stat, degrees_freedom=degrees_freedom)
+        p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
             p_value,
             test_stat,
