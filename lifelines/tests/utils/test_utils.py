@@ -1021,7 +1021,6 @@ class TestSklearnAdapter:
         assert clf.best_params_ == {"l1_ratio": 0.5, "model_ancillary": False, "penalizer": 0.01}
         assert clf.predict(X).shape[0] == X.shape[0]
 
-    @pytest.mark.xfail
     def test_joblib(self, X, Y):
         from joblib import dump, load
 
@@ -1031,6 +1030,13 @@ class TestSklearnAdapter:
         clf.fit(X, Y)
         dump(clf, "filename.joblib")
         clf = load("filename.joblib")
+
+    @pytest.mark.xfail
+    def test_sklearn_check():
+        from sklearn.utils.estimator_checks import check_estimator
+
+        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
+        check_estimator(base_model())
 
 
 def test_rmst_works_at_kaplan_meier_edge_case():

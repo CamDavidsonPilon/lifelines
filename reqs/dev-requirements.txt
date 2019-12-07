@@ -12,5 +12,5 @@ black;python_version > '3.5'
 dill
 statsmodels
 flaky
-scikit-learn
+scikit-learn>=0.22.0
 easydev
