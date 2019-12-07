@@ -21,7 +21,6 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
     def __init__(self, **kwargs):
         self._params = kwargs
         self.lifelines_model = self.lifelines_model(**filter_kwargs(self.lifelines_model.__init__, self._params))
-
         self._params["duration_col"] = "duration_col"
         self._params["event_col"] = self._event_col
 
@@ -63,7 +62,7 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
     def get_params(self, deep=True):
         out = {}
         for name, p in inspect.signature(self.lifelines_model.__init__).parameters.items():
-            if p.kind < 4:
+            if p.kind < 4:  # ignore kwargs
                 out[name] = getattr(self.lifelines_model, name)
         return out
 
