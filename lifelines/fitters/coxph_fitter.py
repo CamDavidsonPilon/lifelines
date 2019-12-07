@@ -51,6 +51,8 @@ from typing import Callable, Iterator, List, Optional, Tuple, Union
 
 __all__ = ["CoxPHFitter"]
 
+CONVERGENCE_DOCS = "Please see the following tips in the lifelines documentation: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model"
+
 
 class BatchVsSingle:
     @staticmethod
@@ -509,18 +511,18 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
                 inv_h_dot_g_T = spsolve(-h, g, assume_a="pos", check_finite=False)
-            except (ValueError, ConvergenceError) as e:
+            except (ValueError, np.linalg.LinAlgError) as e:
                 self._check_values_post_fitting(X, T, E, weights)
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
-                        """Hessian or gradient contains nan or inf value(s). Convergence halted. {1}""".format(
+                        """Hessian or gradient contains nan or inf value(s). Convergence halted. {0}""".format(
                             CONVERGENCE_DOCS
                         ),
                         e,
                     )
-                elif isinstance(e, ConvergenceError):
+                elif isinstance(e, np.linalg.LinAlgError):
                     raise ConvergenceError(
-                        """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. {1}""".format(
+                        """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. {0}""".format(
                             CONVERGENCE_DOCS
                         ),
                         e,
@@ -534,7 +536,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if np.any(np.isnan(delta)):
                 self._check_values_post_fitting(X, T, E, weights)
                 raise ConvergenceError(
-                    """delta contains nan value(s). Convergence halted. {1}""".format(CONVERGENCE_DOCS)
+                    """delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS)
                 )
 
             # Save these as pending result
@@ -1466,7 +1468,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             conditional_after = _to_1d_array(conditional_after).reshape(n, 1)
 
         if self.strata:
+            X = X.copy()
             cumulative_hazard_ = pd.DataFrame()
+            if conditional_after is not None:
+                X["_conditional_after"] = conditional_after
+
             for stratum, stratified_X in X.groupby(self.strata):
                 try:
                     strata_c_0 = self.baseline_cumulative_hazard_[[stratum]]
@@ -1483,10 +1489,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 times_ = coalesce(times, self.baseline_cumulative_hazard_.index)
                 n_ = stratified_X.shape[0]
                 if conditional_after is not None:
-                    times_to_evaluate_at = np.tile(times_, (n_, 1)) + conditional_after
+                    conditional_after_ = stratified_X.pop("_conditional_after")[:, None]
+                    times_to_evaluate_at = np.tile(times_, (n_, 1)) + conditional_after_
 
                     c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at)
-                    c_0_conditional_after = interpolate_at_times(strata_c_0, conditional_after)
+                    c_0_conditional_after = interpolate_at_times(strata_c_0, conditional_after_)
                     c_0_ = np.clip((c_0_ - c_0_conditional_after).T, 0, np.inf)
 
                 else:

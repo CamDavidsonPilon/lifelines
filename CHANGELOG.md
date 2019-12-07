@@ -5,10 +5,13 @@
 ##### New features
  - new `lifelines.plotting.rmst_plot` for pretty figures of survival curves and RMSTs.
  - new variance calculations for `lifelines.utils.resticted_mean_survival_time`
+ - performance improvements on regression models' preprocessing. Should make datasets with
+ high number of columns more performant.
 
 ##### Bug fixes
  - fixed `print_summary` for AAF class.
  - fixed repr for `sklearn_adapter` classes.
+ - fixed `conditional_after` in Cox model with strata was used.
 
 
 #### 0.23.1
