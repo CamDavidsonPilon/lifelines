@@ -217,6 +217,7 @@ mark, you probably have a long life ahead. Meanwhile, a democratic
 leader rarely makes it past ten years, and then have a very short
 lifetime past that.
 
+
 Here the difference between survival functions is very obvious, and
 performing a statistical test seems pedantic. If the curves are more
 similar, or we possess less data, we may be interested in performing a
@@ -248,6 +249,9 @@ we rule that the series have different generators.
            260.47  <0.005    192.23
     """"
 
+There are alternative (and sometimes better) tests of survival functions, and we explain more here: `Statistically compare two populations`_
+
+
 Lets compare the different *types* of regimes present in the dataset:
 
 .. code:: python
@@ -273,9 +277,6 @@ Lets compare the different *types* of regimes present in the dataset:
 .. image:: images/lifelines_intro_all_regimes.png
 
 
-There are alternative (and sometimes better) tests of survival functions, and we explain more here: `Statistically compare two populations`_
-
---------------
 
 Getting data into the right format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -255,7 +255,7 @@ class TestParametricUnivariateFitters:
         for fitter in known_parametric_univariate_fitters:
             fitter().fit_left_censoring(T, E)
 
-    def test_parametric_univarite_fitters_can_print_summary(
+    def test_parametric_univariate_fitters_can_print_summary(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
     ):
         for fitter in known_parametric_univariate_fitters:
@@ -263,7 +263,7 @@ class TestParametricUnivariateFitters:
             f.summary
             f.print_summary()
 
-    def test_parametric_univarite_fitters_has_confidence_intervals(
+    def test_parametric_univariate_fitters_has_confidence_intervals(
         self, positive_sample_lifetimes, known_parametric_univariate_fitters
     ):
         for fitter in known_parametric_univariate_fitters:
@@ -369,13 +369,13 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             assert f().alpha == 0.05
 
-    def test_univarite_fitters_accept_late_entries(self, positive_sample_lifetimes, univariate_fitters):
+    def test_univariate_fitters_accept_late_entries(self, positive_sample_lifetimes, univariate_fitters):
         entries = 0.1 * positive_sample_lifetimes[0]
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0], entry=entries)
             assert f.entry is not None
 
-    def test_univarite_fitters_with_survival_function_have_conditional_time_to_(
+    def test_univariate_fitters_with_survival_function_have_conditional_time_to_(
         self, positive_sample_lifetimes, univariate_fitters
     ):
         for fitter in univariate_fitters:
@@ -2396,6 +2396,14 @@ class TestCoxPHFitter:
         npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
         npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
         npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+    def test_conditional_after_with_strata_in_prediction2(self, rossi, cph):
+
+        cph.fit(rossi, duration_col="week", event_col="arrest", strata=["race"])
+
+        censored_subjects = rossi.loc[~rossi["arrest"].astype(bool)]
+        censored_subjects_last_obs = censored_subjects["week"]
+        pred = cph.predict_survival_function(censored_subjects, conditional_after=censored_subjects_last_obs)
 
     def test_conditional_after_in_prediction_multiple_subjects(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
