@@ -1,5 +1,16 @@
 ## Changelog
 
+#### 0.23.2
+
+##### New features
+ - new `lifelines.plotting.rmst_plot` for pretty figures of survival curves and RMSTs.
+ - new variance calculations for `lifelines.utils.resticted_mean_survival_time`
+
+##### Bug fixes
+ - fixed `print_summary` for AAF class.
+ - fixed repr for `sklearn_adapter` classes.
+
+
 #### 0.23.1
 
 ##### New features
