@@ -449,15 +449,11 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         -------
         beta: (1,d) numpy array.
         """
-<<<<<<< HEAD
-        self.path: List[ndarray] = []
-        assert precision <= 1.0, "precision must be less than or equal to 1."
-=======
+
         decision = BatchVsSingle.decide(self._batch_mode, T.nunique(), X.shape[0], X.shape[1])
         get_gradients = getattr(self, "_get_efron_values_%s" % decision)
         self._batch_mode = decision == "batch"
 
->>>>>>> refactor newtons method in CoxPH and delay checking correlations
         _, d = X.shape
         self.path = []
 
