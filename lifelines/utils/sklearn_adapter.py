@@ -62,8 +62,9 @@ class _SklearnModel(BaseEstimator, MetaEstimatorMixin, RegressorMixin):
 
     def get_params(self, deep=True):
         out = {}
-        for k in inspect.signature(self.lifelines_model.__init__).parameters:
-            out[k] = getattr(self.lifelines_model, k)
+        for name, p in inspect.signature(self.lifelines_model.__init__).parameters.items():
+            if p.kind < 4:
+                out[name] = getattr(self.lifelines_model, name)
         return out
 
     def predict(self, X, **kwargs):
