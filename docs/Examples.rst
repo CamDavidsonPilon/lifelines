@@ -132,7 +132,6 @@ This is a good metric for comparing two survival curves, as their difference rep
 
     from lifelines.utils import restricted_mean_survival_time
     from lifelines.datasets import load_waltons
-    from lifelines.plotting import rmst_plot
 
     df = load_waltons()
     ix = df['group'] == 'miR-137'
@@ -148,7 +147,12 @@ This is a good metric for comparing two survival curves, as their difference rep
 
 
 
+Furthermore, there exist plotting functions to plot the RMST:
 
+.. code-block:: python
+
+
+    from lifelines.plotting import rmst_plot
     ax = plt.subplot(311)
     rmst_plot(kmf_exp, t=time_limit, ax=ax)
 

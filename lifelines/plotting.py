@@ -7,7 +7,7 @@ from scipy import stats
 from matplotlib import pyplot as plt
 
 
-__all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot", "cdf_plot"]
+__all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot", "cdf_plot", "rmst_plot", "loglogs_plot"]
 
 
 def get_distribution_name_of_lifelines_model(model):
@@ -48,6 +48,10 @@ def create_scipy_stats_model_from_lifelines_model(model):
 
 
 def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
+    """
+
+
+    """
     from lifelines import KaplanMeierFitter
 
     if ax is None:
@@ -56,20 +60,20 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
     if timeline is None:
         timeline = model.timeline
 
-    COL_EMP = "empirical quantiles"
+    COL_EMP = "empirical CDF"
 
     if CensoringType.is_left_censoring(model):
-        kmf = KaplanMeierFitter().fit_left_censoring(
+        empirical_kmf = KaplanMeierFitter().fit_left_censoring(
             model.durations, model.event_observed, label=COL_EMP, timeline=timeline
         )
     elif CensoringType.is_right_censoring(model):
-        kmf = KaplanMeierFitter().fit_right_censoring(
+        empirical_kmf = KaplanMeierFitter().fit_right_censoring(
             model.durations, model.event_observed, label=COL_EMP, timeline=timeline
         )
     elif CensoringType.is_interval_censoring(model):
-        raise NotImplementedError()
+        raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
 
-    kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
+    empirical_kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
 
     dist = get_distribution_name_of_lifelines_model(model)
     dist_object = create_scipy_stats_model_from_lifelines_model(model)
@@ -80,17 +84,49 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
 
 def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_kwargs):
     """
+    This functions plots the survival function of the model plus it's area-under-the-curve (AUC) up
+    until the point ``t``. The AUC is known as the restricted mean survival time (RMST).
+
+    To compare the difference between two models' survival curves, you can supply an
+    additional model in ``model2``.
 
     Parameters
     -----------
     model: lifelines.UnivariateFitter
+    model2: lifelines.UnivariateFitter, optional
+        used to compute the delta RMST of two models
     t: float
         the upper bound of the expectation
-    model2: lifelines.UnivariateFitter
-        used to compute the delta RMST of two models
     ax: axis
     text_position: tuple
         move the text position of the RMST.
+
+
+    Examples
+    ---------
+
+    >>> from lifelines.utils import restricted_mean_survival_time
+    >>> from lifelines.datasets import load_waltons
+    >>> from lifelines.plotting import rmst_plot
+    >>>
+    >>> df = load_waltons()
+    >>> ix = df['group'] == 'miR-137'
+    >>> T, E = df['T'], df['E']
+    >>> time_limit = 50
+    >>>
+    >>> kmf_exp = KaplanMeierFitter().fit(T[ix], E[ix], label='exp')
+    >>> kmf_con = KaplanMeierFitter().fit(T[~ix], E[~ix], label='control')
+    >>>
+    >>> ax = plt.subplot(311)
+    >>> rmst_plot(kmf_exp, t=time_limit, ax=ax)
+    >>>
+    >>> ax = plt.subplot(312)
+    >>> rmst_plot(kmf_con, t=time_limit, ax=ax)
+    >>>
+    >>> ax = plt.subplot(313)
+    >>> rmst_plot(kmf_exp, model2=kmf_con, t=time_limit, ax=ax)
+
+
 
     """
     from lifelines.utils import restricted_mean_survival_time
@@ -199,7 +235,7 @@ def qq_plot(model, ax=None, **plot_kwargs):
     elif CensoringType.is_right_censoring(model):
         kmf = KaplanMeierFitter().fit_right_censoring(model.durations, model.event_observed, label=COL_EMP)
     elif CensoringType.is_interval_censoring(model):
-        raise NotImplementedError()
+        raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
 
     q = np.unique(kmf.cumulative_density_.values[:, 0])
     # this is equivalent to the old code `qth_survival_times(q, kmf.cumulative_density, cdf=True)`
@@ -492,7 +528,7 @@ def create_dataframe_slicer(iloc, loc, timeline):
     return lambda df: getattr(df, get_method)[user_submitted_slice]
 
 
-def plot_loglogs(cls, loc=None, iloc=None, show_censors=False, censor_styles=None, ax=None, **kwargs):
+def loglogs_plot(cls, loc=None, iloc=None, show_censors=False, censor_styles=None, ax=None, **kwargs):
     """
     Specifies a plot of the log(-log(SV)) versus log(time) where SV is the estimated survival function.
     """

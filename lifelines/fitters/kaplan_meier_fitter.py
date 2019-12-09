@@ -18,7 +18,7 @@ from lifelines.utils import (
     coalesce,
     CensoringType,
 )
-from lifelines.plotting import plot_loglogs, _plot_estimate
+from lifelines.plotting import loglogs_plot, _plot_estimate
 
 
 class KaplanMeierFitter(UnivariateFitter):
@@ -285,7 +285,7 @@ class KaplanMeierFitter(UnivariateFitter):
         r"""
         Plot :math:`\log(S(t))` against :math:`\log(t)`. Same arguments as ``.plot``.
         """
-        return plot_loglogs(self, *args, **kwargs)
+        return loglogs_plot(self, *args, **kwargs)
 
     def survival_function_at_times(self, times, label=None) -> pd.Series:
         """
