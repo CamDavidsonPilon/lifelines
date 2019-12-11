@@ -2,6 +2,7 @@
 from typing import *
 import numpy as np
 from lifelines import utils
+import pandas as pd
 
 
 class Printer:
@@ -57,8 +58,6 @@ class Printer:
         print(self.to_html())
 
     def to_html(self):
-        import re
-
         decimals = self.decimals
         summary_df = self.model.summary
         columns = summary_df.columns

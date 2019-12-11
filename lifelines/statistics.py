@@ -73,7 +73,7 @@ class StatisticalResult:
 
         self._kwargs = kwargs
 
-    def print_summary(self, decimals=2, **kwargs):
+    def print_summary(self, decimals=2, style=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -86,7 +86,34 @@ class StatisticalResult:
             multiple outputs.
 
         """
-        print(self._to_string(decimals, **kwargs))
+        if style is not None:
+            self.print_specific_style(style)
+        else:
+            try:
+                from IPython.core.getipython import get_ipython
+
+                ip = get_ipython()
+                if ip and ip.has_trait("kernel"):
+                    self.html_print_inside_jupyter()
+                else:
+                    self.ascii_print()
+            except ImportError:
+                self.ascii_print()
+
+    def html_print_inside_jupyter(self):
+        from IPython.display import HTML, display
+
+        display(HTML(self.to_html()))
+
+    def html_print(self):
+        print(self.to_html())
+
+    def ascii_print(self):
+        print(self.to_ascii(decimals, **kwargs))
+
+    def to_html(self):
+        # TODO
+        pass
 
     @property
     def summary(self):
@@ -113,7 +140,7 @@ class StatisticalResult:
             return "<lifelines.StatisticalResult: {0}>".format(self.name[0])
         return "<lifelines.StatisticalResult>"
 
-    def _to_string(self, decimals=2, **kwargs):
+    def to_ascii(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
 
