@@ -2,6 +2,7 @@
 from typing import *
 import numpy as np
 from lifelines import utils
+import pandas as pd
 
 
 class Printer:
