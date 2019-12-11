@@ -73,6 +73,24 @@ class StatisticalResult:
 
         self._kwargs = kwargs
 
+    def print_specific_style(self, style, decimals, **kwargs):
+        """
+        Parameters
+        -----------
+
+        style: str
+         one of {'ascii', 'html', 'latex'}
+
+        """
+        if style == "html":
+            return self.html_print(decimals, **kwargs)
+        elif style == "ascii":
+            return self.ascii_print(decimals, **kwargs)
+        elif style == "latex":
+            return self.latex_print(decimals, **kwargs)
+        else:
+            raise ValueError("style not available.")
+
     def print_summary(self, decimals=2, style=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
@@ -87,33 +105,52 @@ class StatisticalResult:
 
         """
         if style is not None:
-            self.print_specific_style(style)
+            self.print_specific_style(style, decimals, **kwargs)
         else:
             try:
                 from IPython.core.getipython import get_ipython
 
                 ip = get_ipython()
                 if ip and ip.has_trait("kernel"):
-                    self.html_print_inside_jupyter()
+                    self.html_print_inside_jupyter(decimals, **kwargs)
                 else:
-                    self.ascii_print()
+                    self.ascii_print(decimals, **kwargs)
             except ImportError:
-                self.ascii_print()
+                self.ascii_print(decimals, **kwargs)
 
-    def html_print_inside_jupyter(self):
+    def html_print_inside_jupyter(self, decimals, **kwargs):
         from IPython.display import HTML, display
 
-        display(HTML(self.to_html()))
+        display(HTML(self.to_html(decimals, **kwargs)))
 
-    def html_print(self):
-        print(self.to_html())
+    def html_print(self, decimals, **kwargs):
+        print(self.to_html(decimals, **kwargs))
 
-    def ascii_print(self):
+    def ascii_print(self, decimals, **kwargs):
         print(self.to_ascii(decimals, **kwargs))
 
-    def to_html(self):
-        # TODO
-        pass
+    def to_html(self, decimals, **kwargs):
+        extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
+        summary_df = self.summary
+
+        headers = []
+        for k, v in extra_kwargs.items():
+            headers.append((k, v))
+
+        header_df = pd.DataFrame.from_records(headers).set_index(0)
+        header_html = header_df.to_html(header=False, notebook=True, index_names=False)
+
+        summary_html = summary_df.to_html(
+            float_format=format_floats(decimals), formatters={**{"p": format_p_value(decimals)}}
+        )
+
+        return header_html + summary_html
+
+    def latex_print(self, decimals, **kwargs):
+        print(self.to_latex(decimals, **kwargs))
+
+    def to_latex(self, decimals, **kwargs):
+        return self.summary.to_latex()
 
     @property
     def summary(self):
@@ -136,11 +173,9 @@ class StatisticalResult:
         return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
 
     def __repr__(self):
-        if self.name and len(self.name) == 1:
-            return "<lifelines.StatisticalResult: {0}>".format(self.name[0])
-        return "<lifelines.StatisticalResult>"
+        return "<lifelines.StatisticalResult: {0}>".format(self.test_name)
 
-    def to_ascii(self, decimals=2, **kwargs):
+    def to_ascii(self, decimals, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
 
@@ -386,7 +421,13 @@ def survival_difference_at_fixed_point_in_time_test(
     p_value = _chisq_test_p_value(X, 1)
 
     return StatisticalResult(
-        p_value, X, null_distribution="chi squared", degrees_of_freedom=1, point_in_time=point_in_time, **kwargs
+        p_value,
+        X,
+        null_distribution="chi squared",
+        degrees_of_freedom=1,
+        point_in_time=point_in_time,
+        test_name="survival_difference_at_fixed_point_in_time_test",
+        **kwargs
     )
 
 
@@ -479,7 +520,7 @@ def logrank_test(
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
     event_observed = np.r_[event_observed_A, event_observed_B]
-    return multivariate_logrank_test(event_times, groups, event_observed, t_0=t_0, **kwargs)
+    return multivariate_logrank_test(event_times, groups, event_observed, t_0=t_0, test_name="logrank_test", **kwargs)
 
 
 def pairwise_logrank_test(
@@ -539,7 +580,7 @@ def pairwise_logrank_test(
 
     n_unique_groups = unique_groups.shape[0]
 
-    result = StatisticalResult([], [], [])
+    result = StatisticalResult([], [], [], test_name="pairwise_logrank_test")
 
     for i1, i2 in combinations(np.arange(n_unique_groups), 2):
         g1, g2 = unique_groups[[i1, i2]]
@@ -627,6 +668,8 @@ def multivariate_logrank_test(
     pairwise_logrank_test
     logrank_test
     """
+    kwargs.setdefault("test_name", "multivariate_logrank_test")
+
     event_durations, groups = np.asarray(event_durations), np.asarray(groups)
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
@@ -668,7 +711,6 @@ def multivariate_logrank_test(
 
     # compute the p-values and tests
     p_value = _chisq_test_p_value(U, n_groups - 1)
-
     return StatisticalResult(
         p_value, U, t_0=t_0, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
     )
