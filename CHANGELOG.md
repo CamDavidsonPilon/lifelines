@@ -3,6 +3,15 @@
 #### 0.23.2
 
 ##### New features
+ - `StatisticalResult.print_summary` supports html output.
+
+##### Bug fixes
+ - fix import in `printer.py`
+
+
+#### 0.23.2
+
+##### New features
  - new `lifelines.plotting.rmst_plot` for pretty figures of survival curves and RMSTs.
  - new variance calculations for `lifelines.utils.resticted_mean_survival_time`
  - performance improvements on regression models' preprocessing. Should make datasets with
