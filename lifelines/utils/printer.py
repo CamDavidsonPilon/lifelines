@@ -97,9 +97,11 @@ class Printer:
             except AttributeError:
                 pass
 
-        footer_df = pd.DataFrame.from_records(footers).set_index(0)
-        footer_html = footer_df.to_html(header=False, notebook=True, index_names=False)
-
+        if footers:
+            footer_df = pd.DataFrame.from_records(footers).set_index(0)
+            footer_html = footer_df.to_html(header=False, notebook=True, index_names=False)
+        else:
+            footer_html = ""
         return header_html + summary_html + footer_html
 
     def ascii_print(self):

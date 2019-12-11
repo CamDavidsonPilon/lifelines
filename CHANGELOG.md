@@ -7,6 +7,7 @@
 
 ##### Bug fixes
  - fix import in `printer.py`
+ - fix html printing with Univariate models.
 
 
 #### 0.23.2
