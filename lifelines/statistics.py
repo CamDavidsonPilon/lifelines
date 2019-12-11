@@ -46,6 +46,8 @@ class StatisticalResult:
         the p-values of a statistical test(s)
     test_statistic: iterable or float
         the test statistics of a statistical test(s). Must be the same size as p-values if iterable.
+    test_name: string
+        the test that was used. Lifelines should set this.
     name: iterable or string
         if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable.
     kwargs:
@@ -53,9 +55,10 @@ class StatisticalResult:
 
     """
 
-    def __init__(self, p_value, test_statistic, name=None, **kwargs):
+    def __init__(self, p_value, test_statistic, name=None, test_name=None, **kwargs):
         self.p_value = p_value
         self.test_statistic = test_statistic
+        self.test_name = test_name
 
         self._p_value = _to_1d_array(p_value)
         self._test_statistic = _to_1d_array(test_statistic)
