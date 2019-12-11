@@ -74,6 +74,7 @@ class StatisticalResult:
         for kw, value in kwargs.items():
             setattr(self, kw, value)
 
+        kwargs["test_name"] = test_name
         self._kwargs = kwargs
 
     def print_specific_style(self, style, decimals, **kwargs):
