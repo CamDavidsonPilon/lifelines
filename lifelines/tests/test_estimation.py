@@ -2750,6 +2750,12 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         finally:
             sys.stdout = saved_stdout
 
+    def test_print_summary_with_styles(self, rossi, cph):
+        cph.fit(rossi, duration_col="week", event_col="arrest")
+        cph.print_summary(style="html")
+        cph.print_summary(style="latex")
+        cph.print_summary(style="ascii")
+
     def test_log_likelihood(self, data_nus, cph):
         cph.fit(data_nus, duration_col="t", event_col="E")
         assert abs(cph.log_likelihood_ - -12.7601409152) < 0.001

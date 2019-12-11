@@ -12,7 +12,7 @@ from scipy.linalg import solve as spsolve, LinAlgError
 from scipy.integrate import trapz
 from scipy import stats
 
-from lifelines.fitters import BaseFitter
+from lifelines.fitters import RegressionFitter
 from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.statistics import _chisq_test_p_value, proportional_hazard_test, TimeTransformers, StatisticalResult
 from lifelines.utils.lowess import lowess
@@ -80,7 +80,7 @@ class BatchVsSingle:
         return "single"
 
 
-class CoxPHFitter(BaseFitter):
+class CoxPHFitter(RegressionFitter):
     r"""
     This class implements fitting Cox's proportional hazard model:
 

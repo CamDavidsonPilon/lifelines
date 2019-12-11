@@ -34,7 +34,7 @@ class BaseFitter:
     event_observed: np.array
     durations: np.array
 
-    def __init__(self, alpha: float = 0.05, label=None):
+    def __init__(self, alpha: float = 0.05, label: str = None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
@@ -1112,7 +1112,12 @@ class KnownModelParametricUnivariateFitter(ParametricUnivariateFitter):
     _KNOWN_MODEL = True
 
 
-class ParametricRegressionFitter(BaseFitter):
+class RegressionFitter(BaseFitter):
+    def __init__(self, *args, **kwargs):
+        super(RegressionFitter, self).__init__(*args, **kwargs)
+
+
+class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
