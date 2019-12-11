@@ -206,10 +206,10 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
 
 def test_StatisticalResult_kwargs():
 
-    sr = stats.StatisticalResult(0.05, 5.0, kw="some_value")
+    sr = stats.StatisticalResult(0.05, 5.0, kw="some_value", test_name="test")
     assert hasattr(sr, "kw")
     assert getattr(sr, "kw") == "some_value"
-    assert "some_value" in sr._to_string()
+    assert "some_value" in sr.to_ascii(2)
 
 
 def test_StatisticalResult_can_be_added():
