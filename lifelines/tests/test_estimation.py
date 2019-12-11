@@ -313,6 +313,15 @@ class TestParametricUnivariateFitters:
             with pytest.raises(ValueError, match="lower_bound == upper_bound"):
                 f = fitter().fit_interval_censoring(df["left"], df["right"], event_observed=np.ones_like(df["right"]))
 
+    def test_print_summary(self, sample_lifetimes, known_parametric_univariate_fitters):
+        T = np.random.exponential(1, size=100)
+        for f in known_parametric_univariate_fitters:
+            f = f()
+            f.fit(T)
+            f.print_summary(style="ascii")
+            f.print_summary(style="html")
+            f.print_summary(style="latex")
+
 
 class TestUnivariateFitters:
     @pytest.fixture
