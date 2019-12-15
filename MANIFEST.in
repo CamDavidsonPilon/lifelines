@@ -7,5 +7,6 @@ include *.ipynb
 recursive-include lifelines *
 recursive-include datasets *
 recursive-include styles *
+recursive-include reqs *
 
 recursive-exclude * *.py[co]
