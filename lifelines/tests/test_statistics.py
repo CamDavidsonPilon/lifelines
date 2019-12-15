@@ -206,10 +206,10 @@ def test_multivariate_log_rank_is_identital_to_log_rank_for_n_equals_2():
 
 def test_StatisticalResult_kwargs():
 
-    sr = stats.StatisticalResult(0.05, 5.0, kw="some_value")
+    sr = stats.StatisticalResult(0.05, 5.0, kw="some_value", test_name="test")
     assert hasattr(sr, "kw")
     assert getattr(sr, "kw") == "some_value"
-    assert "some_value" in sr._to_string()
+    assert "some_value" in sr.to_ascii(2)
 
 
 def test_StatisticalResult_can_be_added():
@@ -226,8 +226,10 @@ def test_StatisticalResult_can_be_added():
 
 def test_StatisticalResult_can_be_printed():
 
-    sr = stats.StatisticalResult(0.01, 1.0, name=["1"], kw1="some_value1")
-    sr.print_summary()
+    sr = stats.StatisticalResult(0.01, 1.0, name=["1"], kw1="some_value1", test_name="test")
+    sr.print_summary(decimals=3, style="ascii")
+    sr.print_summary(decimals=3, style="latex")
+    sr.print_summary(decimals=3, style="html")
 
 
 def test_proportional_hazard_test():
@@ -321,7 +323,6 @@ def test_proportional_hazard_test_with_weights_and_strata():
     cph.fit(df, "T", "E", weights_col="w", strata="s", robust=True)
 
     results = stats.proportional_hazard_test(cph, df, time_transform="identity")
-    cph.print_summary()
 
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.0283, rtol=1e-3)
 
