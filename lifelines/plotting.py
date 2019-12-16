@@ -579,6 +579,8 @@ def _plot_estimate(
     censor_styles=None,
     ci_legend=False,
     ci_force_lines=False,
+    ci_only_lines=False,
+    ci_no_lines=False,
     ci_alpha=0.25,
     ci_show=True,
     at_risk_counts=False,
@@ -600,7 +602,13 @@ def _plot_estimate(
     ci_alpha: bool
         the transparency level of the confidence interval. Default: 0.3
     ci_force_lines: bool
-        force the confidence intervals to be line plots (versus default shaded areas). Default: False
+        force the confidence intervals to be line plots (versus default shaded areas + lines). Default: False
+        Deprecated: use ``ci_only_lines`` instead.
+    ci_only_lines: bool
+        make the confidence intervals to be line plots (versus default shaded areas + lines). Default: False
+        Deprecated: use ``ci_only_lines`` instead.
+    ci_no_lines: bool
+        Only show the shaded area, with no lines.
     ci_show: bool
         show confidence intervals. Default: True
     ci_legend: bool
@@ -625,6 +633,12 @@ def _plot_estimate(
     ax:
         a pyplot axis object
     """
+    if ci_force_lines:
+        warnings.warn(
+            "ci_force_lines is deprecated. Use ci_only_lines instead (no functional difference, only a name change).",
+            DeprecationWarning,
+        )
+        ci_only_lines = ci_force_lines
 
     plot_estimate_config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, ax, **kwargs)
 
@@ -644,7 +658,7 @@ def _plot_estimate(
     ).plot(**plot_estimate_config.kwargs)
     # plot confidence intervals
     if ci_show:
-        if ci_force_lines:
+        if ci_only_lines:
             dataframe_slicer(plot_estimate_config.confidence_interval_).plot(
                 linestyle="-",
                 linewidth=1,
@@ -665,7 +679,13 @@ def _plot_estimate(
                 step = plot_estimate_config.kwargs["drawstyle"].replace("steps-", "")
 
             plot_estimate_config.ax.fill_between(
-                x, lower, upper, alpha=ci_alpha, color=plot_estimate_config.colour, linewidth=1.0, step=step
+                x,
+                lower,
+                upper,
+                alpha=ci_alpha,
+                color=plot_estimate_config.colour,
+                linewidth=0.0 if ci_no_lines else 1.0,
+                step=step,
             )
 
     if at_risk_counts:
