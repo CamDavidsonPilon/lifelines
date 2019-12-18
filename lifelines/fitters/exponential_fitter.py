@@ -66,6 +66,7 @@ class ExponentialFitter(KnownModelParametricUnivariateFitter):
     """
 
     _fitted_parameter_names = ["lambda_"]
+    _scipy_fit_options = {"ftol": 1e-14}
 
     def percentile(self, p):
         return -self.lambda_ * np.log(p)

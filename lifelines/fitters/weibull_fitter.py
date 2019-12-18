@@ -89,6 +89,7 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
     rho_: float
     _fitted_parameter_names = ["lambda_", "rho_"]
     _compare_to_values = np.array([1.0, 1.0])
+    _scipy_fit_options = {"ftol": 1e-14}
 
     def _create_initial_point(self, Ts, E, entry, weights):
         return np.array([utils.coalesce(*Ts).std(), 1.0])
@@ -96,6 +97,10 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params
         return safe_exp(rho_ * (np.log(np.clip(times, 1e-25, np.inf)) - np.log(lambda_)))
+
+    def _log_hazard(self, params, times):
+        lambda_, rho_ = params
+        return np.log(rho_) - np.log(lambda_) + (rho_ - 1) * (np.log(times) - np.log(lambda_))
 
     def percentile(self, p) -> float:
         return self.lambda_ * (np.log(1.0 / p) ** (1.0 / self.rho_))

@@ -883,6 +883,12 @@ class TestLogLogisticFitter:
 
 
 class TestWeibullFitter:
+    def test_unstable_data(self):
+        data = pd.read_csv("https://raw.githubusercontent.com/scotty269/lifelines_test/master/my_data.csv")
+        T = data["T"]
+        E = data["E"]
+        assert abs(WeibullFitter().fit(T, E).log_likelihood_ - LogNormalFitter().fit(T, E).log_likelihood_) < 0.5
+
     @flaky(max_runs=3, min_passes=2)
     @pytest.mark.parametrize("N", [750, 1500])
     def test_left_censorship_inference(self, N):
