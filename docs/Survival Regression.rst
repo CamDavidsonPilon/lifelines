@@ -173,7 +173,6 @@ Back to our original problem of predicting the event time of censored individual
     censored_subjects = X.loc[~X['arrest'].astype(bool)]
     censored_subjects_last_obs = censored_subjects['week']
 
-    cph.predict_partial_hazard(censored_subjects, conditional_after=censored_subjects_last_obs)
     cph.predict_survival_function(censored_subjects, times=[5., 25., 50.], conditional_after=censored_subjects_last_obs)
     cph.predict_median(censored_subjects, conditional_after=censored_subjects_last_obs)
 
