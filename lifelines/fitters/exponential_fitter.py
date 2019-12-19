@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+from autograd import numpy as anp
 from lifelines.fitters import KnownModelParametricUnivariateFitter
 
 
@@ -66,7 +67,7 @@ class ExponentialFitter(KnownModelParametricUnivariateFitter):
     """
 
     _fitted_parameter_names = ["lambda_"]
-    _scipy_fit_options = {"ftol": 1e-14}
+    _scipy_fit_options = {"ftol": 1e-14, "gtol": 1e-8}
 
     def percentile(self, p):
         return -self.lambda_ * np.log(p)
@@ -74,3 +75,7 @@ class ExponentialFitter(KnownModelParametricUnivariateFitter):
     def _cumulative_hazard(self, params, times):
         lambda_ = params[0]
         return times / lambda_
+
+    def _log_hazard(self, params, times):
+        lambda_ = params[0]
+        return -anp.log(lambda_)
