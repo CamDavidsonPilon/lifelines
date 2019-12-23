@@ -475,7 +475,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         while converging:
             beta += step_size * delta
-
             self.path.append(beta.copy())
 
             i += 1

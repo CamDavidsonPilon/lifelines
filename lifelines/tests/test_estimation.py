@@ -2151,6 +2151,7 @@ class TestWeibullAFTFitter:
     def test_fitted_coefs_match_with_flexsurv_has(self, aft, rossi):
         """
         library('flexsurv')
+        df = read.csv("~/code/lifelines/lifelines/datasets/rossi.csv")
         r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
         r$coef
         """
