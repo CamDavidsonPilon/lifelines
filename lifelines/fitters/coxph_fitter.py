@@ -1614,7 +1614,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         Caution
         --------
-        If the survival function doesn't converge to 0, the the expectation is really infinity and the returned
+        If the survival function doesn't converge to 0, then the expectation is really infinity and the returned
         values are meaningless/too large. In that case, using ``predict_median`` or ``predict_percentile`` would be better.
 
         Parameters
