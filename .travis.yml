@@ -1,4 +1,4 @@
-covariates_from_event_matrixlanguage: python
+language: python
 cache: pip
 dist: xenial
 python:
