@@ -1132,7 +1132,7 @@ def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, dur
         df = df.sample(n=500, random_state=0)
         durations = durations.sample(n=500, random_state=0)
 
-    rank_durations = durations.values.argsort()
+    rank_durations = durations.argsort()
     for col, series in df.iteritems():
         with np.errstate(invalid="ignore", divide="ignore"):
             rank_series = series.values.argsort()
