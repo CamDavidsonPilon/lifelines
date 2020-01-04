@@ -1120,7 +1120,7 @@ class RegressionFitter(BaseFitter):
 class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
-    _scipy_fit_options: Dict[str, Any] = dict()
+    _scipy_fit_options: Dict[str, Any] = {}
     _KNOWN_MODEL = False
     _concordance_score_: float
     _fitted_parameter_names: List[str]
@@ -1498,8 +1498,8 @@ class ParametricRegressionFitter(RegressionFitter):
             hessian_ = (hessian_ + hessian_.T) / 2
             return results.x, -sum_weights * results.fun, sum_weights * hessian_
         else:
-            self._check_values_post_fitting(Xs.df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
             print(results)
+            self._check_values_post_fitting(Xs.df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
             raise utils.ConvergenceError(
                 dedent(
                     """\
@@ -1508,8 +1508,9 @@ class ParametricRegressionFitter(RegressionFitter):
                 0. Are there any lifelines warnings outputted during the `fit`?
                 1. Inspect your DataFrame: does everything look as expected?
                 2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
-                3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
-                4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
+                3. Try using an alternate minimizer: ``fitter._scipy_fit_method = "SLSQP"``.
+                4. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
+                5. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
             """
                     % self._class_name
                 )
@@ -2920,3 +2921,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
                 index=times,
                 columns=df.index,
             )
+
+    def compute_residuals(self, df):
+        pass

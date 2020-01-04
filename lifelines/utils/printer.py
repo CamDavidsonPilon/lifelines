@@ -190,3 +190,4 @@ class Printer:
                 )
             except AttributeError:
                 pass
+        print()

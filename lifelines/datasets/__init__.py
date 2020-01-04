@@ -525,3 +525,16 @@ def load_lupus(**kwargs):
 
     """
     return _load_dataset("merrell1955.csv", index_col=0, **kwargs)
+
+
+def load_lymph_node(**kwargs):
+    """
+    References
+    -----------
+    Schmoor, C., Sauerbrei, W. Bastert, G., Schumacher, M. (2000). Role of Isolated Locoregional Recurrence of Breast Cancer: Results of Four Prospective Studies. Journal of Clinical Oncology, 18(8), 1696-1708.
+
+    Schumacher, M., Bastert, G., Bojar, H., Hiibner, K., Olschewski, M., Sauerbrei, W., Schmoor, C., Beyerle, C., Neumann, R.L.A. and Rauschecker, H.F. for the German Breast Cancer Study Group (GBSG) (1994). A randomized 2 x 2 trial evaluating hormonal treatment and the duration of chemotherapy in node-positive breast cancer patients. Journal of Clinical Oncology, 12, 2086-2093.
+
+    Hosmer, D.W. and Lemeshow, S. and May, S. (2008). Applied Survival Analysis: Regression Modeling of Time to Event Data: Second Edition, John Wiley and Sons Inc., New York, NY
+    """
+    return _load_dataset("lymph_node.csv", index_col=0, **kwargs)
