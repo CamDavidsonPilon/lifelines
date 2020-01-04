@@ -1,4 +1,4 @@
-Univariate Models
+Univariate models
 ==================
 
 AalenJohansenFitter
@@ -76,7 +76,7 @@ GeneralizedGammaFitter
     :undoc-members:
 
 
-Regression Models
+Regression models
 ==================
 
 
