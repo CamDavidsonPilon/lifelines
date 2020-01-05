@@ -599,6 +599,8 @@ def _plot_estimate(
         place markers at censorship events. Default: False
     censor_styles: bool
         If show_censors, this dictionary will be passed into the plot call.
+    ci_show: bool
+        show confidence intervals. Default: True
     ci_alpha: bool
         the transparency level of the confidence interval. Default: 0.3
     ci_force_lines: bool
@@ -608,9 +610,7 @@ def _plot_estimate(
         make the confidence intervals to be line plots (versus default shaded areas + lines). Default: False
         Deprecated: use ``ci_only_lines`` instead.
     ci_no_lines: bool
-        Only show the shaded area, with no lines.
-    ci_show: bool
-        show confidence intervals. Default: True
+        Only show the shaded area, with no boarding lines. Default: False
     ci_legend: bool
         if ci_force_lines is True, this is a boolean flag to add the lines' labels to the legend. Default: False
     at_risk_counts: bool

@@ -1049,8 +1049,8 @@ class TestGeneralizedGammaFitter:
 
         gg = GeneralizedGammaFitter().fit(T)
         npt.assert_allclose(gg.summary.loc["mu_", "coef"], 4.23064, rtol=0.001)
-        npt.assert_allclose(gg.summary.loc["lambda_", "coef"], 0.307639, rtol=1e-5)
-        npt.assert_allclose(np.exp(gg.summary.loc["ln_sigma_", "coef"]), 0.509982, rtol=1e-6)
+        npt.assert_allclose(gg.summary.loc["lambda_", "coef"], 0.307639, rtol=1e-3)
+        npt.assert_allclose(np.exp(gg.summary.loc["ln_sigma_", "coef"]), 0.509982, rtol=1e-3)
 
 
 class TestExponentialFitter:
