@@ -1329,6 +1329,9 @@ class ParametricRegressionFitter(RegressionFitter):
     def _create_Xs_dict(self, df):
         return utils.DataframeSliceDict(df, self.regressors)
 
+    def _filter_dataframe_to_covariates(self, df):
+        return df[set(sum(self.regressors.values(), []))]
+
     def _fit(
         self,
         log_likelihood_function,
@@ -1388,7 +1391,7 @@ class ParametricRegressionFitter(RegressionFitter):
             len(cols) > 0 for cols in self.regressors.values()
         ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
 
-        df = df.astype(float)
+        df = self._filter_dataframe_to_covariates(df).astype(float)
         self._check_values_pre_fitting(df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
         _index = pd.MultiIndex.from_tuples(
@@ -1729,8 +1732,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         df: DataFrame
             a (n,d) DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
+            can be in any order.
         times: iterable, optional
             an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
@@ -1757,8 +1759,7 @@ class ParametricRegressionFitter(RegressionFitter):
         ----------
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
+            can be in any order.
         conditional_after: iterable, optional
             Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
@@ -1794,8 +1795,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         df: DataFrame
             a (n,d) DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
+            can be in any order.
         times: iterable, optional
             an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
             is the set of all durations in the training dataset (observed and unobserved).
@@ -1807,16 +1807,16 @@ class ParametricRegressionFitter(RegressionFitter):
 
         Returns
         -------
-         DataFrame
+        DataFrame
             the cumulative hazards of individuals over the timeline
 
         """
-        df = df.copy().astype(float)
-        times = utils.coalesce(times, self.timeline)
-        times = np.atleast_1d(times).astype(float)
-
         if isinstance(df, pd.Series):
             df = df.to_frame().T
+
+        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        times = utils.coalesce(times, self.timeline)
+        times = np.atleast_1d(times).astype(float)
 
         n = df.shape[0]
         Xs = self._create_Xs_dict(df)
@@ -1843,6 +1843,44 @@ class ParametricRegressionFitter(RegressionFitter):
                 columns=df.index,
             )
 
+    def predict_hazard(self, df, *, times=None):
+        """
+        Predict the hazard for individuals, given their covariates.
+
+        Parameters
+        ----------
+
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
+            can be in any order.
+        times: iterable, optional
+            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations in the training dataset (observed and unobserved).
+        conditional_after:
+            Not implemented yet.
+
+        Returns
+        -------
+        DataFrame
+            the hazards of individuals over the timeline
+
+        """
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
+
+        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        times = utils.coalesce(times, self.timeline)
+        times = np.atleast_1d(times).astype(float)
+
+        n = df.shape[0]
+        Xs = self._create_Xs_dict(df)
+
+        params_dict = {
+            parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
+        }
+
+        return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+
     def predict_expectation(self, X) -> pd.DataFrame:
         r"""
         Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
@@ -1857,8 +1895,7 @@ class ParametricRegressionFitter(RegressionFitter):
         ----------
         X: numpy array or DataFrame
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
+            can be in any order.
 
         Returns
         -------
@@ -2856,6 +2893,55 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             p, self.predict_survival_function(df, ancillary_df=ancillary_df, conditional_after=conditional_after)
         )
 
+    def predict_hazard(self, df, *, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
+        """
+        Predict the median lifetimes for the individuals. If the survival curve of an
+        individual does not cross 0.5, then the result is infinity.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        times: iterable, optional
+            an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved).
+        conditional_after: iterable, optional
+            Not implemented yet
+
+        See Also
+        --------
+        predict_percentile, predict_expectation, predict_survival_function
+        """
+        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        times = utils.coalesce(times, self.timeline)
+        times = np.atleast_1d(times).astype(float)
+
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
+
+        n = df.shape[0]
+
+        if isinstance(ancillary_df, pd.DataFrame):
+            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
+            for c in ancillary_df.columns.difference(df.columns):
+                df[c] = ancillary_df[c]
+
+        if self.fit_intercept:
+            df["_intercept"] = 1.0
+
+        Xs = self._create_Xs_dict(df)
+
+        params_dict = {
+            parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
+        }
+
+        if conditional_after is None:
+            return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+        else:
+            raise NotImplementedError()
+
     def predict_cumulative_hazard(self, df, *, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
@@ -2881,7 +2967,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         --------
         predict_percentile, predict_expectation, predict_survival_function
         """
-        df = df.copy().astype(float)
+        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
