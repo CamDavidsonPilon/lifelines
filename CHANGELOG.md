@@ -1,6 +1,20 @@
 ## Changelog
 
-#### 0.23.2
+#### 0.23.5
+
+##### New features
+ - New `predict_hazard` for parametric regression models.
+ - New lymph node cancer dataset, originally from *H.F. for the German Breast Cancer Study Group (GBSG) (1994)*
+
+##### Bug fixes
+ - fixes error thrown when converge of regression models fails.
+ - `kwargs` is now used in `plot_covariate_groups`
+
+#### 0.23.4
+
+ - Bug fix for PyPI
+
+#### 0.23.3
 
 ##### New features
  - `StatisticalResult.print_summary` supports html output.
