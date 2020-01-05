@@ -1326,7 +1326,10 @@ class ParametricRegressionFitter(RegressionFitter):
         return utils.DataframeSliceDict(df, self.regressors)
 
     def _filter_dataframe_to_covariates(self, df):
-        return df[set(sum(self.regressors.values(), []))]
+        cols = set(sum(self.regressors.values(), []))
+        if "_intercept" not in df.columns:
+            cols = cols - set(["_intercept"])
+        return df[cols]
 
     def _fit(
         self,
