@@ -2054,7 +2054,7 @@ class ParametricRegressionFitter(RegressionFitter):
         for covariate, value in zip(covariates, values.T):
             X[covariate] = value
 
-        self.predict_survival_function(X).plot(ax=ax)
+        self.predict_survival_function(X).plot(ax=ax, **kwargs)
         if plot_baseline:
             self.predict_survival_function(x_bar).rename(columns={0: "baseline survival"}).plot(
                 ax=ax, ls=":", color="k"
@@ -2752,7 +2752,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             X["_intercept"] = 1.0
             ancillary_X["_intercept"] = 1.0
 
-        self.predict_survival_function(X, ancillary_df=ancillary_X).plot(ax=ax)
+        self.predict_survival_function(X, ancillary_df=ancillary_X).plot(ax=ax, **kwargs)
         if plot_baseline:
             self.predict_survival_function(x_bar, ancillary_df=x_bar_anc).rename(columns={0: "baseline survival"}).plot(
                 ax=ax, ls=":", color="k"
