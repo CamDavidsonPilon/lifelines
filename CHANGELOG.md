@@ -9,6 +9,7 @@
 ##### Bug fixes
  - fixes error thrown when converge of regression models fails.
  - `kwargs` is now used in `plot_covariate_groups`
+ - fixed bug where large exponential numbers in `print_summary` were not being suppressed correctly.
 
 #### 0.23.4
 

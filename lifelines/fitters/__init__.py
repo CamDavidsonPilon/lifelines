@@ -912,9 +912,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 3. Are there cusps/ in the cumulative hazard?
 
 
-                It's advisable to not trust the variances reported, and to be suspicious of the
-                fitted parameters too. Perform plots of the cumulative hazard to help understand
-                the latter's bias.
+                It's advisable to not trust the variances reported, and to be suspicious of the fitted parameters too. Perform plots of the cumulative hazard to help understand the latter's bias.
                 """
                 % self._class_name
             )
@@ -925,9 +923,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     """\
                     The diagonal of the variance_matrix_ has negative values. This could be a problem with %s's fit to the data.
 
-                    It's advisable to not trust the variances reported, and to be suspicious of the
-                    fitted parameters too. Perform plots of the cumulative hazard to help understand
-                    the latter's bias.
+                    It's advisable to not trust the variances reported, and to be suspicious of the fitted parameters too. Perform plots of the cumulative hazard to help understand the latter's bias.
 
                     To fix this, try specifying an `initial_point` kwarg in `fit`.
                     """
@@ -1528,8 +1524,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 """\
                 The Hessian was not invertible. We will instead approximate it using the pseudo-inverse.
 
-                It's advisable to not trust the variances reported, and to be suspicious of the
-                fitted parameters too.
+                It's advisable to not trust the variances reported, and to be suspicious of the fitted parameters too.
 
                 Some ways to possible ways fix this:
 
@@ -1548,8 +1543,7 @@ class ParametricRegressionFitter(RegressionFitter):
                     """\
                     The diagonal of the variance_matrix_ has negative values. This could be a problem with %s's fit to the data.
 
-                    It's advisable to not trust the variances reported, and to be suspicious of the
-                    fitted parameters too.
+                    It's advisable to not trust the variances reported, and to be suspicious of the fitted parameters too.
                     """
                     % self._class_name
                 )
