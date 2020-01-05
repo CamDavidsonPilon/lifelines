@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.23.5
+#### 0.23.5 - 2020-01-05
 
 ##### New features
  - New `predict_hazard` for parametric regression models.
@@ -11,11 +11,11 @@
  - `kwargs` is now used in `plot_covariate_groups`
  - fixed bug where large exponential numbers in `print_summary` were not being suppressed correctly.
 
-#### 0.23.4
+#### 0.23.4 - 2019-12-15
 
  - Bug fix for PyPI
 
-#### 0.23.3
+#### 0.23.3 - 2019-12-11
 
 ##### New features
  - `StatisticalResult.print_summary` supports html output.
@@ -25,7 +25,7 @@
  - fix html printing with Univariate models.
 
 
-#### 0.23.2
+#### 0.23.2 - 2019-12-07
 
 ##### New features
  - new `lifelines.plotting.rmst_plot` for pretty figures of survival curves and RMSTs.
@@ -39,7 +39,7 @@
  - fixed `conditional_after` in Cox model with strata was used.
 
 
-#### 0.23.1
+#### 0.23.1 - 2019-11-27
 
 ##### New features
  - new `print_summary` option `style` to print HTML, LaTeX or ASCII output
