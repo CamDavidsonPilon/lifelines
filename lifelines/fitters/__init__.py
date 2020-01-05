@@ -2964,12 +2964,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         --------
         predict_percentile, predict_expectation, predict_survival_function
         """
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
+
         df = self._filter_dataframe_to_covariates(df).copy().astype(float)
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
-
-        if isinstance(df, pd.Series):
-            df = df.to_frame().T
 
         n = df.shape[0]
 

@@ -3,7 +3,7 @@ import numpy as np
 import scipy
 from matplotlib import pyplot as plt
 from lifelines import WeibullFitter, KaplanMeierFitter, LogNormalFitter, LogLogisticFitter
-from lifelines.plotting import left_censorship_cdf_plot, qq_plot
+from lifelines.plotting import cdf_plot, qq_plot
 
 plt.style.use("bmh")
 
@@ -31,18 +31,18 @@ axes = axes.reshape(4)
 
 for i, model in enumerate([WeibullFitter(), KaplanMeierFitter(), LogNormalFitter(), LogLogisticFitter()]):
     if isinstance(model, KaplanMeierFitter):
-        model.fit(T, E, left_censorship=True, label=model.__class__.__name__)
+        model.fit_left_censoring(T, E, label=model.__class__.__name__)
     else:
-        model.fit(T, E, left_censorship=True, label=model.__class__.__name__)
+        model.fit_left_censoring(T, E, label=model.__class__.__name__)
 
     model.plot_cumulative_density(ax=axes[i])
 plt.tight_layout()
 
 for i, model in enumerate([WeibullFitter(), LogNormalFitter(), LogLogisticFitter()]):
-    model.fit(T, E, left_censorship=True)
+    model.fit_left_censoring(T, E)
     fig, axes = plt.subplots(2, 1, figsize=(8, 6))
 
-    left_censorship_cdf_plot(model, ax=axes[0])
+    cdf_plot(model, ax=axes[0])
     qq_plot(model, ax=axes[1])
 
 
