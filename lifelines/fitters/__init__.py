@@ -1329,7 +1329,7 @@ class ParametricRegressionFitter(RegressionFitter):
         cols = set(sum(self.regressors.values(), []))
         if "_intercept" not in df.columns:
             cols = cols - set(["_intercept"])
-        return df[cols]
+        return df[list(cols)]
 
     def _fit(
         self,
