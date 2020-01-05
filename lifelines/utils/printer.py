@@ -152,7 +152,7 @@ class Printer:
             df.to_string(
                 float_format=utils.format_floats(decimals),
                 formatters={
-                    **{utils.leading_space(c): utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
+                    **{c: utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
                     **{utils.leading_space("p"): utils.format_p_value(decimals)},
                 },
                 columns=[c for c in utils.map_leading_space(first_row_set) if c in columns],
@@ -165,7 +165,7 @@ class Printer:
                 df.to_string(
                     float_format=utils.format_floats(decimals),
                     formatters={
-                        **{utils.leading_space(c): utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
+                        **{c: utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
                         **{utils.leading_space("p"): utils.format_p_value(decimals)},
                     },
                     columns=utils.map_leading_space(second_row_set),

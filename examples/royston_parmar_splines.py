@@ -27,6 +27,8 @@ class SplineFitter:
 
 class PHSplineFitter(SplineFitter, ParametricRegressionFitter):
     """
+    Proportional Hazard model
+
     References
     ------------
     Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
@@ -49,6 +51,8 @@ class PHSplineFitter(SplineFitter, ParametricRegressionFitter):
 
 class POSplineFitter(SplineFitter, ParametricRegressionFitter):
     """
+    Proportional Odds model
+
     References
     ------------
     Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
@@ -86,36 +90,13 @@ class POSplineFitter(SplineFitter, ParametricRegressionFitter):
         )
 
 
-class FlexibleSplineFitter(SplineFitter, ParametricRegressionFitter):
-    """
-    References
-    ------------
-    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
-    """
-
-    _fitted_parameter_names = ["beta_", "phi0_", "phi1_", "phi2_", "c_"]
-    _KNOWN_MODEL = True
-    KNOTS = [0.1972, 1.769, 6.728]
-    _scipy_fit_options = {"ftol": 1e-10}
-
-    @staticmethod
-    def softmax(x):
-        return np.log1p(np.exp(-np.abs(x))) + np.maximum(x, 0)
-
-    def _cumulative_hazard(self, params, T, Xs):
-        Xbeta = np.dot(Xs["beta_"], params["beta_"])
-
-        lT = np.log(T)
-        linear_sum = Xbeta + (
-            params["phi0_"]
-            + params["phi1_"] * lT
-            + params["phi2_"] * self.basis(lT, np.log(self.KNOTS[1]), np.log(self.KNOTS[0]), np.log(self.KNOTS[-1]))
-        )
-        c = 0.8 * expit(params["c_"]) + 0.2
-        return 1 / c * self.softmax(linear_sum + np.log(c))
-
-
 class WeibullFitter(ParametricRegressionFitter):
+    """
+    Alternative parameterization of Weibull Model
+
+
+    """
+
     _fitted_parameter_names = ["beta_", "phi0_", "phi1_"]
     _scipy_fit_method = "SLSQP"
     _KNOWN_MODEL = True
@@ -148,7 +129,7 @@ df = pd.get_dummies(df, columns=["binned_lp"], drop_first=True)
 columns_needed_for_fitting = ["binned_lp_(-8.257, -7.608]", "binned_lp_(-7.608, -3.793]"] + ["constant"] + ["T", "E"]
 
 
-# these values look right. Differences could be due to handling ties.
+# these values look right. Differences could be due to handling ties vs Stata
 cph = CoxPHFitter().fit(df[columns_needed_for_fitting].drop("constant", axis=1), "T", "E").print_summary()
 
 
@@ -180,7 +161,7 @@ regressors = {
     "phi2_": ["constant"],
 }
 pof = POSplineFitter()
-pof.fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary()
+pof.fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary(5)
 
 # looks like figure 2 from paper.
 pof.predict_hazard(
@@ -189,15 +170,3 @@ pof.predict_hazard(
     )
 ).plot()
 plt.show()
-
-
-# Check FlexibleSplineFitter mode
-regressors = {
-    "beta_": ["binned_lp_(-8.257, -7.608]", "binned_lp_(-7.608, -3.793]"],
-    "phi0_": ["constant"],
-    "phi1_": ["constant"],
-    "phi2_": ["constant"],
-    "c_": ["constant"],
-}
-fsf = FlexibleSplineFitter(penalizer=0.1)
-fsf.fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary()

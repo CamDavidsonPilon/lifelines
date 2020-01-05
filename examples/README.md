@@ -1,6 +1,6 @@
 ## Examples
 
-In this folder are some examples of lifelines usage, some with and some without comments and context. You can see some common patterns using lifelines and survival analysis.
+In this folder are some examples of *lifelines* usage, some with and some without comments and context.
 
 - `Cox residuals`: A notebook displaying how to create residuals for the Cox model.
 - `Custom Regression Models`: A notebook with examples on how to create a custom parametric regression model.

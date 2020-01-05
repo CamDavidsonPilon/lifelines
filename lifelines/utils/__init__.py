@@ -1146,7 +1146,7 @@ def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, dur
 
 
 def check_complete_separation(df, events, durations, event_col):
-    check_complete_separation_low_variance(df, pd.Series(events), event_col)
+    check_complete_separation_low_variance(df, events, event_col)
     check_complete_separation_close_to_perfect_correlation(df, pd.Series(durations))
 
 

@@ -12,12 +12,11 @@ class CureModel(ParametricRegressionFitter):
 
     def _cumulative_hazard(self, params, T, Xs):
         c = expit(np.dot(Xs["beta_"], params["beta_"]))
-
         lambda_ = np.exp(np.dot(Xs["lambda_"], params["lambda_"]))
         rho_ = np.exp(np.dot(Xs["rho_"], params["rho_"]))
-        cdf = 1 - np.exp(-(T / lambda_) ** rho_)
 
-        return -np.log((1 - c) + c * (1 - cdf))
+        survival = np.exp(-(T / lambda_) ** rho_)
+        return -np.log((1 - c) * 1.0 + c * survival)
 
 
 from lifelines.datasets import load_rossi
