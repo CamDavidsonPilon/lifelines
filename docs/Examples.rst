@@ -229,6 +229,36 @@ This graphical test can be used to invalidate models. For example, in the above 
 
 The :func:`~lifelines.plotting.qq_plots` also works with left censorship as well.
 
+Selecting a parametric model using AIC
+###############################################
+
+
+For univariate models (later to be extended to regression models), a natural way to compare different models is the AIC:
+
+.. math::  \text{AIC}(\text{model}) = -2 \text{ll} + 2k
+
+where :math:`k` is the number of parameters (degrees-of-freedom) of the model and :math:`\text{ll}` is the maximum log-likelihood. The model with the lowest AIC is desirable, since it's a trade off between maximizing the log-likelihood with as few parameters as possible.
+
+*lifelines* has a built in function to automate AIC comparisons between univariate parametric models:
+
+.. code:: python
+
+    from lifelines.utils import find_best_parametric_model
+    from lifelines.datasets import load_lymph_node
+
+    T = load_lymph_node()['rectime']
+    E = load_lymph_node()['censrec']
+
+    best_model, best_aic_ = find_best_parametric_model(T, E)
+
+    print(best_model)
+    # <lifelines.SplineFitter:"Spline_estimate", fitted with 686 total observations, 387 right-censored observations>
+
+    best_model.plot_hazard()
+
+
+.. image:: images/best_parametric_model.png
+
 
 Plotting multiple figures on a plot
 ##############################################
