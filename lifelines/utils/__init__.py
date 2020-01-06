@@ -1741,12 +1741,15 @@ def find_best_parametric_model(event_times, event_observed=None, evaluation: str
         SplineFitter(knots3),
     ] + additional_models:
         try:
-            # TODO: suppress warnings.
-            model.fit(event_times, event_observed)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                model.fit(event_times, event_observed)
             score_ = eval(model)
+
             if score_ < best_score:
                 best_score = score_
                 best_model = model
+
         except ConvergenceError:
             pass
 

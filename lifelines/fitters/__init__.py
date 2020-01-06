@@ -1245,14 +1245,193 @@ class ParametricRegressionFitter(RegressionFitter):
         return ll
 
     @utils.CensoringType.left_censoring
-    def fit_left_censoring(self):
-        # TODO
-        pass
+    def fit_left_censoring(
+        self,
+        df,
+        duration_col=None,
+        event_col=None,
+        regressors=None,
+        fit_intercept=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+        initial_point=None,
+        entry_col=None,
+    ) -> "ParametericAFTRegressionFitter":
+        """
+        Fit the accelerated failure time model to a left-censored dataset.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        duration_col: string
+            the name of the column in DataFrame that contains the subjects'
+            lifetimes/measurements/etc. This column contains the (possibly) left-censored data.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, assume all individuals are uncensored.
+
+        fit_intercept: bool, optional
+            If true, add a constant column to the regression. Overrides value set in class instantiation.
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        regressors: dict, optional
+            a dictionary of parameter names -> list of column names that maps model parameters
+            to a linear combination of variables. If left as None, all variables
+            will be used for all parameters.
+
+        timeline: array, optional
+            Specify a timeline that will be used for plotting and prediction
+
+        weights_col: string
+            the column in DataFrame that specifies weights per observation.
+
+        robust: boolean, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        entry_col: str
+            specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+            the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        Returns
+        -------
+            self with additional new properties ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+
+        """
+        self.duration_col = duration_col
+        self._time_cols = [duration_col]
+
+        df = df.copy()
+
+        T = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
+        self.durations = T.copy()
+
+        self._fit(
+            self._log_likelihood_left_censoring,
+            df,
+            (None, T.values),
+            event_col=event_col,
+            regressors=regressors,
+            show_progress=show_progress,
+            timeline=timeline,
+            weights_col=weights_col,
+            robust=robust,
+            initial_point=initial_point,
+            entry_col=entry_col,
+        )
+
+        return self
 
     @utils.CensoringType.interval_censoring
-    def fit_interval_censoring(self):
-        # TODO
-        pass
+    def fit_interval_censoring(
+        self,
+        df,
+        lower_bound_col,
+        upper_bound_col,
+        event_col=None,
+        ancillary_df=None,
+        regressors=None,
+        show_progress=False,
+        timeline=None,
+        weights_col=None,
+        robust=False,
+        initial_point=None,
+        entry_col=None,
+    ):
+        """
+        Fit the regression model to a right-censored dataset.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        lower_bound_col: string
+            the name of the column in DataFrame that contains the lower bounds of the intervals.
+
+        upper_bound_col: string
+            the name of the column in DataFrame that contains the upper bounds of the intervals.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, this is inferred based on the upper and lower interval limits (equal
+            implies observed death.)
+
+        show_progress: boolean, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        regressors: dict, optional
+            a dictionary of parameter names -> list of column names that maps model parameters
+            to a linear combination of variables. If left as None, all variables
+            will be used for all parameters.
+
+        timeline: array, optional
+            Specify a timeline that will be used for plotting and prediction
+
+        weights_col: string
+            the column in DataFrame that specifies weights per observation.
+
+        robust: boolean, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        entry_col: string
+            specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
+            the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        Returns
+        -------
+            self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+
+
+        """
+        self.upper_bound_col = upper_bound_col
+        self.lower_bound_col = lower_bound_col
+        self._time_cols = [lower_bound_col, upper_bound_col]
+
+        df = df.copy()
+
+        self.lower_bounds = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(lower_bound_col)).astype(float)
+        self.upper_bounds = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(upper_bound_col)).astype(float)
+
+        self._fit(
+            self._log_likelihood_interval_censoring,
+            df,
+            (self.lower_bounds.values, self.upper_bounds.values),
+            event_col=event_col,
+            regressors=regressors,
+            show_progress=show_progress,
+            timeline=timeline,
+            weights_col=weights_col,
+            robust=robust,
+            initial_point=initial_point,
+            entry_col=entry_col,
+        )
+
+        return self
 
     @utils.CensoringType.right_censoring
     def fit(

@@ -1475,7 +1475,8 @@ class TestParametricRegressionFitter:
 
     def test_custom_weibull_model_gives_the_same_data_as_implemented_weibull_model(self, rossi):
         class CustomWeibull(ParametricRegressionFitter):
-
+            _scipy_fit_method = "SLSQP"
+            _scipy_fit_options = {"ftol": 1e-10, "maxiter": 200}
             _fitted_parameter_names = ["lambda_", "rho_"]
 
             def _cumulative_hazard(self, params, T, Xs):
@@ -1484,14 +1485,38 @@ class TestParametricRegressionFitter:
 
                 return (T / lambda_) ** rho_
 
-        cb = CustomWeibull()
-        wf = WeibullAFTFitter(fit_intercept=False)
+            def _log_hazard(self, params, T, Xs):
+                lambda_params = params["lambda_"]
+                log_lambda_ = Xs["lambda_"] @ lambda_params
+
+                rho_params = params["rho_"]
+                log_rho_ = Xs["rho_"] @ rho_params
+
+                return log_rho_ - log_lambda_ + anp.expm1(log_rho_) * (anp.log(T) - log_lambda_)
+
+        cb = CustomWeibull(penalizer=0.0)
+        wf = WeibullAFTFitter(fit_intercept=False, penalizer=0.0)
 
         cb.fit(rossi, "week", "arrest", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
         wf.fit(rossi, "week", "arrest")
 
         assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=2)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
+
+        cb.fit_left_censoring(rossi, "week", "arrest", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
+        wf.fit_left_censoring(rossi, "week", "arrest")
+
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
+        npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
+
+        rossi = rossi.loc[rossi["arrest"].astype(bool)]
+        rossi["week_end"] = rossi["week"].copy()
+        rossi = rossi.drop("arrest", axis=1)
+        cb.fit_interval_censoring(rossi, "week", "week_end", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
+        wf.fit_interval_censoring(rossi, "week", "week_end")
+
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
+        npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_, rtol=0.01)
 
 
 class TestRegressionFitters:
