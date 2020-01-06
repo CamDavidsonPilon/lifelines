@@ -32,6 +32,7 @@ __all__ = [
     "to_episodic_format",
     "add_covariate_to_timeline",
     "covariates_from_event_matrix",
+    "find_best_parametric_model",
 ]
 
 
@@ -1669,3 +1670,84 @@ class DataframeSliceDict:
     def iterdicts(self):
         for _, x in self.df.iterrows():
             yield DataframeSliceDict(x.to_frame().T, self.mappings)
+
+
+def find_best_parametric_model(event_times, event_observed=None, evaluation: str = "AIC", additional_models=None):
+    """
+    To quickly determine the best¹ univariate model, this function will iterate through each
+    parametric model available in lifelines and select the one that minimizes a particular measure of fit.
+
+    ¹Best, according to the measure of fit.
+
+    Parameters
+    -------------
+    event_times: list, np.ndarray, pd.Series
+        a (n,) array of observed survival times.
+    event_observed: list, np.ndarray, pd.Series
+        a (n,) array of censored flags, 1 if observed,  0 if not. Default None assumes all observed.
+    evaluation: string
+        one of {"AIC", "BIC"}
+
+    additional_models: list
+        list of other parametric models that implement the lifelines API.
+
+    Returns
+    ----------
+    tuple of fitted best_model and best_score
+
+    """
+    from lifelines import (
+        WeibullFitter,
+        ExponentialFitter,
+        LogNormalFitter,
+        LogLogisticFitter,
+        PiecewiseExponentialFitter,
+        GeneralizedGammaFitter,
+        SplineFitter,
+    )
+
+    if additional_models is None:
+        additional_models = []
+
+    evaluation_lookup = {
+        "AIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_,
+        "BIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_ * np.log(T.shape[0]),
+    }
+
+    eval = evaluation_lookup[evaluation]
+
+    if event_observed is None:
+        event_observed = np.ones_like(event_times, dtype=bool)
+
+    observed_T = event_times[event_observed.astype(bool)]
+    knots1 = np.percentile(observed_T, 100 * np.linspace(0, 1, 3))
+    knots2 = np.percentile(observed_T, 100 * np.linspace(0, 1, 4))
+    knots3 = np.percentile(observed_T, 100 * np.linspace(0, 1, 5))
+
+    best_model = None
+    best_score = np.inf
+
+    for model in [
+        WeibullFitter(),
+        ExponentialFitter(),
+        LogNormalFitter(),
+        LogLogisticFitter(),
+        PiecewiseExponentialFitter(knots1[1:-1]),
+        PiecewiseExponentialFitter(knots2[1:-1]),
+        PiecewiseExponentialFitter(knots3[1:-1]),
+        GeneralizedGammaFitter(),
+        SplineFitter(knots1),
+        SplineFitter(knots2),
+        SplineFitter(knots3),
+    ] + additional_models:
+        try:
+            # TODO: suppress warnings.
+            model.fit(event_times, event_observed)
+            score_ = eval(model)
+            if score_ < best_score:
+                best_score = score_
+                best_model = model
+        except ConvergenceError:
+            pass
+
+    return best_model, best_score

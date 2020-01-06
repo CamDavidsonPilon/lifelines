@@ -61,6 +61,7 @@ from lifelines import (
     PiecewiseExponentialRegressionFitter,
     GeneralizedGammaFitter,
     GeneralizedGammaRegressionFitter,
+    SplineFitter,
 )
 
 from lifelines.datasets import (
@@ -111,8 +112,13 @@ def data_pred1():
 
 
 class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
-    def __init__(self, **kwargs):
-        super(PiecewiseExponentialFitterTesting, self).__init__([5.0], **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(PiecewiseExponentialFitterTesting, self).__init__([5.0], *args, **kwargs)
+
+
+class SplineFitterTesting(SplineFitter):
+    def __init__(self, *args, **kwargs):
+        super(SplineFitterTesting, self).__init__([0.0, 50.0], *args, **kwargs)
 
 
 class CustomRegressionModelTesting(ParametricRegressionFitter):
@@ -184,6 +190,7 @@ def known_parametric_univariate_fitters():
         LogLogisticFitter,
         PiecewiseExponentialFitterTesting,
         GeneralizedGammaFitter,
+        SplineFitterTesting,
     ]
 
 
@@ -336,6 +343,7 @@ class TestUnivariateFitters:
             LogLogisticFitter,
             PiecewiseExponentialFitterTesting,
             GeneralizedGammaFitter,
+            SplineFitterTesting,
         ]
 
     def test_confidence_interval_has_the_correct_order_so_plotting_doesnt_break(
