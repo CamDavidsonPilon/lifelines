@@ -1222,7 +1222,7 @@ class ParametricRegressionFitter(RegressionFitter):
         ll = ll / anp.sum(W)
         return ll
 
-    @utils.CensoringType.right_censoring
+    @utils.CensoringType.left_censoring
     def fit_left_censoring(self):
         # TODO
         pass
