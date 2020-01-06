@@ -23,6 +23,14 @@ ExponentialFitter
     :members:
     :undoc-members:
 
+GeneralizedGammaFitter
+------------------------------------------
+
+.. automodule:: lifelines.fitters.generalized_gamma_fitter
+    :members:
+    :undoc-members:
+
+
 KaplanMeierFitter
 ----------------------------------------------
 
@@ -58,6 +66,12 @@ PiecewiseExponentialFitter
     :members:
     :undoc-members:
 
+SplineFitter
+-------------------------------------------------------
+
+.. automodule:: lifelines.fitters.spline_fitter
+    :members:
+    :undoc-members:
 
 
 WeibullFitter
@@ -67,13 +81,6 @@ WeibullFitter
     :members:
     :undoc-members:
 
-
-GeneralizedGammaFitter
-------------------------------------------
-
-.. automodule:: lifelines.fitters.generalized_gamma_fitter
-    :members:
-    :undoc-members:
 
 
 Regression models
