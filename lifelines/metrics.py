@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from lifelines.utils import concordance_index
+from lifelines.utils import concordance_index, ConvergenceError
 
 __all__ = ["concordance_index", "uncensored_l2_log_loss", "uncensored_l1_log_loss"]
 
@@ -20,7 +20,7 @@ def uncensored_l1_log_loss(event_times, predicted_event_times, event_observed=No
       predicted_event_times:
         a (n,) array of predicted survival times.
       event_observed:
-        a (n,) array of censorship flags, 1 if observed,  0 if not. Default None assumes all observed.
+        a (n,) array of censored flags, 1 if observed,  0 if not. Default None assumes all observed.
 
     Returns
     -------
@@ -47,7 +47,7 @@ def uncensored_l2_log_loss(event_times, predicted_event_times, event_observed=No
       predicted_event_times:
         a (n,) array of predicted survival times.
       event_observed:
-        a (n,) array of censorship flags, 1 if observed,  0 if not. Default None assumes all observed.
+        a (n,) array of censored flags, 1 if observed,  0 if not. Default None assumes all observed.
 
     Returns
     -------

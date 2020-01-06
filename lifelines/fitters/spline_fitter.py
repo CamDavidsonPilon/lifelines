@@ -5,7 +5,7 @@ from lifelines.utils.safe_exp import safe_exp
 from lifelines import utils
 
 
-class SplineFitter:
+class _SplineFitter:
     _scipy_fit_method = "SLSQP"
     _scipy_fit_options = {"ftol": 1e-10}
 
@@ -20,12 +20,12 @@ class SplineFitter:
         )
 
 
-class SplineFitter(SplineFitter, KnownModelParametricUnivariateFitter):
+class SplineFitter(_SplineFitter, KnownModelParametricUnivariateFitter):
     r"""
     Model the cumulative hazard using cubic splines. This offers great flexibility and smoothness of the cumulative hazard.
 
     .. math::
-        H(t) = \exp{\phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_2 v_j(\log{t})
+        H(t) = \exp{\phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})
 
     where :math:`v_j` are our cubic basis functions at predetermined knots.
 
@@ -46,8 +46,29 @@ class SplineFitter(SplineFitter, KnownModelParametricUnivariateFitter):
         self.n_knots = len(self.knot_locations)
         self._fitted_parameter_names = ["phi_%d_" % i for i in range(self.n_knots)]
         self._bounds = [(None, None)] * (self.n_knots)
-
         super(SplineFitter, self).__init__(*args, **kwargs)
+
+    def __repr__(self) -> str:
+        classname = self._class_name
+        if self._label:
+            label_string = """"%s",""" % self._label
+        else:
+            label_string = ""
+        try:
+            s = (
+                """<lifelines.%s:%s, knot_locations %s, fitted with %g total observations, %g %s-censored observations>"""
+                % (
+                    classname,
+                    label_string,
+                    self.knot_locations,
+                    self.weights.sum(),
+                    self.weights.sum() - self.weights[self.event_observed > 0].sum(),
+                    utils.CensoringType.get_human_readable_censoring_type(self),
+                )
+            )
+        except AttributeError:
+            s = """<lifelines.%s>""" % classname
+        return s
 
     def _cumulative_hazard(self, params, t):
         phis = params

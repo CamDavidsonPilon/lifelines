@@ -625,7 +625,10 @@ With parametric models, we have a functional form that allows us to extend the s
     :width: 650px
     :align: center
 
-To aid model selection, *lifelines* has provided qq-plots, `Selecting a parametric model using QQ plots`_.
+Model Selection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When the underlying data generation distribution is unknown, we resort to measures of fit to tell us which model is most appropriate. *lifelines* has provided qq-plots, `Selecting a parametric model using QQ plots`_, and also tools to compare AIC and other measures: `Selecting a parametric model using AIC`_.
 
 
 Other types of censoring
@@ -692,7 +695,7 @@ Instead of producing a survival function, left-censored data analysis is more in
 
 .. image:: images/lifelines_intro_lcd.png
 
-Alternatively, you can use a parametric model to model the data. This allows for you to "peer" below the LOD, however using a parametric model means you need to correctly specify the distribution. You can use plots like qq-plots to help invalidate some distributions, see `Selecting a parametric model using QQ plots`_.
+Alternatively, you can use a parametric model to model the data. This allows for you to "peer" below the LOD, however using a parametric model means you need to correctly specify the distribution. You can use plots like qq-plots to help invalidate some distributions, see `Selecting a parametric model using QQ plots`_ and `Selecting a parametric model using AIC`_.
 
 
 .. code:: python
@@ -805,3 +808,4 @@ So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, b
 .. _Piecewise Exponential Models and Creating Custom Models: jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html
 .. _Statistically compare two populations: Examples.html#statistically-compare-two-populations
 .. _Selecting a parametric model using QQ plots: Examples.html#selecting-a-parametric-model-using-qq-plots
+.. _Selecting a parametric model using AIC: Examples.html#selecting-a-parametric-model-using-AIC
