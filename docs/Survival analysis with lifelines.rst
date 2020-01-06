@@ -559,7 +559,7 @@ Similarly, there are other parametric models in *lifelines*. Generally, which pa
     wbf.plot_cumulative_hazard(ax=axes[0][0])
     exf.plot_cumulative_hazard(ax=axes[0][1])
     lnf.plot_cumulative_hazard(ax=axes[0][2])
-    #naf.plot_cumulative_hazard(ax=axes[1][0])
+    naf.plot_cumulative_hazard(ax=axes[1][0])
     llf.plot_cumulative_hazard(ax=axes[1][1])
     pwf.plot_cumulative_hazard(ax=axes[1][2])
     gg.plot_cumulative_hazard(ax=axes[2][0])
