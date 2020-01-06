@@ -13,7 +13,7 @@ import autograd.numpy as anp
 from autograd.misc import flatten
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
 from autograd.differential_operators import make_jvp_reversemode
-from scipy.optimize import minimize
+from scipy.optimize import minimize, root_scalar
 from scipy.integrate import trapz
 from scipy import stats
 import pandas as pd
@@ -1101,6 +1101,28 @@ class ParametricUnivariateFitter(UnivariateFitter):
         return pd.DataFrame(
             self.percentile(0.5 * self.survival_function_.values) - age[:, None], index=age, columns=columns
         )
+
+    def percentile(self, p: float) -> float:
+        """
+        Return the unique time point, t, such that S(t) = p.
+
+        Parameters
+        -----------
+        p: float
+
+        Note
+        -----
+        For known parametric models, this should be overwritten by something more accurate.
+        """
+        # use numerical solver to find the value p = e^{-H(t)}. I think I could use `root` in scipy
+        # instead of the scalar version. TODO
+        def _find_root(_p):
+            f = lambda t: _p - self.survival_function_at_times(t).values
+            fprime = lambda t: self.survival_function_at_times(t).values * self.hazard_at_times(t).values
+            return root_scalar(f, bracket=(1e-10, self.timeline[-1]), fprime=fprime, x0=1.0).root
+
+        find_root = np.vectorize(_find_root, otypes=[float])
+        return find_root(p)
 
 
 class KnownModelParametricUnivariateFitter(ParametricUnivariateFitter):
