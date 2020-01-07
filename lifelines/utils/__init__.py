@@ -1732,13 +1732,13 @@ def find_best_parametric_model(event_times, event_observed=None, evaluation: str
         ExponentialFitter(),
         LogNormalFitter(),
         LogLogisticFitter(),
-        PiecewiseExponentialFitter(knots1[1:-1]),
-        PiecewiseExponentialFitter(knots2[1:-1]),
-        PiecewiseExponentialFitter(knots3[1:-1]),
+        PiecewiseExponentialFitter(knots1[1:-1], label="PiecewiseExponentialFitter: 1 breakpoint"),
+        PiecewiseExponentialFitter(knots2[1:-1], label="PiecewiseExponentialFitter: 2 breakpoint"),
+        PiecewiseExponentialFitter(knots3[1:-1], label="PiecewiseExponentialFitter: 3 breakpoint"),
         GeneralizedGammaFitter(),
-        SplineFitter(knots1),
-        SplineFitter(knots2),
-        SplineFitter(knots3),
+        SplineFitter(knots1, label="SplineFitter: 1 internal knot"),
+        SplineFitter(knots2, label="SplineFitter: 2 internal knot"),
+        SplineFitter(knots3, label="SplineFitter: 3 internal knot"),
     ] + additional_models:
         try:
             with warnings.catch_warnings():
@@ -1751,6 +1751,6 @@ def find_best_parametric_model(event_times, event_observed=None, evaluation: str
                 best_model = model
 
         except ConvergenceError:
-            pass
+            continue
 
     return best_model, best_score

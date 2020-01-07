@@ -5,7 +5,7 @@ from lifelines.utils.safe_exp import safe_exp
 from lifelines import utils
 
 
-class _SplineFitter:
+class SplineFitterMixin:
     _scipy_fit_method = "SLSQP"
     _scipy_fit_options = {"ftol": 1e-10}
 
@@ -20,14 +20,14 @@ class _SplineFitter:
         )
 
 
-class SplineFitter(_SplineFitter, KnownModelParametricUnivariateFitter):
+class SplineFitter(SplineFitterMixin, KnownModelParametricUnivariateFitter):
     r"""
     Model the cumulative hazard using cubic splines. This offers great flexibility and smoothness of the cumulative hazard.
 
     .. math::
         H(t) = \exp{\phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})
 
-    where :math:`v_j` are our cubic basis functions at predetermined knots.
+    where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
 
     Parameters
     -----------
@@ -35,6 +35,48 @@ class SplineFitter(_SplineFitter, KnownModelParametricUnivariateFitter):
         The locations of the cubic breakpoints. Typically, the first knot is the minimum observed death, the last knot is the maximum observed death, and the knots in between
         are the centiles of observed data (ex: if one additional knot, choose the 50th percentile, the median. If two additional knots, choose the 33th and 66th percentiles).
 
+
+    Examples
+    --------
+
+    >>> from lifelines import SplineFitter
+    >>> from lifelines.datasets import load_waltons
+    >>> waltons = load_waltons()
+    >>> T, E = waltons['T'], waltons['E']
+    >>> knots = np.percentile(T.loc[E.astype(bool)], [0, 50, 100])
+    >>> sf = SplineFitter(knots)
+    >>> sf.fit()
+    >>> sf.plot()
+    >>> print(sf.knots)
+
+    Attributes
+    ----------
+    cumulative_hazard_ : DataFrame
+        The estimated cumulative hazard (with custom timeline if provided)
+    hazard_ : DataFrame
+        The estimated hazard (with custom timeline if provided)
+    survival_function_ : DataFrame
+        The estimated survival function (with custom timeline if provided)
+    cumumlative_density_ : DataFrame
+        The estimated cumulative density function (with custom timeline if provided)
+    variance_matrix_ : numpy array
+        The variance matrix of the coefficients
+    median_survival_time_: float
+        The median time to event
+    lambda_: float
+        The fitted parameter in the model
+    rho_: float
+        The fitted parameter in the model
+    durations: array
+        The durations provided
+    event_observed: array
+        The event_observed variable provided
+    timeline: array
+        The time line to use for plotting and indexing
+    entry: array or None
+        The entry array provided, or None
+    knot_locations:
+        The locations of the cubic breakpoints.
 
     References
     ------------
@@ -47,28 +89,6 @@ class SplineFitter(_SplineFitter, KnownModelParametricUnivariateFitter):
         self._fitted_parameter_names = ["phi_%d_" % i for i in range(self.n_knots)]
         self._bounds = [(None, None)] * (self.n_knots)
         super(SplineFitter, self).__init__(*args, **kwargs)
-
-    def __repr__(self) -> str:
-        classname = self._class_name
-        if self._label:
-            label_string = """"%s",""" % self._label
-        else:
-            label_string = ""
-        try:
-            s = (
-                """<lifelines.%s:%s, knot_locations %s, fitted with %g total observations, %g %s-censored observations>"""
-                % (
-                    classname,
-                    label_string,
-                    self.knot_locations,
-                    self.weights.sum(),
-                    self.weights.sum() - self.weights[self.event_observed > 0].sum(),
-                    utils.CensoringType.get_human_readable_censoring_type(self),
-                )
-            )
-        except AttributeError:
-            s = """<lifelines.%s>""" % classname
-        return s
 
     def _cumulative_hazard(self, params, t):
         phis = params

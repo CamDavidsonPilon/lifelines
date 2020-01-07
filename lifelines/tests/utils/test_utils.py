@@ -1092,3 +1092,17 @@ def test_rmst_variance():
 
     assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[0] - actual_mean) < 0.001
     assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[1] - actual_var) < 0.001
+
+
+def test_find_best_parametric_model():
+    T = np.random.exponential(2, 1000)
+    E = np.ones_like(T)
+
+    model, score = utils.find_best_parametric_model(T, E)
+    assert True
+
+
+def test_find_best_parametric_model_can_accept_other_models():
+    T = np.random.exponential(2, 1000)
+    model, score = utils.find_best_parametric_model(T, additional_models=[ExponentialFitter(), ExponentialFitter()])
+    assert True
