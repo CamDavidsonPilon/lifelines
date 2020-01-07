@@ -1,5 +1,13 @@
 ## Changelog
 
+#### 0.23.6 - 2020-01-07
+
+##### New features
+ - New univariate model, `SplineFitter`, that uses cubic splines to model the cumulative hazard.
+ - To aid users with selecting the best parametric model, there is a new `lifelines.utils.find_best_parametric_model` function that will iterate through the models and return the model with the lowest AIC (by default).
+ - custom parametric regression models can now do left and interval censoring.
+
+
 #### 0.23.5 - 2020-01-05
 
 ##### New features
