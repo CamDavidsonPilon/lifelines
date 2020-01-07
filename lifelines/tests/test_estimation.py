@@ -118,7 +118,7 @@ class PiecewiseExponentialFitterTesting(PiecewiseExponentialFitter):
 
 class SplineFitterTesting(SplineFitter):
     def __init__(self, *args, **kwargs):
-        super(SplineFitterTesting, self).__init__([0.0, 50.0], *args, **kwargs)
+        super(SplineFitterTesting, self).__init__([0.0, 40.0], *args, **kwargs)
 
 
 class CustomRegressionModelTesting(ParametricRegressionFitter):
