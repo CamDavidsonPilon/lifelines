@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
 from lifelines.fitters import KnownModelParametricUnivariateFitter
+from lifelines import utils
 
 
 class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
@@ -81,6 +82,7 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
         super(PiecewiseExponentialFitter, self).__init__(*args, **kwargs)
 
     def _cumulative_hazard(self, params, times):
+        times = np.atleast_1d(times)
         n = times.shape[0]
         times = times.reshape((n, 1))
         bp = self.breakpoints

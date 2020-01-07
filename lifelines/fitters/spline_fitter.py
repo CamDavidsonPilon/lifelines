@@ -90,6 +90,9 @@ class SplineFitter(SplineFitterMixin, KnownModelParametricUnivariateFitter):
         self._bounds = [(None, None)] * (self.n_knots)
         super(SplineFitter, self).__init__(*args, **kwargs)
 
+    def _create_initial_point(self, Ts, E, entry, weights):
+        return 0.1 * np.ones(self.n_knots)
+
     def _cumulative_hazard(self, params, t):
         phis = params
         lT = np.log(t)
