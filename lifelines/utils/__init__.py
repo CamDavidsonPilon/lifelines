@@ -1720,9 +1720,9 @@ def find_best_parametric_model(event_times, event_observed=None, evaluation: str
         event_observed = np.ones_like(event_times, dtype=bool)
 
     observed_T = event_times[event_observed.astype(bool)]
-    knots1 = np.percentile(observed_T, 100 * np.linspace(0, 1, 3))
-    knots2 = np.percentile(observed_T, 100 * np.linspace(0, 1, 4))
-    knots3 = np.percentile(observed_T, 100 * np.linspace(0, 1, 5))
+    knots1 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 3))
+    knots2 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 4))
+    knots3 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 5))
 
     best_model = None
     best_score = np.inf

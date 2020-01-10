@@ -19,7 +19,7 @@ from typing import Dict, List, Optional, Union
 class LogNormalAFTFitter(ParametericAFTRegressionFitter):
     r"""
     This class implements a Log-Normal AFT model. The model has parameterized
-    form, with :math:`\mu(x) = \exp\left(a_0 + a_1x_1 + ... + a_n x_n \right)`,
+    form, with :math:`\mu(x) = \left(a_0 + a_1x_1 + ... + a_n x_n \right)`,
     and optionally, :math:`\sigma(y) = \exp\left(b_0 + b_1 y_1 + ... + b_m y_m \right)`,
 
     The cumulative hazard rate is

@@ -72,6 +72,13 @@ Contents:
   Gitter channel <https://gitter.im/python-lifelines/Lobby>
   Create a GitHub issue <https://github.com/camdavidsonpilon/lifelines/issues>
 
+.. toctree::
+  :maxdepth: 1
+  :caption: Developer Documentation
+
+  Contributing
+
+
 Installation
 ------------------------------
 
