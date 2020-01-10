@@ -43,6 +43,7 @@ the working group members. The working group currently includes
 
 - Cameron Davidson-Pilon
 - Stefanie Gibson
+- Paul Zivich
 
 All complaints will be reviewed and investigated and will result in a response
 that is deemed necessary and appropriate to the circumstances. Maintainers are
