@@ -517,11 +517,17 @@ def load_lupus(**kwargs):
 
     Note
     ------
-    I transcribed this from the original paper, and highly suspect there are differences.
+    I transcribed this from the original paper, and highly suspect there are differences. See Notes below.
 
     References
     -----------
     Merrell, M., & Shulman, L. E. (1955). Determination of prognosis in chronic disease, illustrated by systemic lupus erythematosus. Journal of Chronic Diseases, 1(1), 12–32. doi:10.1016/0021-9681(55)90018-7
+
+
+    Notes
+    ------
+
+    In lifelines v0.23.7, two rows were updated with more correct data (transcription problems originally.)
 
     """
     return _load_dataset("merrell1955.csv", index_col=0, **kwargs)
