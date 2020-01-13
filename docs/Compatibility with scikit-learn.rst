@@ -36,7 +36,7 @@ New to lifelines in version 0.21.3 is a wrapper that allows you to use lifeline'
     sk_cph.score(X, Y)
 
 
-.. note:: The X variable still needs to be a DataFrame, and should contains the event-occurred column (``event_col``) if it exists.
+.. note:: The X variable still needs to be a DataFrame, and should contain the event-occurred column (``event_col``) if it exists.
 
 
 If needed, the original lifeline's instance is available as the ``lifelines_model`` attribute.
