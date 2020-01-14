@@ -144,8 +144,8 @@ class CoxPHFitter(RegressionFitter):
     baseline_survival_: DataFrame
     """
 
-    _KNOWN_MODEL: bool = True
-    _concordance_score_: float
+    _KNOWN_MODEL = True
+    _concordance_score_ = 0
 
     def __init__(
         self,

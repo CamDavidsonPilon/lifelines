@@ -28,12 +28,6 @@ __all__ = []
 
 
 class BaseFitter:
-
-    _KNOWN_MODEL: bool
-    weights: np.array
-    event_observed: np.array
-    durations: np.array
-
     def __init__(self, alpha: float = 0.05, label: str = None):
         if not (0 < alpha <= 1.0):
             raise ValueError("alpha parameter must be between 0 and 1.")
