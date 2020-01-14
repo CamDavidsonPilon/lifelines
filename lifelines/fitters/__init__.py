@@ -69,12 +69,6 @@ class BaseFitter:
 
 
 class UnivariateFitter(BaseFitter):
-
-    _estimate_name: str
-    _estimation_method: Union[Callable, str]
-    survival_function_: pd.Series
-    confidence_interval_: pd.Series
-
     def _update_docstrings(self):
         # Update their docstrings
         self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self._class_name)
@@ -272,9 +266,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
     _scipy_fit_options: Dict[str, Any] = dict()
-    _event_table: pd.DataFrame
-    _fitted_parameter_names: List[str]
-    _compare_to_values: np.array
 
     def __init__(self, *args, **kwargs):
         super(ParametricUnivariateFitter, self).__init__(*args, **kwargs)
@@ -1134,8 +1125,6 @@ class ParametricRegressionFitter(RegressionFitter):
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = {}
     _KNOWN_MODEL = False
-    _concordance_score_: float
-    _fitted_parameter_names: List[str]
 
     def __init__(self, alpha=0.05, penalizer=0.0):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha)
@@ -2294,8 +2283,6 @@ class ParametricRegressionFitter(RegressionFitter):
 class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     _KNOWN_MODEL = True
-    _ancillary_parameter_name: str
-    _primary_parameter_name: str
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
         super(ParametericAFTRegressionFitter, self).__init__(alpha=alpha)
