@@ -1,7 +1,7 @@
 Changelog
 ---------
 
-0.23.6 - 2020-01-14
+0.23.7 - 2020-01-14
 ^^^^^^^^^^^^^^^^^^^
 
 Bug fixes for py3.5. This will be the last version of lifelines that
