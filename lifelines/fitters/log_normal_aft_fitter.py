@@ -19,7 +19,7 @@ from typing import Dict, List, Optional, Union
 class LogNormalAFTFitter(ParametericAFTRegressionFitter):
     r"""
     This class implements a Log-Normal AFT model. The model has parameterized
-    form, with :math:`\mu(x) = \left(a_0 + a_1x_1 + ... + a_n x_n \right)`,
+    form, with :math:`\mu(x) = a_0 + a_1x_1 + ... + a_n x_n`,
     and optionally, :math:`\sigma(y) = \exp\left(b_0 + b_1 y_1 + ... + b_m y_m \right)`,
 
     The cumulative hazard rate is
@@ -35,7 +35,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
     alpha: float, optional (default=0.05)
         the level in the confidence intervals.
 
-    fit_intercept: boolean, optional (default=True)
+    fit_intercept: bool, optional (default=True)
         Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
 
     penalizer: float, optional (default=0.0)

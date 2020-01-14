@@ -455,8 +455,24 @@ def logrank_test(
     Note
     -----
 
-    The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival
+    - The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival
     curves cross, the logrank test will give an inaccurate assessment of differences.
+
+    - This implementation is a special case of the function ``multivariate_logrank_test``, which is used internally.
+    See Survival and Event Analysis, page 108.
+
+    - There are only disadvantages to using the log-rank test versus using the Cox regression. See more `here <https://discourse.datamethods.org/t/when-is-log-rank-preferred-over-univariable-cox-regression/2344>`_
+    for a discussion. To convert to using the Cox regression:
+
+    >>> from lifelines import CoxPHFitter
+    >>>
+    >>> dfA = pd.DataFrame({'E': event_observed_A, 'T': durations_A, 'groupA': 1})
+    >>> dfB = pd.DataFrame({'E': event_observed_B, 'T': durations_B, 'groupA': 0})
+    >>> df = pd.concat([dfA, dfB])
+    >>>
+    >>> cph = CoxPHFitter().fit(df, 'T', 'E')
+    >>> cph.print_summary()
+
 
 
     Parameters
@@ -504,10 +520,6 @@ def logrank_test(
     >>> print(results.p_value)        # 0.7676
     >>> print(results.test_statistic) # 0.0872
 
-    Notes
-    -----
-    This is a special case of the function ``multivariate_logrank_test``, which is used internally.
-    See Survival and Event Analysis, page 108.
 
     See Also
     --------

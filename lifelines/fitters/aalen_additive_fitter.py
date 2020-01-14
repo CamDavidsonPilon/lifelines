@@ -60,10 +60,10 @@ class AalenAdditiveFitter(BaseFitter):
     coef_penalizer: float, optional (default: 0)
       Attach a L2 penalizer to the size of the coefficients during regression. This improves
       stability of the estimates and controls for high correlation between covariates.
-      For example, this shrinks the absolute value of :math:`c_{i,t}`.
+      For example, this shrinks the magnitude of :math:`c_{i,t}`.
     smoothing_penalizer: float, optional (default: 0)
       Attach a L2 penalizer to difference between adjacent (over time) coefficients. For
-      example, this shrinks the absolute value of :math:`c_{i,t} - c_{i,t+1}`.
+      example, this shrinks the magnitude of :math:`c_{i,t} - c_{i,t+1}`.
 
     Attributes
     ----------
@@ -126,7 +126,7 @@ class AalenAdditiveFitter(BaseFitter):
             identical observations.
             This can be used for sampling weights.
 
-        show_progress: boolean, optional (default=False)
+        show_progress: bool, optional (default=False)
             Since the fitter is iterative, show iteration number.
 
 

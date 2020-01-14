@@ -468,7 +468,7 @@ def survival_table_from_events(
       and censorships.
     weights: (n,1) array, optional
       Optional argument to use weights for individuals. Assumes weights of 1 if not provided.
-    collapse: boolean, optional (default=False)
+    collapse: bool, optional (default=False)
       If True, collapses survival table into lifetable to show events in interval bins
     intervals: iterable, optional
       Default None, otherwise a list/(n,1) array of interval edge measures. If left as None
@@ -648,7 +648,7 @@ def datetimes_to_durations(
         of observation. Anything after this date is also censored.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
-    dayfirst: boolean, optional (default=False)
+    dayfirst: bool, optional (default=False)
          convert assuming European-style dates, i.e. day/month/year.
     na_values : list, optional
         list of values to recognize as NA/NaN. Ex: ['', 'NaT']
@@ -1340,14 +1340,14 @@ def add_covariate_to_timeline(
         the column in cv that represents the time-since-birth the observation occurred at.
     event_col: string
         the column in df that represents if the event-of-interest occurred
-    add_enum: boolean, optional
+    add_enum: bool, optional
          a Boolean flag to denote whether to add a column enumerating rows per subject. Useful to specify a specific
         observation, ex: df[df['enum'] == 1] will grab the first observations per subject.
-    overwrite: boolean, optional
+    overwrite: bool, optional
         if True, covariate values in long_form_df will be overwritten by covariate values in cv if the column exists in both
         cv and long_form_df and the timestamps are identical. If False, the default behavior will be to sum
         the values together.
-    cumulative_sum: boolean, optional
+    cumulative_sum: bool, optional
         sum over time the new covariates. Makes sense if the covariates are new additions, and not state changes (ex:
         administering more drugs vs taking a temperature.)
     cumulative_sum_prefix: string, optional

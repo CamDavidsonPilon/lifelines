@@ -17,4 +17,3 @@ if __name__ == "__main__":
     cp.fit(df, duration_col="week", event_col="arrest", batch_mode=True, show_progress=True)
     print("--- %s seconds ---" % (time.time() - start_time))
     cp.print_summary()
-    print(cp.path)

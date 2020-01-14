@@ -25,6 +25,7 @@ class SplineFitter(SplineFitterMixin, KnownModelParametricUnivariateFitter):
     Model the cumulative hazard using cubic splines. This offers great flexibility and smoothness of the cumulative hazard.
 
     .. math::
+
         H(t) = \exp{\phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})
 
     where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
@@ -34,6 +35,10 @@ class SplineFitter(SplineFitterMixin, KnownModelParametricUnivariateFitter):
     knot_locations: list, np.array
         The locations of the cubic breakpoints. Typically, the first knot is the minimum observed death, the last knot is the maximum observed death, and the knots in between
         are the centiles of observed data (ex: if one additional knot, choose the 50th percentile, the median. If two additional knots, choose the 33th and 66th percentiles).
+
+    References
+    ------------
+    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
 
 
     Examples
@@ -78,9 +83,6 @@ class SplineFitter(SplineFitterMixin, KnownModelParametricUnivariateFitter):
     knot_locations:
         The locations of the cubic breakpoints.
 
-    References
-    ------------
-    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
     """
 
     def __init__(self, knot_locations: np.ndarray, *args, **kwargs):

@@ -129,7 +129,7 @@ class CoxTimeVaryingFitter(BaseFitter):
             the column that contains (possibly time-varying) weight of each subject-period row.
         show_progress: since the fitter is iterative, show convergence
            diagnostics.
-        robust: boolean, optional (default: True)
+        robust: bool, optional (default: True)
             Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
           ties, so if there are high number of ties, results may significantly differ. See
           "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
@@ -323,7 +323,7 @@ class CoxTimeVaryingFitter(BaseFitter):
         df: DataFrame
         stop_times_events: DataFrame
              meta information about the subjects history
-        show_progress: boolean, optional (default: True)
+        show_progress: bool, optional (default: True)
             to show verbose output of convergence
         step_size: float
             > 0 to determine a starting step size in NR algorithm.

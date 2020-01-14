@@ -180,7 +180,7 @@ class UnivariateFitter(BaseFitter):
         ----------
         times: scalar, or array
             a scalar or an array of times to predict the value of {0} at.
-        interpolate: boolean, optional (default=False)
+        interpolate: bool, optional (default=False)
             for methods that produce a stepwise solution (Kaplan-Meier, Nelson-Aalen, etc), turning this to
             True will use an linear interpolation method to provide a more "smooth" answer.
 
@@ -657,7 +657,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
            alpha for this call to fit only.
         ci_labels: list, optional
             add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-        show_progress: boolean, optional
+        show_progress: bool, optional
             since this is an iterative fitting algorithm, switching this to True will display some iteration details.
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
@@ -724,7 +724,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
            alpha for this call to fit only.
         ci_labels: list, optional
             add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-        show_progress: boolean, optional
+        show_progress: bool, optional
             since this is an iterative fitting algorithm, switching this to True will display some iteration details.
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
@@ -794,7 +794,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
            alpha for this call to fit only.
         ci_labels: list, optional
             add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-        show_progress: boolean, optional
+        show_progress: bool, optional
             since this is an iterative fitting algorithm, switching this to True will display some iteration details.
         entry: an array, or pd.Series, of length n
             relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
@@ -1282,7 +1282,7 @@ class ParametricRegressionFitter(RegressionFitter):
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
 
-        show_progress: boolean, optional (default=False)
+        show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
@@ -1297,7 +1297,7 @@ class ParametricRegressionFitter(RegressionFitter):
         weights_col: string
             the column in DataFrame that specifies weights per observation.
 
-        robust: boolean, optional (default=False)
+        robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator.
 
         initial_point: (d,) numpy array, optional
@@ -1376,7 +1376,7 @@ class ParametricRegressionFitter(RegressionFitter):
             observation. If left as None, this is inferred based on the upper and lower interval limits (equal
             implies observed death.)
 
-        show_progress: boolean, optional (default=False)
+        show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
@@ -1391,7 +1391,7 @@ class ParametricRegressionFitter(RegressionFitter):
         weights_col: string
             the column in DataFrame that specifies weights per observation.
 
-        robust: boolean, optional (default=False)
+        robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator.
 
         initial_point: (d,) numpy array, optional
@@ -1467,7 +1467,7 @@ class ParametricRegressionFitter(RegressionFitter):
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
-        show_progress: boolean, optional (default=False)
+        show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
@@ -1482,7 +1482,7 @@ class ParametricRegressionFitter(RegressionFitter):
         weights_col: string
             the column in DataFrame that specifies weights per observation.
 
-        robust: boolean, optional (default=False)
+        robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator.
 
         initial_point: (d,) numpy array, optional
@@ -2347,7 +2347,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
-        show_progress: boolean, optional (default=False)
+        show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
@@ -2366,7 +2366,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         weights_col: string
             the column in DataFrame that specifies weights per observation.
 
-        robust: boolean, optional (default=False)
+        robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator.
 
         initial_point: (d,) numpy array, optional
@@ -2513,7 +2513,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
 
-        show_progress: boolean, optional (default=False)
+        show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
@@ -2523,7 +2523,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         weights_col: string
             the column in DataFrame that specifies weights per observation.
 
-        robust: boolean, optional (default=False)
+        robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator.
 
         initial_point: (d,) numpy array, optional
@@ -2679,10 +2679,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
 
-        show_progress: boolean, optional (default=False)
+        show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
-
 
         timeline: array, optional
             Specify a timeline that will be used for plotting and prediction
@@ -2690,7 +2689,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         weights_col: string
             the column in DataFrame that specifies weights per observation.
 
-        robust: boolean, optional (default=False)
+        robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator.
 
         initial_point: (d,) numpy array, optional
@@ -2703,7 +2702,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Returns
         -------
-            self with additional new properties ``print_summary``, ``params_``, ``confidence_intervals_`` and more
+            self: self with additional new properties ``print_summary``, ``params_``, ``confidence_intervals_`` and more
 
 
         Examples
@@ -3207,4 +3206,4 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             )
 
     def compute_residuals(self, df):
-        pass
+        raise NotImplementedError("Working on it.")

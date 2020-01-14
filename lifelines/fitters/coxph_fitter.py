@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from typing import *
 
-from numpy.linalg import norm, inv
-from scipy.linalg import solve as spsolve, LinAlgError
+from numpy import dot, einsum, log, exp, zeros, arange, multiply
+from scipy.linalg import solve as spsolve, LinAlgError, norm, inv
 from scipy.integrate import trapz
 from scipy import stats
 
@@ -99,7 +99,7 @@ class CoxPHFitter(RegressionFitter):
       penalizer: float, optional (default=0.0)
         Attach an L2 penalizer to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
-        For example, this shrinks the absolute value of :math:`\beta_i`.
+        For example, this shrinks the magnitude value of :math:`\beta_i`.
         The penalty is :math:`\frac{1}{2} \text{penalizer} ||\beta||^2`.
 
       strata: list, optional
@@ -207,7 +207,7 @@ class CoxPHFitter(RegressionFitter):
             identical observations.
             This can be used for sampling weights. In that case, use `robust=True` to get more accurate standard errors.
 
-        show_progress: boolean, optional (default=False)
+        show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
@@ -224,7 +224,7 @@ class CoxPHFitter(RegressionFitter):
         step_size: float, optional
             set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
 
-        robust: boolean, optional (default=False)
+        robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
             ties, so if there are high number of ties, results may significantly differ. See
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
@@ -318,7 +318,7 @@ class CoxPHFitter(RegressionFitter):
         )
 
         self.params_ = pd.Series(params_, index=X.columns, name="coef") / self._norm_std
-        self.hazard_ratios_ = pd.Series(np.exp(self.params_), index=X.columns, name="exp(coef)")
+        self.hazard_ratios_ = pd.Series(exp(self.params_), index=X.columns, name="exp(coef)")
 
         self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(X_norm, T, E, weights)
@@ -439,7 +439,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         precision: float, optional
             the convergence halts if the norm of delta between
             successive positions is less than epsilon.
-        show_progress: boolean, optional
+        show_progress: bool, optional
             since the fitter is iterative, show convergence
                  diagnostics.
         max_steps: int, optional
@@ -462,7 +462,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             assert initial_point.shape == (d,)
             beta = initial_point
         else:
-            beta = np.zeros((d,))
+            beta = zeros((d,))
 
         step_sizer = StepSizer(step_size)
         step_size = step_sizer.next()
@@ -485,7 +485,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             else:
                 g = np.zeros_like(beta)
-                h = np.zeros((beta.shape[0], beta.shape[0]))
+                h = zeros((beta.shape[0], beta.shape[0]))
                 ll = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, get_gradients, beta):
                     g += _g
@@ -506,7 +506,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
                 inv_h_dot_g_T = spsolve(-h, g, assume_a="pos", check_finite=False)
-            except (ValueError, np.linalg.LinAlgError) as e:
+            except (ValueError, LinAlgError) as e:
                 self._check_values_post_fitting(X, T, E, weights)
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
@@ -515,7 +515,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                         ),
                         e,
                     )
-                elif isinstance(e, np.linalg.LinAlgError):
+                elif isinstance(e, LinAlgError):
                     raise ConvergenceError(
                         """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. {0}""".format(
                             CONVERGENCE_DOCS
@@ -638,20 +638,20 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
 
         n, d = X.shape
-        hessian = np.zeros((d, d))
-        gradient = np.zeros((d,))
+        hessian = zeros((d, d))
+        gradient = zeros((d,))
         log_lik = 0
 
         # Init risk and tie sums to zero
-        x_death_sum = np.zeros((d,))
+        x_death_sum = zeros((d,))
         risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
-        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
+        risk_phi_x, tie_phi_x = zeros((d,)), zeros((d,))
+        risk_phi_x_x, tie_phi_x_x = zeros((d, d)), zeros((d, d))
 
         # Init number of ties and weights
         weight_count = 0.0
         tied_death_counts = 0
-        scores = weights * np.exp(np.dot(X, beta))
+        scores = weights * exp(dot(X, beta))
 
         phi_x_is = scores[:, None] * X
         phi_x_x_i = np.empty((d, d))
@@ -668,7 +668,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             phi_i = scores[i]
             phi_x_i = phi_x_is[i]
             # https://stackoverflow.com/a/51481295/1895939
-            phi_x_x_i = np.multiply.outer(xi, phi_x_i)
+            phi_x_x_i = multiply.outer(xi, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + phi_i
@@ -698,10 +698,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             weighted_average = weight_count / tied_death_counts
 
             if tied_death_counts > 1:
-                increasing_proportion = np.arange(tied_death_counts) / tied_death_counts
+                increasing_proportion = arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
-                numer = risk_phi_x - np.multiply.outer(increasing_proportion, tie_phi_x)
-                a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
+                numer = risk_phi_x - multiply.outer(increasing_proportion, tie_phi_x)
+                a1 = einsum("ab,i->ab", risk_phi_x_x, denom) - einsum(
                     "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
                 )
             else:
@@ -714,16 +714,16 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
 
-            log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + dot(x_death_sum, beta) + weighted_average * log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
 
             # reset tie values
             tied_death_counts = 0
             weight_count = 0.0
-            x_death_sum = np.zeros((d,))
+            x_death_sum = zeros((d,))
             tie_phi = 0
-            tie_phi_x = np.zeros((d,))
-            tie_phi_x_x = np.zeros((d, d))
+            tie_phi_x = zeros((d,))
+            tie_phi_x_x = zeros((d, d))
 
         return hessian, gradient, log_lik
 
@@ -761,9 +761,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
             if tied_death_counts > 1:
                 tie_phi = phi_i[-tied_death_counts:].sum()
-                factor = np.log(risk_phi - np.arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
+                factor = log(risk_phi - arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
             else:
-                factor = np.log(risk_phi)
+                factor = log(risk_phi)
 
             log_lik = log_lik - weight_count / tied_death_counts * factor
             pos -= count_of_removals
@@ -812,9 +812,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 continue
 
             if tied_death_counts > 1:
-                factor = np.log(risk_phi - np.arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
+                factor = log(risk_phi - arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
             else:
-                factor = np.log(risk_phi)
+                factor = log(risk_phi)
             log_lik = log_lik - weight_count / tied_death_counts * factor
 
             # reset tie values
@@ -843,21 +843,21 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
 
         n, d = X.shape
-        hessian = np.zeros((d, d))
-        gradient = np.zeros((d,))
+        hessian = zeros((d, d))
+        gradient = zeros((d,))
         log_lik = 0
         # weights = weights[:, None]
 
         # Init risk and tie sums to zero
         risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((d,)), np.zeros((d,))
-        risk_phi_x_x, tie_phi_x_x = np.zeros((d, d)), np.zeros((d, d))
+        risk_phi_x, tie_phi_x = zeros((d,)), zeros((d,))
+        risk_phi_x_x, tie_phi_x_x = zeros((d, d)), zeros((d, d))
 
         # counts are sorted by -T
         _, counts = np.unique(-T, return_counts=True)
-        scores = weights * np.exp(np.dot(X, beta))
+        scores = weights * exp(dot(X, beta))
         pos = n
-        ZERO_TO_N = np.arange(counts.max())
+        ZERO_TO_N = arange(counts.max())
 
         for count_of_removals in counts:
 
@@ -869,7 +869,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
             phi_i = scores[slice_, None]
             phi_x_i = phi_i * X_at_t
-            phi_x_x_i = np.dot(X_at_t.T, phi_x_i)
+            phi_x_x_i = dot(X_at_t.T, phi_x_i)
 
             # Calculate sums of Risk set
             risk_phi = risk_phi + phi_i.sum()
@@ -886,7 +886,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             xi_deaths = X_at_t[-tied_death_counts:]
             weights_deaths = weights_at_t[-tied_death_counts:]
 
-            x_death_sum = np.einsum("a,ab->b", weights_deaths, xi_deaths)
+            x_death_sum = einsum("a,ab->b", weights_deaths, xi_deaths)
 
             weight_count = weights_deaths.sum()
             weighted_average = weight_count / tied_death_counts
@@ -900,10 +900,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 phi_x_i_deaths = phi_x_i[-tied_death_counts:]
                 tie_phi = phi_i[-tied_death_counts:].sum()
                 tie_phi_x = (phi_x_i_deaths).sum(0)
-                tie_phi_x_x = np.dot(xi_deaths.T, phi_x_i_deaths)
+                tie_phi_x_x = dot(xi_deaths.T, phi_x_i_deaths)
 
                 increasing_proportion = ZERO_TO_N[:tied_death_counts] / tied_death_counts
-                numer = risk_phi_x - np.multiply.outer(increasing_proportion, tie_phi_x)
+                numer = risk_phi_x - multiply.outer(increasing_proportion, tie_phi_x)
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
 
                 # computes outer products and sums them together.
@@ -913,7 +913,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 # 3) subtract them, and then sum to (d, d)
                 # Alternatively, we can sum earlier without having to explicitly create (_, d, d) matrices. This is used here.
                 #
-                a1 = np.einsum("ab,i->ab", risk_phi_x_x, denom) - np.einsum(
+                a1 = einsum("ab,i->ab", risk_phi_x_x, denom) - einsum(
                     "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
                 )
             else:
@@ -925,11 +925,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             summand = numer * denom[:, None]
             # This is a batch outer product.
             # given a matrix t, for each row, m, compute it's outer product: m.dot(m.T), and stack these new matrices together.
-            # which would be: np.einsum("Bi, Bj->Bij", t, t)
-            a2 = summand.T.dot(summand)
+            # which would be: einsum("Bi, Bj->Bij", t, t)
+            a2 = dot(summand.T, summand)
 
             gradient = gradient + x_death_sum - weighted_average * summand.sum(0)
-            log_lik = log_lik + np.dot(x_death_sum, beta) + weighted_average * np.log(denom).sum()
+            log_lik = log_lik + dot(x_death_sum, beta) + weighted_average * log(denom).sum()
             hessian = hessian + weighted_average * (a2 - a1)
             pos -= count_of_removals
 
@@ -975,7 +975,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         with np.warnings.catch_warnings():
             np.warnings.filterwarnings("ignore")
-            log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * np.log(E.values - rmart.values))
+            log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * log(E.values - rmart.values))
 
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
         df["deviance"] = deviance
@@ -1048,17 +1048,17 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if not np.any(E):
             # sometimes strata have no deaths. This means nothing is returned
             # in the below code.
-            return np.zeros((n, d))
+            return zeros((n, d))
 
         # Init risk and tie sums to zero
         risk_phi, tie_phi = 0, 0
-        risk_phi_x, tie_phi_x = np.zeros((1, d)), np.zeros((1, d))
+        risk_phi_x, tie_phi_x = zeros((1, d)), zeros((1, d))
 
         # Init number of ties and weights
         weight_count = 0.0
         tie_count = 0
 
-        scores = weights * np.exp(np.dot(X, self.params_))
+        scores = weights * exp(dot(X, self.params_))
 
         diff_against = []
 
@@ -1097,12 +1097,12 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 continue
             elif tie_count == 0:
                 for _ in diff_against:
-                    schoenfeld_residuals = np.append(schoenfeld_residuals, np.zeros((1, d)), axis=0)
+                    schoenfeld_residuals = np.append(schoenfeld_residuals, zeros((1, d)), axis=0)
                 diff_against = []
                 continue
 
             # There was atleast one event and no more ties remain. Time to sum.
-            weighted_mean = np.zeros((1, d))
+            weighted_mean = zeros((1, d))
 
             for l in range(tie_count):
 
@@ -1118,7 +1118,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             tie_count = 0
             weight_count = 0.0
             tie_phi = 0
-            tie_phi_x = np.zeros((1, d))
+            tie_phi_x = zeros((1, d))
             diff_against = []
 
         return schoenfeld_residuals[::-1]
@@ -1176,9 +1176,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         beta = self.params_.values * self._norm_std
 
         E = E.astype(int)
-        score_residuals = np.zeros((n, d))
+        score_residuals = zeros((n, d))
 
-        phi_s = np.exp(np.dot(X, beta))
+        phi_s = exp(dot(X, beta))
 
         # need to store these histories, as we access them often
         # this is a reverse cumulative sum. See original code in https://github.com/CamDavidsonPilon/lifelines/pull/496/files#diff-81ee0759dbae0770e1a02cf17f4cfbb1R431
@@ -1207,6 +1207,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
     def compute_residuals(self, training_dataframe: DataFrame, kind: str) -> pd.DataFrame:
         """
+        Compute the residuals the model.
 
         Parameters
         ----------
@@ -1270,7 +1271,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         Returns
         -------
         df : DataFrame
-            Contains columns coef, np.exp(coef), se(coef), z, p, lower, upper"""
+            Contains columns coef, exp(coef), se(coef), z, p, lower, upper"""
         ci = 100 * (1 - self.alpha)
         z = inv_normal_cdf(1 - self.alpha / 2)
         with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
@@ -1280,8 +1281,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df["se(coef)"] = self.standard_errors_
             df["coef lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
             df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
-            df["exp(coef) lower %g%%" % ci] = self.hazard_ratios_ * np.exp(-z * self.standard_errors_)
-            df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * np.exp(z * self.standard_errors_)
+            df["exp(coef) lower %g%%" % ci] = self.hazard_ratios_ * exp(-z * self.standard_errors_)
+            df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -np.log2(df["p"])
@@ -1335,6 +1336,16 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         p.print(style=style)
 
+    def _trivial_log_likelihood(self):
+        if self._batch_mode:
+            return self._trivial_log_likelihood_batch(
+                self.durations.values, self.event_observed.values, self.weights.values
+            )
+        else:
+            return self._trivial_log_likelihood_single(
+                self.durations.values, self.event_observed.values, self.weights.values
+            )
+
     def log_likelihood_ratio_test(self) -> StatisticalResult:
         """
         This function computes the likelihood ratio test for the Cox model. We
@@ -1344,14 +1355,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if hasattr(self, "_ll_null_"):
             ll_null = self._ll_null_
         else:
-            if self._batch_mode:
-                ll_null = self._trivial_log_likelihood_batch(
-                    self.durations.values, self.event_observed.values, self.weights.values
-                )
-            else:
-                ll_null = self._trivial_log_likelihood_single(
-                    self.durations.values, self.event_observed.values, self.weights.values
-                )
+            ll_null = self._trivial_log_likelihood()
         ll_alt = self.log_likelihood_
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.params_.shape[0]
@@ -1382,7 +1386,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
-        return np.exp(self.predict_log_partial_hazard(X))
+        return exp(self.predict_log_partial_hazard(X))
 
     def predict_log_partial_hazard(self, X: Union[ndarray, DataFrame]) -> pd.DataFrame:
         r"""
@@ -1425,7 +1429,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         X = X.astype(float)
 
         X = normalize(X, self._norm_mean.values, 1)
-        return pd.DataFrame(np.dot(X, self.params_), index=index)
+        return pd.DataFrame(dot(X, self.params_), index=index)
 
     def predict_cumulative_hazard(
         self,
@@ -1550,7 +1554,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
         """
-        return np.exp(-self.predict_cumulative_hazard(X, times=times, conditional_after=conditional_after))
+        return exp(-self.predict_cumulative_hazard(X, times=times, conditional_after=conditional_after))
 
     def predict_percentile(
         self, X: DataFrame, p: float = 0.5, conditional_after: Optional[ndarray] = None
@@ -1700,7 +1704,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         >>> ax = cph.baseline_survival_.plot()
         >>> kmf.plot(ax=ax)
         """
-        survival_df = np.exp(-self.baseline_cumulative_hazard_)
+        survival_df = exp(-self.baseline_cumulative_hazard_)
         if not self.strata:
             survival_df = survival_df.rename(columns={"baseline cumulative hazard": "baseline survival"})
         return survival_df
@@ -1757,9 +1761,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         order = list(range(len(columns) - 1, -1, -1)) if user_supplied_columns else np.argsort(log_hazards)
 
         if hazard_ratios:
-            exp_log_hazards = np.exp(log_hazards)
-            upper_errors = exp_log_hazards * (np.exp(z * self.standard_errors_[columns].values) - 1)
-            lower_errors = exp_log_hazards * (1 - np.exp(-z * self.standard_errors_[columns].values))
+            exp_log_hazards = exp(log_hazards)
+            upper_errors = exp_log_hazards * (exp(z * self.standard_errors_[columns].values) - 1)
+            lower_errors = exp_log_hazards * (1 - exp(-z * self.standard_errors_[columns].values))
             ax.errorbar(
                 exp_log_hazards[order],
                 yaxis_locations,
@@ -1812,7 +1816,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         >>> from lifelines import datasets, CoxPHFitter
         >>> rossi = datasets.load_rossi()
         >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
-        >>> cph.plot_covariate_groups('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
+        >>> cph.plot_covariate_groups('prio', values=arange(0, 15, 3), cmap='coolwarm')
 
         .. image:: images/plot_covariate_example1.png
 
@@ -1916,9 +1920,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         training_df: DataFrame
             the original DataFrame used in the call to ``fit(...)`` or a sub-sampled version.
-        advice: boolean, optional
+        advice: bool, optional
             display advice as output to the user's screen
-        show_plots: boolean, optional
+        show_plots: bool, optional
             display plots of the scaled schoenfeld residuals and loess curves. This is an eyeball test for violations.
             This will slow down the function significantly.
         p_value_threshold: float, optional

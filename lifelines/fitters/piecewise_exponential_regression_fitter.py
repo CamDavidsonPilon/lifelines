@@ -29,11 +29,11 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
     alpha: float, optional (default=0.05)
         the level in the confidence intervals.
 
-
-
     Examples
     ----------
-    See blog post `here <https://dataorigami.net/blogs/napkin-folding/churn>`_.
+    See blog post `here <https://dataorigami.net/blogs/napkin-folding/churn>`_ and
+    paper replication `here <https://github.com/CamDavidsonPilon/lifelines-replications/blob/master/replications/Friedman_1982.ipynb>`_
+
 
     """
 
