@@ -1511,10 +1511,10 @@ class StepSizer:
     def __init__(self, initial_step_size: Optional[float]) -> None:
         initial_step_size = initial_step_size or 0.95
 
-        self.initial_step_size: float = initial_step_size
-        self.step_size: float = initial_step_size
-        self.temper_back_up: bool = False
-        self.norm_of_deltas: List[float] = []
+        self.initial_step_size = initial_step_size
+        self.step_size = initial_step_size
+        self.temper_back_up = False
+        self.norm_of_deltas = []
 
     def update(self, norm_of_delta: float) -> "StepSizer":
         SCALE = 1.2
