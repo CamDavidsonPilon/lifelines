@@ -265,7 +265,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
     _KNOWN_MODEL = False
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
-    _scipy_fit_options: Dict[str, Any] = dict()
+    _scipy_fit_options = dict()
 
     def __init__(self, *args, **kwargs):
         super(ParametricUnivariateFitter, self).__init__(*args, **kwargs)
@@ -1123,7 +1123,7 @@ class RegressionFitter(BaseFitter):
 class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
-    _scipy_fit_options: Dict[str, Any] = {}
+    _scipy_fit_options = dict()
     _KNOWN_MODEL = False
 
     def __init__(self, alpha=0.05, penalizer=0.0):

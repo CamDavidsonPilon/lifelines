@@ -145,7 +145,6 @@ class CoxPHFitter(RegressionFitter):
     """
 
     _KNOWN_MODEL = True
-    _concordance_score_ = 0
 
     def __init__(
         self,
@@ -336,7 +335,7 @@ class CoxPHFitter(RegressionFitter):
 
         if hasattr(self, "_concordance_score_"):
             # we have already fit the model.
-            del self._concordance_score_
+            delattr(self, "_concordance_score_")
 
         return self
 
