@@ -24,7 +24,7 @@ from lifelines import utils
 from lifelines.utils.printer import Printer
 
 
-__all__: List[str] = []
+__all__ = []
 
 
 class BaseFitter:
