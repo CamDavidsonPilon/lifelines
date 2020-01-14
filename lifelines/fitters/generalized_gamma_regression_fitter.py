@@ -19,12 +19,13 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
     The survival function is:
 
     .. math::
-        S(t \;|\; x)=\left\{ \begin{array}{}
-           1-{{\Gamma}_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{ if }\lambda >0  \\
-           {{\Gamma}_{RL}}\left( \tfrac{1}{{{\lambda }^{2}}};\tfrac{{{e}^{\lambda \left( \tfrac{\text{ln}(t)-\mu }{\sigma } \right)}}}{{{\lambda }^{2}}} \right)\text{       if }\lambda < 0  \\
+
+        S(t; x)=\left\{  \begin{array}{}
+           1-\Gamma_{RL}\left( \frac{1}{{{\lambda }^{2}}};\frac{{e}^{\lambda \left( \frac{\log(t)-\mu }{\sigma} \right)}}{\lambda ^{2}} \right)  \textit{ if } \lambda> 0 \\
+              \Gamma_{RL}\left( \frac{1}{{{\lambda }^{2}}};\frac{{e}^{\lambda \left( \frac{\log(t)-\mu }{\sigma} \right)}}{\lambda ^{2}} \right)  \textit{ if } \lambda \le 0 \\
         \end{array} \right.\,\!
 
-    where :math:`\Gamma_{RL}` is the regularized lower incomplete Gamma function, and :math:`\sigma = \exp(\alpha x^T), \lambda = \beta x^T, \mu = \gamma x^T`.
+    where :math:`\Gamma_{RL}` is the regularized lower incomplete Gamma function, and :math:`\sigma = \sigma(x) = \exp(\alpha x^T), \lambda = \lambda(x) \beta x^T, \mu = \mu(x) = \gamma x^T`.
 
     This model has the Exponential, Weibull, Gamma and Log-Normal as sub-models, and thus can be used as a way to test which
     model to use:
