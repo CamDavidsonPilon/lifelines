@@ -1306,7 +1306,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         # Print information about data first
         justify = string_justify(25)
 
-        headers: List[Tuple[str, Any]] = []
+        headers = []
         headers.append(("duration col", "'%s'" % self.duration_col))
 
         if self.event_col:
