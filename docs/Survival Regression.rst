@@ -370,9 +370,12 @@ Baseline hazard and survival
 
 To access the non-parametric baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. These are computed using Breslow's approximation. If you are interested in a _parametric_ baseline hazard, please see `this issue <https://github.com/CamDavidsonPilon/lifelines/issues/812>`_.
 
+Parametric survival models
+==================================
 
 Accelerated failure time models
-==================================
+-----------------------------------------------
+
 
 Suppose we have two populations, A and B, with different survival functions, :math:`S_A(t)` and :math:`S_B(t)`, and they are related by some *accelerated failure rate*, :math:`\lambda`:
 
@@ -401,7 +404,7 @@ Next, we pick a parametric form for the survival function, :math:`S(t)`. The mos
 
 We call these accelerated failure time models, shortened often to just AFT models. Using *lifelines*, we can fit this model (and the unknown :math:`\rho` parameter too).
 
-The Weibull AFT model
+The weibull AFT model
 -----------------------------------------------
 
 
@@ -632,7 +635,7 @@ There are two hyper-parameters that can be used to to achieve a better test scor
     """
 
 
-The Log-Normal and Log-Logistic AFT models
+The log-normal and log-logistic AFT models
 -----------------------------------------------
 
 There are also the :class:`~lifelines.fitters.log_normal_aft_fitter.LogNormalAFTFitter` and :class:`~lifelines.fitters.log_logistic_aft_fitter.LogLogisticAFTFitter` models, which instead of assuming that the survival time distribution is Weibull, we assume it is Log-Normal or Log-Logistic, respectively. They have identical APIs to the :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`, but the parameter names are different.
@@ -647,7 +650,7 @@ There are also the :class:`~lifelines.fitters.log_normal_aft_fitter.LogNormalAFT
     lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest')
 
 
-The Piecewise-Exponential Regression and Generalized Gamma models
+The piecewise-exponential regression and generalized gamma models
 -------------------------------------------------------------------------
 
 Another class of parametric models involves more flexible modeling of the hazard function. The :class:`~lifelines.fitters.piecewise_exponential_regression_fitter.PiecewiseExponentialRegressionFitter` can model jumps in the hazard (think: the differences in "survival-of-staying-in-school" between 1st year, 2nd year, 3rd year, and 4th year students), and constant values between jumps. The ability to specify *when* these jumps occur, called breakpoints, offers modelers great flexibility. An example application involving customer churn is available in this `notebook <https://github.com/CamDavidsonPilon/lifelines/blob/master/examples/SaaS%20churn%20and%20piecewise%20regression%20models.ipynb>`_.
@@ -757,6 +760,12 @@ The AFT models have APIs that handle left and interval censored data, too. The A
 
 
 Another example of using lifelines for interval censored data is located `here <https://dataorigami.net/blogs/napkin-folding/counting-and-interval-censoring>`_.
+
+
+Custom parametric regression models
+-------------------------------------
+
+*lifelines* has a very general syntax for creating your own parametric regression models. If you are looking to create your own custom models, see docs `Custom Regression Models`_.
 
 
 
@@ -933,12 +942,6 @@ Prime Minister Stephen Harper.
 .. image:: images/survival_regression_harper.png
 
 .. note:: Because of the nature of the model, estimated survival functions of individuals can increase. This is an expected artifact of Aalen's additive model.
-
-
-Custom Parametric Regression Models
-=======================================
-
-*lifelines* has a very general syntax for creating your own parametric regression models. If you are looking to create your own custom models, see docs `Custom Regression Models`_.
 
 
 Model selection in survival regression
