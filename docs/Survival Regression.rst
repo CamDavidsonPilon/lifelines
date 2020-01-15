@@ -404,7 +404,7 @@ Next, we pick a parametric form for the survival function, :math:`S(t)`. The mos
 
 We call these accelerated failure time models, shortened often to just AFT models. Using *lifelines*, we can fit this model (and the unknown :math:`\rho` parameter too).
 
-The weibull AFT model
+The Weibull AFT model
 -----------------------------------------------
 
 
@@ -687,7 +687,7 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
 Model selection for parametric models
 -----------------------------------------------
 
-Often, you don't know *a priori* which AFT model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihood. We can look at the log-likelihood for each fitted model and select the largest one.
+Often, you don't know *a priori* which parametric model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihood. We can look at the log-likelihood for each fitted model and select the largest one.
 
 .. code:: python
 
@@ -719,7 +719,7 @@ Often, you don't know *a priori* which AFT model to use. Each model has some ass
 Left, right and interval censored data
 -----------------------------------------------
 
-The AFT models have APIs that handle left and interval censored data, too. The API for them is different than the API for fitting to right censored data. Here's an example with interval censored data.
+The parametric models have APIs that handle left and interval censored data, too. The API for them is different than the API for fitting to right censored data. Here's an example with interval censored data.
 
 .. code:: python
 
@@ -949,7 +949,7 @@ Model selection in survival regression
 
 Parametric vs Semi-parametric models
 ---------------------------------------
-Above, we've displayed two *semi-parametric* models (Cox model and Aalen's model), and a family of *parametric* AFT models. Which should you choose? What are the advantages and disadvantages of either? I suggest reading the two following StackExchange answers to get a better idea of what experts think:
+Above, we've displayed two *semi-parametric* models (Cox model and Aalen's model), and a family of *parametric* models. Which should you choose? What are the advantages and disadvantages of either? I suggest reading the two following StackExchange answers to get a better idea of what experts think:
 
 1. `In survival analysis, why do we use semi-parametric models (Cox proportional hazards) instead of fully parametric models? <https://stats.stackexchange.com/q/64739/11867>`__
 2. `In survival analysis, when should we use fully parametric models over semi-parametric ones? <https://stats.stackexchange.com/q/399544/11867>`__
