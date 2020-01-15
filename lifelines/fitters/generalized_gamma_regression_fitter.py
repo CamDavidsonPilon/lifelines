@@ -25,7 +25,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
               \Gamma_{RL}\left( \frac{1}{{{\lambda }^{2}}};\frac{{e}^{\lambda \left( \frac{\log(t)-\mu }{\sigma} \right)}}{\lambda ^{2}} \right)  \textit{ if } \lambda \le 0 \\
         \end{array} \right.\,\!
 
-    where :math:`\Gamma_{RL}` is the regularized lower incomplete Gamma function, and :math:`\sigma = \sigma(x) = \exp(\alpha x^T), \lambda = \lambda(x) \beta x^T, \mu = \mu(x) = \gamma x^T`.
+    where :math:`\Gamma_{RL}` is the regularized lower incomplete Gamma function, and :math:`\sigma = \sigma(x) = \exp(\alpha x^T), \lambda = \lambda(x) = \beta x^T, \mu = \mu(x) = \gamma x^T`.
 
     This model has the Exponential, Weibull, Gamma and Log-Normal as sub-models, and thus can be used as a way to test which
     model to use:
