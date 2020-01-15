@@ -632,7 +632,7 @@ There are two hyper-parameters that can be used to to achieve a better test scor
     """
 
 
-The Log-Normal and Log-Logistic AFT model
+The Log-Normal and Log-Logistic AFT models
 -----------------------------------------------
 
 There are also the :class:`~lifelines.fitters.log_normal_aft_fitter.LogNormalAFTFitter` and :class:`~lifelines.fitters.log_logistic_aft_fitter.LogLogisticAFTFitter` models, which instead of assuming that the survival time distribution is Weibull, we assume it is Log-Normal or Log-Logistic, respectively. They have identical APIs to the :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`, but the parameter names are different.
@@ -647,7 +647,41 @@ There are also the :class:`~lifelines.fitters.log_normal_aft_fitter.LogNormalAFT
     lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest')
 
 
-Model selection for AFT models
+The Piecewise-Exponential Regression and Generalized Gamma models
+-------------------------------------------------------------------------
+
+Another class of parametric models involves more flexible modeling of the hazard function. The :class:`~lifelines.fitters.piecewise_exponential_regression_fitter.PiecewiseExponentialRegressionFitter` can model jumps in the hazard (think: the differences in "survival-of-staying-in-school" between 1st year, 2nd year, 3rd year, and 4th year students), and constant values between jumps. The ability to specify *when* these jumps occur, called breakpoints, offers modelers great flexibility. An example application involving customer churn is available in this `notebook <https://github.com/CamDavidsonPilon/lifelines/blob/master/examples/SaaS%20churn%20and%20piecewise%20regression%20models.ipynb>`_.
+
+For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fitters.generalized_gamma_regression_fitter.GeneralizedGammaRegressionFitter`. This model is actually a generalization of all the AFT models above (that is, specific values of its parameters represent another model ) - see docs for specific parameter values. The API is slightly different however, and looks more like how custom regression models are built (see next section on *Custom Regression Models*).
+
+.. code:: python
+
+
+    from lifelines import GeneralizedGammaRegressionFitter
+    from lifelines.datasets import load_rossi
+
+    df = load_rossi()
+    df['constant'] = 1.
+
+    # this will regress df against all 3 parameters
+    ggf = GeneralizedGammaRegressionFitter().fit(df, 'week', 'arrest')
+    ggf.print_summary()
+
+
+    # if we only want to regress against the scale parameter, `mu_`
+    regressors = {
+        'mu_': rossi.columns,
+        'sigma_': ['constant'],
+        'lambda_': ['constant']
+    }
+
+    ggf = GeneralizedGammaRegressionFitter().fit(df, 'week', 'arrest', regressors=regressors)
+    ggf.print_summary()
+
+
+
+
+Model selection for parametric models
 -----------------------------------------------
 
 Often, you don't know *a priori* which AFT model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihood. We can look at the log-likelihood for each fitted model and select the largest one.
