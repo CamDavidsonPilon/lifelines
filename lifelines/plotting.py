@@ -604,11 +604,10 @@ def _plot_estimate(
     ci_alpha: bool
         the transparency level of the confidence interval. Default: 0.3
     ci_force_lines: bool
-        force the confidence intervals to be line plots (versus default shaded areas + lines). Default: False
-        Deprecated: use ``ci_only_lines`` instead.
-    ci_only_lines: bool
         make the confidence intervals to be line plots (versus default shaded areas + lines). Default: False
         Deprecated: use ``ci_only_lines`` instead.
+    ci_only_lines: bool
+        make the confidence intervals to be line plots (versus default shaded areas + lines). Default: False.
     ci_no_lines: bool
         Only show the shaded area, with no boarding lines. Default: False
     ci_legend: bool
