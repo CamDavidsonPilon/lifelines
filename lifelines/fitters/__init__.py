@@ -1609,6 +1609,11 @@ class ParametricRegressionFitter(RegressionFitter):
             show_progress=show_progress,
             initial_point=initial_point,
         )
+
+        # align the coefficients again.
+        # https://github.com/CamDavidsonPilon/lifelines/issues/931
+        assert list(self.regressors.keys()) == list(self._norm_std.index.get_level_values(0).unique())
+        _params = np.concatenate([_params[k] for k in self.regressors.keys()])
         self.params_ = _params / self._norm_std
 
         self.variance_matrix_ = self._compute_variance_matrix()
@@ -1642,7 +1647,8 @@ class ParametricRegressionFitter(RegressionFitter):
         assert likelihood is not None, "kwarg likelihood is required"
         penalty = self._add_penalty
         _, param_transform = flatten(self._initial_point_dict)
-
+        # import pdb
+        # pdb.set_trace()
         params = param_transform(params_array)
         return penalty(params, -likelihood(params, *args))
 
@@ -1682,7 +1688,7 @@ class ParametricRegressionFitter(RegressionFitter):
             hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
             # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
             hessian_ = (hessian_ + hessian_.T) / 2
-            return results.x, -sum_weights * results.fun, sum_weights * hessian_
+            return unflatten(results.x), -sum_weights * results.fun, sum_weights * hessian_
         else:
             print(results)
             self._check_values_post_fitting(Xs.df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)

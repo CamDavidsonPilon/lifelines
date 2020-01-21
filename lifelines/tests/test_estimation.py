@@ -1519,6 +1519,65 @@ class TestParametricRegressionFitter:
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_, rtol=0.01)
 
 
+class CureModelA(ParametricRegressionFitter):
+
+    _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
+
+    def __init__(self, **kwargs):
+        cols = load_rossi().drop(["week", "arrest"], axis=1).columns
+        self.regressors = {"lambda_": cols, "beta_": cols, "rho_": cols}
+        super(CureModelA, self).__init__(**kwargs)
+
+    def _cumulative_hazard(self, params, T, Xs):
+        c = expit(anp.dot(Xs["beta_"], params["beta_"]))
+
+        lambda_ = anp.exp(anp.dot(Xs["lambda_"], params["lambda_"]))
+        rho_ = anp.exp(anp.dot(Xs["rho_"], params["rho_"]))
+        cdf = 1 - anp.exp(-((T / lambda_) ** rho_))
+
+        return -anp.log((1 - c) + c * (1 - cdf))
+
+
+class CureModelB(ParametricRegressionFitter):
+    # notice the c vs 1-c in the return statement
+    _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
+
+    def __init__(self, **kwargs):
+        cols = load_rossi().drop(["week", "arrest"], axis=1).columns
+        self.regressors = {"lambda_": cols, "beta_": cols, "rho_": cols}
+        super(CureModelB, self).__init__(**kwargs)
+
+    def _cumulative_hazard(self, params, T, Xs):
+        c = expit(anp.dot(Xs["beta_"], params["beta_"]))
+
+        lambda_ = anp.exp(anp.dot(Xs["lambda_"], params["lambda_"]))
+        rho_ = anp.exp(anp.dot(Xs["rho_"], params["rho_"]))
+        cdf = 1 - anp.exp(-((T / lambda_) ** rho_))
+
+        return -anp.log(c + (1 - c) * (1 - cdf))
+
+
+class TestCustomRegressionModel:
+    @pytest.fixture
+    def rossi(self):
+        rossi = load_rossi()
+        rossi["intercept"] = 1.0
+        return rossi
+
+    def test_reparameterization_flips_the_sign(self, rossi):
+
+        covariates = {"lambda_": rossi.columns, "rho_": ["intercept"], "beta_": ["intercept", "fin"]}
+
+        cmA = CureModelA()
+        cmB = CureModelB()
+
+        cmA.fit(rossi, "week", event_col="arrest", regressors=covariates)
+        cmB.fit(rossi, "week", event_col="arrest", regressors=covariates)
+        assert_series_equal(cmA.params_.loc["lambda_"], cmB.params_.loc["lambda_"])
+        assert_series_equal(cmA.params_.loc["rho_"], cmB.params_.loc["rho_"])
+        assert_series_equal(cmA.params_.loc["beta_"], -cmB.params_.loc["beta_"])
+
+
 class TestRegressionFitters:
     @pytest.fixture
     def rossi(self):
