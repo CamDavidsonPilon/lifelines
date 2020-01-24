@@ -10,10 +10,11 @@ if __name__ == "__main__":
     from lifelines import CoxPHFitter
     from lifelines.datasets import load_rossi
 
+    reps = 10
     df = load_rossi()
-    df = pd.concat([df] * 1)
-    cp = CoxPHFitter()
+    df = pd.concat([df] * reps)
+    cp = CoxPHFitter(penalizer=20 * reps, l1=True)
     start_time = time.time()
-    cp.fit(df, duration_col="week", event_col="arrest", batch_mode=True, show_progress=True)
+    cp.fit(df, duration_col="week", event_col="arrest", batch_mode=True)
     print("--- %s seconds ---" % (time.time() - start_time))
-    cp.print_summary()
+    cp.print_summary(3)

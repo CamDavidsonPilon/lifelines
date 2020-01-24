@@ -5,7 +5,7 @@ import warnings
 from textwrap import dedent, fill
 import numpy as np
 import pandas as pd
-from typing import *
+from typing import Callable, Iterator, List, Optional, Tuple, Union, Any
 
 from numpy import dot, einsum, log, exp, zeros, arange, multiply
 from scipy.linalg import solve as spsolve, LinAlgError, norm, inv
@@ -47,11 +47,15 @@ from numpy import ndarray
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.base import Index
 from pandas.core.series import Series
-from typing import Callable, Iterator, List, Optional, Tuple, Union
+from autograd import numpy as anp
+from autograd import elementwise_grad
 
 __all__ = ["CoxPHFitter"]
 
 CONVERGENCE_DOCS = "Please see the following tips in the lifelines documentation: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model"
+abs_ = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
+d_abs_ = elementwise_grad(abs_)
+dd_abs_ = elementwise_grad(d_abs_)
 
 
 class BatchVsSingle:
@@ -151,6 +155,8 @@ class CoxPHFitter(RegressionFitter):
         tie_method: str = "Efron",
         penalizer: float = 0.0,
         strata: Optional[Union[List[str], str]] = None,
+        l1=False,
+        l2=True,
         **kwargs
     ) -> None:
         super(CoxPHFitter, self).__init__(**kwargs)
@@ -162,6 +168,8 @@ class CoxPHFitter(RegressionFitter):
         self.tie_method = tie_method
         self.penalizer = penalizer
         self.strata = strata
+        self.l1 = l1
+        self.l2 = l2
 
     @CensoringType.right_censoring
     def fit(
@@ -416,7 +424,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         step_size: Optional[float] = None,
         precision: float = 1e-07,
         show_progress: bool = True,
-        max_steps: int = 50,
+        max_steps: int = 500,
     ) -> ndarray:  # pylint: disable=too-many-statements,too-many-branches
         """
         Newton Rhaphson algorithm for fitting CPH model.
@@ -498,9 +506,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 self._ll_null_ = ll
 
             if self.penalizer > 0:
-                # add the gradient and hessian of the l2 term
-                g -= self.penalizer * beta
-                h.flat[:: d + 1] -= self.penalizer
+                if self.l1:
+                    g -= self.penalizer * d_abs_(beta, 1.5 ** i)
+                    h.flat[:: d + 1] -= self.penalizer * dd_abs_(beta, 1.5 ** i)
+                elif self.l2:
+                    g -= self.penalizer * beta
+                    h.flat[:: d + 1] -= self.penalizer
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
