@@ -461,7 +461,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         get_gradients = getattr(self, "_get_efron_values_%s" % decision)
         self._batch_mode = decision == "batch"
 
-        _, d = X.shape
+        n, d = X.shape
         self.path = []
 
         # make sure betas are correct size.
@@ -507,11 +507,11 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if self.penalizer > 0:
                 if self.l1:
-                    g -= self.penalizer * d_abs_(beta, 1.5 ** i)
-                    h.flat[:: d + 1] -= self.penalizer * dd_abs_(beta, 1.5 ** i)
+                    g -= n * self.penalizer * d_abs_(beta, 1.5 ** i)
+                    h.flat[:: d + 1] -= n * self.penalizer * dd_abs_(beta, 1.5 ** i)
                 elif self.l2:
-                    g -= self.penalizer * beta
-                    h.flat[:: d + 1] -= self.penalizer
+                    g -= n * self.penalizer * beta
+                    h.flat[:: d + 1] -= n * self.penalizer
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
