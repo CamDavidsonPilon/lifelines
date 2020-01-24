@@ -53,9 +53,11 @@ from autograd import elementwise_grad
 __all__ = ["CoxPHFitter"]
 
 CONVERGENCE_DOCS = "Please see the following tips in the lifelines documentation: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model"
-abs_ = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
-d_abs_ = elementwise_grad(abs_)
-dd_abs_ = elementwise_grad(d_abs_)
+
+# From https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
+soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
+d_soft_abs = elementwise_grad(soft_abs)
+dd_soft_abs = elementwise_grad(soft_abs)
 
 
 class BatchVsSingle:
@@ -504,14 +506,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 self._ll_null_ = ll
 
             if self.penalizer > 0:
-                if self.l1_ratio > 0:
-                    g -= n * self.penalizer * (self.l1_ratio * d_abs_(beta, 1.5 ** i) + (1 - self.l1_ratio) * beta)
-                    h.flat[:: d + 1] -= (
-                        n * self.penalizer * (self.l1_ratio * dd_abs_(beta, 1.5 ** i) + (1 - self.l1_ratio))
-                    )
-                else:
-                    g -= n * self.penalizer * beta
-                    h.flat[:: d + 1] -= n * self.penalizer
+                g -= n * self.penalizer * (self.l1_ratio * d_soft_abs(beta, 1.5 ** i) + (1 - self.l1_ratio) * beta)
+                h.flat[:: d + 1] -= (
+                    n * self.penalizer * (self.l1_ratio * dd_soft_abs(beta, 1.5 ** i) + (1 - self.l1_ratio))
+                )
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
