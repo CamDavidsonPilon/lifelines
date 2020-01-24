@@ -10,14 +10,11 @@ This version and future versions of lifelines no longer support py35.
 ##### API Changes
  - The penalty in Cox models is now scaled by the number of observations. This makes it invariant to changing sample sizes. This change also make the penalty magnitude behave the same as any parametric regression model.
 
-
-
 #### 0.23.9 - 2020-01-28
 
 ##### Bug fixes
  - fixed important error when a parametric regression model would not assign the correct labels to fitted
 parameters' variances. See more here: https://github.com/CamDavidsonPilon/lifelines/issues/931. Users of `GeneralizedGammaRegressionFitter` and any custom regression models should update their code as soon as possible.
-
 
 #### 0.23.8 - 2020-01-21
 
