@@ -1,5 +1,13 @@
 ## Changelog
 
+#### 0.24.0 - unreleased
+
+This version and future versions of lifelines no longer support py35.
+
+##### New features
+ - `CoxPHFitter` has support for an elastic net penalty, which includes l1 and l2 regression.
+
+
 #### 0.23.9 - 2020-01-28
 
 ##### Bug fixes
