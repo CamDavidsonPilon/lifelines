@@ -155,8 +155,7 @@ class CoxPHFitter(RegressionFitter):
         tie_method: str = "Efron",
         penalizer: float = 0.0,
         strata: Optional[Union[List[str], str]] = None,
-        l1=False,
-        l2=True,
+        l1_ratio=0.0,
         **kwargs
     ) -> None:
         super(CoxPHFitter, self).__init__(**kwargs)
@@ -168,8 +167,7 @@ class CoxPHFitter(RegressionFitter):
         self.tie_method = tie_method
         self.penalizer = penalizer
         self.strata = strata
-        self.l1 = l1
-        self.l2 = l2
+        self.l1_ratio = l1_ratio
 
     @CensoringType.right_censoring
     def fit(
@@ -506,10 +504,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 self._ll_null_ = ll
 
             if self.penalizer > 0:
-                if self.l1:
-                    g -= n * self.penalizer * d_abs_(beta, 1.5 ** i)
-                    h.flat[:: d + 1] -= n * self.penalizer * dd_abs_(beta, 1.5 ** i)
-                elif self.l2:
+                if self.l1_ratio > 0:
+                    g -= n * self.penalizer * (self.l1_ratio * d_abs_(beta, 1.5 ** i) + (1 - self.l1_ratio) * beta)
+                    h.flat[:: d + 1] -= (
+                        n * self.penalizer * (self.l1_ratio * dd_abs_(beta, 1.5 ** i) + (1 - self.l1_ratio))
+                    )
+                else:
                     g -= n * self.penalizer * beta
                     h.flat[:: d + 1] -= n * self.penalizer
 
