@@ -185,7 +185,7 @@ To handle this, you can delay the observations by time periods:
 Fitting the model
 ################################################
 
-Once your dataset is in the correct orientation, we can use :class:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter` to fit the model to your data. The method is similar to :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`, expect we need to tell the :meth:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter.fit` about the additional time columns.
+Once your dataset is in the correct orientation, we can use :class:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter` to fit the model to your data. The method is similar to :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`, except we need to tell the :meth:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter.fit` about the additional time columns.
 
 Fitting the Cox model to the data involves using gradient descent. *lifelines* takes extra effort to help with convergence, so please be attentive to any warnings that appear. Fixing any warnings will generally help convergence. For further help, see :ref:`Problems with convergence in the Cox Proportional Hazard Model`.
 
