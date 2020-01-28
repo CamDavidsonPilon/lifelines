@@ -63,16 +63,6 @@ class POSplineFitter(SplineFitter, ParametricRegressionFitter):
 
     KNOTS = [0.1972, 1.769, 6.728]
 
-    @staticmethod
-    def relu(x):
-        return np.maximum(0, x)
-
-    def basis(self, x, knot, min_knot, max_knot):
-        lambda_ = (max_knot - knot) / (max_knot - min_knot)
-        return self.relu(x - knot) ** 3 - (
-            lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3
-        )
-
     def _cumulative_hazard(self, params, T, Xs):
         Xbeta = np.dot(Xs["beta_"], params["beta_"])
         lT = np.log(T)

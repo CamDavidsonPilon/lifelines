@@ -69,10 +69,10 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
     # about 25% faster than BFGS
     _scipy_fit_method = "SLSQP"
     _scipy_fit_options = {"ftol": 1e-6, "maxiter": 200}
+    _ancillary_parameter_name = "beta_"
+    _primary_parameter_name = "alpha_"
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
-        self._ancillary_parameter_name = "beta_"
-        self._primary_parameter_name = "alpha_"
         super(LogLogisticAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept)
 
     def _cumulative_hazard(self, params, T, Xs):
@@ -109,7 +109,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         beta_ = safe_exp(log_beta_)
         return -np.logaddexp(-beta_ * (np.log(T) - np.log(alpha_)), 0)
 
-    def predict_percentile(self, df, ancillary_df=None, p=0.5, conditional_after=None):
+    def predict_percentile(self, df, ancillary_df=None, p=0.5, conditional_after=None) -> pd.Series:
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -140,13 +140,13 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
 
         if conditional_after is None:
-            return pd.DataFrame(alpha_ * (1 / (p) - 1) ** (1 / beta_), index=_get_index(df))
+            return pd.Series(alpha_ * (1 / (p) - 1) ** (1 / beta_), index=_get_index(df))
         else:
             conditional_after = np.asarray(conditional_after)
             S = 1 / (1 + (conditional_after / alpha_) ** beta_)
-            return pd.DataFrame(alpha_ * (1 / (p * S) - 1) ** (1 / beta_) - conditional_after, index=_get_index(df))
+            return pd.Series(alpha_ * (1 / (p * S) - 1) ** (1 / beta_) - conditional_after, index=_get_index(df))
 
-    def predict_expectation(self, df, ancillary_df=None):
+    def predict_expectation(self, df, ancillary_df=None) -> pd.Series:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -175,4 +175,4 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
         v = (alpha_ * np.pi / beta_) / np.sin(np.pi / beta_)
         v = np.where(beta_ > 1, v, np.nan)
-        return pd.DataFrame(v, index=_get_index(df))
+        return pd.Series(v, index=_get_index(df))

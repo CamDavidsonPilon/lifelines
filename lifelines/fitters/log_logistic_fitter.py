@@ -53,8 +53,10 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
         The estimated hazard (with custom timeline if provided)
     survival_function_ : DataFrame
         The estimated survival function (with custom timeline if provided)
-    cumumlative_density_ : DataFrame
+    cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
+    density: DataFrame
+        The estimated density function (PDF) (with custom timeline if provided)
     variance_matrix_ : numpy array
         The variance matrix of the coefficients
     median_survival_time_: float
@@ -72,6 +74,9 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
     entry: array or None
         The entry array provided, or None
     """
+
+    alpha_: float
+    beta_: float
     _fitted_parameter_names = ["alpha_", "beta_"]
     _compare_to_values = np.array([1.0, 1.0])
 

@@ -36,8 +36,11 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
         The estimated hazard (with custom timeline if provided)
     survival_function_ : DataFrame
         The estimated survival function (with custom timeline if provided)
-    cumumlative_density_ : DataFrame
+    cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
+    density: DataFrame
+        The estimated density function (PDF) (with custom timeline if provided)
+
     variance_matrix_ : numpy array
         The variance matrix of the coefficients
     median_survival_time_: float
@@ -56,6 +59,8 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
         The entry array provided, or None
     """
 
+    mu_: float
+    sigma_: float
     _fitted_parameter_names = ["mu_", "sigma_"]
     _bounds = [(None, None), (0, None)]
     _compare_to_values = np.array([1.0, 1.0])
@@ -70,10 +75,10 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
         return np.array([np.median(log_T), 1.0])
 
     @property
-    def median_survival_time_(self):
+    def median_survival_time_(self) -> float:
         return np.exp(self.mu_)
 
-    def percentile(self, p):
+    def percentile(self, p) -> float:
         return np.exp(self.mu_ + np.sqrt(2 * self.sigma_ ** 2) * erfinv(1 - 2 * p))
 
     def _cumulative_hazard(self, params, times):

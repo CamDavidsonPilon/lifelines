@@ -1,32 +1,18 @@
 # -*- coding: utf-8 -*-
+from typing import Optional
 from lifelines.fitters import KnownModelParametricUnivariateFitter
+from lifelines.fitters.mixins import SplineFitterMixin
 import autograd.numpy as np
 from lifelines.utils.safe_exp import safe_exp
-from lifelines import utils
 
 
-class SplineFitterMixin:
-    _scipy_fit_method = "SLSQP"
-    _scipy_fit_options = {"ftol": 1e-10}
-
-    @staticmethod
-    def relu(x):
-        return np.maximum(0, x)
-
-    def basis(self, x, knot, min_knot, max_knot):
-        lambda_ = (max_knot - knot) / (max_knot - min_knot)
-        return self.relu(x - knot) ** 3 - (
-            lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3
-        )
-
-
-class SplineFitter(SplineFitterMixin, KnownModelParametricUnivariateFitter):
+class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
     r"""
-    Model the cumulative hazard using cubic splines. This offers great flexibility and smoothness of the cumulative hazard.
+    Model the cumulative hazard using :math:`N` cubic splines. This offers great flexibility and smoothness of the cumulative hazard.
 
     .. math::
 
-        H(t) = \exp{\phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})
+        H(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j\(\log{t})}\right)
 
     where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
 
@@ -62,8 +48,11 @@ class SplineFitter(SplineFitterMixin, KnownModelParametricUnivariateFitter):
         The estimated hazard (with custom timeline if provided)
     survival_function_ : DataFrame
         The estimated survival function (with custom timeline if provided)
-    cumumlative_density_ : DataFrame
+    cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
+    density: DataFrame
+        The estimated density function (PDF) (with custom timeline if provided)
+
     variance_matrix_ : numpy array
         The variance matrix of the coefficients
     median_survival_time_: float
@@ -85,7 +74,7 @@ class SplineFitter(SplineFitterMixin, KnownModelParametricUnivariateFitter):
 
     """
 
-    def __init__(self, knot_locations: np.ndarray, *args, **kwargs):
+    def __init__(self, knot_locations: np.array, *args, **kwargs):
         self.knot_locations = knot_locations
         self.n_knots = len(self.knot_locations)
         self._fitted_parameter_names = ["phi_%d_" % i for i in range(self.n_knots)]

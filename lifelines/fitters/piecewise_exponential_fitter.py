@@ -42,8 +42,11 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
         The estimated hazard (with custom timeline if provided)
     survival_function_ : DataFrame
         The estimated survival function (with custom timeline if provided)
-    cumumlative_density_ : DataFrame
+    cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
+    density: DataFrame
+        The estimated density function (PDF) (with custom timeline if provided)
+
     variance_matrix_ : numpy array
         The variance matrix of the coefficients
     median_survival_time_: float
@@ -74,10 +77,9 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
             raise ValueError("First breakpoint must be greater than 0.")
 
         breakpoints = np.sort(breakpoints)
-        self.breakpoints = np.append(breakpoints, [np.inf])
-        n_breakpoints = len(self.breakpoints)
+        self.breakpoints = breakpoints
 
-        self._fitted_parameter_names = ["lambda_%d_" % i for i in range(n_breakpoints)]
+        self._fitted_parameter_names = ["lambda_%d_" % i for i in range(len(self.breakpoints) + 1)]
 
         super(PiecewiseExponentialFitter, self).__init__(*args, **kwargs)
 
@@ -85,7 +87,7 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
         times = np.atleast_1d(times)
         n = times.shape[0]
         times = times.reshape((n, 1))
-        bp = self.breakpoints
+        bp = np.append(self.breakpoints, [np.inf])
         M = np.minimum(np.tile(bp, (n, 1)), times)
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
         return np.dot(M, 1 / params)

@@ -1,11 +1,42 @@
 ## Changelog
 
+#### 0.24.0 - unreleased
+
+This version and future versions of lifelines no longer support py35. Pandas 1.0 is fully supported, along with previous version. Minimum Scipy has been bumped to 1.2.0
+
+##### New features
+ - `CoxPHFitter` and `CoxTimeVaryingFitter` has support for an elastic net penalty, which includes L1 and L2 regression.
+ - `CoxPHFitter` has new baseline survival estimation methods. Specifically, `spline` now estimates the coefficients and baseline survival using splines. The traditional method, `breslow`, is still the default however.
+ - new `lifelines.fitters.mixins.ProportionalHazardMixin` that implements proportional hazard checks.
+ - Regression models have a new `score` method that will score your model against a dataset (ex: a testing or validation dataset). The default is to evaluate the log-likelihood, but also the concordance index can be chose.
+ - Univariate parametric models have a `plot_density`, `density_at_times`, and property `density_` that computes the probability density function estimates.
+  - new dataset for interval regression involving C. Botulinum.
+
+##### API Changes
+ - The penalty in Cox models is now scaled by the number of observations. This makes it invariant to changing sample sizes. This change also make the penalty magnitude behave the same as any parametric regression model.
+ - removed `_score_` and `path` from Cox model.
+ - removed automatically adding `inf` from `PiecewiseExponentialRegressionFitter.breakpoints` and `PiecewiseExponentialFitter.breakpoints`
+ - `tie_method` was dropped from Cox models (it was always Efron anyways...)
+ - Mixins are moved to `lifelines.fitters.mixins`
+ - `CoxTimeVaryingFitter` no longer requires an `id_col`. It's optional, and some checks may be done for integrity if provided.
+ - `score_` on models has been renamed `concordance_index_`
+ - `find_best_parametric_model` `evaluation` kwarg has been changed to `scoring_method`.
+ - models' `.variance_matrix_` is now a DataFrame.
+ - Models' prediction method that return a single array now return a Series (use to return a DataFrame). This includes `predict_median`, `predict_percentile`, `predict_expectation`, `predict_log_partial_hazard`, and possibly others.
+ - Significant changes to `utils.k_fold_cross_validation`.
+
+##### Bug fixes
+ - Fixed `show_censors` with `KaplanMeierFitter.plot_cumulative_density` see issue #940.
+ - Fixed error in `"BIC"` code path in `find_best_parametric_model`
+ - Fixed a bug where left censoring in AFT models was not converging well
+ - Cox models now incorporate any penalizers in their `log_likelihood_`
+
+
 #### 0.23.9 - 2020-01-28
 
 ##### Bug fixes
  - fixed important error when a parametric regression model would not assign the correct labels to fitted
 parameters' variances. See more here: https://github.com/CamDavidsonPilon/lifelines/issues/931. Users of `GeneralizedGammaRegressionFitter` and any custom regression models should update their code as soon as possible.
-
 
 #### 0.23.8 - 2020-01-21
 
@@ -234,7 +265,7 @@ The tests were re-factored to be shipped with the package. Let me know if this c
  - improvements in data validation for `CoxTimeVaryingFitter`
 
 
-### 0.22.0 - 2019-07-03
+#### 0.22.0 - 2019-07-03
 
 ##### New features
  - Ability to create custom parametric regression models by specifying the cumulative hazard. This enables new and extensions of AFT models.
@@ -302,7 +333,7 @@ I'm skipping 0.21.4 version because of deployment issues.
 ##### Bug fixes
  - fixed bug in CoxTimeVaryingFitter when ax is provided, thanks @j-i-l!
 
-### 0.21.0 - 2019-04-12
+#### 0.21.0 - 2019-04-12
 
 ##### New features
  - `weights` is now a optional kwarg for parametric univariate models.
@@ -383,7 +414,7 @@ I'm skipping 0.21.4 version because of deployment issues.
  - Previously, lifelines _always_ added a 0 row to `cph.baseline_hazard_`, even if there were no event at this time. This is no longer the case. A 0 will still be added if there is a duration (observed or not) at 0 occurs however.
 
 
-### 0.20.0 - 2019-03-05
+#### 0.20.0 - 2019-03-05
 
  - Starting with 0.20.0, only Python3 will be supported. Over 75% of recent installs where Py3.
  - Updated minimum dependencies, specifically Matplotlib and Pandas.
@@ -439,7 +470,7 @@ I'm skipping 0.21.4 version because of deployment issues.
  - **Important**: we changed the parameterization of the `PiecewiseExponential` to the same as `ExponentialFitter` (from `\lambda * t` to `t / \lambda`).
 
 
-### 0.19.0 - 2019-02-20
+#### 0.19.0 - 2019-02-20
 
 ##### New features
  - New regression model `WeibullAFTFitter` for fitting accelerated failure time models. Docs have been added to our [documentation](https://lifelines.readthedocs.io/) about how to use `WeibullAFTFitter` (spoiler: it's API is similar to the other regression models) and how to interpret the output.
@@ -501,7 +532,7 @@ I'm skipping 0.21.4 version because of deployment issues.
  - use the `autograd` lib to help with gradients.
  - New `LogLogisticFitter` univariate fitter available.
 
-### 0.18.0 - 2019-01-31
+#### 0.18.0 - 2019-01-31
 
  - `LogNormalFitter` is a new univariate fitter you can use.
  - `WeibullFitter` now correctly returns the confidence intervals (previously returned only NaNs)
@@ -540,7 +571,7 @@ I'm skipping 0.21.4 version because of deployment issues.
  - Fixes a Pandas performance warning in `CoxTimeVaryingFitter`.
  - Performances improvements to `CoxTimeVaryingFitter`.
 
-### 0.17.0 - 2019-01-11
+#### 0.17.0 - 2019-01-11
 
  - corrected behaviour in `CoxPHFitter` where `score_` was not being refreshed on every new `fit`.
  - Reimplentation of `AalenAdditiveFitter`. There were significant changes to it:
@@ -565,7 +596,7 @@ I'm skipping 0.21.4 version because of deployment issues.
 #### 0.16.1 - 2019-01-01
  - Fixed py2 division error in `concordance` method.
 
-### 0.16.0 - 2019-01-01
+#### 0.16.0 - 2019-01-01
 
  - Drop Python 3.4 support.
  - introduction of residual calculations in `CoxPHFitter.compute_residuals`. Residuals include "schoenfeld", "score", "delta_beta", "deviance", "martingale", and "scaled_schoenfeld".
@@ -598,7 +629,7 @@ I'm skipping 0.21.4 version because of deployment issues.
  - Bug fixes for v0.15.0
  - Raise NotImplementedError if the `robust` flag is used in `CoxTimeVaryingFitter` - that's not ready yet.
 
-### 0.15.0 - 2018-11-22
+#### 0.15.0 - 2018-11-22
  - adding `robust` params to `CoxPHFitter`'s `fit`. This enables atleast i) using non-integer weights in the model (these could be sampling weights like IPTW), and ii) mis-specified models (ex: non-proportional hazards). Under the hood it's a sandwich estimator. This does not handle ties, so if there are high number of ties, results may significantly differ from other software.
  - `standard_errors_` is now a property on fitted `CoxPHFitter` which describes the standard errors of the coefficients.
  - `variance_matrix_` is now a property on fitted `CoxPHFitter` which describes the variance matrix of the coefficients.
@@ -655,14 +686,14 @@ I'm skipping 0.21.4 version because of deployment issues.
  - Performance optimizations in `AalenAdditiveFitter` for up to 50% faster completion of `fit` for large dataframes, and up to 10% faster for small dataframes.
 
 
-### 0.14.0 - 2018-03-03
+#### 0.14.0 - 2018-03-03
  - adding `plot_covariate_groups` to `CoxPHFitter` to visualize what happens to survival as we vary a covariate, all else being equal.
  - `utils` functions like `qth_survival_times` and `median_survival_times` now return the transpose of the DataFrame compared to previous version of lifelines. The reason for this is that we often treat survival curves as columns in DataFrames, and functions of the survival curve as index (ex: KaplanMeierFitter.survival_function_ returns a survival curve _at_ time _t_).
  - `KaplanMeierFitter.fit` and `NelsonAalenFitter.fit` accept a `weights` vector that can be used for pre-aggregated datasets. See this [issue](https://github.com/CamDavidsonPilon/lifelines/issues/396).
  - Convergence errors now return a custom `ConvergenceWarning` instead of a `RuntimeWarning`
  - New checks for complete separation in the dataset for regressions.
 
-### 0.13.0 - 2017-12-22
+#### 0.13.0 - 2017-12-22
  - removes `is_significant` and `test_result` from `StatisticalResult`. Users can instead choose their significance level by comparing to `p_value`. The string representation of this class has changed aswell.
  - `CoxPHFitter` and `AalenAdditiveFitter` now have a `score_` property that is the concordance-index of the dataset to the fitted model.
  - `CoxPHFitter` and `AalenAdditiveFitter` no longer have the `data` property. It was an _almost_ duplicate of the training data, but was causing the model to be very large when serialized.
@@ -673,7 +704,7 @@ I'm skipping 0.21.4 version because of deployment issues.
  - `CoxPHFitter` has a slightly more intelligent (barely...) way to pick a step size, so convergence should generally be faster.
  - `CoxPHFitter.fit` now has accepts a `weight_col` kwarg so one can pass in weights per observation. This is very useful if you have many subjects, and the space of covariates is not large. Thus you can group the same subjects together and give that observation a weight equal to the count. Altogether, this means a much faster regression.
 
-### 0.12.0
+#### 0.12.0
  - removes  `include_likelihood` from `CoxPHFitter.fit` - it was not slowing things down much (empirically), and often I wanted it for debugging (I suppose others do too). It's also another exit condition, so we many exit from the NR iterations faster.
  - added `step_size` param to `CoxPHFitter.fit` - the default is good, but for extremely large or small datasets this may want to be set manually.
  - added a warning to `CoxPHFitter` to check for complete seperation: https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
@@ -691,7 +722,7 @@ I'm skipping 0.21.4 version because of deployment issues.
 #### 0.11.1 - 2017-06-22
  - Python3 fix for `CoxPHFitter.plot`.
 
-### 0.11.0 - 2017-06-21
+#### 0.11.0 - 2017-06-21
  - fixes regression in `KaplanMeierFitter.plot` when using Seaborn and lifelines.
  - introduce a new `.plot` function to a fitted `CoxPHFitter` instance. This plots the hazard coefficients and their confidence intervals.
  - in all plot methods, the `ix` kwarg has been deprecated in favour of a new `loc` kwarg. This is to align with Pandas deprecating `ix`
@@ -699,7 +730,7 @@ I'm skipping 0.21.4 version because of deployment issues.
 #### 0.10.1 - 2017-06-05
  - fix in internal normalization for `CoxPHFitter` predict methods.
 
-### 0.10.0
+#### 0.10.0
  - corrected bug that was returning the wrong baseline survival and hazard values in `CoxPHFitter` when `normalize=True`.
  - removed  `normalize` kwarg in `CoxPHFitter`. This was causing lots of confusion for users, and added code complexity. It's really nice to be able to remove it.
  - correcting column name in `CoxPHFitter.baseline_survival_`
@@ -721,7 +752,7 @@ I'm skipping 0.21.4 version because of deployment issues.
 #### 0.9.1
  - add two summary functions to Weibull and Exponential fitter, solves #224
 
-### 0.9.0
+#### 0.9.0
  - new prediction function in `CoxPHFitter`, `predict_log_hazard_relative_to_mean`, that mimics what R's `predict.coxph` does.
  - removing the `predict` method in CoxPHFitter and AalenAdditiveFitter. This is because the choice of `predict_median` as a default was causing too much confusion, and no other natual choice as a default was available. All other `predict_` methods remain.
  - Default predict method in `k_fold_cross_validation` is now `predict_expectation`
@@ -734,7 +765,7 @@ I'm skipping 0.21.4 version because of deployment issues.
     - scaling of smooth hazards in NelsonAalenFitter was off by a factor of 0.5.
 
 
-### 0.8.0
+#### 0.8.0
  - reorganized lifelines directories:
     - moved test files out of main directory.
     - moved `utils.py` into it's own directory.
@@ -755,7 +786,7 @@ categorical variables in your dataset.
 - refactor each fitter into it's own submodule. For now, the tests are still in the same file. This will also *not* break the API.
 
 
-### 0.7.0 - 2015-03-01
+#### 0.7.0 - 2015-03-01
 - allow for multiple fitters to be passed into `k_fold_cross_validation`.
 - statistical tests in `lifelines.statistics`. now return a `StatisticalResult` object with properties like `p_value`, `test_results`, and `summary`.
 - fixed a bug in how log-rank statistical tests are performed. The covariance matrix was not being correctly calculated. This resulted in slightly different p-values.
@@ -768,7 +799,7 @@ categorical variables in your dataset.
 so if your work is to sum up the survival function (for expected values or something similar), it's more difficult to
 make a mistake.
 
-### 0.6.0 - 2015-02-04
+#### 0.6.0 - 2015-02-04
 
 - Inclusion of the univariate fitters `WeibullFitter` and `ExponentialFitter`.
 - Removing `BayesianFitter` from lifelines.
@@ -792,7 +823,7 @@ is `smoothing_penalizer`.
 - Adding "At Risk" counts option to univariate fitter `plot` methods, `.plot(at_risk_counts=True)`, and the function `lifelines.plotting.add_at_risk_counts`.
 - Fix bug Epanechnikov kernel.
 
-### 0.5.0 - 2014-12-07
+#### 0.5.0 - 2014-12-07
 
 - move testing to py.test
 - refactor tests into smaller files
@@ -831,7 +862,7 @@ is `smoothing_penalizer`.
 
 #### 0.4.1.1
 
-- Ability to specify default printing in statsitical tests with the `suppress_print` keyword argument (default False).
+- Ability to specify default printing in statistical tests with the `suppress_print` keyword argument (default False).
 - For the multivariate log rank test, the inverse step has been replaced with the generalized inverse. This seems to be what other packages use.
 - Adding more robust cross validation scheme based on issue #67.
 - fixing `regression_dataset` in `datasets`.
@@ -849,7 +880,7 @@ is `smoothing_penalizer`.
  - Adding a Changelog.
  - more sanitizing for the statistical tests =)
 
-### 0.4.0 - 2014-06-08
+#### 0.4.0 - 2014-06-08
 
  - `CoxFitter` implements Cox Proportional Hazards model in lifelines.
  - lifelines moves the wheels distributions.

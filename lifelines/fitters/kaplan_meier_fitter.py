@@ -55,7 +55,7 @@ class KaplanMeierFitter(UnivariateFitter):
     confidence_interval_survival_function_ : DataFrame
         The lower and upper confidence intervals for the survival function. An alias of
         ``confidence_interval_``. Uses Greenwood's Exponential formula ("log-log" in R).
-    cumumlative_density_ : DataFrame
+    cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
     confidence_interval_cumulative_density_ : DataFrame
         The lower and upper confidence intervals for the cumulative density.
@@ -363,12 +363,7 @@ class KaplanMeierFitter(UnivariateFitter):
         ax:
             a pyplot axis object
         """
-        return _plot_estimate(
-            self,
-            estimate=self.cumulative_density_,
-            confidence_intervals=self.confidence_interval_cumulative_density_,
-            **kwargs
-        )
+        return _plot_estimate(self, estimate="cumulative_density_", **kwargs)
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.

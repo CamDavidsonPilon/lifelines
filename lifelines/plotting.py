@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import warnings
+from typing import Union
+
 import numpy as np
-from lifelines.utils import coalesce, CensoringType
 from scipy import stats
 from matplotlib import pyplot as plt
+import pandas as pd
+
+from lifelines.utils import coalesce, CensoringType
 
 
 __all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot", "cdf_plot", "rmst_plot", "loglogs_plot"]
@@ -655,18 +659,25 @@ def _plot_estimate(
     dataframe_slicer(plot_estimate_config.estimate_).rename(
         columns=lambda _: plot_estimate_config.kwargs.pop("label")
     ).plot(**plot_estimate_config.kwargs)
+
     # plot confidence intervals
     if ci_show:
         if ci_only_lines:
-            dataframe_slicer(plot_estimate_config.confidence_interval_).plot(
-                linestyle="-",
-                linewidth=1,
-                color=[plot_estimate_config.colour],
-                legend=ci_legend,
-                drawstyle=plot_estimate_config.kwargs["drawstyle"],
-                ax=plot_estimate_config.ax,
-                alpha=0.6,
-            )
+            # see https://github.com/CamDavidsonPilon/lifelines/issues/928
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                (
+                    dataframe_slicer(plot_estimate_config.confidence_interval_)
+                    .rename(columns=lambda s: ("" if ci_legend else "_") + s)
+                    .plot(
+                        linestyle="-",
+                        linewidth=1,
+                        color=[plot_estimate_config.colour],
+                        drawstyle=plot_estimate_config.kwargs["drawstyle"],
+                        ax=plot_estimate_config.ax,
+                        alpha=0.6,
+                    )
+                )
         else:
             x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
             lower = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [0]]).values[:, 0]
@@ -694,7 +705,7 @@ def _plot_estimate(
 
 
 class PlotEstimateConfig:
-    def __init__(self, cls, estimate, loc, iloc, show_censors, censor_styles, ax, **kwargs):
+    def __init__(self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, ax, **kwargs):
 
         self.censor_styles = coalesce(censor_styles, {})
 

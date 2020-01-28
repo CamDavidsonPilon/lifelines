@@ -6,7 +6,7 @@ import pandas as pd
 
 
 class Printer:
-    def __init__(self, headers: List[Tuple], model, justify: Callable, decimals: int, header_kwargs: Dict):
+    def __init__(self, model, headers: List[Tuple[str, Any]], justify: Callable, decimals: int, header_kwargs: Dict):
         self.headers = headers
         self.model = model
         self.decimals = decimals
@@ -178,7 +178,7 @@ class Printer:
             try:
                 print("---")
                 if utils.CensoringType.is_right_censoring(self.model) and self.model._KNOWN_MODEL:
-                    print("Concordance = {:.{prec}f}".format(self.model.score_, prec=decimals))
+                    print("Concordance = {:.{prec}f}".format(self.model.concordance_index_, prec=decimals))
             except AttributeError:
                 pass
 

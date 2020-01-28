@@ -5,7 +5,7 @@ import collections
 from datetime import datetime
 from functools import wraps
 from textwrap import dedent
-from typing import Union, Any, Tuple, List, Callable, Optional
+from typing import Union, Any, Tuple, List, Callable, Optional, Dict
 
 import numpy as np
 from numpy import ndarray
@@ -220,7 +220,9 @@ def median_survival_times(model_or_survival_function) -> float:
         raise ValueError("Can't compute median survival time of object %s" % model_or_survival_function)
 
 
-def restricted_mean_survival_time(model_or_survival_function, t: float = np.inf, return_variance=False) -> float:
+def restricted_mean_survival_time(
+    model_or_survival_function, t: float = np.inf, return_variance=False
+) -> Union[float, Tuple[float, float]]:
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
@@ -691,7 +693,7 @@ def datetimes_to_durations(
     return T, C.values
 
 
-def coalesce(*args) -> Optional[Any]:
+def coalesce(*args) -> Any:
     for arg in args:
         if arg is not None:
             return arg
@@ -708,9 +710,8 @@ def k_fold_cross_validation(
     duration_col,
     event_col=None,
     k=5,
-    evaluation_measure=concordance_index,
+    scoring_method="log_likelihood",
     predictor="predict_expectation",
-    predictor_kwargs={},
     fitter_kwargs={},
 ):  # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals
     """
@@ -746,8 +747,6 @@ def k_fold_cross_validation(
       The interface for the method is: ``predict(self, data, **optional_kwargs)``
     fitter_kwargs:
       keyword args to pass into fitter.fit method.
-    predictor_kwargs:
-      keyword args to pass into predictor-method.
 
     Returns
     -------
@@ -785,19 +784,10 @@ def k_fold_cross_validation(
         training_data = df.loc[~ix]
         testing_data = df.loc[ix]
 
-        T_actual = testing_data[duration_col].values
-        E_actual = testing_data[event_col].values
-        X_testing = testing_data[testing_columns]
-
         for fitter, scores in zip(fitters, fitter_scores):
             # fit the fitter to the training data
             fitter.fit(training_data, duration_col=duration_col, event_col=event_col, **fitter_kwargs)
-            T_pred = getattr(fitter, predictor)(X_testing, **predictor_kwargs).values
-
-            try:
-                scores.append(evaluation_measure(T_actual, T_pred, E_actual))
-            except TypeError:
-                scores.append(evaluation_measure(T_actual, T_pred))
+            scores.append(fitter.score(testing_data, scoring_method=scoring_method))
 
     # If a single fitter was given as argument, return a single result
     if len(fitters) == 1:
@@ -943,10 +933,13 @@ def _get_index(X) -> List[Any]:
     # we need a unique index because these are about to become column names.
     if isinstance(X, pd.DataFrame) and X.index.is_unique:
         index = list(X.index)
+    elif isinstance(X, pd.DataFrame) and not X.index.is_unique:
+        warnings.warn("DataFrame Index is not unique, defaulting to incrementing index instead.")
+        index = list(range(X.shape[0]))
     elif isinstance(X, pd.Series):
-        return [0]
+        return list(X.index)
     else:
-        # If it's not a dataframe, order is up to user
+        # If it's not a dataframe or index is not unique, order is up to user
         index = list(range(X.shape[0]))
     return index
 
@@ -1514,7 +1507,7 @@ class StepSizer:
         self.initial_step_size = initial_step_size
         self.step_size = initial_step_size
         self.temper_back_up = False
-        self.norm_of_deltas = []
+        self.norm_of_deltas: List[float] = []
 
     def update(self, norm_of_delta: float) -> "StepSizer":
         SCALE = 1.2
@@ -1554,7 +1547,7 @@ class StepSizer:
         return self.step_size
 
 
-def _to_1d_array(x):
+def _to_1d_array(x) -> np.array:
     v = np.atleast_1d(x)
     try:
         if v.shape[0] > 1 and v.shape[1] > 1:
@@ -1647,7 +1640,7 @@ def safe_zip(first, second):
 
 
 class DataframeSliceDict:
-    def __init__(self, df, mappings):
+    def __init__(self, df: pd.DataFrame, mappings: Dict[str, List[str]]):
         self.df = df
         self.mappings = mappings
         self.size = sum(len(v) for v in self.mappings.values())
@@ -1672,7 +1665,7 @@ class DataframeSliceDict:
             yield DataframeSliceDict(x.to_frame().T, self.mappings)
 
 
-def find_best_parametric_model(event_times, event_observed=None, evaluation: str = "AIC", additional_models=None):
+def find_best_parametric_model(event_times, event_observed=None, scoring_method: str = "AIC", additional_models=None):
     """
     To quickly determine the best¹ univariate model, this function will iterate through each
     parametric model available in lifelines and select the one that minimizes a particular measure of fit.
@@ -1681,13 +1674,12 @@ def find_best_parametric_model(event_times, event_observed=None, evaluation: str
 
     Parameters
     -------------
-    event_times: list, np.ndarray, pd.Series
+    event_times: list, np.array, pd.Series
         a (n,) array of observed survival times.
-    event_observed: list, np.ndarray, pd.Series
+    event_observed: list, np.array, pd.Series
         a (n,) array of censored flags, 1 if observed,  0 if not. Default None assumes all observed.
-    evaluation: string
+    scoring_method: string
         one of {"AIC", "BIC"}
-
     additional_models: list
         list of other parametric models that implement the lifelines API.
 
@@ -1711,10 +1703,11 @@ def find_best_parametric_model(event_times, event_observed=None, evaluation: str
 
     evaluation_lookup = {
         "AIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_,
-        "BIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_ * np.log(T.shape[0]),
+        "BIC": lambda model: 2 * len(model._fitted_parameter_names)
+        - 2 * model.log_likelihood_ * np.log(event_times.shape[0]),
     }
 
-    eval = evaluation_lookup[evaluation]
+    eval = evaluation_lookup[scoring_method]
 
     if event_observed is None:
         event_observed = np.ones_like(event_times, dtype=bool)

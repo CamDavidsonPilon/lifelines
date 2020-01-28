@@ -296,11 +296,14 @@ class TestPlotting:
 
     def test_parametric_plotting_with_show_censors(self, block):
         n = 200
-        T = 50 * np.random.exponential(1, size=(n, 1)) ** 2
-        E = np.random.rand(n) > 0.2
+        T = (np.sqrt(50) * np.random.exponential(1, size=n)) ** 2
+        E = T < 100
+        T = np.minimum(T, 100)
 
-        wf = WeibullFitter().fit(T, E, timeline=np.linspace(0, 5, 1000))
+        wf = WeibullFitter().fit(T, E)
+        wf.plot_density(show_censors=True)
         wf.plot_cumulative_density(show_censors=True)
+
         self.plt.title("test_parametric_plotting_with_show_censors:cumulative_density")
         self.plt.show(block=block)
 
@@ -310,6 +313,10 @@ class TestPlotting:
 
         wf.plot_cumulative_hazard(show_censors=True)
         self.plt.title("test_parametric_plotting_with_show_censors:cumulative_hazard")
+        self.plt.show(block=block)
+
+        wf.plot_density(show_censors=True)
+        self.plt.title("test_parametric_plotting_with_show_censors:density")
         self.plt.show(block=block)
         return
 
@@ -668,4 +675,12 @@ class TestPlotting:
 
         rmst_plot(kmf_con, model2=kmf_exp, t=40.0)
         self.plt.title("test_rmst_plot_with_two_model")
+        self.plt.show(block=block)
+
+    def test_hide_ci_from_legend(self, block):
+        waltons = load_waltons()
+        kmf = KaplanMeierFitter().fit(waltons["T"], waltons["E"])
+        ax = kmf.plot(ci_show=True, ci_only_lines=True, ci_legend=False)
+        ax.legend(title="Legend title")
+        self.plt.title("test_hide_ci_from_legend")
         self.plt.show(block=block)

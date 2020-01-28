@@ -61,8 +61,11 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
         The estimated hazard (with custom timeline if provided)
     survival_function_ : DataFrame
         The estimated survival function (with custom timeline if provided)
-    cumumlative_density_ : DataFrame
+    cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
+    density: DataFrame
+        The estimated density function (PDF) (with custom timeline if provided)
+
     variance_matrix_ : numpy array
         The variance matrix of the coefficients
     median_survival_time_: float
@@ -85,6 +88,8 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
     Looking for a 3-parameter Weibull model? See notes `here <https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html#3-parameter-Weibull-distribution>`_.
     """
 
+    lambda_: float
+    rho_: float
     _fitted_parameter_names = ["lambda_", "rho_"]
     _compare_to_values = np.array([1.0, 1.0])
     _scipy_fit_options = {"ftol": 1e-14}
