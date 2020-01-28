@@ -1500,7 +1500,7 @@ class TestParametricRegressionFitter:
         cb.fit(rossi, "week", "arrest", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
         wf.fit(rossi, "week", "arrest")
 
-        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=2)
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
 
         cb.fit_left_censoring(rossi, "week", "arrest", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
@@ -1561,14 +1561,14 @@ class TestCustomRegressionModel:
 
     def test_reparameterization_flips_the_sign(self, rossi):
 
-        covariates = {"lambda_": rossi.columns, "rho_": ["intercept"], "beta_": ["intercept", "fin"]}
+        regressors = {"lambda_": rossi.columns, "rho_": ["intercept"], "beta_": ["intercept", "fin"]}
 
         cmA = CureModelA()
         cmB = CureModelB()
         cmC = CureModelC()
 
-        cmA.fit(rossi, "week", event_col="arrest", regressors=covariates)
-        cmB.fit(rossi, "week", event_col="arrest", regressors=covariates)
+        cmA.fit(rossi, "week", event_col="arrest", regressors=regressors)
+        cmB.fit(rossi, "week", event_col="arrest", regressors=regressors)
         cmC.fit(
             rossi,
             "week",
@@ -1577,7 +1577,7 @@ class TestCustomRegressionModel:
         )
         assert_frame_equal(cmA.summary.loc["lambda_"], cmB.summary.loc["lambda_"])
         assert_frame_equal(cmA.summary.loc["rho_"], cmB.summary.loc["rho_"])
-        assert_frame_equal(cmC.summary.loc["beta_"], cmB.summary.loc["beta_"])
+        assert_frame_equal(cmC.summary, cmB.summary)
         assert_series_equal(cmA.params_.loc["beta_"], -cmB.params_.loc["beta_"])
 
 
