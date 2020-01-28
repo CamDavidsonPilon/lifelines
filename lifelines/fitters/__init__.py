@@ -916,6 +916,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 )
                 warnings.warn(warning_text, utils.StatisticalWarning)
 
+        self.variance_matrix_ = pd.DataFrame(
+            self.variance_matrix_, index=_fitted_parameter_names, cols=_fitted_parameter_names
+        )
         self._update_docstrings()
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame()
@@ -1567,9 +1570,9 @@ class ParametricRegressionFitter(RegressionFitter):
 
         if regressors is not None:
             # the .intersection preserves order, important!
-            self.regressors = {name: list(df.columns.intersection(cols)) for name, cols in regressors.items()}
+            self.regressors = {name: list(df.columns.intersection(cols)) for name, cols in sorted(regressors.items())}
         else:
-            self.regressors = {name: df.columns.tolist() for name in self._fitted_parameter_names}
+            self.regressors = {name: df.columns.tolist() for name in sorted(self._fitted_parameter_names)}
         assert all(
             len(cols) > 0 for cols in self.regressors.values()
         ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
@@ -1616,7 +1619,7 @@ class ParametricRegressionFitter(RegressionFitter):
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
         self.params_ = _params / self._norm_std
 
-        self.variance_matrix_ = self._compute_variance_matrix()
+        self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
         self.standard_errors_ = self._compute_standard_errors(
             Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
         )
@@ -1757,7 +1760,7 @@ class ParametricRegressionFitter(RegressionFitter):
             if self.robust:
                 se = np.sqrt(self._compute_sandwich_errors(Ts, E, weights, entries, Xs).diagonal())
             else:
-                se = np.sqrt(self.variance_matrix_.diagonal())
+                se = np.sqrt(self.variance_matrix_.values.diagonal())
             return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):
