@@ -916,9 +916,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 )
                 warnings.warn(warning_text, utils.StatisticalWarning)
 
-        self.variance_matrix_ = pd.DataFrame(
-            self.variance_matrix_, index=_fitted_parameter_names, cols=_fitted_parameter_names
-        )
         self._update_docstrings()
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame()
@@ -1619,7 +1616,7 @@ class ParametricRegressionFitter(RegressionFitter):
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
         self.params_ = _params / self._norm_std
 
-        self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
+        self.variance_matrix_ = self._compute_variance_matrix()
         self.standard_errors_ = self._compute_standard_errors(
             Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
         )
