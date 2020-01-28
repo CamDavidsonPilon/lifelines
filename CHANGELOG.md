@@ -1,5 +1,12 @@
 ## Changelog
 
+#### 0.23.9 - 2020-01-28
+
+##### Bug fixes
+ - fixed important error when a parametric regression model would not assign the correct labels to fitted
+parameters' variances. See more here: https://github.com/CamDavidsonPilon/lifelines/issues/931. Users of `GeneralizedGammaRegressionFitter` and any custom regression models should update their code as soon as possible.
+
+
 #### 0.23.8 - 2020-01-21
 
 ##### Bug fixes
