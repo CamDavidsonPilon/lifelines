@@ -669,3 +669,11 @@ class TestPlotting:
         rmst_plot(kmf_con, model2=kmf_exp, t=40.0)
         self.plt.title("test_rmst_plot_with_two_model")
         self.plt.show(block=block)
+
+    def test_hide_ci_from_legend(self, block):
+        waltons = load_waltons()
+        kmf = KaplanMeierFitter().fit(waltons["T"], waltons["E"])
+        ax = kmf.plot(ci_show=True, ci_only_lines=True, ci_legend=False)
+        ax.legend(title="Legend title")
+        self.plt.title("test_hide_ci_from_legend")
+        self.plt.show(block=block)

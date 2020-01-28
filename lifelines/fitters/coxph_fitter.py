@@ -57,7 +57,7 @@ CONVERGENCE_DOCS = "Please see the following tips in the lifelines documentation
 # From https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
 soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
 d_soft_abs = elementwise_grad(soft_abs)
-dd_soft_abs = elementwise_grad(soft_abs)
+dd_soft_abs = elementwise_grad(d_soft_abs)
 
 
 class BatchVsSingle:
@@ -103,10 +103,14 @@ class CoxPHFitter(RegressionFitter):
         'Efron' is available.
 
       penalizer: float, optional (default=0.0)
-        Attach an L2 penalizer to the size of the coefficients during regression. This improves
+        Attach a penalty to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
-        For example, this shrinks the magnitude value of :math:`\beta_i`.
-        The penalty is :math:`\frac{1}{2} \text{penalizer} ||\beta||^2`.
+        For example, this shrinks the magnitude value of :math:`\beta_i`. See `l1_ratio` below.
+        The penalty term is :math:`\frac{1}{2} \text{penalizer} ((1-l1_ratio) ||\beta||_2^2 + l1_ratio*||beta||_1).
+
+      l1_ratio: float, optional (default=0.0)
+        Specify what ratio to assign to a L1 vs L2 penalty. Same as scikit-learn. See `penalizer` above.
+
 
       strata: list, optional
         specify a list of columns to use in stratification. This is useful if a
@@ -506,9 +510,11 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 self._ll_null_ = ll
 
             if self.penalizer > 0:
-                g -= n * self.penalizer * (self.l1_ratio * d_soft_abs(beta, 1.5 ** i) + (1 - self.l1_ratio) * beta)
-                h.flat[:: d + 1] -= (
-                    n * self.penalizer * (self.l1_ratio * dd_soft_abs(beta, 1.5 ** i) + (1 - self.l1_ratio))
+                g -= (
+                    n * 0.5 * self.penalizer * (self.l1_ratio * d_soft_abs(beta, 1.5 ** i) + (1 - self.l1_ratio) * beta)
+                )
+                h[np.diag_indices(d)] -= (
+                    n * 0.5 * self.penalizer * (self.l1_ratio * dd_soft_abs(beta, 1.5 ** i) + (1 - self.l1_ratio))
                 )
 
             # reusing a piece to make g * inv(h) * g.T faster later
