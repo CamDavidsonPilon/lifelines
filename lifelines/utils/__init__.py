@@ -9,6 +9,7 @@ from typing import Union, Any, Tuple, List, Callable, Optional
 
 import numpy as np
 from numpy import ndarray
+from autograd import numpy as anp
 from scipy.linalg import solve
 from scipy import stats
 from scipy.integrate import quad, trapz
@@ -1754,3 +1755,18 @@ def find_best_parametric_model(event_times, event_observed=None, evaluation: str
             continue
 
     return best_model, best_score
+
+
+class SplineFitterMixin:
+    _scipy_fit_method = "SLSQP"
+    _scipy_fit_options = {"ftol": 1e-10}
+
+    @staticmethod
+    def relu(x):
+        return anp.maximum(0, x)
+
+    def basis(self, x, knot, min_knot, max_knot):
+        lambda_ = (max_knot - knot) / (max_knot - min_knot)
+        return self.relu(x - knot) ** 3 - (
+            lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3
+        )

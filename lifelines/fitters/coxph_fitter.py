@@ -12,7 +12,7 @@ from scipy.linalg import solve as spsolve, LinAlgError, norm, inv
 from scipy.integrate import trapz
 from scipy import stats
 
-from lifelines.fitters import RegressionFitter
+from lifelines.fitters import RegressionFitter, ParametricRegressionFitter
 from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.statistics import _chisq_test_p_value, proportional_hazard_test, TimeTransformers, StatisticalResult
 from lifelines.utils.lowess import lowess
@@ -41,6 +41,7 @@ from lifelines.utils import (
     CensoringType,
     interpolate_at_times,
     format_p_value,
+    SplineFitterMixin,
 )
 
 from numpy import ndarray
@@ -60,6 +61,30 @@ d_soft_abs = elementwise_grad(soft_abs)
 dd_soft_abs = elementwise_grad(d_soft_abs)
 
 
+class _PHSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
+    """
+    Proportional Hazard model
+
+    References
+    ------------
+    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
+    """
+
+    _fitted_parameter_names = ["beta_", "phi0_", "phi1_", "phi2_"]
+    _KNOWN_MODEL = True
+
+    KNOTS = [1, 25, 50]
+
+    def _cumulative_hazard(self, params, T, Xs):
+        exp_Xbeta = anp.exp(anp.dot(Xs["beta_"], params["beta_"]))
+        lT = anp.log(T)
+        return exp_Xbeta * anp.exp(
+            params["phi0_"]
+            + params["phi1_"] * lT
+            + params["phi2_"] * self.basis(lT, anp.log(self.KNOTS[1]), anp.log(self.KNOTS[0]), anp.log(self.KNOTS[-1]))
+        )
+
+
 class BatchVsSingle:
     @staticmethod
     def decide(batch_mode: Optional[bool], n_unique: int, n_total: int, n_vars: int) -> str:
@@ -70,14 +95,14 @@ class BatchVsSingle:
             (batch_mode is None)
             and (
                 (
-                    6.153952e-01
-                    + -3.927241e-06 * n_total
-                    + 2.544118e-11 * n_total ** 2
-                    + 2.071377e00 * frac_dups
-                    + -9.724922e-01 * frac_dups ** 2
-                    + 9.138711e-06 * n_total * frac_dups
-                    + -5.617844e-03 * n_vars
-                    + -4.402736e-08 * n_vars * n_total
+                    6.153_952e-01
+                    + -3.927_241e-06 * n_total
+                    + 2.544_118e-11 * n_total ** 2
+                    + 2.071_377e00 * frac_dups
+                    + -9.724_922e-01 * frac_dups ** 2
+                    + 9.138_711e-06 * n_total * frac_dups
+                    + -5.617_844e-03 * n_vars
+                    + -4.402_736e-08 * n_vars * n_total
                 )
                 < 1
             )
@@ -100,7 +125,10 @@ class CoxPHFitter(RegressionFitter):
 
       tie_method: string, optional
         specify how the fitter should deal with ties. Currently only
-        'Efron' is available.
+        'efron' is available.
+
+      baseline_estimation_method: string, optional
+        specify how the fitter should estimate the baseline. `breslow` or `spline`
 
       penalizer: float, optional (default=0.0)
         Attach a penalty to the size of the coefficients during regression. This improves
@@ -158,22 +186,24 @@ class CoxPHFitter(RegressionFitter):
 
     def __init__(
         self,
-        tie_method: str = "Efron",
+        tie_method: str = "efron",
+        baseline_estimation_method: str = "breslow",
         penalizer: float = 0.0,
         strata: Optional[Union[List[str], str]] = None,
         l1_ratio=0.0,
-        **kwargs
+        **kwargs,
     ) -> None:
         super(CoxPHFitter, self).__init__(**kwargs)
         if penalizer < 0:
             raise ValueError("penalizer parameter must be >= 0.")
-        if tie_method != "Efron":
-            raise NotImplementedError("Only Efron is available at the moment.")
+        if tie_method != "efron":
+            raise NotImplementedError("Only 'efron' is available at the moment.")
 
         self.tie_method = tie_method
         self.penalizer = penalizer
         self.strata = strata
         self.l1_ratio = l1_ratio
+        self.baseline_estimation_method = baseline_estimation_method
 
     @CensoringType.right_censoring
     def fit(
@@ -324,14 +354,16 @@ class CoxPHFitter(RegressionFitter):
             normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index, columns=X.columns
         )
 
-        params_ = self._fit_model(
+        params_, ll_, variance_matrix_ = self._fit_model(
             X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size
         )
 
-        self.params_ = pd.Series(params_, index=X.columns, name="coef") / self._norm_std
+        self.log_likelihood_ = ll_
+        self.variance_matrix_ = variance_matrix_
+        print(params_)
+        self.params_ = pd.Series(params_, index=X.columns, name="coef")
         self.hazard_ratios_ = pd.Series(exp(self.params_), index=X.columns, name="exp(coef)")
 
-        self.variance_matrix_ = -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std)
         self.standard_errors_ = self._compute_standard_errors(X_norm, T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
@@ -418,7 +450,15 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-    def _fit_model(
+    def _fit_model(self, *args, **kwargs):
+        if self.baseline_estimation_method == "breslow":
+            return self._fit_model_breslow(*args, **kwargs)
+        elif self.baseline_estimation_method == "spline":
+            return self._fit_model_spline(*args, **kwargs)
+        else:
+            raise ValueError("Invalid baseline estimate supplied.")
+
+    def _fit_model_breslow(
         self,
         X: DataFrame,
         T: Series,
@@ -429,7 +469,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         precision: float = 1e-07,
         show_progress: bool = True,
         max_steps: int = 500,
-    ) -> ndarray:  # pylint: disable=too-many-statements,too-many-branches
+    ):  # pylint: disable=too-many-statements,too-many-branches
         """
         Newton Rhaphson algorithm for fitting CPH model.
 
@@ -586,10 +626,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             previous_ll = ll
             step_size = step_sizer.update(norm_delta).next()
 
-        self._hessian_ = hessian
-        self._score_ = gradient
-        self.log_likelihood_ = ll
-
         if show_progress and success:
             print("Convergence success after %d iterations." % (i))
         elif show_progress and not success:
@@ -609,7 +645,46 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 "Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, ConvergenceWarning
             )
 
-        return beta
+        variance_matrix_ = -inv(hessian) / np.outer(self._norm_std, self._norm_std)
+        params_ = beta / self._norm_std.values
+        return params_, ll, variance_matrix_
+
+    def _fit_model_spline(
+        self,
+        X: DataFrame,
+        T: Series,
+        E: Series,
+        weights: Series,
+        initial_point: Optional[ndarray] = None,
+        show_progress: bool = True,
+        **kwargs,
+    ):
+        df = X.copy()
+        df["T"] = T
+        df["E"] = E
+        df["weights"] = weights
+        df["constant"] = 1.0
+
+        regressors = {
+            "beta_": df.columns.difference(["T", "E", "weights", "constant"]),
+            "phi0_": ["constant"],
+            "phi1_": ["constant"],
+            "phi2_": ["constant"],
+        }
+
+        cph = _PHSplineFitter(penalizer=self.penalizer, l1_ratio=self.l1_ratio)
+        cph.fit(
+            df,
+            "T",
+            "E",
+            weights_col="weights",
+            show_progress=show_progress,
+            initial_point=initial_point,
+            robust=self.robust,
+            regressors=regressors,
+        )
+
+        return cph.params_.loc["beta_"], cph.log_likelihood_, cph.variance_matrix_
 
     def _get_efron_values_single(
         self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
@@ -1782,7 +1857,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 exp_log_hazards[order],
                 yaxis_locations,
                 xerr=np.vstack([lower_errors[order], upper_errors[order]]),
-                **errorbar_kwargs
+                **errorbar_kwargs,
             )
             ax.set_xlabel("HR (%g%% CI)" % ((1 - self.alpha) * 100))
         else:

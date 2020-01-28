@@ -9,7 +9,7 @@ This version and future versions of lifelines no longer support py35.
 
 ##### API Changes
  - The penalty in Cox models is now scaled by the number of observations. This makes it invariant to changing sample sizes. This change also make the penalty magnitude behave the same as any parametric regression model.
-
+ - removed `_score_` from cox model.
 
 #### 0.23.9 - 2020-01-28
 

@@ -1129,9 +1129,10 @@ class ParametricRegressionFitter(RegressionFitter):
     _scipy_fit_options = dict()
     _KNOWN_MODEL = False
 
-    def __init__(self, alpha=0.05, penalizer=0.0):
+    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha)
         self.penalizer = penalizer
+        self.l1_ratio = l1_ratio
 
     def _check_values_post_fitting(self, df, T, E, weights, entries):
         utils.check_complete_separation(df, E, T, self.event_col)
@@ -1640,8 +1641,10 @@ class ParametricRegressionFitter(RegressionFitter):
         params, _ = flatten(params)
         # remove constant cols from being penalized
         params = params[~self._constant_cols]
-        if self.penalizer > 0:
-            penalty = (params ** 2).sum()
+        if self.penalizer > 0 and self.l1_ratio > 0:
+            penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
+        elif self.penalizer > 0 and self.l1_ratio <= 0:
+            penalty = 0.5 * (params ** 2).sum()
         else:
             penalty = 0
         return neg_ll + self.penalizer * penalty
