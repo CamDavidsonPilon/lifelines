@@ -1548,7 +1548,7 @@ class CureModelB(ParametricRegressionFitter):
 
 
 class CureModelC(CureModelB):
-    # notice the c vs 1-c in the return statement
+    # shuffle these parameter names - shouldn't change anything.
     _fitted_parameter_names = ["lambda_", "rho_", "beta_"]
 
 

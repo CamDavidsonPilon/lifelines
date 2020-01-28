@@ -1757,7 +1757,7 @@ class ParametricRegressionFitter(RegressionFitter):
             if self.robust:
                 se = np.sqrt(self._compute_sandwich_errors(Ts, E, weights, entries, Xs).diagonal())
             else:
-                se = np.sqrt(self.variance_matrix_.values.diagonal())
+                se = np.sqrt(self.variance_matrix_.diagonal())
             return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):
