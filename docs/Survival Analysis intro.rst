@@ -14,11 +14,11 @@ Traditionally, survival analysis was developed to measure lifespans of individua
 An actuary or health professional would ask questions like
 "how long does this population live for?", and answer it using survival analysis.
 For example, the population may be a nation's population (for actuaries),
-or a population stricken by a disease (in the medical professionals case).
+or a population stricken by a disease (in the medical professional's case).
 Traditionally, sort of a morbid subject.
 
-The analysis can be further applied to not just traditional *births and
-deaths*, but any duration. Medical professionals might be interested in
+But survival analysis can be applied to not only *births and
+deaths*, but *any* duration. Medical professionals might be interested in
 the *time between childbirths*, where a birth in this case is the event
 of having a child, and a death is becoming pregnant again! (obviously,
 we are loose with our definitions of *birth and death*) Another example
@@ -29,11 +29,10 @@ Censoring
 ----------
 
 
-At the time you want to make inferences about durations, it is possible, likely
-true, that not all the death events have occurred yet. For example, a
+At the time you want to make inferences about durations, it is possible that not all the death events have occurred yet. For example, a
 medical professional will not wait 50 years for each individual in the
 study to pass away before investigating -- he or she is interested in
-the effectiveness of improving lifetimes after only a few years, or months possibly.
+making decisions after only a few years, or months possibly.
 
 The individuals in a population who have not been subject to the death
 event are labeled as *right-censored*, i.e.,
@@ -50,9 +49,9 @@ right-censored individuals. We will see why this is a mistake next.
 Consider a case where the population is actually made up of two
 subpopulations, :math:`A` and :math:`B`. Population :math:`A` has a very
 small lifespan, say 2 months on average, and population :math:`B`
-enjoys a much larger lifespan, say 12 months on average. We may
-not know this distinction beforehand. At :math:`t=10`, we
-wish to investigate the average lifespan for everyone.
+enjoys a much larger lifespan, say 12 months on average. We don't
+know this distinction beforehand. At :math:`t=10`, we
+wish to investigate the average lifespan for the entire population.
 
 In the figure below, the red lines denote the lifespan of individuals where the death event
 has been observed, and the blue lines denote the lifespan of the
@@ -99,7 +98,7 @@ that we would be severely underestimating the true average lifespan.
        9.41  10.  10.]
 
 
-Furthermore, if we instead simply took the mean of *all* observed
+Furthermore, if we instead simply took the mean of *all*
 lifespans, including the current lifespans of right-censored instances,
 we would *still* be underestimating the true average lifespan. Below we
 plot the actual lifetimes of all instances (recall we do not see this
@@ -118,9 +117,9 @@ information at :math:`t=10`).
 
 Survival analysis was originally developed to solve this type of
 problem, that is, to deal with estimation when our data is
-right-censored. Even in the case where all events have been
-observed, i.e. no censoring, survival analysis is still a very useful tool
-to understand durations.
+right-censored. However, wven in the case where all events have been
+observed, i.e. there is no censoring, survival analysis is still a very useful tool
+to understand durations and rates.
 
 The observations need not always start at zero, either. This was done
 only for understanding in the above example. Consider the example where
@@ -145,9 +144,9 @@ amount of time a couple is married. Or the time it takes a user to enter
 a webpage (an infinite time if they never do). The survival function -
 :math:`S(t)` - of a population is defined as
 
-.. math::  S(t) = Pr( T > t)
+.. math::  S(t) = Pr(T > t)
 
-In plain English: the survival function defines the probability the death event has not occurred yet at time
+Simply, the survival function defines the probability the death event has not occurred yet at time
 :math:`t`, or equivalently, the probability of surviving past time
 :math:`t`. Note the following properties of the survival function:
 

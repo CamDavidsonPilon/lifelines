@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import warnings
 from datetime import datetime
 import time
@@ -10,7 +8,7 @@ import pandas as pd
 from numpy.linalg import LinAlgError
 from scipy.integrate import trapz
 
-from lifelines.fitters import BaseFitter
+from lifelines.fitters import RegressionFitter
 from lifelines.utils.printer import Printer
 from lifelines.utils import (
     _get_index,
@@ -34,7 +32,7 @@ from lifelines.utils import (
 )
 
 
-class AalenAdditiveFitter(BaseFitter):
+class AalenAdditiveFitter(RegressionFitter):
 
     r"""
     This class fits the regression model:
@@ -360,7 +358,7 @@ It's important to know that the naive variance estimates of the coefficients are
         """
         return np.exp(-self.predict_cumulative_hazard(X))
 
-    def predict_percentile(self, X, p=0.5):
+    def predict_percentile(self, X, p=0.5) -> pd.Series:
         """
         Returns the median lifetimes for the individuals.
         http://stats.stackexchange.com/questions/102986/percentile-loss-functions
@@ -376,9 +374,9 @@ It's important to know that the naive variance estimates of the coefficients are
 
         """
         index = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X)[index]).T
+        return qth_survival_times(p, self.predict_survival_function(X)[index]).T.squeeze()
 
-    def predict_median(self, X):
+    def predict_median(self, X) -> pd.Series:
         """
 
         Parameters
@@ -392,7 +390,7 @@ It's important to know that the naive variance estimates of the coefficients are
         """
         return self.predict_percentile(X, 0.5)
 
-    def predict_expectation(self, X):
+    def predict_expectation(self, X) -> pd.Series:
         """
         Compute the expected lifetime, E[T], using covariates X.
 
@@ -407,7 +405,7 @@ It's important to know that the naive variance estimates of the coefficients are
         """
         index = _get_index(X)
         t = self._index
-        return pd.DataFrame(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
+        return pd.Series(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def _compute_confidence_intervals(self):
         ci = 100 * (1 - self.alpha)
@@ -572,6 +570,6 @@ It's important to know that the naive variance estimates of the coefficients are
             ]
         )
 
-        p = Printer(headers, self, justify, decimals, kwargs)
+        p = Printer(self, headers, justify, decimals, kwargs)
 
         p.print(style=style)

@@ -544,3 +544,15 @@ def load_lymph_node(**kwargs):
     Hosmer, D.W. and Lemeshow, S. and May, S. (2008). Applied Survival Analysis: Regression Modeling of Time to Event Data: Second Edition, John Wiley and Sons Inc., New York, NY
     """
     return _load_dataset("lymph_node.csv", index_col=0, **kwargs)
+
+
+def load_c_botulinum_lag_phase(**kwargs):
+    """
+    A dataset from [1] that represents the duration of the lag phase for C. botulinum, measured in days. The data is left and right censored.
+
+    References
+    -----------
+    Montville, THOMAS J. "Interaction of pH and NaCl on culture density of Clostridium botulinum 62A." Appl. Environ. Microbiol. 46.4 (1983): 961-963.
+
+    """
+    return _load_dataset("c_botulinum_lag_phase.csv", **kwargs)

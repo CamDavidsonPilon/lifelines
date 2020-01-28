@@ -17,7 +17,6 @@ CLASSIFIERS = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
@@ -28,7 +27,7 @@ LICENSE = "MIT"
 PACKAGE_DATA = {"lifelines": ["datasets/*"]}
 DESCRIPTION = "Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression"
 URL = "https://github.com/CamDavidsonPilon/lifelines"
-PYTHON_REQ = ">=3.5"
+PYTHON_REQ = ">=3.6"
 
 setup(
     name=NAME,

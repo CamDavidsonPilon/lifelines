@@ -34,7 +34,6 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
     See blog post `here <https://dataorigami.net/blogs/napkin-folding/churn>`_ and
     paper replication `here <https://github.com/CamDavidsonPilon/lifelines-replications/blob/master/replications/Friedman_1982.ipynb>`_
 
-
     """
 
     # about 50% faster than BFGS
@@ -51,11 +50,11 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         if len(breakpoints) and breakpoints[0] < 0:
             raise ValueError("First breakpoint must be greater than 0.")
 
-        self.breakpoints = np.append(breakpoints, [np.inf])
+        self.breakpoints = breakpoints
         self.n_breakpoints = len(self.breakpoints)
 
         self.penalizer = penalizer
-        self._fitted_parameter_names = ["lambda_%d_" % i for i in range(self.n_breakpoints)]
+        self._fitted_parameter_names = ["lambda_%d_" % i for i in range(self.n_breakpoints + 1)]
 
     def _add_penalty(self, params, neg_ll):
         params_stacked = np.stack(params.values())
@@ -71,7 +70,8 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
     def _cumulative_hazard(self, params, T, Xs):
         n = T.shape[0]
         T = T.reshape((n, 1))
-        M = np.minimum(np.tile(self.breakpoints, (n, 1)), T)
+        bps = np.append(self.breakpoints, [np.inf])
+        M = np.minimum(np.tile(bps, (n, 1)), T)
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
         lambdas_ = np.array([safe_exp(-np.dot(Xs[param], params[param])) for param in self._fitted_parameter_names])
         return (M * lambdas_.T).sum(1)
@@ -87,9 +87,9 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         if isinstance(X, pd.DataFrame):
             X = X[self.params_["lambda_0_"].index]
 
-        return np.array([np.exp(np.dot(X, self.params_["lambda_%d_" % i])) for i in range(self.n_breakpoints)])
+        return np.array([np.exp(np.dot(X, self.params_["lambda_%d_" % i])) for i in range(self.n_breakpoints + 1)])
 
-    def predict_cumulative_hazard(self, df, times=None, conditional_after=None):
+    def predict_cumulative_hazard(self, df, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Return the cumulative hazard rate of subjects in X at time points.
 
@@ -122,41 +122,8 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
 
         lambdas_ = self._prep_inputs_for_prediction_and_return_parameters(df)
 
-        bp = self.breakpoints
+        bp = np.append(self.breakpoints, [np.inf])
         M = np.minimum(np.tile(bp, (n, 1)), times)
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
 
         return pd.DataFrame(np.dot(M, (1 / lambdas_)), columns=_get_index(df), index=times[:, 0])
-
-    @property
-    def _ll_null(self):
-        if hasattr(self, "_ll_null_"):
-            return self._ll_null_
-
-        initial_point = np.zeros(len(self._fitted_parameter_names))
-
-        model = self.__class__(breakpoints=self.breakpoints[:-1], penalizer=self.penalizer)
-        regressors = {param_name: ["_intercept"] for param_name in self._fitted_parameter_names}
-        if CensoringType.is_right_censoring(self):
-            df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "entry": self.entry, "_intercept": 1.0})
-            model.fit_right_censoring(
-                df, "T", "E", initial_point=initial_point, entry_col="entry", regressors=regressors
-            )
-        elif CensoringType.is_interval_censoring(self):
-            df = pd.DataFrame(
-                {
-                    "lb": self.lower_bound,
-                    "ub": self.upper_bound,
-                    "E": self.event_observed,
-                    "entry": self.entry,
-                    "_intercept": 1.0,
-                }
-            )
-            model.fit_interval_censoring(
-                df, "lb", "ub", "E", initial_point=initial_point, entry_col="entry", regressors=regressors
-            )
-        if CensoringType.is_left_censoring(self):
-            raise NotImplementedError()
-
-        self._ll_null_ = model.log_likelihood_
-        return self._ll_null_

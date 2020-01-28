@@ -12,7 +12,6 @@ from autograd.builtins import DictBox
 from autograd.numpy.numpy_boxes import ArrayBox
 from lifelines.utils import DataframeSliceDict
 from numpy import ndarray
-from pandas.core.frame import DataFrame
 from typing import Dict, List, Optional, Union
 
 
@@ -68,10 +67,10 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
     score_: float
         the concordance index of the model.
     """
+    _primary_parameter_name = "mu_"
+    _ancillary_parameter_name = "sigma_"
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
-        self._primary_parameter_name = "mu_"
-        self._ancillary_parameter_name = "sigma_"
         super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
     def _cumulative_hazard(
@@ -110,12 +109,12 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
 
     def predict_percentile(
         self,
-        df: DataFrame,
+        df: pd.DataFrame,
         *,
-        ancillary_df: Optional[DataFrame] = None,
+        ancillary_df: Optional[pd.DataFrame] = None,
         p: float = 0.5,
         conditional_after: Optional[ndarray] = None
-    ) -> DataFrame:
+    ) -> pd.Series:
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -152,18 +151,18 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
 
         if conditional_after is None:
-            return pd.DataFrame(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p) - 1)), index=_get_index(df))
+            return pd.Series(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p) - 1)), index=_get_index(df))
         else:
             conditional_after = np.asarray(conditional_after)
             Z = (np.log(conditional_after) - np.log(exp_mu_)) / sigma_
             S = norm.sf(Z)
 
-            return pd.DataFrame(
+            return pd.Series(
                 exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after,
                 index=_get_index(df),
             )
 
-    def predict_expectation(self, df: DataFrame, ancillary_df: Optional[DataFrame] = None) -> DataFrame:
+    def predict_expectation(self, df: pd.DataFrame, ancillary_df: Optional[pd.DataFrame] = None) -> pd.Series:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -190,4 +189,4 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         predict_median
         """
         exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
-        return pd.DataFrame(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(df))
+        return pd.Series(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(df))

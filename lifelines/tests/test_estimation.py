@@ -24,7 +24,7 @@ try:
 except ImportError:
     pass
 
-from pandas.util.testing import assert_frame_equal, assert_series_equal, assert_index_equal
+from pandas.testing import assert_frame_equal, assert_series_equal, assert_index_equal
 import numpy.testing as npt
 
 from lifelines.utils import (
@@ -1594,7 +1594,9 @@ class TestRegressionFitters:
     @pytest.fixture
     def regression_models_sans_strata_model(self):
         return [
-            CoxPHFitter(penalizer=10.0),
+            CoxPHFitter(penalizer=1.0, baseline_estimation_method="breslow"),
+            CoxPHFitter(penalizer=1.0, baseline_estimation_method="spline", n_baseline_knots=1),
+            CoxPHFitter(penalizer=1.0, baseline_estimation_method="spline", n_baseline_knots=2),
             AalenAdditiveFitter(coef_penalizer=1.0, smoothing_penalizer=1.0),
             WeibullAFTFitter(fit_intercept=True),
             LogNormalAFTFitter(fit_intercept=True),
@@ -1608,6 +1610,24 @@ class TestRegressionFitters:
     def regression_models(self, regression_models_sans_strata_model):
         regression_models_sans_strata_model.append(CoxPHFitter(strata=["race", "paro", "mar", "wexp"]))
         return regression_models_sans_strata_model
+
+    def test_score_method_returns_same_value_for_unpenalized_models(self, rossi):
+        regression_models = [CoxPHFitter(), WeibullAFTFitter()]
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+            npt.assert_almost_equal(
+                fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0]
+            )
+            npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
+
+        rossi["_intercept"] = 1.0
+        regression_models = [CustomRegressionModelTesting(), PiecewiseExponentialRegressionFitter(breakpoints=[25.0])]
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+            npt.assert_almost_equal(
+                fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0]
+            )
+            npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
 
     def test_print_summary(self, rossi, regression_models):
         for fitter in regression_models:
@@ -1666,15 +1686,6 @@ class TestRegressionFitters:
         for fitter in regression_models:
             with pytest.raises(TypeError):
                 fitter.fit(rossi)
-
-    def test_fit_methods_can_accept_optional_event_col_param(self, regression_models, rossi):
-        rossi_without_arrest = rossi.copy().drop("arrest", axis=1)
-        for model in regression_models:
-            model.fit(rossi, "week", event_col="arrest")
-            assert_series_equal(model.event_observed.sort_index(), rossi["arrest"].astype(bool), check_names=False)
-
-            model.fit(rossi_without_arrest, "week")
-            npt.assert_array_equal(model.event_observed.values, np.ones(rossi.shape[0]))
 
     def test_predict_methods_in_regression_return_same_types(self, regression_models, rossi):
 
@@ -1743,7 +1754,7 @@ class TestRegressionFitters:
                         check_less_precise=2,
                     )
                 else:
-                    assert_series_equal(hazards, hazards_norm)
+                    assert_series_equal(hazards, hazards_norm, check_less_precise=2)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)
@@ -1758,13 +1769,13 @@ class TestRegressionFitters:
             except AttributeError:
                 pass
 
-    def test_error_is_raised_if_using_non_numeric_data_in_fit(self, regression_models_sans_strata_model):
+    def test_error_is_raised_if_using_non_numeric_data_in_fit(self):
         df = pd.DataFrame.from_dict(
             {
-                "t": [1.0, 6.0, 3.0, 4.0],
+                "t": [1.0, 5.0, 3.0, 4.0],
                 "bool_": [True, True, False, True],
                 "int_": [1, -1, 0, 2],
-                "uint8_": pd.Series([1, 3, 2, 5], dtype="uint8"),
+                "uint8_": pd.Series([1, 0, 2, 1], dtype="uint8"),
                 "string_": ["test", "a", "2.5", ""],
                 "float_": [1.2, -0.5, 0.0, 2.2],
                 "categorya_": pd.Series([1, 2, 3, 1], dtype="category"),
@@ -1772,7 +1783,7 @@ class TestRegressionFitters:
             }
         )
 
-        for fitter in regression_models_sans_strata_model:
+        for fitter in [CoxPHFitter(), WeibullAFTFitter()]:
             for subset in [["t", "categoryb_"], ["t", "string_"]]:
                 with pytest.raises(ValueError):
                     fitter.fit(df[subset], duration_col="t")
@@ -1781,24 +1792,24 @@ class TestRegressionFitters:
                 fitter.fit(df[subset], duration_col="t")
 
     @pytest.mark.xfail
-    def test_regression_model_has_score_(self, regression_models, rossi):
+    def test_regression_model_has_concordance_index_(self, regression_models, rossi):
 
         for fitter in regression_models:
-            assert not hasattr(fitter, "score_")
+            assert not hasattr(fitter, "concordance_index_")
             fitter.fit(rossi, duration_col="week", event_col="arrest")
-            assert hasattr(fitter, "score_")
+            assert hasattr(fitter, "concordance_index_")
 
     @pytest.mark.xfail
-    def test_regression_model_updates_score_(self, regression_models, rossi):
+    def test_regression_model_updates_concordance_index_(self, regression_models, rossi):
 
         for fitter in regression_models:
-            assert not hasattr(fitter, "score_")
+            assert not hasattr(fitter, "concordance_index_")
             fitter.fit(rossi, duration_col="week", event_col="arrest")
-            assert hasattr(fitter, "score_")
-            first_score_ = fitter.score_
+            assert hasattr(fitter, "concordance_index_")
+            first_score_ = fitter.concordance_index_
 
             fitter.fit(rossi.head(50), duration_col="week", event_col="arrest")
-            assert first_score_ != fitter.score_
+            assert first_score_ != fitter.concordance_index_
 
     def test_error_is_thrown_if_there_is_nans_in_the_duration_col(self, regression_models, rossi):
         rossi.loc[3, "week"] = None
@@ -1836,6 +1847,11 @@ class TestRegressionFitters:
 
 
 class TestPiecewiseExponentialRegressionFitter:
+    def test_print_summary(self):
+        df = load_rossi()
+        pew = PiecewiseExponentialRegressionFitter(breakpoints=[25, 40]).fit(df, "week", "arrest")
+        pew.print_summary()
+
     def test_inference(self):
 
         N, d = 80000, 2
@@ -1953,7 +1969,7 @@ class TestAFTFitters:
                 abs(
                     model.predict_percentile(subject, p=p)
                     - qth_survival_time(p, model.predict_survival_function(subject, times=times))
-                ).loc[400, 0]
+                ).loc[400]
                 < 0.5
             )
             assert (
@@ -1962,7 +1978,7 @@ class TestAFTFitters:
                     - qth_survival_time(
                         p, model.predict_survival_function(subject, times=times, conditional_after=[50])
                     )
-                ).loc[400, 0]
+                ).loc[400]
                 < 0.5
             )
 
@@ -2017,7 +2033,7 @@ class TestAFTFitters:
 
     def test_accept_initial_params(self, rossi, models):
         for fitter in models:
-            fitter.fit(rossi, "week", "arrest", initial_point=np.ones(9))
+            fitter.fit(rossi, "week", "arrest", initial_point=0.01 * np.ones(9))
 
     def test_log_likelihood_is_maximized_for_data_generating_model(self):
 
@@ -2488,6 +2504,29 @@ class TestCoxPHFitter:
     def cph(self):
         return CoxPHFitter()
 
+    @pytest.fixture
+    def cph_spline(self):
+        return CoxPHFitter(baseline_estimation_method="spline")
+
+    def test_penalty_term_is_used_in_log_likelihood_value(self, rossi):
+        assert (
+            CoxPHFitter(penalizer=2).fit(rossi, "week", "arrest").log_likelihood_
+            < CoxPHFitter(penalizer=1).fit(rossi, "week", "arrest").log_likelihood_
+            < CoxPHFitter(penalizer=0).fit(rossi, "week", "arrest").log_likelihood_
+        )
+        assert (
+            CoxPHFitter(penalizer=2, baseline_estimation_method="spline").fit(rossi, "week", "arrest").log_likelihood_
+            < CoxPHFitter(penalizer=1, baseline_estimation_method="spline").fit(rossi, "week", "arrest").log_likelihood_
+            < CoxPHFitter(penalizer=0, baseline_estimation_method="spline").fit(rossi, "week", "arrest").log_likelihood_
+        )
+
+    def test_baseline_estimation_for_spline(self, rossi, cph_spline):
+        cph_spline.fit(rossi, "week", "arrest")
+
+        assert isinstance(cph_spline.baseline_survival_, pd.DataFrame)
+        assert list(cph_spline.baseline_survival_.columns) == ["baseline survival"]
+        assert list(cph_spline.baseline_cumulative_hazard_.columns) == ["baseline cumulative hazard"]
+
     def test_conditional_after_in_prediction(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
         cph.fit(rossi, "week", "arrest")
@@ -2573,10 +2612,10 @@ class TestCoxPHFitter:
         """
 
         cph.fit(rossi, "week", "arrest")
-        c_index_no_strata = cph.score_
+        c_index_no_strata = cph.concordance_index_
 
         cph.fit(rossi, "week", "arrest", strata=["wexp"])
-        c_index_with_strata = cph.score_
+        c_index_with_strata = cph.concordance_index_
 
         assert c_index_with_strata != c_index_no_strata
         npt.assert_allclose(c_index_with_strata, 0.6124492)
@@ -2963,8 +3002,9 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
     def test_efron_newtons_method(self, data_nus, cph):
         cph._batch_mode = False
-        newton = cph._fit_model
+        newton = cph._newton_rhapson_for_efron_model
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
+
         assert np.abs(newton(X, T, E, W)[0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus, cph):
@@ -2975,7 +3015,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph.fit(data_pred2, "t", "E")
 
         X = data_pred2[data_pred2.columns.difference(["t", "E"])]
-        assert_frame_equal(cph.predict_partial_hazard(np.array(X)), cph.predict_partial_hazard(X))
+        assert_series_equal(cph.predict_partial_hazard(np.array(X)), cph.predict_partial_hazard(X))
 
     def test_prediction_methods_will_accept_a_times_arg_to_reindex_the_predictions(self, data_pred2, cph):
         cph.fit(data_pred2, duration_col="t", event_col="E")
@@ -2994,7 +3034,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cph.fit(data_pred2, duration_col="t", event_col="E")
 
         # Internal training set
-        ci_trn = cph.score_
+        ci_trn = cph.concordance_index_
         # New data should normalize in the exact same way
         ci_org = concordance_index(
             data_pred2["t"], -cph.predict_partial_hazard(data_pred2[["x1", "x2"]]).values, data_pred2["E"]
@@ -3693,9 +3733,9 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         #                                                 theta=1.0, scale=TRUE), data=rossi)
         # cat(round(mod.allison$coefficients, 4), sep=", ")
         expected = np.array([-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909])
-        cf = CoxPHFitter(penalizer=1.0)
+        cf = CoxPHFitter(penalizer=1.0 / rossi.shape[0])
         cf.fit(rossi, duration_col="week", event_col="arrest")
-        npt.assert_array_almost_equal(cf.params_.values, expected, decimal=4)
+        npt.assert_array_almost_equal(cf.params_.values, expected, decimal=2)
 
     def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
@@ -4115,13 +4155,13 @@ class TestAalenAdditiveFitter:
         misorder = ["age", "race", "wexp", "mar", "paro", "prio", "fin"]
         natural_order = rossi.columns.drop(["week", "arrest"])
         deleted_order = rossi.columns.difference(["week", "arrest"])
-        assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
-        assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
+        assert_series_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
+        assert_series_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
 
         aaf = AalenAdditiveFitter(fit_intercept=False)
         aaf.fit(rossi, event_col="arrest", duration_col="week")
-        assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
-        assert_frame_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
+        assert_series_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[misorder]))
+        assert_series_equal(aaf.predict_median(rossi[natural_order]), aaf.predict_median(rossi[deleted_order]))
 
     def test_large_dimensions_for_recursion_error(self):
         n = 500
@@ -4251,6 +4291,17 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(ctv.summary["coef"].values, [1.826757, 0.705963], decimal=4)
         npt.assert_almost_equal(ctv.summary["se(coef)"].values, [1.229, 1.206], decimal=3)
         npt.assert_almost_equal(ctv.summary["p"].values, [0.14, 0.56], decimal=2)
+
+    def test_that_id_col_is_optional(self, dfcv):
+
+        ctv_with_id = CoxTimeVaryingFitter().fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+        ctv_without_id = CoxTimeVaryingFitter().fit(
+            dfcv.drop("id", axis=1), start_col="start", stop_col="stop", event_col="event"
+        )
+
+        assert_frame_equal(ctv_without_id.summary, ctv_with_id.summary)
 
     def test_what_happens_to_nans(self, ctv, dfcv):
         """
