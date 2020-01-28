@@ -883,9 +883,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
         try:
-            self.variance_matrix_ = inv(self._hessian_)
+            variance_matrix_ = inv(self._hessian_)
         except np.linalg.LinAlgError:
-            self.variance_matrix_ = pinv(self._hessian_)
+            variance_matrix_ = pinv(self._hessian_)
             warning_text = dedent(
                 """\
 
@@ -903,7 +903,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             )
             warnings.warn(warning_text, utils.ApproximationWarning)
         finally:
-            if (self.variance_matrix_.diagonal() < 0).any():
+            if (variance_matrix_.diagonal() < 0).any():
                 warning_text = dedent(
                     """\
                     The diagonal of the variance_matrix_ has negative values. This could be a problem with %s's fit to the data.
@@ -916,6 +916,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 )
                 warnings.warn(warning_text, utils.StatisticalWarning)
 
+        self.variance_matrix_ = pd.DataFrame(
+            variance_matrix_, index=self._fitted_parameter_names, columns=self._fitted_parameter_names
+        )
         self._update_docstrings()
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame()
@@ -1616,7 +1619,7 @@ class ParametricRegressionFitter(RegressionFitter):
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
         self.params_ = _params / self._norm_std
 
-        self.variance_matrix_ = self._compute_variance_matrix()
+        self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
         self.standard_errors_ = self._compute_standard_errors(
             Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
         )
@@ -1757,7 +1760,7 @@ class ParametricRegressionFitter(RegressionFitter):
             if self.robust:
                 se = np.sqrt(self._compute_sandwich_errors(Ts, E, weights, entries, Xs).diagonal())
             else:
-                se = np.sqrt(self.variance_matrix_.diagonal())
+                se = np.sqrt(self.variance_matrix_.values.diagonal())
             return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):
