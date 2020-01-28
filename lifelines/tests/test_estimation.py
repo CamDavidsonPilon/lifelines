@@ -1523,11 +1523,6 @@ class CureModelA(ParametricRegressionFitter):
 
     _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
 
-    def __init__(self, **kwargs):
-        cols = load_rossi().drop(["week", "arrest"], axis=1).columns
-        self.regressors = {"lambda_": cols, "beta_": cols, "rho_": cols}
-        super(CureModelA, self).__init__(**kwargs)
-
     def _cumulative_hazard(self, params, T, Xs):
         c = expit(anp.dot(Xs["beta_"], params["beta_"]))
 
@@ -1542,11 +1537,6 @@ class CureModelB(ParametricRegressionFitter):
     # notice the c vs 1-c in the return statement
     _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
 
-    def __init__(self, **kwargs):
-        cols = load_rossi().drop(["week", "arrest"], axis=1).columns
-        self.regressors = {"lambda_": cols, "beta_": cols, "rho_": cols}
-        super(CureModelB, self).__init__(**kwargs)
-
     def _cumulative_hazard(self, params, T, Xs):
         c = expit(anp.dot(Xs["beta_"], params["beta_"]))
 
@@ -1555,6 +1545,11 @@ class CureModelB(ParametricRegressionFitter):
         cdf = 1 - anp.exp(-((T / lambda_) ** rho_))
 
         return -anp.log(c + (1 - c) * (1 - cdf))
+
+
+class CureModelC(CureModelB):
+    # notice the c vs 1-c in the return statement
+    _fitted_parameter_names = ["lambda_", "rho_", "beta_"]
 
 
 class TestCustomRegressionModel:
@@ -1570,11 +1565,19 @@ class TestCustomRegressionModel:
 
         cmA = CureModelA()
         cmB = CureModelB()
+        cmC = CureModelC()
 
         cmA.fit(rossi, "week", event_col="arrest", regressors=covariates)
         cmB.fit(rossi, "week", event_col="arrest", regressors=covariates)
-        assert_series_equal(cmA.params_.loc["lambda_"], cmB.params_.loc["lambda_"])
-        assert_series_equal(cmA.params_.loc["rho_"], cmB.params_.loc["rho_"])
+        cmC.fit(
+            rossi,
+            "week",
+            event_col="arrest",
+            regressors={"lambda_": rossi.columns, "beta_": ["intercept", "fin"], "rho_": ["intercept"]},
+        )
+        assert_frame_equal(cmA.summary.loc["lambda_"], cmB.summary.loc["lambda_"])
+        assert_frame_equal(cmA.summary.loc["rho_"], cmB.summary.loc["rho_"])
+        assert_frame_equal(cmC.summary.loc["beta_"], cmB.summary.loc["beta_"])
         assert_series_equal(cmA.params_.loc["beta_"], -cmB.params_.loc["beta_"])
 
 
