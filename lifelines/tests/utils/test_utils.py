@@ -15,6 +15,7 @@ from lifelines.datasets import load_regression_dataset, load_larynx, load_walton
 from lifelines import utils
 from lifelines import metrics
 from lifelines.utils.sklearn_adapter import sklearn_adapter
+from lifelines.utils.safe_exp import safe_exp
 
 
 def test_format_p_values():
@@ -1106,3 +1107,17 @@ def test_find_best_parametric_model_can_accept_other_models():
     T = np.random.exponential(2, 1000)
     model, score = utils.find_best_parametric_model(T, additional_models=[ExponentialFitter(), ExponentialFitter()])
     assert True
+
+
+def test_safe_exp():
+    from lifelines.utils.safe_exp import MAX
+
+    assert safe_exp(4.0) == np.exp(4.0)
+    assert safe_exp(MAX) == np.exp(MAX)
+    assert safe_exp(MAX + 1) == np.exp(MAX)
+
+    from autograd import grad
+
+    assert grad(safe_exp)(4.0) == np.exp(4.0)
+    assert grad(safe_exp)(MAX) == np.exp(MAX)
+    assert grad(safe_exp)(MAX + 1) == np.exp(MAX)
