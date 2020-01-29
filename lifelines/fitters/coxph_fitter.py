@@ -62,7 +62,7 @@ dd_soft_abs = elementwise_grad(d_soft_abs)
 
 class _PHSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
     """
-    Proportional Hazard model with cublic splines
+    Proportional Hazard model with single-knot cublic splines
 
     References
     ------------
@@ -666,6 +666,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         show_progress: bool = True,
         **kwargs,
     ):
+        if self.strata is not None:
+            raise NotImplementedError("Spline estimation cannot be used with strata yet.")
+
         df = X.copy()
         df["T"] = T
         df["E"] = E
@@ -1419,6 +1422,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         headers.extend(
             [
+                ("baseline estimation method", self.baseline_estimation_method),
                 ("number of observations", "{:g}".format(self.weights.sum())),
                 ("number of events observed", "{:g}".format(self.weights[self.event_observed > 0].sum())),
                 (
