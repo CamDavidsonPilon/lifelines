@@ -944,10 +944,13 @@ def _get_index(X) -> List[Any]:
     # we need a unique index because these are about to become column names.
     if isinstance(X, pd.DataFrame) and X.index.is_unique:
         index = list(X.index)
+    elif isinstance(X, pd.DataFrame) and not X.index.is_unique:
+        warnings.warn("DataFrame Index is not unique, defaulting to incrementing index instead.")
+        index = list(range(X.shape[0]))
     elif isinstance(X, pd.Series):
         return [0]
     else:
-        # If it's not a dataframe, order is up to user
+        # If it's not a dataframe or index is not unique, order is up to user
         index = list(range(X.shape[0]))
     return index
 

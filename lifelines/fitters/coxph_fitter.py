@@ -3,20 +3,26 @@ import time
 from datetime import datetime
 import warnings
 from textwrap import dedent, fill
-import numpy as np
-import pandas as pd
 from typing import Callable, Iterator, List, Optional, Tuple, Union, Any
 
-from numpy import dot, einsum, log, exp, zeros, arange, multiply
+import numpy as np
+from numpy import dot, einsum, log, exp, zeros, arange, multiply, ndarray
 from scipy.linalg import solve as spsolve, LinAlgError, norm, inv
 from scipy.integrate import trapz
 from scipy import stats
+import pandas as pd
+from pandas.core.frame import DataFrame
+from pandas.core.indexes.base import Index
+from pandas.core.series import Series
+from autograd import numpy as anp
+from autograd import elementwise_grad
 
 from lifelines.fitters import RegressionFitter, ParametricRegressionFitter
 from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.statistics import _chisq_test_p_value, proportional_hazard_test, TimeTransformers, StatisticalResult
 from lifelines.utils.lowess import lowess
 from lifelines.utils.printer import Printer
+from lifelines.utils.safe_exp import safe_exp
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio
 from lifelines.utils import (
     _get_index,
@@ -44,13 +50,6 @@ from lifelines.utils import (
     SplineFitterMixin,
 )
 
-from numpy import ndarray
-from pandas.core.frame import DataFrame
-from pandas.core.indexes.base import Index
-from pandas.core.series import Series
-from autograd import numpy as anp
-from autograd import elementwise_grad
-
 __all__ = ["CoxPHFitter"]
 
 CONVERGENCE_DOCS = "Please see the following tips in the lifelines documentation: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model"
@@ -63,25 +62,32 @@ dd_soft_abs = elementwise_grad(d_soft_abs)
 
 class _PHSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
     """
-    Proportional Hazard model
+    Proportional Hazard model with cublic splines
 
     References
     ------------
     Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
     """
 
-    _fitted_parameter_names = ["beta_", "phi0_", "phi1_", "phi2_"]
+    _fitted_parameter_names = ["beta_", "phi1_", "phi2_"]
     _KNOWN_MODEL = True
 
-    KNOTS = [1, 25, 50]
+    def set_knots(self, T, E):
+        self.knots = np.percentile(T[E.astype(bool)], [5, 50, 95])
+        return
+
+    def _pre_fit_model(self, Ts, E, df):
+        self.set_knots(Ts[0], E)
+
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
+        return {"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.5]), "phi2_": np.array([-0.5])}
 
     def _cumulative_hazard(self, params, T, Xs):
-        exp_Xbeta = anp.exp(anp.dot(Xs["beta_"], params["beta_"]))
         lT = anp.log(T)
-        return exp_Xbeta * anp.exp(
-            params["phi0_"]
+        return safe_exp(
+            anp.dot(Xs["beta_"], params["beta_"])
             + params["phi1_"] * lT
-            + params["phi2_"] * self.basis(lT, anp.log(self.KNOTS[1]), anp.log(self.KNOTS[0]), anp.log(self.KNOTS[-1]))
+            + params["phi2_"] * self.basis(lT, anp.log(self.knots[1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
         )
 
 
@@ -360,7 +366,6 @@ class CoxPHFitter(RegressionFitter):
 
         self.log_likelihood_ = ll_
         self.variance_matrix_ = variance_matrix_
-        print(params_)
         self.params_ = pd.Series(params_, index=X.columns, name="coef")
         self.hazard_ratios_ = pd.Series(exp(self.params_), index=X.columns, name="exp(coef)")
 
@@ -645,7 +650,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 "Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, ConvergenceWarning
             )
 
-        variance_matrix_ = -inv(hessian) / np.outer(self._norm_std, self._norm_std)
+        variance_matrix_ = pd.DataFrame(
+            -inv(hessian) / np.outer(self._norm_std, self._norm_std), index=X.columns, columns=X.columns
+        )
         params_ = beta / self._norm_std.values
         return params_, ll, variance_matrix_
 
@@ -666,25 +673,23 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df["constant"] = 1.0
 
         regressors = {
-            "beta_": df.columns.difference(["T", "E", "weights", "constant"]),
-            "phi0_": ["constant"],
+            "beta_": df.columns.difference(["T", "E", "weights"]),
             "phi1_": ["constant"],
             "phi2_": ["constant"],
         }
 
-        cph = _PHSplineFitter(penalizer=self.penalizer, l1_ratio=self.l1_ratio)
+        cph = _PHSplineFitter()
         cph.fit(
-            df,
-            "T",
-            "E",
-            weights_col="weights",
-            show_progress=show_progress,
-            initial_point=initial_point,
-            robust=self.robust,
-            regressors=regressors,
+            df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors
         )
+        self._ll_null_ = cph._ll_null
 
-        return cph.params_.loc["beta_"], cph.log_likelihood_, cph.variance_matrix_
+        return (
+            cph.params_.loc["beta_"].drop("constant") / self._norm_std,
+            cph.log_likelihood_,
+            cph.variance_matrix_.loc["beta_", "beta_"].drop("constant").drop("constant", axis=1)
+            / np.outer(self._norm_std, self._norm_std),
+        )
 
     def _get_efron_values_single(
         self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
@@ -1332,7 +1337,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if self.robust or self.cluster_col:
             se = np.sqrt(self._compute_sandwich_estimator(X, T, E, weights).diagonal())
         else:
-            se = np.sqrt(self.variance_matrix_.diagonal())
+            se = np.sqrt(self.variance_matrix_.values.diagonal())
         return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_estimator(self, X: DataFrame, T: Series, E: Series, weights: Series) -> ndarray:
@@ -1416,7 +1421,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             [
                 ("number of observations", "{:g}".format(self.weights.sum())),
                 ("number of events observed", "{:g}".format(self.weights[self.event_observed > 0].sum())),
-                ("partial log-likelihood", "{:.{prec}f}".format(self.log_likelihood_, prec=decimals)),
+                (
+                    "partial log-likelihood" if self.baseline_estimation_method == "breslow" else "log-likelihood",
+                    "{:.{prec}f}".format(self.log_likelihood_, prec=decimals),
+                ),
                 ("time fit was run", self._time_fit_was_called),
             ]
         )
