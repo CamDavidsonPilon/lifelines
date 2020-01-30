@@ -2,13 +2,13 @@ language: python
 cache: pip
 dist: xenial
 python:
-   - "3.5"
    - "3.6"
    - "3.7"
 env:
   matrix:
     - export PANDAS_VERSION=0.23.4     && export NUMPY_VERSION=1.17.3
     - export PANDAS_VERSION=0.25.3     && export NUMPY_VERSION=1.17.3
+    - export PANDAS_VERSION=0.25.3     && export NUMPY_VERSION=1.18.1
     - export NUMPY_VERSION=1.16.4      && export PANDAS_VERSION=0.25.3
     - export NUMPY_VERSION=1.15.4      && export PANDAS_VERSION=0.25.3
 before_install:
