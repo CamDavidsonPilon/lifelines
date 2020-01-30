@@ -158,12 +158,11 @@ class NelsonAalenFitter(UnivariateFitter):
 
         return self
 
-    def plot_hazard(self, **kwargs):
-        if "bandwidth" not in kwargs:
+    def plot_hazard(self, bandwidth=None, **kwargs):
+        if "bandwidth" is None:
             raise ValueError(
                 "Must specify a bandwidth parameter in the call to plot_hazard, e.g. `plot_hazard(bandwidth=1.0)`"
             )
-        bandwidth = kwargs.pop("bandwidth")
         estimate = self.smoothed_hazard_(bandwidth)
         confidence_intervals = self.smoothed_hazard_confidence_intervals_(bandwidth, estimate.values[:, 0])
         return _plot_estimate(self, estimate, confidence_intervals=confidence_intervals, **kwargs)
