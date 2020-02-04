@@ -44,29 +44,40 @@ Setting up a lifelines development environment
    environment <https://realpython.com/python-virtual-environments-a-primer/>`__
    (if you plan to use one).
 2. Install the development requirements and
-   ```pre-commit`` <https://pre-commit.com>`__ hooks. If you are on Mac,
+   `pre-commit <https://pre-commit.com>`__ hooks. If you are on Mac,
    Linux, or `Windows
-   ``WSL`` <https://docs.microsoft.com/en-us/windows/wsl/faq>`__ you can
+   WSL <https://docs.microsoft.com/en-us/windows/wsl/faq>`__ you can
    use the provided
-   ```Makefile`` <https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile>`__.
+   `Makefile <https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile>`__.
    Just type ``make`` into the console and you’re ready to start
    developing. This will also install the dev-requirements.
 
 Formatting
 ~~~~~~~~~~
 
-``lifelines`` uses the ```black`` <https://github.com/ambv/black>`__
-python formatter. There are 3 different ways to format your code. 1. Use
-the
-```Makefile`` <https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile>`__.
-\* ``make lint`` 2. Call ``black`` directly and pass the correct line
-length. \* ``black . -l 120`` 3. Have you code formatted automatically
-during commit with the ``pre-commit`` hook. \* stage and commit your
-unformatted changes: ``git commit -m "your_commit_message"`` \* Code
-that needs to be formatted will “fail” the commit hooks and be formatted
-for you. \* Stage the newly formatted python code: ``git add *.py`` \*
-Recall your original commit command and commit again:
-``git commit -m "your_commit_message"``
+``lifelines`` uses the `black <https://github.com/ambv/black>`__
+python formatter. There are 3 different ways to format your code.
+
+1. Use the
+   `Makefile <https://github.com/CamDavidsonPilon/lifelines/blob/master/Makefile>`__.
+
+   * ``make lint``
+
+2. Call ``black`` directly and pass the correct line
+   length.
+
+   * ``black . -l 120``
+3. Have your code formatted automatically
+   during commit with the ``pre-commit`` hook.
+
+   * Stage and commit your unformatted changes:
+     ``git commit -m "your_commit_message"``
+   * Code that needs to be formatted will “fail” the commit hooks and be
+     formatted for you.
+   * Stage the newly formatted python code:
+     ``git add *.py``
+   * Recall your original commit command and commit again:
+     ``git commit -m "your_commit_message"``
 
 Running the tests
 ~~~~~~~~~~~~~~~~~

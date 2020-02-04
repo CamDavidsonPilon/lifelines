@@ -34,8 +34,8 @@ There are 3 different ways to format your code.
    * `make lint`
 2. Call `black` directly and pass the correct line length.
    * `black . -l 120`
-3. Have you code formatted automatically during commit with the `pre-commit` hook.
-   * stage and commit your unformatted changes: `git commit -m "your_commit_message"`
+3. Have your code formatted automatically during commit with the `pre-commit` hook.
+   * Stage and commit your unformatted changes: `git commit -m "your_commit_message"`
    * Code that needs to be formatted will "fail" the commit hooks and be formatted for you.
    * Stage the newly formatted python code: `git add *.py`
    * Recall your original commit command and commit again: `git commit -m "your_commit_message"`
