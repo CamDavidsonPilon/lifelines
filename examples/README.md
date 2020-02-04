@@ -21,5 +21,5 @@ In this folder are some examples of *lifelines* usage, some with and some withou
 
 #### Other examples
 
- - [nice tutorial to lifelines and survival analysis](https://github.com/chrisluedtke/data-science-journal/blob/master/07-Advanced-Regression/02_Survival_Analysis)
+ - [nice tutorial to lifelines and survival analysis](https://github.com/chrisluedtke/data-science-journal/blob/master/07-Advanced-Regression/02_Survival_Analysis.ipynb)
  - [Example of likelihood derivation of a discrete competing risks example](https://stats.stackexchange.com/questions/417303/what-is-the-likelihood-for-this-process/425052#425052)
