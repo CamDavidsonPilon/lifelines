@@ -70,7 +70,7 @@ You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965
 
 ## Development
 
-See our [Contributing](https://github.com/CamDavidsonPilon/lifelines/blob/master/CONTRIBUTING.md) guidelines.
+See our [Contributing](https://github.com/CamDavidsonPilon/lifelines/blob/master/.github/CONTRIBUTING.md) guidelines.
 
 -------------------------------------------------------------------------------
 
