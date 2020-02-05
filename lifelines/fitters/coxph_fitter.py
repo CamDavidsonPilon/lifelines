@@ -72,7 +72,9 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin):
     _KNOWN_MODEL = True
 
     def __init__(self, n_baseline_knots=1, *args, **kwargs):
-        self.n_baseline_knots = coalesce(n_baseline_knots, 1)
+        self.n_baseline_knots = coalesce(
+            n_baseline_knots, 1
+        )  # TODO: this needs to be better. Should be no need to a coalesce
         self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 2)]
         super(_PHSplineFitter, self).__init__(*args, **kwargs)
 
