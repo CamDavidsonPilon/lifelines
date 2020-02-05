@@ -159,7 +159,7 @@ class NelsonAalenFitter(UnivariateFitter):
         return self
 
     def plot_hazard(self, bandwidth=None, **kwargs):
-        if "bandwidth" is None:
+        if kwargs.get("bandwidth") is None:
             raise ValueError(
                 "Must specify a bandwidth parameter in the call to plot_hazard, e.g. `plot_hazard(bandwidth=1.0)`"
             )
