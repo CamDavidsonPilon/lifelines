@@ -1832,6 +1832,11 @@ class TestRegressionFitters:
 
 
 class TestPiecewiseExponentialRegressionFitter:
+    def test_print_summary(self):
+        df = load_rossi()
+        pew = PiecewiseExponentialRegressionFitter(breakpoints=[25, 40]).fit(df, "week", "arrest")
+        pew.print_summary()
+
     def test_inference(self):
 
         N, d = 80000, 2

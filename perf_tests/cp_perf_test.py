@@ -10,10 +10,10 @@ if __name__ == "__main__":
     from lifelines import CoxPHFitter
     from lifelines.datasets import load_rossi, load_regression_dataset
 
-    reps = 100
+    reps = 1
     df = load_rossi()
     df = pd.concat([df] * reps)
-    cp = CoxPHFitter(penalizer=0.0, l1_ratio=0, baseline_estimation_method="spline")
+    cp = CoxPHFitter(penalizer=0.0, l1_ratio=0, baseline_estimation_method="spline", n_baseline_knots=1)
     start_time = time.time()
     cp.fit(df, duration_col="week", event_col="arrest")
     print("--- %s seconds ---" % (time.time() - start_time))

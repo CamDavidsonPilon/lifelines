@@ -60,7 +60,7 @@ d_soft_abs = elementwise_grad(soft_abs)
 dd_soft_abs = elementwise_grad(d_soft_abs)
 
 
-class _PHSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
+class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin):
     """
     Proportional Hazard model with single-knot cublic splines
 
@@ -69,26 +69,36 @@ class _PHSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
     Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
     """
 
-    _fitted_parameter_names = ["beta_", "phi1_", "phi2_"]
     _KNOWN_MODEL = True
 
+    def __init__(self, n_baseline_knots=1, *args, **kwargs):
+        self.n_baseline_knots = coalesce(n_baseline_knots, 1)
+        self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 2)]
+        super(_PHSplineFitter, self).__init__(*args, **kwargs)
+
     def set_knots(self, T, E):
-        self.knots = np.percentile(T[E.astype(bool)], [5, 50, 95])
+        self.knots = np.percentile(T[E.astype(bool)], np.linspace(5, 95, self.n_baseline_knots + 2))
         return
 
     def _pre_fit_model(self, Ts, E, df):
         self.set_knots(Ts[0], E)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
-        return {"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.5]), "phi2_": np.array([-0.5])}
+        return {
+            **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.5]), "phi2_": np.array([-0.5])},
+            **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
+        }
 
     def _cumulative_hazard(self, params, T, Xs):
         lT = anp.log(T)
-        return safe_exp(
-            anp.dot(Xs["beta_"], params["beta_"])
-            + params["phi1_"] * lT
-            + params["phi2_"] * self.basis(lT, anp.log(self.knots[1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
-        )
+        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi1_"] * lT)
+
+        for i in range(2, self.n_baseline_knots + 2):
+            H *= safe_exp(
+                params["phi%d_" % i]
+                * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+            )
+        return H
 
 
 class BatchVsSingle:
@@ -196,7 +206,8 @@ class CoxPHFitter(RegressionFitter):
         baseline_estimation_method: str = "breslow",
         penalizer: float = 0.0,
         strata: Optional[Union[List[str], str]] = None,
-        l1_ratio=0.0,
+        l1_ratio: float = 0.0,
+        n_baseline_knots: Optional[int] = None,
         **kwargs,
     ) -> None:
         super(CoxPHFitter, self).__init__(**kwargs)
@@ -210,6 +221,7 @@ class CoxPHFitter(RegressionFitter):
         self.strata = strata
         self.l1_ratio = l1_ratio
         self.baseline_estimation_method = baseline_estimation_method
+        self.n_baseline_knots = n_baseline_knots
 
     @CensoringType.right_censoring
     def fit(
@@ -676,12 +688,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df["constant"] = 1.0
 
         regressors = {
-            "beta_": df.columns.difference(["T", "E", "weights"]),
-            "phi1_": ["constant"],
-            "phi2_": ["constant"],
+            **{"beta_": df.columns.difference(["T", "E", "weights"]), "phi1_": ["constant"]},
+            **{"phi%d_" % i: ["constant"] for i in range(2, self.n_baseline_knots + 2)},
         }
 
-        cph = _PHSplineFitter()
+        cph = _PHSplineFitter(n_baseline_knots=self.n_baseline_knots)
         cph.fit(
             df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors
         )
@@ -1419,10 +1430,12 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             headers.append(("robust variance", True))
         if self.strata:
             headers.append(("strata", self.strata))
+        if self.baseline_estimation_method == "spline":
+            headers.append(("n baseline knots", self.n_baseline_knots))
 
         headers.extend(
             [
-                ("baseline estimation method", self.baseline_estimation_method),
+                ("baseline estimation", self.baseline_estimation_method),
                 ("number of observations", "{:g}".format(self.weights.sum())),
                 ("number of events observed", "{:g}".format(self.weights[self.event_observed > 0].sum())),
                 (

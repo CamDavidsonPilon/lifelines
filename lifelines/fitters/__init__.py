@@ -6,6 +6,7 @@ import warnings
 from datetime import datetime
 from textwrap import dedent
 from typing import *
+from inspect import getfullargspec
 
 import numpy as np
 from numpy.linalg import inv, pinv
@@ -1803,7 +1804,11 @@ class ParametricRegressionFitter(RegressionFitter):
 
         regressors = {name: ["intercept"] for name in self._fitted_parameter_names}
         df = pd.DataFrame({"entry": self.entry, "intercept": 1, "w": self.weights})
-        model = self.__class__(penalizer=self.penalizer)
+
+        # some fitters will have custom __init__ fields that need to be provided (Piecewise, Spline...)
+        args_to_provide = {k: getattr(self, k) for k in getfullargspec(self.__class__.__init__).args if k != "self"}
+        args_to_provide["penalizer"] = self.penalizer
+        model = self.__class__(**args_to_provide)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
