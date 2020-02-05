@@ -54,11 +54,6 @@ __all__ = ["CoxPHFitter"]
 
 CONVERGENCE_DOCS = "Please see the following tips in the lifelines documentation: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model"
 
-# From https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
-soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
-d_soft_abs = elementwise_grad(soft_abs)
-dd_soft_abs = elementwise_grad(d_soft_abs)
-
 
 class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin):
     """
@@ -103,9 +98,12 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin):
         return H
 
 
-class BatchVsSingle:
-    @staticmethod
-    def decide(batch_mode: Optional[bool], n_unique: int, n_total: int, n_vars: int) -> str:
+class _BatchVsSingle:
+
+    BATCH = "batch"
+    SINGLE = "single"
+
+    def decide(self, batch_mode: Optional[bool], n_unique: int, n_total: int, n_vars: int) -> str:
         frac_dups = n_unique / n_total
         if batch_mode or (
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
@@ -125,8 +123,8 @@ class BatchVsSingle:
                 < 1
             )
         ):
-            return "batch"
-        return "single"
+            return self.BATCH
+        return self.SINGLE
 
 
 class CoxPHFitter(RegressionFitter):
@@ -520,9 +518,15 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         beta: (1,d) numpy array.
         """
 
-        decision = BatchVsSingle.decide(self._batch_mode, T.nunique(), X.shape[0], X.shape[1])
+        # soft penalizer functions
+        # From https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
+        soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
+        d_soft_abs = elementwise_grad(soft_abs)
+        dd_soft_abs = elementwise_grad(d_soft_abs)
+
+        decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), X.shape[0], X.shape[1])
         get_gradients = getattr(self, "_get_efron_values_%s" % decision)
-        self._batch_mode = decision == "batch"
+        self._batch_mode = decision == _BatchVsSingle.BATCH
 
         n, d = X.shape
         self.path = []
@@ -836,102 +840,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             tie_phi_x_x = zeros((d, d))
 
         return hessian, gradient, log_lik
-
-    @staticmethod
-    def _trivial_log_likelihood_batch(T, E, weights):
-        # used for log-likelihood test
-        n = T.shape[0]
-        log_lik = 0
-        _, counts = np.unique(-T, return_counts=True)
-        risk_phi = 0
-        pos = n
-
-        for count_of_removals in counts:
-
-            slice_ = slice(pos - count_of_removals, pos)
-
-            weights_at_t = weights[slice_]
-
-            phi_i = weights_at_t
-
-            # Calculate sums of Risk set
-            risk_phi = risk_phi + phi_i.sum()
-
-            # Calculate the sums of Tie set
-            deaths = E[slice_]
-
-            tied_death_counts = deaths.sum()
-            if tied_death_counts == 0:
-                # no deaths, can continue
-                pos -= count_of_removals
-                continue
-
-            weights_deaths = weights_at_t[-tied_death_counts:]
-            weight_count = weights_deaths.sum()
-
-            if tied_death_counts > 1:
-                tie_phi = phi_i[-tied_death_counts:].sum()
-                factor = log(risk_phi - arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
-            else:
-                factor = log(risk_phi)
-
-            log_lik = log_lik - weight_count / tied_death_counts * factor
-            pos -= count_of_removals
-
-        return log_lik
-
-    @staticmethod
-    def _trivial_log_likelihood_single(T, E, weights):
-        # assumes sorted on T!
-
-        log_lik = 0
-        n = T.shape[0]
-
-        # Init risk and tie sums to zero
-        risk_phi, tie_phi = 0, 0
-        # Init number of ties and weights
-        weight_count = 0.0
-        tied_death_counts = 0
-
-        # Iterate backwards to utilize recursive relationship
-        for i in range(n - 1, -1, -1):
-            # Doing it like this to preserve shape
-            ti = T[i]
-            ei = E[i]
-
-            # Calculate phi values
-            phi_i = weights[i]
-            w = weights[i]
-
-            # Calculate sums of Risk set
-            risk_phi = risk_phi + phi_i
-
-            # Calculate sums of Ties, if this is an event
-            if ei:
-                tie_phi = tie_phi + phi_i
-
-                # Keep track of count
-                tied_death_counts += 1
-                weight_count += w
-
-            if i > 0 and T[i - 1] == ti:
-                # There are more ties/members of the risk set
-                continue
-            elif tied_death_counts == 0:
-                # Only censored with current time, move on
-                continue
-
-            if tied_death_counts > 1:
-                factor = log(risk_phi - arange(tied_death_counts) * tie_phi / tied_death_counts).sum()
-            else:
-                factor = log(risk_phi)
-            log_lik = log_lik - weight_count / tied_death_counts * factor
-
-            # reset tie values
-            tied_death_counts = 0
-            weight_count = 0.0
-            tie_phi = 0
-        return log_lik
 
     def _get_efron_values_batch(
         self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
@@ -1428,6 +1336,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             headers.append(("cluster col", "'%s'" % self.cluster_col))
         if self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
+            headers.append(("l1 ratio", self.l1_ratio))
         if self.robust or self.cluster_col:
             headers.append(("robust variance", True))
         if self.strata:
@@ -1453,14 +1362,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         p.print(style=style)
 
     def _trivial_log_likelihood(self):
-        if self._batch_mode:
-            return self._trivial_log_likelihood_batch(
-                self.durations.values, self.event_observed.values, self.weights.values
-            )
-        else:
-            return self._trivial_log_likelihood_single(
-                self.durations.values, self.event_observed.values, self.weights.values
-            )
+        df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "W": self.weights})
+        trivial_model = self.__class__().fit(df, "E", weights_col="W", batch_mode=self.batch_mode)
+        return trivial_model.log_likelihood_
 
     def log_likelihood_ratio_test(self) -> StatisticalResult:
         """
@@ -2231,7 +2135,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
     def score_(self) -> float:
         """
         The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the ROC AUC
-        to survival data, including censorships.
+        to survival data, including censoring.
 
         For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
         onto the training dataset.

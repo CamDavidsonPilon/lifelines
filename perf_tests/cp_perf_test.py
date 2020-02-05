@@ -13,7 +13,7 @@ if __name__ == "__main__":
     reps = 1
     df = load_rossi()
     df = pd.concat([df] * reps)
-    cp = CoxPHFitter(penalizer=0.0, l1_ratio=0, baseline_estimation_method="spline", n_baseline_knots=1)
+    cp = CoxPHFitter(penalizer=0.5, l1_ratio=1.0, baseline_estimation_method="spline", n_baseline_knots=3)
     start_time = time.time()
     cp.fit(df, duration_col="week", event_col="arrest")
     print("--- %s seconds ---" % (time.time() - start_time))
