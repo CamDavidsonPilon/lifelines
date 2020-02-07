@@ -62,6 +62,7 @@ from lifelines import (
     GeneralizedGammaFitter,
     GeneralizedGammaRegressionFitter,
     SplineFitter,
+    MixtureCureFitter,
 )
 
 from lifelines.datasets import (
@@ -946,7 +947,7 @@ class TestWeibullFitter:
         npt.assert_array_equal(wf.timeline, T)
         npt.assert_array_equal(wf.survival_function_.index.values, T)
 
-    def test_weibull_model_does_not_except_negative_or_zero_values(self):
+    def test_weibull_model_does_not_accept_negative_or_zero_values(self):
         wf = WeibullFitter()
 
         T = [0, 1, 2, 4, 5]
@@ -4841,3 +4842,43 @@ class TestAalenJohansenFitter:
 
         fitter.fit(duration, event_observed, event_of_interest=2)
         npt.assert_allclose(ci_from_sas, np.array(fitter.confidence_interval_))
+
+
+class CureModelExponential(ParametricUnivariateFitter):
+    _fitted_parameter_names = ["cured_", "lambda_", "rho_"]
+
+    def _cumulative_hazard(self, params, times):
+        cured_, lambda_, rho_ = params
+        c = expit(cured_)
+
+        sf = anp.exp(-((times / lambda_) ** rho_))
+        return -anp.log(c + (1 - c) * sf)
+
+
+class TestMixtureCureFitter:
+    def test_exponential_data_produces_correct_inference_for_both_cure_and_non_cure_fractions(self):
+        N = 1000000
+        scale = 5
+        T = np.random.exponential(scale, size=N)
+        observed = np.ones(N, dtype=bool)
+
+        # Censor the data at time = 6
+        last_observation_time = 8.0
+        mask = T > last_observation_time
+        T[mask] = last_observation_time
+        observed[mask] = False
+
+        # Add in some 'cured' samples, to make it 20% cured
+        C = int(N / 4)
+        T = np.concatenate([T, last_observation_time * np.ones(C)])
+        observed = np.concatenate([observed, np.zeros(C, dtype=bool)])
+
+        fitter = MixtureCureFitter(base_fitter=ExponentialFitter())
+        fitter.fit(T, event_observed=observed)
+
+        assert abs(expit(fitter.cured_) - 0.2) < 0.01
+        assert abs(fitter.lambda_ / scale - 1) < 0.01
+        assert abs(fitter.percentile(0.6) - scale * np.log(2)) < 0.01
+
+        with pytest.raises(ValueError, match="Percentile must be larger than the cure fraction"):
+            fitter.percentile(0.19)

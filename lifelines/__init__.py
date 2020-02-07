@@ -21,6 +21,7 @@ from lifelines.fitters.piecewise_exponential_regression_fitter import PiecewiseE
 from lifelines.fitters.generalized_gamma_fitter import GeneralizedGammaFitter
 from lifelines.fitters.generalized_gamma_regression_fitter import GeneralizedGammaRegressionFitter
 from lifelines.fitters.spline_fitter import SplineFitter
+from lifelines.fitters.mixture_cure_fitter import MixtureCureFitter
 
 
 from lifelines.version import __version__
@@ -46,4 +47,5 @@ __all__ = [
     "PiecewiseExponentialFitter",
     "PiecewiseExponentialRegressionFitter",
     "SplineFitter",
+    "MixtureCureFitter",
 ]
