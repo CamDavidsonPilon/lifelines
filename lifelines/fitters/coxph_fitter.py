@@ -207,7 +207,7 @@ class CoxPHFitter(RegressionFitter):
         penalizer: float = 0.0,
         strata: Optional[Union[List[str], str]] = None,
         l1_ratio: float = 0.0,
-        n_baseline_knots: Optional[int] = None,
+        n_baseline_knots: int = 1,
         **kwargs,
     ) -> None:
         super(CoxPHFitter, self).__init__(**kwargs)
@@ -372,7 +372,7 @@ class CoxPHFitter(RegressionFitter):
             normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index, columns=X.columns
         )
 
-        params_, ll_, variance_matrix_ = self._fit_model(
+        params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_ = self._fit_model(
             X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size
         )
 
@@ -380,18 +380,12 @@ class CoxPHFitter(RegressionFitter):
         self.variance_matrix_ = variance_matrix_
         self.params_ = pd.Series(params_, index=X.columns, name="coef")
         self.hazard_ratios_ = pd.Series(exp(self.params_), index=X.columns, name="exp(coef)")
+        self.baseline_hazard_ = baseline_hazard_
+        self.baseline_cumulative_hazard_ = baseline_cumulative_hazard_
 
         self.standard_errors_ = self._compute_standard_errors(X_norm, T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
-        self._predicted_partial_hazards_ = (
-            self.predict_partial_hazard(X)
-            .rename(columns={0: "P"})
-            .assign(T=self.durations.values, E=self.event_observed.values, W=self.weights.values)
-            .set_index(X.index)
-        )
-        self.baseline_hazard_ = self._compute_baseline_hazards()
-        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard()
         self.baseline_survival_ = self._compute_baseline_survival()
 
         if hasattr(self, "_concordance_score_"):
@@ -483,6 +477,30 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         weights: Series,
         initial_point: Optional[ndarray] = None,
         step_size: Optional[float] = None,
+        show_progress: bool = True,
+    ):
+        params_, ll_, variance_matrix_ = self._newton_rhapson_for_efron_model(
+            X, T, E, weights, initial_point=initial_point, step_size=step_size, show_progress=show_progress
+        )
+
+        # compute the baseline hazard here.
+        self._predicted_partial_hazards_ = (
+            pd.DataFrame(dot(X, params_), columns=["P"])
+            .assign(T=T.values, E=E.values, W=weights.values)
+            .set_index(X.index)
+        )
+        baseline_hazard_ = self._compute_baseline_hazards()
+        baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(baseline_hazard_)
+        return params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_
+
+    def _newton_rhapson_for_efron_model(
+        self,
+        X: DataFrame,
+        T: Series,
+        E: Series,
+        weights: Series,
+        initial_point: Optional[ndarray] = None,
+        step_size: Optional[float] = None,
         precision: float = 1e-07,
         show_progress: bool = True,
         max_steps: int = 500,
@@ -518,8 +536,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         beta: (1,d) numpy array.
         """
 
-        # soft penalizer functions
-        # From https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
+        # soft penalizer functions, from https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
         d_soft_abs = elementwise_grad(soft_abs)
         dd_soft_abs = elementwise_grad(d_soft_abs)
@@ -543,7 +560,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         delta = np.zeros_like(beta)
         converging = True
-        ll, previous_ll = 0.0, 0.0
+        ll_, previous_ll_ = 0.0, 0.0
         start = time.time()
         i = 0
 
@@ -555,22 +572,22 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if self.strata is None:
 
-                h, g, ll = get_gradients(X.values, T.values, E.values, weights.values, beta)
+                h, g, ll_ = get_gradients(X.values, T.values, E.values, weights.values, beta)
 
             else:
                 g = np.zeros_like(beta)
                 h = zeros((beta.shape[0], beta.shape[0]))
-                ll = 0
+                ll_ = 0
                 for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, get_gradients, beta):
                     g += _g
                     h += _h
-                    ll += _ll
+                    ll_ += _ll
 
             if i == 1 and np.all(beta == 0):
                 # this is a neat optimization, the null partial likelihood
                 # is the same as the full partial but evaluated at zero.
                 # if the user supplied a non-trivial initial point, we need to delay this.
-                self._ll_null_ = ll
+                self._ll_null_ = ll_
 
             if self.penalizer > 0:
                 g -= (
@@ -621,13 +638,13 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             if show_progress:
                 print(
                     "\rIteration %d: norm_delta = %.5f, step_size = %.4f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
-                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start)
+                    % (i, norm_delta, step_size, ll_, newton_decrement, time.time() - start)
                 )
 
             # convergence criteria
             if norm_delta < precision:
                 converging, success = False, True
-            elif previous_ll != 0 and abs(ll - previous_ll) / (-previous_ll) < 1e-09:
+            elif previous_ll_ != 0 and abs(ll_ - previous_ll_) / (-previous_ll_) < 1e-09:
                 # this is what R uses by default
                 converging, success = False, True
             elif newton_decrement < precision:
@@ -638,7 +655,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 converging, success = False, False
             elif step_size <= 0.00001:
                 converging, success = False, False
-            elif abs(ll) < 0.0001 and norm_delta > 1.0:
+            elif abs(ll_) < 0.0001 and norm_delta > 1.0:
                 warnings.warn(
                     "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.stackexchange.com/q/11109/11867 for more.\n",
@@ -646,7 +663,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 )
                 converging, success = False, False
 
-            previous_ll = ll
+            previous_ll_ = ll_
             step_size = step_sizer.update(norm_delta).next()
 
         if show_progress and success:
@@ -672,7 +689,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             -inv(hessian) / np.outer(self._norm_std, self._norm_std), index=X.columns, columns=X.columns
         )
         params_ = beta / self._norm_std.values
-        return params_, ll, variance_matrix_
+        return params_, ll_, variance_matrix_
 
     def _fit_model_spline(
         self,
@@ -703,12 +720,16 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors
         )
         self._ll_null_ = cph._ll_null
+        baseline_hazard_ = cph.predict_hazard(df, times=np.linspace(0, T.max(), 200))
+        baseline_cumulative_hazard_ = cph.predict_cumulative_hazard(df, times=np.linspace(0, T.max(), 200))
 
         return (
             cph.params_.loc["beta_"].drop("constant") / self._norm_std,
             cph.log_likelihood_,
             cph.variance_matrix_.loc["beta_", "beta_"].drop("constant").drop("constant", axis=1)
             / np.outer(self._norm_std, self._norm_std),
+            baseline_hazard_,
+            baseline_cumulative_hazard_,
         )
 
     def _get_efron_values_single(
@@ -1700,8 +1721,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return self._compute_baseline_hazard(self._predicted_partial_hazards_, name="baseline hazard")
 
-    def _compute_baseline_cumulative_hazard(self) -> DataFrame:
-        cumulative = self.baseline_hazard_.cumsum()
+    def _compute_baseline_cumulative_hazard(self, baseline_hazard_) -> DataFrame:
+        cumulative = baseline_hazard_.cumsum()
         if not self.strata:
             cumulative = cumulative.rename(columns={"baseline hazard": "baseline cumulative hazard"})
         return cumulative

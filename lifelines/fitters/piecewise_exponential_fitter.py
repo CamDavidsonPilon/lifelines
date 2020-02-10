@@ -74,10 +74,9 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
             raise ValueError("First breakpoint must be greater than 0.")
 
         breakpoints = np.sort(breakpoints)
-        self.breakpoints = np.append(breakpoints, [np.inf])
-        n_breakpoints = len(self.breakpoints)
+        self.breakpoints = breakpoints
 
-        self._fitted_parameter_names = ["lambda_%d_" % i for i in range(n_breakpoints)]
+        self._fitted_parameter_names = ["lambda_%d_" % i for i in range(len(self.breakpoints) + 1)]
 
         super(PiecewiseExponentialFitter, self).__init__(*args, **kwargs)
 
@@ -85,7 +84,7 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
         times = np.atleast_1d(times)
         n = times.shape[0]
         times = times.reshape((n, 1))
-        bp = self.breakpoints
+        bp = np.append(self.breakpoints, [np.inf])
         M = np.minimum(np.tile(bp, (n, 1)), times)
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
         return np.dot(M, 1 / params)
