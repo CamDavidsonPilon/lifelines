@@ -4876,7 +4876,7 @@ class TestMixtureCureFitter:
         fitter = MixtureCureFitter(base_fitter=ExponentialFitter())
         fitter.fit(T, event_observed=observed)
 
-        assert abs(expit(fitter.cured_) - 0.2) < 0.01
+        assert abs(fitter.cured_fraction_ - 0.2) < 0.01
         assert abs(fitter.lambda_ / scale - 1) < 0.01
         assert abs(fitter.percentile(0.6) - scale * np.log(2)) < 0.01
 
