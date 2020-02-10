@@ -11,8 +11,8 @@ class MixtureCureFitter(ParametricUnivariateFitter):
         # What should the variable that we use be called?
         # Should raise an exception if that variable is in the base fitted parameter names
 
-        self._fitted_parameter_names = ["cured_"] + base_fitter._fitted_parameter_names
-        self._bounds = [(None, None)] + base_fitter._bounds
+        self._fitted_parameter_names = ["cured_fraction_"] + base_fitter._fitted_parameter_names
+        self._bounds = [(0, 1)] + base_fitter._bounds
         super().__init__(*args, **kwargs)
 
     def _fit(self, *args, **kwargs):
@@ -23,7 +23,7 @@ class MixtureCureFitter(ParametricUnivariateFitter):
         return result
 
     def _cumulative_hazard(self, params, times):
-        c = expit(params[0])
+        c = params[0]
         sf = self._base_fitter._survival_function(params[1:], times)
         return -anp.log(c + (1 - c) * sf)
 
@@ -32,7 +32,7 @@ class MixtureCureFitter(ParametricUnivariateFitter):
         return anp.array([0] + list(base_point))
 
     def percentile(self, p):
-        c = expit(self.cured_)
+        c = self.cured_fraction_
 
         if p <= c:
             raise ValueError("Percentile must be larger than the cure fraction")
