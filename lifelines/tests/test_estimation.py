@@ -331,10 +331,16 @@ class TestParametricUnivariateFitters:
             f.print_summary(style="latex")
 
 
+class ExponentialBaseMixtureCureFitter(MixtureCureFitter):
+    def __init__(self):
+        super().__init__(base_fitter=ExponentialFitter())
+
+
 class TestUnivariateFitters:
     @pytest.fixture
     def univariate_fitters(self):
         return [
+            ExponentialBaseMixtureCureFitter,
             KaplanMeierFitter,
             NelsonAalenFitter,
             BreslowFlemingHarringtonFitter,
