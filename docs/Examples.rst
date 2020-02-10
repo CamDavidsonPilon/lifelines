@@ -903,3 +903,6 @@ New in version 0.23.1, *lifelines* models now have the ability to output a LaTeX
 
     # print a HTML summary and table:
     cph.print_summary(style="html")
+
+
+In order to use the produced table summary in LaTeX, make sure you import the package ``booktabs`` in your preamble (``\usepackage{booktabs}``), since it is required to `display the table properly. <https://en.wikibooks.org/wiki/LaTeX/Tables#Using_booktabs>`_
