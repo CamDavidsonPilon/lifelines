@@ -4,7 +4,8 @@ import warnings
 # pylint: disable=wrong-import-position
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
 
-from collections import Counter, Iterable
+from collections import Counter
+from collections.abc import Iterable
 import os
 import pickle
 from itertools import combinations
