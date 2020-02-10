@@ -18,6 +18,14 @@ Install via ``pip``:
 
     pip install lifelines
 
+OR
+
+Install via `conda <https://anaconda.org/conda-forge/lifelines>`_:
+
+.. code-block:: console
+
+    conda install -c conda-forge lifelines
+    
 
 Kaplan-Meier Nelson-Aalen, and parametric models
 ---------------------------------------------------
