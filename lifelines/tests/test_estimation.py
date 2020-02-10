@@ -4862,7 +4862,7 @@ class TestMixtureCureFitter:
         T = np.random.exponential(scale, size=N)
         observed = np.ones(N, dtype=bool)
 
-        # Censor the data at time = 6
+        # Censor the data at time = 8
         last_observation_time = 8.0
         mask = T > last_observation_time
         T[mask] = last_observation_time
