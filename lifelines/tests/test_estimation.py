@@ -4881,5 +4881,4 @@ class TestMixtureCureFitter:
         assert abs(fitter.lambda_ / scale - 1) < 0.01
         assert abs(fitter.percentile(0.6) - scale * np.log(2)) < 0.01
 
-        with pytest.raises(ValueError, match="Percentile must be larger than the cure fraction"):
-            fitter.percentile(0.19)
+        assert fitter.percentile(0.19) is np.inf

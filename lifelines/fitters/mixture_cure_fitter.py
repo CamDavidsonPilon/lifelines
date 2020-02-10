@@ -35,7 +35,7 @@ class MixtureCureFitter(ParametricUnivariateFitter):
         c = self.cured_fraction_
 
         if p <= c:
-            raise ValueError("Percentile must be larger than the cure fraction")
+            return anp.inf
 
         non_cure_p = (p - c) / (1 - c)
         return self._base_fitter.percentile(non_cure_p)
