@@ -90,7 +90,7 @@ def load_holly_molly_polly(**kwargs):
         4  P       1        1            0          20   0   20
 
     """
-    return _load_dataset("holly_molly_polly.tsv", sep="\s", **kwargs)
+    return _load_dataset("holly_molly_polly.tsv", sep=r"\s", **kwargs)
 
 
 def load_leukemia(**kwargs):
