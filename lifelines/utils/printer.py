@@ -47,7 +47,8 @@ class Printer:
         print(self.to_latex())
 
     def to_latex(self):
-        return self.model.summary.to_latex()
+        decimals = self.decimals
+        return self.model.summary.to_latex(float_format="%." + str(decimals) + "f")
 
     def html_print_inside_jupyter(self):
         from IPython.display import HTML, display
