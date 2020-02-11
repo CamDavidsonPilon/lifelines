@@ -13,6 +13,9 @@ This version and future versions of lifelines no longer support py35.
  - removed `_score_` from Cox model.
  - removed automatically adding `inf` from `PiecewiseExponentialRegressionFitter.breakpoints` and `PiecewiseExponentialFitter.breakpoints`
 
+##### Bug fixes
+ - Fixed `show_censors` with `KaplanMeierFitter.plot_cumulative_density` see issue #940.
+
 #### 0.23.9 - 2020-01-28
 
 ##### Bug fixes

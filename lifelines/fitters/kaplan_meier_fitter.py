@@ -363,12 +363,7 @@ class KaplanMeierFitter(UnivariateFitter):
         ax:
             a pyplot axis object
         """
-        return _plot_estimate(
-            self,
-            estimate=self.cumulative_density_,
-            confidence_intervals=self.confidence_interval_cumulative_density_,
-            **kwargs
-        )
+        return _plot_estimate(self, estimate="cumulative_density_", **kwargs)
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.

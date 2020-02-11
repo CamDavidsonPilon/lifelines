@@ -10,7 +10,7 @@ import pandas as pd
 from numpy.linalg import LinAlgError
 from scipy.integrate import trapz
 
-from lifelines.fitters import BaseFitter
+from lifelines.fitters import RegressionFitter
 from lifelines.utils.printer import Printer
 from lifelines.utils import (
     _get_index,
@@ -34,7 +34,7 @@ from lifelines.utils import (
 )
 
 
-class AalenAdditiveFitter(BaseFitter):
+class AalenAdditiveFitter(RegressionFitter):
 
     r"""
     This class fits the regression model:

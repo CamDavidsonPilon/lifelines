@@ -70,7 +70,7 @@ class SplineFitter(utils.SplineFitterMixin, KnownModelParametricUnivariateFitter
 
     """
 
-    def __init__(self, knot_locations: np.ndarray, *args, **kwargs):
+    def __init__(self, knot_locations: Optional[np.ndarray], *args, **kwargs):
         self.knot_locations = knot_locations
         self.n_knots = len(self.knot_locations)
         self._fitted_parameter_names = ["phi_%d_" % i for i in range(self.n_knots)]

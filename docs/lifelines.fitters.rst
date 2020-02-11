@@ -1,3 +1,7 @@
+
+Models
+#######################
+
 Univariate models
 ==================
 
@@ -72,7 +76,6 @@ SplineFitter
 .. automodule:: lifelines.fitters.spline_fitter
     :members:
     :undoc-members:
-    :exclude-members: SplineFitterMixin
 
 WeibullFitter
 ------------------------------------------
@@ -108,6 +111,7 @@ CoxPHFitter
 .. automodule:: lifelines.fitters.coxph_fitter
     :members:
     :undoc-members:
+    :exclude-members: BatchVsSingle
 
 
 WeibullAFTFitter
