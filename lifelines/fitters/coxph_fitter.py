@@ -382,6 +382,12 @@ class CoxPHFitter(RegressionFitter):
         self.hazard_ratios_ = pd.Series(exp(self.params_), index=X.columns, name="exp(coef)")
         self.baseline_hazard_ = baseline_hazard_
         self.baseline_cumulative_hazard_ = baseline_cumulative_hazard_
+        self._predicted_partial_hazards_ = (
+            self.predict_partial_hazard(X)
+            .rename(columns={0: "P"})
+            .assign(T=self.durations.values, E=self.event_observed.values, W=self.weights.values)
+            .set_index(X.index)
+        )
 
         self.standard_errors_ = self._compute_standard_errors(X_norm, T, E, weights)
         self.confidence_intervals_ = self._compute_confidence_intervals()
@@ -479,18 +485,25 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         step_size: Optional[float] = None,
         show_progress: bool = True,
     ):
-        params_, ll_, variance_matrix_ = self._newton_rhapson_for_efron_model(
+        beta_, ll_, hessian_ = self._newton_rhapson_for_efron_model(
             X, T, E, weights, initial_point=initial_point, step_size=step_size, show_progress=show_progress
         )
 
         # compute the baseline hazard here.
-        self._predicted_partial_hazards_ = (
-            pd.DataFrame(dot(X, params_), columns=["P"])
+        predicted_partial_hazards_ = (
+            pd.DataFrame(np.exp(dot(X, beta_)), columns=["P"])
             .assign(T=T.values, E=E.values, W=weights.values)
             .set_index(X.index)
         )
-        baseline_hazard_ = self._compute_baseline_hazards()
+        baseline_hazard_ = self._compute_baseline_hazards(predicted_partial_hazards_)
         baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(baseline_hazard_)
+
+        # rescale parameters back to original scale.
+        params_ = beta_ / self._norm_std.values
+        variance_matrix_ = pd.DataFrame(
+            -inv(hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns, columns=X.columns
+        )
+
         return params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_
 
     def _newton_rhapson_for_efron_model(
@@ -685,11 +698,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 "Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, ConvergenceWarning
             )
 
-        variance_matrix_ = pd.DataFrame(
-            -inv(hessian) / np.outer(self._norm_std, self._norm_std), index=X.columns, columns=X.columns
-        )
-        params_ = beta / self._norm_std.values
-        return params_, ll_, variance_matrix_
+        return beta, ll_, hessian
 
     def _fit_model_spline(
         self,
@@ -720,8 +729,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors
         )
         self._ll_null_ = cph._ll_null
-        baseline_hazard_ = cph.predict_hazard(df, times=np.linspace(0, T.max(), 200))
-        baseline_cumulative_hazard_ = cph.predict_cumulative_hazard(df, times=np.linspace(0, T.max(), 200))
+        baseline_hazard_ = cph.predict_hazard(df.mean()).rename(columns={0: "baseline hazard"})
+        baseline_cumulative_hazard_ = cph.predict_cumulative_hazard(df.mean()).rename(
+            columns={0: "baseline cumulative hazard"}
+        )
 
         return (
             cph.params_.loc["beta_"].drop("constant") / self._norm_std,
@@ -1704,13 +1715,13 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         baseline_hazard.index.name = None
         return baseline_hazard
 
-    def _compute_baseline_hazards(self) -> pd.DataFrame:
+    def _compute_baseline_hazards(self, predicted_partial_hazards_) -> pd.DataFrame:
         if self.strata:
 
             index = self.durations.unique()
             baseline_hazards_ = pd.DataFrame(index=index).sort_index()
 
-            for name, stratum_predicted_partial_hazards_ in self._predicted_partial_hazards_.groupby(self.strata):
+            for name, stratum_predicted_partial_hazards_ in predicted_partial_hazards_.groupby(self.strata):
                 baseline_hazards_ = baseline_hazards_.merge(
                     self._compute_baseline_hazard(stratum_predicted_partial_hazards_, name),
                     left_index=True,
@@ -1719,7 +1730,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 )
             return baseline_hazards_.fillna(0)
 
-        return self._compute_baseline_hazard(self._predicted_partial_hazards_, name="baseline hazard")
+        return self._compute_baseline_hazard(predicted_partial_hazards_, name="baseline hazard")
 
     def _compute_baseline_cumulative_hazard(self, baseline_hazard_) -> DataFrame:
         cumulative = baseline_hazard_.cumsum()
@@ -1898,7 +1909,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             if covariate not in self.params_.index:
                 raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
-        set_kwargs_drawstyle(kwargs, "steps-post")
+        drawstyle = "steps-post" if self.baseline_estimation_method == "breslow" else "default"
+        set_kwargs_drawstyle(kwargs, drawstyle)
 
         if self.strata is None:
             axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
@@ -1914,7 +1926,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
             self.predict_survival_function(X).plot(ax=axes, **kwargs)
             if plot_baseline:
-                self.baseline_survival_.plot(ax=axes, ls=":", color="k", drawstyle="steps-post")
+                self.baseline_survival_.plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
 
         else:
             axes = []
@@ -1936,7 +1948,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 self.predict_survival_function(X).plot(ax=ax, **kwargs)
                 if plot_baseline:
                     baseline_survival_.plot(
-                        ax=ax, ls=":", label="stratum %s baseline survival" % str(stratum), drawstyle="steps-post"
+                        ax=ax, ls=":", label="stratum %s baseline survival" % str(stratum), drawstyle=drawstyle
                     )
                 plt.legend()
                 axes.append(ax)

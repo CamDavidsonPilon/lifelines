@@ -1590,7 +1590,9 @@ class TestRegressionFitters:
     @pytest.fixture
     def regression_models_sans_strata_model(self):
         return [
-            CoxPHFitter(penalizer=10.0),
+            CoxPHFitter(penalizer=1.0, baseline_estimation_method="breslow"),
+            CoxPHFitter(penalizer=1.0, baseline_estimation_method="spline", n_baseline_knots=1),
+            CoxPHFitter(penalizer=1.0, baseline_estimation_method="spline", n_baseline_knots=2),
             AalenAdditiveFitter(coef_penalizer=1.0, smoothing_penalizer=1.0),
             WeibullAFTFitter(fit_intercept=True),
             LogNormalAFTFitter(fit_intercept=True),
@@ -1739,7 +1741,7 @@ class TestRegressionFitters:
                         check_less_precise=2,
                     )
                 else:
-                    assert_series_equal(hazards, hazards_norm)
+                    assert_series_equal(hazards, hazards_norm, check_less_precise=2)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)
@@ -2489,6 +2491,17 @@ class TestCoxPHFitter:
     def cph(self):
         return CoxPHFitter()
 
+    @pytest.fixture
+    def cph_spline(self):
+        return CoxPHFitter(baseline_estimation_method="spline")
+
+    def test_baseline_estimation_for_spline(self, rossi, cph_spline):
+        cph_spline.fit(rossi, "week", "arrest")
+
+        assert isinstance(cph_spline.baseline_survival_, pd.DataFrame)
+        assert list(cph_spline.baseline_survival_.columns) == ["baseline survival"]
+        assert list(cph_spline.baseline_cumulative_hazard_.columns) == ["baseline cumulative hazard"]
+
     def test_conditional_after_in_prediction(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
         cph.fit(rossi, "week", "arrest")
@@ -2964,8 +2977,9 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
     def test_efron_newtons_method(self, data_nus, cph):
         cph._batch_mode = False
-        newton = cph._fit_model
+        newton = cph._newton_rhapson_for_efron_model
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
+
         assert np.abs(newton(X, T, E, W)[0] - -0.0335) < 0.0001
 
     def test_fit_method(self, data_nus, cph):
@@ -3694,9 +3708,9 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         #                                                 theta=1.0, scale=TRUE), data=rossi)
         # cat(round(mod.allison$coefficients, 4), sep=", ")
         expected = np.array([-0.3761, -0.0565, 0.3099, -0.1532, -0.4295, -0.0837, 0.0909])
-        cf = CoxPHFitter(penalizer=1.0)
+        cf = CoxPHFitter(penalizer=1.0 / rossi.shape[0])
         cf.fit(rossi, duration_col="week", event_col="arrest")
-        npt.assert_array_almost_equal(cf.params_.values, expected, decimal=4)
+        npt.assert_array_almost_equal(cf.params_.values, expected, decimal=2)
 
     def test_coef_output_against_Survival_Analysis_by_John_Klein_and_Melvin_Moeschberger(self):
         # see example 8.3 in Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition
