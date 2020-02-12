@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as anp
-from autograd.scipy.special import expit
 from lifelines.fitters import ParametricUnivariateFitter
 
-# What should the name of the fitter actually be?
+
 class MixtureCureFitter(ParametricUnivariateFitter):
     CURED_FRACTION_PARAMETER_NAME = "cured_fraction_"
 
