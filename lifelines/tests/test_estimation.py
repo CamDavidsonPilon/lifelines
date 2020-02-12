@@ -4846,17 +4846,6 @@ class TestAalenJohansenFitter:
         npt.assert_allclose(ci_from_sas, np.array(fitter.confidence_interval_))
 
 
-class CureModelExponential(ParametricUnivariateFitter):
-    _fitted_parameter_names = ["cured_", "lambda_", "rho_"]
-
-    def _cumulative_hazard(self, params, times):
-        cured_, lambda_, rho_ = params
-        c = expit(cured_)
-
-        sf = anp.exp(-((times / lambda_) ** rho_))
-        return -anp.log(c + (1 - c) * sf)
-
-
 class TestMixtureCureFitter:
     def test_exponential_data_produces_correct_inference_for_both_cure_and_non_cure_fractions(self):
         N = 1000000
