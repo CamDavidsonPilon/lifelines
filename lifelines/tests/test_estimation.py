@@ -4865,9 +4865,10 @@ class TestMixtureCureFitter:
 
         fitter = MixtureCureFitter(base_fitter=ExponentialFitter())
         fitter.fit(T, event_observed=observed)
-
+        print(fitter._survival_function([0.2, 1], 1))
         assert abs(fitter.cured_fraction_ - 0.2) < 0.01
         assert abs(fitter.lambda_ / scale - 1) < 0.01
+        assert abs(fitter._survival_function([0.2, 1], 1) - 0.49430) < 0.01
         assert abs(fitter.percentile(0.6) - scale * np.log(2)) < 0.01
 
         assert fitter.percentile(0.19) is np.inf
