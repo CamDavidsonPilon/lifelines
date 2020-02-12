@@ -36,6 +36,13 @@ class MixtureCureFitter(ParametricUnivariateFitter):
         base_cumulative_hazard = self._base_fitter._cumulative_hazard(params[1:], times)
         return c + (1 - c) * (anp.exp(-base_cumulative_hazard))
 
+    def _log_hazard(self, params, times):
+        c = params[0]
+        base_survival_function = self._base_fitter._survival_function(params[1:], times)
+        base_log_hazard = self._base_fitter._log_hazard(params[1:], times)
+        cumulative_hazard = -anp.log(c + (1 - c) * base_survival_function)
+        return anp.log(1 - c) + anp.log(base_survival_function) + base_log_hazard + cumulative_hazard
+
     def _create_initial_point(self, Ts, E, *args):
         base_point = self._base_fitter._create_initial_point(Ts, E, *args)
         return anp.array([0] + list(base_point))
