@@ -4872,3 +4872,11 @@ class TestMixtureCureFitter:
         assert abs(fitter.percentile(0.6) - scale * np.log(2)) < 0.01
 
         assert fitter.percentile(0.19) is np.inf
+
+    def test_should_raise_exception_if_cure_parameter_is_already_in_list_of_parameter_names(self):
+        with pytest.raises(
+            NameError,
+            match="'cured_fraction_' in _fitted_parameter_names is a lifelines reserved word."
+            " Try something else instead.",
+        ):
+            MixtureCureFitter(MixtureCureFitter(base_fitter=ExponentialFitter()))

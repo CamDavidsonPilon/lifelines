@@ -5,11 +5,16 @@ from lifelines.fitters import ParametricUnivariateFitter
 
 # What should the name of the fitter actually be?
 class MixtureCureFitter(ParametricUnivariateFitter):
+    CURED_FRACTION_PARAMETER_NAME = "cured_fraction_"
+
     def __init__(self, base_fitter, *args, **kwargs):
         self._base_fitter = base_fitter
 
-        # What should the variable that we use be called?
-        # Should raise an exception if that variable is in the base fitted parameter names
+        if self.CURED_FRACTION_PARAMETER_NAME in base_fitter._fitted_parameter_names:
+            raise NameError(
+                "'cured_fraction_' in _fitted_parameter_names is a lifelines reserved word. Try something "
+                "else instead."
+            )
 
         self._fitted_parameter_names = ["cured_fraction_"] + base_fitter._fitted_parameter_names
         self._bounds = [(0, 1)] + base_fitter._bounds
