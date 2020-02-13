@@ -4,6 +4,8 @@ from lifelines.fitters import ParametricUnivariateFitter
 
 
 class MixtureCureFitter(ParametricUnivariateFitter):
+    _KNOWN_MODEL = True
+
     CURED_FRACTION_PARAMETER_NAME = "cured_fraction_"
 
     def __init__(self, base_fitter, *args, **kwargs):
