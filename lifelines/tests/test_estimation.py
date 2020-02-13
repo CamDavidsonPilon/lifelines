@@ -192,6 +192,7 @@ def known_parametric_univariate_fitters():
         PiecewiseExponentialFitterTesting,
         GeneralizedGammaFitter,
         SplineFitterTesting,
+        lambda *args, **kwargs: MixtureCureFitter(base_fitter=ExponentialFitter(), *args, **kwargs),
     ]
 
 
