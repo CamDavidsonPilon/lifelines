@@ -11,11 +11,11 @@ class MixtureCureFitter(ParametricUnivariateFitter):
 
         if self.CURED_FRACTION_PARAMETER_NAME in base_fitter._fitted_parameter_names:
             raise NameError(
-                "'cured_fraction_' in _fitted_parameter_names is a lifelines reserved word. Try something "
+                f"'{self.CURED_FRACTION_PARAMETER_NAME}' in _fitted_parameter_names is a lifelines reserved word. Try something "
                 "else instead."
             )
 
-        self._fitted_parameter_names = ["cured_fraction_"] + base_fitter._fitted_parameter_names
+        self._fitted_parameter_names = [self.CURED_FRACTION_PARAMETER_NAME] + base_fitter._fitted_parameter_names
         self._bounds = [(0, 1)] + base_fitter._bounds
         super().__init__(*args, **kwargs)
 
@@ -48,7 +48,7 @@ class MixtureCureFitter(ParametricUnivariateFitter):
         return anp.array([0] + list(base_point))
 
     def percentile(self, p):
-        c = self.cured_fraction_
+        c = getattr(self, self.CURED_FRACTION_PARAMETER_NAME)
 
         if p <= c:
             return anp.inf
