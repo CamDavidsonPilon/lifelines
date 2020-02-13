@@ -11,8 +11,8 @@ class MixtureCureFitter(ParametricUnivariateFitter):
 
         if self.CURED_FRACTION_PARAMETER_NAME in base_fitter._fitted_parameter_names:
             raise NameError(
-                f"'{self.CURED_FRACTION_PARAMETER_NAME}' in _fitted_parameter_names is a lifelines reserved word. Try something "
-                "else instead."
+                f"'{self.CURED_FRACTION_PARAMETER_NAME}' in _fitted_parameter_names is a lifelines reserved word."
+                f" Try something else instead."
             )
 
         self._fitted_parameter_names = [self.CURED_FRACTION_PARAMETER_NAME] + base_fitter._fitted_parameter_names
