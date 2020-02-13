@@ -45,7 +45,7 @@ class MixtureCureFitter(ParametricUnivariateFitter):
 
     def _create_initial_point(self, Ts, E, *args):
         base_point = self._base_fitter._create_initial_point(Ts, E, *args)
-        return anp.array([0] + list(base_point))
+        return anp.array([0.5] + list(base_point))
 
     def percentile(self, p):
         c = getattr(self, self.CURED_FRACTION_PARAMETER_NAME)
