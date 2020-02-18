@@ -4,20 +4,83 @@ from lifelines.fitters import ParametricUnivariateFitter
 
 
 class MixtureCureFitter(ParametricUnivariateFitter):
-    _KNOWN_MODEL = True
+    r"""
 
-    CURED_FRACTION_PARAMETER_NAME = "cured_fraction_"
+    This class implements a Mixture Cure Model for univariate data with a configurable distribution for the
+    non-cure portion. The model survival function has parameterized form:
+
+    .. math::  S(t) = c + \left(1 - c\right)S_b(t),  \;\; 1 > c > 0
+
+    where :math:`S_b(t)` is a parametric survival function describing the non-cure portion of the population, and
+    :math:`c` is the cured fraction of the population.
+
+    After calling the ``.fit`` method, you have access to properties like: ``cumulative_hazard_``,
+    ``survival_function_``, ``lambda_`` and ``rho_``. A summary of the fit is available with the method
+    ``print_summary()``. The parameters for both the cure portion of the model and from the base_fitter are available.
+    The cure fraction is called ``cured_fraction_``, and parameters from the base_fitter will be available with
+    their own appropriate names.
+
+    Parameters
+    -----------
+    base_fitter: ParametricUnivariateFitter, required
+        an instance of a fitter that describes the non-cure portion of the population.
+    alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
+
+    Important
+    ----------
+    The **base_fitter** instance is used to describe the non-cure portion of the population, but is not actually
+    fit to the data. Some internal properties are modified, and it should not be used for any other purpose after
+    passing it to the constructor of this class.
+
+    Examples
+    --------
+    >>> from lifelines import MixtureCureFitter, ExponentialFitter
+    >>>
+    >>> fitter = MixtureCureFitter(base_fitter=ExponentialFitter())
+    >>> fitter.fit(T, event_observed=observed)
+    >>> print(fitter.cured_fraction_)
+    >>> print(fitter.lambda_)  # This is available because it is a parameter of the ExponentialFitter
+
+    Attributes
+    ----------
+    cumulative_hazard_ : DataFrame
+        The estimated cumulative hazard (with custom timeline if provided)
+    cured_fraction_ : float
+        The fitted parameter :math:`c` in the model
+    hazard_ : DataFrame
+        The estimated hazard (with custom timeline if provided)
+    survival_function_ : DataFrame
+        The estimated survival function (with custom timeline if provided)
+    cumulative_density_ : DataFrame
+        The estimated cumulative density function (with custom timeline if provided)
+    variance_matrix_ : numpy array
+        The variance matrix of the coefficients
+    median_survival_time_: float
+        The median time to event
+    durations: array
+        The durations provided
+    event_observed: array
+        The event_observed variable provided
+    timeline: array
+        The time line to use for plotting and indexing
+    entry: array or None
+        The entry array provided, or None
+    """
+
+    _KNOWN_MODEL = True
+    _CURED_FRACTION_PARAMETER_NAME = "cured_fraction_"
 
     def __init__(self, base_fitter, *args, **kwargs):
         self._base_fitter = base_fitter
 
-        if self.CURED_FRACTION_PARAMETER_NAME in base_fitter._fitted_parameter_names:
+        if self._CURED_FRACTION_PARAMETER_NAME in base_fitter._fitted_parameter_names:
             raise NameError(
-                f"'{self.CURED_FRACTION_PARAMETER_NAME}' in _fitted_parameter_names is a lifelines reserved word."
+                f"'{self._CURED_FRACTION_PARAMETER_NAME}' in _fitted_parameter_names is a lifelines reserved word."
                 f" Try something else instead."
             )
 
-        self._fitted_parameter_names = [self.CURED_FRACTION_PARAMETER_NAME] + base_fitter._fitted_parameter_names
+        self._fitted_parameter_names = [self._CURED_FRACTION_PARAMETER_NAME] + base_fitter._fitted_parameter_names
         self._bounds = [(0, 1)] + base_fitter._bounds
         super().__init__(*args, **kwargs)
 
@@ -50,7 +113,7 @@ class MixtureCureFitter(ParametricUnivariateFitter):
         return anp.array([0.5] + list(base_point))
 
     def percentile(self, p):
-        c = getattr(self, self.CURED_FRACTION_PARAMETER_NAME)
+        c = getattr(self, self._CURED_FRACTION_PARAMETER_NAME)
 
         if p <= c:
             return anp.inf
