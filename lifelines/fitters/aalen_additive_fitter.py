@@ -573,3 +573,26 @@ It's important to know that the naive variance estimates of the coefficients are
         p = Printer(self, headers, justify, decimals, kwargs)
 
         p.print(style=style)
+
+    def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
+        """
+        Score the data in df on the fitted model. With default scoring method, returns
+        the *average partial log-likelihood*.
+
+        Parameters
+        ----------
+        df: DataFrame
+            the dataframe with duration col, event col, etc.
+        scoring_method: str
+            one of {'log_likelihood', 'concordance_index'}
+            log_likelihood: returns the average unpenalized partial log-likelihood.
+            concordance_index: returns the concordance-index
+        """
+        if scoring_method == "log_likelihood":
+            raise NotImplementedError("Only concordance_index is available")
+
+        T = df.pop(self.duration_col).astype(float)
+        E = df.pop(self.event_col).astype(bool)
+
+        predictions = self.predict_median(df)
+        return concordance_index(T, predictions, event_observed=E)
