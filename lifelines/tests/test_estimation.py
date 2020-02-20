@@ -193,7 +193,6 @@ def known_parametric_univariate_fitters():
         PiecewiseExponentialFitterTesting,
         GeneralizedGammaFitter,
         SplineFitterTesting,
-        lambda *args, **kwargs: MixtureCureFitter(base_fitter=ExponentialFitter(), *args, **kwargs),
     ]
 
 
@@ -337,7 +336,6 @@ class TestUnivariateFitters:
     @pytest.fixture
     def univariate_fitters(self):
         return [
-            lambda *args, **kwargs: MixtureCureFitter(base_fitter=ExponentialFitter(), *args, **kwargs),
             KaplanMeierFitter,
             NelsonAalenFitter,
             BreslowFlemingHarringtonFitter,
@@ -4918,7 +4916,6 @@ class TestMixtureCureFitter:
 
         fitter = MixtureCureFitter(base_fitter=ExponentialFitter())
         fitter.fit(T, event_observed=observed)
-        print(fitter._survival_function([0.2, 1], 1))
         assert abs(fitter.cured_fraction_ - 0.2) < 0.01
         assert abs(fitter.lambda_ / scale - 1) < 0.01
         assert abs(fitter._survival_function([0.2, 1], 1) - 0.49430) < 0.01

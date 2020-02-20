@@ -705,14 +705,7 @@ def inv_normal_cdf(p) -> float:
 
 
 def k_fold_cross_validation(
-    fitters,
-    df,
-    duration_col,
-    event_col=None,
-    k=5,
-    scoring_method="log_likelihood",
-    predictor="predict_expectation",
-    fitter_kwargs={},
+    fitters, df, duration_col, event_col=None, k=5, scoring_method="log_likelihood", fitter_kwargs={}
 ):  # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals
     """
     Perform cross validation on a dataset. If multiple models are provided,

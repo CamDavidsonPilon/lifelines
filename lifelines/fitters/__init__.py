@@ -1728,7 +1728,7 @@ class ParametricRegressionFitter(RegressionFitter):
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
         self.params_ = _params / self._norm_std
 
-        self.variance_matrix_ = self._compute_variance_matrix()
+        self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
         self.standard_errors_ = self._compute_standard_errors(
             Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
         )
@@ -1935,7 +1935,7 @@ class ParametricRegressionFitter(RegressionFitter):
             if self.robust:
                 se = np.sqrt(self._compute_sandwich_errors(Ts, E, weights, entries, Xs).diagonal())
             else:
-                se = np.sqrt(self.variance_matrix_.diagonal())
+                se = np.sqrt(self.variance_matrix_.values.diagonal())
             return pd.Series(se, name="se", index=self.params_.index)
 
     def _compute_sandwich_errors(self, Ts, E, weights, entries, Xs):

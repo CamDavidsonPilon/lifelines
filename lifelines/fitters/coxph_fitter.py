@@ -1960,6 +1960,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             return NotImplementedError("Only breslow implemented atm.")
 
         df = df.copy()
+
+        if self.strata:
+            df = df.set_index(self.strata)
+
         df = df.sort_values([self.duration_col, self.event_col])
         T = df.pop(self.duration_col).astype(float)
         E = df.pop(self.event_col).astype(bool)
@@ -1970,6 +1974,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             W = pd.Series(np.ones_like(E), index=T.index)
 
         if scoring_method == "log_likelihood":
+
             df = normalize(df, self._norm_mean.values, 1.0)
 
             decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *df.shape)
