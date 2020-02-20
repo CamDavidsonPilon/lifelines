@@ -382,23 +382,8 @@ def test_cross_validator_returns_fitters_k_results():
 
 def test_cross_validator_with_predictor():
     cf = CoxPHFitter()
-    results = utils.k_fold_cross_validation(
-        cf, load_regression_dataset(), duration_col="T", event_col="E", k=3, predictor="predict_expectation"
-    )
+    results = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col="T", event_col="E", k=3)
     assert len(results) == 3
-
-
-def test_cross_validator_with_predictor_and_kwargs():
-    cf = CoxPHFitter()
-    results_06 = utils.k_fold_cross_validation(
-        cf,
-        load_regression_dataset(),
-        duration_col="T",
-        k=3,
-        predictor="predict_percentile",
-        predictor_kwargs={"p": 0.6},
-    )
-    assert len(results_06) == 3
 
 
 def test_cross_validator_with_stratified_cox_model():
@@ -407,15 +392,10 @@ def test_cross_validator_with_stratified_cox_model():
 
 
 def test_cross_validator_with_specific_loss_function():
-    def square_loss(y_actual, y_pred):
-        return ((y_actual - y_pred) ** 2).mean()
-
     cf = CoxPHFitter()
     results_sq = utils.k_fold_cross_validation(
-        cf, load_regression_dataset(), evaluation_measure=square_loss, duration_col="T", event_col="E"
+        cf, load_regression_dataset(), scoring_method="concordance_index", duration_col="T", event_col="E"
     )
-    results_con = utils.k_fold_cross_validation(cf, load_regression_dataset(), duration_col="T", event_col="E")
-    assert list(results_sq) != list(results_con)
 
 
 def test_concordance_index():
