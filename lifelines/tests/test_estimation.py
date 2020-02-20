@@ -436,13 +436,12 @@ class TestUnivariateFitters:
             [pd.to_datetime("2015-01-01 12:00"), pd.to_datetime("2015-01-02"), pd.to_datetime("2015-01-02 12:00")]
         )
         T = pd.to_datetime("2015-01-03") - t
-        with pytest.warns(UserWarning, match="Attempting to convert an unexpected"):
-            for fitter in univariate_fitters:
-                f = fitter().fit(T)
-                try:
-                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
-                except:
-                    npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
+        for fitter in univariate_fitters:
+            f = fitter().fit(T)
+            try:
+                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
+            except:
+                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
 
     def test_univariate_fitters_okay_if_given_boolean_col_with_object_dtype(self, univariate_fitters):
         df = pd.DataFrame({"T": [1, 2, 3, 4, 5], "E": [True, True, True, True, None]})
