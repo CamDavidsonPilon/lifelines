@@ -3087,10 +3087,10 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
             data_norm["t"] = times
 
             scores = k_fold_cross_validation(
-                cf, data_norm, duration_col="t", event_col="E", k=3, predictor="predict_partial_hazard"
+                cf, data_norm, duration_col="t", event_col="E", k=3, scoring_method="concordance_index"
             )
 
-            mean_score = 1 - np.mean(scores)
+            mean_score = np.mean(scores)
 
             expected = 0.9
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
@@ -3101,10 +3101,10 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
         for data_pred in [data_pred1, data_pred2]:
             scores = k_fold_cross_validation(
-                cf, data_pred, duration_col="t", event_col="E", k=3, predictor="predict_partial_hazard"
+                cf, data_pred, duration_col="t", event_col="E", k=3, scoring_method="concordance_index"
             )
 
-            mean_score = 1 - np.mean(scores)  # this is because we are using predict_partial_hazard
+            mean_score = np.mean(scores)
 
             expected = 0.9
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
@@ -3133,10 +3133,10 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
                 data_norm["x2"] = x2
 
             scores = k_fold_cross_validation(
-                cf, data_norm, duration_col="t", event_col="E", k=3, predictor="predict_partial_hazard"
+                cf, data_norm, duration_col="t", event_col="E", k=3, scoring_method="concordance_index"
             )
 
-            mean_score = 1 - np.mean(scores)  # this is because we are using predict_partial_hazard
+            mean_score = np.mean(scores)
             expected = 0.9
             msg = "Expected min-mean c-index {:.2f} < {:.2f}"
             assert mean_score > expected, msg.format(expected, mean_score)
@@ -4201,12 +4201,29 @@ class TestAalenAdditiveFitter:
         )
         aaf.fit(df, duration_col="duration", event_col="done_feeding")
 
+    def test_crossval_for_aalen_add_concordance_index(self, data_pred2, data_pred1):
+        aaf = AalenAdditiveFitter(coef_penalizer=0.1)
+        for data_pred in [data_pred1, data_pred2]:
+            mean_scores = []
+            for repeat in range(20):
+                scores = k_fold_cross_validation(
+                    aaf, data_pred, duration_col="t", event_col="E", k=3, scoring_method="concordance_index"
+                )
+                mean_scores.append(np.mean(scores))
+
+            expected = 0.90
+            msg = "Expected min-mean c-index {:.2f} < {:.2f}"
+            assert np.mean(mean_scores) > expected, msg.format(expected, np.mean(scores))
+
+    @pytest.mark.xfail
     def test_crossval_for_aalen_add(self, data_pred2, data_pred1):
         aaf = AalenAdditiveFitter(coef_penalizer=0.1)
         for data_pred in [data_pred1, data_pred2]:
             mean_scores = []
             for repeat in range(20):
-                scores = k_fold_cross_validation(aaf, data_pred, duration_col="t", event_col="E", k=3)
+                scores = k_fold_cross_validation(
+                    aaf, data_pred, duration_col="t", event_col="E", k=3, scoring_method="log_likelihood"
+                )
                 mean_scores.append(np.mean(scores))
 
             expected = 0.90
