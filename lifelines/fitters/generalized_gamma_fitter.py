@@ -120,7 +120,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         mu_, ln_sigma_, lambda_ = params
         sigma_ = safe_exp(ln_sigma_)
         Z = (log(times) - mu_) / sigma_
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) / lambda_ ** 2, 1e-50, 1e200)
+        clipped_exp = np.clip(safe_exp(lambda_ * Z) / lambda_ ** 2, 1e-15, 1e20)
         ilambda_2 = 1 / lambda_ ** 2
 
         if lambda_ > 0:
@@ -139,7 +139,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         sigma_ = safe_exp(ln_sigma_)
         Z = (log(times) - mu_) / sigma_
         ilambda_2 = 1 / lambda_ ** 2
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-10, 1e20)
+        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-15, 1e20)
 
         if lambda_ > 0:
             v = -gammainccln(ilambda_2, clipped_exp)
@@ -156,7 +156,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
 
         ilambda_2 = 1 / lambda_ ** 2
         Z = (log(times) - mu_) / sigma_
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-10, 1e20)
+        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-15, 1e20)
 
         if lambda_ > 0:
             v = gammaincln(1 / lambda_ ** 2, clipped_exp)
@@ -170,14 +170,16 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         mu_, ln_sigma_, lambda_ = params
         ilambda_2 = 1 / lambda_ ** 2
         Z = (log(times) - mu_) / safe_exp(ln_sigma_)
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-10, 1e20)
+        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-15, 1e20)
         if lambda_ > 0:
             v = (
                 log(lambda_)
                 - log(times)
                 - ln_sigma_
                 - gammaln(ilambda_2)
-                + (lambda_ * Z - safe_exp(lambda_ * Z) - 2 * log(lambda_)) * ilambda_2
+                + -2 * log(lambda_) * ilambda_2
+                - clipped_exp
+                + Z / lambda_
                 - gammainccln(ilambda_2, clipped_exp)
             )
         elif lambda_ < 0:
@@ -186,7 +188,9 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
                 - log(times)
                 - ln_sigma_
                 - gammaln(ilambda_2)
-                + (lambda_ * Z - safe_exp(lambda_ * Z) - 2 * log(-lambda_)) * ilambda_2
+                - 2 * log(-lambda_) * ilambda_2
+                - clipped_exp
+                + Z / lambda_
                 - gammaincln(ilambda_2, clipped_exp)
             )
         else:
