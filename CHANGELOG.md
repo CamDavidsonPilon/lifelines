@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.0 - unreleased
+#### 0.24.0 - 2020-02-20
 
 This version and future versions of lifelines no longer support py35. Pandas 1.0 is fully supported, along with previous version. Minimum Scipy has been bumped to 1.2.0
 
