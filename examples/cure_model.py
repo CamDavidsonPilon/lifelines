@@ -15,7 +15,7 @@ class CureModel(ParametricRegressionFitter):
         lambda_ = np.exp(np.dot(Xs["lambda_"], params["lambda_"]))
         rho_ = np.exp(np.dot(Xs["rho_"], params["rho_"]))
 
-        survival = np.exp(-(T / lambda_) ** rho_)
+        survival = np.exp(-((T / lambda_) ** rho_))
         return -np.log((1 - c) * 1.0 + c * survival)
 
 
