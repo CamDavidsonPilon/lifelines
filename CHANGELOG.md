@@ -7,23 +7,24 @@ This version and future versions of lifelines no longer support py35. Pandas 1.0
 ##### New features
  - `CoxPHFitter` and `CoxTimeVaryingFitter` has support for an elastic net penalty, which includes L1 and L2 regression.
  - `CoxPHFitter` has new baseline survival estimation methods. Specifically, `spline` now estimates the coefficients and baseline survival using splines. The traditional method, `breslow`, is still the default however.
- - new `lifelines.fitters.mixins.ProportionalHazardMixin` that implements proportional hazard checks.
  - Regression models have a new `score` method that will score your model against a dataset (ex: a testing or validation dataset). The default is to evaluate the log-likelihood, but also the concordance index can be chose.
+ - New `MixtureCureFitter` for quickly creating univariate mixture models.
  - Univariate parametric models have a `plot_density`, `density_at_times`, and property `density_` that computes the probability density function estimates.
-  - new dataset for interval regression involving C. Botulinum.
+ - new dataset for interval regression involving C. Botulinum.
+ - new `lifelines.fitters.mixins.ProportionalHazardMixin` that implements proportional hazard checks.
 
 ##### API Changes
+ - Models' prediction method that return a single array now return a Series (use to return a DataFrame). This includes `predict_median`, `predict_percentile`, `predict_expectation`, `predict_log_partial_hazard`, and possibly others.
  - The penalty in Cox models is now scaled by the number of observations. This makes it invariant to changing sample sizes. This change also make the penalty magnitude behave the same as any parametric regression model.
- - removed `_score_` and `path` from Cox model.
+ - `score_` on models has been renamed `concordance_index_`
+ - models' `.variance_matrix_` is now a DataFrame.
+ - `CoxTimeVaryingFitter` no longer requires an `id_col`. It's optional, and some checks may be done for integrity if provided.
+ - Significant changes to `utils.k_fold_cross_validation`.
  - removed automatically adding `inf` from `PiecewiseExponentialRegressionFitter.breakpoints` and `PiecewiseExponentialFitter.breakpoints`
  - `tie_method` was dropped from Cox models (it was always Efron anyways...)
  - Mixins are moved to `lifelines.fitters.mixins`
- - `CoxTimeVaryingFitter` no longer requires an `id_col`. It's optional, and some checks may be done for integrity if provided.
- - `score_` on models has been renamed `concordance_index_`
  - `find_best_parametric_model` `evaluation` kwarg has been changed to `scoring_method`.
- - models' `.variance_matrix_` is now a DataFrame.
- - Models' prediction method that return a single array now return a Series (use to return a DataFrame). This includes `predict_median`, `predict_percentile`, `predict_expectation`, `predict_log_partial_hazard`, and possibly others.
- - Significant changes to `utils.k_fold_cross_validation`.
+ - removed `_score_` and `path` from Cox model.
 
 ##### Bug fixes
  - Fixed `show_censors` with `KaplanMeierFitter.plot_cumulative_density` see issue #940.
