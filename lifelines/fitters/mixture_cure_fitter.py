@@ -82,6 +82,7 @@ class MixtureCureFitter(ParametricUnivariateFitter):
 
         self._fitted_parameter_names = [self._CURED_FRACTION_PARAMETER_NAME] + base_fitter._fitted_parameter_names
         self._bounds = [(0, 1)] + base_fitter._bounds
+        self._scipy_fit_options = base_fitter._scipy_fit_options
         super().__init__(*args, **kwargs)
 
     def _fit(self, *args, **kwargs):

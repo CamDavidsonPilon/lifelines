@@ -4946,3 +4946,25 @@ class TestMixtureCureFitter:
             " Try something else instead.",
         ):
             MixtureCureFitter(MixtureCureFitter(base_fitter=ExponentialFitter()))
+
+    def test_should_get_same_values_as_custom_weibull_on_kidney_transplant_data_set(self):
+        class WeibullMixtureCureFitter(ParametricUnivariateFitter):
+            _fitted_parameter_names = ["c_", "lambda_", "rho_"]
+            _bounds = [(0, 1), (0, None), (0, None)]
+
+            def _cumulative_hazard(self, params, times):
+                c_, lambda_, rho_ = params
+                weibull_survival_function = anp.exp(-((times / lambda_) ** rho_))
+                return -anp.log(c_ + (1 - c_) * weibull_survival_function)
+
+            def _create_initial_point(self, Ts, E, entry, weights):
+                return anp.array([0.5, 1.0, 1.0])
+
+        wmc = WeibullMixtureCureFitter()
+        mcfitter = MixtureCureFitter(base_fitter=WeibullFitter())
+
+        T, E = load_kidney_transplant()["time"], load_kidney_transplant()["death"]
+        wmc.fit(T, E)
+        mcfitter.fit(T, E)
+
+        assert abs(wmc.c_ - mcfitter.cured_fraction_) < 0.001
