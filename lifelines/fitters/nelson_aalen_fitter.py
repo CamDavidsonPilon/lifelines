@@ -165,7 +165,7 @@ class NelsonAalenFitter(UnivariateFitter):
             )
         estimate = self.smoothed_hazard_(bandwidth)
         confidence_intervals = self.smoothed_hazard_confidence_intervals_(bandwidth, estimate.values[:, 0])
-        return _plot_estimate(self, estimate, confidence_intervals=confidence_intervals, bandwidth=bandwidth, **kwargs)
+        return _plot_estimate(self, estimate, confidence_intervals=confidence_intervals, **kwargs)
 
     def _bounds(self, cumulative_sq_, alpha, ci_labels):
         z = inv_normal_cdf(1 - alpha / 2)
