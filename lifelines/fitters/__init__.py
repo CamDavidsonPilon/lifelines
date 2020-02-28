@@ -1755,8 +1755,11 @@ class ParametricRegressionFitter(RegressionFitter):
         return neg_ll + self.penalizer * penalty
 
     def _create_neg_likelihood_with_penalty_function(
-        self, params_array, Ts, E, weights, entries, Xs, unflatten_array_to_dict, likelihood=None, penalty=None
+        self, params_array, Ts, E, weights, entries, Xs, likelihood=None, penalty=None
     ):
+        # it's a bit unfortunate but we do have to "flatten" each time this is called.
+        # I've tried making it an attribute and freezing it with partial, but both caused serialization issues.
+        _, unflatten_array_to_dict = flatten(self._initial_point_dicts[0])
         params_dict = unflatten_array_to_dict(params_array)
         if penalty is None:
             return -likelihood(params_dict, Ts, E, weights, entries, Xs)
@@ -1764,8 +1767,8 @@ class ParametricRegressionFitter(RegressionFitter):
             return penalty(params_dict, -likelihood(params_dict, Ts, E, weights, entries, Xs))
 
     def _prepare_initial_points(self, user_supplied_initial_point, Ts, E, entries, weights, Xs):
-        initial_point_dicts = utils._to_list(self._create_initial_point(Ts, E, entries, weights, Xs))
-        _, unflatten = flatten(initial_point_dicts[0])
+        self._initial_point_dicts = utils._to_list(self._create_initial_point(Ts, E, entries, weights, Xs))
+        _, unflatten = flatten(self._initial_point_dicts[0])
 
         if user_supplied_initial_point is not None and isinstance(user_supplied_initial_point, dict):
             initial_point_arrays, _ = flatten(user_supplied_initial_point)
@@ -1774,7 +1777,7 @@ class ParametricRegressionFitter(RegressionFitter):
             initial_point_arrays = [user_supplied_initial_point]
         elif user_supplied_initial_point is None:
             # not supplied by user
-            initial_point_arrays = [flatten(initial_point_dict)[0] for initial_point_dict in initial_point_dicts]
+            initial_point_arrays = [flatten(initial_point_dict)[0] for initial_point_dict in self._initial_point_dicts]
         return initial_point_arrays, unflatten
 
     def _fit_model(
@@ -1784,19 +1787,13 @@ class ParametricRegressionFitter(RegressionFitter):
             user_supplied_initial_point, Ts, E, entries, weights, Xs
         )
 
+        # optimizing this function
         self._neg_likelihood_with_penalty_function = partial(
-            self._create_neg_likelihood_with_penalty_function,
-            unflatten_array_to_dict=unflatten_array_to_dict,
-            likelihood=likelihood,
-            penalty=self._add_penalty,
+            self._create_neg_likelihood_with_penalty_function, likelihood=likelihood, penalty=self._add_penalty
         )
 
-        # used later in .score method
-        self._neg_likelihood = partial(
-            self._create_neg_likelihood_with_penalty_function,
-            unflatten_array_to_dict=unflatten_array_to_dict,
-            likelihood=likelihood,
-        )
+        # scoring this function in `score`
+        self._neg_likelihood = partial(self._create_neg_likelihood_with_penalty_function, likelihood=likelihood)
 
         minimim_ll = np.inf
         minimum_results = None
