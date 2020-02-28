@@ -1238,6 +1238,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self.l1_ratio = l1_ratio
 
     def _check_values_post_fitting(self, df, T, E, weights, entries):
+        utils.check_dimensions(df)
         utils.check_complete_separation(df, E, T, self.event_col)
 
     def _pre_fit_model(self, Ts, E, df) -> None:
@@ -1795,7 +1796,7 @@ class ParametricRegressionFitter(RegressionFitter):
         # scoring this function in `score`
         self._neg_likelihood = partial(self._create_neg_likelihood_with_penalty_function, likelihood=likelihood)
 
-        minimim_ll = np.inf
+        minimum_ll = np.inf
         minimum_results = None
         for _initial_point in inital_points_as_arrays:
 
@@ -1811,8 +1812,10 @@ class ParametricRegressionFitter(RegressionFitter):
                 args=(Ts, E, weights, entries, Xs),
                 options={**{"disp": show_progress}, **self._scipy_fit_options},
             )
-            if results.fun < minimim_ll:
+            if results.fun < minimum_ll:
                 minimim_ll, minimum_results = results.fun, results
+            else:
+                continue
 
         if show_progress:
             print(minimum_results)
