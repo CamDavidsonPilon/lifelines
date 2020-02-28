@@ -1005,7 +1005,7 @@ Model selection based on predictive power
 
 If censoring is present, it's not appropriate to use a loss function like mean-squared-error or
 mean-absolute-loss. This is because the difference between a censored value and the predicted value could be
-due to poor prediction _or_ due to censoring. Below we introduce alternative ways to measure prediction performance.
+due to poor prediction *or* due to censoring. Below we introduce alternative ways to measure prediction performance.
 
 In this author's opinion, the best way to measure predictive performance is evaluating the log-likelihood on out-of-sample data. The log-likelihood correctly handles any type of censoring, and is precisely what we are maximizing in the model training. The in-sample log-likelihood is available under ``log_likelihood_`` of any regression model. For out-of-sample data, the  :meth:`~lifelines.fitters.cox_ph_fitter.CoxPHFitter.score` method (available on all regression models) can be used. This returns the *average evaluation of the out-of-sample log-likelihood*. We want to maximize this.
 

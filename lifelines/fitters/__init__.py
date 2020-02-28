@@ -1719,7 +1719,7 @@ class ParametricRegressionFitter(RegressionFitter):
             weights.values,
             entries.values,
             show_progress=show_progress,
-            initial_point=initial_point,
+            user_supplied_initial_point=initial_point,
         )
 
         # align the coefficients again.
@@ -1736,13 +1736,13 @@ class ParametricRegressionFitter(RegressionFitter):
         self._predicted_median = self.predict_median(df)
         return self
 
-    def _create_initial_point(self, Ts, E, entries, weights, Xs):
+    def _create_initial_point(self, Ts, E, entries, weights, Xs) -> Union[List[Dict], Dict]:
         return {
             parameter_name: np.zeros(len(Xs.mappings[parameter_name]))
             for parameter_name in self._fitted_parameter_names
         }
 
-    def _add_penalty(self, params, neg_ll):
+    def _add_penalty(self, params: Dict, neg_ll: float):
         params, _ = flatten(params)
         # remove intercepts from being penalized
         params = params[~self._constant_cols]
@@ -1754,54 +1754,80 @@ class ParametricRegressionFitter(RegressionFitter):
             penalty = 0
         return neg_ll + self.penalizer * penalty
 
-    def _create_neg_likelihood_with_penalty_function(self, params_array, *args, likelihood=None, penalty=None):
-        _, param_transform = flatten(self._initial_point_dict)
-        params = param_transform(params_array)
+    def _create_neg_likelihood_with_penalty_function(
+        self, params_array, Ts, E, weights, entries, Xs, unflatten_array_to_dict, likelihood=None, penalty=None
+    ):
+        params_dict = unflatten_array_to_dict(params_array)
         if penalty is None:
-            return -likelihood(params, *args)
+            return -likelihood(params_dict, Ts, E, weights, entries, Xs)
         else:
-            return penalty(params, -likelihood(params, *args))
+            return penalty(params_dict, -likelihood(params_dict, Ts, E, weights, entries, Xs))
 
-    def _fit_model(self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, initial_point=None):
+    def _prepare_initial_points(self, user_supplied_initial_point, Ts, E, entries, weights, Xs):
+        initial_point_dicts = utils._to_list(self._create_initial_point(Ts, E, entries, weights, Xs))
+        _, unflatten = flatten(initial_point_dicts[0])
 
-        # TODO: this should all go in a function or something...
-        initial_point_dict = self._create_initial_point(Ts, E, entries, weights, Xs)
-        self._initial_point_dict = initial_point_dict
-        initial_point_array, unflatten = flatten(self._initial_point_dict)
+        if user_supplied_initial_point is not None and isinstance(user_supplied_initial_point, dict):
+            initial_point_arrays, _ = flatten(initial_point)
+            initial_point_arrays = [initial_point_arrays]
+        elif user_supplied_initial_point is not None and isinstance(user_supplied_initial_point, np.ndarray):
+            initial_point_arrays = [initial_point]
+        elif user_supplied_initial_point is None:
+            # not supplied by user
+            initial_point_arrays = [flatten(initial_point_dict)[0] for initial_point_dict in initial_point_dicts]
+        return initial_point_arrays, unflatten
 
-        if initial_point is not None and isinstance(initial_point, dict):
-            initial_point_array, _ = flatten(initial_point)  # TODO: test
-        elif initial_point is not None and isinstance(initial_point, np.ndarray):
-            initial_point_array = initial_point  # TODO: test
-
-        if initial_point_array.shape[0] != Xs.size:
-            raise ValueError("initial_point is not the correct shape.")
+    def _fit_model(
+        self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, user_supplied_initial_point=None
+    ):
 
         self._neg_likelihood_with_penalty_function = partial(
             self._create_neg_likelihood_with_penalty_function, likelihood=likelihood, penalty=self._add_penalty
         )
+
+        # used later in .score method
         self._neg_likelihood = partial(self._create_neg_likelihood_with_penalty_function, likelihood=likelihood)
 
-        results = minimize(
-            # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
-            value_and_grad(self._neg_likelihood_with_penalty_function),
-            initial_point_array,
-            method=self._scipy_fit_method,
-            jac=True,
-            args=(Ts, E, weights, entries, Xs),
-            options={**{"disp": show_progress}, **self._scipy_fit_options},
+        inital_points_as_arrays, unflatten_array_to_dict = self._prepare_initial_points(
+            user_supplied_initial_point, Ts, E, entries, weights, Xs
         )
+
+        minimim_ll = np.inf
+        minimum_results = None
+        for _initial_point in inital_points_as_arrays:
+
+            if _initial_point.shape[0] != Xs.size:
+                raise ValueError("initial_point is not the correct shape.")
+
+            results = minimize(
+                # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
+                value_and_grad(self._neg_likelihood_with_penalty_function),
+                _initial_point,
+                method=self._scipy_fit_method,
+                jac=True,
+                args=(Ts, E, weights, entries, Xs, unflatten_array_to_dict),
+                options={**{"disp": show_progress}, **self._scipy_fit_options},
+            )
+            if results.fun < minimim_ll:
+                minimim_ll, minimum_results = results.fun, results
+
         if show_progress:
-            print(results)
-        if results.success:
+            print(minimum_results)
+
+        if minimum_results.success:
             sum_weights = weights.sum()
-            # pylint: disable=no-value-for-parameter
-            hessian_ = hessian(self._neg_likelihood_with_penalty_function)(results.x, Ts, E, weights, entries, Xs)
+            hessian_ = hessian(self._neg_likelihood_with_penalty_function)(
+                minimum_results.x, Ts, E, weights, entries, Xs, unflatten_array_to_dict
+            )
             # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
             hessian_ = (hessian_ + hessian_.T) / 2
-            return unflatten(results.x), -sum_weights * results.fun, sum_weights * hessian_
+            return (
+                unflatten_array_to_dict(minimum_results.x),
+                -sum_weights * minimum_results.fun,
+                sum_weights * hessian_,
+            )
         else:
-            print(results)
+            print(minimum_results)
             self._check_values_post_fitting(Xs.df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
             raise utils.ConvergenceError(
                 dedent(
