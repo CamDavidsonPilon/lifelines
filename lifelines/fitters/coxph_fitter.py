@@ -76,10 +76,13 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin, Proportiona
         self.set_knots(Ts[0], E)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
-        return {
-            **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.5]), "phi2_": np.array([-0.5])},
-            **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
-        }
+        return [
+            {
+                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.5]), "phi2_": np.array([-0.5])},
+                **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
+            },
+            super(_PHSplineFitter, self)._create_initial_point(Ts, E, entries, weights, Xs),
+        ]
 
     def _cumulative_hazard(self, params, T, Xs):
         lT = anp.log(T)

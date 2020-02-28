@@ -8,6 +8,7 @@ from lifelines.fitters import ParametricRegressionFitter
 from lifelines.utils import CensoringType
 from lifelines.utils.safe_exp import safe_exp
 from lifelines import utils
+from lifelines import GeneralizedGammaFitter
 
 
 class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
@@ -108,9 +109,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
         # detect constant columns
         constant_col = (Xs.df.var(0) < 1e-8).idxmax()
 
-        import lifelines
-
-        uni_model = lifelines.GeneralizedGammaFitter()
+        uni_model = GeneralizedGammaFitter()
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
