@@ -11,7 +11,6 @@ from lifelines.utils.lowess import lowess
 
 class SplineFitterMixin:
     _scipy_fit_method = "SLSQP"
-    _scipy_fit_options: Dict[str, Any] = {"ftol": 1e-10}
 
     @staticmethod
     def relu(x: np.ndarray):
