@@ -1768,10 +1768,10 @@ class ParametricRegressionFitter(RegressionFitter):
         _, unflatten = flatten(initial_point_dicts[0])
 
         if user_supplied_initial_point is not None and isinstance(user_supplied_initial_point, dict):
-            initial_point_arrays, _ = flatten(initial_point)
+            initial_point_arrays, _ = flatten(user_supplied_initial_point)
             initial_point_arrays = [initial_point_arrays]
         elif user_supplied_initial_point is not None and isinstance(user_supplied_initial_point, np.ndarray):
-            initial_point_arrays = [initial_point]
+            initial_point_arrays = [user_supplied_initial_point]
         elif user_supplied_initial_point is None:
             # not supplied by user
             initial_point_arrays = [flatten(initial_point_dict)[0] for initial_point_dict in initial_point_dicts]
@@ -1780,16 +1780,22 @@ class ParametricRegressionFitter(RegressionFitter):
     def _fit_model(
         self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, user_supplied_initial_point=None
     ):
+        inital_points_as_arrays, unflatten_array_to_dict = self._prepare_initial_points(
+            user_supplied_initial_point, Ts, E, entries, weights, Xs
+        )
 
         self._neg_likelihood_with_penalty_function = partial(
-            self._create_neg_likelihood_with_penalty_function, likelihood=likelihood, penalty=self._add_penalty
+            self._create_neg_likelihood_with_penalty_function,
+            unflatten_array_to_dict=unflatten_array_to_dict,
+            likelihood=likelihood,
+            penalty=self._add_penalty,
         )
 
         # used later in .score method
-        self._neg_likelihood = partial(self._create_neg_likelihood_with_penalty_function, likelihood=likelihood)
-
-        inital_points_as_arrays, unflatten_array_to_dict = self._prepare_initial_points(
-            user_supplied_initial_point, Ts, E, entries, weights, Xs
+        self._neg_likelihood = partial(
+            self._create_neg_likelihood_with_penalty_function,
+            unflatten_array_to_dict=unflatten_array_to_dict,
+            likelihood=likelihood,
         )
 
         minimim_ll = np.inf
@@ -1805,7 +1811,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 _initial_point,
                 method=self._scipy_fit_method,
                 jac=True,
-                args=(Ts, E, weights, entries, Xs, unflatten_array_to_dict),
+                args=(Ts, E, weights, entries, Xs),
                 options={**{"disp": show_progress}, **self._scipy_fit_options},
             )
             if results.fun < minimim_ll:
@@ -1817,7 +1823,7 @@ class ParametricRegressionFitter(RegressionFitter):
         if minimum_results.success:
             sum_weights = weights.sum()
             hessian_ = hessian(self._neg_likelihood_with_penalty_function)(
-                minimum_results.x, Ts, E, weights, entries, Xs, unflatten_array_to_dict
+                minimum_results.x, Ts, E, weights, entries, Xs
             )
             # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
             hessian_ = (hessian_ + hessian_.T) / 2
