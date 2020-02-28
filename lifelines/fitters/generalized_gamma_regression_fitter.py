@@ -139,7 +139,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
             if constant_col in Xs.mappings["lambda_"]:
                 d["lambda_"][Xs.mappings["lambda_"].index(constant_col)] = uni_model.lambda_
 
-            return d
+            return [d, super(GeneralizedGammaRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)]
 
     def _survival_function(self, params, T, Xs):
         lambda_ = Xs["lambda_"] @ params["lambda_"]
