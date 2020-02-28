@@ -124,22 +124,25 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
             # we may use this later in print_summary
             self._ll_null_ = uni_model.log_likelihood_
 
-            d = {}
+            default_point = super(GeneralizedGammaRegressionFitter, self)._create_initial_point(
+                Ts, E, entries, weights, Xs
+            )
+            nested_point = {}
 
-            d["mu_"] = np.array([0.0] * (len(Xs.mappings["mu_"])))
+            nested_point["mu_"] = np.array([0.0] * (len(Xs.mappings["mu_"])))
             if constant_col in Xs.mappings["mu_"]:
-                d["mu_"][Xs.mappings["mu_"].index(constant_col)] = uni_model.mu_
+                nested_point["mu_"][Xs.mappings["mu_"].index(constant_col)] = uni_model.mu_
 
-            d["sigma_"] = np.array([0.0] * (len(Xs.mappings["sigma_"])))
+            nested_point["sigma_"] = np.array([0.0] * (len(Xs.mappings["sigma_"])))
             if constant_col in Xs.mappings["mu_"]:
-                d["sigma_"][Xs.mappings["sigma_"].index(constant_col)] = uni_model.ln_sigma_
+                nested_point["sigma_"][Xs.mappings["sigma_"].index(constant_col)] = uni_model.ln_sigma_
 
             # this needs to be non-zero because we divide by it
-            d["lambda_"] = np.array([0.01] * (len(Xs.mappings["lambda_"])))
+            nested_point["lambda_"] = np.array([0.01] * (len(Xs.mappings["lambda_"])))
             if constant_col in Xs.mappings["lambda_"]:
-                d["lambda_"][Xs.mappings["lambda_"].index(constant_col)] = uni_model.lambda_
+                nested_point["lambda_"][Xs.mappings["lambda_"].index(constant_col)] = uni_model.lambda_
 
-            return [d, super(GeneralizedGammaRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)]
+            return [nested_point, default_point]
 
     def _survival_function(self, params, T, Xs):
         lambda_ = Xs["lambda_"] @ params["lambda_"]

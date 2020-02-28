@@ -1348,7 +1348,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if self.strata:
             headers.append(("strata", self.strata))
         if self.baseline_estimation_method == "spline":
-            headers.append(("n baseline knots", self.n_baseline_knots))
+            headers.append(("number of baseline knots", self.n_baseline_knots))
 
         headers.extend(
             [

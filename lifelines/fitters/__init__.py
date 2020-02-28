@@ -1812,10 +1812,9 @@ class ParametricRegressionFitter(RegressionFitter):
                 args=(Ts, E, weights, entries, Xs),
                 options={**{"disp": show_progress}, **self._scipy_fit_options},
             )
+
             if results.fun < minimum_ll:
-                minimim_ll, minimum_results = results.fun, results
-            else:
-                continue
+                minimum_ll, minimum_results = results.fun, results
 
         if show_progress:
             print(minimum_results)
