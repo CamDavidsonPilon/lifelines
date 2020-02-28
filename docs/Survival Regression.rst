@@ -195,7 +195,7 @@ Both the `penalizer` and `l1_ratio` are specified in the class creation:
 
     rossi = load_rossi()
 
-    cph = CoxPHFitter(penalizer=0.05, l1_ratio=1.0) # only sparse solutions
+    cph = CoxPHFitter(penalizer=0.1, l1_ratio=1.0) # only sparse solutions
     cph.fit(rossi, 'week', 'arrest')
     cph.print_summary()
 
@@ -638,7 +638,7 @@ There are two hyper-parameters that can be used to to achieve a better test scor
 .. code:: python
 
 
-    aft_with_elastic_penalty = WeibullAFTFitter(penalizer=4.0, l1_ratio=1.0)
+    aft_with_elastic_penalty = WeibullAFTFitter(penalizer=1e-4, l1_ratio=1.0)
     aft_with_elastic_penalty.fit(rossi, 'week', 'arrest')
     aft_with_elastic_penalty.predict_median(rossi)
 
