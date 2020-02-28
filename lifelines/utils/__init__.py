@@ -965,6 +965,16 @@ def pass_for_numeric_dtypes_or_raise_array(x):
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 
 
+def check_dimensions(df):
+    n, d = df.shape
+    if d >= n:
+        warning_text = dedent(
+            """Your dataset has more variables than samples. Even with a penalizer (which you must use), convergence is not guaranteed.
+        """
+        )
+        warnings.warn(warning_text, ConvergenceWarning)
+
+
 def check_for_numeric_dtypes_or_raise(df):
     nonnumeric_cols = [
         col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"
