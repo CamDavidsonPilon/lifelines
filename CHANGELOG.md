@@ -1,5 +1,14 @@
 ## Changelog
 
+#### 0.24.1 - unreleased
+
+##### New features
+ - Stability improvements for GeneralizedGammaRegressionFitter and CoxPHFitter with spline estimation.
+
+##### Bug fixes
+ - Fixed bug with plotting hazards in NelsonAalenFitter.
+
+
 #### 0.24.0 - 2020-02-20
 
 This version and future versions of lifelines no longer support py35. Pandas 1.0 is fully supported, along with previous version. Minimum Scipy has been bumped to 1.2.0
