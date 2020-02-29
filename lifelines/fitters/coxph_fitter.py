@@ -78,7 +78,7 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin, Proportiona
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return [
             {
-                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.5]), "phi2_": np.array([-0.5])},
+                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.5]), "phi2_": np.array([-0.75])},
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
             },
             super(_PHSplineFitter, self)._create_initial_point(Ts, E, entries, weights, Xs),
@@ -724,6 +724,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors
         )
         self._ll_null_ = cph._ll_null
+        cph.print_summary()
         baseline_hazard_ = cph.predict_hazard(df.mean()).rename(columns={0: "baseline hazard"})
         baseline_cumulative_hazard_ = cph.predict_cumulative_hazard(df.mean()).rename(
             columns={0: "baseline cumulative hazard"}
