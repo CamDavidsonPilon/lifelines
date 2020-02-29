@@ -2501,6 +2501,24 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline")
 
+    def test_spline_model_can_handle_specific_outliers(self, cph_spline):
+        # https://github.com/CamDavidsonPilon/lifelines/issues/965
+
+        # Generating random correlated data
+        mean = [6, 0, 60]
+        cov = [[5, 0, 0], [0, 5, 0], [0, 0, 5]]  # diagonal covariance
+        days, cov1, cov2 = np.random.multivariate_normal(mean, cov, 5000).T
+
+        # This is probably what causes the issue : some of the data has extreme values
+        days[4500:] = np.multiply(days[4500:], 50)
+
+        test_data = pd.DataFrame({"Days": days, "Cov1": cov1, "Cov2": cov2})
+        test_data = test_data[test_data["Days"] > 0]
+
+        cph_sp = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
+        cph_sp.fit(test_data, duration_col="Days")
+        assert np.all(cph_sp.baseline_survival_.diff().dropna() < 0)
+
     def test_penalty_term_is_used_in_log_likelihood_value(self, rossi):
         assert (
             CoxPHFitter(penalizer=1e-6).fit(rossi, "week", "arrest").log_likelihood_
