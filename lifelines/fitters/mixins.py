@@ -10,6 +10,7 @@ from lifelines.utils.lowess import lowess
 
 
 class SplineFitterMixin:
+    # TODO: this should implement the knot choosing logic.
     _scipy_fit_method = "SLSQP"
 
     @staticmethod

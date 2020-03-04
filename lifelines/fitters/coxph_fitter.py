@@ -69,7 +69,7 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin, Proportiona
         super(_PHSplineFitter, self).__init__(*args, **kwargs)
 
     def set_knots(self, T, E):
-        self.knots = np.percentile(T[E.astype(bool).values], np.linspace(5, 95, self.n_baseline_knots + 2))
+        self.knots = np.percentile(T[E.astype(bool).values], np.linspace(20, 80, self.n_baseline_knots + 2))
         return
 
     def _pre_fit_model(self, Ts, E, df):
