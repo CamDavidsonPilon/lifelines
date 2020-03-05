@@ -13,7 +13,7 @@ if __name__ == "__main__":
     reps = 1
     df = load_rossi()
     df = pd.concat([df] * reps)
-    cp_breslow = CoxPHFitter(penalizer=0.01, l1_ratio=0.0, baseline_estimation_method="spline")
+    cp_breslow = CoxPHFitter(penalizer=0.1, l1_ratio=1.0, baseline_estimation_method="spline")
     start_time = time.time()
     cp_breslow.fit(df, duration_col="week", event_col="arrest", show_progress=True)
     print("--- %s seconds ---" % (time.time() - start_time))
