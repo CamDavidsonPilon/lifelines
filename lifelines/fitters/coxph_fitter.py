@@ -62,6 +62,8 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin, Proportiona
     """
 
     _KNOWN_MODEL = True
+    _scipy_fit_method = "SLSQP"
+    _scipy_fit_options = {"maxiter": 1000, "iprint": 100}
 
     def __init__(self, n_baseline_knots=1, *args, **kwargs):
         self.n_baseline_knots = n_baseline_knots
@@ -69,7 +71,7 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin, Proportiona
         super(_PHSplineFitter, self).__init__(*args, **kwargs)
 
     def set_knots(self, T, E):
-        self.knots = np.percentile(T[E.astype(bool).values], np.linspace(20, 80, self.n_baseline_knots + 2))
+        self.knots = np.percentile(T[E.astype(bool).values], np.linspace(5, 95, self.n_baseline_knots + 2))
         return
 
     def _pre_fit_model(self, Ts, E, df):
@@ -78,10 +80,9 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin, Proportiona
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return [
             {
-                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.5]), "phi2_": np.array([-0.75])},
+                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
-            },
-            super(_PHSplineFitter, self)._create_initial_point(Ts, E, entries, weights, Xs),
+            }
         ]
 
     def _cumulative_hazard(self, params, T, Xs):
@@ -724,7 +725,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors
         )
         self._ll_null_ = cph._ll_null
-        cph.print_summary()
         baseline_hazard_ = cph.predict_hazard(df.mean()).rename(columns={0: "baseline hazard"})
         baseline_cumulative_hazard_ = cph.predict_cumulative_hazard(df.mean()).rename(
             columns={0: "baseline cumulative hazard"}

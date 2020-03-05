@@ -73,6 +73,8 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
         The locations of the cubic breakpoints.
 
     """
+    _scipy_fit_method = "SLSQP"
+    _scipy_fit_options = {"maxiter": 1000}
 
     def __init__(self, knot_locations: np.array, *args, **kwargs):
         self.knot_locations = knot_locations
