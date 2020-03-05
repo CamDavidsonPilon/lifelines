@@ -1747,7 +1747,7 @@ class TestRegressionFitters:
                         check_less_precise=2,
                     )
                 else:
-                    assert_series_equal(hazards, hazards_norm, check_less_precise=2)
+                    assert_series_equal(hazards, hazards_norm, check_less_precise=1)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)
