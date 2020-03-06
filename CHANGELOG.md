@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.1 - unreleased
+#### 0.24.1 - 2020-03-05
 
 ##### New features
  - Stability improvements for GeneralizedGammaRegressionFitter and CoxPHFitter with spline estimation.
