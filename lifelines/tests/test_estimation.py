@@ -203,6 +203,10 @@ class TestBaseFitter:
 
 
 class TestParametricUnivariateFitters:
+    def test_spline_fitter_has_specific_fit_method(self):
+        sp = SplineFitter([1, 2, 3])
+        assert sp._scipy_fit_method == "SLSQP"
+
     @flaky
     def test_confidence_interval_is_expected(self):
 
