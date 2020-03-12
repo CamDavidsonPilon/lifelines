@@ -7,11 +7,11 @@ Cox's time varying proportional hazard model
 
 Often an individual will have a covariate change over time. An example of this is hospital patients who enter the study and, at some future time, may receive a heart transplant. We would like to know the effect of the transplant, but we must be careful if we condition on whether they received the transplant. Consider that if patients needed to wait at least 1 year before getting a transplant, then everyone who dies before that year is considered as a non-transplant patient, and hence this would overestimate the hazard of not receiving a transplant.
 
-We can incorporate changes over time into our survival analysis by using a modification of the Cox model above. The general mathematical description is:
+We can incorporate changes over time into our survival analysis by using a modification of the Cox model. The general mathematical description is:
 
 .. math::  h(t | x) = \overbrace{b_0(t)}^{\text{baseline}}\underbrace{\exp \overbrace{\left(\sum_{i=1}^n \beta_i (x_i(t) - \overline{x_i}) \right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in *lifelines* as :class:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter`. The dataset schema required is different than previous models, so we will spend some time describing this.
+Note the time-varying :math:`x_i(t)` to denote that covariates can change over time. This model is implemented in *lifelines* as :class:`~lifelines.fitters.cox_time_varying_fitter.CoxTimeVaryingFitter`. The dataset schema required is different than previous models, so we will spend some time describing it.
 
 Dataset creation for time-varying regression
 #############################################

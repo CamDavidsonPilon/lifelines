@@ -2505,6 +2505,9 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline")
 
+    def test_model_can_accept_null_covariates(self, cph, rossi):
+        cph.fit(rossi[["week", "arrest"]], "week", "arrest")
+
     def test_spline_model_can_handle_specific_outliers(self, cph_spline):
         # https://github.com/CamDavidsonPilon/lifelines/issues/965
 
@@ -4315,6 +4318,11 @@ class TestCoxTimeVaryingFitter:
     @pytest.fixture()
     def heart(self):
         return load_stanford_heart_transplants()
+
+    def test_model_can_accept_null_covariates(self, ctv, dfcv):
+        ctv.fit(
+            dfcv[["id", "start", "stop", "event"]], id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
 
     def test_inference_against_known_R_output(self, ctv, dfcv):
         """

@@ -211,6 +211,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         super(CoxPHFitter, self).__init__(**kwargs)
         if penalizer < 0:
             raise ValueError("penalizer parameter must be >= 0.")
+        if l1_ratio < 0 or l1_ratio > 1:
+            raise ValueError("l1_ratio parameter must in [0, 1].")
 
         self.penalizer = penalizer
         self.strata = strata
@@ -496,9 +498,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # rescale parameters back to original scale.
         params_ = beta_ / self._norm_std.values
-        variance_matrix_ = pd.DataFrame(
-            -inv(hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns, columns=X.columns
-        )
+        if hessian_.size > 0:
+            variance_matrix_ = pd.DataFrame(
+                -inv(hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns, columns=X.columns
+            )
+        else:
+            variance_matrix_ = pd.DataFrame(index=X.columns, columns=X.columns)
 
         return params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_
 
@@ -602,9 +607,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 self._ll_null_ = ll_
 
             if self.penalizer > 0:
-                ll_ -= penalizer(beta, 1.5 ** i)
-                g -= d_penalizer(beta, 1.5 ** i)
-                h[np.diag_indices(d)] -= dd_penalizer(beta, 1.5 ** i)
+                ll_ -= penalizer(beta, 1.3 ** i)
+                g -= d_penalizer(beta, 1.3 ** i)
+                h[np.diag_indices(d)] -= dd_penalizer(beta, 1.3 ** i)
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
@@ -639,7 +644,11 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             # Save these as pending result
             hessian, gradient = h, g
-            norm_delta = norm(delta)
+
+            if delta.size > 0:
+                norm_delta = norm(delta)
+            else:
+                norm_delta = 0
 
             # reusing an above piece to make g * inv(h) * g.T faster.
             newton_decrement = g.dot(inv_h_dot_g_T) / 2

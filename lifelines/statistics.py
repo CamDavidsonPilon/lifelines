@@ -77,7 +77,7 @@ class StatisticalResult:
         kwargs["test_name"] = test_name
         self._kwargs = kwargs
 
-    def print_specific_style(self, style, decimals, **kwargs):
+    def print_specific_style(self, style, decimals=2, **kwargs):
         """
         Parameters
         -----------
@@ -122,18 +122,18 @@ class StatisticalResult:
             except ImportError:
                 self.ascii_print(decimals, **kwargs)
 
-    def html_print_inside_jupyter(self, decimals, **kwargs):
+    def html_print_inside_jupyter(self, decimals=2, **kwargs):
         from IPython.display import HTML, display
 
         display(HTML(self.to_html(decimals, **kwargs)))
 
-    def html_print(self, decimals, **kwargs):
+    def html_print(self, decimals=2, **kwargs):
         print(self.to_html(decimals, **kwargs))
 
-    def ascii_print(self, decimals, **kwargs):
+    def ascii_print(self, decimals=2, **kwargs):
         print(self.to_ascii(decimals, **kwargs))
 
-    def to_html(self, decimals, **kwargs):
+    def to_html(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         summary_df = self.summary
 
@@ -150,10 +150,10 @@ class StatisticalResult:
 
         return header_html + summary_html
 
-    def latex_print(self, decimals, **kwargs):
+    def latex_print(self, decimals=2, **kwargs):
         print(self.to_latex(decimals, **kwargs))
 
-    def to_latex(self, decimals, **kwargs):
+    def to_latex(self, decimals=2, **kwargs):
         return self.summary.to_latex()
 
     @property
@@ -455,14 +455,11 @@ def logrank_test(
     Note
     -----
 
-    - The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival
-    curves cross, the logrank test will give an inaccurate assessment of differences.
+    - The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival curves cross, the logrank test will give an inaccurate assessment of differences.
 
-    - This implementation is a special case of the function ``multivariate_logrank_test``, which is used internally.
-    See Survival and Event Analysis, page 108.
+    - This implementation is a special case of the function ``multivariate_logrank_test``, which is used internally. See Survival and Event Analysis, page 108.
 
-    - There are only disadvantages to using the log-rank test versus using the Cox regression. See more `here <https://discourse.datamethods.org/t/when-is-log-rank-preferred-over-univariable-cox-regression/2344>`_
-    for a discussion. To convert to using the Cox regression:
+    - There are only disadvantages to using the log-rank test versus using the Cox regression. See more `here <https://discourse.datamethods.org/t/when-is-log-rank-preferred-over-univariable-cox-regression/2344>`_ for a discussion. To convert to using the Cox regression:
 
     >>> from lifelines import CoxPHFitter
     >>>
