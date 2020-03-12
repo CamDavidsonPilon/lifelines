@@ -40,13 +40,15 @@ class AalenJohansenFitter(UnivariateFitter):
     Example
     -------
 
-    >>> from lifelines import AalenJohansenFitter
-    >>> from lifelines.datasets import load_waltons
-    >>> T, E = load_waltons()['T'], load_waltons()['E']
-    >>> ajf = AalenJohansenFitter(calculate_variance=True)
-    >>> ajf.fit(T, E, event_of_interest=1)
-    >>> ajf.cumulative_density_
-    >>> ajf.plot()
+    .. code:: python
+
+        from lifelines import AalenJohansenFitter
+        from lifelines.datasets import load_waltons
+        T, E = load_waltons()['T'], load_waltons()['E']
+        ajf = AalenJohansenFitter(calculate_variance=True)
+        ajf.fit(T, E, event_of_interest=1)
+        ajf.cumulative_density_
+        ajf.plot()
 
 
     References

@@ -1866,16 +1866,17 @@ class ParametricRegressionFitter(RegressionFitter):
 
         Examples
         ---------
+        .. code:: python
 
-        >>> from lifelines import WeibullAFTFitter
-        >>> from lifelines.datasets import load_rossi
-        >>>
-        >>> rossi_train = load_rossi().loc[:400]
-        >>> rossi_test = load_rossi().loc[400:]
-        >>> wf = WeibullAFTFitter().fit(rossi_train, 'week', 'arrest')
-        >>>
-        >>> wf.score(rossi_train)
-        >>> wf.score(rossi_test)
+            from lifelines import WeibullAFTFitter
+            from lifelines.datasets import load_rossi
+
+            rossi_train = load_rossi().loc[:400]
+            rossi_test = load_rossi().loc[400:]
+            wf = WeibullAFTFitter().fit(rossi_train, 'week', 'arrest')
+
+            wf.score(rossi_train)
+            wf.score(rossi_test)
         """
         df = df.copy()
         if scoring_method == "log_likelihood":
@@ -2043,7 +2044,7 @@ class ParametricRegressionFitter(RegressionFitter):
         return StatisticalResult(
             p_value,
             test_stat,
-            name="log-likelihood ratio test",
+            test_name="log-likelihood ratio test",
             degrees_freedom=degrees_freedom,
             null_distribution="chi squared",
         )
@@ -2433,19 +2434,22 @@ class ParametricRegressionFitter(RegressionFitter):
 
         Examples
         ---------
+        .. code:: python
 
-        >>> from lifelines import datasets, WeibullAFTFitter
-        >>> rossi = datasets.load_rossi()
-        >>> wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
-        >>> wf.plot_covariate_groups('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
+            from lifelines import datasets, WeibullAFTFitter
+            rossi = datasets.load_rossi()
+            wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
+            wf.plot_covariate_groups('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
 
         .. image:: images/plot_covariate_example3.png
 
-        >>> # multiple variables at once
-        >>> wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
+        .. code:: python
 
-        >>> # if you have categorical variables, you can simply things:
-        >>> wf.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
+            # multiple variables at once
+            wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
+
+            # if you have categorical variables, you can simply things:
+            wf.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
 
 
         """
@@ -2589,24 +2593,27 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Examples
         --------
-        >>> from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
-        >>>
-        >>> df = pd.DataFrame({
-        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
-        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>> })
-        >>>
-        >>> aft = WeibullAFTFitter()
-        >>> aft.fit(df, 'T', 'E')
-        >>> aft.print_summary()
-        >>> aft.predict_median(df)
-        >>>
-        >>> aft = WeibullAFTFitter()
-        >>> aft.fit(df, 'T', 'E', ancillary_df=df)
-        >>> aft.print_summary()
-        >>> aft.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            aft = WeibullAFTFitter()
+            aft.fit(df, 'T', 'E')
+            aft.print_summary()
+            aft.predict_median(df)
+
+            aft = WeibullAFTFitter()
+            aft.fit(df, 'T', 'E', ancillary_df=df)
+            aft.print_summary()
+            aft.predict_median(df)
 
         """
         self.duration_col = duration_col
@@ -2745,25 +2752,28 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Examples
         --------
-        >>> from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
-        >>>
-        >>> df = pd.DataFrame({
-        >>>     'start': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'stop':  [5, 3, 9, 8, 7, 4, 8, 5, 2, 5, 6, np.inf],  # this last subject is right-censored.
-        >>>     'E':     [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
-        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>> })
-        >>>
-        >>> aft = WeibullAFTFitter()
-        >>> aft.fit_interval_censoring(df, 'start', 'stop', 'E')
-        >>> aft.print_summary()
-        >>> aft.predict_median(df)
-        >>>
-        >>> aft = WeibullAFTFitter()
-        >>> aft.fit_interval_censoring(df, 'start', 'stop', 'E', ancillary_df=df)
-        >>> aft.print_summary()
-        >>> aft.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
+
+            df = pd.DataFrame({
+                'start': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'stop':  [5, 3, 9, 8, 7, 4, 8, 5, 2, 5, 6, np.inf],  # this last subject is right-censored.
+                'E':     [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            aft = WeibullAFTFitter()
+            aft.fit_interval_censoring(df, 'start', 'stop', 'E')
+            aft.print_summary()
+            aft.predict_median(df)
+
+            aft = WeibullAFTFitter()
+            aft.fit_interval_censoring(df, 'start', 'stop', 'E', ancillary_df=df)
+            aft.print_summary()
+            aft.predict_median(df)
         """
 
         self.lower_bound_col = lower_bound_col
@@ -2910,24 +2920,27 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Examples
         --------
-        >>> from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
-        >>>
-        >>> df = pd.DataFrame({
-        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
-        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>> })
-        >>>
-        >>> aft = WeibullAFTFitter()
-        >>> aft.fit_left_censoring(df, 'T', 'E')
-        >>> aft.print_summary()
-        >>> aft.predict_median(df)
-        >>>
-        >>> aft = WeibullAFTFitter()
-        >>> aft.fit_left_censoring(df, 'T', 'E', ancillary_df=df)
-        >>> aft.print_summary()
-        >>> aft.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import WeibullAFTFitter, LogNormalAFTFitter, LogLogisticAFTFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            aft = WeibullAFTFitter()
+            aft.fit_left_censoring(df, 'T', 'E')
+            aft.print_summary()
+            aft.predict_median(df)
+
+            aft = WeibullAFTFitter()
+            aft.fit_left_censoring(df, 'T', 'E', ancillary_df=df)
+            aft.print_summary()
+            aft.predict_median(df)
         """
         df = df.copy()
 
@@ -3128,16 +3141,18 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         Examples
         ---------
 
-        >>> from lifelines import datasets, WeibullAFTFitter
-        >>> rossi = datasets.load_rossi()
-        >>> wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
-        >>> wf.plot_covariate_groups('prio', values=np.arange(0, 15), cmap='coolwarm')
+        .. code:: python
 
-        >>> # multiple variables at once
-        >>> wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
+            from lifelines import datasets, WeibullAFTFitter
+            rossi = datasets.load_rossi()
+            wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
+            wf.plot_covariate_groups('prio', values=np.arange(0, 15), cmap='coolwarm')
 
-        >>> # if you have categorical variables, you can simply things:
-        >>> wf.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
+            # multiple variables at once
+            wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
+
+            # if you have categorical variables, you can simply things:
+            wf.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
 
 
         """

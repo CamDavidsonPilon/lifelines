@@ -44,10 +44,11 @@ def concordance_index(event_times, predicted_scores, event_observed=None) -> flo
 
     Examples
     --------
+    .. code:: python
 
-    >>> from lifelines.utils import concordance_index
-    >>> cph = CoxPHFitter().fit(df, 'T', 'E')
-    >>> concordance_index(df['T'], -cph.predict_partial_hazard(df), df['E'])
+        from lifelines.utils import concordance_index
+        cph = CoxPHFitter().fit(df, 'T', 'E')
+        concordance_index(df['T'], -cph.predict_partial_hazard(df), df['E'])
 
     """
     event_times, predicted_scores, event_observed = _preprocess_scoring_data(

@@ -35,12 +35,15 @@ class MixtureCureFitter(ParametricUnivariateFitter):
 
     Examples
     --------
-    >>> from lifelines import MixtureCureFitter, ExponentialFitter
-    >>>
-    >>> fitter = MixtureCureFitter(base_fitter=ExponentialFitter())
-    >>> fitter.fit(T, event_observed=observed)
-    >>> print(fitter.cured_fraction_)
-    >>> print(fitter.lambda_)  # This is available because it is a parameter of the ExponentialFitter
+
+    .. code:: python
+
+        from lifelines import MixtureCureFitter, ExponentialFitter
+
+        fitter = MixtureCureFitter(base_fitter=ExponentialFitter())
+        fitter.fit(T, event_observed=observed)
+        print(fitter.cured_fraction_)
+        print(fitter.lambda_)  # This is available because it is a parameter of the ExponentialFitter
 
     Attributes
     ----------

@@ -58,13 +58,15 @@ class ProportionalHazardMixin:
         Examples
         ----------
 
-        >>> from lifelines.datasets import load_rossi
-        >>> from lifelines import CoxPHFitter
-        >>>
-        >>> rossi = load_rossi()
-        >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
-        >>>
-        >>> cph.check_assumptions(rossi)
+        .. code:: python
+
+            from lifelines.datasets import load_rossi
+            from lifelines import CoxPHFitter
+
+            rossi = load_rossi()
+            cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+
+            cph.check_assumptions(rossi)
 
 
         Notes
