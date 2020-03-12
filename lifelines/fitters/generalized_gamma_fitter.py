@@ -60,14 +60,16 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
 
     Examples
     --------
+    .. code:: python
 
-    >>> from lifelines import GeneralizedGammaFitter
-    >>> from lifelines.datasets import load_waltons
-    >>> waltons = load_waltons()
-    >>> ggf = GeneralizedGammaFitter()
-    >>> ggf.fit(waltons['T'], waltons['E'])
-    >>> ggf.plot()
-    >>> ggf.summary
+        from lifelines import GeneralizedGammaFitter
+        from lifelines.datasets import load_waltons
+        waltons = load_waltons()
+
+        ggf = GeneralizedGammaFitter()
+        ggf.fit(waltons['T'], waltons['E'])
+        ggf.plot()
+        ggf.summary
 
     Attributes
     ----------

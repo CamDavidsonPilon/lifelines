@@ -135,19 +135,21 @@ class AalenAdditiveFitter(RegressionFitter):
 
         Examples
         --------
-        >>> from lifelines import AalenAdditiveFitter
-        >>>
-        >>> df = pd.DataFrame({
-        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
-        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>> })
-        >>>
-        >>> aaf = AalenAdditiveFitter()
-        >>> aaf.fit(df, 'T', 'E')
-        >>> aaf.predict_median(df)
-        >>> aaf.print_summary()
+        .. code:: python
+
+            from lifelines import AalenAdditiveFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            aaf = AalenAdditiveFitter()
+            aaf.fit(df, 'T', 'E')
+            aaf.predict_median(df)
+            aaf.print_summary()
 
         """
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"

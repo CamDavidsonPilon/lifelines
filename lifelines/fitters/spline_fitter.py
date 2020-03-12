@@ -29,16 +29,19 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
 
     Examples
     --------
+    .. code:: python
 
-    >>> from lifelines import SplineFitter
-    >>> from lifelines.datasets import load_waltons
-    >>> waltons = load_waltons()
-    >>> T, E = waltons['T'], waltons['E']
-    >>> knots = np.percentile(T.loc[E.astype(bool)], [0, 50, 100])
-    >>> sf = SplineFitter(knots)
-    >>> sf.fit()
-    >>> sf.plot()
-    >>> print(sf.knots)
+        from lifelines import SplineFitter
+        from lifelines.datasets import load_waltons
+        waltons = load_waltons()
+
+        T, E = waltons['T'], waltons['E']
+        knots = np.percentile(T.loc[E.astype(bool)], [0, 50, 100])
+
+        sf = SplineFitter(knots)
+        sf.fit()
+        sf.plot()
+        print(sf.knots)
 
     Attributes
     ----------

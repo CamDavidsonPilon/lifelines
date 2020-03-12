@@ -44,14 +44,15 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
 
     Examples
     --------
+    .. code:: python
 
-    >>> from lifelines import WeibullFitter
-    >>> from lifelines.datasets import load_waltons
-    >>> waltons = load_waltons()
-    >>> wbf = WeibullFitter()
-    >>> wbf.fit(waltons['T'], waltons['E'])
-    >>> wbf.plot()
-    >>> print(wbf.lambda_)
+        from lifelines import WeibullFitter
+        from lifelines.datasets import load_waltons
+        waltons = load_waltons()
+        wbf = WeibullFitter()
+        wbf.fit(waltons['T'], waltons['E'])
+        wbf.plot()
+        print(wbf.lambda_)
 
     Attributes
     ----------
