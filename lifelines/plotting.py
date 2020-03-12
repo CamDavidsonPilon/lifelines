@@ -108,27 +108,28 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
 
     Examples
     ---------
+    .. code:: python
 
-    >>> from lifelines.utils import restricted_mean_survival_time
-    >>> from lifelines.datasets import load_waltons
-    >>> from lifelines.plotting import rmst_plot
-    >>>
-    >>> df = load_waltons()
-    >>> ix = df['group'] == 'miR-137'
-    >>> T, E = df['T'], df['E']
-    >>> time_limit = 50
-    >>>
-    >>> kmf_exp = KaplanMeierFitter().fit(T[ix], E[ix], label='exp')
-    >>> kmf_con = KaplanMeierFitter().fit(T[~ix], E[~ix], label='control')
-    >>>
-    >>> ax = plt.subplot(311)
-    >>> rmst_plot(kmf_exp, t=time_limit, ax=ax)
-    >>>
-    >>> ax = plt.subplot(312)
-    >>> rmst_plot(kmf_con, t=time_limit, ax=ax)
-    >>>
-    >>> ax = plt.subplot(313)
-    >>> rmst_plot(kmf_exp, model2=kmf_con, t=time_limit, ax=ax)
+        from lifelines.utils import restricted_mean_survival_time
+        from lifelines.datasets import load_waltons
+        from lifelines.plotting import rmst_plot
+
+        df = load_waltons()
+        ix = df['group'] == 'miR-137'
+        T, E = df['T'], df['E']
+        time_limit = 50
+
+        kmf_exp = KaplanMeierFitter().fit(T[ix], E[ix], label='exp')
+        kmf_con = KaplanMeierFitter().fit(T[~ix], E[~ix], label='control')
+
+        ax = plt.subplot(311)
+        rmst_plot(kmf_exp, t=time_limit, ax=ax)
+
+        ax = plt.subplot(312)
+        rmst_plot(kmf_con, t=time_limit, ax=ax)
+
+        ax = plt.subplot(313)
+        rmst_plot(kmf_exp, model2=kmf_con, t=time_limit, ax=ax)
 
 
 
@@ -212,13 +213,14 @@ def qq_plot(model, ax=None, **plot_kwargs):
 
     Examples
     ---------
+    .. code:: python
 
-    >>> from lifelines import *
-    >>> from lifelines.plotting import qq_plot
-    >>> from lifelines.datasets import load_rossi
-    >>> df = load_rossi()
-    >>> wf = WeibullFitter().fit(df['week'], df['arrest'])
-    >>> qq_plot(wf)
+        from lifelines import *
+        from lifelines.plotting import qq_plot
+        from lifelines.datasets import load_rossi
+        df = load_rossi()
+        wf = WeibullFitter().fit(df['week'], df['arrest'])
+        qq_plot(wf)
 
 
     """
@@ -340,27 +342,29 @@ def add_at_risk_counts(*fitters, **kwargs):
 
     Examples
     --------
-    >>> # First train some fitters and plot them
-    >>> fig = plt.figure()
-    >>> ax = plt.subplot(111)
-    >>>
-    >>> f1 = KaplanMeierFitter()
-    >>> f1.fit(data)
-    >>> f1.plot(ax=ax)
-    >>>
-    >>> f2 = KaplanMeierFitter()
-    >>> f2.fit(data)
-    >>> f2.plot(ax=ax)
-    >>>
-    >>> # There are equivalent
-    >>> add_at_risk_counts(f1, f2)
-    >>> add_at_risk_counts(f1, f2, ax=ax, fig=fig)
-    >>>
-    >>> # This overrides the labels
-    >>> add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
-    >>>
-    >>> # This hides the labels
-    >>> add_at_risk_counts(f1, f2, labels=None)
+    .. code:: python
+
+        # First train some fitters and plot them
+        fig = plt.figure()
+        ax = plt.subplot(111)
+
+        f1 = KaplanMeierFitter()
+        f1.fit(data)
+        f1.plot(ax=ax)
+
+        f2 = KaplanMeierFitter()
+        f2.fit(data)
+        f2.plot(ax=ax)
+
+        # There are equivalent
+        add_at_risk_counts(f1, f2)
+        add_at_risk_counts(f1, f2, ax=ax, fig=fig)
+
+        # This overrides the labels
+        add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
+
+        # This hides the labels
+        add_at_risk_counts(f1, f2, labels=None)
     """
     # Axes and Figure can't be None
     ax = kwargs.pop("ax", None)
@@ -466,10 +470,12 @@ def plot_lifetimes(
 
     Examples
     ---------
-    >>> from lifelines.datasets import load_waltons
-    >>> from lifelines.plotting import plot_lifetimes
-    >>> T, E = load_waltons()["T"], load_waltons()["E"]
-    >>> ax = plot_lifetimes(T.loc[:50], event_observed=E.loc[:50])
+    .. code:: python
+
+        from lifelines.datasets import load_waltons
+        from lifelines.plotting import plot_lifetimes
+        T, E = load_waltons()["T"], load_waltons()["E"]
+        ax = plot_lifetimes(T.loc[:50], event_observed=E.loc[:50])
 
     """
     if ax is None:

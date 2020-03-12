@@ -241,17 +241,18 @@ def restricted_mean_survival_time(
 
     Example
     --------
+    .. code:: python
 
-    >>> from lifelines import KaplanMeierFitter, WeibullFitter
-    >>> from lifelines.utils import restricted_mean_survival_time
-    >>>
-    >>> kmf = KaplanMeierFitter().fit(T, E)
-    >>> restricted_mean_survival_time(kmf, t=3.5)
-    >>> restricted_mean_survival_time(kmf.survival_function_, t=3.5)
-    >>>
-    >>> wf = WeibullFitter().fit(T, E)
-    >>> restricted_mean_survival_time(wf)
-    >>> restricted_mean_survival_time(wf.survival_function_)
+        from lifelines import KaplanMeierFitter, WeibullFitter
+        from lifelines.utils import restricted_mean_survival_time
+
+        kmf = KaplanMeierFitter().fit(T, E)
+        restricted_mean_survival_time(kmf, t=3.5)
+        restricted_mean_survival_time(kmf.survival_function_, t=3.5)
+
+        wf = WeibullFitter().fit(T, E)
+        restricted_mean_survival_time(wf)
+        restricted_mean_survival_time(wf.survival_function_)
 
     References
     -------
@@ -367,34 +368,36 @@ def group_survival_table_from_events(
 
     Example
     -------
-    >>> #input
-    >>> group_survival_table_from_events(waltonG, waltonT, np.ones_like(waltonT)) #data available in test_suite.py
-    >>> #output
-    >>> [
-    >>>     array(['control', 'miR-137'], dtype=object),
-    >>>               removed:control  removed:miR-137
-    >>>     event_at
-    >>>     6                       0                1
-    >>>     7                       2                0
-    >>>     9                       0                3
-    >>>     13                      0                3
-    >>>     15                      0                2
-    >>>     ,
-    >>>               observed:control  observed:miR-137
-    >>>     event_at
-    >>>     6                        0                 1
-    >>>     7                        2                 0
-    >>>     9                        0                 3
-    >>>     13                       0                 3
-    >>>     15                       0                 2
-    >>>     ,
-    >>>               censored:control  censored:miR-137
-    >>>     event_at
-    >>>     6                        0                 0
-    >>>     7                        0                 0
-    >>>     9                        0                 0
-    >>>     ,
-    >>> ]
+    .. code:: python
+
+        #input
+        group_survival_table_from_events(waltonG, waltonT, np.ones_like(waltonT)) #data available in test_suite.py
+        #output
+        [
+            array(['control', 'miR-137'], dtype=object),
+                      removed:control  removed:miR-137
+            event_at
+            6                       0                1
+            7                       2                0
+            9                       0                3
+            13                      0                3
+            15                      0                2
+            ,
+                      observed:control  observed:miR-137
+            event_at
+            6                        0                 1
+            7                        2                 0
+            9                        0                 3
+            13                       0                 3
+            15                       0                 2
+            ,
+                      censored:control  censored:miR-137
+            event_at
+            6                        0                 0
+            7                        0                 0
+            9                        0                 0
+            ,
+        ]
 
     See Also
     --------
@@ -488,25 +491,26 @@ def survival_table_from_events(
 
     Example
     -------
+    .. code:: python
 
-    >>> #Uncollapsed output
-    >>>           removed  observed  censored  entrance   at_risk
-    >>> event_at
-    >>> 0               0         0         0        11        11
-    >>> 6               1         1         0         0        11
-    >>> 7               2         2         0         0        10
-    >>> 9               3         3         0         0         8
-    >>> 13              3         3         0         0         5
-    >>> 15              2         2         0         0         2
-    >>> #Collapsed output
-    >>>          removed observed censored at_risk
-    >>> event_at
-    >>> (0, 2]        34       33        1     312
-    >>> (2, 4]        84       42       42     278
-    >>> (4, 6]        64       17       47     194
-    >>> (6, 8]        63       16       47     130
-    >>> (8, 10]       35       12       23      67
-    >>> (10, 12]      24        5       19      32
+        #Uncollapsed output
+                  removed  observed  censored  entrance   at_risk
+        event_at
+        0               0         0         0        11        11
+        6               1         1         0         0        11
+        7               2         2         0         0        10
+        9               3         3         0         0         8
+        13              3         3         0         0         5
+        15              2         2         0         0         2
+        #Collapsed output
+                 removed observed censored at_risk
+        event_at
+        (0, 2]        34       33        1     312
+        (2, 4]        84       42       42     278
+        (4, 6]        64       17       47     194
+        (6, 8]        63       16       47     130
+        (8, 10]       35       12       23      67
+        (10, 12]      24        5       19      32
 
     See Also
     --------
@@ -595,20 +599,22 @@ def survival_events_from_table(survival_table, observed_deaths_col="observed", c
 
     Example
     -------
-    >>> # Ex: The survival table, as a pandas DataFrame:
-    >>>
-    >>>                  observed  censored
-    >>>    index
-    >>>    1                1         0
-    >>>    2                0         1
-    >>>    3                1         0
-    >>>    4                1         1
-    >>>    5                0         1
-    >>>
-    >>> # would return
-    >>> T = np.array([ 1.,  2.,  3.,  4.,  4.,  5.]),
-    >>> E = np.array([ 1.,  0.,  1.,  1.,  0.,  0.])
-    >>> W = np.array([ 1,  1,  1,  1,  1,  1])
+    .. code:: python
+
+        # Ex: The survival table, as a pandas DataFrame:
+
+                         observed  censored
+           index
+           1                1         0
+           2                0         1
+           3                1         0
+           4                1         1
+           5                0         1
+
+        # would return
+        T = np.array([ 1.,  2.,  3.,  4.,  4.,  5.]),
+        E = np.array([ 1.,  0.,  1.,  1.,  0.,  0.])
+        W = np.array([ 1,  1,  1,  1,  1,  1])
 
     See Also
     --------
@@ -664,14 +670,16 @@ def datetimes_to_durations(
 
     Examples
     --------
-    >>> from lifelines.utils import datetimes_to_durations
-    >>>
-    >>> start_dates = ['2015-01-01', '2015-04-01', '2014-04-05']
-    >>> end_dates = ['2016-02-02', None, '2014-05-06']
-    >>>
-    >>> T, E = datetimes_to_durations(start_dates, end_dates, freq="D")
-    >>> T # array([ 397., 1414.,   31.])
-    >>> E # array([ True, False,  True])
+    .. code:: python
+
+        from lifelines.utils import datetimes_to_durations
+
+        start_dates = ['2015-01-01', '2015-04-01', '2014-04-05']
+        end_dates = ['2016-02-02', None, '2014-05-06']
+
+        T, E = datetimes_to_durations(start_dates, end_dates, freq="D")
+        T # array([ 397., 1414.,   31.])
+        E # array([ True, False,  True])
 
     """
     fill_date = pd.to_datetime(fill_date)
@@ -1198,17 +1206,19 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1) ->
 
     Example
     --------
-    >>> from lifelines.datasets import load_rossi
-    >>> from lifelines.utils import to_episodic_format
-    >>> rossi = load_rossi()
-    >>> long_rossi = to_episodic_format(rossi, 'week', 'arrest', time_gaps=2.)
-    >>>
-    >>> from lifelines import CoxTimeVaryingFitter
-    >>> ctv = CoxTimeVaryingFitter()
-    >>> # age variable violates proportional hazard
-    >>> long_rossi['time * age'] = long_rossi['stop'] * long_rossi['age']
-    >>> ctv.fit(long_rossi, id_col='id', event_col='arrest', show_progress=True)
-    >>> ctv.print_summary()
+    .. code:: python
+
+        from lifelines.datasets import load_rossi
+        from lifelines.utils import to_episodic_format
+        rossi = load_rossi()
+        long_rossi = to_episodic_format(rossi, 'week', 'arrest', time_gaps=2.)
+
+        from lifelines import CoxTimeVaryingFitter
+        ctv = CoxTimeVaryingFitter()
+        # age variable violates proportional hazard
+        long_rossi['time * age'] = long_rossi['stop'] * long_rossi['age']
+        ctv.fit(long_rossi, id_col='id', event_col='arrest', show_progress=True)
+        ctv.print_summary()
 
     See Also
     --------
@@ -1474,9 +1484,10 @@ def covariates_from_event_matrix(df, id_col) -> pd.DataFrame:
 
     Example
     -------
+    .. code:: python
 
-    >>> cv = covariates_from_event_matrix(duration_df, 'id')
-    >>> long_form_df = add_covariate_to_timeline(long_form_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
+        cv = covariates_from_event_matrix(duration_df, 'id')
+        long_form_df = add_covariate_to_timeline(long_form_df, cv, 'id', 'duration', 'e', cumulative_sum=True)
 
     """
     df = df.set_index(id_col)

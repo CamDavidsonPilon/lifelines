@@ -4,6 +4,7 @@
 
 ##### Bug fixes
  - Fixed bug when no covariates were passed into `CoxPHFitter`. See #975
+ - Fixed error in `StatisticalResult` where the test name was not displayed correctly.
 
 
 #### 0.24.1 - 2020-03-05

@@ -176,9 +176,6 @@ class StatisticalResult:
 
         return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
 
-    def __repr__(self):
-        return "<lifelines.StatisticalResult: {0}>".format(self.test_name)
-
     def to_ascii(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
@@ -214,6 +211,9 @@ class StatisticalResult:
         names = self.name + other.name
         kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
+
+    def __repr__(self):
+        return "<lifelines.StatisticalResult: {0}>".format(self.test_name)
 
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
@@ -253,15 +253,17 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
 
     Examples
     --------
-    >>> from lifelines.statistics import sample_size_necessary_under_cph
-    >>>
-    >>> desired_power = 0.8
-    >>> ratio_of_participants = 1.
-    >>> p_exp = 0.25
-    >>> p_con = 0.35
-    >>> postulated_hazard_ratio = 0.7
-    >>> n_exp, n_con = sample_size_necessary_under_cph(desired_power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio)
-    >>> # (421, 421)
+    .. code:: python
+
+        from lifelines.statistics import sample_size_necessary_under_cph
+
+        desired_power = 0.8
+        ratio_of_participants = 1.
+        p_exp = 0.25
+        p_con = 0.35
+        postulated_hazard_ratio = 0.7
+        n_exp, n_con = sample_size_necessary_under_cph(desired_power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio)
+        # (421, 421)
 
     References
     -----------
@@ -383,18 +385,20 @@ def survival_difference_at_fixed_point_in_time_test(
 
     Examples
     --------
-    >>> T1 = [1, 4, 10, 12, 12, 3, 5.4]
-    >>> E1 = [1, 0, 1,  0,  1,  1, 1]
-    >>>
-    >>> T2 = [4, 5, 7, 11, 14, 20, 8, 8]
-    >>> E2 = [1, 1, 1, 1,  1,  1,  1, 1]
-    >>>
-    >>> from lifelines.statistics import survival_difference_at_fixed_point_in_time_test
-    >>> results = survival_difference_at_fixed_point_in_time_test(12, T1, T2, event_observed_A=E1, event_observed_B=E2)
-    >>>
-    >>> results.print_summary()
-    >>> print(results.p_value)        # 0.893
-    >>> print(results.test_statistic) # 0.017
+    .. code:: python
+
+        T1 = [1, 4, 10, 12, 12, 3, 5.4]
+        E1 = [1, 0, 1,  0,  1,  1, 1]
+
+        T2 = [4, 5, 7, 11, 14, 20, 8, 8]
+        E2 = [1, 1, 1, 1,  1,  1,  1, 1]
+
+        from lifelines.statistics import survival_difference_at_fixed_point_in_time_test
+        results = survival_difference_at_fixed_point_in_time_test(12, T1, T2, event_observed_A=E1, event_observed_B=E2)
+
+        results.print_summary()
+        print(results.p_value)        # 0.893
+        print(results.test_statistic) # 0.017
 
     Notes
     -----
@@ -461,14 +465,16 @@ def logrank_test(
 
     - There are only disadvantages to using the log-rank test versus using the Cox regression. See more `here <https://discourse.datamethods.org/t/when-is-log-rank-preferred-over-univariable-cox-regression/2344>`_ for a discussion. To convert to using the Cox regression:
 
-    >>> from lifelines import CoxPHFitter
-    >>>
-    >>> dfA = pd.DataFrame({'E': event_observed_A, 'T': durations_A, 'groupA': 1})
-    >>> dfB = pd.DataFrame({'E': event_observed_B, 'T': durations_B, 'groupA': 0})
-    >>> df = pd.concat([dfA, dfB])
-    >>>
-    >>> cph = CoxPHFitter().fit(df, 'T', 'E')
-    >>> cph.print_summary()
+    .. code:: python
+
+        from lifelines import CoxPHFitter
+
+        dfA = pd.DataFrame({'E': event_observed_A, 'T': durations_A, 'groupA': 1})
+        dfB = pd.DataFrame({'E': event_observed_B, 'T': durations_B, 'groupA': 0})
+        df = pd.concat([dfA, dfB])
+
+        cph = CoxPHFitter().fit(df, 'T', 'E')
+        cph.print_summary()
 
 
 
@@ -504,18 +510,21 @@ def logrank_test(
 
     Examples
     --------
-    >>> T1 = [1, 4, 10, 12, 12, 3, 5.4]
-    >>> E1 = [1, 0, 1,  0,  1,  1, 1]
-    >>>
-    >>> T2 = [4, 5, 7, 11, 14, 20, 8, 8]
-    >>> E2 = [1, 1, 1, 1,  1,  1,  1, 1]
-    >>>
-    >>> from lifelines.statistics import logrank_test
-    >>> results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
-    >>>
-    >>> results.print_summary()
-    >>> print(results.p_value)        # 0.7676
-    >>> print(results.test_statistic) # 0.0872
+
+    .. code:: python
+
+        T1 = [1, 4, 10, 12, 12, 3, 5.4]
+        E1 = [1, 0, 1,  0,  1,  1, 1]
+
+        T2 = [4, 5, 7, 11, 14, 20, 8, 8]
+        E2 = [1, 1, 1, 1,  1,  1,  1, 1]
+
+        from lifelines.statistics import logrank_test
+        results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
+
+        results.print_summary()
+        print(results.p_value)        # 0.7676
+        print(results.test_statistic) # 0.0872
 
 
     See Also
@@ -657,23 +666,25 @@ def multivariate_logrank_test(
     Examples
     --------
 
-    >>> df = pd.DataFrame({
-    >>>    'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-    >>>    'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-    >>>    'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
-    >>> })
-    >>> result = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
-    >>> result.test_statistic
-    >>> result.p_value
-    >>> result.print_summary()
+    .. code:: python
+
+        df = pd.DataFrame({
+           'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+           'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+           'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+        })
+        result = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
+        result.test_statistic
+        result.p_value
+        result.print_summary()
 
 
-    >>> # numpy example
-    >>> G = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
-    >>> T = [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7]
-    >>> E = [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
-    >>> result = multivariate_logrank_test(T, G, E)
-    >>> result.test_statistic
+        # numpy example
+        G = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2]
+        T = [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7]
+        E = [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0]
+        result = multivariate_logrank_test(T, G, E)
+        result.test_statistic
 
 
     See Also

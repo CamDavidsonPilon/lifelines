@@ -142,16 +142,16 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         the level in the confidence intervals.
 
       baseline_estimation_method: string, optional
-        specify how the fitter should estimate the baseline. `breslow` or `spline`
+        specify how the fitter should estimate the baseline. ``"breslow"`` or ``"spline"``
 
       penalizer: float, optional (default=0.0)
         Attach a penalty to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
-        For example, this shrinks the magnitude value of :math:`\beta_i`. See `l1_ratio` below.
-        The penalty term is :math:`\frac{1}{2} \text{penalizer} ((1-l1_ratio) ||\beta||_2^2 + l1_ratio*||beta||_1)`.
+        For example, this shrinks the magnitude value of :math:`\beta_i`. See ``l1_ratio`` below.
+        The penalty term is :math:`\frac{1}{2} \text{penalizer} \left( (1-\text{l1_ratio}) ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
 
       l1_ratio: float, optional (default=0.0)
-        Specify what ratio to assign to a L1 vs L2 penalty. Same as scikit-learn. See `penalizer` above.
+        Specify what ratio to assign to a L1 vs L2 penalty. Same as scikit-learn. See ``penalizer`` above.
 
       strata: list, optional
         specify a list of columns to use in stratification. This is useful if a
@@ -160,16 +160,18 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         See http://courses.washington.edu/b515/l17.pdf.
 
       n_baseline_knots: int
-        Used when `baseline_estimation_method` is "spline". Set the number of interior knots in the baseline hazard.
+        Used when ``baseline_estimation_method`` is "spline". Set the number of interior knots in the baseline hazard.
 
     Examples
     --------
-    >>> from lifelines.datasets import load_rossi
-    >>> from lifelines import CoxPHFitter
-    >>> rossi = load_rossi()
-    >>> cph = CoxPHFitter()
-    >>> cph.fit(rossi, 'week', 'arrest')
-    >>> cph.print_summary()
+    .. code:: python
+
+        from lifelines.datasets import load_rossi
+        from lifelines import CoxPHFitter
+        rossi = load_rossi()
+        cph = CoxPHFitter()
+        cph.fit(rossi, 'week', 'arrest')
+        cph.print_summary()
 
     Attributes
     ----------
@@ -261,7 +263,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             final regression. Default weight is 1.
             This can be used for case-weights. For example, a weight of 2 means there were two subjects with
             identical observations.
-            This can be used for sampling weights. In that case, use `robust=True` to get more accurate standard errors.
+            This can be used for sampling weights. In that case, use ``robust=True`` to get more accurate standard errors.
 
         show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
@@ -274,7 +276,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         strata: list or string, optional
             specify a column or list of columns n to use in stratification. This is useful if a
             categorical covariate does not obey the proportional hazard assumption. This
-            is used similar to the `strata` expression in R.
+            is used similar to the ``strata`` expression in R.
             See http://courses.washington.edu/b515/l17.pdf.
 
         step_size: float, optional
@@ -305,36 +307,39 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         Examples
         --------
-        >>> from lifelines import CoxPHFitter
-        >>>
-        >>> df = pd.DataFrame({
-        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
-        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>> })
-        >>>
-        >>> cph = CoxPHFitter()
-        >>> cph.fit(df, 'T', 'E')
-        >>> cph.print_summary()
-        >>> cph.predict_median(df)
+        .. code:: python
 
+            from lifelines import CoxPHFitter
 
-        >>> from lifelines import CoxPHFitter
-        >>>
-        >>> df = pd.DataFrame({
-        >>>     'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
-        >>>     'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
-        >>>     'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
-        >>>     'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>>     'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
-        >>> })
-        >>>
-        >>> cph = CoxPHFitter()
-        >>> cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
-        >>> cph.print_summary()
-        >>> cph.predict_median(df)
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E')
+            cph.print_summary()
+            cph.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
+                'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
+            cph.print_summary()
+            cph.predict_median(df)
 
         """
         if duration_col is None:
@@ -1399,7 +1404,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         return StatisticalResult(
             p_value,
             test_stat,
-            name="log-likelihood ratio test",
+            test_name="log-likelihood ratio test",
             null_distribution="chi squared",
             degrees_freedom=degrees_freedom,
         )
@@ -1486,7 +1491,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
         conditional_after: iterable, optional
-            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. reset back to starting at 0.
@@ -1584,7 +1589,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             is the set of all durations (observed and unobserved). Uses a linear interpolation if
             points in time are not in the index.
         conditional_after: iterable, optional
-            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
@@ -1609,7 +1614,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         p: float, optional (default=0.5)
             the percentile, must be between 0 and 1.
         conditional_after: iterable, optional
-            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
@@ -1636,7 +1641,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         conditional_after: iterable, optional
-            Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
@@ -1730,17 +1735,21 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         Example
         -------
-        >>> from lifelines.datasets import load_rossi
-        >>> from lifelines import CoxPHFitter, KaplanMeierFitter
-        >>> rossi = load_rossi()
-        >>> kmf = KaplanMeierFitter()
-        >>> kmf.fit(rossi['week'], rossi['arrest'])
-        >>> rossi2 = rossi[['week', 'arrest']].copy()
-        >>> rossi2['var1'] = np.random.randn(432)
-        >>> cph = CoxPHFitter()
-        >>> cph.fit(rossi2, 'week', 'arrest')
-        >>> ax = cph.baseline_survival_.plot()
-        >>> kmf.plot(ax=ax)
+        .. code:: python
+
+            from lifelines.datasets import load_rossi
+            from lifelines import CoxPHFitter, KaplanMeierFitter
+            rossi = load_rossi()
+
+            kmf = KaplanMeierFitter()
+            kmf.fit(rossi['week'], rossi['arrest'])
+            rossi2 = rossi[['week', 'arrest']].copy()
+            rossi2['var1'] = np.random.randn(432)
+
+            cph = CoxPHFitter()
+            cph.fit(rossi2, 'week', 'arrest')
+            ax = cph.baseline_survival_.plot()
+            kmf.plot(ax=ax)
         """
         survival_df = exp(-self.baseline_cumulative_hazard_)
         if not self.strata:
@@ -1756,17 +1765,18 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         columns : list, optional
             specify a subset of the columns to plot
         hazard_ratios: bool, optional
-            by default, `plot` will present the log-hazard ratios (the coefficients). However, by turning this flag to True, the hazard ratios are presented instead.
+            by default, ``plot`` will present the log-hazard ratios (the coefficients). However, by turning this flag to True, the hazard ratios are presented instead.
         errorbar_kwargs:
             pass in additional plotting commands to matplotlib errorbar command
 
         Examples
         ---------
+        .. code:: python
 
-        >>> from lifelines import datasets, CoxPHFitter
-        >>> rossi = datasets.load_rossi()
-        >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
-        >>> cph.plot(hazard_ratios=True)
+            from lifelines import datasets, CoxPHFitter
+            rossi = datasets.load_rossi()
+            cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+            cph.plot(hazard_ratios=True)
 
         Returns
         -------
@@ -1851,32 +1861,37 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         Examples
         ---------
-        >>> from lifelines import datasets, CoxPHFitter
-        >>> rossi = datasets.load_rossi()
-        >>> cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
-        >>> cph.plot_covariate_groups('prio', values=arange(0, 15, 3), cmap='coolwarm')
+        .. code:: python
+
+            from lifelines import datasets, CoxPHFitter
+            rossi = datasets.load_rossi()
+
+            cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+            cph.plot_covariate_groups('prio', values=arange(0, 15, 3), cmap='coolwarm')
 
         .. image:: /images/plot_covariate_example1.png
 
+        .. code:: python
 
-        >>> # multiple variables at once
-        >>> cph.plot_covariate_groups(['prio', 'paro'], values=[
-        >>>  [0,  0],
-        >>>  [5,  0],
-        >>>  [10, 0],
-        >>>  [0,  1],
-        >>>  [5,  1],
-        >>>  [10, 1]
-        >>> ], cmap='coolwarm')
+            # multiple variables at once
+            cph.plot_covariate_groups(['prio', 'paro'], values=[
+             [0,  0],
+             [5,  0],
+             [10, 0],
+             [0,  1],
+             [5,  1],
+             [10, 1]
+            ], cmap='coolwarm')
 
         .. image:: /images/plot_covariate_example2.png
 
+        .. code:: python
 
-        >>> # if you have categorical variables, you can do the following to see the
-        >>> # effect of all the categories on one plot.
-        >>> cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        >>> # same as:
-        >>> cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
+            # if you have categorical variables, you can do the following to see the
+            # effect of all the categories on one plot.
+            cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            # same as:
+            cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
 
 
         """
@@ -1957,15 +1972,17 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         Examples
         ---------
 
-        >>> from lifelines import CoxPHFitter
-        >>> from lifelines.datasets import load_rossi
-        >>>
-        >>> rossi_train = load_rossi().loc[:400]
-        >>> rossi_test = load_rossi().loc[400:]
-        >>> cph = CoxPHFitter().fit(rossi_train, 'week', 'arrest')
-        >>>
-        >>> cph.score(rossi_train)
-        >>> cph.score(rossi_test)
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+            from lifelines.datasets import load_rossi
+
+            rossi_train = load_rossi().loc[:400]
+            rossi_test = load_rossi().loc[400:]
+            cph = CoxPHFitter().fit(rossi_train, 'week', 'arrest')
+
+            cph.score(rossi_train)
+            cph.score(rossi_test)
 
         """
 
