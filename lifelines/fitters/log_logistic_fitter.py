@@ -36,14 +36,16 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
 
     Examples
     --------
+    .. code:: python
 
-    >>> from lifelines import LogLogisticFitter
-    >>> from lifelines.datasets import load_waltons
-    >>> waltons = load_waltons()
-    >>> llf = LogLogisticFitter()
-    >>> llf.fit(waltons['T'], waltons['E'])
-    >>> llf.plot()
-    >>> print(llf.alpha_)
+        from lifelines import LogLogisticFitter
+        from lifelines.datasets import load_waltons
+        waltons = load_waltons()
+
+        llf = LogLogisticFitter()
+        llf.fit(waltons['T'], waltons['E'])
+        llf.plot()
+        print(llf.alpha_)
 
     Attributes
     ----------
