@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.2 - Unreleased
+#### 0.24.2 - 2020-03-15
 
 ##### Bug fixes
  - Fixed bug when no covariates were passed into `CoxPHFitter`. See #975
