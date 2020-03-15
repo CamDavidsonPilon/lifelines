@@ -5,6 +5,7 @@
 ##### Bug fixes
  - Fixed bug when no covariates were passed into `CoxPHFitter`. See #975
  - Fixed error in `StatisticalResult` where the test name was not displayed correctly.
+ - Fixed a keyword bug in `plot_covariate_groups` for parametric models.
 
 
 #### 0.24.1 - 2020-03-05
@@ -18,7 +19,7 @@
 
 #### 0.24.0 - 2020-02-20
 
-This version and future versions of lifelines no longer support py35. Pandas 1.0 is fully supported, along with previous version. Minimum Scipy has been bumped to 1.2.0
+This version and future versions of lifelines no longer support py35. Pandas 1.0 is fully supported, along with previous versions. Minimum Scipy has been bumped to 1.2.0.
 
 ##### New features
  - `CoxPHFitter` and `CoxTimeVaryingFitter` has support for an elastic net penalty, which includes L1 and L2 regression.
@@ -26,7 +27,7 @@ This version and future versions of lifelines no longer support py35. Pandas 1.0
  - Regression models have a new `score` method that will score your model against a dataset (ex: a testing or validation dataset). The default is to evaluate the log-likelihood, but also the concordance index can be chose.
  - New `MixtureCureFitter` for quickly creating univariate mixture models.
  - Univariate parametric models have a `plot_density`, `density_at_times`, and property `density_` that computes the probability density function estimates.
- - new dataset for interval regression involving C. Botulinum.
+ - new dataset for interval regression involving *C. Botulinum*.
  - new `lifelines.fitters.mixins.ProportionalHazardMixin` that implements proportional hazard checks.
 
 ##### API Changes

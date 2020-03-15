@@ -2407,7 +2407,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, timeline=None, **kwargs):
+    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, times=None, **kwargs):
         """
         Produces a plot comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
@@ -2422,8 +2422,8 @@ class ParametricRegressionFitter(RegressionFitter):
             an iterable of the values we wish the covariate to take on.
         plot_baseline: bool
             also display the baseline survival, defined as the survival at the mean of the original dataset.
-        timeline:
-            pass in a timeline to plot
+        times:
+            pass in a times to plot
         kwargs:
             pass in additional plotting commands
 
@@ -2481,9 +2481,9 @@ class ParametricRegressionFitter(RegressionFitter):
         for covariate, value in zip(covariates, values.T):
             X[covariate] = value
 
-        self.predict_survival_function(X, timeline=timeline).plot(ax=ax, **kwargs)
+        self.predict_survival_function(X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
-            self.predict_survival_function(x_bar, timeline=timeline).rename(columns={0: "baseline survival"}).plot(
+            self.predict_survival_function(x_bar, times=times).rename(columns={0: "baseline survival"}).plot(
                 ax=ax, ls=":", color="k"
             )
         return ax
@@ -3113,7 +3113,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, timeline=None, **kwargs):
+    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, times=None, **kwargs):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
@@ -3128,8 +3128,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             an iterable of the values we wish the covariate to take on.
         plot_baseline: bool
             also display the baseline survival, defined as the survival at the mean of the original dataset.
-        timeline: iterable
-            pass in a timeline to plot
+        times: iterable
+            pass in a times to plot
         kwargs:
             pass in additional plotting commands
 
@@ -3194,9 +3194,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             X["_intercept"] = 1.0
             ancillary_X["_intercept"] = 1.0
 
-        self.predict_survival_function(X, ancillary_df=ancillary_X, timeline=timeline).plot(ax=ax, **kwargs)
+        self.predict_survival_function(X, ancillary_df=ancillary_X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
-            self.predict_survival_function(x_bar, ancillary_df=x_bar_anc, timeline=timeline).rename(
+            self.predict_survival_function(x_bar, ancillary_df=x_bar_anc, times=times).rename(
                 columns={0: "baseline survival"}
             ).plot(ax=ax, ls=":", color="k")
         return ax
