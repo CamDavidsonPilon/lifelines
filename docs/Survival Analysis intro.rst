@@ -117,7 +117,7 @@ information at :math:`t=10`).
 
 Survival analysis was originally developed to solve this type of
 problem, that is, to deal with estimation when our data is
-right-censored. However, wven in the case where all events have been
+right-censored. However, even in the case where all events have been
 observed, i.e. there is no censoring, survival analysis is still a very useful tool
 to understand durations and rates.
 
