@@ -183,7 +183,7 @@ Penalties and sparse regression
 
 It's possible to add a penalizer term to the Cox regression as well. One can use these to i) stabilize the coefficients, ii) shrink the estimates to 0, iii) encourages a Bayesian interpretation, and iv) create sparse coefficients. Regression models, including the Cox model, include both an L1 and L2 penalty:
 
-.. math:: \frac{1}{2} \text{penalizer} ((1-l1_ratio) ||\beta||_2^2 + l1_ratio*||beta||_1)
+.. math:: \frac{1}{2} \text{penalizer} ((1-l1\_ratio)\cdot ||\beta||_2^2 + l1\_ratio\cdot ||beta||_1)
 
 Both the `penalizer` and `l1_ratio` are specified in the class creation:
 
