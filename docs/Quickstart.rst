@@ -117,7 +117,7 @@ Instead of the Kaplan-Meier estimator, you may be interested in a parametric mod
 
     kmf = KaplanMeierFitter().fit(T, E, label='KaplanMeierFitter')
     wbf = WeibullFitter().fit(T, E, label='WeibullFitter')
-    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentialFitter')
     lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
     pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
