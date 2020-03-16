@@ -104,7 +104,7 @@ A useful summary stat is the median survival time, which represents when 50% of 
     from lifelines.utils import median_survival_times
 
     median_ = kmf.median_survival_time_
-    median_confidence_interval_ = median_survival_times(kmf.confidence_interval_))
+    median_confidence_interval_ = median_survival_times(kmf.confidence_interval_)
 
 
 Instead of the Kaplan-Meier estimator, you may be interested in a parametric model. *lifelines* has builtin parametric models. For example, Weibull, Log-Normal, Log-Logistic, and more.
