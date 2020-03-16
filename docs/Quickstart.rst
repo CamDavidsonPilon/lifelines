@@ -27,7 +27,7 @@ Install via `conda <https://anaconda.org/conda-forge/lifelines>`_:
     conda install -c conda-forge lifelines
     
 
-Kaplan-Meier Nelson-Aalen, and parametric models
+Kaplan-Meier, Nelson-Aalen, and parametric models
 ---------------------------------------------------
 
 .. note:: For readers looking for an introduction to survival analysis, it's recommended to start at :ref:`Introduction to Survival Analysis`
