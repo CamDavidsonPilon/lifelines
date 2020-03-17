@@ -27,7 +27,7 @@ Install via `conda <https://anaconda.org/conda-forge/lifelines>`_:
     conda install -c conda-forge lifelines
     
 
-Kaplan-Meier Nelson-Aalen, and parametric models
+Kaplan-Meier, Nelson-Aalen, and parametric models
 ---------------------------------------------------
 
 .. note:: For readers looking for an introduction to survival analysis, it's recommended to start at :ref:`Introduction to Survival Analysis`
@@ -104,24 +104,27 @@ A useful summary stat is the median survival time, which represents when 50% of 
     from lifelines.utils import median_survival_times
 
     median_ = kmf.median_survival_time_
-    median_confidence_interval_ = median_survival_times(kmf.confidence_interval_))
+    median_confidence_interval_ = median_survival_times(kmf.confidence_interval_)
 
 
 Instead of the Kaplan-Meier estimator, you may be interested in a parametric model. *lifelines* has builtin parametric models. For example, Weibull, Log-Normal, Log-Logistic, and more.
 
 .. code:: python
 
+    import matplotlib.pyplot as plt
+    import numpy as np
     from lifelines import *
 
-    fig, axes = plt.subplots(2, 3, figsize=(9, 5))
+    fig, axes = plt.subplots(3, 3, figsize=(13.5, 7.5))
 
     kmf = KaplanMeierFitter().fit(T, E, label='KaplanMeierFitter')
     wbf = WeibullFitter().fit(T, E, label='WeibullFitter')
-    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentialFitter')
     lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
     pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
     ggf = GeneralizedGammaFitter().fit(T, E, label='GeneralizedGammaFitter')
+    sf = SplineFitter(np.percentile(T.loc[E.astype(bool)], [0, 50, 100])).fit(T, E, label='SplineFitter')
 
     wbf.plot_survival_function(ax=axes[0][0])
     exf.plot_survival_function(ax=axes[0][1])
@@ -129,7 +132,8 @@ Instead of the Kaplan-Meier estimator, you may be interested in a parametric mod
     kmf.plot_survival_function(ax=axes[1][0])
     llf.plot_survival_function(ax=axes[1][1])
     pwf.plot_survival_function(ax=axes[1][2])
-    ggf.plot_survival_function(ax=axes[1][2])
+    ggf.plot_survival_function(ax=axes[2][0])
+    sf.plot_survival_function(ax=axes[2][1])
 
 .. image:: images/waltons_survival_function.png
 
