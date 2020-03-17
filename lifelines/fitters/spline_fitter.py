@@ -20,7 +20,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
     -----------
     knot_locations: list, np.array
         The locations of the cubic breakpoints. Typically, the first knot is the minimum observed death, the last knot is the maximum observed death, and the knots in between
-        are the centiles of observed data (ex: if one additional knot, choose the 50th percentile, the median. If two additional knots, choose the 33th and 66th percentiles).
+        are the centiles of observed data (ex: if one additional knot, choose the 50th percentile, the median. If two additional knots, choose the 33rd and 66th percentiles).
 
     References
     ------------
@@ -39,7 +39,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
         knots = np.percentile(T.loc[E.astype(bool)], [0, 50, 100])
 
         sf = SplineFitter(knots)
-        sf.fit()
+        sf.fit(T, E)
         sf.plot()
         print(sf.knots)
 
