@@ -1,5 +1,15 @@
 ## Changelog
 
+#### 0.24.3 - unreleased
+
+##### New features
+ - new `logx` kwarg in plotting curves
+ - PH models have `compute_followup_hazard_ratios` for simulating what the hazard ratio would be at previous times. This is useful because the final hazard ratio is some weighted average of these.
+
+##### Bug fixes
+ - Fixed error in HTML printer that was hiding concordance index information.
+
+
 #### 0.24.2 - 2020-03-15
 
 ##### Bug fixes
