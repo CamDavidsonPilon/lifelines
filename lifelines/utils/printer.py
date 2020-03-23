@@ -94,7 +94,7 @@ class Printer:
                             "Log-likelihood ratio test",
                             "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
                         ),
-                        ("-log2(p)", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
+                        ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
                     ]
                 )
             except AttributeError:

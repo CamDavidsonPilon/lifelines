@@ -594,6 +594,7 @@ def _plot_estimate(
     ci_alpha=0.25,
     ci_show=True,
     at_risk_counts=False,
+    logx: bool = False,
     ax=None,
     **kwargs
 ):
@@ -636,6 +637,9 @@ def _plot_estimate(
         >>> model.plot(iloc=slice(0,10))
 
         will plot the first 10 time points.
+    logx: bool
+        Use log scaling on x axis
+
 
     Returns
     -------
@@ -649,7 +653,7 @@ def _plot_estimate(
         )
         ci_only_lines = ci_force_lines
 
-    plot_estimate_config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, ax, **kwargs)
+    plot_estimate_config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, logx, ax, **kwargs)
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc, cls.timeline)
 
@@ -664,7 +668,7 @@ def _plot_estimate(
 
     dataframe_slicer(plot_estimate_config.estimate_).rename(
         columns=lambda _: plot_estimate_config.kwargs.pop("label")
-    ).plot(**plot_estimate_config.kwargs)
+    ).plot(logx=plot_estimate_config.logx, **plot_estimate_config.kwargs)
 
     # plot confidence intervals
     if ci_show:
@@ -680,8 +684,9 @@ def _plot_estimate(
                         linewidth=1,
                         color=[plot_estimate_config.colour],
                         drawstyle=plot_estimate_config.kwargs["drawstyle"],
-                        ax=plot_estimate_config.ax,
                         alpha=0.6,
+                        logx=plot_estimate_config.logx,
+                        ax=plot_estimate_config.ax,
                     )
                 )
         else:
@@ -711,7 +716,9 @@ def _plot_estimate(
 
 
 class PlotEstimateConfig:
-    def __init__(self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, ax, **kwargs):
+    def __init__(
+        self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, logx, ax, **kwargs
+    ):
 
         self.censor_styles = coalesce(censor_styles, {})
 
@@ -729,6 +736,7 @@ class PlotEstimateConfig:
         # plot censors
         self.ax = ax
         self.colour = kwargs["color"]
+        self.logx = logx
         self.kwargs = kwargs
 
         if isinstance(estimate, str):

@@ -684,3 +684,14 @@ class TestPlotting:
         ax.legend(title="Legend title")
         self.plt.title("test_hide_ci_from_legend")
         self.plt.show(block=block)
+
+    def test_logx_plotting(self, block):
+        waltons = load_waltons()
+        kmf = KaplanMeierFitter().fit(np.exp(waltons["T"]), waltons["E"], timeline=np.logspace(0, 40))
+        ax = kmf.plot(logx=True)
+
+        wf = WeibullFitter().fit(np.exp(waltons["T"]), waltons["E"], timeline=np.logspace(0, 40))
+        wf.plot_survival_function(logx=True, ax=ax)
+
+        self.plt.title("test_logx_plotting")
+        self.plt.show(block=block)
