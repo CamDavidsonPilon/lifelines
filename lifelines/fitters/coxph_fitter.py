@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 import warnings
 from textwrap import dedent, fill
-from typing import Callable, Iterator, List, Optional, Tuple, Union, Any
+from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
 
 import numpy as np
 from numpy import dot, einsum, log, exp, zeros, arange, multiply, ndarray
@@ -381,7 +381,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         self.log_likelihood_ = ll_
         self.variance_matrix_ = variance_matrix_
         self.params_ = pd.Series(params_, index=X.columns, name="coef")
-        self.hazard_ratios_ = pd.Series(exp(self.params_), index=X.columns, name="exp(coef)")
         self.baseline_hazard_ = baseline_hazard_
         self.baseline_cumulative_hazard_ = baseline_cumulative_hazard_
 
@@ -2065,3 +2064,37 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             self._concordance_index_ = _concordance_ratio(num_correct, num_tied, num_pairs)
             return self.concordance_index_
         return self._concordance_index_
+
+    def compute_followup_hazard_ratios(self, training_df: DataFrame, followup_times: Iterable) -> DataFrame:
+        """
+        Recompute the hazard ratio at different follow-up times (lifelines handles accounting for updated censoring and updated durations).
+        This is useful because we need to remember that the hazard ratio is actually a weighted-average of period-specific hazard ratios.
+
+        Parameters
+        ----------
+
+        training_df: pd.DataFrame
+            The same dataframe used to train the model
+        followup_times: Iterable
+            a list/array of follow-up times to recompute the hazard ratio at.
+
+
+        """
+        results = {}
+        for t in sorted(followup_times):
+            assert (
+                t <= training_df[self.duration_col].max()
+            ), "all follow-up times must be less than max observed duration"
+            df = training_df.copy()
+            # if we "rollback" the df to time t, who is dead and who is censored
+            df[self.event_col] = (df[self.duration_col] <= t) & df[self.event_col]
+            df[self.duration_col] = np.minimum(df[self.duration_col], t)
+
+            model = self.__class__(
+                penalizer=self.penalizer,
+                l1_ratio=self.l1_ratio,
+                strata=self.strata,
+                baseline_estimation_method=self.baseline_estimation_method,
+            ).fit(df, self.duration_col, self.event_col, weights_col=self.weights_col, cluster_col=self.cluster_col)
+            results[t] = model.hazard_ratios_
+        return DataFrame(results).T

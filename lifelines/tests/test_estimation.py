@@ -2505,8 +2505,16 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline")
 
+    def test_compute_followup_hazard_ratios(self, cph, cph_spline, rossi):
+        cph.fit(rossi, "week", "arrest")
+        cph.compute_followup_hazard_ratios(rossi, [15, 25, 35, 45])
+
+        cph_spline.fit(rossi, "week", "arrest")
+        cph_spline.compute_followup_hazard_ratios(rossi, [15, 25, 35, 45])
+
     def test_model_can_accept_null_covariates(self, cph, rossi):
         cph.fit(rossi[["week", "arrest"]], "week", "arrest")
+        assert True
 
     def test_spline_model_can_handle_specific_outliers(self, cph_spline):
         # https://github.com/CamDavidsonPilon/lifelines/issues/965
