@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.3 - unreleased
+#### 0.24.3 - 2020-03-25
 
 ##### New features
  - new `logx` kwarg in plotting curves
