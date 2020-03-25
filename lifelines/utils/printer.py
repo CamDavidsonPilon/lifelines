@@ -87,13 +87,15 @@ class Printer:
 
             try:
                 sr = self.model.log_likelihood_ratio_test()
-                footers.append(
-                    (
-                        "Log-likelihood ratio test",
-                        "{:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                            sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
+                footers.extend(
+                    [
+                        ("Concordance", "{:.{prec}f}".format(self.model.concordance_index_, prec=decimals)),
+                        (
+                            "Log-likelihood ratio test",
+                            "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
                         ),
-                    )
+                        ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
+                    ]
                 )
             except AttributeError:
                 pass

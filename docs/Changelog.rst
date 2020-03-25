@@ -1,8 +1,29 @@
 Changelog
 ---------
 
+0.24.3 - 2020-03-25
+^^^^^^^^^^^^^^^^^^^
+
+New features
+''''''''''''
+
+-  new ``logx`` kwarg in plotting curves
+-  PH models have ``compute_followup_hazard_ratios`` for simulating what
+   the hazard ratio would be at previous times. This is useful because
+   the final hazard ratio is some weighted average of these.
+
+Bug fixes
+'''''''''
+
+-  Fixed error in HTML printer that was hiding concordance index
+   information.
+
+.. _section-1:
+
 0.24.2 - 2020-03-15
 ^^^^^^^^^^^^^^^^^^^
+
+.. _bug-fixes-1:
 
 Bug fixes
 '''''''''
@@ -14,10 +35,12 @@ Bug fixes
 -  Fixed a keyword bug in ``plot_covariate_groups`` for parametric
    models.
 
-.. _section-1:
+.. _section-2:
 
 0.24.1 - 2020-03-05
 ^^^^^^^^^^^^^^^^^^^
+
+.. _new-features-1:
 
 New features
 ''''''''''''
@@ -25,14 +48,14 @@ New features
 -  Stability improvements for GeneralizedGammaRegressionFitter and
    CoxPHFitter with spline estimation.
 
-.. _bug-fixes-1:
+.. _bug-fixes-2:
 
 Bug fixes
 '''''''''
 
 -  Fixed bug with plotting hazards in NelsonAalenFitter.
 
-.. _section-2:
+.. _section-3:
 
 0.24.0 - 2020-02-20
 ^^^^^^^^^^^^^^^^^^^
@@ -41,7 +64,7 @@ This version and future versions of lifelines no longer support py35.
 Pandas 1.0 is fully supported, along with previous versions. Minimum
 Scipy has been bumped to 1.2.0.
 
-.. _new-features-1:
+.. _new-features-2:
 
 New features
 ''''''''''''
@@ -91,7 +114,7 @@ API Changes
    to ``scoring_method``.
 -  removed ``_score_`` and ``path`` from Cox model.
 
-.. _bug-fixes-2:
+.. _bug-fixes-3:
 
 Bug fixes
 '''''''''
@@ -104,12 +127,12 @@ Bug fixes
 -  Cox models now incorporate any penalizers in their
    ``log_likelihood_``
 
-.. _section-3:
+.. _section-4:
 
 0.23.9 - 2020-01-28
 ^^^^^^^^^^^^^^^^^^^
 
-.. _bug-fixes-3:
+.. _bug-fixes-4:
 
 Bug fixes
 '''''''''
@@ -120,12 +143,12 @@ Bug fixes
    of ``GeneralizedGammaRegressionFitter`` and any custom regression
    models should update their code as soon as possible.
 
-.. _section-4:
+.. _section-5:
 
 0.23.8 - 2020-01-21
 ^^^^^^^^^^^^^^^^^^^
 
-.. _bug-fixes-4:
+.. _bug-fixes-5:
 
 Bug fixes
 '''''''''
@@ -136,19 +159,19 @@ Bug fixes
    ``GeneralizedGammaRegressionFitter`` and any custom regression models
    should update their code as soon as possible.
 
-.. _section-5:
+.. _section-6:
 
 0.23.7 - 2020-01-14
 ^^^^^^^^^^^^^^^^^^^
 
 Bug fixes for py3.5.
 
-.. _section-6:
+.. _section-7:
 
 0.23.6 - 2020-01-07
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-2:
+.. _new-features-3:
 
 New features
 ''''''''''''
@@ -162,12 +185,12 @@ New features
 -  custom parametric regression models can now do left and interval
    censoring.
 
-.. _section-7:
+.. _section-8:
 
 0.23.5 - 2020-01-05
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-3:
+.. _new-features-4:
 
 New features
 ''''''''''''
@@ -176,7 +199,7 @@ New features
 -  New lymph node cancer dataset, originally from *H.F. for the German
    Breast Cancer Study Group (GBSG) (1994)*
 
-.. _bug-fixes-5:
+.. _bug-fixes-6:
 
 Bug fixes
 '''''''''
@@ -186,26 +209,26 @@ Bug fixes
 -  fixed bug where large exponential numbers in ``print_summary`` were
    not being suppressed correctly.
 
-.. _section-8:
+.. _section-9:
 
 0.23.4 - 2019-12-15
 ^^^^^^^^^^^^^^^^^^^
 
 -  Bug fix for PyPI
 
-.. _section-9:
+.. _section-10:
 
 0.23.3 - 2019-12-11
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-4:
+.. _new-features-5:
 
 New features
 ''''''''''''
 
 -  ``StatisticalResult.print_summary`` supports html output.
 
-.. _bug-fixes-6:
+.. _bug-fixes-7:
 
 Bug fixes
 '''''''''
@@ -213,12 +236,12 @@ Bug fixes
 -  fix import in ``printer.py``
 -  fix html printing with Univariate models.
 
-.. _section-10:
+.. _section-11:
 
 0.23.2 - 2019-12-07
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-5:
+.. _new-features-6:
 
 New features
 ''''''''''''
@@ -230,7 +253,7 @@ New features
 -  performance improvements on regression models’ preprocessing. Should
    make datasets with high number of columns more performant.
 
-.. _bug-fixes-7:
+.. _bug-fixes-8:
 
 Bug fixes
 '''''''''
@@ -239,12 +262,12 @@ Bug fixes
 -  fixed repr for ``sklearn_adapter`` classes.
 -  fixed ``conditional_after`` in Cox model with strata was used.
 
-.. _section-11:
+.. _section-12:
 
 0.23.1 - 2019-11-27
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-6:
+.. _new-features-7:
 
 New features
 ''''''''''''
@@ -254,7 +277,7 @@ New features
 -  performance improvements for ``CoxPHFitter`` - up to 30% performance
    improvements for some datasets.
 
-.. _bug-fixes-8:
+.. _bug-fixes-9:
 
 Bug fixes
 '''''''''
@@ -266,12 +289,12 @@ Bug fixes
 -  fixed bug when using ``print_summary`` with left censored models.
 -  lots of minor bug fixes.
 
-.. _section-12:
+.. _section-13:
 
 0.23.0 - 2019-11-17
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-7:
+.. _new-features-8:
 
 New features
 ''''''''''''
@@ -280,7 +303,7 @@ New features
    Jupyter notebooks!
 -  silenced some warnings.
 
-.. _bug-fixes-9:
+.. _bug-fixes-10:
 
 Bug fixes
 '''''''''
@@ -302,7 +325,7 @@ API Changes
 -  ``left_censorship`` in ``fit`` has been removed in favour of
    ``fit_left_censoring``.
 
-.. _section-13:
+.. _section-14:
 
 0.22.10 - 2019-11-08
 ^^^^^^^^^^^^^^^^^^^^
@@ -310,7 +333,7 @@ API Changes
 The tests were re-factored to be shipped with the package. Let me know
 if this causes problems.
 
-.. _bug-fixes-10:
+.. _bug-fixes-11:
 
 Bug fixes
 '''''''''
@@ -320,12 +343,12 @@ Bug fixes
 -  fixed bug in plot_covariate_groups for AFT models when >1d arrays
    were used for values arg.
 
-.. _section-14:
+.. _section-15:
 
 0.22.9 - 2019-10-30
 ^^^^^^^^^^^^^^^^^^^
 
-.. _bug-fixes-11:
+.. _bug-fixes-12:
 
 Bug fixes
 '''''''''
@@ -337,12 +360,12 @@ Bug fixes
 -  ``CoxPHFitter`` now displays correct columns values when changing
    alpha param.
 
-.. _section-15:
+.. _section-16:
 
 0.22.8 - 2019-10-06
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-8:
+.. _new-features-9:
 
 New features
 ''''''''''''
@@ -352,19 +375,19 @@ New features
 -  ``conditional_after`` now available in ``CoxPHFitter.predict_median``
 -  Suppressed some unimportant warnings.
 
-.. _bug-fixes-12:
+.. _bug-fixes-13:
 
 Bug fixes
 '''''''''
 
 -  fixed initial_point being ignored in AFT models.
 
-.. _section-16:
+.. _section-17:
 
 0.22.7 - 2019-09-29
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-9:
+.. _new-features-10:
 
 New features
 ''''''''''''
@@ -372,7 +395,7 @@ New features
 -  new ``ApproximationWarning`` to tell you if the package is making an
    potentially mislead approximation.
 
-.. _bug-fixes-13:
+.. _bug-fixes-14:
 
 Bug fixes
 '''''''''
@@ -391,19 +414,19 @@ API Changes
 -  Some previous ``StatisticalWarnings`` have been replaced by
    ``ApproximationWarning``
 
-.. _section-17:
+.. _section-18:
 
 0.22.6 - 2019-09-25
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-10:
+.. _new-features-11:
 
 New features
 ''''''''''''
 
 -  ``conditional_after`` works for ``CoxPHFitter`` prediction models 😅
 
-.. _bug-fixes-14:
+.. _bug-fixes-15:
 
 Bug fixes
 '''''''''
@@ -419,12 +442,12 @@ API Changes
 -  ``utils.dataframe_interpolate_at_times`` renamed to
    ``utils.interpolate_at_times_and_return_pandas``.
 
-.. _section-18:
+.. _section-19:
 
 0.22.5 - 2019-09-20
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-11:
+.. _new-features-12:
 
 New features
 ''''''''''''
@@ -433,7 +456,7 @@ New features
    weights.
 -  Better support for predicting on Pandas Series
 
-.. _bug-fixes-15:
+.. _bug-fixes-16:
 
 Bug fixes
 '''''''''
@@ -450,12 +473,12 @@ API Changes
 -  ``_get_initial_value`` in parametric univariate models is renamed
    ``_create_initial_point``
 
-.. _section-19:
+.. _section-20:
 
 0.22.4 - 2019-09-04
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-12:
+.. _new-features-13:
 
 New features
 ''''''''''''
@@ -474,7 +497,7 @@ API changes
 -  ``KaplanMeierFitter.survival_function_``\ ‘s’ index is no longer
    given the name “timeline”.
 
-.. _bug-fixes-16:
+.. _bug-fixes-17:
 
 Bug fixes
 '''''''''
@@ -482,12 +505,12 @@ Bug fixes
 -  Fixed issue where ``concordance_index`` would never exit if NaNs in
    dataset.
 
-.. _section-20:
+.. _section-21:
 
 0.22.3 - 2019-08-08
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-13:
+.. _new-features-14:
 
 New features
 ''''''''''''
@@ -511,7 +534,7 @@ API changes
    gains only in Cox models, and only a small fraction of the API was
    being used.
 
-.. _bug-fixes-17:
+.. _bug-fixes-18:
 
 Bug fixes
 '''''''''
@@ -523,19 +546,19 @@ Bug fixes
 -  Fixed an error in the ``predict_percentile`` of
    ``LogLogisticAFTFitter``. New tests have been added around this.
 
-.. _section-21:
+.. _section-22:
 
 0.22.2 - 2019-07-25
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-14:
+.. _new-features-15:
 
 New features
 ''''''''''''
 
 -  lifelines is now compatible with scipy>=1.3.0
 
-.. _bug-fixes-18:
+.. _bug-fixes-19:
 
 Bug fixes
 '''''''''
@@ -546,12 +569,12 @@ Bug fixes
    errors when using the library. The correctly numpy has been pinned
    (to 1.14.0+)
 
-.. _section-22:
+.. _section-23:
 
 0.22.1 - 2019-07-14
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-15:
+.. _new-features-16:
 
 New features
 ''''''''''''
@@ -579,7 +602,7 @@ API changes
    ``.print_summary`` includes confidence intervals for the exponential
    of the value.
 
-.. _bug-fixes-19:
+.. _bug-fixes-20:
 
 Bug fixes
 '''''''''
@@ -589,12 +612,12 @@ Bug fixes
 -  fixed an overflow bug in ``KaplanMeierFitter`` confidence intervals
 -  improvements in data validation for ``CoxTimeVaryingFitter``
 
-.. _section-23:
+.. _section-24:
 
 0.22.0 - 2019-07-03
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-16:
+.. _new-features-17:
 
 New features
 ''''''''''''
@@ -628,7 +651,7 @@ API changes
    could set ``fit_intercept`` to False and not have to set
    ``ancillary_df`` - now one must specify a DataFrame.
 
-.. _bug-fixes-20:
+.. _bug-fixes-21:
 
 Bug fixes
 '''''''''
@@ -637,21 +660,21 @@ Bug fixes
    is now exact instead of an approximation.
 -  fixed a name error bug in ``CoxTimeVaryingFitter.plot``
 
-.. _section-24:
+.. _section-25:
 
 0.21.5 - 2019-06-22
 ^^^^^^^^^^^^^^^^^^^
 
 I’m skipping 0.21.4 version because of deployment issues.
 
-.. _new-features-17:
+.. _new-features-18:
 
 New features
 ''''''''''''
 
 -  ``scoring_method`` now a kwarg on ``sklearn_adapter``
 
-.. _bug-fixes-21:
+.. _bug-fixes-22:
 
 Bug fixes
 '''''''''
@@ -661,12 +684,12 @@ Bug fixes
 -  fixed visual bug that misaligned x-axis ticks and at-risk counts.
    Thanks @christopherahern!
 
-.. _section-25:
+.. _section-26:
 
 0.21.3 - 2019-06-04
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-18:
+.. _new-features-19:
 
 New features
 ''''''''''''
@@ -680,19 +703,19 @@ New features
 -  ``CoxPHFitter.check_assumptions`` now accepts a ``columns`` parameter
    to specify only checking a subset of columns.
 
-.. _bug-fixes-22:
+.. _bug-fixes-23:
 
 Bug fixes
 '''''''''
 
 -  ``covariates_from_event_matrix`` handle nulls better
 
-.. _section-26:
+.. _section-27:
 
 0.21.2 - 2019-05-16
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-19:
+.. _new-features-20:
 
 New features
 ''''''''''''
@@ -716,17 +739,17 @@ API changes
 -  removing ``_compute_likelihood_ratio_test`` on regression models. Use
    ``log_likelihood_ratio_test`` now.
 
-.. _bug-fixes-23:
+.. _bug-fixes-24:
 
 Bug fixes
 '''''''''
 
-.. _section-27:
+.. _section-28:
 
 0.21.1 - 2019-04-26
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-20:
+.. _new-features-21:
 
 New features
 ''''''''''''
@@ -743,19 +766,19 @@ API changes
 -  output of ``survival_table_from_events`` when collapsing rows to
    intervals now removes the “aggregate” column multi-index.
 
-.. _bug-fixes-24:
+.. _bug-fixes-25:
 
 Bug fixes
 '''''''''
 
 -  fixed bug in CoxTimeVaryingFitter when ax is provided, thanks @j-i-l!
 
-.. _section-28:
+.. _section-29:
 
 0.21.0 - 2019-04-12
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-21:
+.. _new-features-22:
 
 New features
 ''''''''''''
@@ -780,7 +803,7 @@ API changes
 -  ``entries`` property in multivariate parametric models has a new
    Series name: ``entry``
 
-.. _bug-fixes-25:
+.. _bug-fixes-26:
 
 Bug fixes
 '''''''''
@@ -790,12 +813,12 @@ Bug fixes
 -  Fixed an error that didn’t let users use Numpy arrays in prediction
    for AFT models
 
-.. _section-29:
+.. _section-30:
 
 0.20.5 - 2019-04-08
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-22:
+.. _new-features-23:
 
 New features
 ''''''''''''
@@ -812,7 +835,7 @@ API changes
 -  in ``AalenJohansenFitter``, the ``variance`` parameter is renamed to
    ``variance_`` to align with the usual lifelines convention.
 
-.. _bug-fixes-26:
+.. _bug-fixes-27:
 
 Bug fixes
 '''''''''
@@ -821,12 +844,12 @@ Bug fixes
    test when using strata.
 -  Fixed some plotting bugs with ``AalenJohansenFitter``
 
-.. _section-30:
+.. _section-31:
 
 0.20.4 - 2019-03-27
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-23:
+.. _new-features-24:
 
 New features
 ''''''''''''
@@ -845,7 +868,7 @@ API changes
 -  Pandas is now correctly pinned to >= 0.23.0. This was always the
    case, but not specified in setup.py correctly.
 
-.. _bug-fixes-27:
+.. _bug-fixes-28:
 
 Bug fixes
 '''''''''
@@ -854,12 +877,12 @@ Bug fixes
 -  ``PiecewiseExponentialFitter`` is available with
    ``from lifelines import *``.
 
-.. _section-31:
+.. _section-32:
 
 0.20.3 - 2019-03-23
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-24:
+.. _new-features-25:
 
 New features
 ''''''''''''
@@ -872,12 +895,12 @@ New features
    ``plot_survival_function`` and
    ``confidence_interval_survival_function_``.
 
-.. _section-32:
+.. _section-33:
 
 0.20.2 - 2019-03-21
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-25:
+.. _new-features-26:
 
 New features
 ''''''''''''
@@ -901,7 +924,7 @@ API changes
    @vpolimenov!
 -  The ``C`` column in ``load_lcd`` dataset is renamed to ``E``.
 
-.. _bug-fixes-28:
+.. _bug-fixes-29:
 
 Bug fixes
 '''''''''
@@ -917,7 +940,7 @@ Bug fixes
    the q parameter was below the truncation limit. This should have been
    ``-np.inf``
 
-.. _section-33:
+.. _section-34:
 
 0.20.1 - 2019-03-16
 ^^^^^^^^^^^^^^^^^^^
@@ -941,7 +964,7 @@ API changes
    This is no longer the case. A 0 will still be added if there is a
    duration (observed or not) at 0 occurs however.
 
-.. _section-34:
+.. _section-35:
 
 0.20.0 - 2019-03-05
 ^^^^^^^^^^^^^^^^^^^
@@ -950,7 +973,7 @@ API changes
    recent installs where Py3.
 -  Updated minimum dependencies, specifically Matplotlib and Pandas.
 
-.. _new-features-26:
+.. _new-features-27:
 
 New features
 ''''''''''''
@@ -970,19 +993,19 @@ API changes
    transposed now (previous parameters where columns, now parameters are
    rows).
 
-.. _bug-fixes-29:
+.. _bug-fixes-30:
 
 Bug fixes
 '''''''''
 
 -  Fixed a bug with plotting and ``check_assumptions``.
 
-.. _section-35:
+.. _section-36:
 
 0.19.5 - 2019-02-26
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-27:
+.. _new-features-28:
 
 New features
 ''''''''''''
@@ -992,24 +1015,24 @@ New features
    features or categorical variables.
 -  Convergence improvements for AFT models.
 
-.. _section-36:
+.. _section-37:
 
 0.19.4 - 2019-02-25
 ^^^^^^^^^^^^^^^^^^^
 
-.. _bug-fixes-30:
+.. _bug-fixes-31:
 
 Bug fixes
 '''''''''
 
 -  remove some bad print statements in ``CoxPHFitter``.
 
-.. _section-37:
+.. _section-38:
 
 0.19.3 - 2019-02-25
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-28:
+.. _new-features-29:
 
 New features
 ''''''''''''
@@ -1021,12 +1044,12 @@ New features
 -  Performance increase to ``print_summary`` in the ``CoxPHFitter`` and
    ``CoxTimeVaryingFitter`` model.
 
-.. _section-38:
+.. _section-39:
 
 0.19.2 - 2019-02-22
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-29:
+.. _new-features-30:
 
 New features
 ''''''''''''
@@ -1034,7 +1057,7 @@ New features
 -  ``ParametricUnivariateFitters``, like ``WeibullFitter``, have
    smoothed plots when plotting (vs stepped plots)
 
-.. _bug-fixes-31:
+.. _bug-fixes-32:
 
 Bug fixes
 '''''''''
@@ -1044,12 +1067,12 @@ Bug fixes
 -  Univariate fitters are more flexiable and can allow 2-d and
    DataFrames as inputs.
 
-.. _section-39:
+.. _section-40:
 
 0.19.1 - 2019-02-21
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-30:
+.. _new-features-31:
 
 New features
 ''''''''''''
@@ -1066,12 +1089,12 @@ API changes
    ``PiecewiseExponential`` to the same as ``ExponentialFitter`` (from
    ``\lambda * t`` to ``t / \lambda``).
 
-.. _section-40:
+.. _section-41:
 
 0.19.0 - 2019-02-20
 ^^^^^^^^^^^^^^^^^^^
 
-.. _new-features-31:
+.. _new-features-32:
 
 New features
 ''''''''''''
@@ -1110,7 +1133,7 @@ API changes
    means that the *default* for alpha is set to 0.05 in the latest
    lifelines, instead of 0.95 in previous versions.
 
-.. _bug-fixes-32:
+.. _bug-fixes-33:
 
 Bug Fixes
 '''''''''
@@ -1127,7 +1150,7 @@ Bug Fixes
    models. Thanks @airanmehr!
 -  Fixed some Pandas <0.24 bugs.
 
-.. _section-41:
+.. _section-42:
 
 0.18.6 - 2019-02-13
 ^^^^^^^^^^^^^^^^^^^
@@ -1137,7 +1160,7 @@ Bug Fixes
    ``rank`` and ``km`` p-values now.
 -  some performance improvements to ``qth_survival_time``.
 
-.. _section-42:
+.. _section-43:
 
 0.18.5 - 2019-02-11
 ^^^^^^^^^^^^^^^^^^^
@@ -1158,7 +1181,7 @@ Bug Fixes
    that can be used to turn off variance calculations since this can
    take a long time for large datasets. Thanks @pzivich!
 
-.. _section-43:
+.. _section-44:
 
 0.18.4 - 2019-02-10
 ^^^^^^^^^^^^^^^^^^^
@@ -1168,7 +1191,7 @@ Bug Fixes
 -  adding left-truncation support to parametric univarite models with
    the ``entry`` kwarg in ``.fit``
 
-.. _section-44:
+.. _section-45:
 
 0.18.3 - 2019-02-07
 ^^^^^^^^^^^^^^^^^^^
@@ -1178,7 +1201,7 @@ Bug Fixes
    warnings are more noticeable.
 -  Improved some warning and error messages.
 
-.. _section-45:
+.. _section-46:
 
 0.18.2 - 2019-02-05
 ^^^^^^^^^^^^^^^^^^^
@@ -1194,7 +1217,7 @@ Bug Fixes
    Moved them all (most) to use ``autograd``.
 -  ``LogNormalFitter`` no longer models ``log_sigma``.
 
-.. _section-46:
+.. _section-47:
 
 0.18.1 - 2019-02-02
 ^^^^^^^^^^^^^^^^^^^
@@ -1205,7 +1228,7 @@ Bug Fixes
 -  use the ``autograd`` lib to help with gradients.
 -  New ``LogLogisticFitter`` univariate fitter available.
 
-.. _section-47:
+.. _section-48:
 
 0.18.0 - 2019-01-31
 ^^^^^^^^^^^^^^^^^^^
@@ -1242,7 +1265,7 @@ Bug Fixes
    ``LinAlgError: Matrix is singular.`` and report back to the user
    advice.
 
-.. _section-48:
+.. _section-49:
 
 0.17.5 - 2019-01-25
 ^^^^^^^^^^^^^^^^^^^
@@ -1250,7 +1273,7 @@ Bug Fixes
 -  more bugs in ``plot_covariate_groups`` fixed when using non-numeric
    strata.
 
-.. _section-49:
+.. _section-50:
 
 0.17.4 -2019-01-25
 ^^^^^^^^^^^^^^^^^^
@@ -1262,7 +1285,7 @@ Bug Fixes
 -  ``groups`` is now called ``values`` in
    ``CoxPHFitter.plot_covariate_groups``
 
-.. _section-50:
+.. _section-51:
 
 0.17.3 - 2019-01-24
 ^^^^^^^^^^^^^^^^^^^
@@ -1270,7 +1293,7 @@ Bug Fixes
 -  Fix in ``compute_residuals`` when using ``schoenfeld`` and the
    minumum duration has only censored subjects.
 
-.. _section-51:
+.. _section-52:
 
 0.17.2 2019-01-22
 ^^^^^^^^^^^^^^^^^
@@ -1281,7 +1304,7 @@ Bug Fixes
    ``for`` loop. The downside is the code is more esoteric now. I’ve
    added comments as necessary though 🤞
 
-.. _section-52:
+.. _section-53:
 
 0.17.1 - 2019-01-20
 ^^^^^^^^^^^^^^^^^^^
@@ -1298,7 +1321,7 @@ Bug Fixes
 -  Fixes a Pandas performance warning in ``CoxTimeVaryingFitter``.
 -  Performances improvements to ``CoxTimeVaryingFitter``.
 
-.. _section-53:
+.. _section-54:
 
 0.17.0 - 2019-01-11
 ^^^^^^^^^^^^^^^^^^^
@@ -1319,7 +1342,7 @@ Bug Fixes
 
 -  some plotting improvemnts to ``plotting.plot_lifetimes``
 
-.. _section-54:
+.. _section-55:
 
 0.16.3 - 2019-01-03
 ^^^^^^^^^^^^^^^^^^^
@@ -1327,7 +1350,7 @@ Bug Fixes
 -  More ``CoxPHFitter`` performance improvements. Up to a 40% reduction
    vs 0.16.2 for some datasets.
 
-.. _section-55:
+.. _section-56:
 
 0.16.2 - 2019-01-02
 ^^^^^^^^^^^^^^^^^^^
@@ -1338,14 +1361,14 @@ Bug Fixes
    has lots of duplicate times. See
    https://github.com/CamDavidsonPilon/lifelines/issues/591
 
-.. _section-56:
+.. _section-57:
 
 0.16.1 - 2019-01-01
 ^^^^^^^^^^^^^^^^^^^
 
 -  Fixed py2 division error in ``concordance`` method.
 
-.. _section-57:
+.. _section-58:
 
 0.16.0 - 2019-01-01
 ^^^^^^^^^^^^^^^^^^^
@@ -1381,7 +1404,7 @@ Bug Fixes
    ``lifelines.utils.to_episodic_format``.
 -  ``CoxTimeVaryingFitter`` now accepts ``strata``.
 
-.. _section-58:
+.. _section-59:
 
 0.15.4
 ^^^^^^
@@ -1389,14 +1412,14 @@ Bug Fixes
 -  bug fix for the Cox model likelihood ratio test when using
    non-trivial weights.
 
-.. _section-59:
+.. _section-60:
 
 0.15.3 - 2018-12-18
 ^^^^^^^^^^^^^^^^^^^
 
 -  Only allow matplotlib less than 3.0.
 
-.. _section-60:
+.. _section-61:
 
 0.15.2 - 2018-11-23
 ^^^^^^^^^^^^^^^^^^^
@@ -1407,7 +1430,7 @@ Bug Fixes
 -  removed ``entry`` from ``ExponentialFitter`` and ``WeibullFitter`` as
    it was doing nothing.
 
-.. _section-61:
+.. _section-62:
 
 0.15.1 - 2018-11-23
 ^^^^^^^^^^^^^^^^^^^
@@ -1416,7 +1439,7 @@ Bug Fixes
 -  Raise NotImplementedError if the ``robust`` flag is used in
    ``CoxTimeVaryingFitter`` - that’s not ready yet.
 
-.. _section-62:
+.. _section-63:
 
 0.15.0 - 2018-11-22
 ^^^^^^^^^^^^^^^^^^^
@@ -1487,7 +1510,7 @@ Bug Fixes
    When Estimating Risks in Pharmacoepidemiology” for a nice overview of
    the model.
 
-.. _section-63:
+.. _section-64:
 
 0.14.6 - 2018-07-02
 ^^^^^^^^^^^^^^^^^^^
@@ -1495,7 +1518,7 @@ Bug Fixes
 -  fix for n > 2 groups in ``multivariate_logrank_test`` (again).
 -  fix bug for when ``event_observed`` column was not boolean.
 
-.. _section-64:
+.. _section-65:
 
 0.14.5 - 2018-06-29
 ^^^^^^^^^^^^^^^^^^^
@@ -1503,7 +1526,7 @@ Bug Fixes
 -  fix for n > 2 groups in ``multivariate_logrank_test``
 -  fix weights in KaplanMeierFitter when using a pandas Series.
 
-.. _section-65:
+.. _section-66:
 
 0.14.4 - 2018-06-14
 ^^^^^^^^^^^^^^^^^^^
@@ -1520,7 +1543,7 @@ Bug Fixes
 -  New ``delay`` parameter in ``add_covariate_to_timeline``
 -  removed ``two_sided_z_test`` from ``statistics``
 
-.. _section-66:
+.. _section-67:
 
 0.14.3 - 2018-05-24
 ^^^^^^^^^^^^^^^^^^^
@@ -1532,7 +1555,7 @@ Bug Fixes
 -  adds a ``column`` argument to ``CoxTimeVaryingFitter`` and
    ``CoxPHFitter`` ``plot`` method to plot only a subset of columns.
 
-.. _section-67:
+.. _section-68:
 
 0.14.2 - 2018-05-18
 ^^^^^^^^^^^^^^^^^^^
@@ -1540,7 +1563,7 @@ Bug Fixes
 -  some quality of life improvements for working with
    ``CoxTimeVaryingFitter`` including new ``predict_`` methods.
 
-.. _section-68:
+.. _section-69:
 
 0.14.1 - 2018-04-01
 ^^^^^^^^^^^^^^^^^^^
@@ -1558,7 +1581,7 @@ Bug Fixes
    faster completion of ``fit`` for large dataframes, and up to 10%
    faster for small dataframes.
 
-.. _section-69:
+.. _section-70:
 
 0.14.0 - 2018-03-03
 ^^^^^^^^^^^^^^^^^^^
@@ -1580,7 +1603,7 @@ Bug Fixes
    of a ``RuntimeWarning``
 -  New checks for complete separation in the dataset for regressions.
 
-.. _section-70:
+.. _section-71:
 
 0.13.0 - 2017-12-22
 ^^^^^^^^^^^^^^^^^^^
@@ -1609,7 +1632,7 @@ Bug Fixes
    group the same subjects together and give that observation a weight
    equal to the count. Altogether, this means a much faster regression.
 
-.. _section-71:
+.. _section-72:
 
 0.12.0
 ^^^^^^
@@ -1626,7 +1649,7 @@ Bug Fixes
 -  Additional functionality to ``utils.survival_table_from_events`` to
    bin the index to make the resulting table more readable.
 
-.. _section-72:
+.. _section-73:
 
 0.11.3
 ^^^^^^
@@ -1638,7 +1661,7 @@ Bug Fixes
    observation or censorship.
 -  More accurate prediction methods parametrics univariate models.
 
-.. _section-73:
+.. _section-74:
 
 0.11.2
 ^^^^^^
@@ -1646,14 +1669,14 @@ Bug Fixes
 -  Changing liscense to valilla MIT.
 -  Speed up ``NelsonAalenFitter.fit`` considerably.
 
-.. _section-74:
+.. _section-75:
 
 0.11.1 - 2017-06-22
 ^^^^^^^^^^^^^^^^^^^
 
 -  Python3 fix for ``CoxPHFitter.plot``.
 
-.. _section-75:
+.. _section-76:
 
 0.11.0 - 2017-06-21
 ^^^^^^^^^^^^^^^^^^^
@@ -1667,14 +1690,14 @@ Bug Fixes
    of a new ``loc`` kwarg. This is to align with Pandas deprecating
    ``ix``
 
-.. _section-76:
+.. _section-77:
 
 0.10.1 - 2017-06-05
 ^^^^^^^^^^^^^^^^^^^
 
 -  fix in internal normalization for ``CoxPHFitter`` predict methods.
 
-.. _section-77:
+.. _section-78:
 
 0.10.0
 ^^^^^^
@@ -1689,7 +1712,7 @@ Bug Fixes
    mimic R’s ``basehaz`` API.
 -  new ``predict_log_partial_hazards`` to ``CoxPHFitter``
 
-.. _section-78:
+.. _section-79:
 
 0.9.4
 ^^^^^
@@ -1712,7 +1735,7 @@ Bug Fixes
 -  performance improvements in ``CoxPHFitter`` - should see at least a
    10% speed improvement in ``fit``.
 
-.. _section-79:
+.. _section-80:
 
 0.9.2
 ^^^^^
@@ -1721,7 +1744,7 @@ Bug Fixes
 -  throw an error if no admissable pairs in the c-index calculation.
    Previously a NaN was returned.
 
-.. _section-80:
+.. _section-81:
 
 0.9.1
 ^^^^^
@@ -1729,7 +1752,7 @@ Bug Fixes
 -  add two summary functions to Weibull and Exponential fitter, solves
    #224
 
-.. _section-81:
+.. _section-82:
 
 0.9.0
 ^^^^^
@@ -1745,7 +1768,7 @@ Bug Fixes
 -  Default predict method in ``k_fold_cross_validation`` is now
    ``predict_expectation``
 
-.. _section-82:
+.. _section-83:
 
 0.8.1 - 2015-08-01
 ^^^^^^^^^^^^^^^^^^
@@ -1762,7 +1785,7 @@ Bug Fixes
    -  scaling of smooth hazards in NelsonAalenFitter was off by a factor
       of 0.5.
 
-.. _section-83:
+.. _section-84:
 
 0.8.0
 ^^^^^
@@ -1781,7 +1804,7 @@ Bug Fixes
    ``lifelines.statistics. power_under_cph``.
 -  fixed a bug when using KaplanMeierFitter for left-censored data.
 
-.. _section-84:
+.. _section-85:
 
 0.7.1
 ^^^^^
@@ -1800,7 +1823,7 @@ Bug Fixes
 -  refactor each fitter into it’s own submodule. For now, the tests are
    still in the same file. This will also *not* break the API.
 
-.. _section-85:
+.. _section-86:
 
 0.7.0 - 2015-03-01
 ^^^^^^^^^^^^^^^^^^
@@ -1819,7 +1842,7 @@ Bug Fixes
    duration remaining until the death event, given survival up until
    time t.
 
-.. _section-86:
+.. _section-87:
 
 0.6.1
 ^^^^^
@@ -1831,7 +1854,7 @@ Bug Fixes
    your work is to sum up the survival function (for expected values or
    something similar), it’s more difficult to make a mistake.
 
-.. _section-87:
+.. _section-88:
 
 0.6.0 - 2015-02-04
 ^^^^^^^^^^^^^^^^^^
@@ -1854,7 +1877,7 @@ Bug Fixes
 -  In ``KaplanMeierFitter``, ``epsilon`` has been renamed to
    ``precision``.
 
-.. _section-88:
+.. _section-89:
 
 0.5.1 - 2014-12-24
 ^^^^^^^^^^^^^^^^^^
@@ -1875,7 +1898,7 @@ Bug Fixes
    ``lifelines.plotting.add_at_risk_counts``.
 -  Fix bug Epanechnikov kernel.
 
-.. _section-89:
+.. _section-90:
 
 0.5.0 - 2014-12-07
 ^^^^^^^^^^^^^^^^^^
@@ -1888,7 +1911,7 @@ Bug Fixes
 -  add test for summary()
 -  Alternate metrics can be used for ``k_fold_cross_validation``.
 
-.. _section-90:
+.. _section-91:
 
 0.4.4 - 2014-11-27
 ^^^^^^^^^^^^^^^^^^
@@ -1900,7 +1923,7 @@ Bug Fixes
 -  Fixes bug in 1-d input not returning in CoxPHFitter
 -  Lots of new tests.
 
-.. _section-91:
+.. _section-92:
 
 0.4.3 - 2014-07-23
 ^^^^^^^^^^^^^^^^^^
@@ -1921,7 +1944,7 @@ Bug Fixes
 -  Adds option ``include_likelihood`` to CoxPHFitter fit method to save
    the final log-likelihood value.
 
-.. _section-92:
+.. _section-93:
 
 0.4.2 - 2014-06-19
 ^^^^^^^^^^^^^^^^^^
@@ -1941,7 +1964,7 @@ Bug Fixes
    from failing so often (this a stop-gap)
 -  pep8 everything
 
-.. _section-93:
+.. _section-94:
 
 0.4.1.1
 ^^^^^^^
@@ -1954,7 +1977,7 @@ Bug Fixes
 -  Adding more robust cross validation scheme based on issue #67.
 -  fixing ``regression_dataset`` in ``datasets``.
 
-.. _section-94:
+.. _section-95:
 
 0.4.1 - 2014-06-11
 ^^^^^^^^^^^^^^^^^^
@@ -1973,7 +1996,7 @@ Bug Fixes
 -  Adding a Changelog.
 -  more sanitizing for the statistical tests =)
 
-.. _section-95:
+.. _section-96:
 
 0.4.0 - 2014-06-08
 ^^^^^^^^^^^^^^^^^^

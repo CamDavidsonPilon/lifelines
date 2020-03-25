@@ -9,6 +9,10 @@ dot = np.dot
 
 
 class MixtureCureModel(ParametricRegressionFitter):
+    """
+    Models two "cure" possibilities: default, repay
+
+    """
 
     _fitted_parameter_names = ["beta_repay", "c_repay", "c_default", "beta_default"]
 

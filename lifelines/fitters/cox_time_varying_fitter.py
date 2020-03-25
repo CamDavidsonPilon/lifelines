@@ -216,7 +216,6 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         )
 
         self.params_ = pd.Series(params_, index=df.columns, name="coef") / self._norm_std
-        self.hazard_ratios_ = pd.Series(np.exp(self.params_), index=df.columns, name="exp(coef)")
         self.variance_matrix_ = pd.DataFrame(
             -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=df.columns
         )

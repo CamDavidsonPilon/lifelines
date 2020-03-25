@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Iterable
 from textwrap import dedent, fill
 from autograd import numpy as anp
 import numpy as np
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from lifelines.statistics import proportional_hazard_test, TimeTransformers
 from lifelines.utils import format_p_value
 from lifelines.utils.lowess import lowess
@@ -233,3 +233,41 @@ class ProportionalHazardMixin:
 
         if counter == 0:
             print("Proportional hazard assumption looks okay.")
+
+    @property
+    def hazard_ratios_(self):
+        return Series(np.exp(self.params_), index=self.params_.index, name="exp(coef)")
+
+    def compute_followup_hazard_ratios(self, training_df: DataFrame, followup_times: Iterable) -> DataFrame:
+        """
+        Recompute the hazard ratio at different follow-up times (lifelines handles accounting for updated censoring and updated durations).
+        This is useful because we need to remember that the hazard ratio is actually a weighted-average of period-specific hazard ratios.
+
+        Parameters
+        ----------
+
+        training_df: pd.DataFrame
+            The same dataframe used to train the model
+        followup_times: Iterable
+            a list/array of follow-up times to recompute the hazard ratio at.
+
+
+        """
+        results = {}
+        for t in sorted(followup_times):
+            assert (
+                t <= training_df[self.duration_col].max()
+            ), "all follow-up times must be less than max observed duration"
+            df = training_df.copy()
+            # if we "rollback" the df to time t, who is dead and who is censored
+            df[self.event_col] = (df[self.duration_col] <= t) & df[self.event_col]
+            df[self.duration_col] = np.minimum(df[self.duration_col], t)
+
+            model = self.__class__(
+                penalizer=self.penalizer,
+                l1_ratio=self.l1_ratio,
+                strata=self.strata,
+                baseline_estimation_method=self.baseline_estimation_method,
+            ).fit(df, self.duration_col, self.event_col, weights_col=self.weights_col, cluster_col=self.cluster_col)
+            results[t] = model.hazard_ratios_
+        return DataFrame(results).T
