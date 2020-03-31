@@ -1,4 +1,4 @@
-.. image:: http://i.imgur.com/EOowdSD.png
+.. image:: https://i.imgur.com/EOowdSD.png
 
 -------------------------------------
 

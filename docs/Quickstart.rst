@@ -1,6 +1,6 @@
 .. _code_directive:
 
-.. image:: http://i.imgur.com/EOowdSD.png
+.. image:: https://i.imgur.com/EOowdSD.png
 
 -------------------------------------
 
@@ -25,7 +25,7 @@ Install via `conda <https://anaconda.org/conda-forge/lifelines>`_:
 .. code-block:: console
 
     conda install -c conda-forge lifelines
-    
+
 
 Kaplan-Meier, Nelson-Aalen, and parametric models
 ---------------------------------------------------
