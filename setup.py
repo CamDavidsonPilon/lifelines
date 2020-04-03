@@ -42,7 +42,7 @@ setup(
     long_description_content_type=LONG_DESC_TYPE,
     classifiers=CLASSIFIERS,
     install_requires=REQUIREMENTS,
-    packages=find_packages(),
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "*benchmarks*"]),
     package_data=PACKAGE_DATA,
     include_package_data=False,
 )

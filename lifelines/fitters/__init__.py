@@ -1744,13 +1744,15 @@ class ParametricRegressionFitter(RegressionFitter):
         }
 
     def _add_penalty(self, params: Dict, neg_ll: float):
-        params, _ = flatten(params)
+        params_array, _ = flatten(params)
         # remove intercepts from being penalized
-        params = params[~self._constant_cols]
+        params_array = params_array[~self._constant_cols]
         if self.penalizer > 0 and self.l1_ratio > 0:
-            penalty = self.l1_ratio * anp.abs(params).sum() + 0.5 * (1.0 - self.l1_ratio) * (params ** 2).sum()
+            penalty = (
+                self.l1_ratio * anp.abs(params_array).sum() + 0.5 * (1.0 - self.l1_ratio) * (params_array ** 2).sum()
+            )
         elif self.penalizer > 0 and self.l1_ratio <= 0:
-            penalty = 0.5 * (params ** 2).sum()
+            penalty = 0.5 * (params_array ** 2).sum()
         else:
             penalty = 0
         return neg_ll + self.penalizer * penalty

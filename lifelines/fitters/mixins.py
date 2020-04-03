@@ -263,11 +263,8 @@ class ProportionalHazardMixin:
             df[self.event_col] = (df[self.duration_col] <= t) & df[self.event_col]
             df[self.duration_col] = np.minimum(df[self.duration_col], t)
 
-            model = self.__class__(
-                penalizer=self.penalizer,
-                l1_ratio=self.l1_ratio,
-                strata=self.strata,
-                baseline_estimation_method=self.baseline_estimation_method,
-            ).fit(df, self.duration_col, self.event_col, weights_col=self.weights_col, cluster_col=self.cluster_col)
+            model = self.__class__(penalizer=self.penalizer, l1_ratio=self.l1_ratio).fit(
+                df, self.duration_col, self.event_col, weights_col=self.weights_col
+            )
             results[t] = model.hazard_ratios_
         return DataFrame(results).T
