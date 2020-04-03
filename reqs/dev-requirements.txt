@@ -1,6 +1,9 @@
+# installs base requirements
 -r base-requirements.txt
+
 # installs lifelines as editable dependency in develop mode
 -e .
+
 pytest>=3.6
 pytest-icdiff
 coverage>=4.4
@@ -13,6 +16,9 @@ dill
 statsmodels
 flaky
 scikit-learn>=0.22.0
+
+# ex: mypy --config-file mypy.ini lifelines
+mypy
 
 # ex: check-wheel-contents dist/lifelines-0.24.3-py3-none-any.whl
 check-wheel-contents
