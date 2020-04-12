@@ -119,7 +119,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
             if utils.CensoringType.is_right_censoring(self):
                 uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
             elif utils.CensoringType.is_interval_censoring(self):
-                uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
+                uni_model.fit_interval_censoring(Ts[0], Ts[1], entry=entries, weights=weights)
             elif utils.CensoringType.is_left_censoring(self):
                 uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 

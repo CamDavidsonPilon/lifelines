@@ -11,6 +11,7 @@ from inspect import getfullargspec
 import numpy as np
 from numpy.linalg import inv, pinv
 import autograd.numpy as anp
+from autograd.scipy import special
 from autograd.misc import flatten
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
 from autograd.differential_operators import make_jvp_reversemode
@@ -1329,10 +1330,11 @@ class ParametricRegressionFitter(RegressionFitter):
             anp.clip(
                 self._survival_function(params, start[~E], Xs.filter(~E))
                 - self._survival_function(params, stop[~E], Xs.filter(~E)),
-                -1e50,
-                1e50,
+                1e-50,
+                1,
             )
         )
+
         delayed_entries = self._cumulative_hazard(params, entries[non_zero_entries], Xs.filter(non_zero_entries))
 
         ll = 0
@@ -1505,18 +1507,29 @@ class ParametricRegressionFitter(RegressionFitter):
 
 
         """
+        df = df.copy()
+
         self.upper_bound_col = upper_bound_col
         self.lower_bound_col = lower_bound_col
 
-        df = df.copy()
+        self.lower_bound = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(lower_bound_col)).astype(float)
+        self.upper_bound = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(upper_bound_col)).astype(float)
 
-        self.lower_bounds = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(lower_bound_col)).astype(float)
-        self.upper_bounds = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(upper_bound_col)).astype(float)
+        if event_col is None:
+            event_col = "E_lifelines_added"
+            df[event_col] = self.lower_bound == self.upper_bound
+
+        if ((self.lower_bound == self.upper_bound) != df[event_col]).any():
+            raise ValueError(
+                "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
+            )
+        if (self.lower_bound > self.upper_bound).any():
+            raise ValueError("All upper bound measurements must be greater than or equal to lower bound measurements.")
 
         self._fit(
             self._log_likelihood_interval_censoring,
             df,
-            (self.lower_bounds.values, self.upper_bounds.values),
+            (self.lower_bound.values, np.clip(self.upper_bound.values, 0, 1e25)),
             event_col=event_col,
             regressors=regressors,
             show_progress=show_progress,
@@ -1884,12 +1897,13 @@ class ParametricRegressionFitter(RegressionFitter):
         if scoring_method == "log_likelihood":
             if utils.CensoringType.is_left_censoring(self):
                 Ts = (None, df.pop(self.duration_col).values)
+                E = df.pop(self.event_col).astype(bool).values
             elif utils.CensoringType.is_interval_censoring(self):
                 Ts = (df.pop(self.lower_bound_col).values, df.pop(self.upper_bound_col).values)
+                E = Ts[0] == Ts[1]
             elif utils.CensoringType.is_right_censoring(self):
                 Ts = (df.pop(self.duration_col).values, None)
-
-            E = df.pop(self.event_col).astype(bool).values
+                E = df.pop(self.event_col).astype(bool).values
 
             if self.weights_col:
                 try:
@@ -1908,7 +1922,6 @@ class ParametricRegressionFitter(RegressionFitter):
                 df["_intercept"] = 1.0
 
             Xs = self._create_Xs_dict(df)
-
             return -self._neg_likelihood(self.params_.values, Ts, E, W, entries, Xs)
 
         elif scoring_method == "concordance_index":
@@ -2186,7 +2199,14 @@ class ParametricRegressionFitter(RegressionFitter):
         return self.predict_percentile(df, p=0.5, conditional_after=conditional_after)
 
     def predict_percentile(self, df, *, p=0.5, conditional_after=None) -> pd.Series:
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
         subjects = utils._get_index(df)
+
+        warnings.warn(
+            "Approximating using `predict_survival_function`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.\n",
+            utils.ApproximationWarning,
+        )
         return utils.qth_survival_times(
             p, self.predict_survival_function(df, conditional_after=conditional_after)[subjects]
         ).T.squeeze()
@@ -2321,7 +2341,7 @@ class ParametricRegressionFitter(RegressionFitter):
         warnings.warn("""Approximating the expected value using trapezoid rule.\n""", utils.ApproximationWarning)
         subjects = utils._get_index(X)
         v = self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
-        return pd.Series(trapz(v.values.T, v.index), index=subjects)
+        return pd.Series(trapz(v.values.T, v.index), index=subjects).squeeze()
 
     @property
     def median_survival_time_(self):
@@ -2787,19 +2807,19 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         lower_bound = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(lower_bound_col)).astype(float)
         upper_bound = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(upper_bound_col)).astype(float)
 
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
+
         if event_col is None:
             event_col = "E_lifelines_added"
-            df[event_col] = lower_bound == upper_bound
+            df[event_col] = self.lower_bound == self.upper_bound
 
-        if ((lower_bound == upper_bound) != df[event_col]).any():
+        if ((self.lower_bound == self.upper_bound) != df[event_col]).any():
             raise ValueError(
                 "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
             )
-        if (lower_bound > upper_bound).any():
+        if (self.lower_bound > self.upper_bound).any():
             raise ValueError("All upper bound measurements must be greater than or equal to lower bound measurements.")
-
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
 
         primary_columns = df.columns.difference([self.lower_bound_col, self.upper_bound_col, event_col]).tolist()
 
@@ -3027,7 +3047,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             if utils.CensoringType.is_right_censoring(self):
                 uni_model.fit_right_censoring(Ts[0], event_observed=E, entry=entries, weights=weights)
             elif utils.CensoringType.is_interval_censoring(self):
-                uni_model.fit_interval_censoring(Ts[0], Ts[1], event_observed=E, entry=entries, weights=weights)
+                uni_model.fit_interval_censoring(Ts[0], Ts[1], entry=entries, weights=weights)
             elif utils.CensoringType.is_left_censoring(self):
                 uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
@@ -3263,11 +3283,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
         """
-        return np.exp(
-            -self.predict_cumulative_hazard(
-                df, ancillary_df=ancillary_df, times=times, conditional_after=conditional_after
+        with np.errstate(divide="ignore"):
+            return np.exp(
+                -self.predict_cumulative_hazard(
+                    df, ancillary_df=ancillary_df, times=times, conditional_after=conditional_after
+                )
             )
-        )
 
     def predict_median(self, df, *, ancillary_df=None, conditional_after=None) -> pd.DataFrame:
         """
@@ -3296,6 +3317,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         return self.predict_percentile(df, ancillary_df=ancillary_df, p=0.5, conditional_after=conditional_after)
 
     def predict_percentile(self, df, *, ancillary_df=None, p=0.5, conditional_after=None) -> pd.Series:
+        warnings.warn(
+            "Approximating using `predict_survival_function`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.\n",
+            utils.ApproximationWarning,
+        )
         return utils.qth_survival_times(
             p, self.predict_survival_function(df, ancillary_df=ancillary_df, conditional_after=conditional_after)
         )

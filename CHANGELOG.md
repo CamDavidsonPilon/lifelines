@@ -1,5 +1,11 @@
 ## Changelog
 
+[ ] tests for infs in GGregresssion
+[ ] test warning is thrown in GGregresssion.predict_median
+[ ] .score() for interval censored models
+[ ] compare interval tests again
+[ ] .fit_interval_censoring(df, ancillary_df=True) vs .fit_interval_censoring(df, ancillary_df=df)
+
 #### 0.24.3 - 2020-03-25
 
 ##### New features

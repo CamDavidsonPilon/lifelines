@@ -99,7 +99,13 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         rho_params = params["rho_"]
         rho_ = safe_exp(Xs["rho_"] @ rho_params)
 
-        return safe_exp(rho_ * (np.log(np.clip(T, 1e-25, np.inf)) - log_lambda_))
+        return safe_exp(rho_ * (np.log(np.clip(T, 1e-100, np.inf)) - log_lambda_))
+
+    def _survival_function(
+        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSliceDict
+    ) -> Union[np.array, ArrayBox]:
+        ch = self._cumulative_hazard(params, T, Xs)
+        return safe_exp(-ch)
 
     def _log_hazard(
         self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSliceDict
