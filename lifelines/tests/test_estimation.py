@@ -2447,7 +2447,7 @@ class TestWeibullAFTFitter:
         aft.fit_right_censoring(rossi, "week", event_col="arrest")
         right_censored_results = aft.summary.copy()
 
-        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=3)
+        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=2)
 
     def test_weibull_interval_censoring_inference_on_known_R_output(self, aft):
         """
