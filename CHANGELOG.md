@@ -1,10 +1,11 @@
 ## Changelog
 
-[ ] tests for infs in GGregresssion
-[ ] test warning is thrown in GGregresssion.predict_median
-[ ] .score() for interval censored models
-[ ] compare interval tests again
-[ ] .fit_interval_censoring(df, ancillary_df=True) vs .fit_interval_censoring(df, ancillary_df=df)
+#### 0.24.4 - 2020-04-13
+
+##### Bug fixes
+ - Improved stability of interval censoring in parametric models.
+ - setting a dataframe in `ancillary_df` works for interval censoring
+ - `.score` works for interval censored models
 
 #### 0.24.3 - 2020-03-25
 

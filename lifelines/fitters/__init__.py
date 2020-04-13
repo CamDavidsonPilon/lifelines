@@ -11,7 +11,6 @@ from inspect import getfullargspec
 import numpy as np
 from numpy.linalg import inv, pinv
 import autograd.numpy as anp
-from autograd.scipy import special
 from autograd.misc import flatten
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
 from autograd.differential_operators import make_jvp_reversemode
@@ -426,8 +425,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 * anp.log(
                     self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops)
                 ),
-                -1e50,
-                1e50,
+                1e-50,
+                1,
             ).sum()
         )
         ll = ll + (weights[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
@@ -2657,6 +2656,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
                     [self.duration_col, event_col]
                 ).tolist(),
             }
+
             ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
                 [self.duration_col, event_col]
             )
@@ -2830,7 +2830,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
                 self._primary_parameter_name: primary_columns,
                 self._ancillary_parameter_name: ancillary_df.columns.tolist(),
             }
-            df = pd.concat([df, ancillary_df[ancillary_df.columns.difference(df.columns)]], axis=1)
+            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
+                [self.lower_bound_col, self.upper_bound_col, event_col]
+            )
+            df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
 
         elif (ancillary_df is True) or self.model_ancillary:
             self.model_ancillary = True
