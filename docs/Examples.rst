@@ -190,9 +190,9 @@ If using *lifelines* for prediction work, it's ideal that you perform some type 
     aaf_2 = AalenAdditiveFitter(coef_penalizer=10)
     cph = CoxPHFitter()
 
-    print(np.mean(k_fold_cross_validation(cph, df, duration_col='T', event_col='E')))
-    print(np.mean(k_fold_cross_validation(aaf_1, df, duration_col='T', event_col='E')))
-    print(np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E')))
+    print(np.mean(k_fold_cross_validation(cph, df, duration_col='T', event_col='E', scoring_method="concordance_index")))
+    print(np.mean(k_fold_cross_validation(aaf_1, df, duration_col='T', event_col='E', scoring_method="concordance_index")))
+    print(np.mean(k_fold_cross_validation(aaf_2, df, duration_col='T', event_col='E', scoring_method="concordance_index")))
 
 From these results, Aalen's Additive model with a penalizer of 10 is best model of predicting future survival times.
 

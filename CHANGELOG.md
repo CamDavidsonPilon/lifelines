@@ -1,5 +1,12 @@
 ## Changelog
 
+#### 0.24.4 - 2020-04-13
+
+##### Bug fixes
+ - Improved stability of interval censoring in parametric models.
+ - setting a dataframe in `ancillary_df` works for interval censoring
+ - `.score` works for interval censored models
+
 #### 0.24.3 - 2020-03-25
 
 ##### New features

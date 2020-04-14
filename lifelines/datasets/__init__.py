@@ -548,7 +548,8 @@ def load_lymph_node(**kwargs):
 
 def load_c_botulinum_lag_phase(**kwargs):
     """
-    A dataset from [1] that represents the duration of the lag phase for C. botulinum, measured in days. The data is left and right censored.
+    A dataset from [1] that represents the duration of the lag phase for C. botulinum, measured in days, at 30C. The data is left and right censored.
+    Note that the table does not have 6% NaCl, but the authors mention no growth occurred (we can infer lag time > 85D then)
 
     References
     -----------

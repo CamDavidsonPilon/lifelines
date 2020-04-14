@@ -38,6 +38,7 @@ from lifelines.utils import (
     ConvergenceError,
     median_survival_times,
     StatisticalWarning,
+    ApproximationWarning,
     qth_survival_time,
 )
 
@@ -77,6 +78,7 @@ from lifelines.datasets import (
     load_regression_dataset,
     load_stanford_heart_transplants,
     load_multicenter_aids_cohort_study,
+    load_c_botulinum_lag_phase,
     load_diabetes,
 )
 from lifelines.generate_datasets import (
@@ -1585,6 +1587,39 @@ class TestCustomRegressionModel:
         assert_frame_equal(cmC.summary, cmB.summary)
         assert_series_equal(cmA.params_.loc["beta_"], -cmB.params_.loc["beta_"])
 
+    def test_custom_regression_model_accepts_infs_in_interval_censoring(self):
+        df = load_c_botulinum_lag_phase()
+        df.loc[df["lower_bound_days"] == 0, "lower_bound_days"] += 0.0001
+
+        df["constant"] = 1.0
+
+        regressors = {"lambda_": ["constant"], "mu_": ["NaCl %", "pH", "constant"], "sigma_": ["constant"]}
+        gg = GeneralizedGammaRegressionFitter()
+        gg.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", regressors=regressors)
+        gg.print_summary()
+
+    def test_warning_is_thrown_in_predict_median(self, rossi):
+
+        rossi["constant"] = 1.0
+        regressors = {"lambda_": ["constant"], "mu_": ["age", "fin", "constant"], "sigma_": ["constant"]}
+
+        gg = GeneralizedGammaRegressionFitter()
+        gg.fit(rossi, "week", "arrest", regressors=regressors)
+
+        with pytest.warns(ApproximationWarning, match="Approximating"):
+            gg.predict_median(rossi)
+
+    def test_score_works_for_interval_censoring(self, rossi):
+        df = load_c_botulinum_lag_phase()
+        df.loc[df["lower_bound_days"] == 0, "lower_bound_days"] += 0.0001
+
+        df["constant"] = 1.0
+
+        regressors = {"lambda_": ["constant"], "mu_": ["NaCl %", "pH", "constant"], "sigma_": ["constant"]}
+        gg = GeneralizedGammaRegressionFitter()
+        gg.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", regressors=regressors)
+        gg.score(df)
+
 
 class TestRegressionFitters:
     @pytest.fixture
@@ -2412,7 +2447,7 @@ class TestWeibullAFTFitter:
         aft.fit_right_censoring(rossi, "week", event_col="arrest")
         right_censored_results = aft.summary.copy()
 
-        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=3)
+        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=2)
 
     def test_weibull_interval_censoring_inference_on_known_R_output(self, aft):
         """
@@ -2445,6 +2480,12 @@ class TestWeibullAFTFitter:
 
         with pytest.raises(AssertionError):
             npt.assert_allclose(aft.summary.loc[("rho_", "gender"), "coef"], 0.1670, rtol=1e-4)
+
+    def test_interval_censoring_with_ancillary_df(self, aft):
+        df = load_c_botulinum_lag_phase()
+
+        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary_df=df)
+        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary_df=True)
 
     def test_aft_weibull_with_weights(self, rossi, aft):
         """

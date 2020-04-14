@@ -19,3 +19,8 @@ NaCl %,pH,lower_bound_days,upper_bound_days
 4,6.0,3.0,3.0
 4,5.5,7.0,7.0
 4,5.0,85.0,inf
+6,7.0,85.0,inf
+6,6.5,85.0,inf
+6,6.0,85.0,inf
+6,5.5,85.0,inf
+6,5.0,85.0,inf
