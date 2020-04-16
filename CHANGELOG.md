@@ -1,5 +1,11 @@
 ## Changelog
 
+#### 0.24.5 - unreleased
+
+##### Bug fixes
+ - Improved `at_risk_counts` for subplots.
+ - More data validation checks for `CoxTimeVaryingFitter`
+
 #### 0.24.4 - 2020-04-13
 
 ##### Bug fixes
