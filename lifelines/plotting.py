@@ -478,6 +478,17 @@ def plot_lifetimes(
         ax = plot_lifetimes(T.loc[:50], event_observed=E.loc[:50])
 
     """
+
+    def iloc(x, i):
+        """
+        Returns the item at index i or items at indices i from x,
+        where x is a numpy array or pd.Series.
+        """
+        try:
+            return x.iloc[i]
+        except AttributeError:
+            return x[i]
+
     if ax is None:
         ax = plt.gca()
 
@@ -497,17 +508,17 @@ def plot_lifetimes(
     if sort_by_duration:
         # order by length of lifetimes;
         ix = np.argsort(entry + durations, 0)
-        durations = durations[ix]
-        event_observed = event_observed[ix]
-        entry = entry[ix]
+        durations = iloc(durations, ix)
+        event_observed = iloc(event_observed, ix)
+        entry = iloc(entry, ix)
 
     for i in range(N):
-        c = event_observed_color if event_observed[i] else event_censored_color
-        ax.hlines(i, entry[i], entry[i] + durations[i], color=c, lw=1.5)
+        c = event_observed_color if iloc(event_observed, i) else event_censored_color
+        ax.hlines(i, iloc(entry, i), iloc(entry, i) + iloc(durations, i), color=c, lw=1.5)
         if left_truncated:
-            ax.hlines(i, 0, entry[i], color=c, lw=1.0, linestyle="--")
-        m = "" if not event_observed[i] else "o"
-        ax.scatter(entry[i] + durations[i], i, color=c, marker=m, s=10)
+            ax.hlines(i, 0, iloc(entry, i), color=c, lw=1.0, linestyle="--")
+        m = "" if not iloc(event_observed, i) else "o"
+        ax.scatter(iloc(entry, i) + iloc(durations, i), i, color=c, marker=m, s=10)
 
     ax.set_ylim(-0.5, N)
     return ax
