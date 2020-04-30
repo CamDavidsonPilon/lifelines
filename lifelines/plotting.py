@@ -441,6 +441,7 @@ def plot_lifetimes(
     sort_by_duration=True,
     event_observed_color="#A60628",
     event_censored_color="#348ABD",
+    label_durations=False,
     ax=None,
     **kwargs
 ):
@@ -463,6 +464,8 @@ def plot_lifetimes(
       default: "#A60628"
     event_censored_color: str
       default: "#348ABD"
+    label_durations: boolean
+      if True then each duration is labelled on the y-axis with its index value from durations.
 
     Returns
     -------
@@ -520,6 +523,14 @@ def plot_lifetimes(
         m = "" if not iloc(event_observed, i) else "o"
         ax.scatter(iloc(entry, i) + iloc(durations, i), i, color=c, marker=m, s=10)
 
+    if label_durations:
+        ax.set_yticks(range(0, N))
+        try:
+            ax.set_yticklabels(durations.index)
+        except AttributeError:
+            pass
+
+    ax.set_xlim(min(durations))
     ax.set_ylim(-0.5, N)
     return ax
 
