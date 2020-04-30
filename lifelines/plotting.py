@@ -441,7 +441,6 @@ def plot_lifetimes(
     sort_by_duration=True,
     event_observed_color="#A60628",
     event_censored_color="#348ABD",
-    label_durations=False,
     ax=None,
     **kwargs
 ):
@@ -464,8 +463,6 @@ def plot_lifetimes(
       default: "#A60628"
     event_censored_color: str
       default: "#348ABD"
-    label_durations: boolean
-      if True then each duration is labelled on the y-axis with its index value from durations.
 
     Returns
     -------
@@ -494,6 +491,9 @@ def plot_lifetimes(
 
     if ax is None:
         ax = plt.gca()
+
+    # If durations is pd.Series with non-default index, then use index values as y-axis labels.
+    label_durations = type(durations) is pd.Series and type(durations.index) is not pd.RangeIndex
 
     N = durations.shape[0]
     if N > 80:
@@ -525,12 +525,11 @@ def plot_lifetimes(
 
     if label_durations:
         ax.set_yticks(range(0, N))
-        try:
-            ax.set_yticklabels(durations.index)
-        except AttributeError:
-            pass
+        ax.set_yticklabels(durations.index)
+    else:
+        ax.set_yticks([])
 
-    ax.set_xlim(min(durations))
+    ax.set_xlim(0)
     ax.set_ylim(-0.5, N)
     return ax
 
