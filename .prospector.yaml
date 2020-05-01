@@ -28,7 +28,7 @@ pyflakes:
 
 pep8:
   options:
-    max-line-length: 120
+    max-line-length: 130
   disable:
     - E501
     - E241

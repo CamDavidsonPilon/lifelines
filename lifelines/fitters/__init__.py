@@ -149,8 +149,7 @@ class UnivariateFitter(BaseFitter):
         new_index = np.concatenate((other_estimate.index, self_estimate.index))
         new_index = np.unique(new_index)
         return pd.DataFrame(
-            self_estimate.reindex(new_index, method="ffill").values
-            - other_estimate.reindex(new_index, method="ffill").values,
+            self_estimate.reindex(new_index, method="ffill").values - other_estimate.reindex(new_index, method="ffill").values,
             index=new_index,
             columns=["diff"],
         )
@@ -169,8 +168,7 @@ class UnivariateFitter(BaseFitter):
         new_index = np.concatenate((other_estimate.index, self_estimate.index))
         new_index = np.unique(new_index)
         t = pd.DataFrame(
-            self_estimate.reindex(new_index, method="ffill").values
-            / other_estimate.reindex(new_index, method="ffill").values,
+            self_estimate.reindex(new_index, method="ffill").values / other_estimate.reindex(new_index, method="ffill").values,
             index=new_index,
             columns=["ratio"],
         )
@@ -422,11 +420,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
             ll
             + np.clip(
                 censored_weights
-                * anp.log(
-                    self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops)
-                ),
-                1e-50,
-                1,
+                * anp.log(self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops)),
+                -1e50,
+                1e50,
             ).sum()
         )
         ll = ll + (weights[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
@@ -458,17 +454,13 @@ class ParametricUnivariateFitter(UnivariateFitter):
         df = pd.DataFrame(index=self.timeline)
 
         # pylint: disable=no-value-for-parameter
-        gradient_of_transform_at_mle = make_jvp_reversemode(transform)(
-            self._fitted_parameters_, self.timeline.astype(float)
-        )
+        gradient_of_transform_at_mle = make_jvp_reversemode(transform)(self._fitted_parameters_, self.timeline.astype(float))
 
         gradient_at_times = np.vstack(
             [gradient_of_transform_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_), dtype=float)]
         )
 
-        std_cumulative_hazard = np.sqrt(
-            np.einsum("nj,jk,nk->n", gradient_at_times.T, self.variance_matrix_, gradient_at_times.T)
-        )
+        std_cumulative_hazard = np.sqrt(np.einsum("nj,jk,nk->n", gradient_at_times.T, self.variance_matrix_, gradient_at_times.T))
 
         if ci_labels is None:
             ci_labels = ["%s_lower_%g" % (self._label, 1 - alpha), "%s_upper_%g" % (self._label, 1 - alpha)]
@@ -625,8 +617,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 (
                     "hypothesis",
                     ", ".join(
-                        "%s != %g" % (name, iv)
-                        for (name, iv) in zip(self._fitted_parameter_names, self._compare_to_values)
+                        "%s != %g" % (name, iv) for (name, iv) in zip(self._fitted_parameter_names, self._compare_to_values)
                     ),
                 ),
             ],
@@ -914,12 +905,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 """\
 
                 The Hessian for %s's fit was not invertible. We will instead approximate it using the pseudo-inverse.
-                This could be a modeling problem:
-
-                1. Are two parameters in the model collinear / exchangeable?
-                2. Is the cumulative hazard always non-negative and always non-decreasing?
-                3. Are there cusps/ in the cumulative hazard?
-
 
                 It's advisable to not trust the variances reported, and to be suspicious of the fitted parameters too. Perform plots of the cumulative hazard to help understand the latter's bias.
                 """
@@ -985,9 +970,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         """
         label = utils.coalesce(label, self._label)
-        return pd.Series(
-            self._survival_function(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
-        )
+        return pd.Series(self._survival_function(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     def cumulative_density_at_times(self, times, label=None) -> pd.Series:
         """
@@ -1002,9 +985,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         """
         label = utils.coalesce(label, self._label)
-        return pd.Series(
-            self._cumulative_density(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
-        )
+        return pd.Series(self._cumulative_density(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     def density_at_times(self, times, label=None) -> pd.Series:
         """
@@ -1033,9 +1014,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
           Rename the series returned. Useful for plotting.
         """
         label = utils.coalesce(label, self._label)
-        return pd.Series(
-            self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label
-        )
+        return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     def hazard_at_times(self, times, label=None) -> pd.Series:
         """
@@ -1137,9 +1116,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         age = self.timeline
         columns = ["%s - Conditional median duration remaining to event" % self._label]
 
-        return pd.DataFrame(
-            self.percentile(0.5 * self.survival_function_.values) - age[:, None], index=age, columns=columns
-        )
+        return pd.DataFrame(self.percentile(0.5 * self.survival_function_.values) - age[:, None], index=age, columns=columns)
 
     def percentile(self, p: float) -> float:
         """
@@ -1322,15 +1299,13 @@ class ParametricRegressionFitter(RegressionFitter):
 
         start, stop = Ts
         non_zero_entries = entries > 0
-        observed_deaths = self._log_hazard(params, stop[E], Xs.filter(E)) - self._cumulative_hazard(
-            params, stop[E], Xs.filter(E)
-        )
+        observed_deaths = self._log_hazard(params, stop[E], Xs.filter(E)) - self._cumulative_hazard(params, stop[E], Xs.filter(E))
         censored_interval_deaths = anp.log(
             anp.clip(
                 self._survival_function(params, start[~E], Xs.filter(~E))
                 - self._survival_function(params, stop[~E], Xs.filter(~E)),
-                1e-50,
-                1,
+                -1e50,
+                1e50,
             )
         )
 
@@ -1706,19 +1681,13 @@ class ParametricRegressionFitter(RegressionFitter):
         )
 
         self._norm_mean = df.mean(0)
-        if (
-            self._KNOWN_MODEL
-            and hasattr(self, "_ancillary_parameter_name")
-            and hasattr(self, "_primary_parameter_name")
-        ):
+        if self._KNOWN_MODEL and hasattr(self, "_ancillary_parameter_name") and hasattr(self, "_primary_parameter_name"):
             # Known AFT model
             self._norm_mean_ = df[self.regressors[self._primary_parameter_name]].mean(0)
             self._norm_mean_ancillary = df[self.regressors[self._ancillary_parameter_name]].mean(0)
 
         _norm_std = df.std(0)
-        self._constant_cols = pd.Series(
-            [(_norm_std.loc[variable_name] < 1e-8) for (_, variable_name) in _index], index=_index
-        )
+        self._constant_cols = pd.Series([(_norm_std.loc[variable_name] < 1e-8) for (_, variable_name) in _index], index=_index)
         self._norm_std = pd.Series([_norm_std.loc[variable_name] for (_, variable_name) in _index], index=_index)
         self._norm_std[self._constant_cols] = 1.0
         _norm_std[_norm_std < 1e-8] = 1.0
@@ -1750,19 +1719,14 @@ class ParametricRegressionFitter(RegressionFitter):
         return self
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs) -> Union[List[Dict], Dict]:
-        return {
-            parameter_name: np.zeros(len(Xs.mappings[parameter_name]))
-            for parameter_name in self._fitted_parameter_names
-        }
+        return {parameter_name: np.zeros(len(Xs.mappings[parameter_name])) for parameter_name in self._fitted_parameter_names}
 
     def _add_penalty(self, params: Dict, neg_ll: float):
         params_array, _ = flatten(params)
         # remove intercepts from being penalized
         params_array = params_array[~self._constant_cols]
         if self.penalizer > 0 and self.l1_ratio > 0:
-            penalty = (
-                self.l1_ratio * anp.abs(params_array).sum() + 0.5 * (1.0 - self.l1_ratio) * (params_array ** 2).sum()
-            )
+            penalty = self.l1_ratio * anp.abs(params_array).sum() + 0.5 * (1.0 - self.l1_ratio) * (params_array ** 2).sum()
         elif self.penalizer > 0 and self.l1_ratio <= 0:
             penalty = 0.5 * (params_array ** 2).sum()
         else:
@@ -1795,9 +1759,7 @@ class ParametricRegressionFitter(RegressionFitter):
             initial_point_arrays = [flatten(initial_point_dict)[0] for initial_point_dict in self._initial_point_dicts]
         return initial_point_arrays, unflatten
 
-    def _fit_model(
-        self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, user_supplied_initial_point=None
-    ):
+    def _fit_model(self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, user_supplied_initial_point=None):
         inital_points_as_arrays, unflatten_array_to_dict = self._prepare_initial_points(
             user_supplied_initial_point, Ts, E, entries, weights, Xs
         )
@@ -1835,16 +1797,10 @@ class ParametricRegressionFitter(RegressionFitter):
 
         if minimum_results.success:
             sum_weights = weights.sum()
-            hessian_ = hessian(self._neg_likelihood_with_penalty_function)(
-                minimum_results.x, Ts, E, weights, entries, Xs
-            )
+            hessian_ = hessian(self._neg_likelihood_with_penalty_function)(minimum_results.x, Ts, E, weights, entries, Xs)
             # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
             hessian_ = (hessian_ + hessian_.T) / 2
-            return (
-                unflatten_array_to_dict(minimum_results.x),
-                -sum_weights * minimum_results.fun,
-                sum_weights * hessian_,
-            )
+            return (unflatten_array_to_dict(minimum_results.x), -sum_weights * minimum_results.fun, sum_weights * hessian_)
         else:
             print(minimum_results)
             self._check_values_post_fitting(Xs.df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
@@ -2031,9 +1987,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 model.fit_right_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
             elif utils.CensoringType.is_interval_censoring(self):
                 df["lb"], df["ub"], df["E"] = self.lower_bound, self.upper_bound, self.event_observed
-                model.fit_interval_censoring(
-                    df, "lb", "ub", "E", entry_col="entry", weights_col="w", regressors=regressors
-                )
+                model.fit_interval_censoring(df, "lb", "ub", "E", entry_col="entry", weights_col="w", regressors=regressors)
             if utils.CensoringType.is_left_censoring(self):
                 df["T"], df["E"] = self.durations, self.event_observed
                 model.fit_left_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
@@ -2245,15 +2199,11 @@ class ParametricRegressionFitter(RegressionFitter):
         n = df.shape[0]
         Xs = self._create_Xs_dict(df)
 
-        params_dict = {
-            parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
-        }
+        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
         columns = utils._get_index(df)
         if conditional_after is None:
-            return pd.DataFrame(
-                self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=columns
-            )
+            return pd.DataFrame(self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=columns)
         else:
             conditional_after = np.asarray(conditional_after).reshape((n, 1))
             times_to_evaluate_at = (conditional_after + np.tile(times, (n, 1))).T
@@ -2300,9 +2250,7 @@ class ParametricRegressionFitter(RegressionFitter):
         n = df.shape[0]
         Xs = self._create_Xs_dict(df)
 
-        params_dict = {
-            parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
-        }
+        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
         return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
 
@@ -2405,9 +2353,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         if not user_supplied_columns:
             if isinstance(hazards.index, pd.MultiIndex):
-                hazards = hazards.groupby(level=0, group_keys=False).apply(
-                    lambda x: x.sort_values(by="coefs", ascending=True)
-                )
+                hazards = hazards.groupby(level=0, group_keys=False).apply(lambda x: x.sort_values(by="coefs", ascending=True))
             else:
                 hazards = hazards.sort_values(by="coefs", ascending=True)
 
@@ -2519,9 +2465,7 @@ class ParametricRegressionFitter(RegressionFitter):
         """
         # pylint: disable=access-member-before-definition
         if not hasattr(self, "_concordance_index_"):
-            self._concordance_index_ = utils.concordance_index(
-                self.durations, self._predicted_median, self.event_observed
-            )
+            self._concordance_index_ = utils.concordance_index(self.durations, self._predicted_median, self.event_observed)
             del self._predicted_median
             return self.concordance_index_
         return self._concordance_index_
@@ -2652,14 +2596,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
             regressors = {
                 self._primary_parameter_name: primary_columns,
-                self._ancillary_parameter_name: ancillary_df.columns.difference(
-                    [self.duration_col, event_col]
-                ).tolist(),
+                self._ancillary_parameter_name: ancillary_df.columns.difference([self.duration_col, event_col]).tolist(),
             }
 
-            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
-                [self.duration_col, event_col]
-            )
+            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference([self.duration_col, event_col])
             df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
 
         elif (ancillary_df is True) or self.model_ancillary:
@@ -3115,9 +3055,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         if not user_supplied_columns:
             if isinstance(hazards.index, pd.MultiIndex):
-                hazards = hazards.groupby(level=0, group_keys=False).apply(
-                    lambda x: x.sort_values(by="coefs", ascending=True)
-                )
+                hazards = hazards.groupby(level=0, group_keys=False).apply(lambda x: x.sort_values(by="coefs", ascending=True))
             else:
                 hazards = hazards.sort_values(by="coefs", ascending=True)
 
@@ -3249,9 +3187,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             ancillary_X = X[self.regressors[self._ancillary_parameter_name]]
         else:
             # provided numpy array
-            assert ancillary_X.shape[1] == (
-                self.params_.loc[self._ancillary_parameter_name].shape[0] + 1
-            )  # 1 for _intercept
+            assert ancillary_X.shape[1] == (self.params_.loc[self._ancillary_parameter_name].shape[0] + 1)  # 1 for _intercept
 
         primary_params = self.params_[self._primary_parameter_name]
         ancillary_params = self.params_[self._ancillary_parameter_name]
@@ -3288,9 +3224,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
         with np.errstate(divide="ignore"):
             return np.exp(
-                -self.predict_cumulative_hazard(
-                    df, ancillary_df=ancillary_df, times=times, conditional_after=conditional_after
-                )
+                -self.predict_cumulative_hazard(df, ancillary_df=ancillary_df, times=times, conditional_after=conditional_after)
             )
 
     def predict_median(self, df, *, ancillary_df=None, conditional_after=None) -> pd.DataFrame:
@@ -3368,9 +3302,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Xs = self._create_Xs_dict(df)
 
-        params_dict = {
-            parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
-        }
+        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
         if conditional_after is None:
             return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
@@ -3421,14 +3353,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         Xs = self._create_Xs_dict(df)
 
-        params_dict = {
-            parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names
-        }
+        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
         if conditional_after is None:
-            return pd.DataFrame(
-                self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index
-            )
+            return pd.DataFrame(self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
         else:
             conditional_after = np.asarray(conditional_after)
             times_to_evaluate_at = (conditional_after[:, None] + np.tile(times, (n, 1))).T
@@ -3443,5 +3371,5 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
                 columns=df.index,
             )
 
-    def compute_residuals(self, df):
-        raise NotImplementedError("Working on it.")
+    def compute_residuals(self, training_dataframe: pd.DataFrame, kind: str) -> pd.DataFrame:
+        raise NotImplementedError("Working on it. Only available for Cox models at the moment.")
