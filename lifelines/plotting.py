@@ -6,6 +6,7 @@ from typing import Union
 import numpy as np
 from scipy import stats
 from matplotlib import pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import pandas as pd
 
 from lifelines.utils import coalesce, CensoringType
@@ -433,6 +434,113 @@ def add_at_risk_counts(*fitters, **kwargs):
     return ax
 
 
+def plot_interval_censored_lifetimes(
+    lower_bound,
+    upper_bound,
+    entry=None,
+    left_truncated=False,
+    sort_by_lower_bound=True,
+    event_observed_color="#A60628",
+    event_right_censored_color="#348ABD",
+    ax=None,
+    **kwargs
+):
+    """
+    Returns a lifetime plot for interval censored data.
+
+    Parameters
+    -----------
+    lower_bound: (n,) numpy array or pd.Series
+      the start of the period the subject experienced the event in.
+    upper_bound: (n,) numpy array or pd.Series
+      the end of the period the subject experienced the event in. If the value is equal to the corresponding value in lower_bound, then
+      the individual's event was observed (not censored).
+    entry: (n,) numpy array or pd.Series
+      offsetting the births away from t=0. This could be from left-truncation, or delayed entry into study.
+    left_truncated: boolean
+      if entry is provided, and the data is left-truncated, this will display additional information in the plot to reflect this.
+    sort_by_lower_bound: boolean
+      sort by the lower_bound vector
+    event_observed_color: str
+      default: "#A60628"
+    event_right_censored_color: str
+      default: "#348ABD"
+      applies to any individual with an upper bound of infinity.
+
+    Returns
+    -------
+    ax:
+
+    Examples
+    ---------
+    .. code:: python
+
+        import pandas as pd
+        import numpy as np
+        from lifelines.plotting import plot_interval_censored_lifetimes
+        df = pd.DataFrame({'lb':[20,15,30, 10, 20, 30], 'ub':[25, 15, np.infty, 20, 20, np.infty]})
+        ax = plot_interval_censored_lifetimes(lower_bound=df['lb'], upper_bound=df['ub'])
+    """
+
+    def iloc(x, i):
+        """
+        Returns the item at index i or items at indices i from x,
+        where x is a numpy array or pd.Series.
+        """
+        try:
+            return x.iloc[i]
+        except AttributeError:
+            return x[i]
+
+    if ax is None:
+        ax = plt.gca()
+
+    # If lower_bounds is pd.Series with non-default index, then use index values as y-axis labels.
+    label_plot_bars = type(lower_bound) is pd.Series and type(lower_bound.index) is not pd.RangeIndex
+
+    N = lower_bound.shape[0]
+    if N > 80:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
+
+    assert upper_bound.shape[0] == N
+
+    if sort_by_lower_bound:
+        ix = np.argsort(lower_bound, 0)
+        upper_bound = iloc(upper_bound, ix)
+        lower_bound = iloc(lower_bound, ix)
+        if entry:
+            entry = iloc(lower_bound, ix)
+
+    if entry is None:
+        entry = np.zeros(N)
+
+    for i in range(N):
+        if np.isposinf(iloc(upper_bound, i)):
+            c = event_right_censored_color
+            ax.hlines(i, iloc(entry, i), iloc(lower_bound, i), color=c, lw=1.5)
+        else:
+            c = event_observed_color
+            ax.hlines(i, iloc(entry, i), iloc(upper_bound, i), color=c, lw=1.5)
+            if iloc(lower_bound, i) == iloc(upper_bound, i):
+                ax.scatter(iloc(lower_bound, i), i, color=c, marker="o", s=10)
+            else:
+                ax.scatter(iloc(lower_bound, i), i, color=c, marker=">", s=10)
+                ax.scatter(iloc(upper_bound, i), i, color=c, marker="<", s=10)
+
+        if left_truncated:
+            ax.hlines(i, 0, iloc(entry, i), color=c, lw=1.0, linestyle="--")
+
+    if label_plot_bars:
+        ax.set_yticks(range(0, N))
+        ax.set_yticklabels(lower_bound.index)
+    else:
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+    ax.set_xlim(0)
+    ax.set_ylim(-0.5, N)
+    return ax
+
+
 def plot_lifetimes(
     durations,
     event_observed=None,
@@ -527,7 +635,7 @@ def plot_lifetimes(
         ax.set_yticks(range(0, N))
         ax.set_yticklabels(durations.index)
     else:
-        ax.set_yticks([])
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax.set_xlim(0)
     ax.set_ylim(-0.5, N)
