@@ -967,6 +967,23 @@ class TestWeibullFitter:
             assert abs(1 - wf.rho_ / rho) < 5 / np.sqrt(N)
             assert abs(1 - wf.lambda_ / lambda_) < 5 / np.sqrt(N)
 
+    def test_interval_censoring_with_excepted_results(self):
+
+        df = pd.DataFrame()
+        df["left"] = [0.1, 30.1, 60.1, 90.1, 120.1, 150.1, 180.1, 210.1]
+        df["right"] = [30, 60, 90, 120, 150, 180, 210, np.inf]
+        df["Observed"] = False  # Means exact fail time is not known
+        df["#Units"] = [15, 17, 19, 26, 19, 43, 20, 15356]
+
+        df["left"] = df["left"]
+        df["right"] = df["right"]
+
+        wf = WeibullFitter()
+        wf.fit_interval_censoring(df["left"], df["right"], event_observed=df["Observed"], weights=df["#Units"])
+
+        npt.assert_allclose(wf.rho_, 1.272946, rtol=1e-5)
+        npt.assert_allclose(wf.lambda_, 7646.68135, rtol=1e-5)
+
 
 class TestGeneralizedGammaFitter:
     def test_exponential_data_inference(self):
