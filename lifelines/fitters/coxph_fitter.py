@@ -1146,7 +1146,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 weighted_mean += numer / (denom * tie_count)
 
             for xi, ei in diff_against:
-                schoenfeld_residuals = np.append(schoenfeld_residuals, weight_count * ei * (xi - weighted_mean), axis=0)
+                schoenfeld_residuals = np.append(schoenfeld_residuals, ei * (xi - weighted_mean), axis=0)
 
             # reset tie values
             tie_count = 0

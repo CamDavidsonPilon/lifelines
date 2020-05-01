@@ -2739,7 +2739,7 @@ class TestCoxPHFitter:
         )
 
         cph.fit(df, "T", "E")
-
+        cph.print_summary()
         results = cph.compute_residuals(df, "schoenfeld")
         expected = pd.DataFrame([-0.3903793341, -0.5535578141, 0.9439371482, 0.0], columns=["var1"], index=[0, 1, 2, 4])
         assert_frame_equal(results, expected, check_less_precise=3)
@@ -2815,7 +2815,7 @@ class TestCoxPHFitter:
 
         cph.fit(regression_dataset, "T", "E")
 
-        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.params_.values
+        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") + cph.params_.values
         npt.assert_allclose(results.iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=1e-03)
         npt.assert_allclose(results.iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=1e-03)
         npt.assert_allclose(
@@ -2852,8 +2852,6 @@ class TestCoxPHFitter:
         npt.assert_allclose(results.iloc[0].values[0], -6.467889, rtol=1e-03)
         npt.assert_allclose(results.iloc[1].values, [9.943385], rtol=1e-03)
         npt.assert_allclose(results.iloc[results.shape[0] - 1].values, [1.229892], rtol=1e-03)
-
-        npt.assert_allclose(results.iloc[2].values, [4.197138 * 2 - 1.230], rtol=1e-03)
 
     def test_original_index_is_respected_in_all_residual_tests(self, cph):
 
