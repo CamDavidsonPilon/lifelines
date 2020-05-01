@@ -144,9 +144,7 @@ class StatisticalResult:
         header_df = pd.DataFrame.from_records(headers).set_index(0)
         header_html = header_df.to_html(header=False, notebook=True, index_names=False)
 
-        summary_html = summary_df.to_html(
-            float_format=format_floats(decimals), formatters={**{"p": format_p_value(decimals)}}
-        )
+        summary_html = summary_df.to_html(float_format=format_floats(decimals), formatters={**{"p": format_p_value(decimals)}})
 
         return header_html + summary_html
 
@@ -188,9 +186,7 @@ class StatisticalResult:
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
-            float_format=format_floats(decimals),
-            index=self.name is not None,
-            formatters={"p": format_p_value(decimals)},
+            float_format=format_floats(decimals), index=self.name is not None, formatters={"p": format_p_value(decimals)}
         )
 
         return s
@@ -439,9 +435,7 @@ def survival_difference_at_fixed_point_in_time_test(
     )
 
 
-def logrank_test(
-    durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs
-) -> StatisticalResult:
+def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs) -> StatisticalResult:
     r"""
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -589,9 +583,7 @@ def pairwise_logrank_test(
 
     n = np.max(np.asarray(event_durations).shape)
 
-    groups, event_durations, event_observed = map(
-        lambda x: np.asarray(x).reshape(n), [groups, event_durations, event_observed]
-    )
+    groups, event_durations, event_observed = map(lambda x: np.asarray(x).reshape(n), [groups, event_durations, event_observed])
 
     if not (n == event_durations.shape[0] == event_observed.shape[0]):
         raise ValueError("inputs must be of the same length.")
@@ -735,9 +727,7 @@ def multivariate_logrank_test(
 
     # compute the p-values and tests
     p_value = _chisq_test_p_value(U, n_groups - 1)
-    return StatisticalResult(
-        p_value, U, t_0=t_0, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs
-    )
+    return StatisticalResult(p_value, U, t_0=t_0, null_distribution="chi squared", degrees_of_freedom=n_groups - 1, **kwargs)
 
 
 def _chisq_test_p_value(U, degrees_freedom) -> float:
@@ -801,9 +791,9 @@ def proportional_hazard_test(
         scaled_resids = precomputed_residuals
 
     def compute_statistic(times, resids):
-        times -= times.mean()
-        T = (times.values[:, None] * resids.values).sum(0) ** 2 / (
-            deaths * np.diag(fitted_cox_model.variance_matrix_) * (times ** 2).sum()
+        demeaned_times = times - times.mean()
+        T = (demeaned_times.values[:, None] * resids.values).sum(0) ** 2 / (
+            deaths * np.diag(fitted_cox_model.variance_matrix_) * (demeaned_times ** 2).sum()
         )
         return T
 

@@ -279,21 +279,20 @@ def test_proportional_hazard_test_with_weights():
         {
             "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
             "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-            "w": [1, 0.5, 2, 1, 1],
+            "w": [1, 1, 1, 1, 1],
         }
     )
     df["E"] = True
 
-    with pytest.warns(StatisticalWarning, match="weights are not integers"):
+    cph = CoxPHFitter()
+    cph.fit(df, "T", "E", weights_col="w")
 
-        cph = CoxPHFitter()
-        cph.fit(df, "T", "E", weights_col="w")
-
-        results = stats.proportional_hazard_test(cph, df)
-        npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.1083698, rtol=1e-3)
+    results = stats.proportional_hazard_test(cph, df, time_transform=["km", "rank", "log", "identity"])
+    results.print_summary(5)
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.000346, rtol=1e-3)
 
 
-def test_proportional_hazard_test_with_weights_and_strata():
+def test_proportional_hazard_test_with_strata_weights_and_strata():
     """
     library(survival)
     df <- data.frame(
@@ -329,7 +328,6 @@ def test_proportional_hazard_test_with_weights_and_strata():
 
 def test_proportional_hazard_test_with_kmf():
     """
-
     library(survival)
     df <- data.frame(
       "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),

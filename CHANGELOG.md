@@ -1,5 +1,15 @@
 ## Changelog
 
+#### 0.24.5 - 2020-05-01
+
+##### New features
+ - `plot_lifetimes` accepts pandas Series.
+
+##### Bug fixes
+ - Fixed important bug in interval censoring models. Users using interval censoring are strongly advised to upgrade.
+ - Improved `at_risk_counts` for subplots.
+ - More data validation checks for `CoxTimeVaryingFitter`
+
 #### 0.24.4 - 2020-04-13
 
 ##### Bug fixes

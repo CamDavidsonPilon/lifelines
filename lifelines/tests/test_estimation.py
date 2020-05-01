@@ -81,11 +81,7 @@ from lifelines.datasets import (
     load_c_botulinum_lag_phase,
     load_diabetes,
 )
-from lifelines.generate_datasets import (
-    generate_hazard_rates,
-    generate_random_lifetimes,
-    piecewise_exponential_survival_data,
-)
+from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, piecewise_exponential_survival_data
 
 
 @pytest.fixture
@@ -158,17 +154,7 @@ def data_pred2():
 @pytest.fixture
 def data_nus():
     data_nus = pd.DataFrame(
-        [
-            [6, 31.4],
-            [98, 21.5],
-            [189, 27.1],
-            [374, 22.7],
-            [1002, 35.7],
-            [1205, 30.7],
-            [2065, 26.5],
-            [2201, 28.3],
-            [2421, 27.9],
-        ],
+        [[6, 31.4], [98, 21.5], [189, 27.1], [374, 22.7], [1002, 35.7], [1205, 30.7], [2065, 26.5], [2201, 28.3], [2421, 27.9]],
         columns=["t", "x"],
     )
     data_nus["E"] = True
@@ -259,9 +245,7 @@ class TestParametricUnivariateFitters:
         for fitter in known_parametric_univariate_fitters:
             fitter().fit(T, E).print_summary(5)
 
-    def test_models_can_handle_really_small_duration_values_for_left_censorship(
-        self, known_parametric_univariate_fitters
-    ):
+    def test_models_can_handle_really_small_duration_values_for_left_censorship(self, known_parametric_univariate_fitters):
         T1 = np.random.exponential(1e-6, size=1000)
         T2 = np.random.exponential(1e-6, size=1000)
         E = T1 > T2
@@ -314,9 +298,7 @@ class TestParametricUnivariateFitters:
             f = fitter().fit_interval_censoring(df["left"], df["right"])
             f.print_summary()
 
-    def test_parameteric_models_all_can_do_interval_censoring_with_prediction(
-        self, known_parametric_univariate_fitters
-    ):
+    def test_parameteric_models_all_can_do_interval_censoring_with_prediction(self, known_parametric_univariate_fitters):
         df = load_diabetes()
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit_interval_censoring(df["left"], df["right"])
@@ -354,9 +336,7 @@ class TestUnivariateFitters:
             SplineFitterTesting,
         ]
 
-    def test_confidence_interval_has_the_correct_order_so_plotting_doesnt_break(
-        self, sample_lifetimes, univariate_fitters
-    ):
+    def test_confidence_interval_has_the_correct_order_so_plotting_doesnt_break(self, sample_lifetimes, univariate_fitters):
         T, E = sample_lifetimes
         for f in univariate_fitters:
             f = f()
@@ -417,9 +397,7 @@ class TestUnivariateFitters:
             if hasattr(f, "survival_function_"):
                 assert all(f.conditional_time_to_event_.index == f.survival_function_.index)
 
-    def test_univariate_fitters_allows_one_to_change_alpha_at_fit_time(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_univariate_fitters_allows_one_to_change_alpha_at_fit_time(self, positive_sample_lifetimes, univariate_fitters):
         alpha = 0.1
         alpha_fit = 0.05
         for f in univariate_fitters:
@@ -438,9 +416,7 @@ class TestUnivariateFitters:
             assert hasattr(fitter, "plot")
 
     def test_univariate_fitters_ok_if_given_timedelta(self, univariate_fitters):
-        t = pd.Series(
-            [pd.to_datetime("2015-01-01 12:00"), pd.to_datetime("2015-01-02"), pd.to_datetime("2015-01-02 12:00")]
-        )
+        t = pd.Series([pd.to_datetime("2015-01-01 12:00"), pd.to_datetime("2015-01-02"), pd.to_datetime("2015-01-02 12:00")])
         T = pd.to_datetime("2015-01-03") - t
         for fitter in univariate_fitters:
             f = fitter().fit(T)
@@ -459,9 +435,7 @@ class TestUnivariateFitters:
             with pytest.warns(UserWarning, match="convert"):
                 fitter().fit(df["T"], df["E"])
 
-    def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(
-        self, positive_sample_lifetimes, univariate_fitters
-    ):
+    def test_predict_methods_returns_a_scalar_or_a_array_depending_on_input(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
             fitter = f()
@@ -559,9 +533,7 @@ class TestUnivariateFitters:
 
                 if isinstance(fitter, ParametricUnivariateFitter):
                     with_array = fitter.fit_interval_censoring(T, T + 1, (T == T + 1)).survival_function_
-                    with_list = fitter.fit_interval_censoring(
-                        list(T), list(T + 1), list((T == T + 1))
-                    ).survival_function_
+                    with_list = fitter.fit_interval_censoring(list(T), list(T + 1), list((T == T + 1))).survival_function_
                     assert_frame_equal(with_list, with_array)
 
                     with_array = fitter.fit_left_censoring(T, C).survival_function_
@@ -994,6 +966,23 @@ class TestWeibullFitter:
             wf.fit(T)
             assert abs(1 - wf.rho_ / rho) < 5 / np.sqrt(N)
             assert abs(1 - wf.lambda_ / lambda_) < 5 / np.sqrt(N)
+
+    def test_interval_censoring_with_excepted_results(self):
+
+        df = pd.DataFrame()
+        df["left"] = [0.1, 30.1, 60.1, 90.1, 120.1, 150.1, 180.1, 210.1]
+        df["right"] = [30, 60, 90, 120, 150, 180, 210, np.inf]
+        df["Observed"] = False  # Means exact fail time is not known
+        df["#Units"] = [15, 17, 19, 26, 19, 43, 20, 15356]
+
+        df["left"] = df["left"]
+        df["right"] = df["right"]
+
+        wf = WeibullFitter()
+        wf.fit_interval_censoring(df["left"], df["right"], event_observed=df["Observed"], weights=df["#Units"])
+
+        npt.assert_allclose(wf.rho_, 1.272946, rtol=1e-5)
+        npt.assert_allclose(wf.lambda_, 7646.68135, rtol=1e-5)
 
 
 class TestGeneralizedGammaFitter:
@@ -1651,18 +1640,14 @@ class TestRegressionFitters:
         regression_models = [CoxPHFitter(), WeibullAFTFitter()]
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
-            npt.assert_almost_equal(
-                fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0]
-            )
+            npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
 
         rossi["_intercept"] = 1.0
         regression_models = [CustomRegressionModelTesting(), PiecewiseExponentialRegressionFitter(breakpoints=[25.0])]
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
-            npt.assert_almost_equal(
-                fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0]
-            )
+            npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
 
     def test_print_summary(self, rossi, regression_models):
@@ -1737,9 +1722,7 @@ class TestRegressionFitters:
             "predict_cumulative_hazard",
         ]:
             for fitter1, fitter2 in combinations(fitted_regression_models, 2):
-                assert isinstance(
-                    getattr(fitter1, predict_method)(rossi), type(getattr(fitter2, predict_method)(rossi))
-                )
+                assert isinstance(getattr(fitter1, predict_method)(rossi), type(getattr(fitter2, predict_method)(rossi)))
 
     def test_predict_methods_in_regression_return_same_index(self, regression_models, rossi):
 
@@ -1910,9 +1893,7 @@ class TestPiecewiseExponentialRegressionFitter:
             lambdas = np.exp(-betas.dot(X[i, :]))
             T[i] = piecewise_exponential_survival_data(1, breakpoints, lambdas)[0]
 
-        T_censor = np.minimum(
-            T.mean() * np.random.exponential(size=N), 110
-        )  # 110 is the end of observation, eg. current time.
+        T_censor = np.minimum(T.mean() * np.random.exponential(size=N), 110)  # 110 is the end of observation, eg. current time.
 
         df = pd.DataFrame(X[:, :-1], columns=["var1", "var2"])
         df["_intercept"] = 1.0
@@ -2007,9 +1988,7 @@ class TestAFTFitters:
             assert (
                 abs(
                     model.predict_percentile(subject, p=p, conditional_after=[50])
-                    - qth_survival_time(
-                        p, model.predict_survival_function(subject, times=times, conditional_after=[50])
-                    )
+                    - qth_survival_time(p, model.predict_survival_function(subject, times=times, conditional_after=[50]))
                 ).loc[400]
                 < 0.5
             )
@@ -2234,8 +2213,7 @@ class TestLogLogisticAFTFitter:
         factor = aft.summary.loc[("alpha_", "prio"), "exp(coef)"]
         expon = aft.summary.loc[("beta_", "_intercept"), "exp(coef)"]
         npt.assert_allclose(
-            baseline_survival / (1 - baseline_survival) * factor ** expon,
-            accelerated_survival / (1 - accelerated_survival),
+            baseline_survival / (1 - baseline_survival) * factor ** expon, accelerated_survival / (1 - accelerated_survival)
         )
 
 
@@ -2433,9 +2411,7 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.013165, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.003630, rtol=1e-3)
 
-    def test_inference_is_the_same_if_using_right_censorship_or_interval_censorship_with_inf_endpoints(
-        self, rossi, aft
-    ):
+    def test_inference_is_the_same_if_using_right_censorship_or_interval_censorship_with_inf_endpoints(self, rossi, aft):
         df = rossi.copy()
         df["start"] = df["week"]
         df["stop"] = np.where(df["arrest"], df["start"], np.inf)
@@ -2582,12 +2558,8 @@ class TestCoxPHFitter:
             < CoxPHFitter(penalizer=0).fit(rossi, "week", "arrest").log_likelihood_
         )
         assert (
-            CoxPHFitter(penalizer=1e-6, baseline_estimation_method="spline")
-            .fit(rossi, "week", "arrest")
-            .log_likelihood_
-            < CoxPHFitter(penalizer=1e-8, baseline_estimation_method="spline")
-            .fit(rossi, "week", "arrest")
-            .log_likelihood_
+            CoxPHFitter(penalizer=1e-6, baseline_estimation_method="spline").fit(rossi, "week", "arrest").log_likelihood_
+            < CoxPHFitter(penalizer=1e-8, baseline_estimation_method="spline").fit(rossi, "week", "arrest").log_likelihood_
             < CoxPHFitter(penalizer=0, baseline_estimation_method="spline").fit(rossi, "week", "arrest").log_likelihood_
         )
 
@@ -2741,11 +2713,7 @@ class TestCoxPHFitter:
         residuals(c, "schoen")
         """
         df = pd.DataFrame(
-            {
-                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
-                "T": [5, 6, 7, 8, 9],
-                "E": [1, 1, 1, 1, 1],
-            }
+            {"var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105], "T": [5, 6, 7, 8, 9], "E": [1, 1, 1, 1, 1]}
         )
 
         cph.fit(df, "T", "E")
@@ -2767,15 +2735,11 @@ class TestCoxPHFitter:
         residuals(c, "schoen")
         """
         df = pd.DataFrame(
-            {
-                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
-                "T": [6, 6, 7, 8, 9],
-                "E": [1, 1, 1, 0, 1],
-            }
+            {"var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105], "T": [6, 6, 7, 8, 9], "E": [1, 1, 1, 0, 1]}
         )
 
         cph.fit(df, "T", "E")
-
+        cph.print_summary()
         results = cph.compute_residuals(df, "schoenfeld")
         expected = pd.DataFrame([-0.3903793341, -0.5535578141, 0.9439371482, 0.0], columns=["var1"], index=[0, 1, 2, 4])
         assert_frame_equal(results, expected, check_less_precise=3)
@@ -2851,21 +2815,48 @@ class TestCoxPHFitter:
 
         cph.fit(regression_dataset, "T", "E")
 
-        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.params_.values
-        npt.assert_allclose(results.iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=5)
-        npt.assert_allclose(results.iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=5)
+        results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") + cph.params_.values
+        npt.assert_allclose(results.iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=1e-03)
+        npt.assert_allclose(results.iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=1e-03)
         npt.assert_allclose(
-            results.iloc[results.shape[0] - 1].values, [0.222207366875, 0.050957334886, 0.218314242931], rtol=5
+            results.iloc[results.shape[0] - 1].values, [0.222207366875, 0.050957334886, 0.218314242931], rtol=1e-03
         )
+
+    def test_scaled_schoenfeld_residuals_against_R_with_weights(self, regression_dataset, cph):
+        """
+
+        library(survival)
+        df <- data.frame(
+          "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
+          "T" = c(5.269797, 6.601666, 7.335846, 11.684092, 12.678458),
+          "E" = c(1, 1, 1, 1, 1),
+          "w" = c(1, 1, 2, 1, 1)
+        )
+
+        c = coxph(formula=Surv(T, E) ~ var1 , data=df, weights=w, ties="efron")
+        residuals(c, "scaledsch", weighted=TRUE)
+        """
+        df = pd.DataFrame(
+            {
+                "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
+                "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
+                "w": [1, 1, 2, 1, 1],
+            }
+        )
+        df["E"] = True
+
+        cph.fit(df, "T", "E", weights_col="w")
+        cph.print_summary()
+        # NOTE: lifelines does not add the coefficients to the final results, but R does when you call residuals(c, "scaledsch")
+        results = cph.compute_residuals(df, "scaled_schoenfeld") + cph.params_.values
+        npt.assert_allclose(results.iloc[0].values[0], -6.467889, rtol=1e-03)
+        npt.assert_allclose(results.iloc[1].values, [9.943385], rtol=1e-03)
+        npt.assert_allclose(results.iloc[results.shape[0] - 1].values, [1.229892], rtol=1e-03)
 
     def test_original_index_is_respected_in_all_residual_tests(self, cph):
 
         df = pd.DataFrame(
-            {
-                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
-                "T": [6, 6, 7, 8, 9],
-                "s": [1, 2, 2, 1, 1],
-            }
+            {"var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105], "T": [6, 6, 7, 8, 9], "s": [1, 2, 2, 1, 1]}
         )
         df.index = ["A", "B", "C", "D", "E"]
 
@@ -2878,11 +2869,7 @@ class TestCoxPHFitter:
     def test_original_index_is_respected_in_all_residual_tests_with_strata(self, cph):
 
         df = pd.DataFrame(
-            {
-                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
-                "T": [6, 6, 7, 8, 9],
-                "s": [1, 2, 2, 1, 1],
-            }
+            {"var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105], "T": [6, 6, 7, 8, 9], "s": [1, 2, 2, 1, 1]}
         )
         df.index = ["A", "B", "C", "D", "E"]
 
@@ -3107,9 +3094,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         # Internal training set
         ci_trn = cph.concordance_index_
         # New data should normalize in the exact same way
-        ci_org = concordance_index(
-            data_pred2["t"], -cph.predict_partial_hazard(data_pred2[["x1", "x2"]]).values, data_pred2["E"]
-        )
+        ci_org = concordance_index(data_pred2["t"], -cph.predict_partial_hazard(data_pred2[["x1", "x2"]]).values, data_pred2["E"])
 
         assert ci_org == ci_trn
 
@@ -3791,9 +3776,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         """
         expected = np.array([-0.3355, -0.0590, 0.1002])
         cf = CoxPHFitter()
-        cf.fit(
-            rossi, duration_col="week", event_col="arrest", strata=["race", "paro", "mar", "wexp"], show_progress=True
-        )
+        cf.fit(rossi, duration_col="week", event_col="arrest", strata=["race", "paro", "mar", "wexp"], show_progress=True)
         npt.assert_array_almost_equal(cf.params_.values, expected, decimal=4)
 
     def test_penalized_output_against_R(self, rossi):
@@ -3934,18 +3917,10 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         rossi = rossi[["week", "arrest", "fin", "age"]]
         cp = CoxPHFitter()
         cp.fit(rossi, "week", "arrest", weights_col="age")
-        npt.assert_almost_equal(
-            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[1.0], 0.00183466, decimal=4
-        )
-        npt.assert_almost_equal(
-            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[2.0], 0.005880265, decimal=4
-        )
-        npt.assert_almost_equal(
-            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[10.0], 0.035425868, decimal=4
-        )
-        npt.assert_almost_equal(
-            cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[52.0], 0.274341397, decimal=3
-        )
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[1.0], 0.00183466, decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[2.0], 0.005880265, decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[10.0], 0.035425868, decimal=4)
+        npt.assert_almost_equal(cp.baseline_cumulative_hazard_["baseline cumulative hazard"].loc[52.0], 0.274341397, decimal=3)
 
     def test_strata_from_init_is_used_in_fit_later(self, rossi):
         strata = ["race", "paro", "mar"]
@@ -4332,9 +4307,7 @@ class TestAalenAdditiveFitter:
             aaf.fit(regression_dataset, "T", "E", weights_col="var3")
         actual = aaf.hazards_
         npt.assert_allclose(actual.iloc[:3]["var1"].tolist(), [1.301523e-02, -4.925302e-04, 2.304792e-02], rtol=1e-06)
-        npt.assert_allclose(
-            actual.iloc[:3]["_intercept"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06
-        )
+        npt.assert_allclose(actual.iloc[:3]["_intercept"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06)
 
     def test_cumulative_hazards_versus_R(self, aaf, regression_dataset):
         """
@@ -4369,9 +4342,7 @@ class TestCoxTimeVaryingFitter:
         return load_stanford_heart_transplants()
 
     def test_model_can_accept_null_covariates(self, ctv, dfcv):
-        ctv.fit(
-            dfcv[["id", "start", "stop", "event"]], id_col="id", start_col="start", stop_col="stop", event_col="event"
-        )
+        ctv.fit(dfcv[["id", "start", "stop", "event"]], id_col="id", start_col="start", stop_col="stop", event_col="event")
 
     def test_inference_against_known_R_output(self, ctv, dfcv):
         """
@@ -4387,9 +4358,7 @@ class TestCoxTimeVaryingFitter:
 
     def test_that_id_col_is_optional(self, dfcv):
 
-        ctv_with_id = CoxTimeVaryingFitter().fit(
-            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
-        )
+        ctv_with_id = CoxTimeVaryingFitter().fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
         ctv_without_id = CoxTimeVaryingFitter().fit(
             dfcv.drop("id", axis=1), start_col="start", stop_col="stop", event_col="event"
         )
@@ -4881,69 +4850,13 @@ class TestAalenJohansenFitter:
 
         expected_event_table = pd.DataFrame.from_records(
             [
-                {
-                    "event_at": 0,
-                    "removed": 0,
-                    "observed": 0,
-                    "observed_2": 0,
-                    "censored": 0,
-                    "entrance": 6,
-                    "at_risk": 6,
-                },
-                {
-                    "event_at": 1,
-                    "removed": 1,
-                    "observed": 0,
-                    "observed_2": 0,
-                    "censored": 1,
-                    "entrance": 0,
-                    "at_risk": 6,
-                },
-                {
-                    "event_at": 2,
-                    "removed": 1,
-                    "observed": 1,
-                    "observed_2": 0,
-                    "censored": 0,
-                    "entrance": 0,
-                    "at_risk": 5,
-                },
-                {
-                    "event_at": 3,
-                    "removed": 1,
-                    "observed": 1,
-                    "observed_2": 0,
-                    "censored": 0,
-                    "entrance": 0,
-                    "at_risk": 4,
-                },
-                {
-                    "event_at": 4,
-                    "removed": 1,
-                    "observed": 1,
-                    "observed_2": 1,
-                    "censored": 0,
-                    "entrance": 0,
-                    "at_risk": 3,
-                },
-                {
-                    "event_at": 5,
-                    "removed": 1,
-                    "observed": 1,
-                    "observed_2": 1,
-                    "censored": 0,
-                    "entrance": 0,
-                    "at_risk": 2,
-                },
-                {
-                    "event_at": 6,
-                    "removed": 1,
-                    "observed": 0,
-                    "observed_2": 0,
-                    "censored": 1,
-                    "entrance": 0,
-                    "at_risk": 1,
-                },
+                {"event_at": 0, "removed": 0, "observed": 0, "observed_2": 0, "censored": 0, "entrance": 6, "at_risk": 6},
+                {"event_at": 1, "removed": 1, "observed": 0, "observed_2": 0, "censored": 1, "entrance": 0, "at_risk": 6},
+                {"event_at": 2, "removed": 1, "observed": 1, "observed_2": 0, "censored": 0, "entrance": 0, "at_risk": 5},
+                {"event_at": 3, "removed": 1, "observed": 1, "observed_2": 0, "censored": 0, "entrance": 0, "at_risk": 4},
+                {"event_at": 4, "removed": 1, "observed": 1, "observed_2": 1, "censored": 0, "entrance": 0, "at_risk": 3},
+                {"event_at": 5, "removed": 1, "observed": 1, "observed_2": 1, "censored": 0, "entrance": 0, "at_risk": 2},
+                {"event_at": 6, "removed": 1, "observed": 0, "observed_2": 0, "censored": 1, "entrance": 0, "at_risk": 1},
             ]
         ).set_index("event_at")[["removed", "observed", "observed_2", "censored", "entrance", "at_risk"]]
         # pandas util for checking if two dataframes are equal
@@ -4956,9 +4869,7 @@ class TestAalenJohansenFitter:
         fitter.fit(duration, event_observed, event_of_interest=2)  # Aalen-Johansen
         kmfitter.fit(duration, event_observed)
 
-        x = np.all(
-            np.where(np.array(1 - kmfitter.survival_function_) >= np.array(fitter.cumulative_density_), True, False)
-        )
+        x = np.all(np.where(np.array(1 - kmfitter.survival_function_) >= np.array(fitter.cumulative_density_), True, False))
         assert x
 
     def test_no_competing_risk(self, fitter, kmfitter, duration):
@@ -5021,8 +4932,7 @@ class TestMixtureCureFitter:
     def test_should_raise_exception_if_cure_parameter_is_already_in_list_of_parameter_names(self):
         with pytest.raises(
             NameError,
-            match="'cured_fraction_' in _fitted_parameter_names is a lifelines reserved word."
-            " Try something else instead.",
+            match="'cured_fraction_' in _fitted_parameter_names is a lifelines reserved word." " Try something else instead.",
         ):
             MixtureCureFitter(MixtureCureFitter(base_fitter=ExponentialFitter()))
 

@@ -118,23 +118,6 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
             log_data = log(Ts[1] - Ts[0] + 0.01)
         return np.array([log_data.mean(), log(log_data.std() + 0.01), 0.1])
 
-    def _survival_function(self, params, times):
-        mu_, ln_sigma_, lambda_ = params
-        sigma_ = safe_exp(ln_sigma_)
-        Z = (log(times) - mu_) / sigma_
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) / lambda_ ** 2, 1e-15, 1e20)
-        ilambda_2 = 1 / lambda_ ** 2
-
-        if lambda_ > 0:
-            v = gammaincc(ilambda_2, clipped_exp)
-        elif lambda_ < 0:
-            v = gammainc(ilambda_2, clipped_exp)
-        else:
-            v = norm.sf(Z)
-
-        # never return a 0
-        return np.clip(v, 1e-50, 1 - 1e-50)
-
     def _cumulative_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
 
@@ -150,22 +133,6 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         else:
             v = -norm.logsf(Z)
 
-        return v
-
-    def _log_1m_sf(self, params, times):
-        mu_, ln_sigma_, lambda_ = params
-        sigma_ = safe_exp(ln_sigma_)
-
-        ilambda_2 = 1 / lambda_ ** 2
-        Z = (log(times) - mu_) / sigma_
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-15, 1e20)
-
-        if lambda_ > 0:
-            v = gammaincln(1 / lambda_ ** 2, clipped_exp)
-        elif lambda_ < 0:
-            v = gammainccln(1 / lambda_ ** 2, clipped_exp)
-        else:
-            v = norm.logcdf(Z)
         return v
 
     def _log_hazard(self, params, times):

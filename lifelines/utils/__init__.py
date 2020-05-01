@@ -994,6 +994,11 @@ def check_for_numeric_dtypes_or_raise(df):
         )
 
 
+def check_for_nonnegative_intervals(start, stop):
+    if (stop < start).any():
+        raise ValueError(dedent("""There exist values in the `stop_col` column that are less than `start_col`."""))
+
+
 def check_for_immediate_deaths(events, start, stop):
     # Only used in CTV. This checks for deaths immediately, that is (0,0) lives.
     if ((start == stop) & (stop == 0) & events).any():
