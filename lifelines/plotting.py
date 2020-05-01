@@ -12,7 +12,15 @@ import pandas as pd
 from lifelines.utils import coalesce, CensoringType
 
 
-__all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot", "cdf_plot", "rmst_plot", "loglogs_plot"]
+__all__ = [
+    "add_at_risk_counts",
+    "plot_lifetimes",
+    "plot_interval_censored_lifetimes",
+    "qq_plot",
+    "cdf_plot",
+    "rmst_plot",
+    "loglogs_plot",
+]
 
 
 def _iloc(x, i):
@@ -190,9 +198,7 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
         )
 
         ax.text(
-            text_position[0],
-            text_position[1],
-            "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
+            text_position[0], text_position[1], "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
         )  # dynamically pick this.
     else:
         rmst = restricted_mean_survival_time(model, t=t)
@@ -654,9 +660,7 @@ def create_dataframe_slicer(iloc, loc, timeline):
         raise ValueError("Cannot set both loc and iloc in call to .plot().")
 
     user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
-    user_submitted_slice = (
-        slice(timeline.min(), timeline.max()) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
-    )
+    user_submitted_slice = slice(timeline.min(), timeline.max()) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
 
     get_method = "iloc" if iloc is not None else "loc"
     return lambda df: getattr(df, get_method)[user_submitted_slice]
@@ -784,15 +788,13 @@ def _plot_estimate(
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(plot_estimate_config.censor_styles)
-        censored_times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(
-            float
-        )
+        censored_times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = plot_estimate_config.predict_at_times(censored_times).values
         plot_estimate_config.ax.plot(censored_times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
 
-    dataframe_slicer(plot_estimate_config.estimate_).rename(
-        columns=lambda _: plot_estimate_config.kwargs.pop("label")
-    ).plot(logx=plot_estimate_config.logx, **plot_estimate_config.kwargs)
+    dataframe_slicer(plot_estimate_config.estimate_).rename(columns=lambda _: plot_estimate_config.kwargs.pop("label")).plot(
+        logx=plot_estimate_config.logx, **plot_estimate_config.kwargs
+    )
 
     # plot confidence intervals
     if ci_show:
@@ -840,9 +842,7 @@ def _plot_estimate(
 
 
 class PlotEstimateConfig:
-    def __init__(
-        self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, logx, ax, **kwargs
-    ):
+    def __init__(self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, logx, ax, **kwargs):
 
         self.censor_styles = coalesce(censor_styles, {})
 
