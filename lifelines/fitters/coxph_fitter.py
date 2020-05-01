@@ -91,8 +91,7 @@ class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin, Proportiona
 
         for i in range(2, self.n_baseline_knots + 2):
             H *= safe_exp(
-                params["phi%d_" % i]
-                * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+                params["phi%d_" % i] * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
             )
         return H
 
@@ -408,9 +407,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         df = df.copy()
 
         if self.strata is not None:
-            sort_by = _to_list(self.strata) + (
-                [self.duration_col, self.event_col] if self.event_col else [self.duration_col]
-            )
+            sort_by = _to_list(self.strata) + ([self.duration_col, self.event_col] if self.event_col else [self.duration_col])
             df = df.sort_values(by=sort_by)
             original_index = df.index.copy()
             df = df.set_index(self.strata)
@@ -493,9 +490,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # compute the baseline hazard here.
         predicted_partial_hazards_ = (
-            pd.DataFrame(np.exp(dot(X, beta_)), columns=["P"])
-            .assign(T=T.values, E=E.values, W=weights.values)
-            .set_index(X.index)
+            pd.DataFrame(np.exp(dot(X, beta_)), columns=["P"]).assign(T=T.values, E=E.values, W=weights.values).set_index(X.index)
         )
         baseline_hazard_ = self._compute_baseline_hazards(predicted_partial_hazards_)
         baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(baseline_hazard_)
@@ -622,9 +617,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 self._check_values_post_fitting(X, T, E, weights)
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
-                        """Hessian or gradient contains nan or inf value(s). Convergence halted. {0}""".format(
-                            CONVERGENCE_DOCS
-                        ),
+                        """Hessian or gradient contains nan or inf value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS),
                         e,
                     )
                 elif isinstance(e, LinAlgError):
@@ -642,9 +635,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if np.any(np.isnan(delta)):
                 self._check_values_post_fitting(X, T, E, weights)
-                raise ConvergenceError(
-                    """delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS)
-                )
+                raise ConvergenceError("""delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS))
 
             # Save these as pending result
             hessian, gradient = h, g
@@ -703,9 +694,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             )
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
-            warnings.warn(
-                "Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, ConvergenceWarning
-            )
+            warnings.warn("Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, ConvergenceWarning)
 
         return beta, ll_, hessian
 
@@ -734,14 +723,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         }
 
         cph = _PHSplineFitter(n_baseline_knots=self.n_baseline_knots, penalizer=self.penalizer, l1_ratio=self.l1_ratio)
-        cph.fit(
-            df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors
-        )
+        cph.fit(df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors)
         self._ll_null_ = cph._ll_null
         baseline_hazard_ = cph.predict_hazard(df.mean()).rename(columns={0: "baseline hazard"})
-        baseline_cumulative_hazard_ = cph.predict_cumulative_hazard(df.mean()).rename(
-            columns={0: "baseline cumulative hazard"}
-        )
+        baseline_cumulative_hazard_ = cph.predict_cumulative_hazard(df.mean()).rename(columns={0: "baseline cumulative hazard"})
 
         return (
             cph.params_.loc["beta_"].drop("constant") / self._norm_std,
@@ -856,9 +841,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 increasing_proportion = arange(tied_death_counts) / tied_death_counts
                 denom = 1.0 / (risk_phi - increasing_proportion * tie_phi)
                 numer = risk_phi_x - multiply.outer(increasing_proportion, tie_phi_x)
-                a1 = einsum("ab,i->ab", risk_phi_x_x, denom) - einsum(
-                    "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
-                )
+                a1 = einsum("ab,i->ab", risk_phi_x_x, denom) - einsum("ab,i->ab", tie_phi_x_x, increasing_proportion * denom)
             else:
                 denom = 1.0 / np.array([risk_phi])
                 numer = risk_phi_x
@@ -972,9 +955,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 # 3) subtract them, and then sum to (d, d)
                 # Alternatively, we can sum earlier without having to explicitly create (_, d, d) matrices. This is used here.
                 #
-                a1 = einsum("ab,i->ab", risk_phi_x_x, denom) - einsum(
-                    "ab,i->ab", tie_phi_x_x, increasing_proportion * denom
-                )
+                a1 = einsum("ab,i->ab", risk_phi_x_x, denom) - einsum("ab,i->ab", tie_phi_x_x, increasing_proportion * denom)
             else:
                 # no tensors here, but do some casting to make it easier in the converging step next.
                 numer = risk_phi_x
@@ -1002,9 +983,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             else:
                 yield (stratified_X, stratified_T, stratified_E, stratified_W), stratum
 
-    def _partition_by_strata_and_apply(
-        self, X: DataFrame, T: Series, E: Series, weights: Series, function: Callable, *args
-    ):
+    def _partition_by_strata_and_apply(self, X: DataFrame, T: Series, E: Series, weights: Series, function: Callable, *args):
         for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
 
@@ -1022,9 +1001,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 baseline_at_T = np.append(baseline_at_T, self.baseline_cumulative_hazard_[name].loc[T_])
 
         martingale = E - (partial_hazard * baseline_at_T)
-        return pd.DataFrame(
-            {self.duration_col: T.values, self.event_col: E.values, "martingale": martingale.values}, index=index
-        )
+        return pd.DataFrame({self.duration_col: T.values, self.event_col: E.values, "martingale": martingale.values}, index=index)
 
     def _compute_deviance(
         self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None
@@ -1063,9 +1040,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
 
         n_deaths = self.event_observed.sum()
-        scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(
-            self.variance_matrix_
-        )
+        scaled_schoenfeld_resids = n_deaths * self._compute_schoenfeld(X, T, E, weights, index).dot(self.variance_matrix_)
 
         scaled_schoenfeld_resids.columns = self.params_.index
         return scaled_schoenfeld_resids
@@ -1199,9 +1174,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return delta_betas
 
-    def _compute_score(
-        self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None
-    ) -> pd.DataFrame:
+    def _compute_score(self, X: DataFrame, T: Series, E: Series, weights: Series, index: Optional[Index] = None) -> pd.DataFrame:
 
         _, d = X.shape
 
@@ -1218,9 +1191,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return pd.DataFrame(score_residuals, columns=self.params_.index, index=index)
 
-    def _compute_score_within_strata(
-        self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray
-    ) -> ndarray:
+    def _compute_score_within_strata(self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray) -> ndarray:
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -1251,9 +1222,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             phi_i = phi_s[i]
 
             score = -phi_i * (
-                (
-                    E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T
-                ).T  # this is constant-ish, and could be cached
+                (E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T).T  # this is constant-ish, and could be cached
                 * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1])
             ).sum(0)
 
@@ -1540,10 +1509,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                     c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at).T
 
                 cumulative_hazard_ = cumulative_hazard_.merge(
-                    pd.DataFrame(c_0_ * v.values, columns=col, index=times_),
-                    how="outer",
-                    right_index=True,
-                    left_index=True,
+                    pd.DataFrame(c_0_ * v.values, columns=col, index=times_), how="outer", right_index=True, left_index=True
                 )
         else:
 
@@ -1596,9 +1562,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         return exp(-self.predict_cumulative_hazard(X, times=times, conditional_after=conditional_after))
 
-    def predict_percentile(
-        self, X: DataFrame, p: float = 0.5, conditional_after: Optional[ndarray] = None
-    ) -> pd.Series:
+    def predict_percentile(self, X: DataFrame, p: float = 0.5, conditional_after: Optional[ndarray] = None) -> pd.Series:
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -1624,9 +1588,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         """
         subjects = _get_index(X)
-        return qth_survival_times(
-            p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
-        ).T.squeeze()
+        return qth_survival_times(p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]).T.squeeze()
 
     def predict_median(self, X: DataFrame, conditional_after: Optional[ndarray] = None) -> pd.Series:
         """
@@ -2082,9 +2044,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         results = {}
         for t in sorted(followup_times):
-            assert (
-                t <= training_df[self.duration_col].max()
-            ), "all follow-up times must be less than max observed duration"
+            assert t <= training_df[self.duration_col].max(), "all follow-up times must be less than max observed duration"
             df = training_df.copy()
             # if we "rollback" the df to time t, who is dead and who is censored
             df[self.event_col] = (df[self.duration_col] <= t) & df[self.event_col]

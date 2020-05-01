@@ -30,6 +30,7 @@ from lifelines.utils import (
     check_for_immediate_deaths,
     check_for_instantaneous_events_at_time_zero,
     check_for_instantaneous_events_at_death_time,
+    check_for_nonnegative_intervals,
     pass_for_numeric_dtypes_or_raise_array,
     ConvergenceError,
     ConvergenceWarning,
@@ -239,6 +240,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         check_low_var(df)
         check_complete_separation_low_variance(df, events, self.event_col)
         check_for_numeric_dtypes_or_raise(df)
+        check_for_nonnegative_intervals(start, stop)
         check_for_immediate_deaths(events, start, stop)
         check_for_instantaneous_events_at_time_zero(start, stop)
         check_for_instantaneous_events_at_death_time(events, start, stop)

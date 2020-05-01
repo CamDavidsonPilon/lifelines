@@ -335,7 +335,7 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(*fitters, **kwargs):
+def add_at_risk_counts(*fitters, ax=None, **kwargs):
     """
     Add counts showing how many individuals were at risk at each time point in
     survival/hazard plots.
@@ -345,7 +345,8 @@ def add_at_risk_counts(*fitters, **kwargs):
     fitters:
       One or several fitters, for example KaplanMeierFitter,
       NelsonAalenFitter, etc...
-
+    ax:
+        a matplotlib axes
 
     Returns
     --------
@@ -379,7 +380,6 @@ def add_at_risk_counts(*fitters, **kwargs):
         add_at_risk_counts(f1, f2, labels=None)
     """
     # Axes and Figure can't be None
-    ax = kwargs.pop("ax", None)
     if ax is None:
         ax = plt.gca()
 
@@ -394,11 +394,15 @@ def add_at_risk_counts(*fitters, **kwargs):
         labels = kwargs.pop("labels", None)
         if labels is None:
             labels = [None] * len(fitters)
+
+    # remove xlabel
+    ax.set_xlabel("")
     # Create another axes where we can put size ticks
     ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
     # Appropriate length scaled for 6 inches. Adjust for figure size.
-    ax2_ypos = -0.15 * 6.0 / fig.get_figheight()
+    ax_height = (ax.get_position().y1 - ax.get_position().y0) * fig.get_figheight()  # axis height
+    ax2_ypos = -0.1 * 6.0 / ax_height
     move_spines(ax2, ["bottom"], [ax2_ypos])
     # Hide all fluff
     remove_spines(ax2, ["top", "right", "bottom", "left"])

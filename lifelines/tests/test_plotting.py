@@ -22,7 +22,7 @@ from lifelines import (
 from lifelines.tests.test_estimation import known_parametric_univariate_fitters
 
 from lifelines.generate_datasets import generate_random_lifetimes, generate_hazard_rates
-from lifelines.plotting import plot_lifetimes, cdf_plot, qq_plot, rmst_plot
+from lifelines.plotting import plot_lifetimes, cdf_plot, qq_plot, rmst_plot, add_at_risk_counts
 from lifelines.datasets import (
     load_waltons,
     load_regression_dataset,
@@ -115,6 +115,49 @@ class TestPlotting:
         kmf.plot(at_risk_counts=True)
         self.plt.title("test_kmf_with_risk_counts")
         self.plt.show(block=block)
+
+    def test_kmf_add_at_risk_counts_with_subplot(self, block, kmf):
+        data1 = np.random.exponential(10, size=(100))
+        kmf.fit(data1)
+
+        fig = self.plt.figure()
+        axes = fig.subplots(1, 2)
+        kmf.plot(ax=axes[0])
+        add_at_risk_counts(kmf, ax=axes[0])
+        kmf.plot(ax=axes[1])
+
+        self.plt.title("test_kmf_add_at_risk_counts_with_subplot")
+        self.plt.show(block=block)
+
+    def test_kmf_add_at_risk_counts_with_custom_subplot(self, block, kmf):
+        # https://github.com/CamDavidsonPilon/lifelines/issues/991#issuecomment-614427882
+        import lifelines
+        import matplotlib as mpl
+        from lifelines.datasets import load_waltons
+
+        plt = self.plt
+        waltons = load_waltons()
+        ix = waltons["group"] == "control"
+
+        img_no = 3
+
+        height = 4 * img_no
+        half_inch = 0.5 / height  # in percent height
+        _fig = plt.figure(figsize=(6, height), dpi=100)
+        gs = mpl.gridspec.GridSpec(img_no, 1)
+        plt.subplots_adjust(left=0.08, right=0.98, bottom=half_inch, top=1 - half_inch)
+
+        for i in range(img_no):
+            ax = plt.subplot(gs[i, 0])
+            kmf_control = lifelines.KaplanMeierFitter()
+            ax = kmf_control.fit(waltons.loc[ix]["T"], waltons.loc[ix]["E"], label="control").plot(ax=ax)
+            kmf_exp = lifelines.KaplanMeierFitter()
+            ax = kmf_exp.fit(waltons.loc[~ix]["T"], waltons.loc[~ix]["E"], label="exp").plot(ax=ax)
+            ax = lifelines.plotting.add_at_risk_counts(kmf_exp, kmf_control, ax=ax)
+
+        plt.subplots_adjust(hspace=0.6)
+        plt.title("test_kmf_add_at_risk_counts_with_custom_subplot")
+        plt.show(block=block)
 
     def test_naf_plotting_with_custom_colours(self, block):
         data1 = np.random.exponential(5, size=(200, 1))
