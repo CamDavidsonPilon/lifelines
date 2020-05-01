@@ -38,7 +38,7 @@ from lifelines.generate_datasets import cumulative_integral
 
 @pytest.fixture()
 def waltons():
-    return load_waltons()[["T", "E"]].iloc[:50]
+    return load_waltons()[["T", "E"]]._iloc[:50]
 
 
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
@@ -193,7 +193,7 @@ class TestPlotting:
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(coef_penalizer=0.1, fit_intercept=False)
         aaf.fit(X, "T", "E")
-        ax = aaf.smoothed_hazards_(1).iloc[0 : aaf.cumulative_hazards_.shape[0] - 500].plot()
+        ax = aaf.smoothed_hazards_(1)._iloc[0 : aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
         ax.set_title("test_aalen_additive_smoothed_plot")
         self.plt.show(block=block)

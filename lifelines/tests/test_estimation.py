@@ -1237,7 +1237,7 @@ class TestKaplanMeierFitter:
         E[np.argmax(T)] = 0
         kmf = KaplanMeierFitter()
         kmf.fit(T, E)
-        assert kmf.survival_function_["KM_estimate"].iloc[-1] > 0
+        assert kmf.survival_function_["KM_estimate"]._iloc[-1] > 0
 
     def test_adding_weights_to_KaplanMeierFitter(self):
         n = 100
@@ -1398,8 +1398,8 @@ class TestNelsonAalenFitter:
 
     def test_iloc_slicing(self, waltons_dataset):
         naf = NelsonAalenFitter().fit(waltons_dataset["T"])
-        assert naf.cumulative_hazard_.iloc[0:10].shape[0] == 10
-        assert naf.cumulative_hazard_.iloc[0:-1].shape[0] == 32
+        assert naf.cumulative_hazard_._iloc[0:10].shape[0] == 10
+        assert naf.cumulative_hazard_._iloc[0:-1].shape[0] == 32
 
     def test_smoothing_hazard_ties(self):
         T = np.random.binomial(20, 0.7, size=300)
@@ -1429,7 +1429,7 @@ class TestNelsonAalenFitter:
         naf = NelsonAalenFitter()
         naf.fit(T)
         df = naf.smoothed_hazard_(bandwidth=0.1)
-        assert df.iloc[0].values[0] > df.iloc[1].values[0]
+        assert df._iloc[0].values[0] > df._iloc[1].values[0]
 
     def test_nelson_aalen_smoothing(self):
         # this test was included because I was refactoring the estimators.
@@ -1439,9 +1439,9 @@ class TestNelsonAalenFitter:
         c = np.random.binomial(1, 0.9, size=N)
         naf = NelsonAalenFitter(nelson_aalen_smoothing=True)
         naf.fit(t, c)
-        assert abs(naf.cumulative_hazard_["NA_estimate"].iloc[-1] - 8.545665) < 1e-6
-        assert abs(naf.confidence_interval_["NA_estimate_upper_0.95"].iloc[-1] - 11.315662) < 1e-6
-        assert abs(naf.confidence_interval_["NA_estimate_lower_0.95"].iloc[-1] - 6.4537448) < 1e-6
+        assert abs(naf.cumulative_hazard_["NA_estimate"]._iloc[-1] - 8.545665) < 1e-6
+        assert abs(naf.confidence_interval_["NA_estimate_upper_0.95"]._iloc[-1] - 11.315662) < 1e-6
+        assert abs(naf.confidence_interval_["NA_estimate_lower_0.95"]._iloc[-1] - 6.4537448) < 1e-6
 
     def test_adding_weights_to_NelsonAalenFitter(self):
         n = 100
@@ -1702,7 +1702,7 @@ class TestRegressionFitters:
     def test_fit_will_accept_object_dtype_as_event_col(self, regression_models_sans_strata_model, rossi):
         # issue #638
         rossi["arrest"] = rossi["arrest"].astype(object)
-        rossi["arrest"].iloc[0] = None
+        rossi["arrest"]._iloc[0] = None
 
         assert rossi["arrest"].dtype == object
         rossi = rossi.dropna()
@@ -1789,7 +1789,7 @@ class TestRegressionFitters:
                     assert_series_equal(hazards, hazards_norm, check_less_precise=1)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
-        X = rossi.iloc[:4].sort_index(ascending=False)
+        X = rossi._iloc[:4].sort_index(ascending=False)
         expected_index = pd.Index(np.array([3, 2, 1, 0]))
 
         for fitter in regression_models:
@@ -2601,8 +2601,8 @@ class TestCoxPHFitter:
     def test_conditional_after_in_prediction(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
         cph.fit(rossi, "week", "arrest")
-        p1 = cph.predict_survival_function(rossi.iloc[0])
-        p2 = cph.predict_survival_function(rossi.iloc[0], conditional_after=[8])
+        p1 = cph.predict_survival_function(rossi._iloc[0])
+        p2 = cph.predict_survival_function(rossi._iloc[0], conditional_after=[8])
 
         explicit = p1 / p1.loc[8]
 
@@ -2614,8 +2614,8 @@ class TestCoxPHFitter:
     def test_conditional_after_with_strata_in_prediction(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
         cph.fit(rossi, "week", "arrest", strata=["fin"])
-        p1 = cph.predict_survival_function(rossi.iloc[0])
-        p2 = cph.predict_survival_function(rossi.iloc[0], conditional_after=[8])
+        p1 = cph.predict_survival_function(rossi._iloc[0])
+        p2 = cph.predict_survival_function(rossi._iloc[0], conditional_after=[8])
 
         explicit = p1 / p1.loc[8]
 
@@ -2635,8 +2635,8 @@ class TestCoxPHFitter:
     def test_conditional_after_in_prediction_multiple_subjects(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
         cph.fit(rossi, "week", "arrest", strata=["fin"])
-        p1 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]])
-        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0])
+        p1 = cph.predict_survival_function(rossi._iloc[[0, 1, 2]])
+        p2 = cph.predict_survival_function(rossi._iloc[[0, 1, 2]], conditional_after=[8, 9, 0])
 
         explicit = p1 / p1.loc[8]
 
@@ -2647,8 +2647,8 @@ class TestCoxPHFitter:
 
         # no strata
         cph.fit(rossi, "week", "arrest")
-        p1 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]])
-        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0])
+        p1 = cph.predict_survival_function(rossi._iloc[[0, 1, 2]])
+        p2 = cph.predict_survival_function(rossi._iloc[[0, 1, 2]], conditional_after=[8, 9, 0])
 
         explicit = p1 / p1.loc[8]
 
@@ -2660,7 +2660,7 @@ class TestCoxPHFitter:
     def test_conditional_after_in_prediction_multiple_subjects_with_custom_times(self, rossi, cph):
 
         cph.fit(rossi, "week", "arrest")
-        p2 = cph.predict_survival_function(rossi.iloc[[0, 1, 2]], conditional_after=[8, 9, 0], times=[10, 20, 30])
+        p2 = cph.predict_survival_function(rossi._iloc[[0, 1, 2]], conditional_after=[8, 9, 0], times=[10, 20, 30])
 
         assert p2.index.tolist() == [10.0, 20.0, 30.0]
 
@@ -2718,7 +2718,7 @@ class TestCoxPHFitter:
         assert df.dtypes["T"] in (int, np.dtype("int64"))
 
     def test_cph_will_handle_times_with_only_censored_individuals(self, rossi):
-        rossi_29 = rossi.iloc[0:10].copy()
+        rossi_29 = rossi._iloc[0:10].copy()
         rossi_29["week"] = 29
         rossi_29["arrest"] = False
 
@@ -2726,7 +2726,7 @@ class TestCoxPHFitter:
 
         cph2_summary = CoxPHFitter().fit(rossi, "week", "arrest").summary
 
-        assert cph2_summary["coef"].iloc[0] != cph1_summary["coef"].iloc[0]
+        assert cph2_summary["coef"]._iloc[0] != cph1_summary["coef"]._iloc[0]
 
     def test_schoenfeld_residuals_no_strata_but_with_censorship(self, cph):
         """
@@ -2852,10 +2852,10 @@ class TestCoxPHFitter:
         cph.fit(regression_dataset, "T", "E")
 
         results = cph.compute_residuals(regression_dataset, "scaled_schoenfeld") - cph.params_.values
-        npt.assert_allclose(results.iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=5)
-        npt.assert_allclose(results.iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=5)
+        npt.assert_allclose(results._iloc[0].values, [0.785518935413, 0.862926592959, 2.479586809860], rtol=5)
+        npt.assert_allclose(results._iloc[1].values, [-0.888580165064, -1.037904485796, -0.915334612372], rtol=5)
         npt.assert_allclose(
-            results.iloc[results.shape[0] - 1].values, [0.222207366875, 0.050957334886, 0.218314242931], rtol=5
+            results._iloc[results.shape[0] - 1].values, [0.222207366875, 0.050957334886, 0.218314242931], rtol=5
         )
 
     def test_original_index_is_respected_in_all_residual_tests(self, cph):
@@ -3080,7 +3080,7 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
 
     def test_fit_method(self, data_nus, cph):
         cph.fit(data_nus, duration_col="t", event_col="E")
-        assert np.abs(cph.params_.iloc[0] - -0.0335) < 0.0001
+        assert np.abs(cph.params_._iloc[0] - -0.0335) < 0.0001
 
     def test_using_dataframes_vs_numpy_arrays(self, data_pred2, cph):
         cph.fit(data_pred2, "t", "E")
@@ -3999,8 +3999,8 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cp2.fit(df_demeaned, event_col="E", duration_col="T")
 
         assert_frame_equal(
-            cp1.predict_survival_function(df.iloc[[0]][["var1", "var2", "var3"]]),
-            cp2.predict_survival_function(df_demeaned.iloc[[0]][["var1", "var2", "var3"]]),
+            cp1.predict_survival_function(df._iloc[[0]][["var1", "var2", "var3"]]),
+            cp2.predict_survival_function(df_demeaned._iloc[[0]][["var1", "var2", "var3"]]),
         )
 
     def test_baseline_survival_is_the_same_indp_of_scale(self, regression_dataset):
@@ -4035,8 +4035,8 @@ Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
         cp2.fit(df_scaled, event_col="E", duration_col="T")
 
         assert_frame_equal(
-            cp1.predict_survival_function(df.iloc[[0]][["var1", "var2", "var3"]]),
-            cp2.predict_survival_function(df_scaled.iloc[[0]][["var1", "var2", "var3"]]),
+            cp1.predict_survival_function(df._iloc[[0]][["var1", "var2", "var3"]]),
+            cp2.predict_survival_function(df_scaled._iloc[[0]][["var1", "var2", "var3"]]),
         )
 
     def test_warning_is_raised_if_df_has_a_near_constant_column(self, rossi):
@@ -4306,7 +4306,7 @@ class TestAalenAdditiveFitter:
     def test_predict_cumulative_hazard_inputs(self, data_pred1):
         aaf = AalenAdditiveFitter(coef_penalizer=0.001)
         aaf.fit(data_pred1, duration_col="t", event_col="E")
-        x = data_pred1.iloc[:5].drop(["t", "E"], axis=1)
+        x = data_pred1._iloc[:5].drop(["t", "E"], axis=1)
         y_df = aaf.predict_cumulative_hazard(x)
         y_np = aaf.predict_cumulative_hazard(x.values)
         assert_frame_equal(y_df, y_np)
@@ -4331,9 +4331,9 @@ class TestAalenAdditiveFitter:
         with pytest.warns(StatisticalWarning, match="weights are not integers"):
             aaf.fit(regression_dataset, "T", "E", weights_col="var3")
         actual = aaf.hazards_
-        npt.assert_allclose(actual.iloc[:3]["var1"].tolist(), [1.301523e-02, -4.925302e-04, 2.304792e-02], rtol=1e-06)
+        npt.assert_allclose(actual._iloc[:3]["var1"].tolist(), [1.301523e-02, -4.925302e-04, 2.304792e-02], rtol=1e-06)
         npt.assert_allclose(
-            actual.iloc[:3]["_intercept"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06
+            actual._iloc[:3]["_intercept"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06
         )
 
     def test_cumulative_hazards_versus_R(self, aaf, regression_dataset):
@@ -4346,7 +4346,7 @@ class TestAalenAdditiveFitter:
         regression_dataset["E"] = 1
 
         aaf.fit(regression_dataset, "T", "E")
-        actual = aaf.cumulative_hazards_.iloc[-1]
+        actual = aaf.cumulative_hazards_._iloc[-1]
         npt.assert_allclose(actual["_intercept"], 2.1675130235, rtol=1e-06)
         npt.assert_allclose(actual["var1"], 0.6820086125, rtol=1e-06)
         npt.assert_allclose(actual["var2"], -0.0776583514, rtol=1e-06)

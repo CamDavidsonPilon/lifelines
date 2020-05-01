@@ -244,8 +244,8 @@ class NelsonAalenFitter(UnivariateFitter):
 
         timeline = self.timeline
         z = inv_normal_cdf(1 - self.alpha / 2)
-        self._cumulative_sq.iloc[0] = 0
-        var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
+        self._cumulative_sq._iloc[0] = 0
+        var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq._iloc[0])
         C = var_hazard_.values != 0.0  # only consider the points with jumps
         std_hazard_ = np.sqrt(
             1.0
