@@ -537,7 +537,7 @@ class TestLongDataFrameUtils(object):
         seed_df = seed_df[seed_df["id"] == 1]
 
         new_value_at_time_0 = 1.0
-        old_value_at_time_0 = seed_df["var1"].iloc[0]
+        old_value_at_time_0 = seed_df["var1"]._iloc[0]
         cv = pd.DataFrame.from_records([{"id": 1, "t": 0, "var1": new_value_at_time_0, "var2": 2.0}])
 
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, "id", "t", "E", overwrite=False)

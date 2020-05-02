@@ -150,7 +150,7 @@ def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
         # If you add print statements to `qth_survival_time`, you'll see it's called
         # once too many times. This is expected Pandas behavior
         # https://stackoverflow.com/questions/21635915/why-does-pandas-apply-calculate-twice
-        return survival_functions.apply(lambda s: qth_survival_time(q, s)).iloc[0]
+        return survival_functions.apply(lambda s: qth_survival_time(q, s))._iloc[0]
     else:
         d = {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}
         survival_times = pd.DataFrame(d).T
@@ -885,7 +885,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         # the population should not have the late entrants. The only exception to this rule
         # is the first period, where entrants happen _prior_ to deaths.
         entrances = events["entrance"].copy()
-        entrances.iloc[0] = 0
+        entrances._iloc[0] = 0
         population = events["at_risk"] - entrances
 
         estimate_ = np.cumsum(_additive_f(population, deaths))
@@ -1407,8 +1407,8 @@ def add_covariate_to_timeline(
         except KeyError:
             return df
 
-        final_state = bool(df[event_col].iloc[-1])
-        final_stop_time = df[stop_col].iloc[-1]
+        final_state = bool(df[event_col]._iloc[-1])
+        final_stop_time = df[stop_col]._iloc[-1]
         df = df.drop([id_col, event_col, stop_col], axis=1).set_index(start_col)
 
         # we subtract a small time because of 1) pandas slicing is _inclusive_, and 2) the degeneracy

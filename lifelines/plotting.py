@@ -6,12 +6,32 @@ from typing import Union
 import numpy as np
 from scipy import stats
 from matplotlib import pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import pandas as pd
 
 from lifelines.utils import coalesce, CensoringType
 
 
-__all__ = ["add_at_risk_counts", "plot_lifetimes", "qq_plot", "cdf_plot", "rmst_plot", "loglogs_plot"]
+__all__ = [
+    "add_at_risk_counts",
+    "plot_lifetimes",
+    "plot_interval_censored_lifetimes",
+    "qq_plot",
+    "cdf_plot",
+    "rmst_plot",
+    "loglogs_plot",
+]
+
+
+def _iloc(x, i):
+    """
+    Returns the item at index i or items at indices i from x,
+    where x is a numpy array or pd.Series.
+    """
+    try:
+        return x._iloc[i]
+    except AttributeError:
+        return x[i]
 
 
 def get_distribution_name_of_lifelines_model(model):
@@ -178,9 +198,7 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
         )
 
         ax.text(
-            text_position[0],
-            text_position[1],
-            "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
+            text_position[0], text_position[1], "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
         )  # dynamically pick this.
     else:
         rmst = restricted_mean_survival_time(model, t=t)
@@ -437,6 +455,103 @@ def add_at_risk_counts(*fitters, ax=None, **kwargs):
     return ax
 
 
+def plot_interval_censored_lifetimes(
+    lower_bound,
+    upper_bound,
+    entry=None,
+    left_truncated=False,
+    sort_by_lower_bound=True,
+    event_observed_color="#A60628",
+    event_right_censored_color="#348ABD",
+    ax=None,
+    **kwargs
+):
+    """
+    Returns a lifetime plot for interval censored data.
+
+    Parameters
+    -----------
+    lower_bound: (n,) numpy array or pd.Series
+      the start of the period the subject experienced the event in.
+    upper_bound: (n,) numpy array or pd.Series
+      the end of the period the subject experienced the event in. If the value is equal to the corresponding value in lower_bound, then
+      the individual's event was observed (not censored).
+    entry: (n,) numpy array or pd.Series
+      offsetting the births away from t=0. This could be from left-truncation, or delayed entry into study.
+    left_truncated: boolean
+      if entry is provided, and the data is left-truncated, this will display additional information in the plot to reflect this.
+    sort_by_lower_bound: boolean
+      sort by the lower_bound vector
+    event_observed_color: str
+      default: "#A60628"
+    event_right_censored_color: str
+      default: "#348ABD"
+      applies to any individual with an upper bound of infinity.
+
+    Returns
+    -------
+    ax:
+
+    Examples
+    ---------
+    .. code:: python
+
+        import pandas as pd
+        import numpy as np
+        from lifelines.plotting import plot_interval_censored_lifetimes
+        df = pd.DataFrame({'lb':[20,15,30, 10, 20, 30], 'ub':[25, 15, np.infty, 20, 20, np.infty]})
+        ax = plot_interval_censored_lifetimes(lower_bound=df['lb'], upper_bound=df['ub'])
+    """
+
+    if ax is None:
+        ax = plt.gca()
+
+    # If lower_bounds is pd.Series with non-default index, then use index values as y-axis labels.
+    label_plot_bars = type(lower_bound) is pd.Series and type(lower_bound.index) is not pd.RangeIndex
+
+    N = lower_bound.shape[0]
+    if N > 80:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
+
+    assert upper_bound.shape[0] == N
+
+    if sort_by_lower_bound:
+        ix = np.argsort(lower_bound, 0)
+        upper_bound = _iloc(upper_bound, ix)
+        lower_bound = _iloc(lower_bound, ix)
+        if entry:
+            entry = _iloc(lower_bound, ix)
+
+    if entry is None:
+        entry = np.zeros(N)
+
+    for i in range(N):
+        if np.isposinf(_iloc(upper_bound, i)):
+            c = event_right_censored_color
+            ax.hlines(i, _iloc(entry, i), _iloc(lower_bound, i), color=c, lw=1.5)
+        else:
+            c = event_observed_color
+            ax.hlines(i, _iloc(entry, i), _iloc(upper_bound, i), color=c, lw=1.5)
+            if _iloc(lower_bound, i) == _iloc(upper_bound, i):
+                ax.scatter(_iloc(lower_bound, i), i, color=c, marker="o", s=10)
+            else:
+                ax.scatter(_iloc(lower_bound, i), i, color=c, marker=">", s=10)
+                ax.scatter(_iloc(upper_bound, i), i, color=c, marker="<", s=10)
+
+        if left_truncated:
+            ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
+
+    if label_plot_bars:
+        ax.set_yticks(range(0, N))
+        ax.set_yticklabels(lower_bound.index)
+    else:
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+    ax.set_xlim(0)
+    ax.set_ylim(-0.5, N)
+    return ax
+
+
 def plot_lifetimes(
     durations,
     event_observed=None,
@@ -483,21 +598,11 @@ def plot_lifetimes(
 
     """
 
-    def iloc(x, i):
-        """
-        Returns the item at index i or items at indices i from x,
-        where x is a numpy array or pd.Series.
-        """
-        try:
-            return x.iloc[i]
-        except AttributeError:
-            return x[i]
-
     if ax is None:
         ax = plt.gca()
 
     # If durations is pd.Series with non-default index, then use index values as y-axis labels.
-    label_durations = type(durations) is pd.Series and type(durations.index) is not pd.RangeIndex
+    label_plot_bars = type(durations) is pd.Series and type(durations.index) is not pd.RangeIndex
 
     N = durations.shape[0]
     if N > 80:
@@ -515,23 +620,23 @@ def plot_lifetimes(
     if sort_by_duration:
         # order by length of lifetimes;
         ix = np.argsort(entry + durations, 0)
-        durations = iloc(durations, ix)
-        event_observed = iloc(event_observed, ix)
-        entry = iloc(entry, ix)
+        durations = _iloc(durations, ix)
+        event_observed = _iloc(event_observed, ix)
+        entry = _iloc(entry, ix)
 
     for i in range(N):
-        c = event_observed_color if iloc(event_observed, i) else event_censored_color
-        ax.hlines(i, iloc(entry, i), iloc(entry, i) + iloc(durations, i), color=c, lw=1.5)
+        c = event_observed_color if _iloc(event_observed, i) else event_censored_color
+        ax.hlines(i, _iloc(entry, i), _iloc(entry, i) + _iloc(durations, i), color=c, lw=1.5)
         if left_truncated:
-            ax.hlines(i, 0, iloc(entry, i), color=c, lw=1.0, linestyle="--")
-        m = "" if not iloc(event_observed, i) else "o"
-        ax.scatter(iloc(entry, i) + iloc(durations, i), i, color=c, marker=m, s=10)
+            ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
+        m = "" if not _iloc(event_observed, i) else "o"
+        ax.scatter(_iloc(entry, i) + _iloc(durations, i), i, color=c, marker=m, s=10)
 
-    if label_durations:
+    if label_plot_bars:
         ax.set_yticks(range(0, N))
         ax.set_yticklabels(durations.index)
     else:
-        ax.set_yticks([])
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax.set_xlim(0)
     ax.set_ylim(-0.5, N)
@@ -555,9 +660,7 @@ def create_dataframe_slicer(iloc, loc, timeline):
         raise ValueError("Cannot set both loc and iloc in call to .plot().")
 
     user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
-    user_submitted_slice = (
-        slice(timeline.min(), timeline.max()) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
-    )
+    user_submitted_slice = slice(timeline.min(), timeline.max()) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
 
     get_method = "iloc" if iloc is not None else "loc"
     return lambda df: getattr(df, get_method)[user_submitted_slice]
@@ -685,15 +788,13 @@ def _plot_estimate(
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(plot_estimate_config.censor_styles)
-        censored_times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(
-            float
-        )
+        censored_times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = plot_estimate_config.predict_at_times(censored_times).values
         plot_estimate_config.ax.plot(censored_times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
 
-    dataframe_slicer(plot_estimate_config.estimate_).rename(
-        columns=lambda _: plot_estimate_config.kwargs.pop("label")
-    ).plot(logx=plot_estimate_config.logx, **plot_estimate_config.kwargs)
+    dataframe_slicer(plot_estimate_config.estimate_).rename(columns=lambda _: plot_estimate_config.kwargs.pop("label")).plot(
+        logx=plot_estimate_config.logx, **plot_estimate_config.kwargs
+    )
 
     # plot confidence intervals
     if ci_show:
@@ -716,8 +817,8 @@ def _plot_estimate(
                 )
         else:
             x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
-            lower = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [0]]).values[:, 0]
-            upper = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [1]]).values[:, 0]
+            lower = dataframe_slicer(plot_estimate_config.confidence_interval_._iloc[:, [0]]).values[:, 0]
+            upper = dataframe_slicer(plot_estimate_config.confidence_interval_._iloc[:, [1]]).values[:, 0]
 
             if plot_estimate_config.kwargs["drawstyle"] == "default":
                 step = None
@@ -741,9 +842,7 @@ def _plot_estimate(
 
 
 class PlotEstimateConfig:
-    def __init__(
-        self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, logx, ax, **kwargs
-    ):
+    def __init__(self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, logx, ax, **kwargs):
 
         self.censor_styles = coalesce(censor_styles, {})
 
