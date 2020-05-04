@@ -984,6 +984,18 @@ class TestWeibullFitter:
         npt.assert_allclose(wf.rho_, 1.272946, rtol=1e-5)
         npt.assert_allclose(wf.lambda_, 7646.68135, rtol=1e-5)
 
+    def test_interval_censoring_against_reliasoft(self):
+        x_left = [0.1, 30, 60, 90, 120, 150, 180, 210, 240]
+        x_right = [30, 60, 90, 120, 150, 180, 210, 240, np.inf]
+        number = [2, 5, 1, 9, 6, 6, 5, 2, 2645]
+        censor = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        wf = WeibullFitter()
+        wf.fit_interval_censoring(x_left, x_right, event_observed=censor, weights=number)
+
+        npt.assert_allclose(wf.rho_, 1.215, rtol=1e-2)
+        npt.assert_allclose(wf.lambda_, 8270.88, rtol=1e-2)
+
 
 class TestGeneralizedGammaFitter:
     def test_exponential_data_inference(self):

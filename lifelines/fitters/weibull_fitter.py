@@ -96,7 +96,7 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
     _scipy_fit_options = {"ftol": 1e-14}
 
     def _create_initial_point(self, Ts, E, entry, weights):
-        return np.array([utils.coalesce(*Ts).std(), 1.0])
+        return np.array([utils.coalesce(*Ts).mean(), 1.5])
 
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params

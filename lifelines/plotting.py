@@ -88,11 +88,11 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
 
     if CensoringType.is_left_censoring(model):
         empirical_kmf = KaplanMeierFitter().fit_left_censoring(
-            model.durations, model.event_observed, label=COL_EMP, timeline=timeline
+            model.durations, model.event_observed, label=COL_EMP, timeline=timeline, weights=model.weights, entry=model.entry
         )
     elif CensoringType.is_right_censoring(model):
         empirical_kmf = KaplanMeierFitter().fit_right_censoring(
-            model.durations, model.event_observed, label=COL_EMP, timeline=timeline
+            model.durations, model.event_observed, label=COL_EMP, timeline=timeline, weights=model.weights, entry=model.entry
         )
     elif CensoringType.is_interval_censoring(model):
         raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
@@ -198,7 +198,7 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
         )
 
         ax.text(
-            text_position[0], text_position[1], "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
+            text_position[0], text_position[1], "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2)
         )  # dynamically pick this.
     else:
         rmst = restricted_mean_survival_time(model, t=t)
@@ -255,14 +255,18 @@ def qq_plot(model, ax=None, **plot_kwargs):
     COL_THEO = "fitted %s quantiles" % dist
 
     if CensoringType.is_left_censoring(model):
-        kmf = KaplanMeierFitter().fit_left_censoring(model.durations, model.event_observed, label=COL_EMP)
+        kmf = KaplanMeierFitter().fit_left_censoring(
+            model.durations, model.event_observed, label=COL_EMP, weights=model.weights, entry=model.entry
+        )
     elif CensoringType.is_right_censoring(model):
-        kmf = KaplanMeierFitter().fit_right_censoring(model.durations, model.event_observed, label=COL_EMP)
+        kmf = KaplanMeierFitter().fit_right_censoring(
+            model.durations, model.event_observed, label=COL_EMP, weights=model.weights, entry=model.entry
+        )
     elif CensoringType.is_interval_censoring(model):
         raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
 
     q = np.unique(kmf.cumulative_density_.values[:, 0])
-    # this is equivalent to the old code `qth_survival_times(q, kmf.cumulative_density, cdf=True)`
+
     quantiles = qth_survival_times(1 - q, kmf.survival_function_)
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
