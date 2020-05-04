@@ -981,8 +981,8 @@ class TestWeibullFitter:
         wf = WeibullFitter()
         wf.fit_interval_censoring(df["left"], df["right"], event_observed=df["Observed"], weights=df["#Units"])
 
-        npt.assert_allclose(wf.rho_, 1.272946, rtol=1e-5)
-        npt.assert_allclose(wf.lambda_, 7646.68135, rtol=1e-5)
+        npt.assert_allclose(wf.rho_, 1.272946, rtol=1e-3)
+        npt.assert_allclose(wf.lambda_, 7646.68135, rtol=1e-3)
 
     def test_interval_censoring_against_reliasoft(self):
         x_left = [0.1, 30, 60, 90, 120, 150, 180, 210, 240]

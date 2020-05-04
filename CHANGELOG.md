@@ -4,7 +4,7 @@
 
 ##### New features
  - At the cost of some performance, convergence is improved in many models.
- - New `lifelines.plotting.plot_interval_censored_lifetimes` for plotting interval censored data
+ - New `lifelines.plotting.plot_interval_censored_lifetimes` for plotting interval censored data - thanks @
 
 ##### Bug fixes
  - fixed bug where `cdf_plot` and `qq_plot` were not factoring in the weights correctly.

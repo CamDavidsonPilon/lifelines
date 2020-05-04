@@ -723,7 +723,7 @@ def multivariate_logrank_test(
     V = V[:-1, :-1]
 
     # take the first n-1 groups
-    U = Z_j._iloc[:-1] @ np.linalg.pinv(V[:-1, :-1]) @ Z_j._iloc[:-1]  # Z.T*inv(V)*Z
+    U = Z_j.iloc[:-1] @ np.linalg.pinv(V[:-1, :-1]) @ Z_j.iloc[:-1]  # Z.T*inv(V)*Z
 
     # compute the p-values and tests
     p_value = _chisq_test_p_value(U, n_groups - 1)

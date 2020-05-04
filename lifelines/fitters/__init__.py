@@ -488,27 +488,32 @@ class ParametricUnivariateFitter(UnivariateFitter):
             warnings.simplefilter("ignore")
 
             minimizing_results, minimizing_ll = None, np.inf
-            for method in [self._scipy_fit_method, "Powell"]:
+            for method in [self._scipy_fit_method, "Nelder-Mead"]:
+
+                initial_value = self._initial_values if minimizing_results is None else utils._to_1d_array(minimizing_results.x)
+
                 results = minimize(
                     value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
-                    self._initial_values,
+                    initial_value,
                     jac=True,
                     method=method,
                     args=(Ts, E, entry, weights),
                     bounds=self._bounds,
                     options={**{"disp": show_progress}, **self._scipy_fit_options},
                 )
-                if results.fun < minimizing_ll:
+
+                if results.success and (results.fun < minimizing_ll):
                     minimizing_ll = results.fun
                     minimizing_results = results
 
             # convergence successful.
             if minimizing_results and minimizing_results.success:
+                sol = utils._to_1d_array(minimizing_results.x)
                 # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(negative_log_likelihood)(minimizing_results.x, Ts, E, entry, weights)
+                hessian_ = hessian(negative_log_likelihood)(sol, Ts, E, entry, weights)
                 # see issue https://github.com/CamDavidsonPilon/lifelines/issues/801
                 hessian_ = (hessian_ + hessian_.T) / 2
-                return minimizing_results.x, -minimizing_results.fun * weights.sum(), hessian_ * weights.sum()
+                return sol, -minimizing_results.fun * weights.sum(), hessian_ * weights.sum()
 
             # convergence failed.
             print(minimizing_results)

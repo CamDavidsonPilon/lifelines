@@ -150,7 +150,7 @@ def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
         # If you add print statements to `qth_survival_time`, you'll see it's called
         # once too many times. This is expected Pandas behavior
         # https://stackoverflow.com/questions/21635915/why-does-pandas-apply-calculate-twice
-        return survival_functions.apply(lambda s: qth_survival_time(q, s))._iloc[0]
+        return survival_functions.apply(lambda s: qth_survival_time(q, s)).iloc[0]
     else:
         d = {_q: survival_functions.apply(lambda s: qth_survival_time(_q, s)) for _q in q}
         survival_times = pd.DataFrame(d).T
@@ -426,9 +426,7 @@ def group_survival_table_from_events(
         C = event_observed[ix]
         B = birth_times[ix]
         group_name = str(group)
-        columns = [
-            event_name + ":" + group_name for event_name in ["removed", "observed", "censored", "entrance", "at_risk"]
-        ]
+        columns = [event_name + ":" + group_name for event_name in ["removed", "observed", "censored", "entrance", "at_risk"]]
         if i == 0:
             survival_table = survival_table_from_events(T, C, B, columns=columns)
         else:
@@ -638,9 +636,7 @@ def survival_events_from_table(survival_table, observed_deaths_col="observed", c
     return np.asarray(T_), np.asarray(E_), np.asarray(W_)
 
 
-def datetimes_to_durations(
-    start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None
-):
+def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None):
     """
     This is a very flexible function for transforming arrays of start_times and end_times
     to the proper format for lifelines: duration and event observation arrays.
@@ -885,7 +881,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         # the population should not have the late entrants. The only exception to this rule
         # is the first period, where entrants happen _prior_ to deaths.
         entrances = events["entrance"].copy()
-        entrances._iloc[0] = 0
+        entrances.iloc[0] = 0
         population = events["at_risk"] - entrances
 
         estimate_ = np.cumsum(_additive_f(population, deaths))
@@ -984,9 +980,7 @@ def check_dimensions(df):
 
 
 def check_for_numeric_dtypes_or_raise(df):
-    nonnumeric_cols = [
-        col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"
-    ]
+    nonnumeric_cols = [col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"]
     if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(
             "DataFrame contains nonnumeric columns: %s. Try 1) using pandas.get_dummies to convert the non-numeric column(s) to numerical data, 2) using it in stratification `strata=`, or 3) dropping the column(s)."
@@ -1407,8 +1401,8 @@ def add_covariate_to_timeline(
         except KeyError:
             return df
 
-        final_state = bool(df[event_col]._iloc[-1])
-        final_stop_time = df[stop_col]._iloc[-1]
+        final_state = bool(df[event_col].iloc[-1])
+        final_stop_time = df[stop_col].iloc[-1]
         df = df.drop([id_col, event_col, stop_col], axis=1).set_index(start_col)
 
         # we subtract a small time because of 1) pandas slicing is _inclusive_, and 2) the degeneracy
@@ -1547,9 +1541,7 @@ class StepSizer:
             self.temper_back_up = True
 
         # recent non-monotonically decreasing is a concern
-        if len(self.norm_of_deltas) >= LOOKBACK and not self._is_monotonically_decreasing(
-            self.norm_of_deltas[-LOOKBACK:]
-        ):
+        if len(self.norm_of_deltas) >= LOOKBACK and not self._is_monotonically_decreasing(self.norm_of_deltas[-LOOKBACK:]):
             self.step_size *= 0.98
 
         # recent monotonically decreasing is good though
@@ -1598,9 +1590,7 @@ def format_exp_floats(decimals) -> Callable:
     sometimes the exp. column can be too large
     """
     threshold = 10 ** 5
-    return (
-        lambda n: "{:.{prec}e}".format(n, prec=decimals) if n > threshold else "{:4.{prec}f}".format(n, prec=decimals)
-    )
+    return lambda n: "{:.{prec}e}".format(n, prec=decimals) if n > threshold else "{:4.{prec}f}".format(n, prec=decimals)
 
 
 def format_floats(decimals) -> Callable:
@@ -1722,8 +1712,7 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
 
     evaluation_lookup = {
         "AIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_,
-        "BIC": lambda model: 2 * len(model._fitted_parameter_names)
-        - 2 * model.log_likelihood_ * np.log(event_times.shape[0]),
+        "BIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_ * np.log(event_times.shape[0]),
     }
 
     eval = evaluation_lookup[scoring_method]

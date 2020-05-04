@@ -29,7 +29,7 @@ def _iloc(x, i):
     where x is a numpy array or pd.Series.
     """
     try:
-        return x._iloc[i]
+        return x.iloc[i]
     except AttributeError:
         return x[i]
 
@@ -821,8 +821,8 @@ def _plot_estimate(
                 )
         else:
             x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
-            lower = dataframe_slicer(plot_estimate_config.confidence_interval_._iloc[:, [0]]).values[:, 0]
-            upper = dataframe_slicer(plot_estimate_config.confidence_interval_._iloc[:, [1]]).values[:, 0]
+            lower = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [0]]).values[:, 0]
+            upper = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [1]]).values[:, 0]
 
             if plot_estimate_config.kwargs["drawstyle"] == "default":
                 step = None

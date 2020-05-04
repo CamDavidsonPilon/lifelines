@@ -73,15 +73,7 @@ class NelsonAalenFitter(UnivariateFitter):
 
     @CensoringType.right_censoring
     def fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        entry=None,
-        label=None,
-        alpha=None,
-        ci_labels=None,
-        weights=None,
+        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -128,14 +120,9 @@ class NelsonAalenFitter(UnivariateFitter):
                     StatisticalWarning,
                 )
 
-        (
-            self.durations,
-            self.event_observed,
-            self.timeline,
-            self.entry,
-            self.event_table,
-            self.weights,
-        ) = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
+        (self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights) = _preprocess_inputs(
+            durations, event_observed, timeline, entry, weights
+        )
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline, self._additive_f, self._variance_f, False
@@ -160,9 +147,7 @@ class NelsonAalenFitter(UnivariateFitter):
 
     def plot_hazard(self, bandwidth=None, **kwargs):
         if bandwidth is None:
-            raise ValueError(
-                "Must specify a bandwidth parameter in the call to plot_hazard, e.g. `plot_hazard(bandwidth=1.0)`"
-            )
+            raise ValueError("Must specify a bandwidth parameter in the call to plot_hazard, e.g. `plot_hazard(bandwidth=1.0)`")
         estimate = self.smoothed_hazard_(bandwidth)
         confidence_intervals = self.smoothed_hazard_confidence_intervals_(bandwidth, estimate.values[:, 0])
         return _plot_estimate(self, estimate, confidence_intervals=confidence_intervals, **kwargs)
@@ -177,12 +162,8 @@ class NelsonAalenFitter(UnivariateFitter):
         self.ci_labels = ci_labels
 
         cum_hazard_ = self.cumulative_hazard_.values
-        df[ci_labels[0]] = cum_hazard_ * np.exp(
-            -z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
-        )
-        df[ci_labels[1]] = cum_hazard_ * np.exp(
-            z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_)
-        )
+        df[ci_labels[0]] = cum_hazard_ * np.exp(-z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_))
+        df[ci_labels[1]] = cum_hazard_ * np.exp(z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_))
         return df
 
     def _variance_f_smooth(self, population, deaths):
@@ -244,15 +225,13 @@ class NelsonAalenFitter(UnivariateFitter):
 
         timeline = self.timeline
         z = inv_normal_cdf(1 - self.alpha / 2)
-        self._cumulative_sq._iloc[0] = 0
-        var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq._iloc[0])
+        self._cumulative_sq.iloc[0] = 0
+        var_hazard_ = self._cumulative_sq.diff().fillna(self._cumulative_sq.iloc[0])
         C = var_hazard_.values != 0.0  # only consider the points with jumps
         std_hazard_ = np.sqrt(
             1.0
             / (bandwidth ** 2)
-            * np.dot(
-                epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C]
-            )
+            * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C])
         )
         values = {
             self.ci_labels[0]: hazard_ * np.exp(z * std_hazard_ / hazard_),
