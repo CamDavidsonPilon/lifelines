@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.6 - unreleased
+#### 0.24.6 - 2020-05-05
 
 ##### New features
  - At the cost of some performance, convergence is improved in many models.
