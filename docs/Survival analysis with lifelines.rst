@@ -106,6 +106,8 @@ called :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.survival_
 The property is a Pandas DataFrame, so we can call :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.plot` on it:
 
 .. code:: python
+    from matplotlib import pyplot as plt
+
 
     kmf.survival_function_.plot()
     plt.title('Survival function of political regimes');
@@ -176,17 +178,18 @@ times we are interested in and are returned a DataFrame with the
 probabilities of survival at those points:
 
 .. code:: python
+    import numpy as np
 
     ax = plt.subplot(111)
 
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
     ax = kmf.plot(ax=ax)
-    print("Median survival time of democratic:", kmf.median_)
+    print("Median survival time of democratic:", kmf.median_survival_time_)
 
     kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
     ax = kmf.plot(ax=ax)
-    print("Median survival time of non-democratic:", kmf.median_)
+    print("Median survival time of non-democratic:", kmf.median_survival_time_)
 
     plt.ylim(0, 1)
     plt.title("Lifespans of different global regimes");
@@ -230,7 +233,6 @@ we rule that the series have different generators.
     results.print_summary()
 
     """
-
     <lifelines.StatisticalResult>
                  t_0 = -1
     null_distribution = chi squared

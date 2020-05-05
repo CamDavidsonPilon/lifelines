@@ -565,6 +565,8 @@ The plotting API is the same as in :class:`~lifelines.fitters.coxph_fitter.CoxPH
 
 .. code:: python
 
+    from matplotlib import pyplot as plt
+
     wft = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=True)
     wft.plot()
 
