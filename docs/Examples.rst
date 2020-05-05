@@ -290,6 +290,25 @@ If you have a pandas DataFrame with columns "group", "T", and "E", then somethin
         kmf.plot(ax=ax)
 
 
+Plotting interval censored data
+##############################################
+
+.. note:: New in *lifelines* v0.24.6
+
+.. code-block:: python
+
+    from lifelines.datasets import load_diabetes
+    from lifelines.plotting import plot_interval_censored_lifetimes
+
+    df_sample = load_diabetes().sample(frac=0.02)
+    ax = plot_interval_censored_lifetimes(df_sample['left'], df_sample['right'])
+
+
+.. image:: /images/interval_censored_viz.png
+    :width: 500px
+    :align: center
+
+
 Plotting options and styles
 ##############################################
 

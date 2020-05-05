@@ -487,26 +487,36 @@ class ParametricUnivariateFitter(UnivariateFitter):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            results = minimize(
-                value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
-                self._initial_values,
-                jac=True,
-                method=self._scipy_fit_method,
-                args=(Ts, E, entry, weights),
-                bounds=self._bounds,
-                options={**{"disp": show_progress}, **self._scipy_fit_options},
-            )
+            minimizing_results, minimizing_ll = None, np.inf
+            for method in [self._scipy_fit_method, "Nelder-Mead"]:
+
+                initial_value = self._initial_values if minimizing_results is None else utils._to_1d_array(minimizing_results.x)
+
+                results = minimize(
+                    value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
+                    initial_value,
+                    jac=True,
+                    method=method,
+                    args=(Ts, E, entry, weights),
+                    bounds=self._bounds,
+                    options={**{"disp": show_progress}, **self._scipy_fit_options},
+                )
+
+                if results.success and (results.fun < minimizing_ll):
+                    minimizing_ll = results.fun
+                    minimizing_results = results
 
             # convergence successful.
-            if results.success:
+            if minimizing_results and minimizing_results.success:
+                sol = utils._to_1d_array(minimizing_results.x)
                 # pylint: disable=no-value-for-parameter
-                hessian_ = hessian(negative_log_likelihood)(results.x, Ts, E, entry, weights)
+                hessian_ = hessian(negative_log_likelihood)(sol, Ts, E, entry, weights)
                 # see issue https://github.com/CamDavidsonPilon/lifelines/issues/801
                 hessian_ = (hessian_ + hessian_.T) / 2
-                return results.x, -results.fun * weights.sum(), hessian_ * weights.sum()
+                return sol, -minimizing_results.fun * weights.sum(), hessian_ * weights.sum()
 
             # convergence failed.
-            print(results)
+            print(minimizing_results)
             if self._KNOWN_MODEL:
                 raise utils.ConvergenceError(
                     dedent(
@@ -1795,7 +1805,7 @@ class ParametricRegressionFitter(RegressionFitter):
         if show_progress:
             print(minimum_results)
 
-        if minimum_results.success:
+        if minimum_results is not None and minimum_results.success:
             sum_weights = weights.sum()
             hessian_ = hessian(self._neg_likelihood_with_penalty_function)(minimum_results.x, Ts, E, weights, entries, Xs)
             # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
@@ -1807,16 +1817,18 @@ class ParametricRegressionFitter(RegressionFitter):
             raise utils.ConvergenceError(
                 dedent(
                     """\
-                Fitting did not converge. Try checking the following:
+                Fitting did not converge. Try the following:
 
                 0. Are there any lifelines warnings outputted during the `fit`?
                 1. Inspect your DataFrame: does everything look as expected?
-                2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
-                3. Try using an alternate minimizer: ``fitter._scipy_fit_method = "SLSQP"``.
-                4. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
-                5. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
-            """
-                    % self._class_name
+                2. Try scaling your duration vector down, i.e. `df["{duration_col}"] = df["{duration_col}"]/100`
+                3. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
+                4. Try using an alternate minimizer: ``fitter._scipy_fit_method = "SLSQP"``.
+                5. Trying adding a small penalizer (or changing it, if already present). Example: `{fitter_name}(penalizer=0.01).fit(...)`.
+                6. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
+            """.format(
+                        duration_col=self.duration_col, fitter_name=self._class_name
+                    )
                 )
             )
 

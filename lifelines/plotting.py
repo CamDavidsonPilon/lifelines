@@ -29,7 +29,7 @@ def _iloc(x, i):
     where x is a numpy array or pd.Series.
     """
     try:
-        return x._iloc[i]
+        return x.iloc[i]
     except AttributeError:
         return x[i]
 
@@ -88,11 +88,11 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
 
     if CensoringType.is_left_censoring(model):
         empirical_kmf = KaplanMeierFitter().fit_left_censoring(
-            model.durations, model.event_observed, label=COL_EMP, timeline=timeline
+            model.durations, model.event_observed, label=COL_EMP, timeline=timeline, weights=model.weights, entry=model.entry
         )
     elif CensoringType.is_right_censoring(model):
         empirical_kmf = KaplanMeierFitter().fit_right_censoring(
-            model.durations, model.event_observed, label=COL_EMP, timeline=timeline
+            model.durations, model.event_observed, label=COL_EMP, timeline=timeline, weights=model.weights, entry=model.entry
         )
     elif CensoringType.is_interval_censoring(model):
         raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
@@ -198,7 +198,7 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
         )
 
         ax.text(
-            text_position[0], text_position[1], "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
+            text_position[0], text_position[1], "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2)
         )  # dynamically pick this.
     else:
         rmst = restricted_mean_survival_time(model, t=t)
@@ -255,14 +255,18 @@ def qq_plot(model, ax=None, **plot_kwargs):
     COL_THEO = "fitted %s quantiles" % dist
 
     if CensoringType.is_left_censoring(model):
-        kmf = KaplanMeierFitter().fit_left_censoring(model.durations, model.event_observed, label=COL_EMP)
+        kmf = KaplanMeierFitter().fit_left_censoring(
+            model.durations, model.event_observed, label=COL_EMP, weights=model.weights, entry=model.entry
+        )
     elif CensoringType.is_right_censoring(model):
-        kmf = KaplanMeierFitter().fit_right_censoring(model.durations, model.event_observed, label=COL_EMP)
+        kmf = KaplanMeierFitter().fit_right_censoring(
+            model.durations, model.event_observed, label=COL_EMP, weights=model.weights, entry=model.entry
+        )
     elif CensoringType.is_interval_censoring(model):
         raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
 
     q = np.unique(kmf.cumulative_density_.values[:, 0])
-    # this is equivalent to the old code `qth_survival_times(q, kmf.cumulative_density, cdf=True)`
+
     quantiles = qth_survival_times(1 - q, kmf.survival_function_)
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
@@ -533,10 +537,10 @@ def plot_interval_censored_lifetimes(
             c = event_observed_color
             ax.hlines(i, _iloc(entry, i), _iloc(upper_bound, i), color=c, lw=1.5)
             if _iloc(lower_bound, i) == _iloc(upper_bound, i):
-                ax.scatter(_iloc(lower_bound, i), i, color=c, marker="o", s=10)
+                ax.scatter(_iloc(lower_bound, i), i, color=c, marker="o", s=13)
             else:
-                ax.scatter(_iloc(lower_bound, i), i, color=c, marker=">", s=10)
-                ax.scatter(_iloc(upper_bound, i), i, color=c, marker="<", s=10)
+                ax.scatter(_iloc(lower_bound, i), i, color=c, marker=">", s=13)
+                ax.scatter(_iloc(upper_bound, i), i, color=c, marker="<", s=13)
 
         if left_truncated:
             ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
@@ -630,7 +634,7 @@ def plot_lifetimes(
         if left_truncated:
             ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
         m = "" if not _iloc(event_observed, i) else "o"
-        ax.scatter(_iloc(entry, i) + _iloc(durations, i), i, color=c, marker=m, s=10)
+        ax.scatter(_iloc(entry, i) + _iloc(durations, i), i, color=c, marker=m, s=13)
 
     if label_plot_bars:
         ax.set_yticks(range(0, N))
@@ -817,8 +821,8 @@ def _plot_estimate(
                 )
         else:
             x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
-            lower = dataframe_slicer(plot_estimate_config.confidence_interval_._iloc[:, [0]]).values[:, 0]
-            upper = dataframe_slicer(plot_estimate_config.confidence_interval_._iloc[:, [1]]).values[:, 0]
+            lower = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [0]]).values[:, 0]
+            upper = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [1]]).values[:, 0]
 
             if plot_estimate_config.kwargs["drawstyle"] == "default":
                 step = None

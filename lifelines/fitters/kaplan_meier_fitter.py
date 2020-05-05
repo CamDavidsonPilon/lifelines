@@ -76,15 +76,7 @@ class KaplanMeierFitter(UnivariateFitter):
 
     @CensoringType.right_censoring
     def fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        entry=None,
-        label=None,
-        alpha=None,
-        ci_labels=None,
-        weights=None,
+        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Fit the model to a right-censored dataset
@@ -122,15 +114,7 @@ class KaplanMeierFitter(UnivariateFitter):
 
     @CensoringType.left_censoring
     def fit_left_censoring(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        entry=None,
-        label=None,
-        alpha=None,
-        ci_labels=None,
-        weights=None,
+        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
     ):
         """
         Fit the model to a left-censored dataset
@@ -166,15 +150,7 @@ class KaplanMeierFitter(UnivariateFitter):
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
     def _fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        entry=None,
-        label=None,
-        alpha=None,
-        ci_labels=None,
-        weights=None,
+        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters
@@ -230,14 +206,9 @@ class KaplanMeierFitter(UnivariateFitter):
         primary_estimate_name = "survival_function_" if not is_left_censoring else "cumulative_density_"
         secondary_estimate_name = "cumulative_density_" if not is_left_censoring else "survival_function_"
 
-        (
-            self.durations,
-            self.event_observed,
-            self.timeline,
-            self.entry,
-            self.event_table,
-            self.weights,
-        ) = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
+        (self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights) = _preprocess_inputs(
+            durations, event_observed, timeline, entry, weights
+        )
 
         alpha = alpha if alpha else self.alpha
         log_estimate, cumulative_sq_ = _additive_estimate(
@@ -250,8 +221,8 @@ class KaplanMeierFitter(UnivariateFitter):
             # we adjust for this using the Breslow-Fleming-Harrington estimator
             n = self.event_table.shape[0]
             net_population = (self.event_table["entrance"] - self.event_table["removed"]).cumsum()
-            if net_population._iloc[: int(n / 2)].min() == 0:
-                ix = net_population._iloc[: int(n / 2)].idxmin()
+            if net_population.iloc[: int(n / 2)].min() == 0:
+                ix = net_population.iloc[: int(n / 2)].idxmin()
                 raise StatError(
                     """There are too few early truncation times and too many events. S(t)==0 for all t>%g. Recommend BreslowFlemingHarringtonFitter."""
                     % ix

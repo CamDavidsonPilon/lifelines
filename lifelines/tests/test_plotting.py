@@ -38,7 +38,7 @@ from lifelines.generate_datasets import cumulative_integral
 
 @pytest.fixture()
 def waltons():
-    return load_waltons()[["T", "E"]]._iloc[:50]
+    return load_waltons()[["T", "E"]].iloc[:50]
 
 
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
@@ -53,9 +53,7 @@ class TestPlotting:
 
         self.plt = plt
 
-    def test_parametric_univariate_fitters_has_hazard_plotting_methods(
-        self, block, known_parametric_univariate_fitters
-    ):
+    def test_parametric_univariate_fitters_has_hazard_plotting_methods(self, block, known_parametric_univariate_fitters):
         positive_sample_lifetimes = np.arange(1, 100)
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes)
@@ -63,9 +61,7 @@ class TestPlotting:
         self.plt.title("test_parametric_univariate_fitters_has_hazard_plotting_methods")
         self.plt.show(block=block)
 
-    def test_parametric_univaraite_fitters_has_cumhazard_plotting_methods(
-        self, block, known_parametric_univariate_fitters
-    ):
+    def test_parametric_univaraite_fitters_has_cumhazard_plotting_methods(self, block, known_parametric_univariate_fitters):
         positive_sample_lifetimes = np.arange(1, 100)
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes)
@@ -74,9 +70,7 @@ class TestPlotting:
         self.plt.title("test_parametric_univaraite_fitters_has_cumhazard_plotting_methods")
         self.plt.show(block=block)
 
-    def test_parametric_univariate_fitters_has_survival_plotting_methods(
-        self, block, known_parametric_univariate_fitters
-    ):
+    def test_parametric_univariate_fitters_has_survival_plotting_methods(self, block, known_parametric_univariate_fitters):
         positive_sample_lifetimes = np.arange(1, 100)
         for fitter in known_parametric_univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes)
@@ -236,7 +230,7 @@ class TestPlotting:
         # fit the aaf, no intercept as it is already built into X, X[2] is ones
         aaf = AalenAdditiveFitter(coef_penalizer=0.1, fit_intercept=False)
         aaf.fit(X, "T", "E")
-        ax = aaf.smoothed_hazards_(1)._iloc[0 : aaf.cumulative_hazards_.shape[0] - 500].plot()
+        ax = aaf.smoothed_hazards_(1).iloc[0 : aaf.cumulative_hazards_.shape[0] - 500].plot()
         ax.set_xlabel("time")
         ax.set_title("test_aalen_additive_smoothed_plot")
         self.plt.show(block=block)
@@ -538,9 +532,7 @@ class TestPlotting:
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(
-            cumulative_integral(coef.values, timeline), index=timeline, columns=coef.columns
-        )
+        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline), index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         X["T"] = T
         X["E"] = np.random.binomial(1, 1, n)
@@ -563,9 +555,7 @@ class TestPlotting:
         timeline = np.linspace(0, 70, 10000)
         hz, coef, X = generate_hazard_rates(n, d, timeline)
         X.columns = coef.columns
-        cumulative_hazards = pd.DataFrame(
-            cumulative_integral(coef.values, timeline), index=timeline, columns=coef.columns
-        )
+        cumulative_hazards = pd.DataFrame(cumulative_integral(coef.values, timeline), index=timeline, columns=coef.columns)
         T = generate_random_lifetimes(hz, timeline)
         T[np.isinf(T)] = 10
         X["T"] = T
@@ -684,6 +674,18 @@ class TestPlotting:
             ax = qq_plot(model, ax=axes[i])
             assert ax is not None
         self.plt.suptitle("test_qq_plot_left_censoring_with_known_distribution")
+        self.plt.show(block=block)
+
+    def test_qq_plot_with_weights_and_entry(self, block):
+        from lifelines.utils import survival_events_from_table
+
+        df = pd.DataFrame(index=[60, 171, 263, 427, 505, 639])
+        df["death"] = [1, 1, 1, 0, 1, 0]
+        df["censored"] = [0, 0, 0, 3, 0, 330]
+        T, E, W = survival_events_from_table(df, observed_deaths_col="death", censored_col="censored")
+        wf = WeibullFitter().fit(T, E, weights=W, entry=0.0001 * np.ones_like(T))
+        ax = qq_plot(wf)
+        self.plt.suptitle("test_qq_plot_with_weights_and_entry")
         self.plt.show(block=block)
 
     def test_qq_plot_right_censoring_with_known_distribution(self, block):

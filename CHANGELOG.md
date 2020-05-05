@@ -1,5 +1,14 @@
 ## Changelog
 
+#### 0.24.6 - 2020-05-05
+
+##### New features
+ - At the cost of some performance, convergence is improved in many models.
+ - New `lifelines.plotting.plot_interval_censored_lifetimes` for plotting interval censored data - thanks @sean-reed!
+
+##### Bug fixes
+ - fixed bug where `cdf_plot` and `qq_plot` were not factoring in the weights correctly.
+
 #### 0.24.5 - 2020-05-01
 
 ##### New features
