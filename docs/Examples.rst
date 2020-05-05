@@ -33,9 +33,15 @@ The :func:`lifelines.statistics.logrank_test` function compares whether the "dea
 .. code-block:: python
 
     from lifelines.statistics import logrank_test
+    from lifelines.datasets import load_waltons
+
+    df = load_waltons()
+    ix = df['group'] == 'miR-137'
+    T_exp, E_exp = df.loc[ix, 'T'], df.loc[ix, 'E']
+    T_con, E_con = df.loc[~ix, 'T'], df.loc[~ix, 'E']
 
 
-    results = logrank_test(T1, T2, event_observed_A=E1, event_observed_B=E2)
+    results = logrank_test(T_exp, T_con, event_observed_A=E_exp, event_observed_B=E_con)
     results.print_summary()
 
     """
@@ -63,6 +69,7 @@ hypothesis that all the populations have the same "death" generation process).
 
 .. code-block:: python
 
+    import pandas as pd
     from lifelines.statistics import multivariate_logrank_test
 
     df = pd.DataFrame({
@@ -98,9 +105,15 @@ the log(-log) transformation implicitly and compares the survival-ness of popula
 .. code-block:: python
 
     from lifelines.statistics import survival_difference_at_fixed_point_in_time_test
+    from lifelines.datasets import load_waltons
 
+    df = load_waltons()
+    ix = df['group'] == 'miR-137'
+    T_exp, E_exp = df.loc[ix, 'T'], df.loc[ix, 'E']
+    T_con, E_con = df.loc[~ix, 'T'], df.loc[~ix, 'E']
 
-    results = survival_difference_at_fixed_point_in_time_test(point_in_time, T1, T2, event_observed_A=E1, event_observed_B=E2)
+    point_in_time = 10.
+    results = survival_difference_at_fixed_point_in_time_test(point_in_time, T_exp, T_con, event_observed_A=E_exp, event_observed_B=E_con)
     results.print_summary()
 
 
@@ -112,6 +125,19 @@ subtract the ``survival_function_`` will likely fail if the DataFrame's indexes 
 the :class:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
 
 .. code-block:: python
+
+    from lifelines.datasets import load_waltons
+    from lifelines import KaplanMeierFitter
+
+
+    df = load_waltons()
+    ix = df['group'] == 'miR-137'
+    T_exp, E_exp = df.loc[ix, 'T'], df.loc[ix, 'E']
+    T_con, E_con = df.loc[~ix, 'T'], df.loc[~ix, 'E']
+
+    kmf1 = KaplanMeierFitter().fit(T_exp, E_exp, label="exp")
+    kmf2 = KaplanMeierFitter().fit(T_con, E_con, label="con")
+
 
     kmf1.subtract(kmf2)
 
@@ -132,6 +158,7 @@ This is a good metric for comparing two survival curves, as their difference rep
 
     from lifelines.utils import restricted_mean_survival_time
     from lifelines.datasets import load_waltons
+    from lifelines import KaplanMeierFitter
 
     df = load_waltons()
     ix = df['group'] == 'miR-137'
@@ -151,8 +178,9 @@ Furthermore, there exist plotting functions to plot the RMST:
 
 .. code-block:: python
 
-
+    from matplotlib import pyplot as plt
     from lifelines.plotting import rmst_plot
+
     ax = plt.subplot(311)
     rmst_plot(kmf_exp, t=time_limit, ax=ax)
 
@@ -179,6 +207,7 @@ If using *lifelines* for prediction work, it's ideal that you perform some type 
 
 .. code-block:: python
 
+    import numpy as np
     from lifelines import AalenAdditiveFitter, CoxPHFitter
     from lifelines.datasets import load_regression_dataset
     from lifelines.utils import k_fold_cross_validation
@@ -274,15 +303,17 @@ When ``.plot`` is called, an ``axis`` object is returned which can be passed int
     ax = kmf.plot(ax=ax)
 
 
-If you have a pandas DataFrame with columns "group", "T", and "E", then something like the following would work:
+If you have a pandas DataFrame with columns "T", "E", and some categorical variable, then something like the following would work:
 
 .. code-block:: python
 
-    from lifelines import KaplanMeierFitter
     from matplotlib import pyplot as plt
 
-    ax = plt.subplot(111)
+    from lifelines.datasets import load_waltons
+    from lifelines import KaplanMeierFitter
+    df = load_waltons()
 
+    ax = plt.subplot(111)
     kmf = KaplanMeierFitter()
 
     for name, grouped_df in df.groupby('group'):
@@ -431,7 +462,7 @@ time                        observed deaths       censored
     import pandas as pd
     from lifelines.utils import survival_events_from_table
 
-    df = pd.read_csv('file.csv', columns = ['time', observed deaths', 'censored'])
+    df = pd.read_csv('file.csv')
     df = df.set_index('time')
 
     T, E, W = survival_events_from_table(df, observed_deaths_col='observed deaths', censored_col='censored')
@@ -475,6 +506,7 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
 
     print(kmf.survival_function_)
 
+    """
         KM-estimate
     0          1.00
     47         0.99
@@ -501,6 +533,7 @@ Suppose your dataset has lifetimes grouped near time 60, thus after fitting
     70         0.02
     71         0.01
     74         0.00
+    """
 
 
 What you would like is to have a predictable and full index from 40 to 75. (Notice that
@@ -512,6 +545,7 @@ existing for times 72 or 73). This is especially useful for comparing multiple s
     kmf.fit(T, timeline=range(40,75))
     print(kmf.survival_function_)
 
+    """
         KM-estimate
     40         1.00
     41         1.00
@@ -548,6 +582,7 @@ existing for times 72 or 73). This is especially useful for comparing multiple s
     72         0.01
     73         0.01
     74         0.00
+    """
 
 
 *lifelines* will intelligently forward-fill the estimates to unseen time points.
@@ -646,11 +681,13 @@ In Pandas, this may look like:
 
 .. code-block:: python
 
+    """
         id    E1      E2     E3
     0   1     1.0     NaN    2.0
     1   2     NaN     5.0    NaN
     2   3     3.0     5.0    7.0
     ...
+    """
 
 Initially, this can't be added to our baseline time-varying dataset. Using :func:`lifelines.utils.covariates_from_event_matrix` we can convert a DataFrame like this into one that can be easily added.
 
@@ -661,9 +698,7 @@ Initially, this can't be added to our baseline time-varying dataset. Using :func
     cv = covariates_from_event_matrix(event_df, id_col='id')
     print(cv)
 
-
-.. code-block:: python
-
+    """
            id  duration  E1  E2  E3
     0       1       1.0   1   0   0
     1       1       2.0   0   1   0
@@ -671,9 +706,7 @@ Initially, this can't be added to our baseline time-varying dataset. Using :func
     3       3       3.0   1   0   0
     4       3       5.0   0   1   0
     5       3       7.0   0   0   1
-
-
-.. code-block:: python
+    """
 
     base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
 
@@ -884,13 +917,12 @@ Specifying ``cluster_col`` will handle correlations, and invoke the robust sandw
 Serialize a *lifelines* model to disk
 ##########################################
 
-When you want to save (and later load) a *lifelines* model to disk, you can use the `loads` and `dumps` API from any popular serialization library.
+When you want to save (and later load) a *lifelines* model to disk, you can use the `loads` and `dumps` API from most popular serialization library (dill, pickle, joblib):
 
 .. code-block:: python
 
     from dill import loads, dumps
     from pickle import loads, dumps
-    from joblib import loads, dumps
 
     s_cph = dumps(cph)
     cph_new = loads(s_cph)
@@ -899,7 +931,7 @@ When you want to save (and later load) a *lifelines* model to disk, you can use 
 
     s_kmf = dumps(kmf)
     kmf_new = loads(s_kmf)
-    kmf.summary
+    kmf.survival_function_
 
 
 Produce a LaTex or HTML table
