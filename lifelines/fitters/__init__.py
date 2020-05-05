@@ -1822,10 +1822,10 @@ class ParametricRegressionFitter(RegressionFitter):
                 0. Are there any lifelines warnings outputted during the `fit`?
                 1. Inspect your DataFrame: does everything look as expected?
                 2. Try scaling your duration vector down, i.e. `df["{duration_col}"] = df["{duration_col}"]/100`
-                2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
-                3. Try using an alternate minimizer: ``fitter._scipy_fit_method = "SLSQP"``.
-                4. Trying adding a small penalizer (or changing it, if already present). Example: `{fitter_name}(penalizer=0.01).fit(...)`.
-                5. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
+                3. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
+                4. Try using an alternate minimizer: ``fitter._scipy_fit_method = "SLSQP"``.
+                5. Trying adding a small penalizer (or changing it, if already present). Example: `{fitter_name}(penalizer=0.01).fit(...)`.
+                6. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
             """.format(
                         duration_col=self.duration_col, fitter_name=self._class_name
                     )
