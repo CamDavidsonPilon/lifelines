@@ -1441,8 +1441,9 @@ def add_covariate_to_timeline(
     if delay < 0:
         raise ValueError("delay parameter must be equal to or greater than 0")
 
-    if any(col not in long_form_df for col in (id_col, event_col, start_col, stop_col)):
-        raise IndexError("Missing column in long_form_df")
+    missing_cols = [col for col in (id_col, event_col, start_col, stop_col) if col not in long_form_df]
+    if missing_cols:
+        raise IndexError("Missing column(s) %s in long_form_df" % missing_cols)
 
     cv[duration_col] += delay
     cv = cv.dropna()

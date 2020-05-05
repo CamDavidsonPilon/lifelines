@@ -54,7 +54,13 @@ We will perform a light transform to this dataset to modify it into the "long" f
 
 .. code:: python
 
+      import pandas as pd
       from lifelines.utils import to_long_format
+
+      base_df = pd.DataFrame([
+        {'id': 1, 'duration': 10, 'event': True, 'var1': 0.1},
+        {'id': 2, 'duration': 12, 'event': True, 'var1': 0.5}
+      ])
 
       base_df = to_long_format(base_df, duration_col="duration")
 
@@ -97,6 +103,14 @@ where ``time`` is the duration from the entry event. Here we see subject 1 had a
 
       from lifelines.utils import add_covariate_to_timeline
 
+      cv = pd.DataFrame([
+        {'id': 1, 'time': 0, 'var2': 1.4},
+        {'id': 1, 'time': 4, 'var2': 1.2},
+        {'id': 1, 'time': 8, 'var2': 1.5},
+        {'id': 2, 'time': 0, 'var2': 1.6},
+
+      ])
+
       df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="event")
 
 
@@ -131,13 +145,20 @@ If your dataset is of the second type, that is, event-based, your dataset may lo
 
 .. code-block:: python
 
+    event_df = pd.DataFrame([
+        {'id': 1, 'E1': 1.0},
+        {'id': 2, 'E1': None},
+        {'id': 3, 'E1': 3.0},
+    ])
+
     print(event_df)
 
-
+    """
         id    E1
     0   1     1.0
     1   2     NaN
     2   3     3.0
+    """
     ...
 
 Initially, this can't be added to our baseline DataFrame. However, using :func:`lifelines.utils.covariates_from_event_matrix` we can convert a DataFrame like this into one that can be easily added.
@@ -150,14 +171,27 @@ Initially, this can't be added to our baseline DataFrame. However, using :func:`
     cv = covariates_from_event_matrix(event_df, id_col="id")
     print(cv)
 
+    """
+       id  duration  E1
+    0   1       1.0   1
+    1   2       inf   1
+    2   3       3.0   1
+    """
 
-    event  id  duration  E1
-    0       1       1.0   1
-    1       3       3.0   1
-    ...
+    base_df = pd.DataFrame([
+        {'id': 1, 'duration': 10, 'event': True, 'var1': 0.1},
+        {'id': 2, 'duration': 12, 'event': True, 'var1': 0.5}
+    ])
+    base_df = to_long_format(base_df, duration_col="duration")
 
 
-    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E")
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="duration", id_col="id", event_col="event")
+    """
+       start   E1  var1  stop  id  event
+    0    0.0  NaN   0.1   1.0   1  False
+    1    1.0  1.0   0.1  10.0   1   True
+    2    0.0  NaN   0.5  12.0   2   True
+    """
 
 For an example of pulling datasets like this from a SQL-store, and other helper functions, see :ref:`Example SQL queries and transformations to get time varying data`.
 
@@ -175,10 +209,22 @@ To handle this, you can delay the observations by time periods:
 
 .. code-block:: python
 
-    from lifelines.utils import covariates_from_event_matrix
+    from lifelines.utils import add_covariate_to_timeline
 
+    cv = pd.DataFrame([
+        {'id': 1, 'time': 0, 'var2': 1.4},
+        {'id': 1, 'time': 4, 'var2': 1.2},
+        {'id': 1, 'time': 8, 'var2': 1.5},
+        {'id': 2, 'time': 0, 'var2': 1.6},
+    ])
 
-    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="E", delay=14)
+    base_df = pd.DataFrame([
+        {'id': 1, 'duration': 10, 'event': True, 'var1': 0.1},
+        {'id': 2, 'duration': 12, 'event': True, 'var1': 0.5}
+    ])
+    base_df = to_long_format(base_df, duration_col="duration")
+
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="event", delay=14)
 
 
 
