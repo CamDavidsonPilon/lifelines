@@ -17,6 +17,9 @@ statsmodels
 flaky
 scikit-learn>=0.22.0
 
+# ex: `py.test` in the docs/ folder
+sybil
+
 # ex: mypy --config-file mypy.ini lifelines
 mypy
 
