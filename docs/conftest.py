@@ -26,5 +26,5 @@ def tempdir():
 
 
 pytest_collect_file = Sybil(
-    parsers=[DocTestParser(), CodeBlockParser(future_imports=["print_function"])], pattern="*.rst", fixtures=["tempdir"]
+    parsers=[DocTestParser(), CodeBlockParser(future_imports=["print_function"])], pattern="*Time*.rst", fixtures=["tempdir"]
 ).pytest()

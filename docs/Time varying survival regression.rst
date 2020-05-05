@@ -203,9 +203,9 @@ One additional flag on :func:`~lifelines.utils.add_covariate_to_timeline` that i
 Delaying time-varying covariates
 #############################################
 
-:func:`~lifelines.utils.add_covariate_to_timeline` also has an option for delaying, or shifting, a covariate so it changes later than originally observed. One may ask, why should one delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknown-st to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that not smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
+:func:`~lifelines.utils.add_covariate_to_timeline` also has an option for delaying, or shifting, a covariate so it changes later than originally observed. One may ask, why should one delay a time-varying covariate? Here's an example. Consider investigating the impact of smoking on mortality and available to us are time-varying observations of how many cigarettes are consumed each month. Unbeknownst to us, when a subject reaches critical illness levels, they are admitted to the hospital and their cigarette consumption drops to zero. Some expire while in hospital. If we used this dataset naively, we would see that *not* smoking leads to sudden death, and conversely, smoking helps your health! This is a case of reverse causation: the upcoming death event actually influences the covariates.
 
-To handle this, you can delay the observations by time periods:
+To handle this, you can delay the observations by time periods. This has the possible of effect of dropping rows outside the observation window.
 
 .. code-block:: python
 
@@ -224,8 +224,18 @@ To handle this, you can delay the observations by time periods:
     ])
     base_df = to_long_format(base_df, duration_col="duration")
 
-    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="event", delay=14)
+    base_df = add_covariate_to_timeline(base_df, cv, duration_col="time", id_col="id", event_col="event", delay=5)\
+                .fillna(0)
 
+    print(base_df)
+    """
+       start  var1  var2  stop  id  event
+    0      0   0.1   NaN   5.0   1  False
+    1      5   0.1   1.4   9.0   1  False
+    2      9   0.1   1.2  10.0   1   True
+    3      0   0.5   NaN   5.0   2  False
+    4      5   0.5   1.6  12.0   2   True
+    """
 
 
 Fitting the model
@@ -240,8 +250,8 @@ Fitting the Cox model to the data involves an iterative gradient descent. *lifel
 
     from lifelines import CoxTimeVaryingFitter
 
-    ctv = CoxTimeVaryingFitter()
-    ctv.fit(df, id_col="id", event_col="event", start_col="start", stop_col="stop", show_progress=True)
+    ctv = CoxTimeVaryingFitter(penalizer=0.1)
+    ctv.fit(base_df, id_col="id", event_col="event", start_col="start", stop_col="stop", show_progress=True)
     ctv.print_summary()
     ctv.plot()
 
