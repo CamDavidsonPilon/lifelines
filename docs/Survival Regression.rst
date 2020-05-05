@@ -401,7 +401,7 @@ Normally, the Cox model is *semi-parametric*, which means that its baseline haza
 
     rossi_dataset = load_rossi()
 
-    cph = CoxPHFitter(baseline_estimation_method="splines")
+    cph = CoxPHFitter(baseline_estimation_method="spline")
     cph.fit(rossi_dataset, 'week', event_col='arrest')
 
 To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively.
