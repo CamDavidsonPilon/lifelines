@@ -242,12 +242,16 @@ holding everything else equal. This is useful to understand the impact of a cova
 
 The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method can accept multiple covariates as well. This is useful for two purposes:
 
-1. There are derivative features in your dataset. For example, suppose you have included ``year`` and ``year**2`` in your dataset. It doesn't make sense to just vary ``year`` and leave ``year**2`` fixed. You'll need to specify manually the values the covariates take on in a N-d array or list (where N is the number of covariates being varied.)
+1. There are derivative features in your dataset. For example, suppose you have included ``prio`` and ``prio**2`` in your dataset. It doesn't make sense to just vary ``year`` and leave ``year**2`` fixed. You'll need to specify manually the values the covariates take on in a N-d array or list (where N is the number of covariates being varied.)
 
 .. code:: python
 
+    rossi_dataset['prio**2'] = rossi_dataset['prio'] ** 2
+
+    cph.fit(rossi_dataset, 'week', 'arrest')
+
     cph.plot_covariate_groups(
-        ['year', 'year**2'],
+        ['prio', 'prio**2'],
         [
             [0, 0],
             [1, 1],
@@ -262,8 +266,10 @@ The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` me
 
 .. code:: python
 
+    import numpy as np
+
     cph.plot_covariate_groups(
-        ['d1', 'd2' 'd3', 'd4', 'd5'],
+        ['d1', 'd2', 'd3', 'd4', 'd5'],
         np.eye(5),
         cmap='coolwarm')
 
@@ -335,6 +341,7 @@ When using sampling weights, it's correct to also change the standard error calc
 
 .. code:: python
 
+    import pandas as pd
     from lifelines import CoxPHFitter
 
     df = pd.DataFrame({
@@ -698,7 +705,6 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
 
 .. code:: python
 
-
     from lifelines import GeneralizedGammaRegressionFitter
     from lifelines.datasets import load_rossi
 
@@ -706,7 +712,7 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
     df['constant'] = 1.
 
     # this will regress df against all 3 parameters
-    ggf = GeneralizedGammaRegressionFitter().fit(df, 'week', 'arrest')
+    ggf = GeneralizedGammaRegressionFitter(penalizer=0.1).fit(df, 'week', 'arrest')
     ggf.print_summary()
 
 
@@ -717,7 +723,7 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
         'lambda_': ['constant']
     }
 
-    ggf = GeneralizedGammaRegressionFitter().fit(df, 'week', 'arrest', regressors=regressors)
+    ggf = GeneralizedGammaRegressionFitter(penalizer=0.1).fit(df, 'week', 'arrest', regressors=regressors)
     ggf.print_summary()
 
 
