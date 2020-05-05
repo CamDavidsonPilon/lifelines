@@ -242,7 +242,7 @@ we rule that the series have different generators.
     ---
     test_statistic      p  -log2(p)
            260.47  <0.005    192.23
-    """"
+    """
 
 There are alternative (and sometimes better) tests of survival functions, and we explain more here: `Statistically compare two populations`_
 
