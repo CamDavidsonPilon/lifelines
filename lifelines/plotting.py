@@ -537,10 +537,10 @@ def plot_interval_censored_lifetimes(
             c = event_observed_color
             ax.hlines(i, _iloc(entry, i), _iloc(upper_bound, i), color=c, lw=1.5)
             if _iloc(lower_bound, i) == _iloc(upper_bound, i):
-                ax.scatter(_iloc(lower_bound, i), i, color=c, marker="o", s=10)
+                ax.scatter(_iloc(lower_bound, i), i, color=c, marker="o", s=13)
             else:
-                ax.scatter(_iloc(lower_bound, i), i, color=c, marker=">", s=10)
-                ax.scatter(_iloc(upper_bound, i), i, color=c, marker="<", s=10)
+                ax.scatter(_iloc(lower_bound, i), i, color=c, marker=">", s=13)
+                ax.scatter(_iloc(upper_bound, i), i, color=c, marker="<", s=13)
 
         if left_truncated:
             ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
@@ -634,7 +634,7 @@ def plot_lifetimes(
         if left_truncated:
             ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
         m = "" if not _iloc(event_observed, i) else "o"
-        ax.scatter(_iloc(entry, i) + _iloc(durations, i), i, color=c, marker=m, s=10)
+        ax.scatter(_iloc(entry, i) + _iloc(durations, i), i, color=c, marker=m, s=13)
 
     if label_plot_bars:
         ax.set_yticks(range(0, N))
