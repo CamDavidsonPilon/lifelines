@@ -1994,7 +1994,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the ROC AUC
         to survival data, including censoring.
 
-        For this purpose, the ``score_`` is a measure of the predictive accuracy of the fitted model
+        For this purpose, the ``concordance_index_`` is a measure of the predictive accuracy of the fitted model
         onto the training dataset.
 
         References

@@ -185,7 +185,11 @@ It's possible to add a penalizer term to the Cox regression as well. One can use
 
 .. math:: \frac{1}{2} \text{penalizer} \left((1-\text{l1\_ratio}) \cdot ||\beta||_2^2 + \text{l1\_ratio} \cdot ||\beta||_1\right)
 
-Both the ``penalizer`` and ``l1_ratio`` are specified in the class creation:
+
+.. note:: It's not clear from the above, but intercept (when applicable) are not penalized.
+
+
+To use this in *lifelines*, both the ``penalizer`` and ``l1_ratio`` can be specified in the class creation:
 
 
 .. code:: python
@@ -195,7 +199,7 @@ Both the ``penalizer`` and ``l1_ratio`` are specified in the class creation:
 
     rossi = load_rossi()
 
-    cph = CoxPHFitter(penalizer=0.1, l1_ratio=1.0) # only sparse solutions
+    cph = CoxPHFitter(penalizer=0.1, l1_ratio=1.0) # sparse solutions,
     cph.fit(rossi, 'week', 'arrest')
     cph.print_summary()
 

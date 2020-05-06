@@ -285,7 +285,7 @@ The input of the ``fit`` method's API in a regression model is different. All th
     :width: 620px
     :align: center
 
-The same dataset, but with a *Weibull accelerated failure time model*. This model was two parameters (see docs `here <https://lifelines.readthedocs.io/en/latest/lifelines.fitters.html#module-lifelines.fitters.weibull_aft_fitter>`_), and we can choose to model both using our covariates or just one. Below we model just the scale parameter, ``lambda_``.
+The same dataset, but with a *Weibull accelerated failure time model*. This model was two parameters (see docs `here <https://lifelines.readthedocs.io/en/latest/fitters/regression/WeibullAFTFitter.html>`_), and we can choose to model both using our covariates or just one. Below we model just the scale parameter, ``lambda_``.
 
 .. code:: python
 
@@ -328,7 +328,7 @@ The same dataset, but with a *Weibull accelerated failure time model*. This mode
     :width: 620px
     :align: center
 
-Other AFT models are available as well, see `here <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#the-log-normal-and-log-logistic-aft-model>`_. An alternative regression model is Aalen's Additive model, which has time-varying hazards:
+Other AFT models are available as well, see `here <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#the-log-normal-and-log-logistic-aft-models>`_. An alternative regression model is Aalen's Additive model, which has time-varying hazards:
 
 .. code:: python
 

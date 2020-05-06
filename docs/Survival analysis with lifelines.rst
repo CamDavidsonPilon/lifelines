@@ -543,7 +543,7 @@ Similarly, there are other parametric models in *lifelines*. Generally, which pa
     E = data['E']
 
     wbf = WeibullFitter().fit(T, E, label='WeibullFitter')
-    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentialFitter')
     lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
     naf = NelsonAalenFitter().fit(T, E, label='NelsonAalenFitter')
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
@@ -578,7 +578,7 @@ Parametric models can also be used to create and plot the survival function, too
 
     kmf = KaplanMeierFitter().fit(T, E, label='KaplanMeierFitter')
     wbf = WeibullFitter().fit(T, E, label='WeibullFitter')
-    exf = ExponentialFitter().fit(T, E, label='ExponentalFitter')
+    exf = ExponentialFitter().fit(T, E, label='ExponentialFitter')
     lnf = LogNormalFitter().fit(T, E, label='LogNormalFitter')
     llf = LogLogisticFitter().fit(T, E, label='LogLogisticFitter')
     pwf = PiecewiseExponentialFitter([40, 60]).fit(T, E, label='PiecewiseExponentialFitter')
@@ -658,7 +658,7 @@ instruments could only detect the measurement was *less* than some upper bound. 
     """
 
 
-*lifelines* has support for left-censored datasets in most univariate models, including the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` class, by using the :meth:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit_left_censoring` method.
+*lifelines* has support for left-censored datasets in most univariate models, including the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` class, by using the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.fit_left_censoring` method.
 
 .. code:: python
 
@@ -668,7 +668,7 @@ instruments could only detect the measurement was *less* than some upper bound. 
     kmf = KaplanMeierFitter()
     kmf.fit_left_censoring(T, E)
 
-Instead of producing a survival function, left-censored data analysis is more interested in the cumulative density function. This is available as the :attr:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.cumulative_density_` property after fitting the data.
+Instead of producing a survival function, left-censored data analysis is more interested in the cumulative density function. This is available as the :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.cumulative_density_` property after fitting the data.
 
 .. code:: python
 

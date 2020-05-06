@@ -651,7 +651,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> "ParametricUnivariateFitter":  # pylint: disable=too-many-arguments
+    ) -> "self":  # pylint: disable=too-many-arguments
         """
         Parameters
         ----------
@@ -716,7 +716,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> "ParametricUnivariateFitter":  # pylint: disable=too-many-arguments
+    ) -> "self":  # pylint: disable=too-many-arguments
         """
         Fit the model to a left-censored dataset
 
@@ -782,7 +782,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> "ParametricUnivariateFitter":  # pylint: disable=too-many-arguments
+    ) -> "self":  # pylint: disable=too-many-arguments
         """
         Fit the model to an interval censored dataset.
 
@@ -1342,7 +1342,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "ParametricRegressionFitter":
+    ) -> "self":
         """
         Fit the accelerated failure time model to a left-censored dataset.
 
@@ -1435,7 +1435,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "ParametricRegressionFitter":
+    ) -> "self":
         """
         Fit the regression model to a right-censored dataset.
 
@@ -1539,7 +1539,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "ParametricRegressionFitter":
+    ) -> "self":
         """
         Fit the regression model to a right-censored dataset.
 
@@ -2512,7 +2512,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "ParametericAFTRegressionFitter":
+    ) -> "self":
         """
         Fit the accelerated failure time model to a right-censored dataset.
 
@@ -2667,7 +2667,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "ParametericAFTRegressionFitter":
+    ) -> "self":
         """
         Fit the accelerated failure time model to a interval-censored dataset.
 
@@ -2839,7 +2839,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "ParametericAFTRegressionFitter":
+    ) -> "self":
         """
         Fit the accelerated failure time model to a left-censored dataset.
 
