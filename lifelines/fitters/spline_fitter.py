@@ -2,7 +2,8 @@
 from typing import Optional
 from lifelines.fitters import KnownModelParametricUnivariateFitter
 from lifelines.fitters.mixins import SplineFitterMixin
-import autograd.numpy as np
+import numpy as np
+import autograd.numpy as anp
 from lifelines.utils.safe_exp import safe_exp
 
 
@@ -12,7 +13,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
 
     .. math::
 
-        H(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j\(\log{t})}\right)
+        H(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j\(\log{t})\right)}
 
     where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
 
@@ -91,17 +92,14 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
 
     def _cumulative_hazard(self, params, t):
         phis = params
-        lT = np.log(t)
+        lT = anp.log(t)
 
-        cum_haz = np.exp(phis[0] + phis[1] * lT)
+        cum_haz = anp.exp(phis[0] + phis[1] * lT)
         for i in range(2, self.n_knots):
-            cum_haz = cum_haz * np.exp(
+            cum_haz = cum_haz * anp.exp(
                 phis[i]
                 * self.basis(
-                    lT,
-                    np.log(self.knot_locations[i - 1]),
-                    np.log(self.knot_locations[0]),
-                    np.log(self.knot_locations[-1]),
+                    lT, anp.log(self.knot_locations[i - 1]), anp.log(self.knot_locations[0]), anp.log(self.knot_locations[-1])
                 )
             )
 

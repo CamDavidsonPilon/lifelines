@@ -122,7 +122,7 @@ Subtraction and division between survival functions
 
 If you are interested in taking the difference between two survival functions, simply trying to
 subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
-the :class:`lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
+the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
 
 .. code-block:: python
 
@@ -410,7 +410,7 @@ Displaying at-risk counts below plots
 Displaying multiple at-risk counts below plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The function ``add_at_risk_counts`` in ``lifelines.plotting`` allows you to add At-Risk counts at the bottom of your figures. For example:
+The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add At-Risk counts at the bottom of your figures. For example:
 
 .. code-block:: python
 
