@@ -14,7 +14,7 @@ def E_step_M_step(observation_intervals, p_old, turnball_interval_lookup):
 
     p_new = np.zeros_like(p_old)
 
-    for ix_i, observation_interval in enumerate(observation_intervals):
+    for observation_interval in observation_intervals:
         p_temp = np.zeros_like(p_old)
 
         # find all turnball intervals, t, that are contained in (ol, or). Call this set T
@@ -29,40 +29,54 @@ def E_step_M_step(observation_intervals, p_old, turnball_interval_lookup):
     return p_new / N
 
 
+def heappop_(array):
+    return heappop(array)
+
+
 def create_turnball_intervals(left, right):
     """
     find the set of innermost intervals
+
     """
 
-    # left and right can be deduped for faster performance.
-    left, right = left.tolist(), right.tolist()
+    left, right = list(set(left)), list(set(right))
     heapify(left)
     heapify(right)
 
-    left_, right_ = heappop(left), heappop(right)
+    left_, right_ = heappop_(left), heappop_(right)
+    assert left_ <= right_
 
     while True:
         try:
-            left__ = heappop(left)
-        except:
-            break
+            # import pdb
+            # pdb.set_trace()
+            if left_ < right_:
+                left__ = heappop_(left)
+                while left__ < right_:
+                    left_ = left__
+                    left__ = heappop_(left)
+                yield interval(left_, right_)
 
-        if right_ == np.inf:
-            # find the last possible left_
-            left_ = heapq.nlargest(1, left)[0]
+                left_ = left__
+                if left_ != right_:
+                    right_ = heappop_(right)
+                else:
+                    yield interval(left_, right_)
+                    right_ = heappop_(right)
+
+            elif left_ > right_:
+                while right_ <= left_:
+                    right_ = heappop_(right)
+
+                yield interval(left_, right_)
+                left_, right_ = heappop_(left), heappop_(right)
+
+            elif left_ == right_:
+                yield interval(left_, right_)
+                right_ = heappop_(right)
+        except IndexError:
             yield interval(left_, right_)
             break
-
-        elif left__ < right_:
-            left_ = left__
-        elif right_ <= left__:
-            yield interval(left_, right_)
-            left_ = left__
-            right_ = heappop(right)
-            while right_ <= left_:
-                right_ = heappop(right)
-        else:
-            print("why am I here")
 
 
 def is_subset(query_interval, super_interval):
@@ -101,13 +115,12 @@ def npmle(left, right):
     assert left.shape == right.shape
 
     # sort left, right arrays by (left, right).
-    ix = np.lexsort((left, right))
+    ix = np.lexsort((right, left))
     left = left[ix]
     right = right[ix]
-
-    turnball_intervals = list(create_turnball_intervals(left, right))
+    turnball_intervals = list(create_turnball_intervals(left, right))  # fix this set problem
     observation_intervals = create_observation_intervals(left, right)
-    turnball_lookup = create_turnball_lookup(turnball_intervals, observation_intervals)
+    turnball_lookup = create_turnball_lookup(turnball_intervals, sorted(set(observation_intervals)))
 
     T = len(turnball_intervals)
 
@@ -125,8 +138,58 @@ def npmle(left, right):
     return p, turnball_intervals
 
 
-left, right = zip(*[(0, 8), (7, 16), (7, 14), (17, np.inf), (37, 44), (6, 10), (45, np.inf), (46, np.inf), (46, np.inf), (0, 7)])
-results = npmle(left, right)
-print(results)
+def reconstruct_survival_function(probabilities, turnball_intervals, timeline):
+    index = [0.0]
+    values = [1.0]
 
-# plot(*results)
+    for p, interval in zip(probabilities, turnball_intervals):
+        if interval.left != index[-1]:
+            index.append(interval.left)
+            values.append(values[-1])
+
+        index.append(interval.right)
+        values.append(values[-1] - p)
+
+    full_dataframe = pd.DataFrame(index=timeline, columns=["survival function"])
+
+    turnball_dataframe = pd.DataFrame(values, index=index, columns=["survival function"])
+
+    dataframe = full_dataframe.combine_first(turnball_dataframe).ffill()
+    return dataframe
+
+
+def compute_confidence_intervals(left, right, mle_, alpha=0.05, samples=10):
+    """
+    uses basic bootstrap
+    """
+    left, right = np.asarray(left, dtype=float), np.asarray(right, dtype=float)
+    all_times = np.unique(np.concatenate((left, right, [np.inf, 0])))
+
+    N = left.shape[0]
+
+    bootstrapped_samples = np.empty((all_times.shape[0], samples))
+
+    for i in range(samples):
+        ix = np.random.randint(low=0, high=N, size=N)
+        left_ = left[ix]
+        right_ = right[ix]
+
+        bootstrapped_samples[:, i] = reconstruct_survival_function(*npmle(left_, right_), all_times).values[:, 0]
+
+    return (
+        2 * mle_.squeeze() - pd.Series(np.percentile(bootstraps, alpha / 2 * 100, axis=1), index=all_times),
+        2 * mle_.squeeze() - pd.Series(np.percentile(bootstraps, (1 - alpha / 2) * 100, axis=1), index=all_times),
+    )
+
+
+from lifelines.datasets import load_diabetes
+
+data = load_diabetes()
+
+left, right = list(data["left"]), list(data["right"])
+results = npmle(left, right)
+
+
+timeline = np.unique(np.concatenate((left, right, [np.inf, 0])))
+df = reconstruct_survival_function(*results, timeline)
+CIs = compute_confidence_intervals(left, right, df)

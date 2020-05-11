@@ -147,6 +147,7 @@ class KaplanMeierFitter(UnivariateFitter):
           self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
 
         """
+        # left censoring is now defined in CensoringType.is_left_censoring(self)
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
     def _fit(
