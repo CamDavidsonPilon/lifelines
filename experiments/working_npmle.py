@@ -175,7 +175,7 @@ data = load_diabetes()
 
 
 left = [1, 7, 8, 7, 7, 17, 37, 46, 46, 45]
-right = [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+right = [7, 8, 10, 16, 14, 100, 44, 100, 100, 100]
 
 # left, right = data['left'], data['right']
 

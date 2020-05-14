@@ -21,7 +21,7 @@ from lifelines.utils import (
     check_nans_or_infs,
 )
 from lifelines.plotting import loglogs_plot, _plot_estimate
-from lifelines.fitters.npmle import npmle, reconstruct_survival_function
+from lifelines.fitters.npmle import npmle, reconstruct_survival_function, npmle_compute_confidence_intervals
 
 
 class KaplanMeierFitter(UnivariateFitter):
@@ -128,6 +128,7 @@ class KaplanMeierFitter(UnivariateFitter):
         show_progress=False,
         entry=None,
         weights=None,
+        tol=1e-5,
     ) -> "KaplanMeierFitter":
 
         if entry is not None or weights is not None:
@@ -156,14 +157,14 @@ class KaplanMeierFitter(UnivariateFitter):
         self.survival_function_ = reconstruct_survival_function(probs, t_intervals, self.timeline, label=self._label)
         self.cumulative_density_ = 1 - self.survival_function_
 
-        self.confidence_interval_ = None
-
         self._median = median_survival_times(self.survival_function_)
         self.percentile = functools.partial(qth_survival_time, model_or_survival_function=self.survival_function_)
 
+        """
+        self.confidence_interval_ = npmle_compute_confidence_intervals(self.lower_bound, self.upper_bound, self.survival_function_, self.alpha)
         self.confidence_interval_survival_function_ = self.confidence_interval_
-        self.confidence_interval_cumulative_density_ = None
-
+        self.confidence_interval_cumulative_density_ = 1 - self.confidence_interval_
+        """
         # estimation methods
         self._estimation_method = "survival_function_"
         self._estimate_name = "survival_function_"
@@ -352,9 +353,17 @@ class KaplanMeierFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(1 - self.predict(times), index=_to_1d_array(times), name=label)
 
+    def plot(self, **kwargs):
+        return self.plot_survival_function(**kwargs)
+
     def plot_survival_function(self, **kwargs):
         """Alias of ``plot``"""
-        return _plot_estimate(self, estimate="survival_function_", **kwargs)
+        if not CensoringType.is_interval_censoring(self):
+            return _plot_estimate(self, estimate="survival_function_", **kwargs)
+        else:
+            # hack for now.
+            color = coalesce(kwargs.get("c"), kwargs.get("color"), "k")
+            self.survival_function_.plot(drawstyle="steps", color=color, **kwargs)
 
     def plot_cumulative_density(self, **kwargs):
         """
