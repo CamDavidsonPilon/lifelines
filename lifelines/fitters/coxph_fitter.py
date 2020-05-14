@@ -15,7 +15,7 @@ from pandas import DataFrame, Series, Index
 from autograd import numpy as anp
 from autograd import elementwise_grad
 
-from lifelines.fitters import RegressionFitter, ParametricRegressionFitter
+from lifelines.fitters import RegressionFitter, SemiParametricRegressionFittter, ParametricRegressionFitter
 from lifelines.fitters.mixins import SplineFitterMixin, ProportionalHazardMixin
 from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
@@ -125,7 +125,7 @@ class _BatchVsSingle:
         return self.SINGLE
 
 
-class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
+class CoxPHFitter(SemiParametricRegressionFittter, ProportionalHazardMixin):
     r"""
     This class implements fitting Cox's proportional hazard model using Efron's method for ties.
 

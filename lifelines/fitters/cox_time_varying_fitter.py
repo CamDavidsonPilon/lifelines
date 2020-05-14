@@ -16,7 +16,7 @@ from autograd import elementwise_grad
 from autograd import numpy as anp
 
 
-from lifelines.fitters import RegressionFitter
+from lifelines.fitters import SemiParametricRegressionFittter
 from lifelines.fitters.mixins import ProportionalHazardMixin
 from lifelines.utils.printer import Printer
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
@@ -47,7 +47,7 @@ __all__ = ["CoxTimeVaryingFitter"]
 matrix_axis_0_sum_to_1d_array = lambda m: np.sum(m, 0)
 
 
-class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
+class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMixin):
     r"""
     This class implements fitting Cox's time-varying proportional hazard model:
 
@@ -173,9 +173,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
 
         if weights_col is None:
             self.weights_col = None
-            assert (
-                "__weights" not in df.columns
-            ), "__weights is an internal lifelines column, please rename your column first."
+            assert "__weights" not in df.columns, "__weights is an internal lifelines column, please rename your column first."
             df["__weights"] = 1.0
         else:
             self.weights_col = weights_col
@@ -217,9 +215,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         )
 
         self.params_ = pd.Series(params_, index=df.columns, name="coef") / self._norm_std
-        self.variance_matrix_ = pd.DataFrame(
-            -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=df.columns
-        )
+        self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=df.columns)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
         )
@@ -260,10 +256,9 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
             ), stratum
 
     def _partition_by_strata_and_apply(self, X, events, start, stop, weights, function, *args):
-        for (
-            (stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W),
-            _,
-        ) in self._partition_by_strata(X, events, start, stop, weights):
+        for ((stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W), _) in self._partition_by_strata(
+            X, events, start, stop, weights
+        ):
             yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
 
     def _compute_z_values(self):
@@ -375,9 +370,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
             i += 1
 
             if self.strata is None:
-                h, g, ll = self._get_gradients(
-                    df.values, events.values, start.values, stop.values, weights.values, beta
-                )
+                h, g, ll = self._get_gradients(df.values, events.values, start.values, stop.values, weights.values, beta)
             else:
                 g = np.zeros_like(beta)
                 h = np.zeros((d, d))
@@ -714,11 +707,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         degrees_freedom = self.params_.shape[0]
         p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
-            p_value,
-            test_stat,
-            name="log-likelihood ratio test",
-            degrees_freedom=degrees_freedom,
-            null_distribution="chi squared",
+            p_value, test_stat, name="log-likelihood ratio test", degrees_freedom=degrees_freedom, null_distribution="chi squared"
         )
 
     def plot(self, columns=None, ax=None, **errorbar_kwargs):
@@ -777,18 +766,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         return ax
 
-    def _compute_cumulative_baseline_hazard(
-        self, tv_data, events, start, stop, weights
-    ):  # pylint: disable=too-many-locals
+    def _compute_cumulative_baseline_hazard(self, tv_data, events, start, stop, weights):  # pylint: disable=too-many-locals
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             hazards = self.predict_partial_hazard(tv_data).values
 
         unique_death_times = np.unique(stop[events.values])
-        baseline_hazard_ = pd.DataFrame(
-            np.zeros_like(unique_death_times), index=unique_death_times, columns=["baseline hazard"]
-        )
+        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times), index=unique_death_times, columns=["baseline hazard"])
 
         for t in unique_death_times:
             ix = (start.values < t) & (t <= stop.values)

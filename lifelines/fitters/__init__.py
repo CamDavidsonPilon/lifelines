@@ -1214,6 +1214,15 @@ class RegressionFitter(BaseFitter):
         raise NotImplementedError()
 
 
+class SemiParametricRegressionFittter(RegressionFitter):
+    @property
+    def AIC_partial_(self) -> float:
+        """
+        "partial" because the log-likelihood is partial
+        """
+        return -2 * self.log_likelihood_ + 2 * self.params_.shape[0]
+
+
 class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
@@ -2481,6 +2490,10 @@ class ParametricRegressionFitter(RegressionFitter):
             del self._predicted_median
             return self.concordance_index_
         return self._concordance_index_
+
+    @property
+    def AIC_(self) -> float:
+        return -2 * self.log_likelihood_ + 2 * self.params_.shape[0]
 
 
 class ParametericAFTRegressionFitter(ParametricRegressionFitter):
