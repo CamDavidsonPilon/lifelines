@@ -29,54 +29,36 @@ def E_step_M_step(observation_intervals, p_old, turnball_interval_lookup):
     return p_new / N
 
 
-def heappop_(array):
-    return heappop(array)
-
-
 def create_turnball_intervals(left, right):
     """
-    find the set of innermost intervals
-
+    TIHI X 10000
     """
 
-    left, right = list(set(left)), list(set(right))
-    heapify(left)
-    heapify(right)
+    left = [[l, 0, "1l", i] for i, l in enumerate(left)]
+    right = [[r, 0, "0r", i] for i, r in enumerate(right)]
 
-    left_, right_ = heappop_(left), heappop_(right)
-    assert left_ <= right_
+    for l, r in zip(left, right):
+        if l[3] == r[3] and l[0] == r[0]:
+            l[1] -= 0.01
+            r[1] += 0.01
 
-    while True:
-        try:
-            # import pdb
-            # pdb.set_trace()
-            if left_ < right_:
-                left__ = heappop_(left)
-                while left__ < right_:
-                    left_ = left__
-                    left__ = heappop_(left)
-                yield interval(left_, right_)
+    import copy
 
-                left_ = left__
-                if left_ != right_:
-                    right_ = heappop_(right)
-                else:
-                    yield interval(left_, right_)
-                    right_ = heappop_(right)
+    union = sorted(left + right)
+    union_ = copy.deepcopy(union)
+    """
+    # fix ties
+    for k in range(len(union)-1):
+        e_, e__ = union[k], union[k+1]
+        if e_[2] == "1l" and e__[2] == "0r" and e_[0] == e__[0]:
+            union_[k][1] += 0.01
+    """
+    union = sorted(union_)
 
-            elif left_ > right_:
-                while right_ <= left_:
-                    right_ = heappop_(right)
-
-                yield interval(left_, right_)
-                left_, right_ = heappop_(left), heappop_(right)
-
-            elif left_ == right_:
-                yield interval(left_, right_)
-                right_ = heappop_(right)
-        except IndexError:
-            yield interval(left_, right_)
-            break
+    for k in range(len(union) - 1):
+        e_, e__ = union[k], union[k + 1]
+        if e_[2] == "1l" and e__[2] == "0r":
+            yield interval(e_[0], e__[0])
 
 
 def is_subset(query_interval, super_interval):
@@ -118,7 +100,8 @@ def npmle(left, right):
     ix = np.lexsort((right, left))
     left = left[ix]
     right = right[ix]
-    turnball_intervals = list(create_turnball_intervals(left, right))  # fix this set problem
+
+    turnball_intervals = list(create_turnball_intervals(left, right))
     observation_intervals = create_observation_intervals(left, right)
     turnball_lookup = create_turnball_lookup(turnball_intervals, sorted(set(observation_intervals)))
 
@@ -158,7 +141,7 @@ def reconstruct_survival_function(probabilities, turnball_intervals, timeline):
     return dataframe
 
 
-def compute_confidence_intervals(left, right, mle_, alpha=0.05, samples=10):
+def compute_confidence_intervals(left, right, mle_, alpha=0.05, samples=1000):
     """
     uses basic bootstrap
     """
@@ -177,8 +160,8 @@ def compute_confidence_intervals(left, right, mle_, alpha=0.05, samples=10):
         bootstrapped_samples[:, i] = reconstruct_survival_function(*npmle(left_, right_), all_times).values[:, 0]
 
     return (
-        2 * mle_.squeeze() - pd.Series(np.percentile(bootstraps, alpha / 2 * 100, axis=1), index=all_times),
-        2 * mle_.squeeze() - pd.Series(np.percentile(bootstraps, (1 - alpha / 2) * 100, axis=1), index=all_times),
+        2 * mle_.squeeze() - pd.Series(np.percentile(bootstrapped_samples, (alpha / 2) * 100, axis=1), index=all_times),
+        2 * mle_.squeeze() - pd.Series(np.percentile(bootstrapped_samples, (1 - alpha / 2) * 100, axis=1), index=all_times),
     )
 
 
@@ -186,7 +169,10 @@ from lifelines.datasets import load_diabetes
 
 data = load_diabetes()
 
-left, right = list(data["left"]), list(data["right"])
+
+left = [1, 7, 8, 7, 7, 17, 37, 46, 46, 45]
+right = [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+
 results = npmle(left, right)
 
 
