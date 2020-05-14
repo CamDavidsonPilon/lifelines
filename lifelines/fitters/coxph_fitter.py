@@ -1350,8 +1350,21 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             ]
         )
 
-        p = Printer(self, headers, justify, decimals, kwargs)
+        sr = self.log_likelihood_ratio_test()
+        footers = []
+        footers.extend(
+            [
+                ("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)),
+                ("Partial AIC", "{:.{prec}f}".format(self.AIC_partial_, prec=decimals)),
+                (
+                    "log-likelihood ratio test",
+                    "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
+                ),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
+            ]
+        )
 
+        p = Printer(self, headers, footers, justify, decimals, kwargs)
         p.print(style=style)
 
     def _trivial_log_likelihood(self):

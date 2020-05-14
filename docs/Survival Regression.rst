@@ -103,7 +103,9 @@ The implementation of the Cox model in *lifelines* is under :class:`~lifelines.f
     prio  3.19 <0.005       9.48
     ---
     Concordance = 0.64
-    Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
+    Partial AIC = 1331.50
+    log-likelihood ratio test = 33.27 on 7 df
+    -log2(p) of ll-ratio test = 15.37
     """
 
 To access the coefficients and the baseline hazard directly, you can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.params_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` respectively. Taking a look at these coefficients for a moment, ``prio`` (the number of prior arrests) has a coefficient of about 0.09. Thus, a one unit increase in ``prio`` means the the baseline hazard will increase by a factor of :math:`\exp{(0.09)} = 1.10` - about a 10% increase. Recall, in the Cox proportional hazard model, a higher hazard means more at risk of the event occurring. The value :math:`\exp{(0.09)}` is called the *hazard ratio*, a name that will be clear with another example.
@@ -181,7 +183,7 @@ Back to our original problem of predicting the event time of censored individual
 Penalties and sparse regression
 -----------------------------------------------
 
-It's possible to add a penalizer term to the Cox regression as well. One can use these to i) stabilize the coefficients, ii) shrink the estimates to 0, iii) encourages a Bayesian interpretation, and iv) create sparse coefficients. Regression models, including the Cox model, include both an L1 and L2 penalty:
+It's possible to add a penalizer term to the Cox regression as well. One can use these to i) stabilize the coefficients, ii) shrink the estimates to 0, iii) encourages a Bayesian viewpoint, and iv) create sparse coefficients. Regression models, including the Cox model, include both an L1 and L2 penalty:
 
 .. math:: \frac{1}{2} \text{penalizer} \left((1-\text{l1\_ratio}) \cdot ||\beta||_2^2 + \text{l1\_ratio} \cdot ||\beta||_1\right)
 
@@ -202,6 +204,29 @@ To use this in *lifelines*, both the ``penalizer`` and ``l1_ratio`` can be speci
     cph = CoxPHFitter(penalizer=0.1, l1_ratio=1.0) # sparse solutions,
     cph.fit(rossi, 'week', 'arrest')
     cph.print_summary()
+
+
+Instead of a float, an *array* can be provided that is the same size as the number of estimated parameters. The values in the array
+are specific penalty coefficients for each covariate. This is useful for more complicated covariate structure. Some examples:
+
+i) you have lots of confounders you wish to penalizer, but not the main treatment(s).
+
+.. code:: python
+
+    from lifelines import CoxPHFitter
+    from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    # variable `fin` is the treatment of interest so don't penalize it at all
+    penalty = np.array([0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
+
+    cph = CoxPHFitter(penalizer=penalty)
+    cph.fit(rossi, 'week', 'arrest')
+    cph.print_summary()
+
+ii) you have to `fuse categories together <https://stats.stackexchange.com/questions/146907/principled-way-of-collapsing-categorical-variables-with-many-levels>`_.
+
 
 
 Plotting the coefficients
@@ -300,15 +325,7 @@ To specify variables to be used in stratification, we define them in the call to
 
 .. code:: python
 
-    from lifelines.datasets import load_rossi
-    from lifelines import CoxPHFitter
-
-    rossi_dataset = load_rossi()
-    cph = CoxPHFitter()
-    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
-
-    cph.print_summary()  # access the results using cph.summary
-
+p
     """
     <lifelines.CoxPHFitter: fitted with 432 observations, 318 censored>
           duration col = 'week'
@@ -328,8 +345,10 @@ To specify variables to be used in stratification, we define them in the call to
     paro -0.09       0.92      0.20 -0.44   0.66      0.60       -0.47        0.30
     prio  0.09       1.10      0.03  3.21 <0.005      9.56        0.04        0.15
     ---
-    Concordance = 0.64
-    Likelihood ratio test = 109.63 on 6 df, -log2(p)=68.48
+    Concordance = 0.63
+    Partial AIC = 1253.13
+    log-likelihood ratio test = 32.73 on 6 df
+    -log2(p) of ll-ratio test = 16.37
     """
 
     cph.baseline_cumulative_hazard_.shape
@@ -492,7 +511,9 @@ The Weibull AFT model is implemented under :class:`~lifelines.fitters.weibull_af
     rho_    _intercept  0.339      1.404     0.089  3.809 <0.0005    12.808       0.165       0.514
     ---
     Concordance = 0.640
-    Log-likelihood ratio test = 33.416 on 7 df, -log2(p)=15.462
+    AIC = 1377.833
+    log-likelihood ratio test = 33.416 on 7 df
+    -log2(p) of ll-ratio test = 15.462
     """
 
 From above, we can see that ``prio``, which is the number of previous incarcerations, has a large negative coefficient. This means that each addition incarcerations changes a subject's mean/median survival time by :math:`\exp(-0.066) = 0.936`, approximately a 7% decrease in mean/median survival time. What is the mean/median survival time?
@@ -646,7 +667,7 @@ When predicting time remaining for uncensored individuals, you can use the `cond
     aft.predict_percentile(X, p=0.9, ancillary_df=censored_X, conditional_after=censored_subjects_last_obs)
 
 
-There are two hyper-parameters that can be used to to achieve a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_.
+There are two hyper-parameters that can be used to to achieve a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_. (However, *lifelines* will also accept an array for custom penalizer per variable, see `Cox docs above <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#penalties-and-sparse-regression>`_)
 
 .. code:: python
 
@@ -680,8 +701,10 @@ There are two hyper-parameters that can be used to to achieve a better test scor
             _intercept  0.00       1.00      0.19  0.00   1.00      0.00       -0.38        0.38
     rho_    _intercept -0.00       1.00       nan   nan    nan       nan         nan         nan
     ---
-    Concordance = 0.60
-    Log-likelihood ratio test = -4028.65 on 7 df, -log2(p)=-0.00
+    Concordance = 0.64
+    AIC = 1377.91
+    log-likelihood ratio test = 33.34 on 7 df
+    -log2(p) of ll-ratio test = 15.42
     """
 
 
