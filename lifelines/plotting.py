@@ -732,7 +732,7 @@ def _plot_estimate(
 ):
 
     """
-    Plots a pretty figure of estimates
+    Plots a pretty figure of {0}.{1}
 
     Matplotlib plot arguments can be passed in inside the kwargs, plus
 
