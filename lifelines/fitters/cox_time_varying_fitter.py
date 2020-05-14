@@ -86,9 +86,6 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio: float = 0.0, strata=None):
         super(CoxTimeVaryingFitter, self).__init__(alpha=alpha)
-        if penalizer < 0:
-            raise ValueError("penalizer parameter must be >= 0.")
-
         self.alpha = alpha
         self.penalizer = penalizer
         self.strata = strata
@@ -339,13 +336,14 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         assert precision <= 1.0, "precision must be less than or equal to 1."
 
         # soft penalizer functions, from https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
-        # soft penalizer functions, from https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
         penalizer = (
             lambda beta, a: n
             * 0.5
-            * self.penalizer
-            * (self.l1_ratio * soft_abs(beta, a).sum() + (1 - self.l1_ratio) * ((beta) ** 2).sum())
+            * (
+                self.l1_ratio * (self.penalizer * soft_abs(beta, a)).sum()
+                + (1 - self.l1_ratio) * (self.penalizer * beta ** 2).sum()
+            )
         )
         d_penalizer = elementwise_grad(penalizer)
         dd_penalizer = elementwise_grad(d_penalizer)
@@ -388,7 +386,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
                 # if the user supplied a non-trivial initial point, we need to delay this.
                 self._log_likelihood_null = ll
 
-            if self.penalizer > 0:
+            if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
                 ll -= penalizer(beta, 1.5 ** i)
                 g -= d_penalizer(beta, 1.5 ** i)
                 h[np.diag_indices(d)] -= dd_penalizer(beta, 1.5 ** i)
@@ -653,7 +651,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             headers.append(("event col", "'%s'" % self.event_col))
         if self.weights_col:
             headers.append(("weights col", "'%s'" % self.weights_col))
-        if self.penalizer > 0:
+        if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
         if self.strata:
             headers.append(("strata", self.strata))

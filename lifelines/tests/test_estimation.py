@@ -1481,6 +1481,21 @@ class TestParametricRegressionFitter:
         rossi["_int"] = 1.0
         return rossi
 
+    def test_penalizer_can_be_an_array(self, rossi):
+
+        wf_array = WeibullAFTFitter(penalizer=0.01 * np.ones(7)).fit(rossi, "week", "arrest")
+        wf_float = WeibullAFTFitter(penalizer=0.01).fit(rossi, "week", "arrest")
+
+        assert_frame_equal(wf_array.summary, wf_float.summary)
+
+    def test_penalizer_can_be_an_array_and_check_it_behaves_as_expected(self, rossi):
+
+        penalty = np.array([0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01])
+        wf_array = WeibullAFTFitter(penalizer=penalty).fit(rossi, "week", "arrest")
+        wf_float = WeibullAFTFitter(penalizer=0.01).fit(rossi, "week", "arrest")
+
+        assert abs(wf_array.summary.loc[("lambda_", "fin"), "coef"]) > abs(wf_float.summary.loc[("lambda_", "fin"), "coef"])
+
     def test_custom_weibull_model_gives_the_same_data_as_implemented_weibull_model(self, rossi):
         class CustomWeibull(ParametricRegressionFitter):
             _scipy_fit_method = "SLSQP"
@@ -2533,6 +2548,21 @@ class TestCoxPHFitter:
     @pytest.fixture
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline")
+
+    def test_penalizer_can_be_an_array(self, rossi):
+
+        cph_array = CoxPHFitter(penalizer=0.01 * np.ones(7)).fit(rossi, "week", "arrest")
+        cph_float = CoxPHFitter(penalizer=0.01).fit(rossi, "week", "arrest")
+
+        assert_frame_equal(cph_array.summary, cph_float.summary)
+
+    def test_penalizer_can_be_an_array_and_check_it_behaves_as_expected(self, rossi):
+
+        penalty = np.array([0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01])
+        cph_array = CoxPHFitter(penalizer=penalty).fit(rossi, "week", "arrest")
+        cph_float = CoxPHFitter(penalizer=0.01).fit(rossi, "week", "arrest")
+
+        assert abs(cph_array.summary.loc["fin", "coef"]) > abs(cph_float.summary.loc["fin", "coef"])
 
     def test_compute_followup_hazard_ratios(self, cph, cph_spline, rossi):
         cph.fit(rossi, "week", "arrest")
@@ -4352,6 +4382,29 @@ class TestCoxTimeVaryingFitter:
     @pytest.fixture()
     def heart(self):
         return load_stanford_heart_transplants()
+
+    def test_penalizer_can_be_an_array(self, dfcv):
+
+        cph_array = CoxTimeVaryingFitter(penalizer=0.01 * np.ones(2)).fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+        cph_float = CoxTimeVaryingFitter(penalizer=0.01).fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+
+        assert_frame_equal(cph_array.summary, cph_float.summary)
+
+    def test_penalizer_can_be_an_array_and_check_it_behaves_as_expected(self, dfcv):
+
+        penalty = np.array([0, 0.01])
+        cph_array = CoxTimeVaryingFitter(penalizer=penalty).fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+        cph_float = CoxTimeVaryingFitter(penalizer=0.01).fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+
+        assert abs(cph_array.summary.loc["z", "coef"]) > abs(cph_float.summary.loc["z", "coef"])
 
     def test_model_can_accept_null_covariates(self, ctv, dfcv):
         ctv.fit(dfcv[["id", "start", "stop", "event"]], id_col="id", start_col="start", stop_col="stop", event_col="event")

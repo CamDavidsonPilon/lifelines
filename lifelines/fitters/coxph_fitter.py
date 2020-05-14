@@ -143,11 +143,14 @@ class CoxPHFitter(SemiParametricRegressionFittter, ProportionalHazardMixin):
       baseline_estimation_method: string, optional
         specify how the fitter should estimate the baseline. ``"breslow"`` or ``"spline"``
 
-      penalizer: float, optional (default=0.0)
+      penalizer: float or array, optional (default=0.0)
         Attach a penalty to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the magnitude value of :math:`\beta_i`. See ``l1_ratio`` below.
         The penalty term is :math:`\frac{1}{2} \text{penalizer} \left( (1-\text{l1_ratio}) ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
+
+        Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
+        example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
 
       l1_ratio: float, optional (default=0.0)
         Specify what ratio to assign to a L1 vs L2 penalty. Same as scikit-learn. See ``penalizer`` above.
@@ -202,7 +205,7 @@ class CoxPHFitter(SemiParametricRegressionFittter, ProportionalHazardMixin):
     def __init__(
         self,
         baseline_estimation_method: str = "breslow",
-        penalizer: float = 0.0,
+        penalizer: Union[float, np.ndarray] = 0.0,
         strata: Optional[Union[List[str], str]] = None,
         l1_ratio: float = 0.0,
         n_baseline_knots: int = 1,
@@ -210,8 +213,7 @@ class CoxPHFitter(SemiParametricRegressionFittter, ProportionalHazardMixin):
     ) -> None:
 
         super(CoxPHFitter, self).__init__(**kwargs)
-        if penalizer < 0:
-            raise ValueError("penalizer parameter must be >= 0.")
+
         if l1_ratio < 0 or l1_ratio > 1:
             raise ValueError("l1_ratio parameter must in [0, 1].")
 
@@ -555,8 +557,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         penalizer = (
             lambda beta, a: n
             * 0.5
-            * self.penalizer
-            * (self.l1_ratio * soft_abs(beta, a).sum() + (1 - self.l1_ratio) * ((beta) ** 2).sum())
+            * (
+                self.l1_ratio * (self.penalizer * soft_abs(beta, a)).sum()
+                + (1 - self.l1_ratio) * (self.penalizer * beta ** 2).sum()
+            )
         )
         d_penalizer = elementwise_grad(penalizer)
         dd_penalizer = elementwise_grad(d_penalizer)
@@ -605,7 +609,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 # if the user supplied a non-trivial initial point, we need to delay this.
                 self._ll_null_ = ll_
 
-            if self.penalizer > 0:
+            if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
                 ll_ -= penalizer(beta, 1.3 ** i)
                 g -= d_penalizer(beta, 1.3 ** i)
                 h[np.diag_indices(d)] -= dd_penalizer(beta, 1.3 ** i)
@@ -1323,7 +1327,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             headers.append(("weights col", "'%s'" % self.weights_col))
         if self.cluster_col:
             headers.append(("cluster col", "'%s'" % self.cluster_col))
-        if self.penalizer > 0:
+        if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
             headers.append(("l1 ratio", self.l1_ratio))
         if self.robust or self.cluster_col:

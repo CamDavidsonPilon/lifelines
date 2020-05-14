@@ -1228,7 +1228,7 @@ class ParametricRegressionFitter(RegressionFitter):
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
 
-    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0):
+    def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha)
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
@@ -1744,13 +1744,18 @@ class ParametricRegressionFitter(RegressionFitter):
         params_array, _ = flatten(params)
         # remove intercepts from being penalized
         params_array = params_array[~self._constant_cols]
-        if self.penalizer > 0 and self.l1_ratio > 0:
-            penalty = self.l1_ratio * anp.abs(params_array).sum() + 0.5 * (1.0 - self.l1_ratio) * (params_array ** 2).sum()
-        elif self.penalizer > 0 and self.l1_ratio <= 0:
-            penalty = 0.5 * (params_array ** 2).sum()
+        if (isinstance(self.penalizer, np.ndarray) or self.penalizer > 0) and self.l1_ratio > 0:
+            penalty = (
+                self.l1_ratio * (self.penalizer * anp.abs(params_array)).sum()
+                + 0.5 * (1.0 - self.l1_ratio) * (self.penalizer * (params_array) ** 2).sum()
+            )
+
+        elif (isinstance(self.penalizer, np.ndarray) or self.penalizer > 0) and self.l1_ratio <= 0:
+            penalty = 0.5 * (self.penalizer * (params_array) ** 2).sum()
+
         else:
             penalty = 0
-        return neg_ll + self.penalizer * penalty
+        return neg_ll + penalty
 
     def _create_neg_likelihood_with_penalty_function(
         self, params_array, Ts, E, weights, entries, Xs, likelihood=None, penalty=None
@@ -2096,7 +2101,7 @@ class ParametricRegressionFitter(RegressionFitter):
             headers.append(("weights col", "'%s'" % self.weights_col))
         if self.entry_col:
             headers.append(("entry col", "'%s'" % self.entry_col))
-        if self.penalizer > 0:
+        if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
         if self.robust:
             headers.append(("robust variance", True))

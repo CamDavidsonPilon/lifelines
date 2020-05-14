@@ -58,7 +58,10 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
     -----------
     alpha: float, optional (default=0.05)
         the level in the confidence intervals.
-
+    penalizer: float or array, optional (default=0.0)
+        the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
+        Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
+        example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
 
     Examples
     --------
@@ -126,9 +129,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
             # we may use this later in print_summary
             self._ll_null_ = uni_model.log_likelihood_
 
-            default_point = super(GeneralizedGammaRegressionFitter, self)._create_initial_point(
-                Ts, E, entries, weights, Xs
-            )
+            default_point = super(GeneralizedGammaRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)
             nested_point = {}
 
             nested_point["mu_"] = np.array([0.0] * (len(Xs.mappings["mu_"])))

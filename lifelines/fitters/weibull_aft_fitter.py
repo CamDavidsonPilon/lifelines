@@ -43,8 +43,10 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
     fit_intercept: boolean, optional (default=True)
         Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
 
-    penalizer: float, optional (default=0.0)
+    penalizer: float or array, optional (default=0.0)
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
+        Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
+        example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
 
     l1_ratio: float, optional (default=0.0)
         how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
