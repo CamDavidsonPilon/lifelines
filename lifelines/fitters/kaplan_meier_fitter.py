@@ -17,8 +17,11 @@ from lifelines.utils import (
     StatisticalWarning,
     coalesce,
     CensoringType,
+    pass_for_numeric_dtypes_or_raise_array,
+    check_nans_or_infs,
 )
 from lifelines.plotting import loglogs_plot, _plot_estimate
+from lifelines.fitters.npmle import npmle, reconstruct_survival_function, npmle_compute_confidence_intervals
 
 
 class KaplanMeierFitter(UnivariateFitter):
@@ -112,6 +115,62 @@ class KaplanMeierFitter(UnivariateFitter):
 
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
+    @CensoringType.interval_censoring
+    def fit_interval_censoring(
+        self,
+        lower_bound,
+        upper_bound,
+        event_observed=None,
+        timeline=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        show_progress=False,
+        entry=None,
+        weights=None,
+        tol=1e-5,
+    ) -> "KaplanMeierFitter":
+
+        if entry is not None or weights is not None:
+            raise NotImplementedError("entry / weights is not supported yet")
+
+        self.upper_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(upper_bound))
+        self.lower_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(lower_bound))
+        check_nans_or_infs(self.lower_bound)
+
+        self.timeline = coalesce(timeline, np.unique(np.concatenate((self.upper_bound, self.lower_bound))))
+
+        if (self.upper_bound < self.lower_bound).any():
+            raise ValueError("All upper_bound times must be greater than or equal to lower_bound times.")
+
+        if event_observed is None:
+            event_observed = self.upper_bound == self.lower_bound
+
+        if ((self.lower_bound == self.upper_bound) != event_observed).any():
+            raise ValueError(
+                "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
+            )
+
+        self._label = coalesce(label, self._label, "KM_estimate")
+
+        probs, t_intervals = npmle(self.lower_bound, self.upper_bound, verbose=show_progress)
+        self.survival_function_ = reconstruct_survival_function(probs, t_intervals, self.timeline, label=self._label)
+        self.cumulative_density_ = 1 - self.survival_function_
+
+        self._median = median_survival_times(self.survival_function_)
+        self.percentile = functools.partial(qth_survival_time, model_or_survival_function=self.survival_function_)
+
+        """
+        self.confidence_interval_ = npmle_compute_confidence_intervals(self.lower_bound, self.upper_bound, self.survival_function_, self.alpha)
+        self.confidence_interval_survival_function_ = self.confidence_interval_
+        self.confidence_interval_cumulative_density_ = 1 - self.confidence_interval_
+        """
+        # estimation methods
+        self._estimation_method = "survival_function_"
+        self._estimate_name = "survival_function_"
+        self._update_docstrings()
+        return self
+
     @CensoringType.left_censoring
     def fit_left_censoring(
         self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
@@ -147,6 +206,7 @@ class KaplanMeierFitter(UnivariateFitter):
           self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
 
         """
+        # left censoring is then defined in CensoringType.is_left_censoring(self)
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
     def _fit(
@@ -293,9 +353,17 @@ class KaplanMeierFitter(UnivariateFitter):
         label = coalesce(label, self._label)
         return pd.Series(1 - self.predict(times), index=_to_1d_array(times), name=label)
 
+    def plot(self, **kwargs):
+        return self.plot_survival_function(**kwargs)
+
     def plot_survival_function(self, **kwargs):
         """Alias of ``plot``"""
-        return _plot_estimate(self, estimate="survival_function_", **kwargs)
+        if not CensoringType.is_interval_censoring(self):
+            return _plot_estimate(self, estimate="survival_function_", **kwargs)
+        else:
+            # hack for now.
+            color = coalesce(kwargs.get("c"), kwargs.get("color"), "k")
+            self.survival_function_.plot(drawstyle="steps", color=color, **kwargs)
 
     def plot_cumulative_density(self, **kwargs):
         """
