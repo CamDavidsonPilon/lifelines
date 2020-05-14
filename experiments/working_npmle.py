@@ -3,7 +3,6 @@ from matplotlib import pyplot as plt
 from collections import defaultdict, namedtuple
 from numpy.linalg import norm
 
-# use NamedTuples for intervals
 interval = namedtuple("Interval", ["left", "right"])
 
 
@@ -34,18 +33,18 @@ def create_turnball_intervals(left, right):
     TIHI X 10000
     """
 
-    left = [[l, 0, "1l", i] for i, l in enumerate(left)]
-    right = [[r, 0, "0r", i] for i, r in enumerate(right)]
+    left = [[l, 0, "1l"] for l in left]
+    right = [[r, 0, "0r"] for r in right]
 
     for l, r in zip(left, right):
-        if l[3] == r[3] and l[0] == r[0]:
+        if l[0] == r[0]:
             l[1] -= 0.01
             r[1] += 0.01
 
     import copy
 
-    union = sorted(left + right)
-    union_ = copy.deepcopy(union)
+    union = sorted(list(left) + list(right))
+
     """
     # fix ties
     for k in range(len(union)-1):
@@ -53,12 +52,14 @@ def create_turnball_intervals(left, right):
         if e_[2] == "1l" and e__[2] == "0r" and e_[0] == e__[0]:
             union_[k][1] += 0.01
     """
-    union = sorted(union_)
+    intervals = []
 
     for k in range(len(union) - 1):
         e_, e__ = union[k], union[k + 1]
         if e_[2] == "1l" and e__[2] == "0r":
-            yield interval(e_[0], e__[0])
+            intervals.append(interval(e_[0], e__[0]))
+
+    return sorted(set(intervals))
 
 
 def is_subset(query_interval, super_interval):
@@ -130,8 +131,11 @@ def reconstruct_survival_function(probabilities, turnball_intervals, timeline):
             index.append(interval.left)
             values.append(values[-1])
 
-        index.append(interval.right)
-        values.append(values[-1] - p)
+        if interval.left == interval.right:
+            values[-1] -= p
+        else:
+            index.append(interval.right)
+            values.append(values[-1] - p)
 
     full_dataframe = pd.DataFrame(index=timeline, columns=["survival function"])
 
@@ -173,9 +177,11 @@ data = load_diabetes()
 left = [1, 7, 8, 7, 7, 17, 37, 46, 46, 45]
 right = [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
 
+# left, right = data['left'], data['right']
+
 results = npmle(left, right)
 
 
 timeline = np.unique(np.concatenate((left, right, [np.inf, 0])))
 df = reconstruct_survival_function(*results, timeline)
-CIs = compute_confidence_intervals(left, right, df)
+# CIs = compute_confidence_intervals(left, right, df)
