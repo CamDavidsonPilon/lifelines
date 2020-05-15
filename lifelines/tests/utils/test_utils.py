@@ -1079,7 +1079,7 @@ def test_find_best_parametric_model_works_for_interval_censoring():
 
 
 def test_find_best_parametric_model_works_with_weights_and_entry():
-    T = np.random.exponential(2, 100)
+    T = np.random.exponential(5, 100)
     W = np.random.randint(1, 5, size=100)
     entry = np.random.exponential(0.01, 100)
     model, score = utils.find_best_parametric_model(T, weights=W, entry=entry, show_progress=True)

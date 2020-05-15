@@ -670,7 +670,6 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         footers = []
         footers.extend(
             [
-                ("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)),
                 ("Partial AIC", "{:.{prec}f}".format(self.AIC_partial_, prec=decimals)),
                 (
                     "log-likelihood ratio test",

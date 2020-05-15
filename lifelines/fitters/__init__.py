@@ -46,6 +46,7 @@ class BaseFitter:
         self.alpha = alpha
         self._class_name = self.__class__.__name__
         self._label = label
+        self._censoring_type = None
 
     def __repr__(self) -> str:
         classname = self._class_name
@@ -487,10 +488,12 @@ class ParametricUnivariateFitter(UnivariateFitter):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            minimizing_results, minimizing_ll = None, np.inf
-            for method in [self._scipy_fit_method, "Nelder-Mead"]:
+            minimizing_results, previous_results, minimizing_ll = None, None, np.inf
+            for method, option in zip(
+                ["Nelder-Mead", self._scipy_fit_method], [{"maxiter": 25}, {**{"disp": show_progress}, **self._scipy_fit_options}]
+            ):
 
-                initial_value = self._initial_values if minimizing_results is None else utils._to_1d_array(minimizing_results.x)
+                initial_value = self._initial_values if previous_results is None else utils._to_1d_array(previous_results.x)
 
                 results = minimize(
                     value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
@@ -499,15 +502,18 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     method=method,
                     args=(Ts, E, entry, weights),
                     bounds=self._bounds,
-                    options={**{"disp": show_progress}, **self._scipy_fit_options},
+                    options=option,
                 )
+                previous_results = results
 
-                if results.success and (results.fun < minimizing_ll):
+                if results.success and ~np.isnan(results.x).any() and (results.fun < minimizing_ll):
                     minimizing_ll = results.fun
                     minimizing_results = results
 
             # convergence successful.
-            if minimizing_results and minimizing_results.success:
+            # I still need to check for ~np.isnan(minimizing_results.x).any() since minimize will happily
+            # return nans even when criteria is satisified.
+            if minimizing_results and minimizing_results.success and ~np.isnan(minimizing_results.x).any():
                 sol = utils._to_1d_array(minimizing_results.x)
                 # pylint: disable=no-value-for-parameter
                 hessian_ = hessian(negative_log_likelihood)(sol, Ts, E, entry, weights)
@@ -516,7 +522,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 return sol, -minimizing_results.fun * weights.sum(), hessian_ * weights.sum()
 
             # convergence failed.
-            print(minimizing_results)
+            if show_progress:
+                print(minimizing_results)
             if self._KNOWN_MODEL:
                 raise utils.ConvergenceError(
                     dedent(
@@ -631,6 +638,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     ),
                 ),
             ],
+            [],
             justify,
             decimals,
             kwargs,
@@ -2117,9 +2125,12 @@ class ParametricRegressionFitter(RegressionFitter):
 
         sr = self.log_likelihood_ratio_test()
         footers = []
+
+        if CensoringType.is_right_censoring(self):
+            footers.apoend(("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)))
+
         footers.extend(
             [
-                ("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)),
                 ("AIC", "{:.{prec}f}".format(self.AIC_, prec=decimals)),
                 (
                     "log-likelihood ratio test",
