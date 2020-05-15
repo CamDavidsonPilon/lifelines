@@ -1065,6 +1065,27 @@ def test_find_best_parametric_model_with_BIC():
     assert True
 
 
+def test_find_best_parametric_model_works_for_left_censoring():
+    T = np.random.exponential(2, 100)
+    model, score = utils.find_best_parametric_model(T, censoring_type="left", show_progress=True)
+    assert True
+
+
+def test_find_best_parametric_model_works_for_interval_censoring():
+    T_1 = np.random.exponential(2, 100)
+    T_2 = T_1 + 1
+    model, score = utils.find_best_parametric_model((T_1, T_2), censoring_type="interval", show_progress=True)
+    assert True
+
+
+def test_find_best_parametric_model_works_with_weights_and_entry():
+    T = np.random.exponential(2, 100)
+    W = np.random.randint(1, 5, size=100)
+    entry = np.random.exponential(0.01, 100)
+    model, score = utils.find_best_parametric_model(T, weights=W, entry=entry, show_progress=True)
+    assert True
+
+
 def test_safe_exp():
     from lifelines.utils.safe_exp import MAX
 
