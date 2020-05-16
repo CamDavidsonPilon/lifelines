@@ -218,8 +218,8 @@ class TestPlotting:
 
     def test_kmf_with_interval_censoring_plotting(self, block):
         kmf = KaplanMeierFitter()
-        left, right = load_diabetes()[["left", "right"]]
-        kmf.fit(left, right)
+        left, right = load_diabetes()["left"], load_diabetes()["right"]
+        kmf.fit_interval_censoring(left, right)
         kmf.plot(color="r")
         self.plt.show(block=block)
         return

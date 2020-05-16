@@ -260,6 +260,9 @@ class TestParametricUnivariateFitters:
         T = np.maximum(T1, T2)
 
         for fitter in known_parametric_univariate_fitters:
+            if isinstance(fitter(), PiecewiseExponentialFitterTesting):
+                # not a good model since the "break" is at 5.
+                continue
             fitter().fit_left_censoring(T, E)
 
     def test_parametric_univariate_fitters_can_print_summary(
@@ -383,7 +386,8 @@ class TestUnivariateFitters:
             assert f().alpha == 0.05
 
     def test_univariate_fitters_accept_late_entries(self, positive_sample_lifetimes, univariate_fitters):
-        entries = 0.1 * positive_sample_lifetimes[0]
+        positive_sample_lifetimes = positive_sample_lifetimes
+        entries = positive_sample_lifetimes[0] - 3
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0], entry=entries)
             assert f.entry is not None
@@ -3124,26 +3128,38 @@ class TestCoxPHFitter:
                     repr(cph)
                     + "\n"
                     + """
-      duration col = week
-         event col = arrest
-number of subjects = 432
-  number of events = 114
-    log-likelihood = -658.748
-  time fit was run = 2018-10-23 02:40:45 UTC
+<lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
+             duration col = 'week'
+                event col = 'arrest'
+      baseline estimation = breslow
+   number of observations = 432
+number of events observed = 114
+   partial log-likelihood = -658.75
+         time fit was run = 2018-10-23 02:40:45 UTC
 
 ---
-        coef  exp(coef)  se(coef)       z      p  coef lower 95%  coef upper 95%
-fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043
-age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143
-race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
-wexp -0.1498     0.8609    0.2122 -0.7058 0.4803     -0.5657      0.2662
-mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
-paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
-prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476
----
+       coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+fin   -0.38       0.68       0.19            -0.75            -0.00                 0.47                 1.00
+age   -0.06       0.94       0.02            -0.10            -0.01                 0.90                 0.99
+race   0.31       1.37       0.31            -0.29             0.92                 0.75                 2.50
+wexp  -0.15       0.86       0.21            -0.57             0.27                 0.57                 1.30
+mar   -0.43       0.65       0.38            -1.18             0.31                 0.31                 1.37
+paro  -0.08       0.92       0.20            -0.47             0.30                 0.63                 1.35
+prio   0.09       1.10       0.03             0.04             0.15                 1.04                 1.16
 
-Concordance = 0.640
-Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
+         z      p   -log2(p)
+fin  -1.98   0.05       4.40
+age  -2.61   0.01       6.79
+race  1.02   0.31       1.70
+wexp -0.71   0.48       1.06
+mar  -1.14   0.26       1.97
+paro -0.43   0.66       0.59
+prio  3.19 <0.005       9.48
+---
+Concordance = 0.64
+Partial AIC = 1331.50
+log-likelihood ratio test = 33.27 on 7 df
+-log2(p) of ll-ratio test = 15.37
 """
                 )
                 .strip()
@@ -4949,22 +4965,30 @@ class TestCoxTimeVaryingFitter:
                     repr(ctv)
                     + "\n"
                     + """
-         event col = event
+<lifelines.CoxTimeVaryingFitter: fitted with 172 periods, 103 subjects, 75 events>
+         event col = 'event'
 number of subjects = 103
  number of periods = 172
   number of events = 75
-    log-likelihood = -290.566
+partial log-likelihood = -290.57
   time fit was run = 2018-10-23 02:41:45 UTC
 
 ---
-              coef  exp(coef)  se(coef)       z      p  coef lower 95%  coef upper 95%
-age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540
-year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082
-surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825
-transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
----
+             coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+age          0.03       1.03       0.01             0.00             0.05                 1.00                 1.06
+year        -0.15       0.86       0.07            -0.28            -0.01                 0.75                 0.99
+surgery     -0.64       0.53       0.37            -1.36             0.08                 0.26                 1.09
+transplant  -0.01       0.99       0.31            -0.63             0.60                 0.54                 1.83
 
-Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
+               z    p   -log2(p)
+age         1.98 0.05       4.39
+year       -2.08 0.04       4.72
+surgery    -1.74 0.08       3.60
+transplant -0.03 0.97       0.04
+---
+Partial AIC = 589.13
+log-likelihood ratio test = 15.11 on 4 df
+-log2(p) of ll-ratio test = 7.80
 """
                 )
                 .strip()
@@ -5169,4 +5193,4 @@ class TestMixtureCureFitter:
         wmc.fit(T, E)
         mcfitter.fit(T, E)
 
-        assert abs(wmc.c_ - mcfitter.cured_fraction_) < 0.001
+        assert_frame_equal(wmc.summary.reset_index(drop=True), mcfitter.summary.reset_index(drop=True), check_less_precise=0)
