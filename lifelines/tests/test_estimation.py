@@ -228,6 +228,14 @@ class TestParametricUnivariateFitters:
         assert coef - std > lower
         assert coef + std < upper
 
+    def test_AIC_on_models(self, known_parametric_univariate_fitters):
+        T = np.random.exponential(1, size=1000)
+
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit(T)
+            assert f.AIC_ > 0
+            npt.assert_allclose(f.AIC_, -2 * f.log_likelihood_ + 2 * f.summary.shape[0])
+
     def test_models_can_handle_really_large_duration_values(self, known_parametric_univariate_fitters):
         T1 = np.random.exponential(1e12, size=1000)
         T2 = np.random.exponential(1e12, size=1000)
@@ -1613,18 +1621,22 @@ class TestParametricRegressionFitter:
         rossi["_int"] = 1.0
         return rossi
 
+    def test_AIC_on_models(self, rossi):
+        model = WeibullAFTFitter(fit_intercept=False).fit(rossi, "week", "arrest")
+        npt.assert_allclose(model.AIC_, -2 * model.log_likelihood_ + 2 * model.summary.shape[0])
+
     def test_penalizer_can_be_an_array(self, rossi):
 
-        wf_array = WeibullAFTFitter(penalizer=0.01 * np.ones(7)).fit(rossi, "week", "arrest")
-        wf_float = WeibullAFTFitter(penalizer=0.01).fit(rossi, "week", "arrest")
+        wf_array = WeibullAFTFitter(penalizer=0.01 * np.ones(7), fit_intercept=False).fit(rossi, "week", "arrest")
+        wf_float = WeibullAFTFitter(penalizer=0.01, fit_intercept=False).fit(rossi, "week", "arrest")
 
         assert_frame_equal(wf_array.summary, wf_float.summary)
 
     def test_penalizer_can_be_an_array_and_check_it_behaves_as_expected(self, rossi):
 
         penalty = np.array([0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01])
-        wf_array = WeibullAFTFitter(penalizer=penalty).fit(rossi, "week", "arrest")
-        wf_float = WeibullAFTFitter(penalizer=0.01).fit(rossi, "week", "arrest")
+        wf_array = WeibullAFTFitter(penalizer=penalty, fit_intercept=False).fit(rossi, "week", "arrest")
+        wf_float = WeibullAFTFitter(penalizer=0.01, fit_intercept=False).fit(rossi, "week", "arrest")
 
         assert abs(wf_array.summary.loc[("lambda_", "fin"), "coef"]) > abs(wf_float.summary.loc[("lambda_", "fin"), "coef"])
 
@@ -2695,6 +2707,10 @@ class TestCoxPHFitter:
         cph_float = CoxPHFitter(penalizer=0.01).fit(rossi, "week", "arrest")
 
         assert abs(cph_array.summary.loc["fin", "coef"]) > abs(cph_float.summary.loc["fin", "coef"])
+
+    def test_AIC_partial_(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest")
+        npt.assert_allclose(cph.AIC_partial_, -2 * cph.log_likelihood_ + 2 * cph.summary.shape[0])
 
     def test_compute_followup_hazard_ratios(self, cph, cph_spline, rossi):
         cph.fit(rossi, "week", "arrest")

@@ -295,7 +295,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
     @property
     def AIC_(self) -> float:
-        return -2 * self.log_likelihood_ + 2 * self.params_.shape[0]
+        return -2 * self.log_likelihood_ + 2 * self._fitted_parameters_.shape[0]
 
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
         class_name = self._class_name
@@ -1940,7 +1940,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 Some ways to possible ways fix this:
 
                 0. Are there any lifelines warnings outputted during the `fit`?
-                1. Inspect your DataFrame: does everything look as expected?
+                1. Inspect your DataFrame: does everything look as expected? Do you need to add/drop a constant (intercept) column?
                 2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
                 3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
                 4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
@@ -2130,8 +2130,8 @@ class ParametricRegressionFitter(RegressionFitter):
         sr = self.log_likelihood_ratio_test()
         footers = []
 
-        if CensoringType.is_right_censoring(self):
-            footers.apoend(("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)))
+        if utils.CensoringType.is_right_censoring(self):
+            footers.append(("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)))
 
         footers.extend(
             [
