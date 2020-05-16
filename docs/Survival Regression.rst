@@ -1035,12 +1035,16 @@ The sections `Testing the Proportional Hazard Assumptions`_ and `Assessing Cox m
 .. note:: Work is being done to extend residual methods to all regression models. Stay tuned.
 
 
-Model selection based on predictive power
------------------------------------------------
+Model selection based on predictive power and fit
+---------------------------------------------------
 
 If censoring is present, it's not appropriate to use a loss function like mean-squared-error or
 mean-absolute-loss. This is because the difference between a censored value and the predicted value could be
 due to poor prediction *or* due to censoring. Below we introduce alternative ways to measure prediction performance.
+
+Out-of-sample validation
+****************************
+
 
 In this author's opinion, the best way to measure predictive performance is evaluating the log-likelihood on out-of-sample data. The log-likelihood correctly handles any type of censoring, and is precisely what we are maximizing in the model training. The in-sample log-likelihood is available under ``log_likelihood_`` of any regression model. For out-of-sample data, the  :meth:`~lifelines.fitters.cox_ph_fitter.CoxPHFitter.score` method (available on all regression models) can be used. This returns the *average evaluation of the out-of-sample log-likelihood*. We want to maximize this.
 
@@ -1058,6 +1062,27 @@ In this author's opinion, the best way to measure predictive performance is eval
 
     print(cph_l2.score(test_rossi))
     print(cph_l1.score(test_rossi)) # better model
+
+
+Within-sample validation
+****************************
+
+For within-sample validation, the AIC is a great metric for comparing models as it relies on the log-likelihood. It's available under ``AIC_`` for parametric models, and ``AIC_partial_`` for Cox models (because the Cox model maximizes a *partial* log-likelihood, it can't be reliably compared to parametric model's AIC.)
+
+
+.. code:: python
+
+    from lifelines import CoxPHFitter
+    from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    cph_l2 = CoxPHFitter(penalizer=0.1, l1_ratio=0.).fit(rossi, 'week', 'arrest')
+    cph_l1 = CoxPHFitter(penalizer=0.1, l1_ratio=1.).fit(rossi, 'week', 'arrest')
+
+    print(cph_l2.AIC_partial_) # lower is better
+    print(cph_l1.AIC_partial_)
+
 
 
 Another censoring-sensitive measure is the concordance-index, also known as the c-index. This measure
@@ -1096,6 +1121,9 @@ Fitted survival models typically have a concordance index between 0.55 and 0.75 
 
 .. note:: Remember, the concordance score evaluates the relative rankings of subject's event times. Thus, it is scale and shift invariant (i.e. you can multiple by a positive constant, or add a constant, and the rankings won't change). A model maximized for concordance-index does not necessarily give good predicted *times*, but will give good predicted *rankings*.
 
+
+Cross validation
+****************************
 
 *lifelines* has an implementation of k-fold cross validation under :func:`lifelines.utils.k_fold_cross_validation`. This function accepts an instance of a regression fitter (either :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter` of :class:`~lifelines.fitters.aalen_additive_fitter.AalenAdditiveFitter`), a dataset, plus ``k`` (the number of folds to perform, default 5). On each fold, it splits the data
 into a training set and a testing set fits itself on the training set and evaluates itself on the testing set (using the concordance measure by default).

@@ -29,6 +29,7 @@ __all__ = [
     "proportional_hazard_test",
     "power_under_cph",
     "sample_size_necessary_under_cph",
+    "somers_d",
 ]
 
 

@@ -293,6 +293,10 @@ class ParametricUnivariateFitter(UnivariateFitter):
         if "alpha" in self._fitted_parameter_names:
             raise NameError("'alpha' in _fitted_parameter_names is a lifelines reserved word. Try 'alpha_' instead.")
 
+    @property
+    def AIC_(self) -> float:
+        return -2 * self.log_likelihood_ + 2 * self.params_.shape[0]
+
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
         class_name = self._class_name
 

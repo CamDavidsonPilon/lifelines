@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+"""
+This code isn't to be called directly, but is the core logic of the KaplanMeierFitter.fit_interval_censoring
+
+References
+https://upcommons.upc.edu/bitstream/handle/2117/93831/01Rop01de01.pdf
+
+
+"""
 from collections import defaultdict, namedtuple
 import numpy as np
 from numpy.linalg import norm
@@ -20,9 +28,12 @@ def E_step_M_step(observation_intervals, p_old, turnball_interval_lookup):
         # find all turnball intervals, t, that are contained in (ol, or). Call this set T
         # the denominator is sum of p_old[T] probabilities
         # the numerator is p_old[t]
+
+        # TODO: I think I can remove the bottom for loop:
+        # > ix = turnball_interval_lookup[observation_interval]
+        # > p_temp[ix] = p_old[ix]
         for ix_t in turnball_interval_lookup[observation_interval]:
-            t_p = p_old[ix_t]
-            p_temp[ix_t] = t_p
+            p_temp[ix_t] = p_old[ix_t]
 
         p_new = p_new + p_temp / p_temp.sum()
 
@@ -108,6 +119,17 @@ def npmle(left, right, tol=1e-5, verbose=False):
     turnball_intervals = list(create_turnball_intervals(left, right))
     observation_intervals = create_observation_intervals(left, right)
     turnball_lookup = create_turnball_lookup(turnball_intervals, sorted(set(observation_intervals)))
+    print(turnball_lookup)
+
+    """ is correct
+    turnball_lookup = {
+        interval(6.0, 6.0): {0},
+        interval(7.0, 7.0): {1},
+        interval(7.0, np.inf): {2},  # {1, 2}
+        interval(8., 8.): {2},
+    }
+    """
+    print(turnball_lookup)
 
     T = len(turnball_intervals)
 
@@ -126,10 +148,21 @@ def npmle(left, right, tol=1e-5, verbose=False):
 
 
 def reconstruct_survival_function(probabilities, turnball_intervals, timeline, label="NPMLE"):
-    index = [0.0]
-    values = [1.0]
+    """
+    TIHI
 
-    for p, interval in zip(probabilities, turnball_intervals):
+    """
+    index = []
+    values = []
+
+    for i, (p, interval) in enumerate(zip(probabilities, turnball_intervals)):
+        if i == 0:
+            index.append(interval.left)
+            index.append(interval.right)
+            values.append(1.0)
+            values.append(1 - p)
+            continue
+
         if interval.left != index[-1]:
             index.append(interval.left)
             values.append(values[-1])
@@ -140,12 +173,12 @@ def reconstruct_survival_function(probabilities, turnball_intervals, timeline, l
             index.append(interval.right)
             values.append(values[-1] - p)
 
-    full_dataframe = pd.DataFrame(index=timeline, columns=[label + "_upper"])
+    full_dataframe = pd.DataFrame(index=timeline, columns=[label + "_lower"])
 
-    turnball_dataframe = pd.DataFrame(values, index=index, columns=[label + "_upper"])
+    turnball_dataframe = pd.DataFrame(values, index=index, columns=[label + "_lower"])
 
-    dataframe = full_dataframe.combine_first(turnball_dataframe).ffill()
-    dataframe[label + "_lower"] = dataframe[label + "_upper"].shift(1).fillna(1)
+    dataframe = full_dataframe.combine_first(turnball_dataframe).ffill().fillna(1)
+    dataframe[label + "_upper"] = dataframe[label + "_lower"].shift(1).fillna(1)
     return dataframe
 
 
@@ -171,3 +204,18 @@ def npmle_compute_confidence_intervals(left, right, mle_, alpha=0.05, samples=10
         2 * mle_.squeeze() - pd.Series(np.percentile(bootstrapped_samples, (alpha / 2) * 100, axis=1), index=all_times),
         2 * mle_.squeeze() - pd.Series(np.percentile(bootstrapped_samples, (1 - alpha / 2) * 100, axis=1), index=all_times),
     )
+
+
+"""
+Test cases
+"""
+
+
+ti = create_turnball_intervals(*zip(*[(0, 1), (4, 6), (2, 6), (0, 3), (2, 4), (5, 7)]))
+
+assert ti == [interval(0, 1), interval(2, 3), interval(5, 6)]
+
+
+ti = create_turnball_intervals(*zip(*[(4, 7), (3, 5), (0, 2), (1, 4), (6, 9), (8, 10)]))
+
+assert ti == [interval(1, 2), interval(3, 4), interval(4, 5), interval(6, 7), interval(8, 9)]

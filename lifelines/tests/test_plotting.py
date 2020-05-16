@@ -32,6 +32,7 @@ from lifelines.datasets import (
     load_rossi,
     load_multicenter_aids_cohort_study,
     load_nh4,
+    load_diabetes,
 )
 from lifelines.generate_datasets import cumulative_integral
 
@@ -212,6 +213,14 @@ class TestPlotting:
         ax = aaf.plot(iloc=slice(0, aaf.cumulative_hazards_.shape[0] - 100))
         ax.set_xlabel("time")
         ax.set_title("test_aalen_additive_plot")
+        self.plt.show(block=block)
+        return
+
+    def test_kmf_with_interval_censoring_plotting(self, block):
+        kmf = KaplanMeierFitter()
+        left, right = load_diabetes()[["left", "right"]]
+        kmf.fit(left, right)
+        kmf.plot(color="r")
         self.plt.show(block=block)
         return
 
