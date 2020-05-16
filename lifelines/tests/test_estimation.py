@@ -228,6 +228,14 @@ class TestParametricUnivariateFitters:
         assert coef - std > lower
         assert coef + std < upper
 
+    def test_AIC_on_models(self, known_parametric_univariate_fitters):
+        T = np.random.exponential(1, size=1000)
+
+        for fitter in known_parametric_univariate_fitters:
+            f = fitter().fit(T)
+            assert f.AIC_ > 0
+            npt.assert_allclose(f.AIC_, -2 * f.log_likelihood_ + 2 * f.summary.shape[0])
+
     def test_models_can_handle_really_large_duration_values(self, known_parametric_univariate_fitters):
         T1 = np.random.exponential(1e12, size=1000)
         T2 = np.random.exponential(1e12, size=1000)
@@ -252,6 +260,9 @@ class TestParametricUnivariateFitters:
         T = np.maximum(T1, T2)
 
         for fitter in known_parametric_univariate_fitters:
+            if isinstance(fitter(), PiecewiseExponentialFitterTesting):
+                # not a good model since the "break" is at 5.
+                continue
             fitter().fit_left_censoring(T, E)
 
     def test_parametric_univariate_fitters_can_print_summary(
@@ -375,7 +386,8 @@ class TestUnivariateFitters:
             assert f().alpha == 0.05
 
     def test_univariate_fitters_accept_late_entries(self, positive_sample_lifetimes, univariate_fitters):
-        entries = 0.1 * positive_sample_lifetimes[0]
+        positive_sample_lifetimes = positive_sample_lifetimes
+        entries = positive_sample_lifetimes[0] - 3
         for fitter in univariate_fitters:
             f = fitter().fit(positive_sample_lifetimes[0], entry=entries)
             assert f.entry is not None
@@ -1357,6 +1369,138 @@ class TestKaplanMeierFitter:
         npt.assert_allclose(rf["KM_lifelines_latest"].values, rf["KM_lateenterafter"].values, rtol=10e-2)
         npt.assert_allclose(rf["KM_lifelines_latest"].values, rf["KM_true"].values, rtol=10e-2)
 
+    def test_interval_censoring_to_r_1(self):
+        kmf = KaplanMeierFitter()
+        left = [1, 7, 8, 7, 7, 17, 37, 46, 46, 45]
+        right = [7, 8, 10, 16, 14, 100, 44, 100, 100, 100]
+
+        kmf.fit_interval_censoring(left, right)
+
+        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([0.9, 1.0]))
+        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.7, 0.9]))
+        npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0.5, 0.7]))
+        npt.assert_allclose(kmf.survival_function_.loc[44.0].values, np.array([0.375, 0.5]), rtol=1e-3)
+        npt.assert_allclose(kmf.survival_function_.iloc[-1].values, np.array([0.0, 0.375]), atol=1e-3)
+
+    def test_interval_censoring_to_r_2_test_observed_event(self):
+        kmf = KaplanMeierFitter()
+        left = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45]
+        right = [7, 8, 10, 16, 14, 100, 44, 100, 100, 100]
+
+        kmf.fit_interval_censoring(left, right)
+
+        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([0.9, 1.0]))
+        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.5, 0.9]))
+        npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0.5, 0.5]))
+        npt.assert_allclose(kmf.survival_function_.loc[44.0].values, np.array([0.375, 0.5]), rtol=1e-3)
+        npt.assert_allclose(kmf.survival_function_.iloc[-1].values, np.array([0.0, 0.375]), atol=1e-3)
+
+    def test_interval_censoring_to_r_3_test_0_and_inf(self):
+        kmf = KaplanMeierFitter()
+        left = [0, 8, 8, 7, 7, 17, 37, 46, 46, 45]
+        right = [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+
+        kmf.fit_interval_censoring(left, right)
+
+        npt.assert_allclose(kmf.survival_function_.loc[0.0].values, np.array([1.0, 1.0]))
+        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([0.9, 1.0]))
+        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.5, 0.9]))
+        npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0.5, 0.5]))
+        npt.assert_allclose(kmf.survival_function_.loc[44.0].values, np.array([0.375, 0.5]), rtol=1e-3)
+        npt.assert_allclose(kmf.survival_function_.iloc[-1].values, np.array([0.0, 0.375]), atol=1e-3)
+
+    def test_interval_censoring_to_r_3_test_ties_and_overlapping_intervals(self):
+        kmf = KaplanMeierFitter()
+        left = [6, 7, 8, 7, 5]
+        right = [7, 8, 10, 16, 20]
+
+        kmf.fit_interval_censoring(left, right)
+
+        npt.assert_allclose(kmf.survival_function_.loc[5.0].values, np.array([1.0, 1.0]))
+        npt.assert_allclose(kmf.survival_function_.loc[6.0].values, np.array([1.0, 1.0]))
+        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([0.75, 1.0]), rtol=1e-05)
+        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.375, 0.75]), rtol=1e-05)
+        npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0, 0.375]), rtol=1e-05)
+
+    def test_interval_censoring_with_custom_index(self):
+        kmf = KaplanMeierFitter()
+        left = [6, 7, 8, 7, 5]
+        right = [7, 8, 10, 16, 20]
+
+        kmf.fit_interval_censoring(left, right, timeline=np.arange(10))
+        npt.assert_allclose(kmf.survival_function_.index.values, np.arange(10))
+
+    def test_interval_censoring_fit_with_exact_observations_is_equal_to_km(self):
+        left = np.array([6, 7, 8])
+        right = np.array([6, 7, 8])
+
+        kmf_interval = KaplanMeierFitter()
+        kmf_interval.fit_interval_censoring(left, right)
+
+        kmf_right = KaplanMeierFitter().fit(left, left == right)
+
+        npt.assert_allclose(
+            kmf_interval.survival_function_["NPMLE_estimate_lower"],
+            kmf_right.survival_function_["KM_estimate"],
+            rtol=1e-3,
+            atol=1e-3,
+        )
+
+    def test_interval_censoring_fit_with_exact_observations_is_equal_to_km2(self):
+        left = np.array([6, 7, 8, 9])
+        right = np.array([6, 7, 8, np.inf])
+
+        kmf_interval = KaplanMeierFitter()
+        kmf_interval.fit_interval_censoring(left, right)
+
+        kmf_right = KaplanMeierFitter().fit(left, left == right)
+
+        npt.assert_allclose(
+            kmf_interval.survival_function_["NPMLE_estimate_lower"].iloc[:-1],
+            kmf_right.survival_function_["KM_estimate"],
+            rtol=1e-3,
+            atol=1e-3,
+        )
+
+    def test_interval_censoring_fit_with_exact_observations_is_equal_to_km3(self):
+        left = np.array([6, 7, 8, 7.5])
+        right = np.array([6, 7, 8, np.inf])
+
+        kmf_interval = KaplanMeierFitter()
+        kmf_interval.fit_interval_censoring(left, right)
+
+        kmf_right = KaplanMeierFitter().fit(left, left == right)
+
+        npt.assert_allclose(
+            kmf_interval.survival_function_["NPMLE_estimate_lower"].iloc[:-1],
+            kmf_right.survival_function_["KM_estimate"],
+            rtol=1e-3,
+            atol=1e-3,
+        )
+
+    def test_interval_censoring_fit_with_exact_observations_is_equal_to_km4(self):
+        left = np.array([6, 7, 8, 7.0])
+        right = np.array([6, 7, 8, np.inf])
+
+        kmf_interval = KaplanMeierFitter()
+        kmf_interval.fit_interval_censoring(left, right)
+
+        kmf_right = KaplanMeierFitter().fit(left, left == right)
+
+        npt.assert_allclose(
+            kmf_interval.survival_function_["NPMLE_estimate_lower"].iloc[:-1],
+            kmf_right.survival_function_["KM_estimate"],
+            rtol=1e-3,
+            atol=1e-3,
+        )
+
+    def test_interval_model_has_all_attributes_as_non_interval(self):
+        left = [6, 7, 8, 7, 5]
+        right = [7, 8, 10, 16, 20]
+        kmf_interval = KaplanMeierFitter().fit(left, right)
+
+        kmf_right = KaplanMeierFitter().fit(np.arange(10))
+
 
 class TestNelsonAalenFitter:
     def nelson_aalen(self, lifetimes, observed=None):
@@ -1480,6 +1624,25 @@ class TestParametricRegressionFitter:
         rossi = load_rossi()
         rossi["_int"] = 1.0
         return rossi
+
+    def test_AIC_on_models(self, rossi):
+        model = WeibullAFTFitter(fit_intercept=False).fit(rossi, "week", "arrest")
+        npt.assert_allclose(model.AIC_, -2 * model.log_likelihood_ + 2 * model.summary.shape[0])
+
+    def test_penalizer_can_be_an_array(self, rossi):
+
+        wf_array = WeibullAFTFitter(penalizer=0.01 * np.ones(7), fit_intercept=False).fit(rossi, "week", "arrest")
+        wf_float = WeibullAFTFitter(penalizer=0.01, fit_intercept=False).fit(rossi, "week", "arrest")
+
+        assert_frame_equal(wf_array.summary, wf_float.summary)
+
+    def test_penalizer_can_be_an_array_and_check_it_behaves_as_expected(self, rossi):
+
+        penalty = np.array([0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01])
+        wf_array = WeibullAFTFitter(penalizer=penalty, fit_intercept=False).fit(rossi, "week", "arrest")
+        wf_float = WeibullAFTFitter(penalizer=0.01, fit_intercept=False).fit(rossi, "week", "arrest")
+
+        assert abs(wf_array.summary.loc[("lambda_", "fin"), "coef"]) > abs(wf_float.summary.loc[("lambda_", "fin"), "coef"])
 
     def test_custom_weibull_model_gives_the_same_data_as_implemented_weibull_model(self, rossi):
         class CustomWeibull(ParametricRegressionFitter):
@@ -2534,6 +2697,25 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline")
 
+    def test_penalizer_can_be_an_array(self, rossi):
+
+        cph_array = CoxPHFitter(penalizer=0.01 * np.ones(7)).fit(rossi, "week", "arrest")
+        cph_float = CoxPHFitter(penalizer=0.01).fit(rossi, "week", "arrest")
+
+        assert_frame_equal(cph_array.summary, cph_float.summary)
+
+    def test_penalizer_can_be_an_array_and_check_it_behaves_as_expected(self, rossi):
+
+        penalty = np.array([0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01])
+        cph_array = CoxPHFitter(penalizer=penalty).fit(rossi, "week", "arrest")
+        cph_float = CoxPHFitter(penalizer=0.01).fit(rossi, "week", "arrest")
+
+        assert abs(cph_array.summary.loc["fin", "coef"]) > abs(cph_float.summary.loc["fin", "coef"])
+
+    def test_AIC_partial_(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest")
+        npt.assert_allclose(cph.AIC_partial_, -2 * cph.log_likelihood_ + 2 * cph.summary.shape[0])
+
     def test_compute_followup_hazard_ratios(self, cph, cph_spline, rossi):
         cph.fit(rossi, "week", "arrest")
         cph.compute_followup_hazard_ratios(rossi, [15, 25, 35, 45])
@@ -2946,26 +3128,38 @@ class TestCoxPHFitter:
                     repr(cph)
                     + "\n"
                     + """
-      duration col = week
-         event col = arrest
-number of subjects = 432
-  number of events = 114
-    log-likelihood = -658.748
-  time fit was run = 2018-10-23 02:40:45 UTC
+<lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
+             duration col = 'week'
+                event col = 'arrest'
+      baseline estimation = breslow
+   number of observations = 432
+number of events observed = 114
+   partial log-likelihood = -658.75
+         time fit was run = 2018-10-23 02:40:45 UTC
 
 ---
-        coef  exp(coef)  se(coef)       z      p  coef lower 95%  coef upper 95%
-fin  -0.3794     0.6843    0.1914 -1.9826 0.0474     -0.7545     -0.0043
-age  -0.0574     0.9442    0.0220 -2.6109 0.0090     -0.1006     -0.0143
-race  0.3139     1.3688    0.3080  1.0192 0.3081     -0.2898      0.9176
-wexp -0.1498     0.8609    0.2122 -0.7058 0.4803     -0.5657      0.2662
-mar  -0.4337     0.6481    0.3819 -1.1358 0.2561     -1.1821      0.3147
-paro -0.0849     0.9186    0.1958 -0.4336 0.6646     -0.4685      0.2988
-prio  0.0915     1.0958    0.0286  3.1939 0.0014      0.0353      0.1476
----
+       coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+fin   -0.38       0.68       0.19            -0.75            -0.00                 0.47                 1.00
+age   -0.06       0.94       0.02            -0.10            -0.01                 0.90                 0.99
+race   0.31       1.37       0.31            -0.29             0.92                 0.75                 2.50
+wexp  -0.15       0.86       0.21            -0.57             0.27                 0.57                 1.30
+mar   -0.43       0.65       0.38            -1.18             0.31                 0.31                 1.37
+paro  -0.08       0.92       0.20            -0.47             0.30                 0.63                 1.35
+prio   0.09       1.10       0.03             0.04             0.15                 1.04                 1.16
 
-Concordance = 0.640
-Log-likelihood ratio test = 33.27 on 7 df, -log2(p)=15.37
+         z      p   -log2(p)
+fin  -1.98   0.05       4.40
+age  -2.61   0.01       6.79
+race  1.02   0.31       1.70
+wexp -0.71   0.48       1.06
+mar  -1.14   0.26       1.97
+paro -0.43   0.66       0.59
+prio  3.19 <0.005       9.48
+---
+Concordance = 0.64
+Partial AIC = 1331.50
+log-likelihood ratio test = 33.27 on 7 df
+-log2(p) of ll-ratio test = 15.37
 """
                 )
                 .strip()
@@ -4353,6 +4547,29 @@ class TestCoxTimeVaryingFitter:
     def heart(self):
         return load_stanford_heart_transplants()
 
+    def test_penalizer_can_be_an_array(self, dfcv):
+
+        cph_array = CoxTimeVaryingFitter(penalizer=0.01 * np.ones(2)).fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+        cph_float = CoxTimeVaryingFitter(penalizer=0.01).fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+
+        assert_frame_equal(cph_array.summary, cph_float.summary)
+
+    def test_penalizer_can_be_an_array_and_check_it_behaves_as_expected(self, dfcv):
+
+        penalty = np.array([0, 0.01])
+        cph_array = CoxTimeVaryingFitter(penalizer=penalty).fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+        cph_float = CoxTimeVaryingFitter(penalizer=0.01).fit(
+            dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event"
+        )
+
+        assert abs(cph_array.summary.loc["z", "coef"]) > abs(cph_float.summary.loc["z", "coef"])
+
     def test_model_can_accept_null_covariates(self, ctv, dfcv):
         ctv.fit(dfcv[["id", "start", "stop", "event"]], id_col="id", start_col="start", stop_col="stop", event_col="event")
 
@@ -4748,22 +4965,30 @@ class TestCoxTimeVaryingFitter:
                     repr(ctv)
                     + "\n"
                     + """
-         event col = event
+<lifelines.CoxTimeVaryingFitter: fitted with 172 periods, 103 subjects, 75 events>
+         event col = 'event'
 number of subjects = 103
  number of periods = 172
   number of events = 75
-    log-likelihood = -290.566
+partial log-likelihood = -290.57
   time fit was run = 2018-10-23 02:41:45 UTC
 
 ---
-              coef  exp(coef)  se(coef)       z      p  coef lower 95%  coef upper 95%
-age         0.0272     1.0275    0.0137  1.9809 0.0476      0.0003      0.0540
-year       -0.1463     0.8639    0.0705 -2.0768 0.0378     -0.2845     -0.0082
-surgery    -0.6372     0.5288    0.3672 -1.7352 0.0827     -1.3570      0.0825
-transplant -0.0103     0.9898    0.3138 -0.0327 0.9739     -0.6252      0.6047
----
+             coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+age          0.03       1.03       0.01             0.00             0.05                 1.00                 1.06
+year        -0.15       0.86       0.07            -0.28            -0.01                 0.75                 0.99
+surgery     -0.64       0.53       0.37            -1.36             0.08                 0.26                 1.09
+transplant  -0.01       0.99       0.31            -0.63             0.60                 0.54                 1.83
 
-Likelihood ratio test = 15.11 on 4 df, -log2(p)=7.80
+               z    p   -log2(p)
+age         1.98 0.05       4.39
+year       -2.08 0.04       4.72
+surgery    -1.74 0.08       3.60
+transplant -0.03 0.97       0.04
+---
+Partial AIC = 589.13
+log-likelihood ratio test = 15.11 on 4 df
+-log2(p) of ll-ratio test = 7.80
 """
                 )
                 .strip()
@@ -4968,4 +5193,4 @@ class TestMixtureCureFitter:
         wmc.fit(T, E)
         mcfitter.fit(T, E)
 
-        assert abs(wmc.c_ - mcfitter.cured_fraction_) < 0.001
+        assert_frame_equal(wmc.summary.reset_index(drop=True), mcfitter.summary.reset_index(drop=True), check_less_precise=0)

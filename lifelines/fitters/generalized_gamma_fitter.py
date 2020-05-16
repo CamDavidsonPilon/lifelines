@@ -115,7 +115,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
             log_data = log(Ts[1])
         elif CensoringType.is_interval_censoring(self):
             # this fails if Ts[1] == Ts[0], so we add a some fudge factors.
-            log_data = log(Ts[1] - Ts[0] + 0.01)
+            log_data = log(Ts[1] - Ts[0] + 0.1)
         return np.array([log_data.mean(), log(log_data.std() + 0.01), 0.1])
 
     def _cumulative_hazard(self, params, times):

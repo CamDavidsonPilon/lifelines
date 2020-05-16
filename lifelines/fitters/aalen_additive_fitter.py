@@ -201,9 +201,7 @@ class AalenAdditiveFitter(RegressionFitter):
 
         hazards = pd.DataFrame(hazards_, columns=columns, index=index).iloc[:stop]
         cumulative_hazards_ = hazards.cumsum()
-        cumulative_variance_hazards_ = (
-            pd.DataFrame(variance_hazards_, columns=columns, index=index).iloc[:stop].cumsum()
-        )
+        cumulative_variance_hazards_ = pd.DataFrame(variance_hazards_, columns=columns, index=index).iloc[:stop].cumsum()
 
         return hazards, cumulative_hazards_, cumulative_variance_hazards_
 
@@ -299,9 +297,7 @@ It's important to know that the naive variance estimates of the coefficients are
         self._check_values(df, T, E)
 
         if self.fit_intercept:
-            assert (
-                "_intercept" not in df.columns
-            ), "_intercept is an internal lifelines column, please rename your column first."
+            assert "_intercept" not in df.columns, "_intercept is an internal lifelines column, please rename your column first."
             X["_intercept"] = 1.0
 
         return X, T, E, W
@@ -333,9 +329,7 @@ It's important to know that the naive variance estimates of the coefficients are
         X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
 
         timeline = self._index
-        individual_cumulative_hazards_ = pd.DataFrame(
-            np.dot(self.cumulative_hazards_, X_.T), index=timeline, columns=cols
-        )
+        individual_cumulative_hazards_ = pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=timeline, columns=cols)
 
         return individual_cumulative_hazards_
 
@@ -490,7 +484,7 @@ It's important to know that the naive variance estimates of the coefficients are
         )
 
     @property
-    def score_(self):
+    def concordance_index_(self):
         """
         The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the ROC AUC
         to survival data, including censorships.
@@ -572,7 +566,8 @@ It's important to know that the naive variance estimates of the coefficients are
             ]
         )
 
-        p = Printer(self, headers, justify, decimals, kwargs)
+        footers = [("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals))]
+        p = Printer(self, headers, footers, justify, decimals, kwargs)
 
         p.print(style=style)
 

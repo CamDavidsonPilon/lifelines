@@ -4,6 +4,35 @@ import numpy as np
 from lifelines.utils.btree import _BTree
 
 
+def somers_d(event_times, x, event_observed=None) -> float:
+    """
+    A measure of rank association between [-1, 1] between a censored variable, event_times,
+    and another (uncensored) variable, x. -1 is strong anti-correlation, 1 is strong correlation.
+
+
+    event_times: iterable
+         a length-n iterable of observed survival times.
+    x: iterable
+        a length-n iterable to compare against
+    event_observed: iterable, optional
+        a length-n iterable censoring flags, 1 if observed, 0 if not. Default None assumes all observed.
+
+
+    Examples
+    --------
+    .. code:: python
+        from lifelines.datasets import load_rossi
+        from lifelines.utils
+
+        T, E = df['week'], df['arrest']
+        x = df['age']
+        somers_d(T, x, E)
+
+
+    """
+    return 2 * concordance_index(event_times, x, event_observed) - 1
+
+
 def concordance_index(event_times, predicted_scores, event_observed=None) -> float:
     """
     Calculates the concordance index (C-index) between two series
@@ -29,7 +58,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None) -> flo
     predicted_scores: iterable
         a length-n iterable of predicted scores - these could be survival times, or hazards, etc. See https://stats.stackexchange.com/questions/352183/use-median-survival-time-to-calculate-cph-c-statistic/352435#352435
     event_observed: iterable, optional
-        a length-n iterable censorship flags, 1 if observed, 0 if not. Default None assumes all observed.
+        a length-n iterable censoring flags, 1 if observed, 0 if not. Default None assumes all observed.
 
     Returns
     -------
@@ -51,9 +80,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None) -> flo
         concordance_index(df['T'], -cph.predict_partial_hazard(df), df['E'])
 
     """
-    event_times, predicted_scores, event_observed = _preprocess_scoring_data(
-        event_times, predicted_scores, event_observed
-    )
+    event_times, predicted_scores, event_observed = _preprocess_scoring_data(event_times, predicted_scores, event_observed)
     num_correct, num_tied, num_pairs = _concordance_summary_statistics(event_times, predicted_scores, event_observed)
 
     return _concordance_ratio(num_correct, num_tied, num_pairs)
@@ -65,9 +92,7 @@ def _concordance_ratio(num_correct: int, num_tied: int, num_pairs: int) -> float
     return (num_correct + num_tied / 2) / num_pairs
 
 
-def _concordance_summary_statistics(
-    event_times, predicted_event_times, event_observed
-):  # pylint: disable=too-many-locals
+def _concordance_summary_statistics(event_times, predicted_event_times, event_observed):  # pylint: disable=too-many-locals
     """Find the concordance index in n * log(n) time.
 
     Assumes the data has been verified by lifelines.utils.concordance_index first.
@@ -234,9 +259,7 @@ def naive_concordance_index(event_times, predicted_event_times, event_observed=N
     event_times, predicted_event_times, event_observed = _preprocess_scoring_data(
         event_times, predicted_event_times, event_observed
     )
-    return _concordance_ratio(
-        *_naive_concordance_summary_statistics(event_times, predicted_event_times, event_observed)
-    )
+    return _concordance_ratio(*_naive_concordance_summary_statistics(event_times, predicted_event_times, event_observed))
 
 
 def _preprocess_scoring_data(event_times, predicted_scores, event_observed):

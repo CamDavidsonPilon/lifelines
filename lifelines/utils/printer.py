@@ -6,11 +6,20 @@ import pandas as pd
 
 
 class Printer:
-    def __init__(self, model, headers: List[Tuple[str, Any]], justify: Callable, decimals: int, header_kwargs: Dict):
+    def __init__(
+        self,
+        model,
+        headers: List[Tuple[str, Any]],
+        footers: List[Tuple[str, Any]],
+        justify: Callable,
+        decimals: int,
+        header_kwargs: Dict,
+    ):
         self.headers = headers
         self.model = model
         self.decimals = decimals
         self.justify = justify
+        self.footers = footers
 
         for tuple_ in header_kwargs.items():
             self.add_to_headers(tuple_)
@@ -76,32 +85,8 @@ class Printer:
             },
         )
 
-        footers = []
-        with np.errstate(invalid="ignore", divide="ignore"):
-
-            try:
-                if utils.CensoringType.is_right_censoring(self.model) and self.model._KNOWN_MODEL:
-                    footers.append(("Concordance", "{:.{prec}f}".format(self.model.score_, prec=decimals)))
-            except AttributeError:
-                pass
-
-            try:
-                sr = self.model.log_likelihood_ratio_test()
-                footers.extend(
-                    [
-                        ("Concordance", "{:.{prec}f}".format(self.model.concordance_index_, prec=decimals)),
-                        (
-                            "Log-likelihood ratio test",
-                            "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
-                        ),
-                        ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
-                    ]
-                )
-            except AttributeError:
-                pass
-
-        if footers:
-            footer_df = pd.DataFrame.from_records(footers).set_index(0)
+        if self.footers:
+            footer_df = pd.DataFrame.from_records(self.footers).set_index(0)
             footer_html = footer_df.to_html(header=False, notebook=True, index_names=False)
         else:
             footer_html = ""
@@ -177,20 +162,7 @@ class Printer:
 
         with np.errstate(invalid="ignore", divide="ignore"):
 
-            try:
-                print("---")
-                if utils.CensoringType.is_right_censoring(self.model) and self.model._KNOWN_MODEL:
-                    print("Concordance = {:.{prec}f}".format(self.model.concordance_index_, prec=decimals))
-            except AttributeError:
-                pass
-
-            try:
-                sr = self.model.log_likelihood_ratio_test()
-                print(
-                    "Log-likelihood ratio test = {:.{prec}f} on {} df, -log2(p)={:.{prec}f}".format(
-                        sr.test_statistic, sr.degrees_freedom, -np.log2(sr.p_value), prec=decimals
-                    )
-                )
-            except AttributeError:
-                pass
+            print("---")
+            for string, value in self.footers:
+                print("{} = {}".format(string, value))
         print()

@@ -53,13 +53,13 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         self.breakpoints = breakpoints
         self.n_breakpoints = len(self.breakpoints)
 
+        assert isinstance(self.penalizer, float), "penalizer must be a float"
         self.penalizer = penalizer
         self._fitted_parameter_names = ["lambda_%d_" % i for i in range(self.n_breakpoints + 1)]
 
     def _add_penalty(self, params, neg_ll):
         params_stacked = np.stack(params.values())
         coef_penalty = 0
-
         if self.penalizer > 0:
             for i in range(params_stacked.shape[1]):
                 if not self._constant_cols[i]:

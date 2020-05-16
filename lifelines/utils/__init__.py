@@ -42,6 +42,10 @@ class CensoringType:
     INTERVAL = 2
     RIGHT = 3
 
+    MAP = {"right": RIGHT, "left": LEFT, "interval": INTERVAL}
+
+    HUMAN_MAP = {LEFT: "left", RIGHT: "right", INTERVAL: "interval"}
+
     @classmethod
     def right_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
@@ -84,11 +88,13 @@ class CensoringType:
     @classmethod
     def get_human_readable_censoring_type(cls, model) -> str:
         if cls.is_interval_censoring(model):
-            return "interval"
+            return cls.HUMAN_MAP[cls.INTERVAL]
         elif cls.is_right_censoring(model):
-            return "right"
+            return cls.HUMAN_MAP[cls.RIGHT]
+        elif cls.is_left_censoring(model):
+            return cls.HUMAN_MAP[cls.LEFT]
         else:
-            return "left"
+            return
 
 
 class StatError(Exception):
@@ -1675,7 +1681,19 @@ class DataframeSliceDict:
             yield DataframeSliceDict(x.to_frame().T, self.mappings)
 
 
-def find_best_parametric_model(event_times, event_observed=None, scoring_method: str = "AIC", additional_models=None):
+def find_best_parametric_model(
+    event_times,
+    event_observed=None,
+    scoring_method: str = "AIC",
+    additional_models=None,
+    censoring_type="right",
+    timeline=None,
+    alpha=None,
+    ci_labels=None,
+    entry=None,
+    weights=None,
+    show_progress=False,
+):
     """
     To quickly determine the best¹ univariate model, this function will iterate through each
     parametric model available in lifelines and select the one that minimizes a particular measure of fit.
@@ -1685,13 +1703,27 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
     Parameters
     -------------
     event_times: list, np.array, pd.Series
-        a (n,) array of observed survival times.
+        a (n,) array of observed survival times. If interval censoring, a tuple of (lower_bound, upper_bound).
     event_observed: list, np.array, pd.Series
         a (n,) array of censored flags, 1 if observed,  0 if not. Default None assumes all observed.
     scoring_method: string
         one of {"AIC", "BIC"}
     additional_models: list
         list of other parametric models that implement the lifelines API.
+    censoring_type: str
+        {"right", "left", "interval"}
+    timeline: list, optional
+        return the model at the values in timeline (positively increasing)
+    alpha: float, optional
+        the alpha value in the confidence intervals. Overrides the initializing
+       alpha for this call to fit only.
+    ci_labels: list, optional
+        add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+    entry: an array, or pd.Series, of length n
+        relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
+        entered study when they were "born": time zero.
+    weights: an array, or pd.Series, of length n
+        integer weights per observation
 
     Returns
     ----------
@@ -1711,20 +1743,37 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
     if additional_models is None:
         additional_models = []
 
+    censoring_type = CensoringType.MAP[censoring_type]
+
     evaluation_lookup = {
         "AIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_,
-        "BIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_ * np.log(event_times.shape[0]),
+        "BIC": lambda model: 2 * len(model._fitted_parameter_names)
+        - 2 * model.log_likelihood_ * np.log(model.event_observed.shape[0]),
     }
 
     eval = evaluation_lookup[scoring_method]
 
-    if event_observed is None:
-        event_observed = np.ones_like(event_times, dtype=bool)
+    if censoring_type != CensoringType.INTERVAL:
+        event_times = (event_times,)
 
-    observed_T = event_times[event_observed.astype(bool)]
-    knots1 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 3))
-    knots2 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 4))
-    knots3 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 5))
+    n = event_times[0].shape
+
+    if event_observed is None:
+        if censoring_type == CensoringType.INTERVAL:
+            event_observed = event_times[0] == event_times[1]
+        else:
+            event_observed = np.ones(n, dtype=bool)
+
+    try:
+        observed_T = event_times[0][event_observed.astype(bool)]
+        knots1 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 3))
+        knots2 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 4))
+        knots3 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 5))
+    except:
+        observed_T = event_times[0]
+        knots1 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 3))
+        knots2 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 4))
+        knots3 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 5))
 
     best_model = None
     best_score = np.inf
@@ -1745,9 +1794,19 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                model.fit(event_times, event_observed)
+                getattr(model, "fit_" + CensoringType.HUMAN_MAP[censoring_type] + "_censoring")(
+                    *event_times,
+                    event_observed=event_observed,
+                    weights=weights,
+                    entry=entry,
+                    alpha=alpha,
+                    ci_labels=ci_labels,
+                    timeline=timeline
+                )
             score_ = eval(model)
 
+            if show_progress:
+                print(model._label, ", Score: %.2f" % score_)
             if score_ < best_score:
                 best_score = score_
                 best_model = model

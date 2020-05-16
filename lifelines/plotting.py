@@ -95,7 +95,9 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
             model.durations, model.event_observed, label=COL_EMP, timeline=timeline, weights=model.weights, entry=model.entry
         )
     elif CensoringType.is_interval_censoring(model):
-        raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
+        empirical_kmf = KaplanMeierFitter().fit_interval_censoring(
+            model.lower_bound, model.upper_bound, label=COL_EMP, timeline=timeline, weights=model.weights, entry=model.entry
+        )
 
     empirical_kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
 
@@ -258,16 +260,22 @@ def qq_plot(model, ax=None, **plot_kwargs):
         kmf = KaplanMeierFitter().fit_left_censoring(
             model.durations, model.event_observed, label=COL_EMP, weights=model.weights, entry=model.entry
         )
+        sf, cdf = kmf.survival_function_[COL_EMP], kmf.cumulative_density_[COL_EMP]
     elif CensoringType.is_right_censoring(model):
         kmf = KaplanMeierFitter().fit_right_censoring(
             model.durations, model.event_observed, label=COL_EMP, weights=model.weights, entry=model.entry
         )
+        sf, cdf = kmf.survival_function_[COL_EMP], kmf.cumulative_density_[COL_EMP]
+
     elif CensoringType.is_interval_censoring(model):
-        raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
+        kmf = KaplanMeierFitter().fit_interval_censoring(
+            model.lower_bound, model.upper_bound, label=COL_EMP, weights=model.weights, entry=model.entry
+        )
+        sf, cdf = kmf.survival_function_[COL_EMP + "_lower"], kmf.cumulative_density_[COL_EMP + "_lower"]
 
-    q = np.unique(kmf.cumulative_density_.values[:, 0])
+    q = np.unique(cdf.values)
 
-    quantiles = qth_survival_times(1 - q, kmf.survival_function_)
+    quantiles = qth_survival_times(1 - q, sf)
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
 
@@ -732,7 +740,7 @@ def _plot_estimate(
 ):
 
     """
-    Plots a pretty figure of {0}.{1}
+    Plots a pretty figure of estimates
 
     Matplotlib plot arguments can be passed in inside the kwargs, plus
 

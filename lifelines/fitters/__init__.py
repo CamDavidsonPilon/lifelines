@@ -46,6 +46,7 @@ class BaseFitter:
         self.alpha = alpha
         self._class_name = self.__class__.__name__
         self._label = label
+        self._censoring_type = None
 
     def __repr__(self) -> str:
         classname = self._class_name
@@ -292,6 +293,10 @@ class ParametricUnivariateFitter(UnivariateFitter):
         if "alpha" in self._fitted_parameter_names:
             raise NameError("'alpha' in _fitted_parameter_names is a lifelines reserved word. Try 'alpha_' instead.")
 
+    @property
+    def AIC_(self) -> float:
+        return -2 * self.log_likelihood_ + 2 * self._fitted_parameters_.shape[0]
+
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
         class_name = self._class_name
 
@@ -487,10 +492,13 @@ class ParametricUnivariateFitter(UnivariateFitter):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            minimizing_results, minimizing_ll = None, np.inf
-            for method in [self._scipy_fit_method, "Nelder-Mead"]:
+            minimizing_results, previous_results, minimizing_ll = None, None, np.inf
+            for method, option in zip(
+                ["Nelder-Mead", self._scipy_fit_method],
+                [{"maxiter": 100}, {**{"disp": show_progress}, **self._scipy_fit_options}],
+            ):
 
-                initial_value = self._initial_values if minimizing_results is None else utils._to_1d_array(minimizing_results.x)
+                initial_value = self._initial_values if previous_results is None else utils._to_1d_array(previous_results.x)
 
                 results = minimize(
                     value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
@@ -499,15 +507,18 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     method=method,
                     args=(Ts, E, entry, weights),
                     bounds=self._bounds,
-                    options={**{"disp": show_progress}, **self._scipy_fit_options},
+                    options=option,
                 )
+                previous_results = results
 
-                if results.success and (results.fun < minimizing_ll):
+                if results.success and ~np.isnan(results.x).any() and (results.fun < minimizing_ll):
                     minimizing_ll = results.fun
                     minimizing_results = results
 
             # convergence successful.
-            if minimizing_results and minimizing_results.success:
+            # I still need to check for ~np.isnan(minimizing_results.x).any() since minimize will happily
+            # return nans even when criteria is satisified.
+            if minimizing_results and minimizing_results.success and ~np.isnan(minimizing_results.x).any():
                 sol = utils._to_1d_array(minimizing_results.x)
                 # pylint: disable=no-value-for-parameter
                 hessian_ = hessian(negative_log_likelihood)(sol, Ts, E, entry, weights)
@@ -516,7 +527,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 return sol, -minimizing_results.fun * weights.sum(), hessian_ * weights.sum()
 
             # convergence failed.
-            print(minimizing_results)
+            if show_progress:
+                print(minimizing_results)
             if self._KNOWN_MODEL:
                 raise utils.ConvergenceError(
                     dedent(
@@ -631,6 +643,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     ),
                 ),
             ],
+            [],
             justify,
             decimals,
             kwargs,
@@ -1214,12 +1227,21 @@ class RegressionFitter(BaseFitter):
         raise NotImplementedError()
 
 
+class SemiParametricRegressionFittter(RegressionFitter):
+    @property
+    def AIC_partial_(self) -> float:
+        """
+        "partial" because the log-likelihood is partial
+        """
+        return -2 * self.log_likelihood_ + 2 * self.params_.shape[0]
+
+
 class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
 
-    def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0):
+    def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha)
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
@@ -1735,13 +1757,18 @@ class ParametricRegressionFitter(RegressionFitter):
         params_array, _ = flatten(params)
         # remove intercepts from being penalized
         params_array = params_array[~self._constant_cols]
-        if self.penalizer > 0 and self.l1_ratio > 0:
-            penalty = self.l1_ratio * anp.abs(params_array).sum() + 0.5 * (1.0 - self.l1_ratio) * (params_array ** 2).sum()
-        elif self.penalizer > 0 and self.l1_ratio <= 0:
-            penalty = 0.5 * (params_array ** 2).sum()
+        if (isinstance(self.penalizer, np.ndarray) or self.penalizer > 0) and self.l1_ratio > 0:
+            penalty = (
+                self.l1_ratio * (self.penalizer * anp.abs(params_array)).sum()
+                + 0.5 * (1.0 - self.l1_ratio) * (self.penalizer * (params_array) ** 2).sum()
+            )
+
+        elif (isinstance(self.penalizer, np.ndarray) or self.penalizer > 0) and self.l1_ratio <= 0:
+            penalty = 0.5 * (self.penalizer * (params_array) ** 2).sum()
+
         else:
             penalty = 0
-        return neg_ll + self.penalizer * penalty
+        return neg_ll + penalty
 
     def _create_neg_likelihood_with_penalty_function(
         self, params_array, Ts, E, weights, entries, Xs, likelihood=None, penalty=None
@@ -1914,7 +1941,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 Some ways to possible ways fix this:
 
                 0. Are there any lifelines warnings outputted during the `fit`?
-                1. Inspect your DataFrame: does everything look as expected?
+                1. Inspect your DataFrame: does everything look as expected? Do you need to add/drop a constant (intercept) column?
                 2. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
                 3. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
                 4. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
@@ -2087,7 +2114,7 @@ class ParametricRegressionFitter(RegressionFitter):
             headers.append(("weights col", "'%s'" % self.weights_col))
         if self.entry_col:
             headers.append(("entry col", "'%s'" % self.entry_col))
-        if self.penalizer > 0:
+        if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
         if self.robust:
             headers.append(("robust variance", True))
@@ -2101,7 +2128,24 @@ class ParametricRegressionFitter(RegressionFitter):
             ]
         )
 
-        p = Printer(self, headers, justify, decimals, kwargs)
+        sr = self.log_likelihood_ratio_test()
+        footers = []
+
+        if utils.CensoringType.is_right_censoring(self):
+            footers.append(("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)))
+
+        footers.extend(
+            [
+                ("AIC", "{:.{prec}f}".format(self.AIC_, prec=decimals)),
+                (
+                    "log-likelihood ratio test",
+                    "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
+                ),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
+            ]
+        )
+
+        p = Printer(self, headers, footers, justify, decimals, kwargs)
 
         p.print(style=style)
 
@@ -2481,6 +2525,10 @@ class ParametricRegressionFitter(RegressionFitter):
             del self._predicted_median
             return self.concordance_index_
         return self._concordance_index_
+
+    @property
+    def AIC_(self) -> float:
+        return -2 * self.log_likelihood_ + 2 * self.params_.shape[0]
 
 
 class ParametericAFTRegressionFitter(ParametricRegressionFitter):
