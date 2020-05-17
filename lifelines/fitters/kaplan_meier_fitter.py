@@ -195,10 +195,8 @@ class KaplanMeierFitter(UnivariateFitter):
 
         self._label = coalesce(label, self._label, "NPMLE_estimate")
 
-        probs, t_intervals = npmle(self.lower_bound, self.upper_bound, verbose=show_progress)
-        self.survival_function_ = reconstruct_survival_function(probs, t_intervals, self.timeline, label=self._label).loc[
-            self.timeline
-        ]
+        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress)
+        self.survival_function_ = reconstruct_survival_function(*results, self.timeline, label=self._label).loc[self.timeline]
         self.cumulative_density_ = 1 - self.survival_function_
 
         self._median = median_survival_times(self.survival_function_)
@@ -407,7 +405,7 @@ class KaplanMeierFitter(UnivariateFitter):
         else:
             # hack for now.
             color = coalesce(kwargs.get("c"), kwargs.get("color"), "k")
-            self.survival_function_.plot(drawstyle="steps", color=color, **kwargs)
+            self.survival_function_.plot(drawstyle="steps-pre", color=color, **kwargs)
 
     def plot_cumulative_density(self, **kwargs):
         """

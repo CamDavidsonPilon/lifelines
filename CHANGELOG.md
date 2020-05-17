@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.7
+#### 0.24.7 - 2020-05-17
 
 ##### New features
  - `find_best_parametric_model` can handle left and interval censoring. Also allows for more fitting options.
@@ -8,11 +8,6 @@
  - `penalizer` in all regression models can now be an array instead of a float. This enables new functionality and better
  control over penalization. This is similar (but not identical) to `penalty.factors` in glmnet in R.
  - some convergence tweaks which should help recent performance regressions.
-
-##### Bug fixes
- - fixed bug where `cdf_plot` and `qq_plot` were not factoring in the weights correctly.
-
-
 
 #### 0.24.6 - 2020-05-05
 
