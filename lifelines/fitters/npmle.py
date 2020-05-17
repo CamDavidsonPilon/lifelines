@@ -19,18 +19,13 @@ def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup):
 
     N = len(observation_intervals)
     p_new = np.zeros_like(p_old)
-
     for observation_interval in observation_intervals:
-        p_temp = np.zeros_like(p_old)
-
         # find all turnbull intervals, t, that are contained in (ol, or). Call this set T
         # the denominator is sum of p_old[T] probabilities
         # the numerator is p_old[t]
 
         ix = list(turnbull_interval_lookup[observation_interval])
-
-        p_temp[ix] = p_old[ix]
-        p_new = p_new + p_temp / p_temp.sum()
+        p_new[ix] += p_old[ix] / p_old[ix].sum()
 
     return p_new / N
 
@@ -109,6 +104,7 @@ def npmle(left, right, tol=1e-5, verbose=False):
         i += 1
         p_new = E_step_M_step(observation_intervals, p, turnbull_lookup)
         converged = check_convergence(p_new, p, tol, i, verbose=verbose)
+
         p = p_new
 
     return p, turnbull_intervals
