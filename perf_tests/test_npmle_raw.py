@@ -9,10 +9,12 @@ if __name__ == "__main__":
     from lifelines.fitters.npmle import npmle
     from lifelines.datasets import load_diabetes
 
+    df = pd.read_csv("mice.csv", index_col=[0])
+
     reps = 1
-    df = load_diabetes()
-    df = pd.concat([df] * reps)
-    left, right = df["left"], df["right"]
+    # df = load_diabetes()
+    # df = pd.concat([df] * reps)
+    left, right = df["l"], df["u"]
     start_time = time.time()
-    npmle(left, right)  # verbose=True)
+    npmle(left, right, verbose=True)
     print("--- %s seconds ---" % (time.time() - start_time))

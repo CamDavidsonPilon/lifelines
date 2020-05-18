@@ -17,6 +17,26 @@ from lifelines.utils import ConvergenceWarning
 interval = namedtuple("Interval", ["left", "right"])
 
 
+class min_max:
+    """
+    Keep only the min/max of streaming values
+    """
+
+    def __init__(self):
+        self.min = np.inf
+        self.max = -np.inf
+
+    def add(self, value):
+        if value > self.max:
+            self.max = value
+        if value < self.min:
+            self.min = value
+
+    def __iter__(self):
+        yield self.min
+        yield self.max
+
+
 def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weights):
 
     N = sum(weights)
@@ -26,8 +46,8 @@ def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weight
         # the denominator is sum of p_old[T] probabilities
         # the numerator is p_old[t]
 
-        ix = list(turnbull_interval_lookup[observation_interval])
-        p_new[ix] += w * p_old[ix] / p_old[ix].sum()
+        min_, max_ = turnbull_interval_lookup[observation_interval]
+        p_new[min_ : max_ + 1] += w * p_old[min_ : max_ + 1] / p_old[min_ : max_ + 1].sum()
 
     return p_new / N
 
@@ -60,7 +80,7 @@ def is_subset(query_interval, super_interval):
 
 def create_turnbull_lookup(turnbull_intervals, observation_intervals):
 
-    turnbull_lookup = defaultdict(set)
+    turnbull_lookup = defaultdict(min_max)
 
     for i, turnbull_interval in enumerate(turnbull_intervals):
         # ask: which observations is this t_interval part of?
@@ -71,44 +91,73 @@ def create_turnbull_lookup(turnbull_intervals, observation_intervals):
             if is_subset(turnbull_interval, observation_interval):
                 turnbull_lookup[observation_interval].add(i)
 
-    return turnbull_lookup
+    return {o: list(s) for o, s in turnbull_lookup.items()}
 
 
 def check_convergence(p_new, p_old, tol, i, verbose=False):
     if verbose:
-        print("Iteration %d: norm(p_new - p_old): %.6f" % (i, norm(p_new - p_old)))
+        print("Iteration %d: delta: %.6f" % (i, norm(p_new - p_old)))
     if norm(p_new - p_old) < tol:
         return True
     return False
 
 
-def create_observation_intervals(left, right):
-    return [interval(l, r) for l, r in zip(left, right)]
+def create_observation_intervals(obs):
+    return [interval(l, r) for l, r in obs]
 
 
-def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=100):
+def odds(p):
+    return p / (1 - p)
+
+
+def probs(o):
+    return o / (o + 1)
+
+
+def npmle(left, right, tol=1e-6, weights=None, verbose=False, max_iter=1e5):
     """
     left and right are closed intervals.
     TODO: extend this to open-closed intervals.
     """
+    left, right = np.asarray(left), np.asarray(right)
+
     if weights is None:
         weights = np.ones_like(left)
 
-    turnbull_intervals = create_turnbull_intervals(left, right)
-    observation_intervals = create_observation_intervals(left, right)
-    turnbull_lookup = create_turnbull_lookup(turnbull_intervals, sorted(set(observation_intervals)))
+    # perform a group by to get unique observations and weights
+    df_ = pd.DataFrame({"l": left, "r": right, "w": weights}).groupby(["l", "r"]).sum()
+    weights = df_["w"].values
+    unique_obs = df_.index.values
 
-    T = len(turnbull_intervals)
+    # create objects needed
+    turnbull_intervals = create_turnbull_intervals(left, right)
+    observation_intervals = create_observation_intervals(unique_obs)
+    turnbull_lookup = create_turnbull_lookup(turnbull_intervals, observation_intervals)
+
+    # convergence init
     converged = False
+    i = 0
 
     # initialize to equal weight
+    T = len(turnbull_intervals)
     p = 1 / T * np.ones(T)
-    i = 0
+
     while (not converged) and (i < max_iter):
         p_new = E_step_M_step(observation_intervals, p, turnbull_lookup, weights)
         converged = check_convergence(p_new, p, tol, i, verbose=verbose)
 
-        p = p_new
+        # find alpha that maximizes ll using a line search
+        best_alpha, best_p, best_ll = None, None, -np.inf
+        delta = odds(p_new) - odds(p)
+        for alpha in 10 ** np.array([-0.1, 0, 0.1, 0.2]):
+            p_temp = probs(odds(p) + alpha * delta)
+            ll_temp = log_likelihood(observation_intervals, p_temp, turnbull_lookup, weights)
+            if best_ll < ll_temp:
+                best_ll = ll_temp
+                best_alpha = alpha
+                best_p = p_temp
+
+        p = best_p
 
         i += 1
 
@@ -116,6 +165,15 @@ def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=100):
         warnings.warn("Exceeded max iterations", ConvergenceWarning)
 
     return p, turnbull_intervals
+
+
+def log_likelihood(observation_intervals, p, turnbull_interval_lookup, weights):
+
+    ll = 0
+    for observation_interval, w in zip(observation_intervals, weights):
+        min_, max_ = turnbull_interval_lookup[observation_interval]
+        ll += w * np.log(p[min_ : max_ + 1].sum())
+    return ll
 
 
 def reconstruct_survival_function(probabilities, turnbull_intervals, timeline=None, label="NPMLE"):
