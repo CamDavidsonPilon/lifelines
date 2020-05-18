@@ -242,6 +242,9 @@ def qq_plot(model, ax=None, **plot_kwargs):
         wf = WeibullFitter().fit(df['week'], df['arrest'])
         qq_plot(wf)
 
+    Notes
+    ------
+    The interval censoring case uses the mean between the upper and lower bounds.
 
     """
     from lifelines.utils import qth_survival_times
@@ -271,7 +274,7 @@ def qq_plot(model, ax=None, **plot_kwargs):
         kmf = KaplanMeierFitter().fit_interval_censoring(
             model.lower_bound, model.upper_bound, label=COL_EMP, weights=model.weights, entry=model.entry
         )
-        sf, cdf = kmf.survival_function_[COL_EMP + "_lower"], kmf.cumulative_density_[COL_EMP + "_lower"]
+        sf, cdf = kmf.survival_function_.mean(1), kmf.cumulative_density_[COL_EMP + "_lower"]
 
     q = np.unique(cdf.values)
 

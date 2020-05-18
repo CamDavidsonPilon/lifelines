@@ -1369,33 +1369,7 @@ class TestKaplanMeierFitter:
         npt.assert_allclose(rf["KM_lifelines_latest"].values, rf["KM_lateenterafter"].values, rtol=10e-2)
         npt.assert_allclose(rf["KM_lifelines_latest"].values, rf["KM_true"].values, rtol=10e-2)
 
-    def test_interval_censoring_to_r_1(self):
-        kmf = KaplanMeierFitter()
-        left = [1, 7, 8, 7, 7, 17, 37, 46, 46, 45]
-        right = [7, 8, 10, 16, 14, 100, 44, 100, 100, 100]
-
-        kmf.fit_interval_censoring(left, right)
-
-        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([0.9, 1.0]))
-        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.7, 0.9]))
-        npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0.5, 0.7]))
-        npt.assert_allclose(kmf.survival_function_.loc[44.0].values, np.array([0.375, 0.5]), rtol=1e-3)
-        npt.assert_allclose(kmf.survival_function_.iloc[-1].values, np.array([0.0, 0.375]), atol=1e-3)
-
-    def test_interval_censoring_to_r_2_test_observed_event(self):
-        kmf = KaplanMeierFitter()
-        left = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45]
-        right = [7, 8, 10, 16, 14, 100, 44, 100, 100, 100]
-
-        kmf.fit_interval_censoring(left, right)
-
-        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([0.9, 1.0]))
-        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.5, 0.9]))
-        npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0.5, 0.5]))
-        npt.assert_allclose(kmf.survival_function_.loc[44.0].values, np.array([0.375, 0.5]), rtol=1e-3)
-        npt.assert_allclose(kmf.survival_function_.iloc[-1].values, np.array([0.0, 0.375]), atol=1e-3)
-
-    def test_interval_censoring_to_r_3_test_0_and_inf(self):
+    def test_interval_censoring_to_r_test_0_and_inf(self):
         kmf = KaplanMeierFitter()
         left = [0, 8, 8, 7, 7, 17, 37, 46, 46, 45]
         right = [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
@@ -1403,13 +1377,13 @@ class TestKaplanMeierFitter:
         kmf.fit_interval_censoring(left, right)
 
         npt.assert_allclose(kmf.survival_function_.loc[0.0].values, np.array([1.0, 1.0]))
-        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([0.9, 1.0]))
-        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.5, 0.9]))
+        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([1.0, 1.0]))
+        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.83333, 0.83333]), rtol=1e-3)
         npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0.5, 0.5]))
-        npt.assert_allclose(kmf.survival_function_.loc[44.0].values, np.array([0.375, 0.5]), rtol=1e-3)
-        npt.assert_allclose(kmf.survival_function_.iloc[-1].values, np.array([0.0, 0.375]), atol=1e-3)
+        npt.assert_allclose(kmf.survival_function_.loc[44.0].values, np.array([0.5, 0.375]), rtol=1e-3)
+        npt.assert_allclose(kmf.survival_function_.iloc[-1].values, np.array([0.375, 0.0]), atol=1e-3)
 
-    def test_interval_censoring_to_r_3_test_ties_and_overlapping_intervals(self):
+    def test_interval_censoring_to_r_test_ties_and_overlapping_intervals(self):
         kmf = KaplanMeierFitter()
         left = [6, 7, 8, 7, 5]
         right = [7, 8, 10, 16, 20]
@@ -1430,76 +1404,48 @@ class TestKaplanMeierFitter:
         kmf.fit_interval_censoring(left, right, timeline=np.arange(10))
         npt.assert_allclose(kmf.survival_function_.index.values, np.arange(10))
 
-    def test_interval_censoring_fit_with_exact_observations_is_equal_to_km(self):
-        left = np.array([6, 7, 8])
-        right = np.array([6, 7, 8])
-
-        kmf_interval = KaplanMeierFitter()
-        kmf_interval.fit_interval_censoring(left, right)
-
-        kmf_right = KaplanMeierFitter().fit(left, left == right)
-
-        npt.assert_allclose(
-            kmf_interval.survival_function_["NPMLE_estimate_lower"],
-            kmf_right.survival_function_["KM_estimate"],
-            rtol=1e-3,
-            atol=1e-3,
-        )
-
-    def test_interval_censoring_fit_with_exact_observations_is_equal_to_km2(self):
-        left = np.array([6, 7, 8, 9])
-        right = np.array([6, 7, 8, np.inf])
-
-        kmf_interval = KaplanMeierFitter()
-        kmf_interval.fit_interval_censoring(left, right)
-
-        kmf_right = KaplanMeierFitter().fit(left, left == right)
-
-        npt.assert_allclose(
-            kmf_interval.survival_function_["NPMLE_estimate_lower"].iloc[:-1],
-            kmf_right.survival_function_["KM_estimate"],
-            rtol=1e-3,
-            atol=1e-3,
-        )
-
-    def test_interval_censoring_fit_with_exact_observations_is_equal_to_km3(self):
-        left = np.array([6, 7, 8, 7.5])
-        right = np.array([6, 7, 8, np.inf])
-
-        kmf_interval = KaplanMeierFitter()
-        kmf_interval.fit_interval_censoring(left, right)
-
-        kmf_right = KaplanMeierFitter().fit(left, left == right)
-
-        npt.assert_allclose(
-            kmf_interval.survival_function_["NPMLE_estimate_lower"].iloc[:-1],
-            kmf_right.survival_function_["KM_estimate"],
-            rtol=1e-3,
-            atol=1e-3,
-        )
-
-    def test_interval_censoring_fit_with_exact_observations_is_equal_to_km4(self):
-        left = np.array([6, 7, 8, 7.0])
-        right = np.array([6, 7, 8, np.inf])
-
-        kmf_interval = KaplanMeierFitter()
-        kmf_interval.fit_interval_censoring(left, right)
-
-        kmf_right = KaplanMeierFitter().fit(left, left == right)
-
-        npt.assert_allclose(
-            kmf_interval.survival_function_["NPMLE_estimate_lower"].iloc[:-1],
-            kmf_right.survival_function_["KM_estimate"],
-            rtol=1e-3,
-            atol=1e-3,
-        )
-
-    def test_interval_model_has_all_attributes_as_non_interval(self):
+    def test_interval_censoring_with_weights(self):
+        kmf = KaplanMeierFitter()
         left = [6, 7, 8, 7, 5]
         right = [7, 8, 10, 16, 20]
-        kmf_interval = KaplanMeierFitter().fit(left, right)
 
-        kmf_right = KaplanMeierFitter().fit(np.arange(10))
+        kmf.fit_interval_censoring(left, right, timeline=np.arange(10))
+        npt.assert_allclose(kmf.survival_function_.index.values, np.arange(10))
+
+    def test_interval_censoring_fit_against_R(self):
+        """
+        library(icenReg)
+
+        left  <-  c(0, 4, 2, 0, 2, 5)
+        right <- c(1, 6, 6, 3, 4, 7)
+
+        data = data.frame(left,right)
+
+        fit <- ic_np(cbind(left, right) ~ 0, data=data, B=c(1,1))
+        plot(fit)
+        fit$T_bull_Intervals
+        getSCurves(fit)
+        """
+        left = np.array([0, 4, 2, 0, 2, 5])
+        right = np.array([1, 6, 6, 3, 4, 7])
+
+        kmf_interval = KaplanMeierFitter()
+        kmf_interval.fit_interval_censoring(left, right)
+
+        npt.assert_allclose(kmf_interval.survival_function_.loc[0, "NPMLE_estimate_upper"], 1.0, rtol=1e-2)
+        npt.assert_allclose(kmf_interval.survival_function_.loc[0, "NPMLE_estimate_lower"], 1.0, rtol=1e-2)
+
+        npt.assert_allclose(kmf_interval.survival_function_.loc[1, "NPMLE_estimate_upper"], 1.0, rtol=1e-2)
+        npt.assert_allclose(kmf_interval.survival_function_.loc[1, "NPMLE_estimate_lower"], 0.75, rtol=1e-2)
+
+        npt.assert_allclose(kmf_interval.survival_function_.loc[2, "NPMLE_estimate_upper"], 0.75, rtol=1e-2)
+        npt.assert_allclose(kmf_interval.survival_function_.loc[2, "NPMLE_estimate_lower"], 0.75, rtol=1e-2)
+
+        npt.assert_allclose(kmf_interval.survival_function_.loc[4, "NPMLE_estimate_upper"], 0.5, rtol=1e-2)
+        npt.assert_allclose(kmf_interval.survival_function_.loc[4, "NPMLE_estimate_lower"], 0.375, rtol=1e-2)
+
+        npt.assert_allclose(kmf_interval.survival_function_.loc[6, "NPMLE_estimate_upper"], 0.375, rtol=1e-2)
+        npt.assert_allclose(kmf_interval.survival_function_.loc[6, "NPMLE_estimate_lower"], 0.0, rtol=1e-2)
 
 
 class TestNelsonAalenFitter:

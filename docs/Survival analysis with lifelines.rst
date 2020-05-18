@@ -727,7 +727,7 @@ Based on the above, the log-normal distribution seems to fit well, and the Weibu
 Interval censored data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Data can also be interval censored. An example of this is periodically recording the population of micro-organisms as they die-off. Their deaths are interval censored because you know a subject died between two observations periods. New to lifelines in version 0.21.0, all parametric models have support for interval censored data.
+Data can also be interval censored. An example of this is periodically recording the population of micro-organisms as they die-off. Their deaths are interval censored because you know a subject died between two observations periods.
 
 .. note:: The API for ``fit_interval_censoring`` is different than right and left censored data.
 
@@ -735,10 +735,36 @@ Data can also be interval censored. An example of this is periodically recording
 
 
     from lifelines.datasets import load_diabetes
+    from lifelines.plotting import plot_interval_censored_lifetimes
 
     df = load_diabetes()
+    plot_interval_censored_lifetimes(df['left'], df['right'])
 
-    wf = WeibullFitter().fit_interval_censoring(lower_bound=df['left'], upper_bound=df['right'])
+.. image:: images/interval_censored_lifetimes.png
+    :width: 670px
+    :align: center
+
+
+Above, we can see that some subjects' death was exactly observed (denoted by a red ●), and some subjects' deaths is bounded between two times (denoted by the interval between the red ▶︎ ◀︎).  We can perform inference on the data using any of our models. Note the use of calling `fit_interval_censoring` instead of `fit`.
+
+.. code:: python
+
+    wf = WeibullFitter()
+    wf.fit_interval_censoring(lower_bound=df['left'], upper_bound=df['right'])
+
+    # or, a non-parametric estimator:
+    # for now, this assumes closed observation intervals, ex: [4,5], not (4, 5) or (4, 5]
+    kmf = KaplanMeierFitter()
+    kmf.fit_interval_censoring(df['left'], df['right'])
+
+    ax = kmf.plot_survival_function()
+    wf.plot_survival_function(ax=ax)
+
+
+.. image:: images/interval_censored_inference.png
+    :width: 670px
+    :align: center
+
 
 
 Another example of using lifelines for interval censored data is located `here <https://dataorigami.net/blogs/napkin-folding/counting-and-interval-censoring>`_.
