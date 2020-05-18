@@ -173,6 +173,9 @@ class KaplanMeierFitter(UnivariateFitter):
         if entry is not None:
             raise NotImplementedError("entry is not supported yet")
 
+        if weights is None:
+            weights = np.ones_like(upper_bound)
+
         self.weights = np.asarray(weights)
 
         self.upper_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(upper_bound))

@@ -51,17 +51,3 @@ def test_npmle_with_weights():
 
     left, right = [1, 1, 8, 8, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 7, 8, 8, 10, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
     npt.assert_allclose(npmle(left, right)[0], sol, rtol=1e-4)
-
-
-def test_mice():
-    import pandas as pd
-    from lifelines.fitters.npmle import npmle
-    from lifelines.datasets import load_diabetes
-
-    df = pd.read_csv("mice.csv", index_col=[0])
-
-    reps = 1
-    # df = load_diabetes()
-    # df = pd.concat([df] * reps)
-    left, right = df["l"], df["u"]
-    npmle(left, right, verbose=True)
