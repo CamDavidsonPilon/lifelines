@@ -39,7 +39,7 @@ class min_max:
 
 def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weights):
 
-    N = sum(weights)
+    N = 0
     p_new = np.zeros_like(p_old)
     for observation_interval, w in zip(observation_intervals, weights):
         # find all turnbull intervals, t, that are contained in (ol, or). Call this set T
@@ -48,6 +48,7 @@ def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weight
 
         min_, max_ = turnbull_interval_lookup[observation_interval]
         p_new[min_ : max_ + 1] += w * p_old[min_ : max_ + 1] / p_old[min_ : max_ + 1].sum()
+        N += w
 
     return p_new / N
 
@@ -114,7 +115,7 @@ def probs(o):
     return o / (o + 1)
 
 
-def npmle(left, right, tol=1e-6, weights=None, verbose=False, max_iter=1e5):
+def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
     """
     left and right are closed intervals.
     TODO: extend this to open-closed intervals.
@@ -149,7 +150,7 @@ def npmle(left, right, tol=1e-6, weights=None, verbose=False, max_iter=1e5):
         # find alpha that maximizes ll using a line search
         best_alpha, best_p, best_ll = None, None, -np.inf
         delta = odds(p_new) - odds(p)
-        for alpha in 10 ** np.array([-0.1, 0, 0.1, 0.2]):
+        for alpha in np.array([1.0, 1.25, 1.95]):
             p_temp = probs(odds(p) + alpha * delta)
             ll_temp = log_likelihood(observation_intervals, p_temp, turnbull_lookup, weights)
             if best_ll < ll_temp:

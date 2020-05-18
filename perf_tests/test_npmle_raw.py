@@ -16,5 +16,5 @@ if __name__ == "__main__":
     # df = pd.concat([df] * reps)
     left, right = df["l"], df["u"]
     start_time = time.time()
-    npmle(left, right, verbose=True)
+    npmle(left, right, verbose=False)
     print("--- %s seconds ---" % (time.time() - start_time))
