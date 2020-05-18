@@ -134,9 +134,15 @@ class KaplanMeierFitter(UnivariateFitter):
         Fit the model to a interval-censored dataset using non-parametric MLE. This estimator is
         also called the Turball Estimator.
 
+        Currently, only closed interval are supported. However, it's easy to create open intervals by adding (or subtracting) a very small
+        value from the lower-bound (or upper bound). For example, the following turns closed intervals into open intervals.
+
+        >>> left, right = df['left'], df['right']
+        >>> KaplanMeierFitter().fit_interval_censoring(left + 0.00001, right - 0.00001)
+
         Note
         ------
-        This is new and experimental, and many feature are missing.
+        This is new and experimental, and many features are missing.
 
         Parameters
         ----------
@@ -168,11 +174,13 @@ class KaplanMeierFitter(UnivariateFitter):
         self: KaplanMeierFitter
           self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
         """
-        warnings.warn("This is new and experimental, many feature are missing and accuracy is not reliable", UserWarning)
+        if entry is not None:
+            raise NotImplementedError("entry is not supported yet")
 
-        if entry is not None or weights is not None:
-            raise NotImplementedError("entry / weights is not supported yet")
-        self.weights = np.ones_like(upper_bound)
+        if weights is None:
+            weights = np.ones_like(upper_bound)
+
+        self.weights = np.asarray(weights)
 
         self.upper_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(upper_bound))
         self.lower_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(lower_bound))
@@ -195,10 +203,8 @@ class KaplanMeierFitter(UnivariateFitter):
 
         self._label = coalesce(label, self._label, "NPMLE_estimate")
 
-        probs, t_intervals = npmle(self.lower_bound, self.upper_bound, verbose=show_progress)
-        self.survival_function_ = reconstruct_survival_function(probs, t_intervals, self.timeline, label=self._label).loc[
-            self.timeline
-        ]
+        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress)
+        self.survival_function_ = reconstruct_survival_function(*results, self.timeline, label=self._label).loc[self.timeline]
         self.cumulative_density_ = 1 - self.survival_function_
 
         self._median = median_survival_times(self.survival_function_)
@@ -407,7 +413,7 @@ class KaplanMeierFitter(UnivariateFitter):
         else:
             # hack for now.
             color = coalesce(kwargs.get("c"), kwargs.get("color"), "k")
-            self.survival_function_.plot(drawstyle="steps", color=color, **kwargs)
+            self.survival_function_.plot(drawstyle="steps-pre", color=color, **kwargs)
 
     def plot_cumulative_density(self, **kwargs):
         """
