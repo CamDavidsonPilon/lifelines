@@ -182,7 +182,7 @@ def reconstruct_survival_function(probabilities, turnbull_intervals, timeline=No
     if timeline is None:
         timeline = []
 
-    index = np.unique(turnbull_intervals)
+    index = np.unique(np.concatenate((turnbull_intervals, [(0, 0)])))
     label_upper = label + "_upper"
     label_lower = label + "_lower"
     df = pd.DataFrame([], index=index, columns=[label_upper, label_lower])
@@ -205,7 +205,9 @@ def reconstruct_survival_function(probabilities, turnbull_intervals, timeline=No
 
     full_dataframe = pd.DataFrame(index=timeline, columns=df.columns)
 
-    return full_dataframe.combine_first(df).bfill().sort_index()
+    # First backfill at events between known observations
+    # Second fill all events _outside_ known obs with running_sum
+    return full_dataframe.combine_first(df).bfill().fillna(running_sum).clip(lower=0.0)
 
 
 def npmle_compute_confidence_intervals(left, right, mle_, alpha=0.05, samples=1000):

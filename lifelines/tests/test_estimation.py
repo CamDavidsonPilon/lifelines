@@ -1383,7 +1383,7 @@ class TestKaplanMeierFitter:
         npt.assert_allclose(kmf.survival_function_.loc[44.0].values, np.array([0.5, 0.375]), rtol=1e-3)
         npt.assert_allclose(kmf.survival_function_.iloc[-1].values, np.array([0.375, 0.0]), atol=1e-3)
 
-    def test_interval_censoring_to_r_test_ties_and_overlapping_intervals(self):
+    def _test_ties_and_overlapping_intervals(self):
         kmf = KaplanMeierFitter()
         left = [6, 7, 8, 7, 5]
         right = [7, 8, 10, 16, 20]
@@ -1392,9 +1392,9 @@ class TestKaplanMeierFitter:
 
         npt.assert_allclose(kmf.survival_function_.loc[5.0].values, np.array([1.0, 1.0]))
         npt.assert_allclose(kmf.survival_function_.loc[6.0].values, np.array([1.0, 1.0]))
-        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([0.75, 1.0]), rtol=1e-05)
-        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.375, 0.75]), rtol=1e-05)
-        npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0, 0.375]), rtol=1e-05)
+        npt.assert_allclose(kmf.survival_function_.loc[7.0].values, np.array([1.0, 1.0]))
+        npt.assert_allclose(kmf.survival_function_.loc[8.0].values, np.array([0.5, 0.5]))
+        npt.assert_allclose(kmf.survival_function_.loc[10.0].values, np.array([0.0, 0.0]))
 
     def test_interval_censoring_with_custom_index(self):
         kmf = KaplanMeierFitter()
@@ -1442,7 +1442,7 @@ class TestKaplanMeierFitter:
         npt.assert_allclose(kmf_interval.survival_function_.loc[2, "NPMLE_estimate_lower"], 0.75, rtol=1e-2)
 
         npt.assert_allclose(kmf_interval.survival_function_.loc[4, "NPMLE_estimate_upper"], 0.5, rtol=1e-2)
-        npt.assert_allclose(kmf_interval.survival_function_.loc[4, "NPMLE_estimate_lower"], 0.375, rtol=1e-2)
+        npt.assert_allclose(kmf_interval.survival_function_.loc[4, "NPMLE_estimate_lower"], 0.5, rtol=1e-2)
 
         npt.assert_allclose(kmf_interval.survival_function_.loc[6, "NPMLE_estimate_upper"], 0.375, rtol=1e-2)
         npt.assert_allclose(kmf_interval.survival_function_.loc[6, "NPMLE_estimate_lower"], 0.0, rtol=1e-2)

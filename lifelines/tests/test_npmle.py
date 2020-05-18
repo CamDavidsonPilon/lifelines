@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
-from lifelines.fitters.npmle import npmle, is_subset, create_turnbull_intervals, interval
+from lifelines.fitters.npmle import npmle, is_subset, create_turnbull_intervals, interval, reconstruct_survival_function
 from numpy import testing as npt
 import numpy as np
 
@@ -51,3 +51,13 @@ def test_npmle_with_weights():
 
     left, right = [1, 1, 8, 8, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 7, 8, 8, 10, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
     npt.assert_allclose(npmle(left, right)[0], sol, rtol=1e-4)
+
+
+def test_sf_doesnt_return_nans():
+    left = [6, 7, 8, 7, 5]
+    right = [7, 8, 10, 16, 20]
+    results = npmle(left, right)
+    npt.assert_allclose(results[1], [interval(7, 7), interval(8, 8)])
+    npt.assert_allclose(results[0], [0.5, 0.5])
+    sf = reconstruct_survival_function(*results, timeline=[6, 7, 8, 16, 20])
+    assert not np.isnan(sf.values).any()
