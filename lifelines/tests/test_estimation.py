@@ -1404,6 +1404,14 @@ class TestKaplanMeierFitter:
         kmf.fit_interval_censoring(left, right, timeline=np.arange(10))
         npt.assert_allclose(kmf.survival_function_.index.values, np.arange(10))
 
+    def test_interval_censoring_with_weights(self):
+        kmf = KaplanMeierFitter()
+        left = [6, 7, 8, 7, 5]
+        right = [7, 8, 10, 16, 20]
+
+        kmf.fit_interval_censoring(left, right, timeline=np.arange(10))
+        npt.assert_allclose(kmf.survival_function_.index.values, np.arange(10))
+
     def test_interval_censoring_fit_against_R(self):
         """
         library(icenReg)

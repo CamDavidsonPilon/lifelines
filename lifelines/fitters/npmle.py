@@ -8,24 +8,26 @@ https://docs.ufpr.br/~giolo/CE063/Artigos/A4_Gomes%20et%20al%202009.pdf
 
 """
 from collections import defaultdict, namedtuple
+import warnings
 import numpy as np
 from numpy.linalg import norm
 import pandas as pd
+from lifelines.utils import ConvergenceWarning
 
 interval = namedtuple("Interval", ["left", "right"])
 
 
-def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup):
+def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weights):
 
-    N = len(observation_intervals)
+    N = sum(weights)
     p_new = np.zeros_like(p_old)
-    for observation_interval in observation_intervals:
+    for observation_interval, w in zip(observation_intervals, weights):
         # find all turnbull intervals, t, that are contained in (ol, or). Call this set T
         # the denominator is sum of p_old[T] probabilities
         # the numerator is p_old[t]
 
         ix = list(turnbull_interval_lookup[observation_interval])
-        p_new[ix] += p_old[ix] / p_old[ix].sum()
+        p_new[ix] += w * p_old[ix] / p_old[ix].sum()
 
     return p_new / N
 
@@ -84,33 +86,42 @@ def create_observation_intervals(left, right):
     return [interval(l, r) for l, r in zip(left, right)]
 
 
-def npmle(left, right, tol=1e-5, verbose=False):
+def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=100):
     """
     left and right are closed intervals.
     TODO: extend this to open-closed intervals.
     """
+    if weights is None:
+        weights = np.ones_like(left)
+
     turnbull_intervals = create_turnbull_intervals(left, right)
     observation_intervals = create_observation_intervals(left, right)
     turnbull_lookup = create_turnbull_lookup(turnbull_intervals, sorted(set(observation_intervals)))
 
     T = len(turnbull_intervals)
-
     converged = False
 
     # initialize to equal weight
     p = 1 / T * np.ones(T)
     i = 0
-    while not converged:
-        i += 1
-        p_new = E_step_M_step(observation_intervals, p, turnbull_lookup)
+    while (not converged) and (i < max_iter):
+        p_new = E_step_M_step(observation_intervals, p, turnbull_lookup, weights)
         converged = check_convergence(p_new, p, tol, i, verbose=verbose)
 
         p = p_new
 
+        i += 1
+
+    if i >= max_iter:
+        warnings.warn("Exceeded max iterations", ConvergenceWarning)
+
     return p, turnbull_intervals
 
 
-def reconstruct_survival_function(probabilities, turnbull_intervals, timeline, label="NPMLE"):
+def reconstruct_survival_function(probabilities, turnbull_intervals, timeline=None, label="NPMLE"):
+
+    if timeline is None:
+        timeline = []
 
     index = np.unique(turnbull_intervals)
     label_upper = label + "_upper"
@@ -135,7 +146,7 @@ def reconstruct_survival_function(probabilities, turnbull_intervals, timeline, l
 
     full_dataframe = pd.DataFrame(index=timeline, columns=df.columns)
 
-    return full_dataframe.combine_first(df).bfill()
+    return full_dataframe.combine_first(df).bfill().sort_index()
 
 
 def npmle_compute_confidence_intervals(left, right, mle_, alpha=0.05, samples=1000):

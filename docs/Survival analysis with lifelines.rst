@@ -753,6 +753,7 @@ Above, we can see that some subjects' death was exactly observed (denoted by a r
     wf.fit_interval_censoring(lower_bound=df['left'], upper_bound=df['right'])
 
     # or, a non-parametric estimator:
+    # for now, this assumes closed observation intervals, ex: [4,5], not (4, 5) or (4, 5]
     kmf = KaplanMeierFitter()
     kmf.fit_interval_censoring(df['left'], df['right'])
 

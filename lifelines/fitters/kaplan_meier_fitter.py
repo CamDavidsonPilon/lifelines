@@ -168,11 +168,12 @@ class KaplanMeierFitter(UnivariateFitter):
         self: KaplanMeierFitter
           self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
         """
-        warnings.warn("This is new and experimental, many feature are missing and accuracy is not reliable", UserWarning)
+        warnings.warn("This is new and experimental, many features are missing and accuracy is not guaranteed", UserWarning)
 
-        if entry is not None or weights is not None:
-            raise NotImplementedError("entry / weights is not supported yet")
-        self.weights = np.ones_like(upper_bound)
+        if entry is not None:
+            raise NotImplementedError("entry is not supported yet")
+
+        self.weights = np.asarray(weights)
 
         self.upper_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(upper_bound))
         self.lower_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(lower_bound))

@@ -34,3 +34,20 @@ def test_create_turnbull_intervals():
 def test_npmle():
     left, right = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
     npt.assert_allclose(npmle(left, right)[0], np.array([0.16667016, 0.33332984, 0.125, 0.375]))
+
+
+def test_npmle_with_weights_is_identical_if_uniform_weights():
+    left, right = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+    weights = 2 * np.ones_like(right)
+    npt.assert_allclose(npmle(left, right)[0], np.array([0.16667016, 0.33332984, 0.125, 0.375]))
+
+
+def test_npmle_with_weights():
+    sol = np.array([0.2051282, 0.4102564, 0.0961539, 0.2884615])
+
+    left, right = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+    weights = np.array([2, 2, 2, 1, 1, 1, 1, 1, 1, 1])
+    npt.assert_allclose(npmle(left, right, weights=weights)[0], sol)
+
+    left, right = [1, 1, 8, 8, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 7, 8, 8, 10, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+    npt.assert_allclose(npmle(left, right)[0], sol, rtol=1e-4)
