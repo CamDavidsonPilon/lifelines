@@ -134,9 +134,15 @@ class KaplanMeierFitter(UnivariateFitter):
         Fit the model to a interval-censored dataset using non-parametric MLE. This estimator is
         also called the Turball Estimator.
 
+        Currently, only closed interval are supported. However, it's easy to create open intervals by adding (or subtracting) a very small
+        value from the lower-bound (or upper bound). For example, the following turns closed intervals into open intervals.
+
+        >>> left, right = df['left'], df['right']
+        >>> KaplanMeierFitter().fit_interval_censoring(left + 0.00001, right - 0.00001)
+
         Note
         ------
-        This is new and experimental, and many feature are missing.
+        This is new and experimental, and many features are missing.
 
         Parameters
         ----------
@@ -168,10 +174,11 @@ class KaplanMeierFitter(UnivariateFitter):
         self: KaplanMeierFitter
           self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
         """
-        warnings.warn("This is new and experimental, many features are missing and accuracy is not guaranteed", UserWarning)
-
         if entry is not None:
             raise NotImplementedError("entry is not supported yet")
+
+        if weights is None:
+            weights = np.ones_like(upper_bound)
 
         self.weights = np.asarray(weights)
 
