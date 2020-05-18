@@ -1,5 +1,12 @@
 ## Changelog
 
+
+#### 0.24.8 - 2020-05-17
+
+##### New features
+ - Non parametric interval censoring is now available, _experimentally_. Not all edge cases are fully checked, and some features are missing. Try it under `KaplanMeierFitter.fit_interval_censoring`
+
+
 #### 0.24.7 - 2020-05-17
 
 ##### New features
