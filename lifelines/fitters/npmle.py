@@ -41,16 +41,21 @@ def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weight
 
     N = 0
     p_new = np.zeros_like(p_old)
+    P = cumulative_sum(p_old)
     for observation_interval, w in zip(observation_intervals, weights):
         # find all turnbull intervals, t, that are contained in (ol, or). Call this set T
         # the denominator is sum of p_old[T] probabilities
         # the numerator is p_old[t]
 
         min_, max_ = turnbull_interval_lookup[observation_interval]
-        p_new[min_ : max_ + 1] += w * p_old[min_ : max_ + 1] / p_old[min_ : max_ + 1].sum()
+        p_new[min_ : max_ + 1] += w * (p_old[min_ : max_ + 1]) / (P[max_ + 1] - P[min_])
         N += w
 
     return p_new / N
+
+
+def cumulative_sum(p):
+    return np.insert(p, 0, 0).cumsum()
 
 
 def create_turnbull_intervals(left, right):
@@ -150,9 +155,9 @@ def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
         # find alpha that maximizes ll using a line search
         best_alpha, best_p, best_ll = None, None, -np.inf
         delta = odds(p_new) - odds(p)
-        for alpha in np.array([1.0, 1.25, 1.95]):
+        for alpha in np.array([1.0, 1.25, 1.75, 2.5]):
             p_temp = probs(odds(p) + alpha * delta)
-            ll_temp = log_likelihood(observation_intervals, p_temp, turnbull_lookup, weights)
+            ll_temp = log_likelihood(p_temp, turnbull_lookup, weights)
             if best_ll < ll_temp:
                 best_ll = ll_temp
                 best_alpha = alpha
@@ -168,13 +173,10 @@ def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
     return p, turnbull_intervals
 
 
-def log_likelihood(observation_intervals, p, turnbull_interval_lookup, weights):
-
-    ll = 0
-    for observation_interval, w in zip(observation_intervals, weights):
-        min_, max_ = turnbull_interval_lookup[observation_interval]
-        ll += w * np.log(p[min_ : max_ + 1].sum())
-    return ll
+def log_likelihood(p, turnbull_interval_lookup, weights):
+    P = cumulative_sum(p)
+    ix = np.array(list(turnbull_interval_lookup.values()))
+    return (weights * np.log(P[ix[:, 1] + 1] - P[ix[:, 0]])).sum()
 
 
 def reconstruct_survival_function(probabilities, turnbull_intervals, timeline=None, label="NPMLE"):
