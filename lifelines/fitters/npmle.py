@@ -100,10 +100,10 @@ def create_turnbull_lookup(turnbull_intervals, observation_intervals):
     return {o: list(s) for o, s in turnbull_lookup.items()}
 
 
-def check_convergence(p_new, p_old, tol, i, verbose=False):
+def check_convergence(p_new, p_old, turnbull_lookup, weights, tol, i, verbose=False):
     if verbose:
         print("Iteration %d: delta: %.6f" % (i, norm(p_new - p_old)))
-    if norm(p_new - p_old) < tol:
+    if log_likelihood(p_new, turnbull_lookup, weights) - log_likelihood(p_old, turnbull_lookup, weights) < tol:
         return True
     return False
 
@@ -120,7 +120,7 @@ def probs(o):
     return o / (o + 1)
 
 
-def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
+def npmle(left, right, tol=1e-10, weights=None, verbose=False, max_iter=1e5):
     """
     left and right are closed intervals.
     TODO: extend this to open-closed intervals.
@@ -150,7 +150,7 @@ def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
 
     while (not converged) and (i < max_iter):
         p_new = E_step_M_step(observation_intervals, p, turnbull_lookup, weights)
-        converged = check_convergence(p_new, p, tol, i, verbose=verbose)
+        converged = check_convergence(p_new, p, turnbull_lookup, weights, tol, i, verbose=verbose)
 
         # find alpha that maximizes ll using a line search
         best_alpha, best_p, best_ll = None, None, -np.inf
