@@ -125,10 +125,10 @@ class KaplanMeierFitter(UnivariateFitter):
         label=None,
         alpha=None,
         ci_labels=None,
-        show_progress=False,
         entry=None,
         weights=None,
-        tol=1e-7,
+        tol: float = 1e-5,
+        show_progress: bool = False,
     ) -> "KaplanMeierFitter":
         """
         Fit the model to a interval-censored dataset using non-parametric MLE. This estimator is
@@ -168,6 +168,10 @@ class KaplanMeierFitter(UnivariateFitter):
               if providing a weighted dataset. For example, instead
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
+          tol: float, optional
+            minimum difference in log likelihood changes for iterative algorithm.
+          show_progress: bool, optional
+            display information during fitting.
 
         Returns
         -------
@@ -203,7 +207,7 @@ class KaplanMeierFitter(UnivariateFitter):
 
         self._label = coalesce(label, self._label, "NPMLE_estimate")
 
-        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress)
+        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress, tol=tol)
         self.survival_function_ = reconstruct_survival_function(*results, self.timeline, label=self._label).loc[self.timeline]
         self.cumulative_density_ = 1 - self.survival_function_
 
