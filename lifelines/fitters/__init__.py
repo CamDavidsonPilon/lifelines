@@ -93,6 +93,7 @@ class UnivariateFitter(BaseFitter):
         self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self._class_name)
         self.__class__.predict.__doc__ = self.predict.__doc__.format(self._class_name)
         self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self._class_name, self._estimate_name)
+        return
 
     def plot(self, **kwargs):
         """

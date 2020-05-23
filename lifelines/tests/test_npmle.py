@@ -33,13 +33,13 @@ def test_create_turnbull_intervals():
 
 def test_npmle():
     left, right = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
-    npt.assert_allclose(npmle(left, right)[0], np.array([0.16667016, 0.33332984, 0.125, 0.375]), rtol=1e-4)
+    npt.assert_allclose(npmle(left, right, verbose=True)[0], np.array([0.16667016, 0.33332984, 0.125, 0.375]), rtol=1e-4)
 
 
 def test_npmle_with_weights_is_identical_if_uniform_weights():
     left, right = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
     weights = 2 * np.ones_like(right)
-    npt.assert_allclose(npmle(left, right)[0], np.array([0.16667016, 0.33332984, 0.125, 0.375]), rtol=1e-4)
+    npt.assert_allclose(npmle(left, right, verbose=True)[0], np.array([0.16667016, 0.33332984, 0.125, 0.375]), rtol=1e-4)
 
 
 def test_npmle_with_weights():
@@ -61,3 +61,12 @@ def test_sf_doesnt_return_nans():
     npt.assert_allclose(results[0], [0.5, 0.5])
     sf = reconstruct_survival_function(*results, timeline=[6, 7, 8, 16, 20])
     assert not np.isnan(sf.values).any()
+
+
+def test_mice_and_optimization_flag():
+    import pandas as pd
+
+    df = pd.read_csv("mice.csv", index_col=[0])
+    results = npmle(df["l"], df["u"], verbose=True, optimize=True)
+    npt.assert_allclose(results[0][0], 1 - 0.8571429, rtol=1e-4)
+    npt.assert_allclose(results[0][-1], 0.166667, rtol=1e-4)

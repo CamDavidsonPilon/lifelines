@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import functools
 import warnings
 import numpy as np
 import pandas as pd
@@ -212,7 +211,6 @@ class KaplanMeierFitter(UnivariateFitter):
         self.cumulative_density_ = 1 - self.survival_function_
 
         self._median = median_survival_times(self.survival_function_)
-        self.percentile = functools.partial(qth_survival_time, model_or_survival_function=self.survival_function_)
 
         """
         self.confidence_interval_ = npmle_compute_confidence_intervals(self.lower_bound, self.upper_bound, self.survival_function_, self.alpha)
@@ -349,7 +347,6 @@ class KaplanMeierFitter(UnivariateFitter):
         self.__estimate = getattr(self, primary_estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self._median = median_survival_times(self.survival_function_)
-        self.percentile = functools.partial(qth_survival_time, model_or_survival_function=self.survival_function_)
         self._cumulative_sq_ = cumulative_sq_
 
         setattr(self, "confidence_interval_" + primary_estimate_name, self.confidence_interval_)

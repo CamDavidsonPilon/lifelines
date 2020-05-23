@@ -1965,7 +1965,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
 
         if self.baseline_estimation_method != "breslow":
-            return NotImplementedError("Only breslow implemented atm.")
+            raise NotImplementedError("Only breslow implemented atm.")
 
         df = df.copy()
 
