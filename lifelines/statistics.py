@@ -436,7 +436,9 @@ def survival_difference_at_fixed_point_in_time_test(
     )
 
 
-def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, **kwargs) -> StatisticalResult:
+def logrank_test(
+    durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, weightings=None, **kwargs
+) -> StatisticalResult:
     r"""
     Measures and reports on whether two intensity processes are different. That is, given two
     event series, determines whether the data generating processes are statistically different.
@@ -493,6 +495,18 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     t_0: float, optional (default=-1)
         the final time period under observation, -1 for all time.
 
+    weightings: str, optional
+        apply a weighted logrank test: options are "w" for Wilcoxon (also known as Breslow), "tw"
+        for Tarone-Ware and "p" for Peto test. These are useful for testing for early differences in survival times.
+
+        Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
+            Wilcoxon: :math:`n_i`
+            Tarone-Ware: :math:`\sqrt{n_i}`
+            Peto: :math:`\bar{S}(t_i)`
+
+            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}` and :math:`\bar{S}(t_i)` is
+            Peto-Peto's modified survival estimate at time :math:`t_{i}`.
+
     kwargs:
         add keywords and meta-data to the experiment summary
 
@@ -537,11 +551,13 @@ def logrank_test(durations_A, durations_B, event_observed_A=None, event_observed
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
     event_observed = np.r_[event_observed_A, event_observed_B]
-    return multivariate_logrank_test(event_times, groups, event_observed, t_0=t_0, test_name="logrank_test", **kwargs)
+    return multivariate_logrank_test(
+        event_times, groups, event_observed, t_0=t_0, test_name="logrank_test", weightings=weightings, **kwargs
+    )
 
 
 def pairwise_logrank_test(
-    event_durations, groups, event_observed=None, t_0=-1, **kwargs
+    event_durations, groups, event_observed=None, t_0=-1, weightings=None, **kwargs
 ) -> StatisticalResult:  # pylint: disable=too-many-locals
 
     r"""
@@ -561,6 +577,18 @@ def pairwise_logrank_test(
 
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
+
+    weightings: str, optional
+        apply a weighted logrank test: options are "w" for Wilcoxon (also known as Breslow), "tw"
+        for Tarone-Ware and "p" for Peto test. These are useful for testing for early differences in survival times.
+
+        Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
+            Wilcoxon: :math:`n_i`
+            Tarone-Ware: :math:`\sqrt{n_i}`
+            Peto: :math:`\bar{S}(t_i)`
+
+            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}` and :math:`\bar{S}(t_i)` is
+            Peto-Peto's modified survival estimate at time :math:`t_{i}`.
 
     kwargs:
         add keywords and meta-data to the experiment summary.
@@ -607,6 +635,7 @@ def pairwise_logrank_test(
             event_observed.loc[ix2],
             t_0=t_0,
             name=[(g1, g2)],
+            weightings=weightings,
             **kwargs
         )
 
@@ -618,7 +647,7 @@ def difference_of_restricted_mean_survival_time_test(model1, model2, t):
 
 
 def multivariate_logrank_test(
-    event_durations, groups, event_observed=None, t_0=-1, **kwargs
+    event_durations, groups, event_observed=None, t_0=-1, weightings=None, **kwargs
 ) -> StatisticalResult:  # pylint: disable=too-many-locals
     r"""
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
@@ -645,6 +674,18 @@ def multivariate_logrank_test(
 
     t_0: float, optional (default=-1)
         the period under observation, -1 for all time.
+
+    weightings: str, optional
+        apply a weighted logrank test: options are "w" for Wilcoxon (also known as Breslow), "tw"
+        for Tarone-Ware and "p" for Peto test. These are useful for testing for early differences in survival times.
+
+        Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
+            Wilcoxon: :math:`n_i`
+            Tarone-Ware: :math:`\sqrt{n_i}`
+            Peto: :math:`\bar{S}(t_i)`
+
+            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}` and :math:`\bar{S}(t_i)` is
+            Peto-Peto's modified survival estimate at time :math:`t_{i}`.
 
     kwargs:
         add keywords and meta-data to the experiment summary.
@@ -703,11 +744,46 @@ def multivariate_logrank_test(
     n_groups = unique_groups.shape[0]
 
     # compute the factors needed
-    N_j = obs.sum(0).values
     n_ij = rm.sum(0).values - rm.cumsum(0).shift(1).fillna(0)
     d_i = obs.sum(1)
     n_i = rm.values.sum() - rm.sum(1).cumsum().shift(1).fillna(0)
-    ev = n_ij.mul(d_i / n_i, axis="index").sum(0)
+    ev_i = n_ij.mul(d_i / n_i, axis="index")
+
+    # compute weightings for log-rank alternatives
+    if weightings is None:
+        w_i = np.ones(d_i.shape[0])
+    elif weightings == "w":
+        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Wilcoxon")
+        w_i = n_i
+    elif weightings == "tw":
+        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Tarone-Ware")
+        w_i = np.sqrt(n_i)
+    elif weightings == "p":
+        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Peto")
+        w_i = np.cumprod(1.0 - (ev_i.sum(1)) / (n_i + 1))  # Peto-Peto's modified survival estimates.
+    elif weightings == "fh":
+        if "p" in kwargs:
+            p = kwargs["p"]
+            if p < 0:
+                raise ValueError("p must be non-negative.")
+        else:
+            raise ValueError("Must provide keyword argument p for Flemington-Harrington test statistic")
+        if "q" in kwargs:
+            q = kwargs["q"]
+            if q < 0:
+                raise ValueError("q must be non-negative.")
+        else:
+            raise ValueError("Must provide keyword argument q for Flemington-Harrington test statistic")
+        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Flemington-Harrington")
+        kmf = KaplanMeierFitter().fit(event_durations, event_observed=event_observed)
+        s = kmf.survival_function_.to_numpy().flatten()[:-1]
+        w_i = np.power(s, p) * np.power(1.0 - s, q)
+    else:
+        raise ValueError("Invalid value for weightings.")
+
+    # apply weights to observed and expected
+    N_j = obs.mul(w_i, axis=0).sum(0).values
+    ev = ev_i.mul(w_i, axis=0).sum(0)
 
     # vector of observed minus expected
     Z_j = N_j - ev
@@ -717,7 +793,7 @@ def multivariate_logrank_test(
     # compute covariance matrix
     factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i ** 2
     n_ij["_"] = n_i.values
-    V_ = n_ij.mul(np.sqrt(factor), axis="index").fillna(0)
+    V_ = (n_ij.mul(w_i, axis=0)).mul(np.sqrt(factor), axis="index").fillna(0)  # weighted V_
     V = -np.dot(V_.T, V_)
     ix = np.arange(n_groups)
     V[ix, ix] = V[ix, ix] - V[-1, ix]
