@@ -14,7 +14,7 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
 
     .. math::  S(t) = \exp\left(-\left(\frac{t}{\lambda}\right)^\rho\right),   \lambda > 0, \rho > 0,
 
-    The :math:`\lambda` (scale) parameter has an applicable interpretation: it represent the time when 37% of the population has died.
+    The :math:`\lambda` (scale) parameter has an applicable interpretation: it represents the time when 63.2% of the population has died.
     The :math:`\rho` (shape) parameter controls if the cumulative hazard (see below) is convex or concave, representing accelerating or decelerating
     hazards.
 
