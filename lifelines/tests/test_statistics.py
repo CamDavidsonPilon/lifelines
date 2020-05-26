@@ -111,7 +111,7 @@ def test_wilcoxon_weighted_logrank_on_leukemia_dataset():
     group_1 = data[data["Rx"] == 0]
     group_2 = data[data["Rx"] == 1]
 
-    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="w")
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="wilcoxon")
 
     assert abs(result.test_statistic - 13.457852) < 10e-6
     assert result.test_name == "Wilcoxon_test"
@@ -125,7 +125,7 @@ def test_tarone_ware_weighted_logrank_on_leukemia_dataset():
     group_1 = data[data["Rx"] == 0]
     group_2 = data[data["Rx"] == 1]
 
-    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="tw")
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="tarone-ware")
 
     assert abs(result.test_statistic - 15.123575) < 10e-6
     assert result.test_name == "Tarone-Ware_test"
@@ -139,7 +139,7 @@ def test_peto_weighted_logrank_on_leukemia_dataset():
     group_1 = data[data["Rx"] == 0]
     group_2 = data[data["Rx"] == 1]
 
-    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="p")
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="peto")
 
     assert abs(result.test_statistic - 14.084139) < 10e-6
     assert result.test_name == "Peto_test"

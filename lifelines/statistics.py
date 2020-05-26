@@ -496,8 +496,8 @@ def logrank_test(
         the final time period under observation, -1 for all time.
 
     weightings: str, optional
-        apply a weighted logrank test: options are "w" for Wilcoxon (also known as Breslow), "tw"
-        for Tarone-Ware and "p" for Peto test. These are useful for testing for early differences in survival times.
+        apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
+        for Tarone-Ware and "peto" for Peto test. These are useful for testing for early differences in survival times.
 
         Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
             Wilcoxon: :math:`n_i`
@@ -579,8 +579,8 @@ def pairwise_logrank_test(
         the period under observation, -1 for all time.
 
     weightings: str, optional
-        apply a weighted logrank test: options are "w" for Wilcoxon (also known as Breslow), "tw"
-        for Tarone-Ware and "p" for Peto test. These are useful for testing for early differences in survival times.
+        apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
+        for Tarone-Ware and "peto" for Peto test. These are useful for testing for early differences in survival times.
 
         Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
             Wilcoxon: :math:`n_i`
@@ -676,8 +676,8 @@ def multivariate_logrank_test(
         the period under observation, -1 for all time.
 
     weightings: str, optional
-        apply a weighted logrank test: options are "w" for Wilcoxon (also known as Breslow), "tw"
-        for Tarone-Ware and "p" for Peto test. These are useful for testing for early differences in survival times.
+        apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
+        for Tarone-Ware and "peto" for Peto test. These are useful for testing for early differences in survival times.
 
         Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
             Wilcoxon: :math:`n_i`
@@ -752,13 +752,13 @@ def multivariate_logrank_test(
     # compute weightings for log-rank alternatives
     if weightings is None:
         w_i = np.ones(d_i.shape[0])
-    elif weightings == "w":
+    elif weightings == "wilcoxon":
         kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Wilcoxon")
         w_i = n_i
-    elif weightings == "tw":
+    elif weightings == "tarone-ware":
         kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Tarone-Ware")
         w_i = np.sqrt(n_i)
-    elif weightings == "p":
+    elif weightings == "peto":
         kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Peto")
         w_i = np.cumprod(1.0 - (ev_i.sum(1)) / (n_i + 1))  # Peto-Peto's modified survival estimates.
     elif weightings == "fh":
