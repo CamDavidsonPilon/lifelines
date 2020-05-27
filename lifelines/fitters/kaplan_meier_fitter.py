@@ -293,8 +293,11 @@ class KaplanMeierFitter(UnivariateFitter):
           self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
 
         """
+        durations = np.asarray(durations)
         self._check_values(durations)
+
         if event_observed is not None:
+            event_observed = np.asarray(event_observed)
             self._check_values(event_observed)
 
         self._label = coalesce(label, self._label, "KM_estimate")

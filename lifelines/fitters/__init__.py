@@ -883,6 +883,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         n = len(utils.coalesce(*Ts))
 
         if event_observed is not None:
+            event_observed = np.asarray(event_observed)
             utils.check_nans_or_infs(event_observed)
 
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones(n)
