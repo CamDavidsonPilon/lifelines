@@ -93,6 +93,56 @@ hypothesis that all the populations have the same "death" generation process).
     ---
     """
 
+The logrank test statistic is calculated from the differences between the observed deaths for a group and expected
+deaths, under the null hypothesis that all groups share the same survival curve, summed across all ordered death times.
+It therefore weights differences between the survival curves equally at each death time, resulting in maximum power
+when the assumption of proportional hazards is true. To test for early or late differences in survival between
+groups, a weighted logrank test that are more sensitive to non-proportional hazards might be a better choice.
+
+Four types of weighted logrank test are currently available in lifelines through the ``weightings`` argument:
+the Wilcoxon (``weightings='wilcoxon'``), Tarone-Ware (``weightings='tarone-ware'``), Peto (``weightings='peto'``)
+and Fleming-Harrington (``weightings='fleming-harrington'``) tests.
+The following weightings are applied at the ith ordered failure time, :math:`t_{i}`:
+
+    .. math:: \text{Wilcoxon:}\quad n_i
+    .. math:: \text{Tarone-Ware:}\quad \sqrt{n_i}
+    .. math:: \text{Peto:}\quad \bar{S}(t_i)
+    .. math:: \text{Fleming-Harrington}\quad \hat{S}(t_i)^p \times (1 - \hat{S}(t_i))^q
+
+where :math:`n_i` is the number at risk just prior to time :math:`t_{i}`, :math:`\bar{S}(t_i)` is
+Peto-Peto's modified survival estimate and :math:`\hat{S}(t_i)` is the left-continuous
+Kaplan-Meier survival estimate at time :math:`t_{i}`.
+
+The Wilcoxon, Tarone-Ware and Peto tests apply more weight to earlier death times. The Peto test is more robust than
+the Wilcoxon or Tarone-Ware tests when many observations are censored. When p > q, the Fleming-Harrington
+applies more weight to earlier death times whilst when p < q, it is more sensitive to late differences (for p=q=0 it
+reduces to the unweighted logrank test). The choice of which test to perform should be made in advance and not
+retrospectively to avoid introducing bias.
+
+.. code-block:: python
+
+    import pandas as pd
+    from lifelines.statistics import multivariate_logrank_test
+
+    df = pd.DataFrame({
+        'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2], # could be strings too
+        'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+    })
+
+    results = multivariate_logrank_test(df['durations'], df['groups'], df['events'], weightings='peto')
+    results.print_summary()
+
+    """
+    t_0 = -1
+    null_distribution = chi squared
+    degrees_of_freedom = 2
+    test_name = multivariate_Peto_test
+    ---
+    test_statistic    p  -log2(p)
+              0.95 0.62      0.68
+    """
+
 Survival differences at a point in time
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

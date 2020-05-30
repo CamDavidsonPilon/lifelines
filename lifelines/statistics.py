@@ -497,20 +497,19 @@ def logrank_test(
 
     weightings: str, optional
         apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
-        for Tarone-Ware and "peto" for Peto test. These are useful for testing for early differences in survival times.
+        for Tarone-Ware, "peto" for Peto test and "fleming-harrington" for Fleming-Harrington test.
+        These are useful for testing for early or late differences in the survival curve. For the Fleming-Harrington
+        test, keyword arguments p and q must also be provided with non-negative values.
 
         Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
             Wilcoxon: :math:`n_i`
             Tarone-Ware: :math:`\sqrt{n_i}`
             Peto: :math:`\bar{S}(t_i)`
+            Fleming-Harrington: :math:`\hat{S}(t_i)^p \times (1 - \hat{S}(t_i))^q`
 
-            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}` and :math:`\bar{S}(t_i)` is
-            Peto-Peto's modified survival estimate at time :math:`t_{i}`.
-
-    kwargs:
-        add keywords and meta-data to the experiment summary
-
-
+            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}`, :math:`\bar{S}(t_i)` is
+            Peto-Peto's modified survival estimate and :math:`\hat{S}(t_i)` is the left-continuous
+            Kaplan-Meier survival estimate at time :math:`t_{i}`.
     Returns
     -------
 
@@ -580,16 +579,19 @@ def pairwise_logrank_test(
 
     weightings: str, optional
         apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
-        for Tarone-Ware and "peto" for Peto test. These are useful for testing for early differences in survival times.
+        for Tarone-Ware, "peto" for Peto test and "fleming-harrington" for Fleming-Harrington test.
+        These are useful for testing for early or late differences in the survival curve. For the Fleming-Harrington
+        test, keyword arguments p and q must also be provided with non-negative values.
 
         Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
             Wilcoxon: :math:`n_i`
             Tarone-Ware: :math:`\sqrt{n_i}`
             Peto: :math:`\bar{S}(t_i)`
+            Fleming-Harrington: :math:`\hat{S}(t_i)^p \times (1 - \hat{S}(t_i))^q`
 
-            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}` and :math:`\bar{S}(t_i)` is
-            Peto-Peto's modified survival estimate at time :math:`t_{i}`.
-
+            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}`, :math:`\bar{S}(t_i)` is
+            Peto-Peto's modified survival estimate and :math:`\hat{S}(t_i)` is the left-continuous
+            Kaplan-Meier survival estimate at time :math:`t_{i}`.
     kwargs:
         add keywords and meta-data to the experiment summary.
 
@@ -677,15 +679,19 @@ def multivariate_logrank_test(
 
     weightings: str, optional
         apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
-        for Tarone-Ware and "peto" for Peto test. These are useful for testing for early differences in survival times.
+        for Tarone-Ware, "peto" for Peto test and "fleming-harrington" for Fleming-Harrington test.
+        These are useful for testing for early or late differences in the survival curve. For the Fleming-Harrington
+        test, keyword arguments p and q must also be provided with non-negative values.
 
         Weightings are applied at the ith ordered failure time, :math:`t_{i}`, according to:
             Wilcoxon: :math:`n_i`
             Tarone-Ware: :math:`\sqrt{n_i}`
             Peto: :math:`\bar{S}(t_i)`
+            Fleming-Harrington: :math:`\hat{S}(t_i)^p \times (1 - \hat{S}(t_i))^q`
 
-            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}` and :math:`\bar{S}(t_i)` is
-            Peto-Peto's modified survival estimate at time :math:`t_{i}`.
+            where :math:`n_i` is the number at risk just prior to time :math:`t_{i}`, :math:`\bar{S}(t_i)` is
+            Peto-Peto's modified survival estimate and :math:`\hat{S}(t_i)` is the left-continuous
+            Kaplan-Meier survival estimate at time :math:`t_{i}`.
 
     kwargs:
         add keywords and meta-data to the experiment summary.
@@ -761,7 +767,7 @@ def multivariate_logrank_test(
     elif weightings == "peto":
         kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Peto")
         w_i = np.cumprod(1.0 - (ev_i.sum(1)) / (n_i + 1))  # Peto-Peto's modified survival estimates.
-    elif weightings == "fh":
+    elif weightings == "fleming-harrington":
         if "p" in kwargs:
             p = kwargs["p"]
             if p < 0:
@@ -776,7 +782,7 @@ def multivariate_logrank_test(
             raise ValueError("Must provide keyword argument q for Flemington-Harrington test statistic")
         kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Flemington-Harrington")
         kmf = KaplanMeierFitter().fit(event_durations, event_observed=event_observed)
-        s = kmf.survival_function_.to_numpy().flatten()[:-1]
+        s = kmf.survival_function_.to_numpy().flatten()[:-1]  # Left-continuous Kaplan-Meier survival estimate.
         w_i = np.power(s, p) * np.power(1.0 - s, q)
     else:
         raise ValueError("Invalid value for weightings.")
