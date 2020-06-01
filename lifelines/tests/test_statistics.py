@@ -7,7 +7,7 @@ import pytest
 from lifelines import statistics as stats
 from lifelines import CoxPHFitter
 from lifelines.utils import StatisticalWarning
-from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset
+from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset, load_leukemia
 
 
 def test_sample_size_necessary_under_cph():
@@ -101,6 +101,48 @@ def test_rank_test_output_against_R_with_censorship():
     r_stat = 0.384615
     assert abs(result.p_value - r_p_value) < 10e-6
     assert abs(result.test_statistic - r_stat) < 10e-6
+
+
+def test_wilcoxon_weighted_logrank_on_leukemia_dataset():
+    """
+    Test against result from "Survival Analysis: A Self-learning Text" by Kleinbaum & Klein, 3rd edition, 2012.
+    """
+    data = load_leukemia()
+    group_1 = data[data["Rx"] == 0]
+    group_2 = data[data["Rx"] == 1]
+
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="wilcoxon")
+
+    assert abs(result.test_statistic - 13.457852) < 10e-6
+    assert result.test_name == "Wilcoxon_test"
+
+
+def test_tarone_ware_weighted_logrank_on_leukemia_dataset():
+    """
+    Test against result from "Survival Analysis: A Self-learning Text" by Kleinbaum & Klein, 3rd edition, 2012.
+    """
+    data = load_leukemia()
+    group_1 = data[data["Rx"] == 0]
+    group_2 = data[data["Rx"] == 1]
+
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="tarone-ware")
+
+    assert abs(result.test_statistic - 15.123575) < 10e-6
+    assert result.test_name == "Tarone-Ware_test"
+
+
+def test_peto_weighted_logrank_on_leukemia_dataset():
+    """
+    Test against result from "Survival Analysis: A Self-learning Text" by Kleinbaum & Klein, 3rd edition, 2012.
+    """
+    data = load_leukemia()
+    group_1 = data[data["Rx"] == 0]
+    group_2 = data[data["Rx"] == 1]
+
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="peto")
+
+    assert abs(result.test_statistic - 14.084139) < 10e-6
+    assert result.test_name == "Peto_test"
 
 
 def test_unequal_intensity_event_observed():
