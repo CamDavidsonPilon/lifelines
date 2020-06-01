@@ -600,7 +600,7 @@ def pairwise_logrank_test(
     -------
 
     StatisticalResult
-        a StatisticalResult object that contains all the pairwise comparisons (try ``StatisticalResult.summary`` or ``StatisticalResult.print_summarty``)
+        a StatisticalResult object that contains all the pairwise comparisons (try ``StatisticalResult.summary`` or ``StatisticalResult.print_summary``)
 
 
     See Also
