@@ -132,7 +132,7 @@ class KaplanMeierFitter(UnivariateFitter):
     ) -> "KaplanMeierFitter":
         """
         Fit the model to a interval-censored dataset using non-parametric MLE. This estimator is
-        also called the Turball Estimator.
+        also called the Turnbull Estimator.
 
         Currently, only closed interval are supported. However, it's easy to create open intervals by adding (or subtracting) a very small
         value from the lower-bound (or upper bound). For example, the following turns closed intervals into open intervals.
