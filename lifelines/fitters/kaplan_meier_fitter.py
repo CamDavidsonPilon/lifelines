@@ -367,7 +367,7 @@ class KaplanMeierFitter(UnivariateFitter):
 
     def plot_loglogs(self, *args, **kwargs):
         r"""
-        Plot :math:`\log(S(t))` against :math:`\log(t)`. Same arguments as ``.plot``.
+        Plot :math:`\log(-\log(S(t)))` against :math:`\log(t)`. Same arguments as ``.plot``.
         """
         return loglogs_plot(self, *args, **kwargs)
 
