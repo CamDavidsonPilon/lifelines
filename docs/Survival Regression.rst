@@ -653,7 +653,7 @@ Given a new subject, we ask questions about their future survival? When are they
     aft.predict_expectation(X, ancillary_df=X)
 
 
-When predicting time remaining for uncensored individuals, you can use the `conditional_after` kwarg:
+When predicting time remaining for censored individuals, you can use the `conditional_after` kwarg:
 
 
 .. code:: python
