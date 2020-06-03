@@ -701,7 +701,6 @@ def loglogs_plot(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     kwargs["ax"] = ax
     set_kwargs_color(kwargs)
     set_kwargs_drawstyle(kwargs)
-    kwargs["logx"] = True
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc, cls.timeline)
 
@@ -713,13 +712,15 @@ def loglogs_plot(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
         cs.update(censor_styles)
         times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
-        # don't log times, as Pandas will take care of all log-scaling later.
-        ax.plot(times, loglog(v), linestyle="None", color=colour, **cs)
+        ax.plot(np.log(times), loglog(v), linestyle="None", color=colour, **cs)
 
     # plot estimate
-    dataframe_slicer(loglog(cls.survival_function_)).plot(**kwargs)
+    sliced_estimates = dataframe_slicer(loglog(cls.survival_function_))
+    sliced_estimates["log(timeline)"] = np.log(sliced_estimates.index)
+    sliced_estimates.plot(x="log(timeline)", **kwargs)
     ax.set_xlabel("log(timeline)")
     ax.set_ylabel("log(-log(survival_function_))")
+
     return ax
 
 
