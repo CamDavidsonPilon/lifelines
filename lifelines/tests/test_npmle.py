@@ -2,6 +2,7 @@
 import pytest
 from lifelines.fitters.npmle import npmle, is_subset, create_turnbull_intervals, interval, reconstruct_survival_function
 from numpy import testing as npt
+from lifelines.datasets import load_mice
 import numpy as np
 import pandas as pd
 
@@ -65,15 +66,14 @@ def test_sf_doesnt_return_nans():
 
 
 def test_mice_and_optimization_flag():
-
-    df = pd.read_csv("mice.csv", index_col=[0])
+    df = load_mice()
     results = npmle(df["l"], df["u"], verbose=True, optimize=True)
     npt.assert_allclose(results[0][0], 1 - 0.8571429, rtol=1e-4)
     npt.assert_allclose(results[0][-1], 0.166667, rtol=1e-4)
 
 
 def test_mice_scipy():
-    df = pd.read_csv("mice.csv", index_col=[0])
+    df = load_mice()
     results = npmle(df["l"], df["u"], verbose=True, fit_method="scipy")
     npt.assert_allclose(results[0][0], 1 - 0.8571429, rtol=1e-4)
     npt.assert_allclose(results[0][-1], 0.166667, rtol=1e-4)

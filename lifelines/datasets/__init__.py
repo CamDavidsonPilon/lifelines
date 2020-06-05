@@ -557,3 +557,14 @@ def load_c_botulinum_lag_phase(**kwargs):
 
     """
     return _load_dataset("c_botulinum_lag_phase.csv", **kwargs)
+
+
+def load_mice(**kwargs):
+    """
+    A dataset of interval-censored observations of mice tumors in two different environments.
+
+    References
+    -----------
+    Hoel D. and Walburg, H.,(1972), Statistical analysis of survival experiments, The Annals of Statistics, 18, 1259-1294
+    """
+    return _load_dataset("mice.csv", **kwargs)
