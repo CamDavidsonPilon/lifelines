@@ -528,7 +528,7 @@ class TestUnivariateFitters:
                 pass
             assert not (pd.isnull(fitter.confidence_interval_)).all().all()
 
-    def test_lists_as_input(self, positive_sample_lifetimes, univariate_fitters):
+    def test_lists_and_tuples_as_input(self, positive_sample_lifetimes, univariate_fitters):
         T, C = positive_sample_lifetimes
         for f in univariate_fitters:
             fitter = f()
@@ -536,21 +536,29 @@ class TestUnivariateFitters:
             if isinstance(fitter, NelsonAalenFitter):
                 with_array = fitter.fit(T, C).cumulative_hazard_
                 with_list = fitter.fit(list(T), list(C)).cumulative_hazard_
+                with_tuple = fitter.fit(tuple(T), tuple(C)).cumulative_hazard_
                 assert_frame_equal(with_list, with_array)
+                assert_frame_equal(with_tuple, with_array)
 
             else:
                 with_array = fitter.fit(T, C).survival_function_
                 with_list = fitter.fit(list(T), list(C)).survival_function_
+                with_tuple = fitter.fit(tuple(T), tuple(C)).survival_function_
                 assert_frame_equal(with_list, with_array)
+                assert_frame_equal(with_tuple, with_array)
 
                 if isinstance(fitter, ParametricUnivariateFitter):
                     with_array = fitter.fit_interval_censoring(T, T + 1, (T == T + 1)).survival_function_
                     with_list = fitter.fit_interval_censoring(list(T), list(T + 1), list((T == T + 1))).survival_function_
+                    with_tuple = fitter.fit_interval_censoring(tuple(T), tuple(T + 1), tuple((T == T + 1))).survival_function_
                     assert_frame_equal(with_list, with_array)
+                    assert_frame_equal(with_tuple, with_array)
 
                     with_array = fitter.fit_left_censoring(T, C).survival_function_
                     with_list = fitter.fit_left_censoring(list(T), list(C)).survival_function_
+                    with_tuple = fitter.fit_left_censoring(tuple(T), tuple(C)).survival_function_
                     assert_frame_equal(with_list, with_array)
+                    assert_frame_equal(with_tuple, with_array)
 
     def test_subtraction_function(self, positive_sample_lifetimes, univariate_fitters):
         T2 = np.arange(1, 50)

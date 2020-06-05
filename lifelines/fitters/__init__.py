@@ -93,6 +93,7 @@ class UnivariateFitter(BaseFitter):
         self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self._class_name)
         self.__class__.predict.__doc__ = self.predict.__doc__.format(self._class_name)
         self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self._class_name, self._estimate_name)
+        return
 
     def plot(self, **kwargs):
         """
@@ -882,6 +883,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         n = len(utils.coalesce(*Ts))
 
         if event_observed is not None:
+            event_observed = np.asarray(event_observed)
             utils.check_nans_or_infs(event_observed)
 
         self.event_observed = np.asarray(event_observed, dtype=int) if event_observed is not None else np.ones(n)

@@ -918,7 +918,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     if event_observed is None:
         event_observed = np.ones(n, dtype=int)
     else:
-        event_observed = np.asarray(event_observed).reshape((n,)).copy().astype(int)
+        event_observed = np.asarray(event_observed).reshape((n,)).astype(int)
 
     if entry is not None:
         entry = np.asarray(entry).reshape((n,))

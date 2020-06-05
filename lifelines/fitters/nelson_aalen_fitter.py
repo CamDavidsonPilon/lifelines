@@ -105,8 +105,10 @@ class NelsonAalenFitter(UnivariateFitter):
           self, with new properties like ``cumulative_hazard_``.
 
         """
+        durations = np.asarray(durations)
         check_nans_or_infs(durations)
         if event_observed is not None:
+            event_observed = np.asarray(event_observed)
             check_nans_or_infs(event_observed)
 
         if weights is not None:

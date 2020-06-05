@@ -13,6 +13,7 @@ import numpy as np
 from numpy.linalg import norm
 import pandas as pd
 from lifelines.utils import ConvergenceWarning
+from typing import *
 
 interval = namedtuple("Interval", ["left", "right"])
 
@@ -26,7 +27,7 @@ class min_max:
         self.min = np.inf
         self.max = -np.inf
 
-    def add(self, value):
+    def add(self, value: float):
         if value > self.max:
             self.max = value
         if value < self.min:
@@ -37,23 +38,45 @@ class min_max:
         yield self.max
 
 
-def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weights):
+def temper(i: int, optimize) -> float:
+    if optimize:
+        return 0.9 * (2 * np.arctan(i / 100) / np.pi) + 1
+    else:
+        return 1.0
 
+
+def E_step_M_step(observation_intervals, p_old, turnbull_interval_lookup, weights, i, optimize) -> np.ndarray:
+    """
+    See [1], but also modifications.
+
+    References
+    -----------
+    1. Clifford Anderson-Bergman (2016): An efficient implementation of the
+     EMICM algorithm for the interval censored NPMLE, Journal of Computational and Graphical
+     Statistics, DOI: 10.1080/10618600.2016.1208616
+    """
     N = 0
-    p_new = np.zeros_like(p_old)
+    m = np.zeros_like(p_old)
+    P = cumulative_sum(p_old)
     for observation_interval, w in zip(observation_intervals, weights):
         # find all turnbull intervals, t, that are contained in (ol, or). Call this set T
         # the denominator is sum of p_old[T] probabilities
         # the numerator is p_old[t]
-
         min_, max_ = turnbull_interval_lookup[observation_interval]
-        p_new[min_ : max_ + 1] += w * p_old[min_ : max_ + 1] / p_old[min_ : max_ + 1].sum()
+        m[min_ : max_ + 1] += w / (P[max_ + 1] - P[min_]).sum()
         N += w
 
-    return p_new / N
+    p_new = p_old * (m / N) ** temper(i, optimize)
+    p_new /= p_new.sum()
+    return p_new
 
 
-def create_turnbull_intervals(left, right):
+def cumulative_sum(p: np.ndarray) -> np.ndarray:
+    # return np.insert(p, 0, 0).cumsum()
+    return np.concatenate((np.zeros(1), p)).cumsum()
+
+
+def create_turnbull_intervals(left, right) -> List[interval]:
     """
     obs are []
     turnbulls are []
@@ -72,14 +95,16 @@ def create_turnbull_intervals(left, right):
     return intervals
 
 
-def is_subset(query_interval, super_interval):
+def is_subset(query_interval: interval, super_interval: interval) -> bool:
     """
     assumes query_interval is [], and super_interval is (]
     """
     return super_interval.left <= query_interval.left and query_interval.right <= super_interval.right
 
 
-def create_turnbull_lookup(turnbull_intervals, observation_intervals):
+def create_turnbull_lookup(
+    turnbull_intervals: List[interval], observation_intervals: List[interval]
+) -> Dict[interval, List[interval]]:
 
     turnbull_lookup = defaultdict(min_max)
 
@@ -95,27 +120,41 @@ def create_turnbull_lookup(turnbull_intervals, observation_intervals):
     return {o: list(s) for o, s in turnbull_lookup.items()}
 
 
-def check_convergence(p_new, p_old, tol, i, verbose=False):
+def check_convergence(
+    p_new: np.ndarray,
+    p_old: np.ndarray,
+    turnbull_lookup: Dict[interval, List[interval]],
+    weights: np.ndarray,
+    tol: float,
+    i: int,
+    verbose=False,
+) -> bool:
+    old_ll = log_likelihood(p_old, turnbull_lookup, weights)
+    new_ll = log_likelihood(p_new, turnbull_lookup, weights)
+    delta = new_ll - old_ll
     if verbose:
-        print("Iteration %d: delta: %.6f" % (i, norm(p_new - p_old)))
-    if norm(p_new - p_old) < tol:
+        print("Iteration %d " % i)
+        print("   delta log-likelihood: %.10f" % delta)
+        print("   log-like:             %.6f" % log_likelihood(p_new, turnbull_lookup, weights))
+    if (delta < tol) and (delta >= 0):
         return True
     return False
 
 
-def create_observation_intervals(obs):
+def create_observation_intervals(obs) -> List[interval]:
     return [interval(l, r) for l, r in obs]
 
 
-def odds(p):
-    return p / (1 - p)
+def log_odds(p: np.ndarray) -> np.ndarray:
+    return np.log(p) - np.log(1 - p)
 
 
-def probs(o):
+def probs(log_odds: np.ndarray) -> np.ndarray:
+    o = np.exp(log_odds)
     return o / (o + 1)
 
 
-def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
+def npmle(left, right, tol=1e-7, weights=None, verbose=False, max_iter=1e5, optimize=False, fit_method="em"):
     """
     left and right are closed intervals.
     TODO: extend this to open-closed intervals.
@@ -135,6 +174,54 @@ def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
     observation_intervals = create_observation_intervals(unique_obs)
     turnbull_lookup = create_turnbull_lookup(turnbull_intervals, observation_intervals)
 
+    if fit_method == "em":
+        p = expectation_maximization_fit(
+            observation_intervals, turnbull_intervals, turnbull_lookup, weights, tol, max_iter, optimize, verbose
+        )
+    elif fit_method == "scipy":
+        p = scipy_minimize_fit(turnbull_lookup, turnbull_intervals, weights, tol, verbose)
+
+    return p, turnbull_intervals
+
+
+def scipy_minimize_fit(turnbull_interval_lookup, turnbull_intervals, weights, tol, verbose):
+    import autograd.numpy as anp
+    from autograd import value_and_grad
+    from scipy.optimize import minimize
+
+    def cumulative_sum(p):
+        return anp.concatenate((anp.zeros(1), p)).cumsum()
+
+    def negative_log_likelihood(p, turnbull_interval_lookup, weights):
+        P = cumulative_sum(p)
+        ix = anp.array(list(turnbull_interval_lookup.values()))
+        return -(weights * anp.log(P[ix[:, 1] + 1] - P[ix[:, 0]])).sum()
+
+    def con(p):
+        return p.sum() - 1
+
+    # initialize to equal weight
+    T = len(turnbull_intervals)
+    p = 1 / T * np.ones(T)
+
+    cons = {"type": "eq", "fun": con}
+    results = minimize(
+        value_and_grad(negative_log_likelihood),
+        args=(turnbull_interval_lookup, weights),
+        x0=p,
+        bounds=[(0, 1)] * T,
+        jac=True,
+        constraints=cons,
+        tol=tol,
+        options={"disp": verbose},
+    )
+    return results.x
+
+
+def expectation_maximization_fit(
+    observation_intervals, turnbull_intervals, turnbull_lookup, weights, tol, max_iter, optimize, verbose
+):
+
     # convergence init
     converged = False
     i = 0
@@ -144,18 +231,17 @@ def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
     p = 1 / T * np.ones(T)
 
     while (not converged) and (i < max_iter):
-        p_new = E_step_M_step(observation_intervals, p, turnbull_lookup, weights)
-        converged = check_convergence(p_new, p, tol, i, verbose=verbose)
+        new_p = E_step_M_step(observation_intervals, p, turnbull_lookup, weights, i, optimize)
+        converged = check_convergence(new_p, p, turnbull_lookup, weights, tol, i, verbose=verbose)
 
         # find alpha that maximizes ll using a line search
-        best_alpha, best_p, best_ll = None, None, -np.inf
-        delta = odds(p_new) - odds(p)
+        best_p, best_ll = None, -np.inf
+        delta = log_odds(new_p) - log_odds(p)
         for alpha in np.array([1.0, 1.25, 1.95]):
-            p_temp = probs(odds(p) + alpha * delta)
-            ll_temp = log_likelihood(observation_intervals, p_temp, turnbull_lookup, weights)
+            p_temp = probs(log_odds(p) + alpha * delta)
+            ll_temp = log_likelihood(p_temp, turnbull_lookup, weights)
             if best_ll < ll_temp:
                 best_ll = ll_temp
-                best_alpha = alpha
                 best_p = p_temp
 
         p = best_p
@@ -165,19 +251,18 @@ def npmle(left, right, tol=1e-5, weights=None, verbose=False, max_iter=1e5):
     if i >= max_iter:
         warnings.warn("Exceeded max iterations", ConvergenceWarning)
 
-    return p, turnbull_intervals
+    return p
 
 
-def log_likelihood(observation_intervals, p, turnbull_interval_lookup, weights):
-
-    ll = 0
-    for observation_interval, w in zip(observation_intervals, weights):
-        min_, max_ = turnbull_interval_lookup[observation_interval]
-        ll += w * np.log(p[min_ : max_ + 1].sum())
-    return ll
+def log_likelihood(p: np.ndarray, turnbull_interval_lookup, weights) -> float:
+    P = cumulative_sum(p)
+    ix = np.array(list(turnbull_interval_lookup.values()))
+    return (weights * np.log(P[ix[:, 1] + 1] - P[ix[:, 0]])).sum()
 
 
-def reconstruct_survival_function(probabilities, turnbull_intervals, timeline=None, label="NPMLE"):
+def reconstruct_survival_function(
+    probabilities: np.ndarray, turnbull_intervals: List[interval], timeline=None, label="NPMLE"
+) -> pd.DataFrame:
 
     if timeline is None:
         timeline = []
