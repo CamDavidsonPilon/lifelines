@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import functools
 import warnings
 import numpy as np
 import pandas as pd
@@ -125,10 +124,10 @@ class KaplanMeierFitter(UnivariateFitter):
         label=None,
         alpha=None,
         ci_labels=None,
-        show_progress=False,
         entry=None,
         weights=None,
-        tol=1e-7,
+        tol: float = 1e-5,
+        show_progress: bool = False,
     ) -> "KaplanMeierFitter":
         """
         Fit the model to a interval-censored dataset using non-parametric MLE. This estimator is
@@ -168,6 +167,10 @@ class KaplanMeierFitter(UnivariateFitter):
               if providing a weighted dataset. For example, instead
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
+          tol: float, optional
+            minimum difference in log likelihood changes for iterative algorithm.
+          show_progress: bool, optional
+            display information during fitting.
 
         Returns
         -------
@@ -203,12 +206,11 @@ class KaplanMeierFitter(UnivariateFitter):
 
         self._label = coalesce(label, self._label, "NPMLE_estimate")
 
-        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress)
+        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress, tol=tol)
         self.survival_function_ = reconstruct_survival_function(*results, self.timeline, label=self._label).loc[self.timeline]
         self.cumulative_density_ = 1 - self.survival_function_
 
         self._median = median_survival_times(self.survival_function_)
-        self.percentile = functools.partial(qth_survival_time, model_or_survival_function=self.survival_function_)
 
         """
         self.confidence_interval_ = npmle_compute_confidence_intervals(self.lower_bound, self.upper_bound, self.survival_function_, self.alpha)
@@ -291,8 +293,11 @@ class KaplanMeierFitter(UnivariateFitter):
           self with new properties like ``survival_function_``, ``plot()``, ``median_survival_time_``
 
         """
+        durations = np.asarray(durations)
         self._check_values(durations)
+
         if event_observed is not None:
+            event_observed = np.asarray(event_observed)
             self._check_values(event_observed)
 
         self._label = coalesce(label, self._label, "KM_estimate")
@@ -345,7 +350,6 @@ class KaplanMeierFitter(UnivariateFitter):
         self.__estimate = getattr(self, primary_estimate_name)
         self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
         self._median = median_survival_times(self.survival_function_)
-        self.percentile = functools.partial(qth_survival_time, model_or_survival_function=self.survival_function_)
         self._cumulative_sq_ = cumulative_sq_
 
         setattr(self, "confidence_interval_" + primary_estimate_name, self.confidence_interval_)

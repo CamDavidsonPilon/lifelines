@@ -1,6 +1,17 @@
 ## Changelog
 
 
+#### 0.24.9 - 2020-06-05
+
+##### New features
+ - Faster NPMLE for interval censored data
+ - New weightings available in the `logrank_test`: `wilcoxon`, `tarone-ware`, `peto`, `fleming-harrington`. Thanks @sean-reed
+ - new interval censored dataset: `lifelines.datasets.load_mice`
+
+##### Bug fixes
+ - Cleared up some mislabeling in `plot_loglogs`. Thanks @sean-reed!
+ - tuples are now able to be used as input in univariate models.
+
 #### 0.24.8 - 2020-05-17
 
 ##### New features
