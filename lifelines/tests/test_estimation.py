@@ -709,6 +709,13 @@ class TestLogNormalFitter:
     def lnf(self):
         return LogNormalFitter()
 
+    def test_lognormal_model_has_sensible_interval_censored_initial_values_for_data_with_lots_of_infs(self, lnf):
+        left = [1, 0, 2, 5, 4]
+        right = [np.inf, np.inf, np.inf, 5, 6]
+        lnf.fit_interval_censoring(left, right)
+        assert lnf._initial_values[0] < 10
+        assert lnf._initial_values[1] < 10
+
     def test_fit(self, lnf):
         T = np.exp(np.random.randn(100000))
         E = np.ones_like(T)
@@ -811,6 +818,13 @@ class TestLogLogisticFitter:
     @pytest.fixture()
     def llf(self):
         return LogLogisticFitter()
+
+    def test_loglogistic_model_has_sensible_interval_censored_initial_values_for_data_with_lots_of_infs(self, llf):
+        left = [1, 0, 2, 5, 4]
+        right = [np.inf, np.inf, np.inf, 5, 6]
+        llf.fit_interval_censoring(left, right)
+        assert llf._initial_values[0] < 10
+        assert llf._initial_values[1] < 10
 
     def test_loglogistic_model_does_not_except_negative_or_zero_values(self, llf):
 

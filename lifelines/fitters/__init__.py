@@ -1749,7 +1749,8 @@ class ParametricRegressionFitter(RegressionFitter):
             Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        self._predicted_median = self.predict_median(df)
+        if self._KNOWN_MODEL:
+            self._predicted_median = self.predict_median(df)
         return self
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs) -> Union[List[Dict], Dict]:
