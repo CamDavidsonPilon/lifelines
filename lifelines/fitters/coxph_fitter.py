@@ -42,10 +42,9 @@ from lifelines.utils import (
     ConvergenceError,
     string_justify,
     interpolate_at_times_and_return_pandas,
-    CensoringType,
     interpolate_at_times,
-    format_p_value,
 )
+from lifelines import utils
 
 __all__ = ["CoxPHFitter"]
 
@@ -223,7 +222,7 @@ class CoxPHFitter(SemiParametricRegressionFittter, ProportionalHazardMixin):
         self.baseline_estimation_method = baseline_estimation_method
         self.n_baseline_knots = n_baseline_knots
 
-    @CensoringType.right_censoring
+    @utils.CensoringType.right_censoring
     def fit(
         self,
         df: pd.DataFrame,
@@ -1296,7 +1295,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -np.log2(df["p"])
+            df["-log2(p)"] = -utils.safe_log2(df["p"])
             return df
 
     def print_summary(self, decimals: int = 2, style: Optional[str] = None, **kwargs) -> None:
@@ -1360,7 +1359,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                     "log-likelihood ratio test",
                     "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
                 ),
-                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.safe_log2(sr.p_value), prec=decimals)),
             ]
         )
 
