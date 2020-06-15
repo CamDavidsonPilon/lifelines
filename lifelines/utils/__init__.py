@@ -1815,3 +1815,9 @@ def find_best_parametric_model(
             continue
 
     return best_model, best_score
+
+
+def safe_log2(p):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r"divide by zero encountered in log2")
+        return np.log2(p)

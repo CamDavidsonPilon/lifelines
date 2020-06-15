@@ -2134,7 +2134,7 @@ class ParametricRegressionFitter(RegressionFitter):
         sr = self.log_likelihood_ratio_test()
         footers = []
 
-        if utils.CensoringType.is_right_censoring(self):
+        if utils.CensoringType.is_right_censoring(self) and self._KNOWN_MODEL:
             footers.append(("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)))
 
         footers.extend(
@@ -2144,7 +2144,7 @@ class ParametricRegressionFitter(RegressionFitter):
                     "log-likelihood ratio test",
                     "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
                 ),
-                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.safe_log2(sr.p_value), prec=decimals)),
             ]
         )
 
