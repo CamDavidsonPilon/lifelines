@@ -165,4 +165,3 @@ class Printer:
             print("---")
             for string, value in self.footers:
                 print("{} = {}".format(string, value))
-        print()
