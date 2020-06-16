@@ -1644,7 +1644,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             points in time are not in the index.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. reset back to starting at 0.
 
@@ -1739,7 +1739,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             points in time are not in the index.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
@@ -1762,7 +1762,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             the percentile, must be between 0 and 1.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
@@ -1789,7 +1789,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             same order as the training data.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
@@ -1820,7 +1820,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             same order as the training data.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
