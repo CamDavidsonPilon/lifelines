@@ -22,28 +22,6 @@ from lifelines.statistics import _chisq_test_p_value, StatisticalResult
 from lifelines.utils.printer import Printer
 from lifelines.utils.safe_exp import safe_exp
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio, concordance_index
-from lifelines.utils import (
-    _get_index,
-    _to_list,
-    _to_tuple,
-    _to_1d_array,
-    inv_normal_cdf,
-    normalize,
-    qth_survival_times,
-    coalesce,
-    check_for_numeric_dtypes_or_raise,
-    check_low_var,
-    check_complete_separation,
-    check_nans_or_infs,
-    StatError,
-    ConvergenceWarning,
-    StatisticalWarning,
-    StepSizer,
-    ConvergenceError,
-    string_justify,
-    interpolate_at_times_and_return_pandas,
-    interpolate_at_times,
-)
 from lifelines import utils
 
 __all__ = ["CoxPHFitter"]
@@ -347,7 +325,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         """
 
         # Print information about data first
-        justify = string_justify(25)
+        justify = utils.string_justify(25)
 
         headers: List[Tuple[str, Any]] = []
         headers.append(("duration col", "'%s'" % self.duration_col))
@@ -536,7 +514,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         cluster_col: Optional[str] = None,
         robust: bool = False,
         batch_mode: Optional[bool] = None,
-    ) -> "CoxPHFitter":
+    ) -> "SemiParametricPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
 
@@ -653,7 +631,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
         self._batch_mode = batch_mode
-        self.strata = coalesce(strata, self.strata)
+        self.strata = utils.coalesce(strata, self.strata)
 
         X, T, E, weights, original_index, self._clusters = self._preprocess_dataframe(df)
 
@@ -671,7 +649,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         # this is surprisingly faster to do...
         X_norm = pd.DataFrame(
-            normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index, columns=X.columns
+            utils.normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index, columns=X.columns
         )
 
         params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_, model = self._fit_model(
@@ -709,7 +687,9 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         df = df.copy()
 
         if self.strata is not None:
-            sort_by = _to_list(self.strata) + ([self.duration_col, self.event_col] if self.event_col else [self.duration_col])
+            sort_by = utils._to_list(self.strata) + (
+                [self.duration_col, self.event_col] if self.event_col else [self.duration_col]
+            )
             df = df.sort_values(by=sort_by)
             original_index = df.index.copy()
             df = df.set_index(self.strata)
@@ -737,7 +717,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         T = T.astype(float)
 
         # we check nans here because converting to bools maps NaNs to True..
-        check_nans_or_infs(E)
+        utils.check_nans_or_infs(E)
         E = E.astype(bool)
 
         self._check_values_pre_fitting(X, T, E, W)
@@ -748,13 +728,13 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         """
         Functions here check why a fit may have non-obviously failed
         """
-        check_complete_separation(X, E, T, self.event_col)
+        utils.check_complete_separation(X, E, T, self.event_col)
 
     def _check_values_pre_fitting(self, X, T, E, W):
-        check_low_var(X)
-        check_for_numeric_dtypes_or_raise(X)
-        check_nans_or_infs(T)
-        check_nans_or_infs(X)
+        utils.check_low_var(X)
+        utils.check_for_numeric_dtypes_or_raise(X)
+        utils.check_nans_or_infs(T)
+        utils.check_nans_or_infs(X)
         # check to make sure their weights are okay
         if self.weights_col:
             if (W.astype(int) != W).any() and not self.robust:
@@ -763,7 +743,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
 """,
-                    StatisticalWarning,
+                    utils.StatisticalWarning,
                 )
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
@@ -870,7 +850,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         else:
             beta = zeros((d,))
 
-        step_sizer = StepSizer(step_size)
+        step_sizer = utils.StepSizer(step_size)
         step_size = step_sizer.next()
 
         delta = np.zeros_like(beta)
@@ -914,12 +894,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             except (ValueError, LinAlgError) as e:
                 self._check_values_post_fitting(X, T, E, weights)
                 if "infs or NaNs" in str(e):
-                    raise ConvergenceError(
+                    raise utils.ConvergenceError(
                         """Hessian or gradient contains nan or inf value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS),
                         e,
                     )
                 elif isinstance(e, LinAlgError):
-                    raise ConvergenceError(
+                    raise utils.ConvergenceError(
                         """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. {0}""".format(
                             CONVERGENCE_DOCS
                         ),
@@ -933,7 +913,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if np.any(np.isnan(delta)):
                 self._check_values_post_fitting(X, T, E, weights)
-                raise ConvergenceError("""delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS))
+                raise utils.ConvergenceError("""delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS))
 
             # Save these as pending result
             hessian, gradient = h, g
@@ -970,7 +950,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 warnings.warn(
                     "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.stackexchange.com/q/11109/11867 for more.\n",
-                    ConvergenceWarning,
+                    utils.ConvergenceWarning,
                 )
                 converging, success = False, False
 
@@ -988,11 +968,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             warnings.warn(
                 "Newton-Rhaphson convergence completed successfully but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
                 % norm_delta,
-                ConvergenceWarning,
+                utils.ConvergenceWarning,
             )
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
-            warnings.warn("Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, ConvergenceWarning)
+            warnings.warn("Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, utils.ConvergenceWarning)
 
         return beta, ll_, hessian
 
@@ -1494,7 +1474,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
     def _compute_confidence_intervals(self) -> pd.DataFrame:
         ci = 100 * (1 - self.alpha)
-        z = inv_normal_cdf(1 - self.alpha / 2)
+        z = utils.inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.params_.values
         return pd.DataFrame(
@@ -1539,7 +1519,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df : DataFrame
         """
         ci = 100 * (1 - self.alpha)
-        z = inv_normal_cdf(1 - self.alpha / 2)
+        z = utils.inv_normal_cdf(1 - self.alpha / 2)
         with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
             df = pd.DataFrame(index=self.params_.index)
             df["coef"] = self.params_
@@ -1631,7 +1611,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             X = X.to_frame().T
             return self.predict_log_partial_hazard(X)
 
-        index = _get_index(X)
+        index = utils._get_index(X)
 
         if isinstance(X, pd.DataFrame):
             order = hazard_names
@@ -1641,7 +1621,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         X = X.astype(float)
 
-        X = normalize(X, self._norm_mean.values, 1)
+        X = utils.normalize(X, self._norm_mean.values, 1)
         return pd.Series(dot(X, self.params_), index=index)
 
     def predict_cumulative_hazard(
@@ -1677,7 +1657,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if times is not None:
             times = np.atleast_1d(times).astype(float)
         if conditional_after is not None:
-            conditional_after = _to_1d_array(conditional_after).reshape(n, 1)
+            conditional_after = utils._to_1d_array(conditional_after).reshape(n, 1)
 
         if self.strata:
             X = X.copy()
@@ -1689,28 +1669,28 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 try:
                     strata_c_0 = self.baseline_cumulative_hazard_[[stratum]]
                 except KeyError:
-                    raise StatError(
+                    raise utils.StatError(
                         dedent(
                             """The stratum %s was not found in the original training data. For example, try
                             the following on the original dataset, df: `df.groupby(%s).size()`. Expected is that %s is not present in the output."""
                             % (stratum, self.strata, stratum)
                         )
                     )
-                col = _get_index(stratified_X)
+                col = utils._get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
-                times_ = coalesce(times, self.baseline_cumulative_hazard_.index)
+                times_ = utils.coalesce(times, self.baseline_cumulative_hazard_.index)
                 n_ = stratified_X.shape[0]
                 if conditional_after is not None:
                     conditional_after_ = stratified_X.pop("_conditional_after")[:, None]
                     times_to_evaluate_at = np.tile(times_, (n_, 1)) + conditional_after_
 
-                    c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at)
-                    c_0_conditional_after = interpolate_at_times(strata_c_0, conditional_after_)
+                    c_0_ = utils.interpolate_at_times(strata_c_0, times_to_evaluate_at)
+                    c_0_conditional_after = utils.interpolate_at_times(strata_c_0, conditional_after_)
                     c_0_ = np.clip((c_0_ - c_0_conditional_after).T, 0, np.inf)
 
                 else:
                     times_to_evaluate_at = np.tile(times_, (n_, 1))
-                    c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at).T
+                    c_0_ = utils.interpolate_at_times(strata_c_0, times_to_evaluate_at).T
 
                 cumulative_hazard_ = cumulative_hazard_.merge(
                     pd.DataFrame(c_0_ * v.values, columns=col, index=times_), how="outer", right_index=True, left_index=True
@@ -1718,19 +1698,19 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         else:
 
             v = self.predict_partial_hazard(X)
-            col = _get_index(v)
-            times_ = coalesce(times, self.baseline_cumulative_hazard_.index)
+            col = utils._get_index(v)
+            times_ = utils.coalesce(times, self.baseline_cumulative_hazard_.index)
 
             if conditional_after is not None:
                 times_to_evaluate_at = np.tile(times_, (n, 1)) + conditional_after
 
-                c_0 = interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at)
-                c_0_conditional_after = interpolate_at_times(self.baseline_cumulative_hazard_, conditional_after)
+                c_0 = utils.interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at)
+                c_0_conditional_after = utils.interpolate_at_times(self.baseline_cumulative_hazard_, conditional_after)
                 c_0 = np.clip((c_0 - c_0_conditional_after).T, 0, np.inf)
 
             else:
                 times_to_evaluate_at = np.tile(times_, (n, 1))
-                c_0 = interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at).T
+                c_0 = utils.interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at).T
 
             cumulative_hazard_ = pd.DataFrame(c_0 * v.values, columns=col, index=times_)
 
@@ -1791,8 +1771,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         predict_median
 
         """
-        subjects = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]).T.squeeze()
+        subjects = utils._get_index(X)
+        return utils.qth_survival_times(
+            p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
+        ).T.squeeze()
 
     def predict_median(self, X: DataFrame, conditional_after: Optional[ndarray] = None) -> pd.Series:
         """
@@ -1854,7 +1836,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         predict_percentile
 
         """
-        subjects = _get_index(X)
+        subjects = utils._get_index(X)
         v = self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
         return pd.Series(trapz(v.values.T, v.index), index=subjects)
 
@@ -1961,7 +1943,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         errorbar_kwargs.setdefault("elinewidth", 1.25)
         errorbar_kwargs.setdefault("capsize", 3)
 
-        z = inv_normal_cdf(1 - self.alpha / 2)
+        z = utils.inv_normal_cdf(1 - self.alpha / 2)
         user_supplied_columns = True
 
         if columns is None:
@@ -2062,7 +2044,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         from matplotlib import pyplot as plt
 
-        covariates = _to_list(covariates)
+        covariates = utils._to_list(covariates)
         n_covariates = len(covariates)
         values = np.asarray(values)
         if len(values.shape) == 1:
@@ -2100,7 +2082,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 ax = plt.figure().add_subplot(1, 1, 1)
                 x_bar = self._norm_mean.to_frame().T
 
-                for name, value in zip(_to_list(self.strata), _to_tuple(stratum)):
+                for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
                     x_bar[name] = value
 
                 X = pd.concat([x_bar] * values.shape[0])
@@ -2166,7 +2148,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         if scoring_method == "log_likelihood":
 
-            df = normalize(df, self._norm_mean.values, 1.0)
+            df = utils.normalize(df, self._norm_mean.values, 1.0)
 
             decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *df.shape)
             get_gradients = getattr(self, "_get_efron_values_%s" % decision)

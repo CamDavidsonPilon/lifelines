@@ -55,7 +55,7 @@ Contents:
   :caption: Additional documentation
 
   Examples
-  References
+  references
 
 .. toctree::
   :maxdepth: 1
