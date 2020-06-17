@@ -35,6 +35,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
     paper replication `here <https://github.com/CamDavidsonPilon/lifelines-replications/blob/master/replications/Friedman_1982.ipynb>`_
 
     """
+    _FAST_MEDIAN_PREDICT = True
 
     # about 50% faster than BFGS
     _scipy_fit_method = "SLSQP"

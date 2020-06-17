@@ -2220,6 +2220,8 @@ class ParametricRegressionFitter(RegressionFitter):
             df = df.to_frame().T
 
         df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+
+        # TODO: where does self.timeline come from?
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 

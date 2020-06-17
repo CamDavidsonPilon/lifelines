@@ -262,14 +262,15 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
     def __getattr__(self, attr):
         if attr == "_model":
-            raise AttributeError("Must call fit first.")
+            raise AttributeError("Must call `fit` first.")
 
-        try:
+        if hasattr(self._model, attr):
             return getattr(self._model, attr)
-        except AttributeError:
-            raise AttributeError("%s has no attribute '%s'" % (self._class_name, attr))
+
+        raise AttributeError("%s has no attribute '%s'" % (self._class_name, attr))
 
     def __dir__(self):
+        # pretty hacky - probably a better way
         return self._model.__dir__() + ["print_summary", "baseline_estimation_method"]
 
     def _fit_model(self, *args, **kwargs):
@@ -297,11 +298,11 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         kwargs.pop("step_size")
         kwargs.pop("batch_mode")
         df = args[0].copy()
-        df["constant"] = 1
+        df["_intercept"] = 1
 
         regressors = {
-            **{"beta_": df.columns.difference(["T", "E", "weights"]), "phi1_": ["constant"]},
-            **{"phi%d_" % i: ["constant"] for i in range(2, self.n_baseline_knots + 2)},
+            **{"beta_": df.columns.difference(["T", "E", "weights"]), "phi1_": ["_intercept"]},
+            **{"phi%d_" % i: ["_intercept"] for i in range(2, self.n_baseline_knots + 2)},
         }
 
         model = ParametricSplinePHFitter(penalizer=self.penalizer, l1_ratio=self.l1_ratio, n_baseline_knots=self.n_baseline_knots)
@@ -2283,7 +2284,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         """
         Predict the baseline hazard at times (Defaults to observed durations)
         """
-        times = utils.coalesce(times, np.unique(self.durations))
+        times = utils.coalesce(times, self.timeline)
         v = self.predict_hazard(self._norm_mean, times=times)
         v.columns = ["baseline hazard"]
         return v
@@ -2292,7 +2293,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         """
         Predict the baseline survival at times (Defaults to observed durations)
         """
-        times = utils.coalesce(times, np.unique(self.durations))
+        times = utils.coalesce(times, self.timeline)
         v = self.predict_survival_function(self._norm_mean, times=times)
         v.columns = ["baseline survival"]
         return v
@@ -2301,10 +2302,103 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         """
         Predict the baseline cumulative hazard at times (Defaults to observed durations)
         """
-        times = utils.coalesce(times, np.unique(self.durations))
+        times = utils.coalesce(times, self.timeline)
         v = self.predict_cumulative_hazard(self._norm_mean, times=times)
         v.columns = ["baseline cumulative hazard"]
         return v
+
+    def predict_cumulative_hazard(self, df, *, times=None, conditional_after=None):
+        """
+        Predict the cumulative hazard for individuals, given their covariates.
+
+        Parameters
+        ----------
+
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
+            can be in any order.
+        times: iterable, optional
+            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations in the training dataset (observed and unobserved).
+        conditional_after: iterable, optional
+            Must be equal is size to (df.shape[0],) (`n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
+
+        Returns
+        -------
+        DataFrame
+            the cumulative hazards of individuals over the timeline
+
+        """
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
+
+        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        df["_intercept"] = 1
+
+        times = utils.coalesce(times, self.timeline)
+        times = np.atleast_1d(times).astype(float)
+
+        n = df.shape[0]
+        Xs = self._create_Xs_dict(df)
+
+        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
+
+        columns = utils._get_index(df)
+        if conditional_after is None:
+            return pd.DataFrame(self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=columns)
+        else:
+            conditional_after = np.asarray(conditional_after).reshape((n, 1))
+            times_to_evaluate_at = (conditional_after + np.tile(times, (n, 1))).T
+            return pd.DataFrame(
+                np.clip(
+                    self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
+                    - self._cumulative_hazard(params_dict, conditional_after, Xs),
+                    0,
+                    np.inf,
+                ),
+                index=times,
+                columns=columns,
+            )
+
+    def predict_hazard(self, df, *, times=None):
+        """
+        Predict the hazard for individuals, given their covariates.
+
+        Parameters
+        ----------
+
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
+            can be in any order.
+        times: iterable, optional
+            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations in the training dataset (observed and unobserved).
+        conditional_after:
+            Not implemented yet.
+
+        Returns
+        -------
+        DataFrame
+            the hazards of individuals over the timeline
+
+        """
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
+
+        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        df["_intercept"] = 1
+        times = utils.coalesce(times, self.timeline)
+        times = np.atleast_1d(times).astype(float)
+
+        n = df.shape[0]
+        Xs = self._create_Xs_dict(df)
+
+        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
+
+        return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
 
 
 class _BatchVsSingle:

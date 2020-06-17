@@ -124,6 +124,7 @@ class SplineFitterTesting(SplineFitter):
 
 class CustomRegressionModelTesting(ParametricRegressionFitter):
 
+    _FAST_MEDIAN_PREDICT = True
     _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
 
     def __init__(self, **kwargs):
