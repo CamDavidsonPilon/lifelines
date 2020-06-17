@@ -1170,6 +1170,7 @@ class KnownModelParametricUnivariateFitter(ParametricUnivariateFitter):
 class RegressionFitter(BaseFitter):
 
     _KNOWN_MODEL = False
+    _FAST_MEDIAN_PREDICT = False
     _ALLOWED_RESIDUALS = {"schoenfeld", "score", "delta_beta", "deviance", "martingale", "scaled_schoenfeld"}
 
     def __init__(self, *args, **kwargs):
@@ -1194,39 +1195,6 @@ class RegressionFitter(BaseFitter):
 
         resids = getattr(self, "_compute_%s" % kind)(X, Ts, E, weights, index=shuffled_original_index)
         return resids
-
-    def _preprocess_dataframe(self, training_dataframe):
-        raise NotImplementedError()
-
-    def _compute_schoenfeld(self, X: pd.DataFrame, T: pd.Series, E: pd.Series, weights: pd.Series, index: pd.Index):
-        raise NotImplementedError()
-
-    def _compute_score(self, X, T, E, weights, index=None):
-        raise NotImplementedError()
-
-    def _compute_delta_beta(self, X, T, E, weights, index=None):
-        raise NotImplementedError()
-
-    def _compute_deviance(self, X, T, E, weights, index=None):
-        raise NotImplementedError()
-
-    def _compute_martingale(self, X, T, E, weights, index=None):
-        raise NotImplementedError()
-
-    def _compute_scale_schoenfeld(self, X, T, E, weights, index=None):
-        raise NotImplementedError()
-
-    def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
-        raise NotImplementedError()
-
-    def predict_percentile(self, df, *, p=0.5, conditional_after=None) -> pd.Series:
-        raise NotImplementedError()
-
-    def predict_median(self, df, conditional_after=None) -> pd.Series:
-        raise NotImplementedError()
-
-    def predict_expectation(self, df, conditional_after=None) -> pd.Series:
-        raise NotImplementedError()
 
 
 class SemiParametricRegressionFittter(RegressionFitter):
@@ -1749,7 +1717,8 @@ class ParametricRegressionFitter(RegressionFitter):
             Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
-        self._predicted_median = self.predict_median(df)
+        if self._FAST_MEDIAN_PREDICT:
+            self._predicted_median = self.predict_median(df)
         return self
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs) -> Union[List[Dict], Dict]:
@@ -2133,7 +2102,7 @@ class ParametricRegressionFitter(RegressionFitter):
         sr = self.log_likelihood_ratio_test()
         footers = []
 
-        if utils.CensoringType.is_right_censoring(self):
+        if utils.CensoringType.is_right_censoring(self) and self._FAST_MEDIAN_PREDICT:
             footers.append(("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)))
 
         footers.extend(
@@ -2143,7 +2112,7 @@ class ParametricRegressionFitter(RegressionFitter):
                     "log-likelihood ratio test",
                     "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
                 ),
-                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-np.log2(sr.p_value), prec=decimals)),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.safe_log2(sr.p_value), prec=decimals)),
             ]
         )
 
@@ -2251,6 +2220,8 @@ class ParametricRegressionFitter(RegressionFitter):
             df = df.to_frame().T
 
         df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+
+        # TODO: where does self.timeline come from?
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
@@ -2536,6 +2507,7 @@ class ParametricRegressionFitter(RegressionFitter):
 class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     _KNOWN_MODEL = True
+    _FAST_MEDIAN_PREDICT = True
     _primary_parameter_name: str
     _ancillary_parameter_name: str
 
