@@ -1,5 +1,16 @@
 ## Changelog
 
+#### 0.24.10
+
+##### New features
+ - New improvements when using splines model in CoxPHFitter - it should offer much better prediction and baseline-hazard estimation, including extrapolation and interpolation.
+
+##### API Changes
+ - Related to above: the fitted spline parameters are now available in the `.summary` and `.print_summary` methods.
+
+##### Bug fixes
+- fixed a bug in initialization of some interval-censoring models -> better convergence.
+
 
 #### 0.24.9 - 2020-06-05
 

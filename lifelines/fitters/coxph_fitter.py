@@ -2336,6 +2336,8 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             df = df.to_frame().T
 
         df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+
+        # this is needed for these models
         df["_intercept"] = 1
 
         times = utils.coalesce(times, self.timeline)
