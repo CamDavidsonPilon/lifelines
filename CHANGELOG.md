@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.11
+#### 0.24.11 - 2020-06-17
 
 ##### New features
  - new spline regression model `CRCSplineFitter` based on the paper "A flexible parametric accelerated failure time model" by Michael J. Crowther, Patrick Royston, Mark Clements.

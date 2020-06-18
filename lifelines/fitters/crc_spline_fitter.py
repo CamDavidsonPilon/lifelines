@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Below is a re-implementation of Royston, Clements and Crowther spline models,
 
-Crowther MJ, Royston P, Clements M. A flexible parametric accelerated failure time model.
-"""
 from autograd import numpy as np
 from lifelines.fitters import ParametricRegressionFitter
 from lifelines.fitters.mixins import SplineFitterMixin
@@ -11,10 +7,25 @@ from lifelines.utils.safe_exp import safe_exp
 
 
 class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
+    """
+    Below is an implementation of Crowther, Royston, Clements AFT cubic spline models.
+
+    Parameters
+    -----------
+
+    n_baseline_knots: int
+        the number of knots in the cubic spline. If equal to 2, then the model is equal to the WeibullAFT model.
+
+
+    Reference
+    ----------
+    Crowther MJ, Royston P, Clements M. A flexible parametric accelerated failure time model.
+    """
 
     _scipy_fit_method = "SLSQP"
 
-    def __init__(self, n_baseline_knots, *args, **kwargs):
+    def __init__(self, n_baseline_knots: int, *args, **kwargs):
+        assert n_baseline_knots > 1, "must be greater than 1"
         self.n_baseline_knots = n_baseline_knots
         self._fitted_parameter_names = ["beta_"] + ["gamma%d_" % i for i in range(0, self.n_baseline_knots)]
         super(CRCSplineFitter, self).__init__(*args, **kwargs)
