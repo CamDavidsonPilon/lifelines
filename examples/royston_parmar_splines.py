@@ -20,9 +20,7 @@ class SplineFitter:
 
     def basis(self, x, knot, min_knot, max_knot):
         lambda_ = (max_knot - knot) / (max_knot - min_knot)
-        return self.relu(x - knot) ** 3 - (
-            lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3
-        )
+        return self.relu(x - knot) ** 3 - (lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3)
 
 
 class PHSplineFitter(SplineFitter, ParametricRegressionFitter):
@@ -38,6 +36,14 @@ class PHSplineFitter(SplineFitter, ParametricRegressionFitter):
     _KNOWN_MODEL = True
 
     KNOTS = [0.1972, 1.769, 6.728]
+
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
+        return {
+            "beta_": np.zeros(len(Xs.mappings["beta_"])),
+            "phi0_": np.array([0.0]),
+            "phi1_": np.array([0.1]),
+            "phi2_": np.array([0.0]),
+        }
 
     def _cumulative_hazard(self, params, T, Xs):
         exp_Xbeta = np.exp(np.dot(Xs["beta_"], params["beta_"]))
@@ -73,8 +79,7 @@ class POSplineFitter(SplineFitter, ParametricRegressionFitter):
                 + (
                     params["phi0_"]
                     + params["phi1_"] * lT
-                    + params["phi2_"]
-                    * self.basis(lT, np.log(self.KNOTS[1]), np.log(self.KNOTS[0]), np.log(self.KNOTS[-1]))
+                    + params["phi2_"] * self.basis(lT, np.log(self.KNOTS[1]), np.log(self.KNOTS[0]), np.log(self.KNOTS[-1]))
                 )
             )
         )
@@ -124,11 +129,7 @@ cph = CoxPHFitter().fit(df[columns_needed_for_fitting].drop("constant", axis=1),
 
 
 # check PH(1) Weibull model (different parameterization from lifelines)
-regressors = {
-    "beta_": ["binned_lp_(-8.257, -7.608]", "binned_lp_(-7.608, -3.793]"],
-    "phi0_": ["constant"],
-    "phi1_": ["constant"],
-}
+regressors = {"beta_": ["binned_lp_(-8.257, -7.608]", "binned_lp_(-7.608, -3.793]"], "phi0_": ["constant"], "phi1_": ["constant"]}
 waf = WeibullFitter().fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary()
 
 
@@ -155,8 +156,6 @@ pof.fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_s
 
 # looks like figure 2 from paper.
 pof.predict_hazard(
-    pd.DataFrame(
-        {"binned_lp_(-8.257, -7.608]": [0, 0, 1], "binned_lp_(-7.608, -3.793]": [0, 1, 0], "constant": [1.0, 1, 1]}
-    )
+    pd.DataFrame({"binned_lp_(-8.257, -7.608]": [0, 0, 1], "binned_lp_(-7.608, -3.793]": [0, 1, 0], "constant": [1.0, 1, 1]})
 ).plot()
 plt.show()
