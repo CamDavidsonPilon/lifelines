@@ -1,6 +1,16 @@
 ## Changelog
 
-#### 0.24.10
+#### 0.24.11
+
+##### New features
+ - new spline regression model `CRCSplineFitter` based on the paper "A flexible parametric accelerated failure time model" by Michael J. Crowther, Patrick Royston, Mark Clements.
+ - new survival probability calibration tool `lifelines.calibration.survival_probability_calibration` to help validate regression models. Based on “Graphical calibration curves and the integrated calibration index (ICI) for survival models” by P. Austin, F. Harrell, and D. van Klaveren.
+
+##### API Changes
+ - (and bug fix) scalar parameters in regression models were not being penalized by `penalizer` - we now penalizing everything except intercept terms in linear relationships.
+
+
+#### 0.24.10 - 2020-06-16
 
 ##### New features
  - New improvements when using splines model in CoxPHFitter - it should offer much better prediction and baseline-hazard estimation, including extrapolation and interpolation.

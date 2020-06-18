@@ -1,76 +1,72 @@
 # -*- coding: utf-8 -*-
-"""
-Smoothed calibration curves for time-to-event models
-
-https://onlinelibrary.wiley.com/doi/full/10.1002/sim.8570
-
-"""
 
 
-def ccl(p):
-    return np.log(-np.log(1 - p))
+def survival_probability_calibration(model, training_df, t0):
+    """
+    Smoothed calibration curves for time-to-event models
 
+    https://onlinelibrary.wiley.com/doi/full/10.1002/sim.8570
 
-from lifelines.datasets import load_regression_dataset
+    """
 
-df = load_regression_dataset()
-T = "T"
-E = "E"
+    def ccl(p):
+        return np.log(-np.log(1 - p))
 
-T_0 = 15
+    T = model.duration_col
+    E = model.event_col
 
+    predictions_at_t0 = np.clip(1 - model.predict_survival_function(training_df, times=[t0]).T.squeeze(), 1e-10, 1 - 1e-10)
 
-# fit original model and make survival predictions
-cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=4).fit(df, T, E)
-predictions_at_T_0 = 1 - cph.predict_survival_function(df, times=[T_0]).T.squeeze()
-cll_predictions_at_T_0 = ccl(predictions_at_T_0)
+    # create new dataset with the predictions
+    prediction_df = pd.DataFrame(
+        {"ccl_at_%d" % t0: ccl(predictions_at_t0), "constant": 1, T: model.durations, E: model.event_observed}
+    )
 
-# create new dataset with the predictions
-prediction_df = pd.DataFrame({"ccl_at_%d" % T_0: cll_predictions_at_T_0, "constant": 1, "week": df[T], "arrest": df[E]})
+    # fit new dataset to flexible spline model
+    # this new model connects prediction probabilities and actual survival. It should be very flexible, almost to the point of overfitting. It's goal is just to smooth out the data!
+    knots = 3
+    regressors = {"beta_": ["ccl_at_%d" % t0], "gamma0_": ["constant"], "gamma1_": ["constant"], "gamma2_": ["constant"]}
 
-# fit new dataset to flexible spline model
-# this new model connects prediction probabilities and actual survival. It should be very flexible, almost to the point of overfitting. It's goal is just to smooth out the data!
+    # this model is from examples/royson_crowther_clements_splines.py
+    crc = CRCSplineFitter(knots, penalizer=0)
+    if CensoringType.is_right_censoring(model):
+        crc.fit_right_censoring(prediction_df, T, E, regressors=regressors)
+    elif CensoringType.is_left_censoring(model):
+        crc.fit_left_censoring(prediction_df, T, E, regressors=regressors)
+    elif CensoringType.is_interval_censoring(model):
+        crc.fit_interval_censoring(prediction_df, T, E, regressors=regressors)
 
-regressors = {
-    "beta_": ["ccl_at_%d" % T_0],
-    "gamma0_": ["constant"],
-    "gamma1_": ["constant"],
-    "gamma2_": ["constant"],
-    "gamma3_": ["constant"],
-}
-# this model is from examples/royson_crowther_clements_splines.py
-crc = CRCSplineFitter(4).fit(prediction_df, "week", "arrest", regressors=regressors)
+    # predict new model at values 0 to 1, but remember to ccl it!
+    x = np.linspace(np.clip(predictions_at_t0.min() - 0.01, 0, 1), np.clip(predictions_at_t0.max() + 0.01, 0, 1), 100)
+    y = 1 - crc.predict_survival_function(pd.DataFrame({"ccl_at_%d" % t0: ccl(x), "constant": 1}), times=[t0]).T.squeeze()
 
-# predict new model at values 0 to 1, but remember to ccl it!
-x = np.linspace(np.clip(predictions_at_T_0.min() - 0.05, 0, 1), np.clip(predictions_at_T_0.max() + 0.05, 0, 1), 100)
-y = 1 - crc.predict_survival_function(pd.DataFrame({"ccl_at_%d" % T_0: ccl(x), "constant": 1}), times=[T_0]).T.squeeze()
+    fig, ax = plt.subplots()
+    # plot our results
+    ax.set_title("Smoothed calibration curve of \npredicted vs observed probabilities of t ≤ %d mortality" % t0)
 
+    color = "tab:red"
+    ax.plot(x, y, label="smoothed calibration curve, %d knots" % knots)
+    ax.set_xlabel("Predicted probability of \nt ≤ %d mortality" % t0)
+    ax.set_ylabel("Observed probability of \nt ≤ %d mortality" % t0, color=color)
+    ax.tick_params(axis="y", labelcolor=color)
 
-# plot our results
-fig, ax = plt.subplots()
-ax.set_title("Smoothed calibration curve of predicted vs observed probabilities")
-plt.ylim(x[0], x[-1])
-plt.xlim(x[0], x[-1])
+    # plot x=y line
+    ax.plot(x, x, c="k", ls="--")
+    ax.legend()
 
+    # plot histogram of our original predictions
+    color = "tab:blue"
+    twin_ax = ax.twinx()
+    twin_ax.set_ylabel("Count of \npredicted probabilities", color=color)  # we already handled the x-label with ax1
+    twin_ax.tick_params(axis="y", labelcolor=color)
+    twin_ax.hist(predictions_at_t0, alpha=0.3, bins="sqrt", color=color)
 
-color = "tab:red"
-ax.plot(x, y, label="smoothed calibration curve", color=color)
-ax.set_xlabel("Predicted probability of \nt=%d mortality" % T_0)
-ax.set_ylabel("Observed probability of \nt=%d mortality" % T_0, color=color)
-ax.tick_params(axis="y", labelcolor=color)
+    plt.tight_layout()
 
-# plot x=y line
-ax.plot(x, x, c="k", ls="--")
+    deltas = ((1 - crc.predict_survival_function(prediction_df, times=[t0])).T.squeeze() - predictions_at_t0).abs()
+    ICI = deltas.mean()
+    E50 = np.percentile(deltas, 50)
+    print("ICI = ", ICI)
+    print("E50 = ", E50)
 
-
-# plot histogram of our original predictions
-color = "tab:blue"
-twin_ax = ax.twinx()
-twin_ax.set_ylabel("histogram of \npredicted probabilities", color=color)  # we already handled the x-label with ax1
-twin_ax.tick_params(axis="y", labelcolor=color)
-
-
-twin_ax.hist(predictions_at_T_0, alpha=0.3, bins="sqrt", color=color)
-
-ax.legend()
-plt.tight_layout()
+    return ax, ICI, E50

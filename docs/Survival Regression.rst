@@ -1016,10 +1016,10 @@ Prime Minister Stephen Harper.
 .. note:: Because of the nature of the model, estimated survival functions of individuals can increase. This is an expected artifact of Aalen's additive model.
 
 
-Model selection in survival regression
-=========================================
+Model selection and calibration in survival regression
+==========================================================
 
-Parametric vs Semi-parametric models
+Parametric vs semi-parametric models
 ---------------------------------------
 Above, we've displayed two *semi-parametric* models (Cox model and Aalen's model), and a family of *parametric* models. Which should you choose? What are the advantages and disadvantages of either? I suggest reading the two following StackExchange answers to get a better idea of what experts think:
 
@@ -1145,6 +1145,30 @@ into a training set and a testing set fits itself on the training set and evalua
         # [0.5449, 0.5587, 0.6179]
 
 Also, lifelines has wrappers for `compatibility with scikit learn`_ for making cross-validation and grid-search even easier.
+
+
+Model probability calibration
+---------------------------------------------------
+
+New in *lifelines* v0.24.11 is the :func:`~lifelines.calibration.survival_probability_calibration` function to measure your fitted survival model against observed frequencies of events. We follow the advice in "Graphical calibration curves and the integrated calibration index (ICI) for survival models" by P. Austin and co., and use create a smoothed calibration curve using a flexible spline regression model (this avoids the traditional problem of binning the continuous-valued probability, and handles censored data).
+
+
+.. code:: python
+
+        from lifelines import CoxPHFitter
+        from lifelines.datasets import load_rossi
+        from lifelines.calibration import survival_probability_calibration
+
+        regression_dataset = load_rossi()
+        cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
+        cph.fit(rossi, "week", "arrest")
+
+
+        survival_probability_calibration(cph, rossi, t0=25)
+
+.. image:: images/survival_calibration_probablilty.png
+
+
 
 
 .. _Assessing Cox model fit using residuals: jupyter_notebooks/Cox%20residuals.html

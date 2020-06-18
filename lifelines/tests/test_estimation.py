@@ -66,6 +66,7 @@ from lifelines import (
     GeneralizedGammaRegressionFitter,
     SplineFitter,
     MixtureCureFitter,
+    CRCSplineFitter,
 )
 
 from lifelines.datasets import (
@@ -1774,6 +1775,7 @@ class TestRegressionFitters:
             PiecewiseExponentialRegressionFitter(breakpoints=[25.0]),
             CustomRegressionModelTesting(penalizer=1.0),
             GeneralizedGammaRegressionFitter(penalizer=5.0),
+            CRCSplineFitter(3),
         ]
 
     @pytest.fixture
