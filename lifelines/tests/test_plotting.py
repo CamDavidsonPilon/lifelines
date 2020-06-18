@@ -35,6 +35,7 @@ from lifelines.datasets import (
     load_diabetes,
 )
 from lifelines.generate_datasets import cumulative_integral
+from lifelines.calibration import survival_probability_calibration
 
 
 @pytest.fixture()
@@ -748,4 +749,10 @@ class TestPlotting:
         wf.plot_survival_function(logx=True, ax=ax)
 
         self.plt.title("test_logx_plotting")
+        self.plt.show(block=block)
+
+    def test_survival_probability_calibration(self, block):
+        rossi = load_rossi()
+        cph = CoxPHFitter().fit(rossi, "week", "arrest")
+        survival_probability_calibration(cph, rossi, 25)
         self.plt.show(block=block)

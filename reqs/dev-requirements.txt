@@ -4,7 +4,7 @@
 # installs lifelines as editable dependency in develop mode
 -e .
 
-pytest>=3.6
+pytest>=4.6
 pytest-icdiff
 coverage>=4.4
 pytest-cov

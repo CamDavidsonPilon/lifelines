@@ -1685,13 +1685,15 @@ class ParametricRegressionFitter(RegressionFitter):
         self._norm_mean = df.mean(0)
         if self._KNOWN_MODEL and hasattr(self, "_ancillary_parameter_name") and hasattr(self, "_primary_parameter_name"):
             # Known AFT model
-            self._norm_mean_ = df[self.regressors[self._primary_parameter_name]].mean(0)
+            self._norm_mean_primary = df[self.regressors[self._primary_parameter_name]].mean(0)
             self._norm_mean_ancillary = df[self.regressors[self._ancillary_parameter_name]].mean(0)
 
         _norm_std = df.std(0)
-        self._constant_cols = pd.Series([(_norm_std.loc[variable_name] < 1e-8) for (_, variable_name) in _index], index=_index)
+
+        self._cols_to_not_penalize = self._find_cols_to_not_penalize(_index, _norm_std)
         self._norm_std = pd.Series([_norm_std.loc[variable_name] for (_, variable_name) in _index], index=_index)
-        self._norm_std[self._constant_cols] = 1.0
+        _constant_cols = pd.Series([_norm_std.loc[variable_name] < 1e-8 for (_, variable_name) in _index], index=_index)
+        self._norm_std[_constant_cols] = 1.0
         _norm_std[_norm_std < 1e-8] = 1.0
 
         self._pre_fit_model(Ts, E, df)
@@ -1721,13 +1723,28 @@ class ParametricRegressionFitter(RegressionFitter):
             self._predicted_median = self.predict_median(df)
         return self
 
+    def _find_cols_to_not_penalize(self, index, norm_std):
+        """
+        We only want to avoid penalizing the constant term in linear relationships. Our flag for a
+        linear relationship is >1 covariate
+        """
+        s = pd.Series(False, index=index)
+        for k, v in index.groupby(index.get_level_values(0)).items():
+            if v.size > 1:
+                for (parameter_name, variable_name) in v:
+                    if norm_std.loc[variable_name] < 1e-8:
+                        s.loc[(parameter_name, variable_name)] = True
+
+        return s
+
     def _create_initial_point(self, Ts, E, entries, weights, Xs) -> Union[List[Dict], Dict]:
         return {parameter_name: np.zeros(len(Xs.mappings[parameter_name])) for parameter_name in self._fitted_parameter_names}
 
     def _add_penalty(self, params: Dict, neg_ll: float):
         params_array, _ = flatten(params)
+
         # remove intercepts from being penalized
-        params_array = params_array[~self._constant_cols]
+        params_array = params_array[~self._cols_to_not_penalize]
         if (isinstance(self.penalizer, np.ndarray) or self.penalizer > 0) and self.l1_ratio > 0:
             penalty = (
                 self.l1_ratio * (self.penalizer * anp.abs(params_array)).sum()
@@ -3172,7 +3189,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             ax = plt.gca()
 
         # model X
-        x_bar = self._norm_mean.to_frame().T
+        x_bar = self._norm_mean_primary.to_frame().T
         X = pd.concat([x_bar] * values.shape[0])
         if np.array_equal(np.eye(len(covariates)), values):
             X.index = ["%s=1" % c for c in covariates]
@@ -3304,7 +3321,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         Parameters
         ----------
         df: DataFrame
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            a (n,d) covariate numpy array, Series, or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
         times: iterable, optional
@@ -3317,6 +3334,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         --------
         predict_percentile, predict_expectation, predict_survival_function
         """
+
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T
+
         df = self._filter_dataframe_to_covariates(df).copy().astype(float)
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)

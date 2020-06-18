@@ -1,9 +1,39 @@
 # -*- coding: utf-8 -*-
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from lifelines.utils import CensoringType
+from lifelines.fitters import RegressionFitter
+from lifelines import CRCSplineFitter
 
 
-def survival_probability_calibration(model, training_df, t0):
-    """
-    Smoothed calibration curves for time-to-event models
+def survival_probability_calibration(model: RegressionFitter, training_df: pd.DataFrame, t0: float, ax=None):
+    r"""
+    Smoothed calibration curves for time-to-event models. This is analogous to
+    calibration curves for classification models, extended to handle survival probabilities
+    and censoring. Produces a matplotlib figure and some metrics.
+
+    We want to calibrate our model's prediction of :math:`P(T < \text{t0})` against the observed frequencies.
+
+    Parameters
+    -------------
+
+    model:
+        a fitted lifelines regression model to be evaluated
+    training_df: DataFrame
+        the DataFrame used to train the model
+    t0: float
+        the time to evaluate the probability of event occurring prior at.
+
+    Returns
+    ----------
+    ax:
+        mpl axes
+    ICI:
+        mean absolute difference between predicted and observed
+    E50:
+        median absolute difference between predicted and observed
 
     https://onlinelibrary.wiley.com/doi/full/10.1002/sim.8570
 
@@ -11,6 +41,9 @@ def survival_probability_calibration(model, training_df, t0):
 
     def ccl(p):
         return np.log(-np.log(1 - p))
+
+    if ax is None:
+        ax = plt.gca()
 
     T = model.duration_col
     E = model.event_col
@@ -40,12 +73,11 @@ def survival_probability_calibration(model, training_df, t0):
     x = np.linspace(np.clip(predictions_at_t0.min() - 0.01, 0, 1), np.clip(predictions_at_t0.max() + 0.01, 0, 1), 100)
     y = 1 - crc.predict_survival_function(pd.DataFrame({"ccl_at_%d" % t0: ccl(x), "constant": 1}), times=[t0]).T.squeeze()
 
-    fig, ax = plt.subplots()
     # plot our results
     ax.set_title("Smoothed calibration curve of \npredicted vs observed probabilities of t ≤ %d mortality" % t0)
 
     color = "tab:red"
-    ax.plot(x, y, label="smoothed calibration curve, %d knots" % knots)
+    ax.plot(x, y, label="smoothed calibration curve")
     ax.set_xlabel("Predicted probability of \nt ≤ %d mortality" % t0)
     ax.set_ylabel("Observed probability of \nt ≤ %d mortality" % t0, color=color)
     ax.tick_params(axis="y", labelcolor=color)

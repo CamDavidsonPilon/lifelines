@@ -64,7 +64,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         See http://courses.washington.edu/b515/l17.pdf.
 
       n_baseline_knots: int
-        Used when ``baseline_estimation_method`` is "spline". Set the number of interior knots in the baseline hazard.
+        Used when ``baseline_estimation_method`` is "spline". Set the number of _interior_ knots in the baseline hazard. Should be atleast 1.
 
     Examples
     --------
@@ -2238,7 +2238,9 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
     strata = None
 
     def __init__(self, n_baseline_knots=1, *args, **kwargs):
-        assert n_baseline_knots is not None, "n_baseline_knots must be a positive integer. Set in class instantiation"
+        assert (
+            n_baseline_knots is not None and n_baseline_knots > 0
+        ), "n_baseline_knots must be a positive integer. Set in class instantiation"
         self.n_baseline_knots = n_baseline_knots
         self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 2)]
         super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)

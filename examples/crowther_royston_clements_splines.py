@@ -20,12 +20,10 @@ class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
         super(CRCSplineFitter, self).__init__(*args, **kwargs)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
-        return [
-            {
-                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "gamma0_": np.array([0.0]), "gamma1_": np.array([0.1])},
-                **{"gamma%d_" % i: np.array([0.0]) for i in range(2, self.n_baseline_knots)},
-            }
-        ]
+        return {
+            **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "gamma0_": np.array([0.0]), "gamma1_": np.array([0.1])},
+            **{"gamma%d_" % i: np.array([0.0]) for i in range(2, self.n_baseline_knots)},
+        }
 
     def set_knots(self, T, E):
         self.knots = np.percentile(np.log(T[E.astype(bool).values]), np.linspace(5, 95, self.n_baseline_knots))
@@ -111,6 +109,3 @@ WeibullAFTFitter().fit(df.drop("constant", axis=1), "T", "E").print_summary()
 cf = CRCSplineFitter(4).fit(df, "T", "E", regressors=regressors)
 cf.print_summary()
 cf.predict_hazard(df)[[0, 1, 2, 3]].plot()
-
-
-cph = CoxPHFitter(baseline_estimation_method="spline").fit(df.drop("constant", axis=1), "T", "E")
