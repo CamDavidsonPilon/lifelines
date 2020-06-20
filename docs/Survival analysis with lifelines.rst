@@ -113,7 +113,7 @@ The property is a Pandas DataFrame, so we can call :meth:`~lifelines.fitters.kap
     plt.title('Survival function of political regimes');
 
 .. image:: images/lifelines_intro_kmf_curve.png
-    :width: 700px
+    :width: 600px
     :align: center
 
 How do we interpret this? The y-axis represents the probability a leader is still
@@ -127,7 +127,7 @@ property. (The method uses exponential Greenwood confidence interval. The mathem
     kmf.plot()
 
 .. image:: images/lifelines_intro_kmf_fitter.png
-    :width: 700px
+    :width: 600px
     :align: center
 
 The median time in office, which defines the point in time where on
@@ -400,7 +400,7 @@ years:
 
 
 .. image:: images/lifelines_intro_naf_fitter_multi.png
-    :width: 650px
+    :width: 600px
     :align: center
 
 Looking at the rates of change, I would say that both political
@@ -444,7 +444,8 @@ intervals, similar to the traditional :meth:`~lifelines.fitters.nelson_aalen_fit
 
 
 .. image:: images/lifelines_intro_naf_smooth_multi.png
-
+    :width: 600px
+    :align: center
 
 It is more clear here which group has the higher hazard, and Non-democratic regimes appear to have a constant hazard.
 
@@ -467,7 +468,8 @@ here. My advice: stick with the cumulative hazard function.
 
 
 .. image:: images/lifelines_intro_naf_smooth_multi_2.png
-
+    :width: 600px
+    :align: center
 
 Estimating cumulative hazards using parametric models
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -503,7 +505,9 @@ In lifelines, estimation is available using the :class:`~lifelines.fitters.weibu
     wf = WeibullFitter().fit(T, E)
 
     wf.print_summary()
-    wf.plot()
+    ax = wf.plot()
+    ax.set_title("Cumulative hazard of Weibull model; estimated parameters")
+
 
     """
     <lifelines.WeibullFitter: fitted with 163 observations, 7 censored>
@@ -519,7 +523,7 @@ In lifelines, estimation is available using the :class:`~lifelines.fitters.weibu
     """
 
 .. image:: images/survival_weibull.png
-    :width: 650px
+    :width: 600px
     :align: center
 
 
@@ -613,11 +617,11 @@ With parametric models, we have a functional form that allows us to extend the s
     # these values provided
     wbf = WeibullFitter().fit(T, E, timeline=timeline)
 
-
-    wbf.plot_survival_function()
+    ax = wbf.plot_survival_function()
+    ax.set_title("Survival function of Weibull model; estimated parameters")
 
 .. image:: images/weibull_extrapolation.png
-    :width: 650px
+    :width: 600px
     :align: center
 
 Model Selection
@@ -689,6 +693,8 @@ Instead of producing a survival function, left-censored data analysis is more in
 
 
 .. image:: images/lifelines_intro_lcd.png
+    :width: 600px
+    :align: center
 
 Alternatively, you can use a parametric model to model the data. This allows for you to "peer" below the LOD, however using a parametric model means you need to correctly specify the distribution. You can use plots like qq-plots to help invalidate some distributions, see `Selecting a parametric model using QQ plots`_ and `Selecting a parametric model using AIC`_.
 
