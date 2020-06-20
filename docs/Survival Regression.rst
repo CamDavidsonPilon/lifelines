@@ -417,7 +417,7 @@ Normally, the Cox model is *semi-parametric*, which means that its baseline haza
     cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
     cph.fit(rossi_dataset, 'week', event_col='arrest')
 
-To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :func:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :func:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`
+To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`
 
 
 Parametric survival models
@@ -1067,7 +1067,7 @@ of AUC, another common loss function, and is interpreted similarly:
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-Fitted survival models typically have a concordance index between 0.55 and 0.75 (this may seem bad, but even a perfect model has a lot of noise than can make a high score impossible). In *lifelines*, a fitted model's concordance-index is present in the output of :meth:`~lifelines.fitters.cox_ph_fitter.CoxPHFitter.score`, but also available under the ``concordance_index_`` property. Generally, the measure is implemented in *lifelines* under :func:`lifelines.utils.concordance_index` and accepts the actual times (along with any censored subjects) and the predicted times.
+Fitted survival models typically have a concordance index between 0.55 and 0.75 (this may seem bad, but even a perfect model has a lot of noise than can make a high score impossible). In *lifelines*, a fitted model's concordance-index is present in the output of :meth:`~lifelines.fitters.cox_ph_fitter.CoxPHFitter.score`, but also available under the ``concordance_index_`` property. Generally, the measure is implemented in *lifelines* under :meth:`lifelines.utils.concordance_index` and accepts the actual times (along with any censored subjects) and the predicted times.
 
 .. code:: python
 
