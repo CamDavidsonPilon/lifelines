@@ -104,6 +104,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         The entry array provided, or None
     """
 
+    _scipy_fit_method = "SLSQP"
     _fitted_parameter_names = ["mu_", "ln_sigma_", "lambda_"]
     _bounds = [(None, None), (None, None), (None, None)]
     _compare_to_values = np.array([0.0, 0.0, 1.0])
@@ -124,7 +125,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         sigma_ = safe_exp(ln_sigma_)
         Z = (log(times) - mu_) / sigma_
         ilambda_2 = 1 / lambda_ ** 2
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-15, 1e20)
+        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e20)
 
         if lambda_ > 0:
             v = -gammainccln(ilambda_2, clipped_exp)
@@ -132,14 +133,13 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
             v = -gammaincln(ilambda_2, clipped_exp)
         else:
             v = -norm.logsf(Z)
-
         return v
 
     def _log_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
         ilambda_2 = 1 / lambda_ ** 2
         Z = (log(times) - mu_) / safe_exp(ln_sigma_)
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-15, 1e20)
+        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e20)
         if lambda_ > 0:
             v = (
                 log(lambda_)
