@@ -9,13 +9,6 @@ New features
 
 -  improved convergence of ``GeneralizedGamma(Regression)Fitter``.
 
-API Changes
-'''''''''''
-
--  (and bug fix) scalar parameters in regression models were not being
-   penalized by ``penalizer`` - we now penalizing everything except
-   intercept terms in linear relationships.
-
 .. _section-1:
 
 0.24.11 - 2020-06-17
@@ -34,8 +27,6 @@ New features
    validate regression models. Based on “Graphical calibration curves
    and the integrated calibration index (ICI) for survival models” by P.
    Austin, F. Harrell, and D. van Klaveren.
-
-.. _api-changes-1:
 
 API Changes
 '''''''''''
@@ -58,7 +49,7 @@ New features
    offer much better prediction and baseline-hazard estimation,
    including extrapolation and interpolation.
 
-.. _api-changes-2:
+.. _api-changes-1:
 
 API Changes
 '''''''''''
@@ -282,7 +273,7 @@ New features
 -  new ``lifelines.fitters.mixins.ProportionalHazardMixin`` that
    implements proportional hazard checks.
 
-.. _api-changes-3:
+.. _api-changes-2:
 
 API Changes
 '''''''''''
@@ -509,7 +500,7 @@ Bug fixes
    now fixed.
 -  fixed a NaN error in confidence intervals for KaplanMeierFitter
 
-.. _api-changes-4:
+.. _api-changes-3:
 
 API Changes
 '''''''''''
@@ -600,7 +591,7 @@ Bug fixes
 -  realigned values in ``print_summary``.
 -  fixed bug in ``survival_difference_at_fixed_point_in_time_test``
 
-.. _api-changes-5:
+.. _api-changes-4:
 
 API Changes
 '''''''''''
@@ -627,7 +618,7 @@ New features
 Bug fixes
 '''''''''
 
-.. _api-changes-6:
+.. _api-changes-5:
 
 API Changes
 '''''''''''
@@ -661,7 +652,7 @@ Bug fixes
 -  Fixed an issue with ``AalenJohansenFitter`` failing to plot
    confidence intervals.
 
-.. _api-changes-7:
+.. _api-changes-6:
 
 API Changes
 '''''''''''
@@ -685,7 +676,7 @@ New features
 -  new ``utils.restricted_mean_survival_time`` that approximates the
    RMST using numerical integration against survival functions.
 
-.. _api-changes-8:
+.. _api-changes-7:
 
 API changes
 '''''''''''
@@ -719,7 +710,7 @@ New features
 -  smarter initial conditions for parametric regression models.
 -  New regression model: ``GeneralizedGammaRegressionFitter``
 
-.. _api-changes-9:
+.. _api-changes-8:
 
 API changes
 '''''''''''
@@ -785,7 +776,7 @@ New features
    right censoring)
 -  improvements to ``lifelines.utils.gamma``
 
-.. _api-changes-10:
+.. _api-changes-9:
 
 API changes
 '''''''''''
@@ -825,7 +816,7 @@ New features
 -  for parametric univariate models, the ``conditional_time_to_event_``
    is now exact instead of an approximation.
 
-.. _api-changes-11:
+.. _api-changes-10:
 
 API changes
 '''''''''''
@@ -923,7 +914,7 @@ New features
    that computes, you guessed it, the log-likelihood ratio test.
    Previously this was an internal API that is being exposed.
 
-.. _api-changes-12:
+.. _api-changes-11:
 
 API changes
 '''''''''''
@@ -954,7 +945,7 @@ New features
    ``add_covariate_to_timeline``
 -  PiecewiseExponentialFitter now allows numpy arrays as breakpoints
 
-.. _api-changes-13:
+.. _api-changes-12:
 
 API changes
 '''''''''''
@@ -988,7 +979,7 @@ New features
 -  a new interval censored dataset is available under
    ``lifelines.datasets.load_diabetes``
 
-.. _api-changes-14:
+.. _api-changes-13:
 
 API changes
 '''''''''''
@@ -1021,7 +1012,7 @@ New features
 
 -  performance improvements for ``print_summary``.
 
-.. _api-changes-15:
+.. _api-changes-14:
 
 API changes
 '''''''''''
@@ -1056,7 +1047,7 @@ New features
    generating piecewise exp. data
 -  Faster ``print_summary`` for AFT models.
 
-.. _api-changes-16:
+.. _api-changes-15:
 
 API changes
 '''''''''''
@@ -1111,7 +1102,7 @@ New features
 -  add a ``lifelines.plotting.qq_plot`` for univariate parametric models
    that handles censored data.
 
-.. _api-changes-17:
+.. _api-changes-16:
 
 API changes
 '''''''''''
@@ -1150,7 +1141,7 @@ Bug fixes
    decades of development.
 -  suppressed unimportant warnings
 
-.. _api-changes-18:
+.. _api-changes-17:
 
 API changes
 '''''''''''
@@ -1177,7 +1168,7 @@ New features
 -  smarter initialization for AFT models which should improve
    convergence.
 
-.. _api-changes-19:
+.. _api-changes-18:
 
 API changes
 '''''''''''
@@ -1276,7 +1267,7 @@ New features
 -  improved stability of ``LogNormalFitter``
 -  Matplotlib for Python3 users are not longer forced to use 2.x.
 
-.. _api-changes-20:
+.. _api-changes-19:
 
 API changes
 '''''''''''
@@ -1303,7 +1294,7 @@ New features
 -  ``CoxPHFitter`` performance improvements (about 10%)
 -  ``CoxTimeVaryingFitter`` performance improvements (about 10%)
 
-.. _api-changes-21:
+.. _api-changes-20:
 
 API changes
 '''''''''''

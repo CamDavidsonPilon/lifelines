@@ -4,11 +4,7 @@
 
 ##### New features
  - improved convergence of `GeneralizedGamma(Regression)Fitter`.
-
-##### API Changes
- - (and bug fix) scalar parameters in regression models were not being penalized by `penalizer` - we now penalizing everything except intercept terms in linear relationships.
-
-
+g
 
 #### 0.24.11 - 2020-06-17
 
