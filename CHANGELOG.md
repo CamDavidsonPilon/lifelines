@@ -1,5 +1,11 @@
 ## Changelog
 
+#### 0.24.12 - 2020-06-20
+
+##### New features
+ - improved convergence of `GeneralizedGamma(Regression)Fitter`.
+g
+
 #### 0.24.11 - 2020-06-17
 
 ##### New features

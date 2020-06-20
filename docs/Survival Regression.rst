@@ -154,31 +154,6 @@ After fitting, you can use use the suite of prediction methods: :meth:`~lifeline
     ...
 
 
-A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their survival function. We are interested to answer the following: *What is a subject's new survival function given I know the subject has lived past time s?* Mathematically:
-
-.. math::
-
-    \begin{align*}
-    P(T > t \;|\; T > s) &= \frac{P(T > t \;\text{and}\; T > s)}{P(T > s)} \\
-                         &= \frac{P(T > t)}{P(T > s)} \\
-                         &= \frac{S(t)}{S(s)}
-    \end{align*}
-
-Thus we scale the original survival function by the survival function at time :math:`s` (everything prior to :math:`s` should be mapped to 1.0 as well, since we are working with probabilities and we know that the subject was alive before :math:`s`).
-
-Back to our original problem of predicting the event time of censored individuals, *lifelines* has all this math and logic built in when using the ``conditional_after`` kwarg.
-
-.. code:: python
-
-
-    # filter down to just censored subjects to predict remaining survival
-    censored_subjects = X.loc[~X['arrest'].astype(bool)]
-    censored_subjects_last_obs = censored_subjects['week']
-
-    cph.predict_survival_function(censored_subjects, times=[5., 25., 50.], conditional_after=censored_subjects_last_obs)
-    cph.predict_median(censored_subjects, conditional_after=censored_subjects_last_obs)
-
-
 
 Penalties and sparse regression
 -----------------------------------------------
@@ -246,6 +221,8 @@ With a fitted model, an alternative way to view the coefficients and their range
     cph.plot()
 
 .. image:: images/coxph_plot.png
+    :width: 650px
+    :align: center
 
 
 Plotting the effect of varying a covariate
@@ -266,7 +243,7 @@ holding everything else equal. This is useful to understand the impact of a cova
     cph.plot_covariate_groups('prio', [0, 2, 4, 6, 8, 10], cmap='coolwarm')
 
 .. image:: images/coxph_plot_covarite_groups.png
-    :width: 650px
+    :width: 600px
     :align: center
 
 The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method can accept multiple covariates as well. This is useful for two purposes:
@@ -325,7 +302,13 @@ To specify variables to be used in stratification, we define them in the call to
 
 .. code:: python
 
-p
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+    rossi_dataset = load_rossi()
+    cph = CoxPHFitter()
+    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
+    cph.print_summary()  # access the results using cph.summary
+
     """
     <lifelines.CoxPHFitter: fitted with 432 observations, 318 censored>
           duration col = 'week'
@@ -417,10 +400,10 @@ Residuals
 After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modeling questions. See `Assessing Cox model fit using residuals`_.
 
 
-Baseline hazard and survival
------------------------------------------------
+Modeling baseline hazard and survival with splines
+-----------------------------------------------------
 
-Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no functional form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. There is an option to create a parametric baseline with splines:
+Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no functional form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. There is an option to create a parametric baseline with cubic splines:
 
 
 .. code:: python
@@ -431,10 +414,10 @@ Normally, the Cox model is *semi-parametric*, which means that its baseline haza
 
     rossi_dataset = load_rossi()
 
-    cph = CoxPHFitter(baseline_estimation_method="spline")
+    cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
     cph.fit(rossi_dataset, 'week', event_col='arrest')
 
-To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively.
+To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`
 
 
 Parametric survival models
@@ -603,6 +586,8 @@ The plotting API is the same as in :class:`~lifelines.fitters.coxph_fitter.CoxPH
     wft.plot()
 
 .. image:: images/weibull_aft_forest.png
+    :width: 650px
+    :align: center
 
 
 We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_covariate_groups`, and this is also a nice time to observe the effects of modeling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
@@ -622,6 +607,7 @@ We can observe the influence a variable in the model by plotting the *outcome* (
 
 .. image:: images/weibull_aft_two_models.png
 
+
 Comparing a few of these survival functions side by side:
 
 .. code:: python
@@ -633,6 +619,8 @@ Comparing a few of these survival functions side by side:
     ax.get_legend().remove()
 
 .. image:: images/weibull_aft_two_models_side_by_side.png
+    :width: 500px
+    :align: center
 
 You read more about and see other examples of the extensions to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_covariate_groups`
 
@@ -651,20 +639,6 @@ Given a new subject, we ask questions about their future survival? When are they
     aft.predict_median(X, ancillary_df=X)
     aft.predict_percentile(X, p=0.9, ancillary_df=X)
     aft.predict_expectation(X, ancillary_df=X)
-
-
-When predicting time remaining for censored individuals, you can use the `conditional_after` kwarg:
-
-
-.. code:: python
-
-    censored_X = rossi.loc[~rossi['arrest'].astype(bool)]
-    censored_subjects_last_obs = censored_X['week']
-
-    aft.predict_cumulative_hazard(censored_X, ancillary_df=censored_X, conditional_after=censored_subjects_last_obs)
-    aft.predict_survival_function(censored_X, ancillary_df=censored_X, conditional_after=censored_subjects_last_obs)
-    aft.predict_median(censored_X, ancillary_df=censored_X, conditional_after=censored_subjects_last_obs)
-    aft.predict_percentile(X, p=0.9, ancillary_df=censored_X, conditional_after=censored_subjects_last_obs)
 
 
 There are two hyper-parameters that can be used to to achieve a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_. (However, *lifelines* will also accept an array for custom penalizer per variable, see `Cox docs above <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#penalties-and-sparse-regression>`_)
@@ -1093,7 +1067,7 @@ of AUC, another common loss function, and is interpreted similarly:
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
 
-Fitted survival models typically have a concordance index between 0.55 and 0.75 (this may seem bad, but even a perfect model has a lot of noise than can make a high score impossible). In *lifelines*, a fitted model's concordance-index is present in the output of :meth:`~lifelines.fitters.cox_ph_fitter.CoxPHFitter.score`, but also available under the ``concordance_index_`` property. Generally, the measure is implemented in *lifelines* under :func:`lifelines.utils.concordance_index` and accepts the actual times (along with any censored subjects) and the predicted times.
+Fitted survival models typically have a concordance index between 0.55 and 0.75 (this may seem bad, but even a perfect model has a lot of noise than can make a high score impossible). In *lifelines*, a fitted model's concordance-index is present in the output of :meth:`~lifelines.fitters.cox_ph_fitter.CoxPHFitter.score`, but also available under the ``concordance_index_`` property. Generally, the measure is implemented in *lifelines* under :meth:`lifelines.utils.concordance_index` and accepts the actual times (along with any censored subjects) and the predicted times.
 
 .. code:: python
 
@@ -1167,8 +1141,42 @@ New in *lifelines* v0.24.11 is the :func:`~lifelines.calibration.survival_probab
         survival_probability_calibration(cph, rossi, t0=25)
 
 .. image:: images/survival_calibration_probablilty.png
+    :width: 600
+    :align: center
 
 
+Prediction on censored subjects
+===================================
+
+A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their survival function. We are interested to answer the following: *What is a subject's new survival function given I know the subject has lived past time s?* Mathematically:
+
+.. math::
+
+    \begin{align*}
+    P(T > t \;|\; T > s) &= \frac{P(T > t \;\text{and}\; T > s)}{P(T > s)} \\
+                         &= \frac{P(T > t)}{P(T > s)} \\
+                         &= \frac{S(t)}{S(s)}
+    \end{align*}
+
+Thus we scale the original survival function by the survival function at time :math:`s` (everything prior to :math:`s` should be mapped to 1.0 as well, since we are working with probabilities and we know that the subject was alive before :math:`s`).
+
+Back to our original problem of predicting the event time of censored individuals, *lifelines* has all this math and logic built in when using the ``conditional_after`` kwarg.
+
+.. code:: python
+
+    # all regression models can be used here, Cox is used for illustration
+    cph = CoxPHFitter().fit(rossi, "week", "age")
+
+    # filter down to just censored subjects to predict remaining survival
+    censored_subjects = X.loc[~X['arrest'].astype(bool)]
+    censored_subjects_last_obs = censored_subjects['week']
+
+    cph.predict_survival_function(censored_subjects, times=[5., 25., 50.], conditional_after=censored_subjects_last_obs)
+    cph.predict_median(censored_subjects, conditional_after=censored_subjects_last_obs)
+
+.. note:: It's important to remember that this is now computing a _conditional_ probability (or metric), so if the result of ``predict_median`` is 10.5, then the *entire lifetime* is 10.5 + ``conditional_after``.
+
+.. note:: If using `conditional_after` to predict *un*censored subjects, then ``conditional_after`` should probably be set to 0, or left blank.
 
 
 .. _Assessing Cox model fit using residuals: jupyter_notebooks/Cox%20residuals.html

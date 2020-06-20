@@ -154,7 +154,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
 
         Z = (log(T) - mu_) / sigma_
         ilambda_2 = 1 / lambda_ ** 2
-        exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-25, 1e25)
+        exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e25)
 
         return np.where(lambda_ > 0, gammaincc(ilambda_2, exp_term), gammainc(ilambda_2, exp_term))
 
@@ -164,8 +164,8 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
         mu_ = Xs["mu_"] @ params["mu_"]
 
         ilambda_2 = 1 / lambda_ ** 2
-        Z = (log(T) - mu_) / np.clip(sigma_, 1e-10, 1e20)
-        exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-25, 1e25)
+        Z = (log(T) - mu_) / np.clip(sigma_, 0, 1e20)
+        exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e25)
 
         return -np.where(lambda_ > 0, gammainccln(ilambda_2, exp_term), gammaincln(ilambda_2, exp_term))
 
@@ -175,8 +175,8 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
         mu_ = Xs["mu_"] @ params["mu_"]
 
         ilambda_2 = 1 / lambda_ ** 2
-        Z = (log(T) - mu_) / np.clip(safe_exp(ln_sigma_), 1e-10, 1e20)
-        exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-25, 1e25)
+        Z = (log(T) - mu_) / np.clip(safe_exp(ln_sigma_), 0, 1e20)
+        exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e25)
 
         return (
             log(np.abs(lambda_))

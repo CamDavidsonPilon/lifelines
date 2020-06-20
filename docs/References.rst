@@ -8,3 +8,4 @@ API Reference
     lifelines.statistics
     lifelines.plotting
     lifelines.datasets
+    lifelines.calibration

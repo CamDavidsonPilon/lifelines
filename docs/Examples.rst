@@ -335,9 +335,9 @@ where :math:`k` is the number of parameters (degrees-of-freedom) of the model an
 
     best_model.plot_hazard()
 
-
 .. image:: images/best_parametric_model.png
-
+    :width: 500px
+    :align: center
 
 Plotting multiple figures on a plot
 ##############################################

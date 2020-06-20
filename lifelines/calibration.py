@@ -77,7 +77,7 @@ def survival_probability_calibration(model: RegressionFitter, training_df: pd.Da
     ax.set_title("Smoothed calibration curve of \npredicted vs observed probabilities of t ≤ %d mortality" % t0)
 
     color = "tab:red"
-    ax.plot(x, y, label="smoothed calibration curve")
+    ax.plot(x, y, label="smoothed calibration curve", color=color)
     ax.set_xlabel("Predicted probability of \nt ≤ %d mortality" % t0)
     ax.set_ylabel("Observed probability of \nt ≤ %d mortality" % t0, color=color)
     ax.tick_params(axis="y", labelcolor=color)
