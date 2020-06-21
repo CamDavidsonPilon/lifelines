@@ -4,7 +4,7 @@
 
 ##### New features
  - improved convergence of `GeneralizedGamma(Regression)Fitter`.
-g
+
 
 #### 0.24.11 - 2020-06-17
 
