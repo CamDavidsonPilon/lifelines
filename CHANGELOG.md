@@ -1,5 +1,11 @@
 ## Changelog
 
+#### 0.24.13 - 2020-06-22
+
+##### Bug fixes
+- fixed a bug where `CoxPHFitter` would ignore inputed `alpha` levels for confidence intervals
+
+
 #### 0.24.12 - 2020-06-20
 
 ##### New features

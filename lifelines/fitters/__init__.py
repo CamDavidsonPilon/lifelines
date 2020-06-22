@@ -1211,8 +1211,8 @@ class ParametricRegressionFitter(RegressionFitter):
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
 
-    def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0):
-        super(ParametricRegressionFitter, self).__init__(alpha=alpha)
+    def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0, **kwargs):
+        super(ParametricRegressionFitter, self).__init__(alpha=alpha, **kwargs)
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
 

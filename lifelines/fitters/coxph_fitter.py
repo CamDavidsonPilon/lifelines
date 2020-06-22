@@ -282,7 +282,9 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             raise ValueError("Invalid baseline estimate supplied.")
 
     def _fit_model_breslow(self, *args, **kwargs):
-        model = SemiParametricPHFitter(penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self._strata)
+        model = SemiParametricPHFitter(
+            penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self._strata, alpha=self.alpha, label=self._label
+        )
         model.fit(*args, **kwargs)
         return model
 
@@ -305,7 +307,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             **{"phi%d_" % i: ["_intercept"] for i in range(2, self.n_baseline_knots + 2)},
         }
 
-        model = ParametricSplinePHFitter(penalizer=self.penalizer, l1_ratio=self.l1_ratio, n_baseline_knots=self.n_baseline_knots)
+        model = ParametricSplinePHFitter(
+            penalizer=self.penalizer,
+            l1_ratio=self.l1_ratio,
+            n_baseline_knots=self.n_baseline_knots,
+            alpha=self.alpha,
+            label=self._label,
+        )
         model.fit(df, *args[1:], regressors=regressors, **kwargs)
         return model
 
