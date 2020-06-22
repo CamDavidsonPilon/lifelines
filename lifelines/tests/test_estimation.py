@@ -1783,6 +1783,21 @@ class TestRegressionFitters:
         regression_models_sans_strata_model.append(CoxPHFitter(strata=["race", "paro", "mar", "wexp"]))
         return regression_models_sans_strata_model
 
+    def test_alpha_will_vary_the_statistics_in_summary(self, rossi):
+        reg_005 = WeibullAFTFitter(alpha=0.05).fit(rossi, "week", "arrest")
+        reg_010 = WeibullAFTFitter(alpha=0.10).fit(rossi, "week", "arrest")
+        assert (
+            reg_005.summary.loc[("lambda_", "fin"), "coef lower 95%"] < reg_010.summary.loc[("lambda_", "fin"), "coef lower 90%"]
+        )
+
+        reg_005 = CoxPHFitter(alpha=0.05).fit(rossi, "week", "arrest")
+        reg_010 = CoxPHFitter(alpha=0.10).fit(rossi, "week", "arrest")
+        assert reg_005.summary.loc["fin", "coef lower 95%"] < reg_010.summary.loc["fin", "coef lower 90%"]
+
+        reg_005 = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, alpha=0.05).fit(rossi, "week", "arrest")
+        reg_010 = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, alpha=0.10).fit(rossi, "week", "arrest")
+        assert reg_005.summary.loc[("beta_", "fin"), "coef lower 95%"] < reg_010.summary.loc[("beta_", "fin"), "coef lower 90%"]
+
     def test_score_method_returns_same_value_for_unpenalized_models(self, rossi):
         regression_models = [CoxPHFitter(), WeibullAFTFitter()]
         for fitter in regression_models:
