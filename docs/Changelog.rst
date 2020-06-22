@@ -9,6 +9,8 @@ Bug fixes
 
 -  fixed a bug where ``CoxPHFitter`` would ignore inputed ``alpha``
    levels for confidence intervals
+-  fixed a bug where ``CoxPHFitter`` would fail with working with
+   ``sklearn_adapter``
 
 .. _section-1:
 
