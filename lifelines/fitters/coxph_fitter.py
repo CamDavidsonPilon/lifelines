@@ -120,7 +120,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             raise ValueError("l1_ratio parameter must in [0, 1].")
 
         self.penalizer = penalizer
-        self._strata = strata
+        self.strata = strata
         self.l1_ratio = l1_ratio
         self.baseline_estimation_method = baseline_estimation_method
         self.n_baseline_knots = n_baseline_knots
@@ -245,13 +245,14 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             cph.predict_median(df)
 
         """
+        self.strata = utils.coalesce(strata, self.strata)
         self._model = self._fit_model(
             df,
             duration_col,
             event_col=event_col,
             show_progress=show_progress,
             initial_point=initial_point,
-            strata=utils.coalesce(strata, self._strata),
+            strata=self.strata,
             step_size=step_size,
             weights_col=weights_col,
             cluster_col=cluster_col,
@@ -283,7 +284,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
     def _fit_model_breslow(self, *args, **kwargs):
         model = SemiParametricPHFitter(
-            penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self._strata, alpha=self.alpha, label=self._label
+            penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self.strata, alpha=self.alpha, label=self._label
         )
         model.fit(*args, **kwargs)
         return model
@@ -295,10 +296,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         if kwargs["cluster_col"] is not None:
             raise ValueError("cluster_col is not available for this baseline estimation method")
 
+        # these are not needed
         kwargs.pop("strata")
         kwargs.pop("cluster_col")
         kwargs.pop("step_size")
         kwargs.pop("batch_mode")
+
         df = args[0].copy()
         df["_intercept"] = 1
 
@@ -415,7 +418,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             model = self.__class__(
                 penalizer=self.penalizer,
                 l1_ratio=self.l1_ratio,
-                strata=self._strata,
+                strata=self.strata,
                 baseline_estimation_method=self.baseline_estimation_method,
                 n_baseline_knots=self.n_baseline_knots,
             ).fit(df, self.duration_col, self.event_col, weights_col=self.weights_col, cluster_col=self.cluster_col)
