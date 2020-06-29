@@ -97,9 +97,20 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         the strata provided
     standard_errors_: Series
         the standard errors of the estimates
+    log_likelihood_: float
+        the log-likelihood at the fitted coefficients
+    AIC_: float
+        the AIC at the fitted coefficients (if using splines for baseline hazard)
+    partial_AIC_: float
+        the AIC at the fitted coefficients (if using non-parametric inference for baseline hazard)
     baseline_hazard_: DataFrame
+        the baseline hazard evaluated at the observed times. Estimated using Breslow's method.
     baseline_cumulative_hazard_: DataFrame
+        the baseline cumulative hazard evaluated at the observed times. Estimated using Breslow's method.
     baseline_survival_: DataFrame
+        the baseline survival evaluated at the observed times. Estimated using Breslow's method.
+    summary: Dataframe
+        a Dataframe of the coefficients, p-values, CIs, etc. found in ``print_summary``
     """
 
     _KNOWN_MODEL = True
@@ -433,6 +444,10 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
     .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)
 
     The baseline hazard, :math:`h_0(t)` is modeled non-parametrically (using Breslow's method).
+
+    Note
+    -------
+    This is a "hidden" class that is invoked when using ``baseline_estimation_method="breslow"`` (the default). You probably want to use ``CoxPHFitter``, not this.
 
     Parameters
     ----------
@@ -2224,6 +2239,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
 class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, ProportionalHazardMixin):
     r"""
+
+
     Proportional hazard model with cubic splines model for the baseline hazard.
 
     .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)
@@ -2237,6 +2254,10 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
     References
     ------------
     Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
+
+    Note
+    -------
+    This is a "hidden" class that is invoked when using ``baseline_estimation_method="spline"``. You probably want to use ``CoxPHFitter``, not this.
     """
 
     _scipy_fit_method = "SLSQP"
