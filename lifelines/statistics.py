@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from itertools import combinations
+import warnings
 
 import numpy as np
 from scipy import stats
 import pandas as pd
 
+from lifelines import utils
 from lifelines.utils import (
-    _to_1d_array,
-    _to_list,
     group_survival_table_from_events,
     string_justify,
     format_p_value,
@@ -60,13 +60,13 @@ class StatisticalResult:
         self.test_statistic = test_statistic
         self.test_name = test_name
 
-        self._p_value = _to_1d_array(p_value)
-        self._test_statistic = _to_1d_array(test_statistic)
+        self._p_value = utils._to_1d_array(p_value)
+        self._test_statistic = utils._to_1d_array(test_statistic)
 
         assert len(self._p_value) == len(self._test_statistic)
 
         if name is not None:
-            self.name = _to_list(name)
+            self.name = utils._to_list(name)
             assert len(self.name) == len(self._test_statistic)
         else:
             self.name = None
@@ -840,7 +840,8 @@ def proportional_hazard_test(
     fitted_cox_model, training_df, time_transform="rank", precomputed_residuals=None, **kwargs
 ) -> StatisticalResult:
     """
-    Test whether any variable in a Cox model breaks the proportional hazard assumption.
+    Test whether any variable in a Cox model breaks the proportional hazard assumption. This method uses an approximation
+    that R's ``survival`` use to use, but changed it in late 2019, hence there will be differences here between lifelines and R.
 
     Parameters
     ----------
@@ -862,20 +863,32 @@ def proportional_hazard_test(
     R uses the default `km`, we use `rank`, as this performs well versus other transforms. See
     http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
 
+    References
+    -----------
+     - http://eprints.lse.ac.uk/84988/1/06_ParkHendry2015-ReassessingSchoenfeldTests_Final.pdf
+     - "Extending the Cox Model"
+     - https://github.com/therneau/survival/commit/5da455de4f16fbed7f867b1fc5b15f2157a132cd#diff-c784cc3eeb38f0a6227988a30f9c0730R36
+
     """
+    if "transform" in kwargs:
+        warnings.warn("Found 'transform' keyword being set. Did you mean to set 'time_transform' instead?", UserWarning)
 
     events, durations, weights = fitted_cox_model.event_observed, fitted_cox_model.durations, fitted_cox_model.weights
-    deaths = events.sum()
+    n_deaths = events.sum()
 
     if precomputed_residuals is None:
         scaled_resids = fitted_cox_model.compute_residuals(training_df, kind="scaled_schoenfeld")
     else:
         scaled_resids = precomputed_residuals
 
-    def compute_statistic(times, resids):
+    scaled_resids = (
+        fitted_cox_model.compute_residuals(training_df, kind="schoenfeld").dot(fitted_cox_model.variance_matrix_) * n_deaths
+    )
+
+    def compute_statistic(times, resids, n_deaths):
         demeaned_times = times - times.mean()
         T = (demeaned_times.values[:, None] * resids.values).sum(0) ** 2 / (
-            deaths * np.diag(fitted_cox_model.variance_matrix_) * (demeaned_times ** 2).sum()
+            n_deaths * (fitted_cox_model.standard_errors_ ** 2) * (demeaned_times ** 2).sum()
         )
         return T
 
@@ -889,8 +902,8 @@ def proportional_hazard_test(
         # yuck
         for transform_name, transform in ((_, TimeTransformers().get(_)) for _ in time_transform):
             times = transform(durations, events, weights)[events.values]
-            T = compute_statistic(times, scaled_resids)
-            p_values = _to_1d_array([_chisq_test_p_value(t, 1) for t in T])
+            T = compute_statistic(times, scaled_resids, n_deaths)
+            p_values = utils._to_1d_array([_chisq_test_p_value(t, 1) for t in T])
             result += StatisticalResult(
                 p_values,
                 T,
@@ -898,6 +911,7 @@ def proportional_hazard_test(
                 test_name="proportional_hazard_test",
                 null_distribution="chi squared",
                 degrees_of_freedom=1,
+                model=str(fitted_cox_model),
                 **kwargs
             )
 
@@ -909,9 +923,9 @@ def proportional_hazard_test(
 
         times = time_transformer(durations, events, weights)[events.values]
 
-        T = compute_statistic(times, scaled_resids)
+        T = compute_statistic(times, scaled_resids, n_deaths)
 
-        p_values = _to_1d_array([_chisq_test_p_value(t, 1) for t in T])
+        p_values = utils._to_1d_array([_chisq_test_p_value(t, 1) for t in T])
         result = StatisticalResult(
             p_values,
             T,
@@ -920,6 +934,7 @@ def proportional_hazard_test(
             time_transform=time_transform,
             null_distribution="chi squared",
             degrees_of_freedom=1,
+            model=str(fitted_cox_model),
             **kwargs
         )
     return result

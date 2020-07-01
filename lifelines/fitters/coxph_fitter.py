@@ -1339,6 +1339,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
     def _compute_schoenfeld_within_strata(self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray) -> ndarray:
         """
         A positive value of the residual shows an X value that is higher than expected at that death time.
+
         """
         # TODO: the diff_against is gross
         # This uses Efron ties.
