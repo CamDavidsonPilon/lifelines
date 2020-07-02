@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.13 - 2020-06-22
+#### 0.24.14 - 2020-07-02
 
 ##### Bug fixes
 - fixed a bug where using `conditional_after` and `times` in prediction methods would result in a shape error

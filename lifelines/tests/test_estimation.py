@@ -1798,12 +1798,13 @@ class TestRegressionFitters:
         reg_010 = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, alpha=0.10).fit(rossi, "week", "arrest")
         assert reg_005.summary.loc[("beta_", "fin"), "coef lower 95%"] < reg_010.summary.loc[("beta_", "fin"), "coef lower 90%"]
 
+    def test_spline_model_can_use_score(self, rossi):
+        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2)
+        cph_spline.fit(rossi, "week", "arrest")
+        cph_spline.score(rossi, scoring_method="log_likelihood")
+
     def test_score_method_returns_same_value_for_unpenalized_models(self, rossi):
-        regression_models = [
-            CoxPHFitter(),
-            WeibullAFTFitter(),
-            CoxPHFitter(baseline_estimation_method="spine", n_baseline_knots=2),
-        ]
+        regression_models = [CoxPHFitter(), WeibullAFTFitter()]
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
