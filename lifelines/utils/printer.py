@@ -97,6 +97,7 @@ class Printer:
         decimals = self.decimals
         df = self.model.summary
         justify = self.justify
+        ci = 100 * (1 - self.model.alpha)
 
         print(self.model)
         for string, value in self.headers:
@@ -114,10 +115,10 @@ class Printer:
                 "coef",
                 "exp(coef)",
                 "se(coef)",
-                "coef lower 95%",
-                "coef upper 95%",
-                "exp(coef) lower 95%",
-                "exp(coef) upper 95%",
+                "coef lower %d%%" % ci,
+                "coef upper %d%%" % ci,
+                "exp(coef) lower %d%%" % ci,
+                "exp(coef) upper %d%%" % ci,
                 "z",
                 "p",
                 "-log2(p)",
@@ -129,10 +130,10 @@ class Printer:
                 "coef",
                 "exp(coef)",
                 "se(coef)",
-                "coef lower 95%",
-                "coef upper 95%",
-                "exp(coef) lower 95%",
-                "exp(coef) upper 95%",
+                "coef lower %d%%" % ci,
+                "coef upper %d%%" % ci,
+                "exp(coef) lower %d%%" % ci,
+                "exp(coef) upper %d%%" % ci,
             ]
             second_row_set = ["z", "p", "-log2(p)"]
 

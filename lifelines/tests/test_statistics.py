@@ -321,7 +321,7 @@ def test_proportional_hazard_test_with_weights():
         {
             "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
             "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-            "w": [1, 1, 1, 1, 1],
+            "w": [1, 0.5, 2, 1, 1],
         }
     )
     df["E"] = True
@@ -331,7 +331,7 @@ def test_proportional_hazard_test_with_weights():
 
     results = stats.proportional_hazard_test(cph, df, time_transform=["km", "rank", "log", "identity"])
     results.print_summary(5)
-    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.000346, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var1", "rank"]["test_statistic"], 0.108, rtol=1e-2)
 
 
 def test_proportional_hazard_test_with_strata_weights_and_strata():
@@ -347,6 +347,7 @@ def test_proportional_hazard_test_with_strata_weights_and_strata():
 
     c = coxph(formula=Surv(T, E) ~ var1 + strata(s), data=df, weights=w)
     cz = cox.zph(c, transform='identity')
+    cz_km = cox.zph(c, transform='km')
 
     """
 
@@ -361,11 +362,13 @@ def test_proportional_hazard_test_with_strata_weights_and_strata():
     df["E"] = True
 
     cph = CoxPHFitter()
-    cph.fit(df, "T", "E", weights_col="w", strata="s", robust=True)
+    cph.fit(df, "T", "E", weights_col="w", strata="s")
 
     results = stats.proportional_hazard_test(cph, df, time_transform="identity")
-
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.0283, rtol=1e-3)
+
+    results = stats.proportional_hazard_test(cph, df, time_transform="km")
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.0434, rtol=1e-1)
 
 
 def test_proportional_hazard_test_with_kmf():

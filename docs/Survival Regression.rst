@@ -1176,7 +1176,7 @@ Back to our original problem of predicting the event time of censored individual
 
 .. note:: It's important to remember that this is now computing a _conditional_ probability (or metric), so if the result of ``predict_median`` is 10.5, then the *entire lifetime* is 10.5 + ``conditional_after``.
 
-.. note:: If using `conditional_after` to predict *un*censored subjects, then ``conditional_after`` should probably be set to 0, or left blank.
+.. note:: If using ``conditional_after`` to predict *uncensored* subjects, then ``conditional_after`` should probably be set to 0, or left blank.
 
 
 .. _Assessing Cox model fit using residuals: jupyter_notebooks/Cox%20residuals.html

@@ -306,6 +306,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             raise ValueError("strata is not available for this baseline estimation method")
         if kwargs["cluster_col"] is not None:
             raise ValueError("cluster_col is not available for this baseline estimation method")
+        assert self.n_baseline_knots is not None, "n_baseline_knots must be set in initialization."
 
         # these are not needed
         kwargs.pop("strata")
@@ -1339,6 +1340,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
     def _compute_schoenfeld_within_strata(self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray) -> ndarray:
         """
         A positive value of the residual shows an X value that is higher than expected at that death time.
+
         """
         # TODO: the diff_against is gross
         # This uses Efron ties.
@@ -2366,38 +2368,9 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             the cumulative hazards of individuals over the timeline
 
         """
-        if isinstance(df, pd.Series):
-            df = df.to_frame().T
-
-        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
-
-        # this is needed for these models
+        df = df.copy()
         df["_intercept"] = 1
-
-        times = utils.coalesce(times, self.timeline)
-        times = np.atleast_1d(times).astype(float)
-
-        n = df.shape[0]
-        Xs = self._create_Xs_dict(df)
-
-        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
-
-        columns = utils._get_index(df)
-        if conditional_after is None:
-            return pd.DataFrame(self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=columns)
-        else:
-            conditional_after = np.asarray(conditional_after).reshape((n, 1))
-            times_to_evaluate_at = (conditional_after + np.tile(times, (n, 1))).T
-            return pd.DataFrame(
-                np.clip(
-                    self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
-                    - self._cumulative_hazard(params_dict, conditional_after, Xs),
-                    0,
-                    np.inf,
-                ),
-                index=times,
-                columns=columns,
-            )
+        return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(df, times=None, conditional_after=None)
 
     def predict_hazard(self, df, *, times=None):
         """
@@ -2435,6 +2408,19 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
         return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+
+    def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
+        df = df.copy()
+        df["_intercept"] = 1
+        return super(ParametricSplinePHFitter, self).score(df, scoring_method)
+
+    @property
+    def AIC_partial_(self):
+        warnings.warn(
+            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead",
+            StatisticalWarning,
+        )
+        return None
 
 
 class _BatchVsSingle:

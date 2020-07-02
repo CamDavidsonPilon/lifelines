@@ -1798,6 +1798,11 @@ class TestRegressionFitters:
         reg_010 = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, alpha=0.10).fit(rossi, "week", "arrest")
         assert reg_005.summary.loc[("beta_", "fin"), "coef lower 95%"] < reg_010.summary.loc[("beta_", "fin"), "coef lower 90%"]
 
+    def test_spline_model_can_use_score(self, rossi):
+        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2)
+        cph_spline.fit(rossi, "week", "arrest")
+        cph_spline.score(rossi, scoring_method="log_likelihood")
+
     def test_score_method_returns_same_value_for_unpenalized_models(self, rossi):
         regression_models = [CoxPHFitter(), WeibullAFTFitter()]
         for fitter in regression_models:
@@ -2870,6 +2875,24 @@ class TestCoxPHFitter:
         npt.assert_allclose(explicit.loc[10.0, 0], p2.loc[2.0, 0])
         npt.assert_allclose(explicit.loc[12.0, 0], p2.loc[4.0, 0])
         npt.assert_allclose(explicit.loc[20.0, 0], p2.loc[12.0, 0])
+
+    def test_conditional_after_with_custom_times(self, rossi):
+        cph_semi = CoxPHFitter(baseline_estimation_method="breslow").fit(rossi, "week", "arrest")
+        cph_spline = CoxPHFitter(n_baseline_knots=2, baseline_estimation_method="spline").fit(rossi, "week", "arrest")
+
+        # predict single
+        cph_semi.fit(rossi, "week", "arrest").predict_survival_function(rossi.iloc[0], times=np.arange(5), conditional_after=[10])
+        cph_spline.fit(rossi, "week", "arrest").predict_survival_function(
+            rossi.iloc[0], times=np.arange(5), conditional_after=[10]
+        )
+
+        # predict multiple
+        cph_semi.fit(rossi, "week", "arrest").predict_survival_function(
+            rossi.iloc[:10], times=np.arange(5), conditional_after=[10] * 10
+        )
+        cph_spline.fit(rossi, "week", "arrest").predict_survival_function(
+            rossi.iloc[:10], times=np.arange(5), conditional_after=[10] * 10
+        )
 
     def test_conditional_after_with_strata_in_prediction(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
