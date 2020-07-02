@@ -1185,7 +1185,13 @@ class RegressionFitter(BaseFitter):
         training_dataframe : DataFrame
             the same training DataFrame given in `fit`
         kind : string
-            {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale', 'scaled_schoenfeld'}
+            One of {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale', 'scaled_schoenfeld'}
+
+        Notes
+        -------
+        - ``'scaled_schoenfeld'``: *lifelines* does not add the coefficients to the final results, but R does when you call ``residuals(c, "scaledsch")``
+
+
 
         """
         assert kind in self._ALLOWED_RESIDUALS, "kind must be in %s" % self._ALLOWED_RESIDUALS
@@ -2256,7 +2262,7 @@ class ParametricRegressionFitter(RegressionFitter):
             return pd.DataFrame(
                 np.clip(
                     self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
-                    - self._cumulative_hazard(params_dict, conditional_after, Xs),
+                    - self._cumulative_hazard(params_dict, conditional_after.reshape(n), Xs),
                     0,
                     np.inf,
                 ),

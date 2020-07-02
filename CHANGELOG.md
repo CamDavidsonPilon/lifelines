@@ -3,6 +3,13 @@
 #### 0.24.13 - 2020-06-22
 
 ##### Bug fixes
+- fixed a bug where using `conditional_after` and `times` in prediction methods would result in a shape error
+- fixed a bug where `score` was not able to be used in splined `CoxPHFitter`
+- fixed a bug where some columns would not be displayed in `print_summary`
+
+#### 0.24.13 - 2020-06-22
+
+##### Bug fixes
 - fixed a bug where `CoxPHFitter` would ignore inputed `alpha` levels for confidence intervals
 - fixed a bug where `CoxPHFitter` would fail with working with `sklearn_adapter`
 

@@ -1164,15 +1164,15 @@ Back to our original problem of predicting the event time of censored individual
 
 .. code:: python
 
-    # all regression models can be used here, Cox is used for illustration
-    cph = CoxPHFitter().fit(rossi, "week", "arrest")
+    # all regression models can be used here, WeibullAFTFitter is used for illustration
+    wf = WeibullAFTFitter().fit(rossi, "week", "arrest")
 
     # filter down to just censored subjects to predict remaining survival
-    censored_subjects = X.loc[~X['arrest'].astype(bool)]
+    censored_subjects = rossi.loc[~rossi['arrest'].astype(bool)]
     censored_subjects_last_obs = censored_subjects['week']
 
-    cph.predict_survival_function(censored_subjects, times=[5., 25., 50.], conditional_after=censored_subjects_last_obs)
-    cph.predict_median(censored_subjects, conditional_after=censored_subjects_last_obs)
+    wf.predict_survival_function(censored_subjects, times=[5., 25., 50.], conditional_after=censored_subjects_last_obs)
+    wf.predict_median(censored_subjects, conditional_after=censored_subjects_last_obs)
 
 .. note:: It's important to remember that this is now computing a _conditional_ probability (or metric), so if the result of ``predict_median`` is 10.5, then the *entire lifetime* is 10.5 + ``conditional_after``.
 
