@@ -2262,7 +2262,7 @@ class ParametricRegressionFitter(RegressionFitter):
             return pd.DataFrame(
                 np.clip(
                     self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
-                    - self._cumulative_hazard(params_dict, conditional_after, Xs),
+                    - self._cumulative_hazard(params_dict, conditional_after.reshape(n), Xs),
                     0,
                     np.inf,
                 ),

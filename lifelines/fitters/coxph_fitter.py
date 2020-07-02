@@ -2368,38 +2368,9 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             the cumulative hazards of individuals over the timeline
 
         """
-        if isinstance(df, pd.Series):
-            df = df.to_frame().T
-
-        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
-
-        # this is needed for these models
+        df = df.copy()
         df["_intercept"] = 1
-
-        times = utils.coalesce(times, self.timeline)
-        times = np.atleast_1d(times).astype(float)
-
-        n = df.shape[0]
-        Xs = self._create_Xs_dict(df)
-
-        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
-
-        columns = utils._get_index(df)
-        if conditional_after is None:
-            return pd.DataFrame(self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=columns)
-        else:
-            conditional_after = np.asarray(conditional_after).reshape((n, 1))
-            times_to_evaluate_at = (conditional_after + np.tile(times, (n, 1))).T
-            return pd.DataFrame(
-                np.clip(
-                    self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
-                    - self._cumulative_hazard(params_dict, conditional_after, Xs),
-                    0,
-                    np.inf,
-                ),
-                index=times,
-                columns=columns,
-            )
+        return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(df, times=None, conditional_after=None)
 
     def predict_hazard(self, df, *, times=None):
         """
