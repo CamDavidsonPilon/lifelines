@@ -1187,8 +1187,6 @@ class RegressionFitter(BaseFitter):
         kind : string
             One of {'schoenfeld', 'score', 'delta_beta', 'deviance', 'martingale', 'scaled_schoenfeld'}
 
-
-
         Notes
         -------
         - ``'scaled_schoenfeld'``: *lifelines* does not add the coefficients to the final results, but R does when you call ``residuals(c, "scaledsch")``

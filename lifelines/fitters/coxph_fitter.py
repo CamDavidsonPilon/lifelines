@@ -306,6 +306,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             raise ValueError("strata is not available for this baseline estimation method")
         if kwargs["cluster_col"] is not None:
             raise ValueError("cluster_col is not available for this baseline estimation method")
+        assert self.n_baseline_knots is not None, "n_baseline_knots must be set in initialization."
 
         # these are not needed
         kwargs.pop("strata")
@@ -2436,6 +2437,19 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
         return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+
+    def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
+        df = df.copy()
+        df["_intercept"] = 1
+        return super(ParametricSplinePHFitter, self).score(df, scoring_method)
+
+    @property
+    def AIC_partial_(self):
+        warnings.warn(
+            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead",
+            StatisticalWarning,
+        )
+        return None
 
 
 class _BatchVsSingle:
