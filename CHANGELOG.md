@@ -1,5 +1,12 @@
 ## Changelog
 
+#### 0.24.15
+
+##### Bug fixes
+- fixed an edge case in `KaplanMeierFitter` where a rally late entry would occur after all other population had died.
+- fixed `plot` in `BreslowFlemingtonHarrisFitter`
+
+
 #### 0.24.14 - 2020-07-02
 
 ##### Bug fixes

@@ -11,13 +11,13 @@
 [What is survival analysis and why should I learn it?](http://lifelines.readthedocs.org/en/latest/Survival%20Analysis%20intro.html)
  Survival analysis was originally developed and applied heavily by the actuarial and medical community. Its purpose was to answer *why do events occur now versus later* under uncertainty (where *events* might refer to deaths, disease remission, etc.). This is great for researchers who are interested in measuring lifetimes: they can answer questions like *what factors might influence deaths?*
 
-But outside of medicine and actuarial science, there are many other interesting and exciting applications of this survival analysis. For example:
+But outside of medicine and actuarial science, there are many other interesting and exciting applications of survival analysis. For example:
 - SaaS providers are interested in measuring subscriber lifetimes, or time to some first action
 - inventory stock out is a censoring event for true "demand" of a good.
 - sociologists are interested in measuring political parties' lifetimes, or relationships, or marriages
 - A/B tests to determine how long it takes different groups to perform an action.
 
-*lifelines* is a pure Python implementation of the best parts of survival analysis. We'd love to hear if you are using *lifelines*, please leave an Issue and let us know your thoughts on the library.
+*lifelines* is a pure Python implementation of the best parts of survival analysis.
 
 
 ## Documentation and intro to survival analysis

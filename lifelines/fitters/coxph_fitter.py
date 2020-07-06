@@ -150,6 +150,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         cluster_col: Optional[str] = None,
         robust: bool = False,
         batch_mode: Optional[bool] = None,
+        timeline: Optional[Iterator] = None,
     ) -> "CoxPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
@@ -269,6 +270,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             cluster_col=cluster_col,
             robust=robust,
             batch_mode=batch_mode,
+            timeline=timeline,
         )
         return self
 
@@ -542,6 +544,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         cluster_col: Optional[str] = None,
         robust: bool = False,
         batch_mode: Optional[bool] = None,
+        timeline: Optional[Iterator] = None,
     ) -> "SemiParametricPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
@@ -690,6 +693,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         self.params_ = pd.Series(params_, index=X.columns, name="coef")
         self.baseline_hazard_ = baseline_hazard_
         self.baseline_cumulative_hazard_ = baseline_cumulative_hazard_
+        self.timeline = utils.coalesce(timeline, self.baseline_cumulative_hazard_.index)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -1685,6 +1689,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         if times is not None:
             times = np.atleast_1d(times).astype(float)
+        else:
+            times = self.timeline
         if conditional_after is not None:
             conditional_after = utils._to_1d_array(conditional_after).reshape(n, 1)
 
@@ -1707,7 +1713,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                     )
                 col = utils._get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
-                times_ = utils.coalesce(times, self.baseline_cumulative_hazard_.index)
+                times_ = times
                 n_ = stratified_X.shape[0]
                 if conditional_after is not None:
                     conditional_after_ = stratified_X.pop("_conditional_after")[:, None]
@@ -1728,7 +1734,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
             v = self.predict_partial_hazard(X)
             col = utils._get_index(v)
-            times_ = utils.coalesce(times, self.baseline_cumulative_hazard_.index)
+            times_ = times
 
             if conditional_after is not None:
                 times_to_evaluate_at = np.tile(times_, (n, 1)) + conditional_after

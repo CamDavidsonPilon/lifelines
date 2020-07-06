@@ -28,15 +28,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
 
     @CensoringType.right_censoring
     def fit(
-        self,
-        durations,
-        event_observed=None,
-        timeline=None,
-        entry=None,
-        label=None,
-        alpha=None,
-        ci_labels=None,
-        weights=None,
+        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
     ):  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -69,14 +61,7 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         alpha = coalesce(alpha, self.alpha)
 
         naf = NelsonAalenFitter(alpha=alpha)
-        naf.fit(
-            durations,
-            event_observed=event_observed,
-            timeline=timeline,
-            label=self._label,
-            entry=entry,
-            ci_labels=ci_labels,
-        )
+        naf.fit(durations, event_observed=event_observed, timeline=timeline, label=self._label, entry=entry, ci_labels=ci_labels)
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = (
             naf.durations,
             naf.event_observed,
@@ -89,6 +74,8 @@ class BreslowFlemingHarringtonFitter(UnivariateFitter):
         # estimation
         self.survival_function_ = np.exp(-naf.cumulative_hazard_)
         self.confidence_interval_ = np.exp(-naf.confidence_interval_)
+        self.confidence_interval_survival_function_ = self.confidence_interval_
+        self.confidence_interval_cumulative_density = 1 - self.confidence_interval_
 
         # estimation methods
         self._estimation_method = "survival_function_"

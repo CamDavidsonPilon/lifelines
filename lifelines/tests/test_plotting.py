@@ -17,6 +17,7 @@ from lifelines import (
     WeibullAFTFitter,
     ExponentialFitter,
     AalenJohansenFitter,
+    BreslowFlemingHarringtonFitter,
 )
 
 from lifelines.tests.test_estimation import known_parametric_univariate_fitters
@@ -326,6 +327,14 @@ class TestPlotting:
         naf.fit(data1)
         naf.plot_hazard(bandwidth=5.0, iloc=slice(0, 1700))
         self.plt.title("test_naf_plot_cumulative_hazard_bandwith_1")
+        self.plt.show(block=block)
+        return
+
+    def test_breslow_fleming_harrington_plotting(self, block):
+        T = 50 * np.random.exponential(1, size=(200, 1)) ** 2
+        bf = BreslowFlemingHarringtonFitter().fit(T)
+        bf.plot()
+        self.plt.title("test_breslow_fleming_harrington_plotting")
         self.plt.show(block=block)
         return
 
