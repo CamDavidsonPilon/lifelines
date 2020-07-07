@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.24.15
+#### 0.24.15 - 2020-07-07
 
 ##### Bug fixes
 - fixed an edge case in `KaplanMeierFitter` where a really late entry would occur after all other population had died.
