@@ -5,6 +5,7 @@
 ##### Bug fixes
 - fixed an edge case in `KaplanMeierFitter` where a rally late entry would occur after all other population had died.
 - fixed `plot` in `BreslowFlemingtonHarrisFitter`
+- fixed bug where using `conditional_after` and `times` in `CoxPHFitter("spline")` prediction methods would be ignored.
 
 
 #### 0.24.14 - 2020-07-02

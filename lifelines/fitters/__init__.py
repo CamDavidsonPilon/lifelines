@@ -2244,7 +2244,6 @@ class ParametricRegressionFitter(RegressionFitter):
 
         df = self._filter_dataframe_to_covariates(df).copy().astype(float)
 
-        # TODO: where does self.timeline come from?
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
@@ -2255,10 +2254,11 @@ class ParametricRegressionFitter(RegressionFitter):
 
         columns = utils._get_index(df)
         if conditional_after is None:
-            return pd.DataFrame(self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=columns)
+            times_to_evaluate_at = np.tile(times, (n, 1)).T
+            return pd.DataFrame(self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs), index=times, columns=columns)
         else:
-            conditional_after = np.asarray(conditional_after).reshape((n, 1))
-            times_to_evaluate_at = (conditional_after + np.tile(times, (n, 1))).T
+            conditional_after = np.asarray(conditional_after)
+            times_to_evaluate_at = (conditional_after.reshape((n, 1)) + np.tile(times, (n, 1))).T
             return pd.DataFrame(
                 np.clip(
                     self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)
@@ -3372,8 +3372,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     def predict_cumulative_hazard(self, df, *, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
         """
-        Predict the median lifetimes for the individuals. If the survival curve of an
-        individual does not cross 0.5, then the result is infinity.
+        Predict the cumulative hazard for the individuals.
 
         Parameters
         ----------
@@ -3420,7 +3419,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             return pd.DataFrame(self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
         else:
             conditional_after = np.asarray(conditional_after)
-            times_to_evaluate_at = (conditional_after[:, None] + np.tile(times, (n, 1))).T
+            times_to_evaluate_at = (conditional_after.reshape((n, 1)) + np.tile(times, (n, 1))).T
             return pd.DataFrame(
                 np.clip(
                     self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs)

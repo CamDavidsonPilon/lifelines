@@ -2376,7 +2376,9 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         """
         df = df.copy()
         df["_intercept"] = 1
-        return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(df, times=None, conditional_after=None)
+        return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
+            df, times=times, conditional_after=conditional_after
+        )
 
     def predict_hazard(self, df, *, times=None):
         """
