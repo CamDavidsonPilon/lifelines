@@ -3,7 +3,7 @@
 #### 0.24.15
 
 ##### Bug fixes
-- fixed an edge case in `KaplanMeierFitter` where a rally late entry would occur after all other population had died.
+- fixed an edge case in `KaplanMeierFitter` where a really late entry would occur after all other population had died.
 - fixed `plot` in `BreslowFlemingtonHarrisFitter`
 - fixed bug where using `conditional_after` and `times` in `CoxPHFitter("spline")` prediction methods would be ignored.
 

@@ -3368,6 +3368,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if conditional_after is None:
             return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
         else:
+            # TODO
             raise NotImplementedError()
 
     def predict_cumulative_hazard(self, df, *, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
@@ -3416,7 +3417,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
         if conditional_after is None:
-            return pd.DataFrame(self._cumulative_hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+            times_to_evaluate_at = np.tile(times, (n, 1)).T
+            return pd.DataFrame(self._cumulative_hazard(params_dict, times_to_evaluate_at, Xs), index=times, columns=df.index)
         else:
             conditional_after = np.asarray(conditional_after)
             times_to_evaluate_at = (conditional_after.reshape((n, 1)) + np.tile(times, (n, 1))).T
