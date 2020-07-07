@@ -1472,6 +1472,14 @@ class TestKaplanMeierFitter:
         npt.assert_allclose(kmf_interval.survival_function_.loc[6, "NPMLE_estimate_upper"], 0.375, rtol=1e-2)
         npt.assert_allclose(kmf_interval.survival_function_.loc[6, "NPMLE_estimate_lower"], 0.0, rtol=1e-2)
 
+    def test_really_late_entrance(self):
+        T = [1, 2, 3, 1, 2, 6]
+        entries = [0, 0, 0, 0, 0, 5]
+
+        kmf = KaplanMeierFitter()
+        kmf.fit(T, entry=entries)
+        assert np.all((kmf.survival_function_.diff().dropna() <= 0))
+
 
 class TestNelsonAalenFitter:
     def nelson_aalen(self, lifetimes, observed=None):
@@ -2779,6 +2787,18 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
 
+    def test_timeline_argument_can_be_set(self, rossi, cph_spline, cph):
+        timeline = np.linspace(0, 100)
+        cph.fit(rossi, "week", "arrest", timeline=timeline)
+
+        cph_spline.fit(rossi, "week", "arrest", timeline=timeline)
+
+        npt.assert_allclose(cph_spline.timeline, timeline)
+        npt.assert_allclose(cph.timeline, timeline)
+
+        npt.assert_allclose(cph.predict_survival_function(rossi).index.values, timeline)
+        npt.assert_allclose(cph_spline.predict_survival_function(rossi).index.values, timeline)
+
     def test_penalizer_can_be_an_array(self, rossi):
 
         cph_array = CoxPHFitter(penalizer=0.01 * np.ones(7)).fit(rossi, "week", "arrest")
@@ -2879,20 +2899,29 @@ class TestCoxPHFitter:
     def test_conditional_after_with_custom_times(self, rossi):
         cph_semi = CoxPHFitter(baseline_estimation_method="breslow").fit(rossi, "week", "arrest")
         cph_spline = CoxPHFitter(n_baseline_knots=2, baseline_estimation_method="spline").fit(rossi, "week", "arrest")
+        times = np.arange(5)
 
         # predict single
-        cph_semi.fit(rossi, "week", "arrest").predict_survival_function(rossi.iloc[0], times=np.arange(5), conditional_after=[10])
-        cph_spline.fit(rossi, "week", "arrest").predict_survival_function(
-            rossi.iloc[0], times=np.arange(5), conditional_after=[10]
+        result = cph_semi.fit(rossi, "week", "arrest").predict_survival_function(
+            rossi.iloc[0], times=times, conditional_after=[10]
         )
+        npt.assert_allclose(result.index.values, times)
+
+        result = cph_spline.fit(rossi, "week", "arrest").predict_survival_function(
+            rossi.iloc[0], times=times, conditional_after=[10]
+        )
+        npt.assert_allclose(result.index.values, times)
 
         # predict multiple
-        cph_semi.fit(rossi, "week", "arrest").predict_survival_function(
-            rossi.iloc[:10], times=np.arange(5), conditional_after=[10] * 10
+        result = cph_semi.fit(rossi, "week", "arrest").predict_survival_function(
+            rossi.iloc[:10], times=times, conditional_after=[10] * 10
         )
-        cph_spline.fit(rossi, "week", "arrest").predict_survival_function(
-            rossi.iloc[:10], times=np.arange(5), conditional_after=[10] * 10
+        npt.assert_allclose(result.index.values, times)
+
+        result = cph_spline.fit(rossi, "week", "arrest").predict_survival_function(
+            rossi.iloc[:10], times=times, conditional_after=[10] * 10
         )
+        npt.assert_allclose(result.index.values, times)
 
     def test_conditional_after_with_strata_in_prediction(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0

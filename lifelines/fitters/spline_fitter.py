@@ -18,7 +18,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
     Parameters
     -----------
     knot_locations: list, np.array
-        The locations of the cubic breakpoints. Typically, the first knot is the minimum observed death, the last knot is the maximum observed death, and the knots in between
+        The locations of the cubic breakpoints. Must be length two or more. Typically, the first knot is the minimum observed death, the last knot is the maximum observed death, and the knots in between
         are the centiles of observed data (ex: if one additional knot, choose the 50th percentile, the median. If two additional knots, choose the 33rd and 66th percentiles).
 
     References
@@ -81,6 +81,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
     def __init__(self, knot_locations: np.array, *args, **kwargs):
         self.knot_locations = knot_locations
         self.n_knots = len(self.knot_locations)
+        assert self.n_knots > 1, "knot_locations must have two or more elements."
         self._fitted_parameter_names = ["phi_%d_" % i for i in range(self.n_knots)]
         self._bounds = [(None, None)] * (self.n_knots)
         super(SplineFitter, self).__init__(*args, **kwargs)
