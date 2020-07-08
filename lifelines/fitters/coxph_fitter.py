@@ -29,12 +29,17 @@ __all__ = ["CoxPHFitter"]
 
 class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
     r"""
-    This class implements fitting Cox's proportional hazard model using Efron's method for ties.
+    This class implements fitting Cox's proportional hazard model.
 
     .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)
 
-    The baseline hazard, :math:`h_0(t)` can be modeled non-parametrically (using Breslow's method) or parametrically (using cubic splines).
-    This is specified using the ``baseline_estimation_method`` parameter.
+    The baseline hazard, :math:`h_0(t)` can be modeled in two ways:
+
+    1. non-parametrically, using Breslow's method. In this case, the entire model is the traditional semi-parametric Cox model. Ties are
+    handled using Efron's method.
+    2. parametrically, using a pre-specified number of cubic splines.
+
+    This is specified using the ``baseline_estimation_method`` parameter in the initialization.
 
     Parameters
     ----------

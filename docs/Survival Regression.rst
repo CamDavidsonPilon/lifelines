@@ -38,7 +38,7 @@ An example dataset we will use is the Rossi recidivism dataset, available in *li
     3      52       0    1   23     1     1    1     1     1
     """
 
-The DataFrame ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column is the event occurred, and the other columns represent variables we wish to regress against.
+The DataFrame ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column denotes if the event occurred, and the other columns represent variables we wish to regress against.
 
 
 If you need to first clean or transform your dataset (encode categorical variables, add interaction terms, etc.), that should happen *before* using *lifelines*. Libraries like Pandas and Patsy help with that.
@@ -47,7 +47,7 @@ If you need to first clean or transform your dataset (encode categorical variabl
 Cox's proportional hazard model
 =================================
 
-The idea behind Cox's proportional hazard model model is that the log-hazard of an individual is a linear function of their static covariates *and* a population-level baseline hazard that changes over time. Mathematically:
+The idea behind Cox's proportional hazard model model is that the log-hazard of an individual is a linear function of their covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
 .. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
@@ -59,7 +59,7 @@ Note a few facts about this model: the only time component is in the baseline ha
 Fitting the regression
 -----------------------
 
-The implementation of the Cox model in *lifelines* is under :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. Like R, it has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
+The implementation of the Cox model in *lifelines* is under :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. We fit the model to the dataset using :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit`. Like R, it has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
 
 
 .. code:: python
@@ -143,7 +143,7 @@ Prediction
 -----------------------
 
 
-After fitting, you can use use the suite of prediction methods: :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_partial_hazard`, :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_survival_function`, and others.
+After fitting, you can use use the suite of prediction methods: :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_partial_hazard`, :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_survival_function`, and others. See also the section on `Predicting uncensored subjects below <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#prediction-on-censored-subjects>`_
 
 .. code:: python
 
@@ -240,7 +240,7 @@ holding everything else equal. This is useful to understand the impact of a cova
     cph = CoxPHFitter()
     cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
 
-    cph.plot_covariate_groups('prio', [0, 2, 4, 6, 8, 10], cmap='coolwarm')
+    cph.plot_covariate_groups(covariates='prio', values=[0, 2, 4, 6, 8, 10], cmap='coolwarm')
 
 .. image:: images/coxph_plot_covarite_groups.png
     :width: 600px
@@ -257,8 +257,8 @@ The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` me
     cph.fit(rossi_dataset, 'week', 'arrest')
 
     cph.plot_covariate_groups(
-        ['prio', 'prio**2'],
-        [
+        covariates=['prio', 'prio**2'],
+        values=[
             [0, 0],
             [1, 1],
             [2, 4],
@@ -267,20 +267,28 @@ The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` me
         ],
         cmap='coolwarm')
 
-2. This feature is also useful for analyzing categorical variables. In your regression, you may have dummy variables (also called one-hot-encoded variables) in your DataFrame that represent some categorical variable. To simultaneously plot the survival curves of each category, all else being equal, we can use:
+2. This feature is also useful for analyzing categorical variables. In your regression, you may have dummy variables (also called one-hot-encoded variables) in your DataFrame that represent some categorical variable. To simultaneously plot the survival curves of each category, all else being equal, we can use (assuming no reference category)
 
+
+.. code:: python
+
+    cph.plot_covariate_groups(
+        covariates=['d1', 'd2', 'd3', 'd4', 'd5'],
+        values=np.eye(5),
+        plot_baseline=False)
+
+The reason why we use ``np.eye`` is because we want each row of the matrix to "turn on" one category and "turn off" the others.
+
+If there is a reference category, say `"d0"`, we can add another row to our values matrix that is all zeros, denoting all other columns are turned off (and by default `"d0"` is turned on):
 
 .. code:: python
 
     import numpy as np
 
     cph.plot_covariate_groups(
-        ['d1', 'd2', 'd3', 'd4', 'd5'],
-        np.eye(5),
-        cmap='coolwarm')
-
-The reason why we use ``np.eye`` is because we want each row of the matrix to "turn on" one category and "turn off" the others.
-
+        covariates=['d1', 'd2', 'd3', 'd4', 'd5'],
+        values=np.append(np.eye(5), np.zeros((5, 1)), axis=1),
+        plot_baseline=False)
 
 Checking the proportional hazards assumption
 -----------------------------------------------
@@ -305,28 +313,38 @@ To specify variables to be used in stratification, we define them in the call to
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
     rossi_dataset = load_rossi()
+
     cph = CoxPHFitter()
     cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
-    cph.print_summary()  # access the results using cph.summary
+    cph.print_summary()
 
     """
-    <lifelines.CoxPHFitter: fitted with 432 observations, 318 censored>
-          duration col = 'week'
-             event col = 'arrest'
-                strata = ['race']
-    number of subjects = 432
-      number of events = 114
-        log-likelihood = -620.56
-      time fit was run = 2019-01-27 23:08:35 UTC
+    <lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
+                 duration col = 'week'
+                    event col = 'arrest'
+                       strata = ['race']
+          baseline estimation = breslow
+       number of observations = 432
+    number of events observed = 114
+       partial log-likelihood = -620.56
+             time fit was run = 2020-07-07 21:44:15 UTC
 
     ---
-          coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
-    fin  -0.38       0.68      0.19 -1.98   0.05      4.39       -0.75       -0.00
-    age  -0.06       0.94      0.02 -2.62   0.01      6.83       -0.10       -0.01
-    wexp -0.14       0.87      0.21 -0.67   0.50      0.99       -0.56        0.27
-    mar  -0.44       0.64      0.38 -1.15   0.25      2.00       -1.19        0.31
-    paro -0.09       0.92      0.20 -0.44   0.66      0.60       -0.47        0.30
-    prio  0.09       1.10      0.03  3.21 <0.005      9.56        0.04        0.15
+           coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+    fin   -0.38       0.68       0.19            -0.75            -0.00                 0.47                 1.00
+    age   -0.06       0.94       0.02            -0.10            -0.01                 0.90                 0.99
+    wexp  -0.14       0.87       0.21            -0.56             0.27                 0.57                 1.32
+    mar   -0.44       0.64       0.38            -1.19             0.31                 0.30                 1.36
+    paro  -0.09       0.92       0.20            -0.47             0.30                 0.63                 1.35
+    prio   0.09       1.10       0.03             0.04             0.15                 1.04                 1.16
+
+             z      p   -log2(p)
+    fin  -1.98   0.05       4.39
+    age  -2.62   0.01       6.83
+    wexp -0.67   0.50       0.99
+    mar  -1.15   0.25       2.00
+    paro -0.44   0.66       0.60
+    prio  3.21 <0.005       9.56
     ---
     Concordance = 0.63
     Partial AIC = 1253.13
@@ -403,8 +421,7 @@ After fitting a Cox model, we can look back and compute important model residual
 Modeling baseline hazard and survival with splines
 -----------------------------------------------------
 
-Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no functional form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. There is an option to create a parametric baseline with cubic splines:
-
+Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. There is an option to create a parametric baseline with cubic splines:
 
 .. code:: python
 
@@ -1148,7 +1165,7 @@ New in *lifelines* v0.24.11 is the :func:`~lifelines.calibration.survival_probab
 Prediction on censored subjects
 ===================================
 
-A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their survival function. We are interested to answer the following: *What is a subject's new survival function given I know the subject has lived past time s?* Mathematically:
+A common use case is to predict the event time of censored subjects. This is easy to do, but we first have to calculate an important conditional probability. Let :math:`T` be the (random) event time for some subject, and :math:`S(t)≔P(T > t)` be their survival function. We are interested in answering the following: *What is a subject's new survival function given I know the subject has lived past time :math:`s`?* Mathematically:
 
 .. math::
 
@@ -1160,7 +1177,8 @@ A common use case is to predict the event time of censored subjects. This is eas
 
 Thus we scale the original survival function by the survival function at time :math:`s` (everything prior to :math:`s` should be mapped to 1.0 as well, since we are working with probabilities and we know that the subject was alive before :math:`s`).
 
-Back to our original problem of predicting the event time of censored individuals, *lifelines* has all this math and logic built in when using the ``conditional_after`` kwarg.
+This is such a common calculation that *lifelines* has all this built in. The ``conditional_after`` kwarg in all prediction methods
+allows you to specify what :math:`s` is per subject. Below we predict the remaining life of censored subjects:
 
 .. code:: python
 
@@ -1171,12 +1189,15 @@ Back to our original problem of predicting the event time of censored individual
     censored_subjects = rossi.loc[~rossi['arrest'].astype(bool)]
     censored_subjects_last_obs = censored_subjects['week']
 
-    wf.predict_survival_function(censored_subjects, times=[5., 25., 50.], conditional_after=censored_subjects_last_obs)
+    # predict new survival function
+    wf.predict_survival_function(censored_subjects, conditional_after=censored_subjects_last_obs)
+
+    # predict median remaining life
     wf.predict_median(censored_subjects, conditional_after=censored_subjects_last_obs)
 
-.. note:: It's important to remember that this is now computing a _conditional_ probability (or metric), so if the result of ``predict_median`` is 10.5, then the *entire lifetime* is 10.5 + ``conditional_after``.
+.. note:: It's important to remember that this is now computing a *conditional* probability (or metric), so if the result of ``predict_median`` is 10.5, then the *entire lifetime* is 10.5 + ``conditional_after``.
 
-.. note:: If using ``conditional_after`` to predict *uncensored* subjects, then ``conditional_after`` should probably be set to 0, or left blank.
+.. note:: If using ``conditional_after`` to predict on *uncensored* subjects, then ``conditional_after`` should probably be set to 0, or left blank.
 
 
 .. _Assessing Cox model fit using residuals: jupyter_notebooks/Cox%20residuals.html
