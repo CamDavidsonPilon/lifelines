@@ -871,6 +871,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     Called to compute the Kaplan Meier and Nelson-Aalen estimates.
 
     """
+
     if reverse:
         events = events.sort_index(ascending=False)
         at_risk = events["entrance"].sum() - events["removed"].cumsum().shift(1).fillna(0)
@@ -882,20 +883,23 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     else:
         deaths = events["observed"]
 
-        # Why subtract entrants like this? see https://github.com/CamDavidsonPilon/lifelines/issues/497
-        # specifically, we kill people, compute the ratio, and then "add" the entrants. This means that
-        # the population should not have the late entrants. The only exception to this rule
-        # is the first period, where entrants happen _prior_ to deaths.
         entrances = events["entrance"].copy()
         entrances.iloc[0] = 0
+        # Why subtract entrants like this? see https://github.com/CamDavidsonPilon/lifelines/issues/497
+        # specifically, we kill people, compute the ratio, and then "add" the entrants.
+        # This can cause a problem if there are late entrants that enter but population=0, as
+        # then we have log(0 - 0). We later ffill to fix this.
+        # The only exception to this rule is the first period, where entrants happen _prior_ to deaths.
         population = events["at_risk"] - entrances
 
         estimate_ = np.cumsum(_additive_f(population, deaths))
         var_ = np.cumsum(_additive_var(population, deaths))
 
     timeline = sorted(timeline)
-    estimate_ = estimate_.reindex(timeline, method="pad").fillna(0)
-    var_ = var_.reindex(timeline, method="pad")
+    # we forward fill because there are situations where there are NaNs caused by lack of a population.
+    # see issue #
+    estimate_ = estimate_.reindex(timeline, method="pad").ffill()
+    var_ = var_.reindex(timeline, method="pad").ffill()
     var_.index.name = "timeline"
     estimate_.index.name = "timeline"
 
