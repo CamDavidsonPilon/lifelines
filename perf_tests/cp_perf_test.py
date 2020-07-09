@@ -10,14 +10,12 @@ if __name__ == "__main__":
     from lifelines import CoxPHFitter
     from lifelines.datasets import load_rossi, load_regression_dataset
 
-    reps = 1
+    reps = 2500
     df = load_rossi()
     df = pd.concat([df] * reps)
+    print(df.shape)
     cph = CoxPHFitter()
     start_time = time.time()
     cph.fit(df, duration_col="week", event_col="arrest", show_progress=True)
+    print(cph._batch_mode)
     print("--- %s seconds ---" % (time.time() - start_time))
-    cph.print_summary(2)
-    print(cph.compute_followup_hazard_ratios(df, [15, 20, 30, 40, 50, 52]))
-    print(cph.hazard_ratios_)
-    cph.compute_followup_hazard_ratios(df, [15, 20, 30, 40, 50, 52]).plot()

@@ -877,8 +877,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         dd_penalizer = elementwise_grad(d_penalizer)
 
         decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *X.shape)
-        get_gradients = getattr(self, "_get_efron_values_%s" % decision)
         self._batch_mode = decision == _BatchVsSingle.BATCH
+        get_gradients = getattr(self, "_get_efron_values_%s" % decision)
 
         # make sure betas are correct size.
         if initial_point is not None:
@@ -2448,18 +2448,16 @@ class _BatchVsSingle:
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
             and (
-                (
-                    6.153_952e-01
-                    + -3.927_241e-06 * n_total
-                    + 2.544_118e-11 * n_total ** 2
-                    + 2.071_377e00 * frac_dups
-                    + -9.724_922e-01 * frac_dups ** 2
-                    + 9.138_711e-06 * n_total * frac_dups
-                    + -5.617_844e-03 * n_vars
-                    + -4.402_736e-08 * n_vars * n_total
-                )
-                < 1
+                2.909_374e-01
+                + n_total * -8.411_575e-07
+                + frac_dups * 5.084_471e00
+                + n_total * frac_dups * 2.110_770e-08
+                + frac_dups ** 2 * -3.578_701e00
+                + n_total ** 2 * 6.094_380e-13
+                + n_vars * -1.428_580e-03
+                + n_vars * n_total * 1.612_768e-09
             )
+            < 1
         ):
             return self.BATCH
         return self.SINGLE
