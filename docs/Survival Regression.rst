@@ -154,8 +154,6 @@ After fitting, you can use use the suite of prediction methods: :meth:`~lifeline
     cph.predict_partial_hazard(X)
     ...
 
-.. note::
-
 
 
 Penalties and sparse regression
