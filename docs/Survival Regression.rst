@@ -143,16 +143,18 @@ Prediction
 -----------------------
 
 
-After fitting, you can use use the suite of prediction methods: :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_partial_hazard`, :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_survival_function`, and others. See also the section on `Predicting uncensored subjects below <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#prediction-on-censored-subjects>`_
+After fitting, you can use use the suite of prediction methods: :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_partial_hazard`, :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.predict_survival_function`, and others. See also the section on `Predicting censored subjects below <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#prediction-on-censored-subjects>`_
 
 .. code:: python
 
     X = rossi_dataset
 
-    cph.predict_partial_hazard(X)
     cph.predict_survival_function(X)
     cph.predict_median(X)
+    cph.predict_partial_hazard(X)
     ...
+
+.. note::
 
 
 

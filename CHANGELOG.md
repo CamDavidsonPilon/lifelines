@@ -1,5 +1,13 @@
 ## Changelog
 
+#### 0.24.15 - 2020-07-09
+
+##### New features
+ - improved algorithm choice for large Dataframes for Cox models. Should see a significant performance boost.
+
+##### Bug fixes
+- fixed `utils.median_survival_time` not accepting Pandas Series.
+
 #### 0.24.15 - 2020-07-07
 
 ##### Bug fixes

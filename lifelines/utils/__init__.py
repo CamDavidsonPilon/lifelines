@@ -128,9 +128,9 @@ def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
     ----------
     q: float or array
       a float between 0 and 1 that represents the time when the survival function hits the qth percentile.
-    survival_functions: a (n,d) DataFrame or numpy array.
-      If DataFrame, will return index values (actual times)
-      If numpy array, will return indices.
+    survival_functions: a (n,d) DataFrame, Series, or NumPy array.
+      If DataFrame or Series, will return index values (actual times)
+      If NumPy array, will return indices.
 
     Returns
     -------
@@ -218,7 +218,7 @@ def median_survival_times(model_or_survival_function) -> float:
     """
     import lifelines
 
-    if isinstance(model_or_survival_function, pd.DataFrame):
+    if isinstance(model_or_survival_function, (pd.DataFrame, pd.Series)):
         return qth_survival_times(0.5, model_or_survival_function)
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         return model_or_survival_function.median_survival_time_

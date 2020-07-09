@@ -130,6 +130,11 @@ def test_median():
     assert utils.median_survival_times(sv) == 500
 
 
+def test_median_accepts_series():
+    sv = pd.Series(1 - np.linspace(0, 1, 1000))
+    assert utils.median_survival_times(sv) == 500
+
+
 def test_qth_survival_times_with_varying_datatype_inputs():
     sf_list = [1.0, 0.75, 0.5, 0.25, 0.0]
     sf_array = np.array([1.0, 0.75, 0.5, 0.25, 0.0])
