@@ -747,10 +747,10 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
 
 
 
-Model selection for parametric models
+AIC and model selection for parametric models
 -----------------------------------------------
 
-Often, you don't know *a priori* which parametric model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the log-likelihoods for each fitted model. (Technically, we are comparing the `AIC <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_, but the number of parameters for each model is the same, so we can simply and just look at the log-likelihood). Generally, given the same dataset and number of parameters, a better fitting model has a larger log-likelihood. We can look at the log-likelihood for each fitted model and select the largest one.
+Often, you don't know *a priori* which parametric model to use. Each model has some assumptions built-in (not implemented yet in *lifelines*), but a quick and effective method is to compare the `AICs <https://en.wikipedia.org/wiki/Akaike_information_criterion>`_ for each fitted model. (In this case, the number of parameters for each model is the same, so really this is comparing the log-likelihood). The model with the smallest AIC does the best job of fitting to the data with a minimal degrees of freedom.
 
 .. code:: python
 
@@ -763,9 +763,9 @@ Often, you don't know *a priori* which parametric model to use. Each model has s
     lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest')
     wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
 
-    print(llf.log_likelihood_)  # -679.938
-    print(lnf.log_likelihood_)  # -683.234
-    print(wf.log_likelihood_)   # -679.916, slightly the best model.
+    print(llf.AIC_)  # 1377.877
+    print(lnf.AIC_)  # 1384.469
+    print(wf.AIC_)   # 1377.833, slightly the best model.
 
 
     # with some heterogeneity in the ancillary parameters
@@ -774,9 +774,9 @@ Often, you don't know *a priori* which parametric model to use. Each model has s
     lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
     wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
 
-    print(llf.log_likelihood_) # -678.94, slightly the best model.
-    print(lnf.log_likelihood_) # -680.39
-    print(wf.log_likelihood_)  # -679.60
+    print(llf.AIC_) # 1377.89, the best model here, but not the overall best.
+    print(lnf.AIC_) # 1380.79
+    print(wf.AIC_)  # 1379.21
 
 
 Left, right and interval censored data

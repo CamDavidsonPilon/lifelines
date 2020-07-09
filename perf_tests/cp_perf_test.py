@@ -13,9 +13,9 @@ if __name__ == "__main__":
     reps = 2500
     df = load_rossi()
     df = pd.concat([df] * reps)
+    df.to_csv("rossi_2500.csv", index=False)
     print(df.shape)
-    cph = CoxPHFitter()
+    cph = CoxPHFitter(baseline_estimation_method="breslow", n_baseline_knots=2)
     start_time = time.time()
     cph.fit(df, duration_col="week", event_col="arrest", show_progress=True)
-    print(cph._batch_mode)
     print("--- %s seconds ---" % (time.time() - start_time))

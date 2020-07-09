@@ -35,11 +35,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
     The baseline hazard, :math:`h_0(t)` can be modeled in two ways:
 
-    1. non-parametrically, using Breslow's method. In this case, the entire model is the traditional semi-parametric Cox model. Ties are
+    1. (default) non-parametrically, using Breslow's method. In this case, the entire model is the traditional semi-parametric Cox model. Ties are
     handled using Efron's method.
+
     2. parametrically, using a pre-specified number of cubic splines.
 
-    This is specified using the ``baseline_estimation_method`` parameter in the initialization.
+    This is specified using the ``baseline_estimation_method`` parameter in the initialization (default = ``"breslow"``)
 
     Parameters
     ----------
@@ -218,11 +219,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         -------
         self: CoxPHFitter
             self with additional new properties: ``print_summary``, ``hazards_``, ``confidence_intervals_``, ``baseline_survival_``, etc.
-
-
-        Note
-        ----
-        Tied survival times are handled using Efron's tie-method.
 
 
         Examples
