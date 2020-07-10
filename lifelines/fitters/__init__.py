@@ -1340,9 +1340,10 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        formula: str = None,
     ) -> "self":
         """
-        Fit the accelerated failure time model to a left-censored dataset.
+        Fit the regression model to a left-censored dataset.
 
         Parameters
         ----------
@@ -1433,9 +1434,10 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        formula: str = None,
     ) -> "self":
         """
-        Fit the regression model to a right-censored dataset.
+        Fit the regression model to a interval-censored dataset.
 
         Parameters
         ----------
@@ -1482,6 +1484,9 @@ class ParametricRegressionFitter(RegressionFitter):
         entry_col: string
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        formula:
+            TODO
 
         Returns
         -------
@@ -1584,6 +1589,9 @@ class ParametricRegressionFitter(RegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
+        formula: string
+            TODO
+
         Returns
         -------
             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
@@ -1594,13 +1602,12 @@ class ParametricRegressionFitter(RegressionFitter):
 
         df = df.copy()
 
-        T = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
-        self.durations = T.copy()
+        self.durations = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
 
         self._fit(
             self._log_likelihood_right_censoring,
             df,
-            (T.values, None),
+            (self.durations.values, None),
             event_col=event_col,
             regressors=regressors,
             show_progress=show_progress,
@@ -2557,6 +2564,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        formula: str = None,
     ) -> "self":
         """
         Fit the accelerated failure time model to a right-censored dataset.
@@ -2607,6 +2615,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         entry_col: string
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        formula: string
+            TODO
 
         Returns
         -------
@@ -2712,6 +2723,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        formula=None,
     ) -> "self":
         """
         Fit the accelerated failure time model to a interval-censored dataset.
@@ -2763,6 +2775,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         entry_col: str
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        formula: str
+            TODO
 
         Returns
         -------
@@ -2884,6 +2899,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        formula: str = None,
     ) -> "self":
         """
         Fit the accelerated failure time model to a left-censored dataset.
@@ -2934,6 +2950,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         entry_col: str
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        formula:
+            TODO
 
         Returns
         -------

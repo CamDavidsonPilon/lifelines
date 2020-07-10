@@ -157,6 +157,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         robust: bool = False,
         batch_mode: Optional[bool] = None,
         timeline: Optional[Iterator] = None,
+        formula: str = None,
     ) -> "CoxPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
@@ -215,6 +216,9 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         batch_mode: bool, optional
             enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
 
+        formula: str
+            TODO
+
         Returns
         -------
         self: CoxPHFitter
@@ -272,6 +276,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             robust=robust,
             batch_mode=batch_mode,
             timeline=timeline,
+            formula=formula,
         )
         return self
 
@@ -546,6 +551,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         robust: bool = False,
         batch_mode: Optional[bool] = None,
         timeline: Optional[Iterator] = None,
+        formula: str = None,
     ) -> "SemiParametricPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
@@ -664,6 +670,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         self._n_examples = df.shape[0]
         self._batch_mode = batch_mode
         self.strata = utils.coalesce(strata, self.strata)
+        self.formula = formula
 
         X, T, E, weights, original_index, self._clusters = self._preprocess_dataframe(df)
 
@@ -746,7 +753,14 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
-        X = df.astype(float)
+        if self.formula is None:
+            self.formula = " + ".join(df.columns) + " -1"
+
+        X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe")
+
+        if not hasattr(self, "_design_info"):
+            self._design_info = X.design_info
+
         T = T.astype(float)
 
         # we check nans here because converting to bools maps NaNs to True..
@@ -1649,12 +1663,12 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         if isinstance(X, pd.DataFrame):
             order = hazard_names
+            (X,) = patsy.build_design_matrices([self._design_info], X, return_type="dataframe")
             X = X.reindex(order, axis="columns")
             X = X.astype(float)
             X = X.values
 
         X = X.astype(float)
-
         X = utils.normalize(X, self._norm_mean.values, 1)
         return pd.Series(dot(X, self.params_), index=index)
 
@@ -2101,7 +2115,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             x_bar = self._norm_mean.to_frame().T
             X = pd.concat([x_bar] * values.shape[0])
 
-            if np.array_equal(np.eye(n_covariates), values):
+            if np.array_equal(np.eye(n_covariates), values) or np.array_equal(
+                np.append(np.eye(n_covariates), np.zeros((n_covariates, 1)), axis=1), values
+            ):
                 X.index = ["%s=1" % c for c in covariates]
             else:
                 X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
