@@ -193,7 +193,22 @@ class TestBaseFitter:
         assert bf.__repr__() == "<lifelines.BaseFitter>"
 
 
+from hypothesis import given
+import hypothesis.strategies as st
+from hypothesis.extra.numpy import arrays as hyp_arrays, array_shapes as hyp_array_shapes
+from autograd import elementwise_grad as egrad
+
+
 class TestParametricUnivariateFitters:
+    @given(
+        T=hyp_arrays(np.double, 200, elements=st.floats(0.5, 100000, allow_nan=False)),
+        params=hyp_arrays(np.double, 2, elements=st.floats(0.2, 100, allow_nan=False)),
+    )
+    def test_log_hazard_and_cumulative_hazard_match(self, T, params):
+        for fitter in [LogNormalFitter, WeibullFitter]:
+            f = fitter()
+            npt.assert_allclose(np.log(egrad(f._cumulative_hazard, argnum=1)(params, T)), f._log_hazard(params, T), rtol=1e-4)
+
     def test_spline_fitter_has_specific_fit_method(self):
         sp = SplineFitter([1, 2, 3])
         assert sp._scipy_fit_method == "SLSQP"
