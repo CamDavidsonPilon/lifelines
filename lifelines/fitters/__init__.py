@@ -23,6 +23,7 @@ import pandas as pd
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
 from lifelines import utils
 from lifelines.utils.printer import Printer
+from lifelines.statistics import _chisq_test_p_value, StatisticalResult
 
 
 __all__ = [
@@ -1806,7 +1807,6 @@ class ParametricRegressionFitter(RegressionFitter):
         minimum_ll = np.inf
         minimum_results = None
         for _initial_point in inital_points_as_arrays:
-
             if _initial_point.shape[0] != Xs.size:
                 raise ValueError("initial_point is not the correct shape.")
 
@@ -2034,8 +2034,6 @@ class ParametricRegressionFitter(RegressionFitter):
         compare the existing model (with all the covariates) to the trivial model
         of no covariates.
         """
-        from lifelines.statistics import _chisq_test_p_value, StatisticalResult
-
         ll_null = self._ll_null
         ll_alt = self.log_likelihood_
 
