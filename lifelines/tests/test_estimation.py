@@ -2614,6 +2614,7 @@ class TestWeibullAFTFitter:
         df = load_diabetes()
         df["gender"] = df["gender"] == "male"
         df["E"] = df["left"] == df["right"]
+        df["gender"] = df["gender"].astype(int)
 
         aft.fit_interval_censoring(df, "left", "right", "E")
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "coef"], 0.04576, rtol=1e-3)
@@ -2640,6 +2641,7 @@ class TestWeibullAFTFitter:
 
         aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary_df=df)
         aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary_df=True)
+        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary_df="pH")
 
     def test_aft_weibull_with_weights(self, rossi, aft):
         """
@@ -2668,8 +2670,8 @@ class TestWeibullAFTFitter:
 
         npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.39347, rtol=1e-3)
         npt.assert_allclose(wf.summary.loc[("lambda_", "Intercept"), "coef"], np.log(140.55112), rtol=1e-2)
-        npt.assert_allclose(wf.summary.loc[("rho_", "Intercept"), "coef"], np.log(1.25981), rtol=1e-4)
-        npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], 0.01485, rtol=1e-4)
+        npt.assert_allclose(wf.summary.loc[("rho_", "Intercept"), "coef"], np.log(1.25981), rtol=1e-2)
+        npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], 0.01485, rtol=1e-2)
 
     def test_aft_weibull_can_do_interval_prediction(self, aft):
         # https://github.com/CamDavidsonPilon/lifelines/issues/839
@@ -2796,23 +2798,23 @@ class TestCoxPHFitter:
         return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
 
     def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline):
-        cph.fit(rossi, "week", "arrest", formula="age + race - 1")
+        cph.fit(rossi, "week", "arrest", formula="age + race")
         assert cph.summary.index.tolist() == ["age", "race"]
 
-        cph.fit(rossi, "week", "arrest", formula="age * race - 1")
+        cph.fit(rossi, "week", "arrest", formula="age * race")
         assert cph.summary.index.tolist() == ["age", "race", "age:race"]
 
-        cph_spline.fit(rossi, "week", "arrest", formula="age + race - 1")
+        cph_spline.fit(rossi, "week", "arrest", formula="age + race")
         assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race"]
 
-        cph_spline.fit(rossi, "week", "arrest", formula="age * race - 1")
+        cph_spline.fit(rossi, "week", "arrest", formula="age * race")
         assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race", "age:race"]
 
     def test_formulas_can_be_used_with_prediction(self, rossi, cph, cph_spline):
-        cph.fit(rossi, "week", "arrest", formula="age * race - 1")
+        cph.fit(rossi, "week", "arrest", formula="age * race")
         cph.predict_survival_function(rossi)
 
-        cph_spline.fit(rossi, "week", "arrest", formula="age * race - 1")
+        cph_spline.fit(rossi, "week", "arrest", formula="age * race")
         cph_spline.predict_survival_function(rossi)
 
     def test_timeline_argument_can_be_set(self, rossi, cph_spline, cph):

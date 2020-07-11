@@ -8,8 +8,6 @@
 ##### API Changes
  - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using "Intercept".
  - The never used "lifelines.metrics" is deleted.
- - `CoxPHFitter` with spline baseline estimation has a slightly different functional form. We've moved the intercept term into a spline term. That is, `beta_ _intercept` is now `phi0_`. This makes spline vs non-parametric parameters identical.
-
 
 ##### Bug fixes
  - The p-value of the log-likelihood ratio test for the CoxPHFitter with splines was returning the wrong result because the

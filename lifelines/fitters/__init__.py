@@ -1702,9 +1702,10 @@ class ParametricRegressionFitter(RegressionFitter):
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
-        self._check_values_pre_fitting(df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
-
         self.regressors, Xs = self._create_design_info_and_matrices(regressors, df)
+
+        self._check_values_pre_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
+
         self._norm_mean = Xs.mean(0)
 
         if self._KNOWN_MODEL and hasattr(self, "_ancillary_parameter_name") and hasattr(self, "_primary_parameter_name"):
@@ -2011,7 +2012,8 @@ class ParametricRegressionFitter(RegressionFitter):
             n_params = params.shape[0]
             J = np.zeros((n_params, n_params))
 
-            for ts, e, w, s, xs in zip(utils.safe_zip(*Ts), E, weights, entries, Xs.iterdicts()):
+            for ts, e, w, s, (_, xs) in zip(utils.safe_zip(*Ts), E, weights, entries, Xs.iterrows()):
+                xs = utils.DataframeSlicer(xs.to_frame().T)
                 score_vector = ll_gradient(params, ts, e, w, s, xs)
                 J += np.outer(score_vector, score_vector)
 
@@ -2616,8 +2618,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         ancillary_df: None, boolean, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
-            If True, model the ancillary parameters with the same covariates as ``df``.
+            If True, model the ancillary parameters with the same covariates/formula as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+            If string, must be a patsy formula.
 
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
@@ -2674,47 +2677,54 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
         self.duration_col = duration_col
         self.fit_intercept = utils.coalesce(fit_intercept, self.fit_intercept)
+        self.event_col = event_col
+        self.entry_col = entry_col
+        self.weights_col = weights_col
 
         df = df.copy()
 
         T = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(self.duration_col)).astype(float)
         self.durations = T.copy()
 
-        primary_columns = df.columns.difference([self.duration_col, event_col]).tolist()
+        if formula:
+            primary_columns_or_formula = [formula]
+        else:
+            primary_columns_or_formula = df.columns.difference(
+                [self.duration_col, self.event_col, self.entry_col, self.weights_col]
+            ).tolist()
+
+        regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
 
         if isinstance(ancillary_df, pd.DataFrame):
             self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            regressors = {
-                self._primary_parameter_name: primary_columns,
-                self._ancillary_parameter_name: ancillary_df.columns.difference([self.duration_col, event_col]).tolist(),
-            }
+            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference([self.duration_col, event_col]).tolist()
 
-            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference([self.duration_col, event_col])
+            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
+                [self.duration_col, self.event_col]
+            )
             df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
+
+        elif isinstance(ancillary_df, str):
+            # patsy formula
+            self.model_ancillary = True
+            regressors[self._ancillary_parameter_name] = [ancillary_df]
 
         elif (ancillary_df is True) or self.model_ancillary:
             self.model_ancillary = True
-            regressors = {
-                self._primary_parameter_name: primary_columns.copy(),
-                self._ancillary_parameter_name: primary_columns.copy(),
-            }
+            regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
+
         elif (ancillary_df is None) or (ancillary_df is False):
-            regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
+            regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
 
         if self.fit_intercept:
-            assert (
-                "Intercept" not in df
-            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["Intercept"] = 1.0
-            regressors[self._primary_parameter_name].append("Intercept")
-            regressors[self._ancillary_parameter_name].append("Intercept")
-        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
-            assert (
-                "Intercept" not in df
-            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["Intercept"] = 1.0
-            regressors[self._ancillary_parameter_name].append("Intercept")
+            regressors[self._primary_parameter_name].append("1")
+            regressors[self._ancillary_parameter_name].append("1")
+        elif not self.fit_intercept:
+            regressors[self._primary_parameter_name].append("0")
+            regressors[self._ancillary_parameter_name].append("0")
+            if (ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary:
+                regressors[self._ancillary_parameter_name].append("1")
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_right_censoring,
@@ -2836,6 +2846,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         self.lower_bound_col = lower_bound_col
         self.upper_bound_col = upper_bound_col
         self.fit_intercept = utils.coalesce(fit_intercept, self.fit_intercept)
+        self.entry_col = entry_col
+        self.weights_col = weights_col
 
         df = df.copy()
 
@@ -2849,6 +2861,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             event_col = "E_lifelines_added"
             df[event_col] = self.lower_bound == self.upper_bound
 
+        self.event_col = event_col
+
         if ((self.lower_bound == self.upper_bound) != df[event_col]).any():
             raise ValueError(
                 "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
@@ -2856,42 +2870,46 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if (self.lower_bound > self.upper_bound).any():
             raise ValueError("All upper bound measurements must be greater than or equal to lower bound measurements.")
 
-        primary_columns = df.columns.difference([self.lower_bound_col, self.upper_bound_col, event_col]).tolist()
+        if formula:
+            primary_columns_or_formula = [formula]
+        else:
+            primary_columns_or_formula = df.columns.difference(
+                [self.lower_bound_col, self.upper_bound_col, self.event_col, self.entry_col, self.weights_col]
+            ).tolist()
+
+        regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
 
         if isinstance(ancillary_df, pd.DataFrame):
             self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            regressors = {
-                self._primary_parameter_name: primary_columns,
-                self._ancillary_parameter_name: ancillary_df.columns.tolist(),
-            }
+            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference(
+                [self.upper_bound_col, self.lower_bound_col, self.event_col]
+            ).tolist()
+
             ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
-                [self.lower_bound_col, self.upper_bound_col, event_col]
+                [self.upper_bound_col, self.lower_bound_col, self.event_col]
             )
             df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
 
+        elif isinstance(ancillary_df, str):
+            # patsy formula
+            self.model_ancillary = True
+            regressors[self._ancillary_parameter_name] = [ancillary_df]
+
         elif (ancillary_df is True) or self.model_ancillary:
             self.model_ancillary = True
-            regressors = {
-                self._primary_parameter_name: primary_columns.copy(),
-                self._ancillary_parameter_name: primary_columns.copy(),
-            }
+            regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
+
         elif (ancillary_df is None) or (ancillary_df is False):
-            regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
+            regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
 
         if self.fit_intercept:
-            assert (
-                "Intercept" not in df
-            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["Intercept"] = 1.0
-            regressors[self._primary_parameter_name].append("Intercept")
-            regressors[self._ancillary_parameter_name].append("Intercept")
-        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
-            assert (
-                "Intercept" not in df
-            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["Intercept"] = 1.0
-            regressors[self._ancillary_parameter_name].append("Intercept")
+            regressors[self._primary_parameter_name].append("1")
+            regressors[self._ancillary_parameter_name].append("1")
+        elif not self.fit_intercept:
+            regressors[self._primary_parameter_name].append("0")
+            if (ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary:
+                regressors[self._ancillary_parameter_name].append("1")
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_interval_censoring,
@@ -3009,42 +3027,52 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         df = df.copy()
 
         T = utils.pass_for_numeric_dtypes_or_raise_array(df.pop(duration_col)).astype(float)
-        self.durations = T.copy()
-        self.fit_intercept = utils.coalesce(fit_intercept, self.fit_intercept)
         self.duration_col = duration_col
+        self.fit_intercept = utils.coalesce(fit_intercept, self.fit_intercept)
+        self.event_col = event_col
+        self.entry_col = entry_col
+        self.weights_col = weights_col
 
-        primary_columns = df.columns.difference([duration_col, event_col]).tolist()
+        self.durations = T.copy()
+
+        if formula:
+            primary_columns_or_formula = [formula]
+        else:
+            primary_columns_or_formula = df.columns.difference(
+                [self.duration_col, self.event_col, self.entry_col, self.weights_col]
+            ).tolist()
+
+        regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
+
         if isinstance(ancillary_df, pd.DataFrame):
             self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            regressors = {
-                self._primary_parameter_name: primary_columns,
-                self._ancillary_parameter_name: ancillary_df.columns.tolist(),
-            }
-            df = pd.concat([df, ancillary_df[ancillary_df.columns.difference(df.columns)]], axis=1)
+            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference([self.duration_col, event_col]).tolist()
+
+            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
+                [self.duration_col, self.event_col]
+            )
+            df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
+
+        elif isinstance(ancillary_df, str):
+            # patsy formula
+            self.model_ancillary = True
+            regressors[self._ancillary_parameter_name] = [ancillary_df]
 
         elif (ancillary_df is True) or self.model_ancillary:
             self.model_ancillary = True
-            regressors = {
-                self._primary_parameter_name: primary_columns.copy(),
-                self._ancillary_parameter_name: primary_columns.copy(),
-            }
+            regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
+
         elif (ancillary_df is None) or (ancillary_df is False):
-            regressors = {self._primary_parameter_name: primary_columns, self._ancillary_parameter_name: []}
+            regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
 
         if self.fit_intercept:
-            assert (
-                "Intercept" not in df
-            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["Intercept"] = 1.0
-            regressors[self._primary_parameter_name].append("Intercept")
-            regressors[self._ancillary_parameter_name].append("Intercept")
-        elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
-            assert (
-                "Intercept" not in df
-            ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["Intercept"] = 1.0
-            regressors[self._ancillary_parameter_name].append("Intercept")
+            regressors[self._primary_parameter_name].append("1")
+            regressors[self._ancillary_parameter_name].append("1")
+        elif not self.fit_intercept:
+            regressors[self._primary_parameter_name].append("0")
+            if (ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary:
+                regressors[self._ancillary_parameter_name].append("1")
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_left_censoring,
@@ -3095,14 +3123,16 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model.log_likelihood_
+        self._ll_null_dof = len(uni_model._fitted_parameter_names)
 
-        d = {}
+        initial_point = {}
+        cols = Xs.columns
 
-        for param, mapping in Xs.mappings.items():
-            d[param] = np.array([0.0] * (len(mapping)))
-            if constant_col in mapping:
-                d[param][mapping.index(constant_col)] = _transform_ith_param(getattr(uni_model, param))
-        return d
+        for param, covs in cols.groupby(cols.get_level_values(0)).items():
+            initial_point[param] = np.zeros(covs.shape)
+            if constant_col in covs:
+                initial_point[param][covs.tolist().index(constant_col)] = _transform_ith_param(getattr(uni_model, param))
+        return initial_point
 
     def plot(self, columns=None, parameter=None, ax=None, **errorbar_kwargs):
         """
@@ -3267,23 +3297,21 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            X["Intercept"] = 1.0
-            primary_X = X[self.params_.loc[self._primary_parameter_name].index]
+            design_info = self.regressors[self._primary_parameter_name]
+            primary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
         elif isinstance(X, pd.Series):
             return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T, ancillary_X)
         else:
-            # provided numpy array
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
 
         if isinstance(ancillary_X, pd.DataFrame):
-            ancillary_X = ancillary_X.copy()
-            if self.fit_intercept:
-                ancillary_X["Intercept"] = 1.0
-            ancillary_X = ancillary_X[self.regressors[self._ancillary_parameter_name]]
+            design_info = self.regressors[self._ancillary_parameter_name]
+            ancillary_X, = patsy.build_design_matrices([design_info], ancillary_X, return_type="dataframe")
         elif isinstance(ancillary_X, pd.Series):
             return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T)
         elif ancillary_X is None:
-            ancillary_X = X[self.regressors[self._ancillary_parameter_name]]
+            design_info = self.regressors[self._ancillary_parameter_name]
+            ancillary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
         else:
             # provided numpy array
             assert ancillary_X.shape[1] == (self.params_.loc[self._ancillary_parameter_name].shape[0] + 1)  # 1 for _intercept
