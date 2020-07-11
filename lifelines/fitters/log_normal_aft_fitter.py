@@ -10,7 +10,7 @@ from lifelines.utils.safe_exp import safe_exp
 
 from autograd.builtins import DictBox
 from autograd.numpy.numpy_boxes import ArrayBox
-from lifelines.utils import DataframeSliceDict
+from lifelines.utils import DataframeSlicer
 from numpy import ndarray
 from typing import Dict, List, Optional, Union
 
@@ -76,7 +76,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
     def _cumulative_hazard(
-        self, params: Union[DictBox, Dict[str, ndarray]], T: Union[float, ndarray], Xs: DataframeSliceDict
+        self, params: Union[DictBox, Dict[str, ndarray]], T: Union[float, ndarray], Xs: DataframeSlicer
     ) -> Union[ndarray, ArrayBox]:
         mu_params = params["mu_"]
         mu_ = np.dot(Xs["mu_"], mu_params)
@@ -86,7 +86,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         Z = (np.log(T) - mu_) / sigma_
         return -norm.logsf(Z)
 
-    def _log_hazard(self, params: DictBox, T: Union[float, ndarray], Xs: DataframeSliceDict) -> ArrayBox:
+    def _log_hazard(self, params: DictBox, T: Union[float, ndarray], Xs: DataframeSlicer) -> ArrayBox:
         mu_params = params["mu_"]
         mu_ = np.dot(Xs["mu_"], mu_params)
 

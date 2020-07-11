@@ -323,12 +323,14 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         kwargs.pop("batch_mode")
 
         df = args[0].copy()
-        df["_intercept"] = 1
 
-        regressors = {
-            **{"beta_": df.columns.difference(["T", "E", "weights"]), "phi1_": ["_intercept"]},
-            **{"phi%d_" % i: ["_intercept"] for i in range(2, self.n_baseline_knots + 2)},
-        }
+        if kwargs["formula"] is not None:
+            formula = kwargs.pop("formula")
+        else:
+            kwargs.pop("formula")
+            formula = " + ".join(df.columns.difference([kwargs["duration_col"], kwargs["event_col"], kwargs["weights_col"]]))
+
+        regressors = {**{"beta_": formula}, **{"phi%d_" % i: ["1"] for i in range(1, self.n_baseline_knots + 2)}}
 
         model = ParametricSplinePHFitter(
             penalizer=self.penalizer,
@@ -2310,9 +2312,10 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         self._set_knots(Ts[0], E)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
+
         return [
             {
-                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
+                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
             }
         ]

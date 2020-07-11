@@ -10,7 +10,7 @@ from lifelines.utils import _get_index
 from lifelines.fitters import ParametericAFTRegressionFitter
 from lifelines.fitters.mixins import ProportionalHazardMixin
 from lifelines.utils.safe_exp import safe_exp
-from lifelines.utils import DataframeSliceDict
+from lifelines.utils import DataframeSlicer
 from lifelines.statistics import proportional_hazard_test
 
 
@@ -93,7 +93,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         super(WeibullAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
     def _cumulative_hazard(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSliceDict
+        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
     ) -> Union[np.array, ArrayBox]:
         lambda_params = params["lambda_"]
         log_lambda_ = Xs["lambda_"] @ lambda_params
@@ -104,13 +104,13 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         return safe_exp(rho_ * (np.log(np.clip(T, 1e-100, np.inf)) - log_lambda_))
 
     def _survival_function(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSliceDict
+        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
     ) -> Union[np.array, ArrayBox]:
         ch = self._cumulative_hazard(params, T, Xs)
         return safe_exp(-ch)
 
     def _log_hazard(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSliceDict
+        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
     ) -> Union[np.array, ArrayBox]:
         lambda_params = params["lambda_"]
         log_lambda_ = Xs["lambda_"] @ lambda_params

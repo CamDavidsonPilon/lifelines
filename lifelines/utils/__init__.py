@@ -1659,30 +1659,25 @@ def safe_zip(first, second):
         yield from zip(first, second)
 
 
-class DataframeSliceDict:
-    def __init__(self, df: pd.DataFrame, mappings: Dict[str, List[str]]):
+class DataframeSlicer:
+    """
+    Changed in v0.25.0
+
+    The purpose of this is to wrap column (multi-) indexing to return a Numpy Array
+    instead of a Pandas DataFrame.
+
+
+    """
+
+    def __init__(self, df: pd.DataFrame):
         self.df = df
-        self.mappings = mappings
-        self.size = sum(len(v) for v in self.mappings.values())
 
     def __getitem__(self, key):
-        columns = self.mappings[key]
-        if columns == "*":
-            return self.df.values
-        else:
-            return self.df[columns].values
+        return self.df[key].values
 
-    def __iter__(self):
-        for k in self.mappings:
-            yield (k, self[k])
-
-    def filter(self, ix) -> "DataframeSliceDict":
+    def filter(self, ix) -> "DataframeSlicer":
         ix = _to_1d_array(ix)
-        return DataframeSliceDict(self.df[ix], self.mappings)
-
-    def iterdicts(self):
-        for _, x in self.df.iterrows():
-            yield DataframeSliceDict(x.to_frame().T, self.mappings)
+        return DataframeSlicer(self.df[ix])
 
 
 def find_best_parametric_model(

@@ -1226,7 +1226,7 @@ class ParametricRegressionFitter(RegressionFitter):
         utils.check_dimensions(df)
         utils.check_complete_separation(df, E, T, self.event_col)
 
-    def _pre_fit_model(self, Ts, E, df) -> None:
+    def _pre_fit_model(self, Ts, E, Xs) -> None:
         return
 
     def _check_values_pre_fitting(self, df, T, E, weights, entries):
@@ -1620,9 +1620,6 @@ class ParametricRegressionFitter(RegressionFitter):
 
         return self
 
-    def _create_Xs_dict(self, df):
-        return utils.DataframeSliceDict(df, self.regressors)
-
     def _filter_dataframe_to_covariates(self, df):
         cols = set(sum(self.regressors.values(), []))
         if "_intercept" not in df.columns:
@@ -1680,23 +1677,38 @@ class ParametricRegressionFitter(RegressionFitter):
         self.weights = weights.copy()
         self._check_values_pre_fitting(df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
-        def _create_design_info_lookup(self, user_inputed_regressor_lookup):
+        import patsy
+
+        def _create_design_info_and_matrices(user_inputed_regressor_lookup, df):
 
             # convert user_inputed_regressor_lookup to a dict {str: design_info}
 
             if user_inputed_regressor_lookup is None:
                 formula = " + ".join(df.columns.tolist())
-                return {name: formula for name in sorted(self._fitted_parameter_names)}
+                df_transformed = patsy.dmatrix(formula, df, return_type="dataframe")
+                return (
+                    {name: df_transformed.design_info for name in sorted(self._fitted_parameter_names)},
+                    pd.concat(
+                        {name: df_transformed for name in sorted(self._fitted_parameter_names)},
+                        axis=1,
+                        names=("params", "covariates"),
+                    ),
+                )
 
             regressors = {}
-            for param, value in user_inputed_regressor_lookup:
+            Xs = {}
+            for param, value in user_inputed_regressor_lookup.items():
                 if isinstance(value, list):
                     # list of covariates
-                    regressors[param] = " + ".join(value)
+                    formula = " + ".join(value)
                 elif isinstance(value, str):
-                    # patsy formula
-                    regressors[param] = value
-            return regressors
+                    # submitted formula
+                    formula = value
+
+                df_transformed_ = patsy.dmatrix(formula, df, return_type="dataframe")
+                regressors[param] = df_transformed_.design_info
+                Xs[param] = df_transformed_
+            return regressors, pd.concat(Xs, axis=1, names=("params", "covariates"))
 
             """
             if regressors is not None:
@@ -1710,31 +1722,34 @@ class ParametricRegressionFitter(RegressionFitter):
             df = self._filter_dataframe_to_covariates(df).astype(float)
             """
 
-        self.regressors, Xs = self._create_design_matrices(regressors)
+        self.regressors, Xs = _create_design_info_and_matrices(regressors, df)
+        self._norm_mean = Xs.mean(0)
 
-        _index = pd.MultiIndex.from_tuples(
-            sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
-        )
+        # _index = pd.MultiIndex.from_tuples(
+        #    sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
+        # )
 
-        self._norm_mean = df.mean(0)
         if self._KNOWN_MODEL and hasattr(self, "_ancillary_parameter_name") and hasattr(self, "_primary_parameter_name"):
             # Known AFT model
-            self._norm_mean_primary = df[self.regressors[self._primary_parameter_name]].mean(0)
-            self._norm_mean_ancillary = df[self.regressors[self._ancillary_parameter_name]].mean(0)
+            self._norm_mean_primary = Xs[self._primary_parameter_name].mean(0)
+            self._norm_mean_ancillary = Xs[self._ancillary_parameter_name].mean(0)
 
-        _norm_std = df.std(0)
+        _index = Xs.columns
+        _norm_std = Xs.std(0)
 
-        self._cols_to_not_penalize = self._find_cols_to_not_penalize(_index, _norm_std)
-        self._norm_std = pd.Series([_norm_std.loc[variable_name] for (_, variable_name) in _index], index=_index)
-        _constant_cols = pd.Series([_norm_std.loc[variable_name] < 1e-8 for (_, variable_name) in _index], index=_index)
+        self._cols_to_not_penalize = self._find_cols_to_not_penalize(_norm_std)
+        self._norm_std = Xs.std(0)
+        _constant_cols = pd.Series(
+            [_norm_std.loc[param_name, variable_name] < 1e-8 for (param_name, variable_name) in _index], index=_index
+        )
         self._norm_std[_constant_cols] = 1.0
         _norm_std[_norm_std < 1e-8] = 1.0
 
-        self._pre_fit_model(Ts, E, df)
+        self._pre_fit_model(Ts, E, Xs)
         _params, self.log_likelihood_, self._hessian_ = self._fit_model(
             log_likelihood_function,
             Ts,
-            self._create_Xs_dict(utils.normalize(df, 0, _norm_std)),
+            utils.normalize(Xs, 0, _norm_std),
             E.values,
             weights.values,
             entries.values,
@@ -1744,29 +1759,28 @@ class ParametricRegressionFitter(RegressionFitter):
 
         # align the coefficients again.
         # https://github.com/CamDavidsonPilon/lifelines/issues/931
-        assert list(self.regressors.keys()) == list(self._norm_std.index.get_level_values(0).unique())
+        # TODO assert list(self.regressors.keys()) == list(self._norm_std.index.get_level_values(0).unique())
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
         self.params_ = _params / self._norm_std
 
         self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
-        self.standard_errors_ = self._compute_standard_errors(
-            Ts, E.values, weights.values, entries.values, self._create_Xs_dict(df)
-        )
+        self.standard_errors_ = self._compute_standard_errors(Ts, E.values, weights.values, entries.values, Xs)
         self.confidence_intervals_ = self._compute_confidence_intervals()
         if self._FAST_MEDIAN_PREDICT:
             self._predicted_median = self.predict_median(df)
         return self
 
-    def _find_cols_to_not_penalize(self, index, norm_std):
+    def _find_cols_to_not_penalize(self, norm_std):
         """
         We only want to avoid penalizing the constant term in linear relationships. Our flag for a
-        linear relationship is >1 covariate
+        linear relationship is >1 covariate.
         """
+        index = norm_std.index
         s = pd.Series(False, index=index)
         for k, v in index.groupby(index.get_level_values(0)).items():
             if v.size > 1:
                 for (parameter_name, variable_name) in v:
-                    if norm_std.loc[variable_name] < 1e-8:
+                    if norm_std.loc[parameter_name, variable_name] < 1e-8:
                         s.loc[(parameter_name, variable_name)] = True
 
         return s
@@ -1835,7 +1849,7 @@ class ParametricRegressionFitter(RegressionFitter):
         minimum_results = None
         for _initial_point in inital_points_as_arrays:
 
-            if _initial_point.shape[0] != Xs.size:
+            if _initial_point.shape[0] != Xs.columns.size:
                 raise ValueError("initial_point is not the correct shape.")
 
             results = minimize(
@@ -1844,7 +1858,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 _initial_point,
                 method=self._scipy_fit_method,
                 jac=True,
-                args=(Ts, E, weights, entries, Xs),
+                args=(Ts, E, weights, entries, utils.DataframeSlicer(Xs)),
                 options={**{"disp": show_progress}, **self._scipy_fit_options},
             )
 
@@ -1856,7 +1870,9 @@ class ParametricRegressionFitter(RegressionFitter):
 
         if minimum_results is not None and minimum_results.success:
             sum_weights = weights.sum()
-            hessian_ = hessian(self._neg_likelihood_with_penalty_function)(minimum_results.x, Ts, E, weights, entries, Xs)
+            hessian_ = hessian(self._neg_likelihood_with_penalty_function)(
+                minimum_results.x, Ts, E, weights, entries, utils.DataframeSlicer(Xs)
+            )
             # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
             hessian_ = (hessian_ + hessian_.T) / 2
             return (unflatten_array_to_dict(minimum_results.x), -sum_weights * minimum_results.fun, sum_weights * hessian_)
