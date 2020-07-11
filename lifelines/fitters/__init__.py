@@ -1678,18 +1678,39 @@ class ParametricRegressionFitter(RegressionFitter):
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
-
-        if regressors is not None:
-            # the .intersection preserves order, important!
-            self.regressors = {name: list(df.columns.intersection(cols)) for name, cols in sorted(regressors.items())}
-        else:
-            self.regressors = {name: df.columns.tolist() for name in sorted(self._fitted_parameter_names)}
-        assert all(
-            len(cols) > 0 for cols in self.regressors.values()
-        ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
-
-        df = self._filter_dataframe_to_covariates(df).astype(float)
         self._check_values_pre_fitting(df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
+
+        def _create_design_info_lookup(self, user_inputed_regressor_lookup):
+
+            # convert user_inputed_regressor_lookup to a dict {str: design_info}
+
+            if user_inputed_regressor_lookup is None:
+                formula = " + ".join(df.columns.tolist())
+                return {name: formula for name in sorted(self._fitted_parameter_names)}
+
+            regressors = {}
+            for param, value in user_inputed_regressor_lookup:
+                if isinstance(value, list):
+                    # list of covariates
+                    regressors[param] = " + ".join(value)
+                elif isinstance(value, str):
+                    # patsy formula
+                    regressors[param] = value
+            return regressors
+
+            """
+            if regressors is not None:
+                # the .intersection preserves order, important!
+                self.regressors = {name: list(df.columns.intersection(cols)) for name, cols in sorted(regressors.items())}
+            else:
+                self.regressors = {name: df.columns.tolist() for name in sorted(self._fitted_parameter_names)}
+            assert all(
+                len(cols) > 0 for cols in self.regressors.values()
+            ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
+            df = self._filter_dataframe_to_covariates(df).astype(float)
+            """
+
+        self.regressors, Xs = self._create_design_matrices(regressors)
 
         _index = pd.MultiIndex.from_tuples(
             sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
