@@ -8,7 +8,7 @@ from lifelines.fitters import RegressionFitter
 from lifelines import CRCSplineFitter
 
 
-def survival_probability_calibration(model: RegressionFitter, training_df: pd.DataFrame, t0: float, ax=None):
+def survival_probability_calibration(model: RegressionFitter, df: pd.DataFrame, t0: float, ax=None):
     r"""
     Smoothed calibration curves for time-to-event models. This is analogous to
     calibration curves for classification models, extended to handle survival probabilities
@@ -21,8 +21,9 @@ def survival_probability_calibration(model: RegressionFitter, training_df: pd.Da
 
     model:
         a fitted lifelines regression model to be evaluated
-    training_df: DataFrame
-        the DataFrame used to train the model
+    df: DataFrame
+        a DataFrame that has the same columns as the training data. ``df`` could be the original training dataset,
+        or a out-of-sample dataset.
     t0: float
         the time to evaluate the probability of event occurring prior at.
 
@@ -40,7 +41,9 @@ def survival_probability_calibration(model: RegressionFitter, training_df: pd.Da
     """
 
     def ccl(p):
-        return np.log(-np.log(1 - p))
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "divide by zero encountered in log")
+            return np.log(-np.log(1 - p))
 
     if ax is None:
         ax = plt.gca()
@@ -48,12 +51,10 @@ def survival_probability_calibration(model: RegressionFitter, training_df: pd.Da
     T = model.duration_col
     E = model.event_col
 
-    predictions_at_t0 = np.clip(1 - model.predict_survival_function(training_df, times=[t0]).T.squeeze(), 1e-10, 1 - 1e-10)
+    predictions_at_t0 = np.clip(1 - model.predict_survival_function(df, times=[t0]).T.squeeze(), 1e-10, 1 - 1e-10)
 
     # create new dataset with the predictions
-    prediction_df = pd.DataFrame(
-        {"ccl_at_%d" % t0: ccl(predictions_at_t0), "constant": 1, T: model.durations, E: model.event_observed}
-    )
+    prediction_df = pd.DataFrame({"ccl_at_%d" % t0: ccl(predictions_at_t0), "constant": 1, T: df[T], E: df[E]})
 
     # fit new dataset to flexible spline model
     # this new model connects prediction probabilities and actual survival. It should be very flexible, almost to the point of overfitting. It's goal is just to smooth out the data!
@@ -96,7 +97,7 @@ def survival_probability_calibration(model: RegressionFitter, training_df: pd.Da
     plt.tight_layout()
 
     deltas = ((1 - crc.predict_survival_function(prediction_df, times=[t0])).T.squeeze() - predictions_at_t0).abs()
-    ICI = deltas.mean()
+    ICI = np.mean(deltas)
     E50 = np.percentile(deltas, 50)
     print("ICI = ", ICI)
     print("E50 = ", E50)
