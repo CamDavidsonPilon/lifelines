@@ -172,7 +172,7 @@ class AalenAdditiveFitter(RegressionFitter):
 
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
-            self._norm_std["_intercept"] = 1.0
+            self._norm_std["Intercept"] = 1.0
         else:
             # a _intercept was provided
             self._norm_std[self._norm_std < 1e-8] = 1.0
@@ -297,8 +297,8 @@ It's important to know that the naive variance estimates of the coefficients are
         self._check_values(df, T, E)
 
         if self.fit_intercept:
-            assert "_intercept" not in df.columns, "_intercept is an internal lifelines column, please rename your column first."
-            X["_intercept"] = 1.0
+            assert "Intercept" not in df.columns, "_intercept is an internal lifelines column, please rename your column first."
+            X["Intercept"] = 1.0
 
         return X, T, E, W
 
@@ -319,7 +319,7 @@ It's important to know that the naive variance estimates of the coefficients are
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):
             order = self.cumulative_hazards_.columns
-            order = order.drop("_intercept") if self.fit_intercept else order
+            order = order.drop("Intercept") if self.fit_intercept else order
             X_ = X[order].values
         elif isinstance(X, pd.Series):
             return self.predict_cumulative_hazard(X.to_frame().T)

@@ -112,7 +112,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         # detect constant columns
-        constant_col = (Xs.df.var(0) < 1e-8).idxmax()
+        constant_col = (Xs.var(0) < 1e-8).idxmax()
 
         uni_model = GeneralizedGammaFitter()
 
@@ -132,18 +132,18 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
             default_point = super(GeneralizedGammaRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)
             nested_point = {}
 
-            nested_point["mu_"] = np.array([0.0] * (len(Xs.mappings["mu_"])))
-            if constant_col in Xs.mappings["mu_"]:
-                nested_point["mu_"][Xs.mappings["mu_"].index(constant_col)] = uni_model.mu_
+            nested_point["mu_"] = np.array([0.0] * (len(Xs["mu_"].columns)))
+            if constant_col in Xs["mu_"].columns:
+                nested_point["mu_"][Xs["mu_"].columns.index(constant_col)] = uni_model.mu_
 
-            nested_point["sigma_"] = np.array([0.0] * (len(Xs.mappings["sigma_"])))
-            if constant_col in Xs.mappings["mu_"]:
-                nested_point["sigma_"][Xs.mappings["sigma_"].index(constant_col)] = uni_model.ln_sigma_
+            nested_point["sigma_"] = np.array([0.0] * (len(Xs["sigma_"].columns)))
+            if constant_col in Xs["sigma_"].columns:
+                nested_point["sigma_"][Xs["sigma_"].columns.index(constant_col)] = uni_model.ln_sigma_
 
             # this needs to be non-zero because we divide by it
-            nested_point["lambda_"] = np.array([0.01] * (len(Xs.mappings["lambda_"])))
-            if constant_col in Xs.mappings["lambda_"]:
-                nested_point["lambda_"][Xs.mappings["lambda_"].index(constant_col)] = uni_model.lambda_
+            nested_point["lambda_"] = np.array([0.01] * (len(Xs["lambda_"].columns)))
+            if constant_col in Xs["lambda_"].columns:
+                nested_point["lambda_"][Xs["lambda_"].columns.index(constant_col)] = uni_model.lambda_
 
             return [nested_point, default_point]
 

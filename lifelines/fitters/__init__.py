@@ -18,6 +18,7 @@ from scipy.optimize import minimize, root_scalar
 from scipy.integrate import trapz
 from scipy import stats
 import pandas as pd
+import patsy
 
 
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
@@ -1620,11 +1621,37 @@ class ParametricRegressionFitter(RegressionFitter):
 
         return self
 
-    def _filter_dataframe_to_covariates(self, df):
-        cols = set(sum(self.regressors.values(), []))
-        if "_intercept" not in df.columns:
-            cols = cols - set(["_intercept"])
-        return df[list(cols)]
+    def _create_design_info_and_matrices(self, user_inputed_regressor_lookup, df):
+
+        # convert user_inputed_regressor_lookup to a dict {str: design_info}
+
+        if user_inputed_regressor_lookup is None:
+            formula = " + ".join(df.columns.tolist())
+            df_transformed = patsy.dmatrix(formula, df, return_type="dataframe")
+            return (
+                {name: df_transformed.design_info for name in sorted(self._fitted_parameter_names)},
+                pd.concat(
+                    {name: df_transformed for name in sorted(self._fitted_parameter_names)}, axis=1, names=("param", "covariate")
+                ),
+            )
+
+        regressors = {}
+        Xs = {}
+        for param, value in user_inputed_regressor_lookup.items():
+            if isinstance(value, list):
+                # list of covariates
+                formula = " + ".join(value)
+            elif isinstance(value, str):
+                # submitted formula
+                formula = value
+            elif value is None:
+                # use all covariates available
+                formula = " + ".join(df.columns)
+
+            df_transformed_ = patsy.dmatrix(formula, df, return_type="dataframe")
+            regressors[param] = df_transformed_.design_info
+            Xs[param] = df_transformed_
+        return regressors, pd.concat(Xs, axis=1, names=("param", "covariate"))
 
     def _fit(
         self,
@@ -1677,57 +1704,8 @@ class ParametricRegressionFitter(RegressionFitter):
         self.weights = weights.copy()
         self._check_values_pre_fitting(df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
-        import patsy
-
-        def _create_design_info_and_matrices(user_inputed_regressor_lookup, df):
-
-            # convert user_inputed_regressor_lookup to a dict {str: design_info}
-
-            if user_inputed_regressor_lookup is None:
-                formula = " + ".join(df.columns.tolist())
-                df_transformed = patsy.dmatrix(formula, df, return_type="dataframe")
-                return (
-                    {name: df_transformed.design_info for name in sorted(self._fitted_parameter_names)},
-                    pd.concat(
-                        {name: df_transformed for name in sorted(self._fitted_parameter_names)},
-                        axis=1,
-                        names=("params", "covariates"),
-                    ),
-                )
-
-            regressors = {}
-            Xs = {}
-            for param, value in user_inputed_regressor_lookup.items():
-                if isinstance(value, list):
-                    # list of covariates
-                    formula = " + ".join(value)
-                elif isinstance(value, str):
-                    # submitted formula
-                    formula = value
-
-                df_transformed_ = patsy.dmatrix(formula, df, return_type="dataframe")
-                regressors[param] = df_transformed_.design_info
-                Xs[param] = df_transformed_
-            return regressors, pd.concat(Xs, axis=1, names=("params", "covariates"))
-
-            """
-            if regressors is not None:
-                # the .intersection preserves order, important!
-                self.regressors = {name: list(df.columns.intersection(cols)) for name, cols in sorted(regressors.items())}
-            else:
-                self.regressors = {name: df.columns.tolist() for name in sorted(self._fitted_parameter_names)}
-            assert all(
-                len(cols) > 0 for cols in self.regressors.values()
-            ), "All parameters must have at least one column associated with it. Did you mean to include a constant column?"
-            df = self._filter_dataframe_to_covariates(df).astype(float)
-            """
-
-        self.regressors, Xs = _create_design_info_and_matrices(regressors, df)
+        self.regressors, Xs = self._create_design_info_and_matrices(regressors, df)
         self._norm_mean = Xs.mean(0)
-
-        # _index = pd.MultiIndex.from_tuples(
-        #    sum(([(name, col) for col in columns] for name, columns in self.regressors.items()), [])
-        # )
 
         if self._KNOWN_MODEL and hasattr(self, "_ancillary_parameter_name") and hasattr(self, "_primary_parameter_name"):
             # Known AFT model
@@ -1759,7 +1737,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         # align the coefficients again.
         # https://github.com/CamDavidsonPilon/lifelines/issues/931
-        # TODO assert list(self.regressors.keys()) == list(self._norm_std.index.get_level_values(0).unique())
+        assert list(self.regressors.keys()) == list(self._norm_std.index.get_level_values(0).unique())
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
         self.params_ = _params / self._norm_std
 
@@ -1786,7 +1764,7 @@ class ParametricRegressionFitter(RegressionFitter):
         return s
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs) -> Union[List[Dict], Dict]:
-        return {parameter_name: np.zeros(len(Xs.mappings[parameter_name])) for parameter_name in self._fitted_parameter_names}
+        return {parameter_name: np.zeros(len(Xs[parameter_name].columns)) for parameter_name in self._fitted_parameter_names}
 
     def _add_penalty(self, params: Dict, neg_ll: float):
         params_array, _ = flatten(params)
@@ -1878,7 +1856,7 @@ class ParametricRegressionFitter(RegressionFitter):
             return (unflatten_array_to_dict(minimum_results.x), -sum_weights * minimum_results.fun, sum_weights * hessian_)
         else:
             print(minimum_results)
-            self._check_values_post_fitting(Xs.df, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
+            self._check_values_post_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
             raise utils.ConvergenceError(
                 dedent(
                     """\
@@ -1896,6 +1874,13 @@ class ParametricRegressionFitter(RegressionFitter):
                     )
                 )
             )
+
+    def _create_Xs_dict(self, df):
+        Xs = {}
+        for param, design_info in self.regressors.items():
+            df_transformed_, = patsy.build_design_matrices([design_info], df, return_type="dataframe")
+            Xs[param] = df_transformed_
+        return utils.DataframeSlicer(pd.concat(Xs, axis=1, names=("param", "covariate")))
 
     def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
         """
@@ -1951,7 +1936,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 entries = np.zeros_like(E)
 
             if getattr(self, "fit_intercept", False):
-                df["_intercept"] = 1.0
+                df["Intercept"] = 1.0
 
             Xs = self._create_Xs_dict(df)
             return -self._neg_likelihood(self.params_.values, Ts, E, W, entries, Xs)
@@ -2048,8 +2033,8 @@ class ParametricRegressionFitter(RegressionFitter):
         if hasattr(self, "_ll_null_"):
             return self._ll_null_
 
-        regressors = {name: ["intercept"] for name in self._fitted_parameter_names}
-        df = pd.DataFrame({"entry": self.entry, "intercept": 1, "w": self.weights})
+        regressors = {name: ["1"] for name in self._fitted_parameter_names}
+        df = pd.DataFrame({"entry": self.entry, "w": self.weights})
 
         # some fitters will have custom __init__ fields that need to be provided (Piecewise, Spline...)
         args_to_provide = {k: getattr(self, k) for k in getfullargspec(self.__class__.__init__).args if k != "self"}
@@ -2070,6 +2055,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 model.fit_left_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
 
         self._ll_null_ = model.log_likelihood_
+        self._ll_null_dof = model.params_.shape[0]
         return self._ll_null_
 
     def log_likelihood_ratio_test(self):
@@ -2084,7 +2070,7 @@ class ParametricRegressionFitter(RegressionFitter):
         ll_alt = self.log_likelihood_
 
         test_stat = 2 * ll_alt - 2 * ll_null
-        degrees_freedom = self.params_.shape[0] - 2  # delta in number of parameters between models
+        degrees_freedom = self.params_.shape[0] - self._ll_null_dof  # delta in number of parameters between models
         p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
             p_value,
@@ -2286,7 +2272,7 @@ class ParametricRegressionFitter(RegressionFitter):
         if isinstance(df, pd.Series):
             df = df.to_frame().T
 
-        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        df = df.copy()
 
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
@@ -2339,7 +2325,7 @@ class ParametricRegressionFitter(RegressionFitter):
         if isinstance(df, pd.Series):
             df = df.to_frame().T
 
-        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        df = df.copy()
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
@@ -2718,17 +2704,17 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         if self.fit_intercept:
             assert (
-                "_intercept" not in df
+                "Intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["_intercept"] = 1.0
-            regressors[self._primary_parameter_name].append("_intercept")
-            regressors[self._ancillary_parameter_name].append("_intercept")
+            df["Intercept"] = 1.0
+            regressors[self._primary_parameter_name].append("Intercept")
+            regressors[self._ancillary_parameter_name].append("Intercept")
         elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
             assert (
-                "_intercept" not in df
+                "Intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["_intercept"] = 1.0
-            regressors[self._ancillary_parameter_name].append("_intercept")
+            df["Intercept"] = 1.0
+            regressors[self._ancillary_parameter_name].append("Intercept")
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_right_censoring,
@@ -2895,17 +2881,17 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         if self.fit_intercept:
             assert (
-                "_intercept" not in df
+                "Intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["_intercept"] = 1.0
-            regressors[self._primary_parameter_name].append("_intercept")
-            regressors[self._ancillary_parameter_name].append("_intercept")
+            df["Intercept"] = 1.0
+            regressors[self._primary_parameter_name].append("Intercept")
+            regressors[self._ancillary_parameter_name].append("Intercept")
         elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
             assert (
-                "_intercept" not in df
+                "Intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["_intercept"] = 1.0
-            regressors[self._ancillary_parameter_name].append("_intercept")
+            df["Intercept"] = 1.0
+            regressors[self._ancillary_parameter_name].append("Intercept")
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_interval_censoring,
@@ -3048,17 +3034,17 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         if self.fit_intercept:
             assert (
-                "_intercept" not in df
+                "Intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["_intercept"] = 1.0
-            regressors[self._primary_parameter_name].append("_intercept")
-            regressors[self._ancillary_parameter_name].append("_intercept")
+            df["Intercept"] = 1.0
+            regressors[self._primary_parameter_name].append("Intercept")
+            regressors[self._ancillary_parameter_name].append("Intercept")
         elif not self.fit_intercept and ((ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary):
             assert (
-                "_intercept" not in df
+                "Intercept" not in df
             ), "lifelines is trying to overwrite _intercept. Please rename _intercept to something else."
-            df["_intercept"] = 1.0
-            regressors[self._ancillary_parameter_name].append("_intercept")
+            df["Intercept"] = 1.0
+            regressors[self._ancillary_parameter_name].append("Intercept")
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_left_censoring,
@@ -3080,7 +3066,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
-        constant_col = (Xs.df.std(0) < 1e-8).idxmax()
+        constant_col = (Xs.std(0) < 1e-8).idxmax()
 
         def _transform_ith_param(param):
             if param <= 0:
@@ -3267,8 +3253,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             ancillary_X[covariate] = value
 
         if self.fit_intercept:
-            X["_intercept"] = 1.0
-            ancillary_X["_intercept"] = 1.0
+            X["Intercept"] = 1.0
+            ancillary_X["Intercept"] = 1.0
 
         self.predict_survival_function(X, ancillary_df=ancillary_X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
@@ -3281,7 +3267,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            X["_intercept"] = 1.0
+            X["Intercept"] = 1.0
             primary_X = X[self.params_.loc[self._primary_parameter_name].index]
         elif isinstance(X, pd.Series):
             return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T, ancillary_X)
@@ -3292,7 +3278,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if isinstance(ancillary_X, pd.DataFrame):
             ancillary_X = ancillary_X.copy()
             if self.fit_intercept:
-                ancillary_X["_intercept"] = 1.0
+                ancillary_X["Intercept"] = 1.0
             ancillary_X = ancillary_X[self.regressors[self._ancillary_parameter_name]]
         elif isinstance(ancillary_X, pd.Series):
             return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T)
@@ -3400,7 +3386,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if isinstance(df, pd.Series):
             df = df.to_frame().T
 
-        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        df = df.copy()
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
@@ -3415,7 +3401,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
                 df[c] = ancillary_df[c]
 
         if self.fit_intercept:
-            df["_intercept"] = 1.0
+            df["Intercept"] = 1.0
 
         Xs = self._create_Xs_dict(df)
 
@@ -3454,7 +3440,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if isinstance(df, pd.Series):
             df = df.to_frame().T
 
-        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
+        df = df.copy()
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
@@ -3466,7 +3452,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
                 df[c] = ancillary_df[c]
 
         if self.fit_intercept:
-            df["_intercept"] = 1.0
+            df["Intercept"] = 1.0
 
         Xs = self._create_Xs_dict(df)
 

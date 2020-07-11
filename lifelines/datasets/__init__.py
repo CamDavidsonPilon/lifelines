@@ -187,7 +187,7 @@ def load_larynx(**kwargs):
 
         Size: (89,6)
         Example:
-            time  age  death  Stage II  Stage III  Stage IV
+            time  age  death  Stage_II  Stage_III  Stage_IV
              0.6   77      1         0          0         0
              1.3   53      1         0          0         0
              2.4   45      1         0          0         0

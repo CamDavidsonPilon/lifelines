@@ -14,6 +14,7 @@ import pandas as pd
 from pandas import DataFrame, Series, Index
 from autograd import numpy as anp
 from autograd import elementwise_grad
+import patsy
 
 from lifelines.fitters import RegressionFitter, SemiParametricRegressionFittter, ParametricRegressionFitter
 from lifelines.fitters.mixins import SplineFitterMixin, ProportionalHazardMixin
@@ -324,13 +325,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         df = args[0].copy()
 
-        if kwargs["formula"] is not None:
-            formula = kwargs.pop("formula")
-        else:
-            kwargs.pop("formula")
-            formula = " + ".join(df.columns.difference([kwargs["duration_col"], kwargs["event_col"], kwargs["weights_col"]]))
-
-        regressors = {**{"beta_": formula}, **{"phi%d_" % i: ["1"] for i in range(1, self.n_baseline_knots + 2)}}
+        formula = kwargs.pop("formula")
+        regressors = {**{"beta_": formula}, **{"phi%d_" % i: ["1"] for i in range(0, self.n_baseline_knots + 2)}}
 
         model = ParametricSplinePHFitter(
             penalizer=self.penalizer,
@@ -700,7 +696,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         self.log_likelihood_ = ll_
         self.model = model
         self.variance_matrix_ = variance_matrix_
-        self.params_ = pd.Series(params_, index=X.columns, name="coef")
+        self.params_ = pd.Series(params_, index=pd.Index(X.columns, name="covariate"), name="coef")
         self.baseline_hazard_ = baseline_hazard_
         self.baseline_cumulative_hazard_ = baseline_cumulative_hazard_
         self.timeline = utils.coalesce(timeline, self.baseline_cumulative_hazard_.index)
@@ -756,9 +752,9 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
         if self.formula is None:
-            self.formula = " + ".join(df.columns) + " -1"
+            self.formula = " + ".join(df.columns) + " - 1"
 
-        X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe")
+        X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
 
         if not hasattr(self, "_design_info"):
             self._design_info = X.design_info
@@ -1586,7 +1582,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
     def _trivial_log_likelihood(self):
         df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "W": self.weights})
-        trivial_model = self.__class__().fit(df, "E", weights_col="W", batch_mode=self.batch_mode)
+        trivial_model = self.__class__().fit_right_censoring(df, "E", weights_col="W", batch_mode=self.batch_mode)
         return trivial_model.log_likelihood_
 
     def log_likelihood_ratio_test(self) -> StatisticalResult:
@@ -2301,7 +2297,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             n_baseline_knots is not None and n_baseline_knots > 0
         ), "n_baseline_knots must be a positive integer. Set in class instantiation"
         self.n_baseline_knots = n_baseline_knots
-        self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 2)]
+        self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(0, self.n_baseline_knots + 2)]
         super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)
 
     def _set_knots(self, T, E):
@@ -2315,14 +2311,19 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
         return [
             {
-                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
+                **{
+                    "beta_": np.zeros(len(Xs["beta_"].columns)),
+                    "phi0_": np.array([0.0]),
+                    "phi1_": np.array([0.05]),
+                    "phi2_": np.array([-0.05]),
+                },
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
             }
         ]
 
     def _cumulative_hazard(self, params, T, Xs):
         lT = anp.log(T)
-        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi1_"] * lT)
+        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi0_"] + params["phi1_"] * lT)
 
         for i in range(2, self.n_baseline_knots + 2):
             H *= safe_exp(
@@ -2347,7 +2348,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline hazard at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_hazard(self._norm_mean, times=times)
+        v = self.predict_hazard(self._norm_mean["beta_"], times=times)
         v.columns = ["baseline hazard"]
         return v
 
@@ -2356,7 +2357,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline survival at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_survival_function(self._norm_mean, times=times)
+        v = self.predict_survival_function(self._norm_mean["beta_"], times=times)
         v.columns = ["baseline survival"]
         return v
 
@@ -2365,7 +2366,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline cumulative hazard at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_cumulative_hazard(self._norm_mean, times=times)
+        v = self.predict_cumulative_hazard(self._norm_mean["beta_"], times=times)
         v.columns = ["baseline cumulative hazard"]
         return v
 
@@ -2395,7 +2396,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
         """
         df = df.copy()
-        df["_intercept"] = 1
+        df["Intercept"] = 1
         return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
             df, times=times, conditional_after=conditional_after
         )
@@ -2425,8 +2426,8 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         if isinstance(df, pd.Series):
             df = df.to_frame().T
 
-        df = self._filter_dataframe_to_covariates(df).copy().astype(float)
-        df["_intercept"] = 1
+        df = df.copy()
+        df["Intercept"] = 1
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
@@ -2439,7 +2440,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
     def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
         df = df.copy()
-        df["_intercept"] = 1
+        df["Intercept"] = 1
         return super(ParametricSplinePHFitter, self).score(df, scoring_method)
 
     @property

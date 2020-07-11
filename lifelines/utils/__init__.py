@@ -1092,7 +1092,7 @@ def check_low_var(df, prescript="", postscript=""):
         cols = str(list(df.columns[low_var]))
         warning_text = (
             "%sColumn(s) %s have very low variance. \
-This may harm convergence. Try dropping this redundant column before fitting \
+This may harm convergence. 1) Are you using formula's? Did you mean to add '-1' to the end. 2) Try dropping this redundant column before fitting \
 if convergence fails.%s\n"
             % (prescript, cols, postscript)
         )

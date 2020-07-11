@@ -18,6 +18,7 @@ import pytest
 from scipy.stats import weibull_min, norm, logistic, invweibull, invgamma
 from autograd.scipy.special import expit
 from autograd import numpy as anp
+import patsy
 
 try:
     from flaky import flaky
@@ -1601,7 +1602,7 @@ class TestParametricRegressionFitter:
     @pytest.fixture
     def rossi(self):
         rossi = load_rossi()
-        rossi["_int"] = 1.0
+        rossi["Intercept"] = 1.0
         return rossi
 
     def test_AIC_on_models(self, rossi):
@@ -1763,6 +1764,13 @@ class TestCustomRegressionModel:
         gg.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", regressors=regressors)
         gg.score(df)
 
+    def test_formulas_can_be_used_for_regressors(self, rossi):
+
+        regressors = {"lambda_": ["1"], "mu_": ["age + prio + paro + 1"], "sigma_": ["fin + age + 1"]}
+        gg = GeneralizedGammaRegressionFitter()
+        gg.fit(rossi, "week", "arrest", regressors=regressors)
+        assert gg.summary.shape[0] == 8
+
 
 class TestRegressionFitters:
     @pytest.fixture
@@ -1818,7 +1826,7 @@ class TestRegressionFitters:
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
 
-        rossi["_intercept"] = 1.0
+        rossi["Intercept"] = 1.0
         regression_models = [CustomRegressionModelTesting(), PiecewiseExponentialRegressionFitter(breakpoints=[25.0])]
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
@@ -1934,8 +1942,8 @@ class TestRegressionFitters:
             else:
                 if isinstance(hazards.index, pd.MultiIndex):
                     assert_series_equal(
-                        hazards.drop("_intercept", axis=0, level=1),
-                        hazards_norm.drop("_intercept", axis=0, level=1),
+                        hazards.drop("Intercept", axis=0, level=1),
+                        hazards_norm.drop("Intercept", axis=0, level=1),
                         check_less_precise=1,
                     )
                 else:
@@ -2066,7 +2074,7 @@ class TestPiecewiseExponentialRegressionFitter:
         T_censor = np.minimum(T.mean() * np.random.exponential(size=N), 110)  # 110 is the end of observation, eg. current time.
 
         df = pd.DataFrame(X[:, :-1], columns=["var1", "var2"])
-        df["_intercept"] = 1.0
+        df["Intercept"] = 1.0
 
         df["T"] = np.round(np.maximum(np.minimum(T, T_censor), 0.1), 1)
         df["E"] = T <= T_censor
@@ -2083,15 +2091,15 @@ class TestPiecewiseExponentialRegressionFitter:
 
         assert_allclose(("lambda_0_", "var1"), betas[0][0])
         assert_allclose(("lambda_0_", "var2"), betas[0][1])
-        assert_allclose(("lambda_0_", "_intercept"), betas[0][2])
+        assert_allclose(("lambda_0_", "Intercept"), betas[0][2])
 
         assert_allclose(("lambda_1_", "var1"), betas[1][0])
         assert_allclose(("lambda_1_", "var2"), betas[1][1])
-        assert_allclose(("lambda_1_", "_intercept"), betas[1][2])
+        assert_allclose(("lambda_1_", "Intercept"), betas[1][2])
 
         assert_allclose(("lambda_5_", "var1"), betas[-1][0])
         assert_allclose(("lambda_5_", "var2"), betas[-1][1])
-        assert_allclose(("lambda_5_", "_intercept"), betas[-1][2])
+        assert_allclose(("lambda_5_", "Intercept"), betas[-1][2])
 
 
 class TestAFTFitters:
@@ -2343,8 +2351,8 @@ class TestLogNormalAFTFitter:
 
         npt.assert_allclose(aft.summary.loc[("mu_", "paro"), "coef"], 0.09698076, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("mu_", "prio"), "coef"], -0.10216665, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("mu_", "_intercept"), "coef"], 2.63459946, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("sigma_", "_intercept"), "coef"], -0.47257736, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("mu_", "Intercept"), "coef"], 2.63459946, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("sigma_", "Intercept"), "coef"], -0.47257736, rtol=1e-1)
         npt.assert_allclose(aft.summary.loc[("sigma_", "prio"), "coef"], -0.04741327, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("sigma_", "age"), "coef"], 0.03769193, rtol=1e-1)
 
@@ -2364,8 +2372,8 @@ class TestLogLogisticAFTFitter:
 
         npt.assert_allclose(aft.summary.loc[("alpha_", "paro"), "coef"], 0.07512732, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("alpha_", "prio"), "coef"], -0.08837948, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("alpha_", "_intercept"), "coef"], 2.75013722, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("beta_", "_intercept"), "coef"], 1.22928200, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("alpha_", "Intercept"), "coef"], 2.75013722, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("beta_", "Intercept"), "coef"], 1.22928200, rtol=1e-1)
         npt.assert_allclose(aft.summary.loc[("beta_", "prio"), "coef"], 0.02707661, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("beta_", "age"), "coef"], -0.03853006, rtol=1e-1)
 
@@ -2381,7 +2389,7 @@ class TestLogLogisticAFTFitter:
         accelerated_survival = aft.predict_survival_function(subject).squeeze()
 
         factor = aft.summary.loc[("alpha_", "prio"), "exp(coef)"]
-        expon = aft.summary.loc[("beta_", "_intercept"), "exp(coef)"]
+        expon = aft.summary.loc[("beta_", "Intercept"), "exp(coef)"]
         npt.assert_allclose(
             baseline_survival / (1 - baseline_survival) * factor ** expon, accelerated_survival / (1 - accelerated_survival)
         )
@@ -2415,8 +2423,8 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "coef"], 0.33081212, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], 0.06303764, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.06954257, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 3.98650094, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 0.27564733, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "coef"], 3.98650094, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "coef"], 0.27564733, rtol=1e-4)
 
     def test_fitted_se_with_eha_when_left_truncated(self, aft, rossi):
         """
@@ -2440,8 +2448,8 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "se(coef)"], 0.292, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "se(coef)"], 0.149, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "se(coef)"], 0.022, rtol=1e-1)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.446, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.104, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "se(coef)"], 0.446, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "se(coef)"], 0.104, rtol=1e-2)
 
     def test_fitted_coefs_match_with_flexsurv_has(self, aft, rossi):
         """
@@ -2459,8 +2467,8 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "coef"], 0.31095531, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], 0.05883352, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.06580211, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 3.98968559, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 0.33911900, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "coef"], 3.98968559, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "coef"], 0.33911900, rtol=1e-4)
 
     def test_fitted_se_match_with_flexsurv_has(self, aft, rossi):
         """
@@ -2477,8 +2485,8 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "se(coef)"], 0.27326405, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "se(coef)"], 0.13963680, rtol=1e-4)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "se(coef)"], 0.02093981, rtol=1e-4)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.41904636, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.08900064, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "se(coef)"], 0.41904636, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "se(coef)"], 0.08900064, rtol=1e-3)
 
     def test_fitted_log_likelihood_match_with_flexsurv_has(self, aft, rossi):
         # survreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio, data=df, dist='weibull')
@@ -2500,8 +2508,8 @@ class TestWeibullAFTFitter:
 
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], 0.088364095, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.074052141, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 2.756355922, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 1.163429253, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "coef"], 2.756355922, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "coef"], 1.163429253, rtol=1e-4)
         npt.assert_allclose(aft.summary.loc[("rho_", "prio"), "coef"], 0.008982523, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("rho_", "age"), "coef"], -0.037069994, rtol=1e-4)
 
@@ -2523,7 +2531,7 @@ class TestWeibullAFTFitter:
         aft_without_intercept = WeibullAFTFitter(fit_intercept=True)
         aft_without_intercept.fit(rossi, "week", "arrest", ancillary_df=rossi)
 
-        rossi["_intercept"] = 1.0
+        rossi["Intercept"] = 1.0
         aft_with_intercept = WeibullAFTFitter(fit_intercept=False)
         aft_with_intercept.fit(rossi, "week", "arrest", ancillary_df=rossi)
 
@@ -2564,8 +2572,8 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "se(coef)"], 0.2748, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "se(coef)"], 0.1429, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "se(coef)"], 0.0208, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.4631, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.0870, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "se(coef)"], 0.4631, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "se(coef)"], 0.0870, rtol=1e-3)
 
     def test_robust_errors_against_R_with_weights(self, rossi, aft):
         # r = survreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio, data=df, dist='weibull', robust=TRUE, weights=age)
@@ -2578,8 +2586,8 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "se(coef)"], 0.012179, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "se(coef)"], 0.006427, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "se(coef)"], 0.000964, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.013165, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.003630, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "se(coef)"], 0.013165, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "se(coef)"], 0.003630, rtol=1e-3)
 
     def test_inference_is_the_same_if_using_right_censorship_or_interval_censorship_with_inf_endpoints(self, rossi, aft):
         df = rossi.copy()
@@ -2609,16 +2617,16 @@ class TestWeibullAFTFitter:
 
         aft.fit_interval_censoring(df, "left", "right", "E")
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "coef"], 0.04576, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], np.log(18.31971), rtol=1e-4)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], np.log(2.82628), rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "coef"], np.log(18.31971), rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "coef"], np.log(2.82628), rtol=1e-4)
 
         npt.assert_allclose(aft.log_likelihood_, -2027.196, rtol=1e-3)
 
         npt.assert_allclose(aft.summary.loc[("lambda_", "gender"), "se(coef)"], 0.02823, rtol=1e-1)
 
         with pytest.raises(AssertionError):
-            npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "se(coef)"], 0.42273, rtol=1e-1)
-            npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "se(coef)"], 0.08356, rtol=1e-1)
+            npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "se(coef)"], 0.42273, rtol=1e-1)
+            npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "se(coef)"], 0.08356, rtol=1e-1)
 
         aft.fit_interval_censoring(df, "left", "right", "E", ancillary_df=True)
 
@@ -2647,8 +2655,8 @@ class TestWeibullAFTFitter:
         npt.assert_allclose(aft.summary.loc[("lambda_", "mar"), "coef"], 0.47322543, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], -0.02885281, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.06162843, rtol=1e-3)
-        npt.assert_allclose(aft.summary.loc[("lambda_", "_intercept"), "coef"], 4.93041526, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("rho_", "_intercept"), "coef"], 0.28612353, rtol=1e-4)
+        npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "coef"], 4.93041526, rtol=1e-2)
+        npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "coef"], 0.28612353, rtol=1e-4)
 
     def test_aft_weibull_with_ancillary_model_and_with_weights(self, rossi):
         """
@@ -2659,8 +2667,8 @@ class TestWeibullAFTFitter:
         wf = WeibullAFTFitter(penalizer=0).fit(rossi, "week", "arrest", weights_col="age", ancillary_df=rossi[["prio"]])
 
         npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.39347, rtol=1e-3)
-        npt.assert_allclose(wf.summary.loc[("lambda_", "_intercept"), "coef"], np.log(140.55112), rtol=1e-2)
-        npt.assert_allclose(wf.summary.loc[("rho_", "_intercept"), "coef"], np.log(1.25981), rtol=1e-4)
+        npt.assert_allclose(wf.summary.loc[("lambda_", "Intercept"), "coef"], np.log(140.55112), rtol=1e-2)
+        npt.assert_allclose(wf.summary.loc[("rho_", "Intercept"), "coef"], np.log(1.25981), rtol=1e-4)
         npt.assert_allclose(wf.summary.loc[("rho_", "prio"), "coef"], 0.01485, rtol=1e-4)
 
     def test_aft_weibull_can_do_interval_prediction(self, aft):
@@ -2786,6 +2794,26 @@ class TestCoxPHFitter:
     @pytest.fixture
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
+
+    def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline):
+        cph.fit(rossi, "week", "arrest", formula="age + race - 1")
+        assert cph.summary.index.tolist() == ["age", "race"]
+
+        cph.fit(rossi, "week", "arrest", formula="age * race - 1")
+        assert cph.summary.index.tolist() == ["age", "race", "age:race"]
+
+        cph_spline.fit(rossi, "week", "arrest", formula="age + race - 1")
+        assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race"]
+
+        cph_spline.fit(rossi, "week", "arrest", formula="age * race - 1")
+        assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race", "age:race"]
+
+    def test_formulas_can_be_used_with_prediction(self, rossi, cph, cph_spline):
+        cph.fit(rossi, "week", "arrest", formula="age * race - 1")
+        cph.predict_survival_function(rossi)
+
+        cph_spline.fit(rossi, "week", "arrest", formula="age * race - 1")
+        cph_spline.predict_survival_function(rossi)
 
     def test_timeline_argument_can_be_set(self, rossi, cph_spline, cph):
         timeline = np.linspace(0, 100)
@@ -3004,7 +3032,7 @@ class TestCoxPHFitter:
         npt.assert_allclose(c_index_with_strata, 0.6124492)
 
     def test_check_assumptions(self, cph, rossi):
-        # TODO make this better
+        # TODO make this test better
         cph.fit(rossi, "week", "arrest")
         cph.check_assumptions(rossi)
 
@@ -3059,7 +3087,9 @@ class TestCoxPHFitter:
         cph.fit(df, "T", "E")
 
         results = cph.compute_residuals(df, "schoenfeld")
-        expected = pd.DataFrame([-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344, 0.0], columns=["var1"])
+        expected = pd.DataFrame(
+            [-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344, 0.0], columns=pd.Index(["var1"], name="covariate")
+        )
         assert_frame_equal(results, expected, check_less_precise=3)
 
     def test_schoenfeld_residuals_with_censorship_and_ties(self, cph):
@@ -3081,7 +3111,9 @@ class TestCoxPHFitter:
         cph.fit(df, "T", "E")
         cph.print_summary()
         results = cph.compute_residuals(df, "schoenfeld")
-        expected = pd.DataFrame([-0.3903793341, -0.5535578141, 0.9439371482, 0.0], columns=["var1"], index=[0, 1, 2, 4])
+        expected = pd.DataFrame(
+            [-0.3903793341, -0.5535578141, 0.9439371482, 0.0], columns=pd.Index(["var1"], name="covariate"), index=[0, 1, 2, 4]
+        )
         assert_frame_equal(results, expected, check_less_precise=3)
 
     def test_schoenfeld_residuals_with_weights(self, cph):
@@ -3108,7 +3140,9 @@ class TestCoxPHFitter:
         cph.fit(df, "T", "E", weights_col="w", robust=True)
 
         results = cph.compute_residuals(df, "schoenfeld")
-        expected = pd.DataFrame([-0.6633324862, -0.9107785234, 0.6176009038, -0.6103579448, 0.0], columns=["var1"])
+        expected = pd.DataFrame(
+            [-0.6633324862, -0.9107785234, 0.6176009038, -0.6103579448, 0.0], columns=pd.Index(["var1"], name="covariate")
+        )
         assert_frame_equal(results, expected, check_less_precise=3)
 
     def test_schoenfeld_residuals_with_strata(self, cph):
@@ -3138,7 +3172,9 @@ class TestCoxPHFitter:
 
         results = cph.compute_residuals(df, "schoenfeld")
         expected = pd.DataFrame(
-            [5.898252711e-02, -2.074325854e-02, 0.0, -3.823926885e-02, 0.0], columns=["var1"], index=[0, 3, 4, 1, 2]
+            [5.898252711e-02, -2.074325854e-02, 0.0, -3.823926885e-02, 0.0],
+            columns=pd.Index(["var1"], name="covariate"),
+            index=[0, 3, 4, 1, 2],
         )
         assert_frame_equal(results, expected, check_less_precise=3)
 
@@ -3365,6 +3401,7 @@ log-likelihood ratio test = 33.27 on 7 df
         result = cph.predict_survival_function(rossi_mean)
         assert_series_equal(cph.baseline_survival_["baseline survival"], result[0], check_names=False)
 
+    @pytest.mark.xfail
     def test_cox_ph_prediction_with_series_of_longer_length(self, rossi, cph):
         rossi = rossi[["week", "arrest", "age"]]
         cph.fit(rossi, duration_col="week", event_col="arrest")
@@ -4405,7 +4442,7 @@ log-likelihood ratio test = 33.27 on 7 df
 
     def test_what_happens_to_nans(self, rossi, cph):
         rossi["var4"] = np.nan
-        with pytest.raises(TypeError):
+        with pytest.raises(patsy.PatsyError):
             cph.fit(rossi, duration_col="week", event_col="arrest")
 
     def test_check_assumptions_fails_for_nonunique_index(self, cph, rossi):
@@ -4448,7 +4485,7 @@ class TestAalenAdditiveFitter:
         aaf = AalenAdditiveFitter()
         expected = ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
         aaf.fit(rossi, event_col="arrest", duration_col="week")
-        assert list(aaf.cumulative_hazards_.columns.drop("_intercept")) == expected
+        assert list(aaf.cumulative_hazards_.columns.drop("Intercept")) == expected
 
         aaf = AalenAdditiveFitter(fit_intercept=False)
         expected = ["fin", "age", "race", "wexp", "mar", "paro", "prio"]
@@ -4555,7 +4592,7 @@ class TestAalenAdditiveFitter:
         actual = aaf.hazards_
         npt.assert_allclose(actual.loc[:2, "fin"].tolist(), [-0.004628582, -0.005842295], rtol=1e-06)
         npt.assert_allclose(actual.loc[:2, "prio"].tolist(), [-1.268344e-03, 1.119377e-04], rtol=1e-06)
-        npt.assert_allclose(actual.loc[:2, "_intercept"].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
+        npt.assert_allclose(actual.loc[:2, "Intercept"].tolist(), [1.913901e-02, -3.297233e-02], rtol=1e-06)
 
     def test_aalen_additive_fitter_versus_R_with_weights(self, aaf, regression_dataset):
         """
@@ -4568,7 +4605,7 @@ class TestAalenAdditiveFitter:
             aaf.fit(regression_dataset, "T", "E", weights_col="var3")
         actual = aaf.hazards_
         npt.assert_allclose(actual.iloc[:3]["var1"].tolist(), [1.301523e-02, -4.925302e-04, 2.304792e-02], rtol=1e-06)
-        npt.assert_allclose(actual.iloc[:3]["_intercept"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06)
+        npt.assert_allclose(actual.iloc[:3]["Intercept"].tolist(), [-9.672957e-03, 1.439187e-03, 1.838915e-03], rtol=1e-06)
 
     def test_cumulative_hazards_versus_R(self, aaf, regression_dataset):
         """
@@ -4581,7 +4618,7 @@ class TestAalenAdditiveFitter:
 
         aaf.fit(regression_dataset, "T", "E")
         actual = aaf.cumulative_hazards_.iloc[-1]
-        npt.assert_allclose(actual["_intercept"], 2.1675130235, rtol=1e-06)
+        npt.assert_allclose(actual["Intercept"], 2.1675130235, rtol=1e-06)
         npt.assert_allclose(actual["var1"], 0.6820086125, rtol=1e-06)
         npt.assert_allclose(actual["var2"], -0.0776583514, rtol=1e-06)
         npt.assert_allclose(actual["var3"], 0.5515174017, rtol=1e-06)
