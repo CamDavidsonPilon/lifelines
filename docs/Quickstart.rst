@@ -236,13 +236,15 @@ While the above :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter
 .. note:: More detailed documentation and tutorials are available in `Survival Regression`_.
 
 
+The dataset for regression models is different than the datasets above. All the data, including durations, censored indicators and covariates must be contained in **a Pandas DataFrame**.
+
 .. code:: python
 
     from lifelines.datasets import load_regression_dataset
-    regression_dataset = load_regression_dataset()
+    regression_dataset = load_regression_dataset() # a Pandas DataFrame
 
 
-The input of the ``fit`` method's API in a regression model is different. All the data, including durations, censored indicators and covariates must be contained in **a Pandas DataFrame**. The duration column and event occurred column are specified in the call to ``fit``. Below we model our regression dataset using the Cox proportional hazard model, full docs `here <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#cox-s-proportional-hazard-model>`_.
+A regression model is instantiated, and a model is fit to a dataset using ``fit``. The duration column and event column are specified in the call to ``fit``. Below we model our regression dataset using the Cox proportional hazard model, full docs `here <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#cox-s-proportional-hazard-model>`_.
 
 .. code:: python
 

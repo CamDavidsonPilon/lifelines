@@ -71,7 +71,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         See http://courses.washington.edu/b515/l17.pdf.
 
       n_baseline_knots: int
-        Used when ``baseline_estimation_method`` is "spline". Set the number of _interior_ knots in the baseline hazard. Should be atleast 1.
+        Used when ``baseline_estimation_method="spline"`. Set the number of _interior_ knots in the baseline hazard. Should be atleast 1. Royston et. al, the authors
+        of this model, suggest 2 to start, but any values between 1 and 4 are reasonable.
 
     Examples
     --------
@@ -2309,12 +2310,14 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         self._set_knots(Ts[0], E)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
-        return [
+        #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
+        v = [
             {
                 **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
             }
         ]
+        return v
 
     def _cumulative_hazard(self, params, T, Xs):
         lT = anp.log(T)
