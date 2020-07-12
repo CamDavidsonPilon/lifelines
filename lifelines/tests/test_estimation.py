@@ -1622,9 +1622,9 @@ class TestParametricRegressionFitter:
         wf_array = WeibullAFTFitter(penalizer=penalty, fit_intercept=False).fit(rossi, "week", "arrest")
         wf_float = WeibullAFTFitter(penalizer=0.01, fit_intercept=False).fit(rossi, "week", "arrest")
 
-        assert abs(wf_array.summary.loc[("lambda_", "fin"), "coef"]) > abs(wf_float.summary.loc[("lambda_", "fin"), "coef"])
+        assert abs(wf_array.summary.loc[("lambda_", "age"), "coef"]) > abs(wf_float.summary.loc[("lambda_", "age"), "coef"])
 
-    def test_custom_weibull_model_gives_the_same_data_as_implemented_weibull_model(self, rossi):
+    def test_custom_weibull_model_gives_the_same_data_as_implemented_weibull_model(self):
         class CustomWeibull(ParametricRegressionFitter):
             _scipy_fit_method = "SLSQP"
             _scipy_fit_options = {"ftol": 1e-10, "maxiter": 200}
@@ -1646,15 +1646,18 @@ class TestParametricRegressionFitter:
                 return log_rho_ - log_lambda_ + anp.expm1(log_rho_) * (anp.log(T) - log_lambda_)
 
         cb = CustomWeibull(penalizer=0.0)
-        wf = WeibullAFTFitter(fit_intercept=False, penalizer=0.0)
+        wf = WeibullAFTFitter(penalizer=0.0)
 
-        cb.fit(rossi, "week", "arrest", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
+        rossi = load_rossi()
+        regressors = {"lambda_": rossi.columns.difference(["week", "arrest"]), "rho_": ["1"]}
+
+        cb.fit(rossi, "week", "arrest", regressors=regressors)
         wf.fit(rossi, "week", "arrest")
 
         assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
 
-        cb.fit_left_censoring(rossi, "week", "arrest", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
+        cb.fit_left_censoring(rossi, "week", "arrest", regressors=regressors)
         wf.fit_left_censoring(rossi, "week", "arrest")
 
         assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
@@ -1663,7 +1666,7 @@ class TestParametricRegressionFitter:
         rossi = rossi.loc[rossi["arrest"].astype(bool)]
         rossi["week_end"] = rossi["week"].copy()
         rossi = rossi.drop("arrest", axis=1)
-        cb.fit_interval_censoring(rossi, "week", "week_end", regressors={"lambda_": rossi.columns, "rho_": ["_int"]})
+        cb.fit_interval_censoring(rossi, "week", "week_end", regressors=regressors)
         wf.fit_interval_censoring(rossi, "week", "week_end")
 
         assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
@@ -1724,7 +1727,11 @@ class TestCustomRegressionModel:
             rossi,
             "week",
             event_col="arrest",
-            regressors={"lambda_": rossi.columns, "beta_": ["intercept", "fin"], "rho_": ["intercept"]},
+            regressors={
+                "lambda_": rossi.columns.difference(["week", "arrest"]),
+                "beta_": ["intercept", "fin"],
+                "rho_": ["intercept"],
+            },
         )
         assert_frame_equal(cmA.summary.loc["lambda_"], cmB.summary.loc["lambda_"])
         assert_frame_equal(cmA.summary.loc["rho_"], cmB.summary.loc["rho_"])
@@ -1737,7 +1744,7 @@ class TestCustomRegressionModel:
 
         df["constant"] = 1.0
 
-        regressors = {"lambda_": ["constant"], "mu_": ["NaCl %", "pH", "constant"], "sigma_": ["constant"]}
+        regressors = {"lambda_": ["constant"], "mu_": ["NaCl_percent", "pH", "constant"], "sigma_": ["constant"]}
         gg = GeneralizedGammaRegressionFitter()
         gg.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", regressors=regressors)
         gg.print_summary()
@@ -1759,7 +1766,7 @@ class TestCustomRegressionModel:
 
         df["constant"] = 1.0
 
-        regressors = {"lambda_": ["constant"], "mu_": ["NaCl %", "pH", "constant"], "sigma_": ["constant"]}
+        regressors = {"lambda_": ["constant"], "mu_": ["NaCl_percent", "pH", "constant"], "sigma_": ["constant"]}
         gg = GeneralizedGammaRegressionFitter()
         gg.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", regressors=regressors)
         gg.score(df)
@@ -1822,11 +1829,11 @@ class TestRegressionFitters:
     def test_score_method_returns_same_value_for_unpenalized_models(self, rossi):
         regression_models = [CoxPHFitter(), WeibullAFTFitter()]
         for fitter in regression_models:
+
             fitter.fit(rossi, "week", "arrest")
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
 
-        rossi["Intercept"] = 1.0
         regression_models = [CustomRegressionModelTesting(), PiecewiseExponentialRegressionFitter(breakpoints=[25.0])]
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
@@ -1962,26 +1969,22 @@ class TestRegressionFitters:
             except AttributeError:
                 pass
 
-    def test_error_is_raised_if_using_non_numeric_data_in_fit(self):
+    def test_error_is_not_raised_if_using_non_numeric_data_in_fit(self):
         df = pd.DataFrame.from_dict(
             {
                 "t": [1.0, 5.0, 3.0, 4.0],
-                "bool_": [True, True, False, True],
+                "bool_": [True, False, False, True],
                 "int_": [1, -1, 0, 2],
                 "uint8_": pd.Series([1, 0, 2, 1], dtype="uint8"),
-                "string_": ["test", "a", "2.5", ""],
+                "string_": ["2.5", "a", "2.5", "a"],
                 "float_": [1.2, -0.5, 0.0, 2.2],
-                "categorya_": pd.Series([1, 2, 3, 1], dtype="category"),
+                "categorya_": pd.Series([1, 2, 2, 1], dtype="category"),
                 "categoryb_": pd.Series(["a", "b", "a", "b"], dtype="category"),
             }
         )
 
         for fitter in [CoxPHFitter(), WeibullAFTFitter()]:
-            for subset in [["t", "categoryb_"], ["t", "string_"]]:
-                with pytest.raises(ValueError):
-                    fitter.fit(df[subset], duration_col="t")
-
-            for subset in [["t", "uint8_"]]:
+            for subset in [["t", "categoryb_"], ["t", "string_"], ["t", "uint8_"], ["t", "categorya_"], ["t", "bool_"]]:
                 fitter.fit(df[subset], duration_col="t")
 
     @pytest.mark.xfail
@@ -2074,7 +2077,6 @@ class TestPiecewiseExponentialRegressionFitter:
         T_censor = np.minimum(T.mean() * np.random.exponential(size=N), 110)  # 110 is the end of observation, eg. current time.
 
         df = pd.DataFrame(X[:, :-1], columns=["var1", "var2"])
-        df["Intercept"] = 1.0
 
         df["T"] = np.round(np.maximum(np.minimum(T, T_censor), 0.1), 1)
         df["E"] = T <= T_censor

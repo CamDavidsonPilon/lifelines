@@ -1154,7 +1154,7 @@ def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, dur
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
     See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression\n"
-                    % (col)
+                    % (str(col))
                 )
                 warnings.warn(dedent(warning_text), ConvergenceWarning)
 
@@ -1665,8 +1665,6 @@ class DataframeSlicer:
 
     The purpose of this is to wrap column (multi-) indexing to return a Numpy Array
     instead of a Pandas DataFrame.
-
-
     """
 
     def __init__(self, df: pd.DataFrame):

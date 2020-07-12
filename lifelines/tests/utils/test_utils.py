@@ -950,7 +950,7 @@ class TestSklearnAdapter:
         cph = base_model()
         cph.fit(X, Y)
 
-        s = pickle.dumps(cph)
+        s = pickle.dumps(cph, protocol=-1)
         s = pickle.loads(s)
         assert cph.predict(X).shape[0] == X.shape[0]
 

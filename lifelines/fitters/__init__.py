@@ -1,38 +1,41 @@
 # -*- coding: utf-8 -*-
-import collections
 from functools import partial, wraps
-import sys
-import warnings
+from inspect import getfullargspec
 from datetime import datetime
 from textwrap import dedent
 from typing import *
-from inspect import getfullargspec
+import collections
+import warnings
+import sys
 
-import numpy as np
 from numpy.linalg import inv, pinv
-import autograd.numpy as anp
-from autograd.misc import flatten
+import numpy as np
+
 from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
 from autograd.differential_operators import make_jvp_reversemode
+from autograd.misc import flatten
+import autograd.numpy as anp
+
 from scipy.optimize import minimize, root_scalar
 from scipy.integrate import trapz
 from scipy import stats
+
 import pandas as pd
 import patsy
 
 
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
-from lifelines import utils
 from lifelines.utils.printer import Printer
+from lifelines import utils
 
 
 __all__ = [
-    "BaseFitter",
-    "ParametricRegressionFitter",
-    "RegressionFitter",
     "ParametericAFTRegressionFitter",
-    "UnivariateFitter",
+    "ParametricRegressionFitter",
     "ParametricUnivariateFitter",
+    "RegressionFitter",
+    "UnivariateFitter",
+    "BaseFitter",
 ]
 
 
@@ -1638,7 +1641,7 @@ class ParametricRegressionFitter(RegressionFitter):
         regressors = {}
         Xs = {}
         for param, value in user_inputed_regressor_lookup.items():
-            if isinstance(value, list):
+            if isinstance(value, (list, pd.Index)):
                 # list of covariates
                 formula = " + ".join(value)
             elif isinstance(value, str):

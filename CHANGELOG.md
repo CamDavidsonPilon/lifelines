@@ -3,10 +3,10 @@
 #### 0.25.0 - unreleased
 
 ##### New features
- - Formulas! *lifelines* now supports Patsy formulas in regression models. See docs here.
+ - Formulas! *lifelines* now supports Patsy formulas in regression models. See docs [here]().
 
 ##### API Changes
- - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using "Intercept".
+ - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using `"Intercept"`.
  - The never used "lifelines.metrics" is deleted.
 
 ##### Bug fixes

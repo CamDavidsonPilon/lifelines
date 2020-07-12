@@ -704,10 +704,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self._predicted_partial_hazards_ = (
-                self.predict_partial_hazard(df)
-                .to_frame(name="P")
-                .assign(T=self.durations.values, E=self.event_observed.values, W=self.weights.values)
-                .set_index(X.index)
+                self.predict_partial_hazard(df).to_frame(name="P").assign(T=self.durations, E=self.event_observed, W=self.weights)
             )
 
         self.standard_errors_ = self._compute_standard_errors(X_norm, T, E, weights)
