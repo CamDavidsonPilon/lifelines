@@ -126,7 +126,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
             elif utils.CensoringType.is_left_censoring(self):
                 uni_model.fit_left_censoring(Ts[1], event_observed=E, entry=entries, weights=weights)
 
-            # we may use this later in print_summary
+            # we may use these later in log_likelihood_test()
             self._ll_null_ = uni_model.log_likelihood_
             self._ll_null_dof = len(uni_model._fitted_parameter_names)
             assert self._ll_null_dof == 3

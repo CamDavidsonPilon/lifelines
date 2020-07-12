@@ -4,8 +4,10 @@ Below is a re-implementation of Royston, Clements and Crowther spline models,
 
 Crowther MJ, Royston P, Clements M. A flexible parametric accelerated failure time model.
 """
+import pandas as pd
 from autograd import numpy as np
 from lifelines.fitters import ParametricRegressionFitter
+from lifelines import WeibullAFTFitter
 from lifelines.fitters.mixins import SplineFitterMixin
 from lifelines.utils.safe_exp import safe_exp
 
@@ -21,7 +23,7 @@ class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return {
-            **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "gamma0_": np.array([0.0]), "gamma1_": np.array([0.1])},
+            **{"beta_": np.zeros(len(Xs["beta_"].columns)), "gamma0_": np.array([0.0]), "gamma1_": np.array([0.1])},
             **{"gamma%d_" % i: np.array([0.0]) for i in range(2, self.n_baseline_knots)},
         }
 
@@ -55,13 +57,13 @@ def generate_data(n=20000):
 
     T_observed = np.minimum(T_actual, C)
     E = T_actual < C
-    return pd.DataFrame({"X": X, "E": E, "T": T_observed, "Z": Z, "constant": 1})
+    return pd.DataFrame({"X": X, "E": E, "T": T_observed, "Z": Z})
 
 
 df = generate_data()
 
 
-regressors = {"beta_": ["X", "Z"], "gamma0_": ["constant"], "gamma1_": ["constant"], "gamma2_": ["constant"]}
+regressors = {"beta_": ["X + Z - 1"], "gamma0_": ["1"], "gamma1_": ["1"], "gamma2_": ["1"]}
 
 cf = CRCSplineFitter(3).fit(df, "T", "E", regressors=regressors)
 cf.print_summary()
@@ -98,14 +100,17 @@ def generate_data(n=1000):
     MAX_TIME = 5
     T_observed = np.minimum(MAX_TIME, T_actual)
     E = T_actual < MAX_TIME
-    return pd.DataFrame({"E": E, "T": T_observed, "X": X, "constant": 1})
+    return pd.DataFrame({"E": E, "T": T_observed, "X": X})
 
 
 df = generate_data()
+WeibullAFTFitter().fit(df, "T", "E").print_summary()
 
-regressors = {"beta_": ["X"], "gamma0_": ["constant"], "gamma1_": ["constant"], "gamma2_": ["constant"], "gamma3_": ["constant"]}
+regressors = {"beta_": ["X - 1"], "gamma0_": ["1"], "gamma1_": ["1"], "gamma2_": ["1"], "gamma3_": ["1"]}
 
-WeibullAFTFitter().fit(df.drop("constant", axis=1), "T", "E").print_summary()
 cf = CRCSplineFitter(4).fit(df, "T", "E", regressors=regressors)
+# beta_   X should be around 0.5
+
+
 cf.print_summary()
 cf.predict_hazard(df)[[0, 1, 2, 3]].plot()
