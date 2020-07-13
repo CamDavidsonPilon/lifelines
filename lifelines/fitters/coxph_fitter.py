@@ -682,6 +682,9 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             self.event_observed.index = original_index
             self.weights.index = original_index
 
+        # TODO: doesn't handle weights, nor strata
+        self._central_values = self._compute_central_values_of_raw_training_data(df)
+
         self._norm_mean = X.mean(0)
         self._norm_std = X.std(0)
 
@@ -705,7 +708,10 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self._predicted_partial_hazards_ = (
-                self.predict_partial_hazard(df).to_frame(name="P").assign(T=self.durations, E=self.event_observed, W=self.weights)
+                self.predict_partial_hazard(df)
+                .to_frame(name="P")
+                .assign(T=self.durations, E=self.event_observed, W=self.weights)
+                .set_index(X.index)
             )
 
         self.standard_errors_ = self._compute_standard_errors(X_norm, T, E, weights)
@@ -775,6 +781,9 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         utils.check_complete_separation(X, E, T, self.event_col)
 
     def _check_values_pre_fitting(self, X, T, E, W):
+        """
+        Some utilities to check for bad data coming in, like NaNs or complete separation.
+        """
         utils.check_low_var(X)
         utils.check_for_numeric_dtypes_or_raise(X)
         utils.check_nans_or_infs(T)
@@ -2029,12 +2038,12 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
+    def plot_covariate_groups(self, covariates, values, plot_baseline=True, y="survival_function", **kwargs):
         """
-        Produces a plot comparing the baseline survival curve of the model versus
+        Produces a plot comparing the baseline curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
-        subjects' survival as we vary covariate(s), all else being held equal. The baseline survival
-        curve is equal to the predicted survival curve at all average values in the original dataset.
+        subjects' survival as we vary covariate(s), all else being held equal. The baseline
+        curve is equal to the predicted curve at all average values in the original dataset.
 
         Parameters
         ----------
@@ -2044,6 +2053,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             an iterable of the specific values we wish the covariate(s) to take on.
         plot_baseline: bool
             also display the baseline survival, defined as the survival at the mean of the original dataset.
+        y: str
+            one of "survival_function", or "cumulative_hazard"
         kwargs:
             pass in additional plotting commands.
 
@@ -2101,7 +2112,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             raise ValueError("The number of covariates must equal to second dimension of the values array.")
 
         for covariate in covariates:
-            if covariate not in self.params_.index:
+            if covariate not in self._central_values.columns:
                 raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
 
         drawstyle = "steps-post"
@@ -2109,7 +2120,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         if self.strata is None:
             axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
-            x_bar = self._norm_mean.to_frame().T
+            x_bar = self._central_values
             X = pd.concat([x_bar] * values.shape[0])
 
             if np.array_equal(np.eye(n_covariates), values) or np.array_equal(
@@ -2117,19 +2128,18 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             ):
                 X.index = ["%s=1" % c for c in covariates]
             else:
-                X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+                X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
             for covariate, value in zip(covariates, values.T):
                 X[covariate] = value
-
-            self.predict_survival_function(X).plot(ax=axes, **kwargs)
+            getattr(self, "predict_%s" % y)(X).plot(ax=axes, **kwargs)
             if plot_baseline:
-                self.baseline_survival_.plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
+                getattr(self, "predict_%s" % y)(x_bar).plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
 
         else:
             axes = []
             for stratum, baseline_survival_ in self.baseline_survival_.iteritems():
                 ax = plt.figure().add_subplot(1, 1, 1)
-                x_bar = self._norm_mean.to_frame().T
+                x_bar = self._central_values
 
                 for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
                     x_bar[name] = value
@@ -2138,13 +2148,13 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 if np.array_equal(np.eye(len(covariates)), values):
                     X.index = ["%s=1" % c for c in covariates]
                 else:
-                    X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+                    X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
                 for covariate, value in zip(covariates, values.T):
                     X[covariate] = value
 
-                self.predict_survival_function(X).plot(ax=ax, **kwargs)
+                getattr(self, "predict_%s" % y)(X).plot(ax=ax, **kwargs)
                 if plot_baseline:
-                    baseline_survival_.plot(
+                    getattr(self, "predict_%s" % y)(x_bar).plot(
                         ax=ax, ls=":", label="stratum %s baseline survival" % str(stratum), drawstyle=drawstyle
                     )
                 plt.legend()

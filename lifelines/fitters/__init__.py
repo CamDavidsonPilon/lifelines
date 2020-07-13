@@ -1180,6 +1180,23 @@ class RegressionFitter(BaseFitter):
     def __init__(self, *args, **kwargs):
         super(RegressionFitter, self).__init__(*args, **kwargs)
 
+    def _compute_central_values_of_raw_training_data(self, df):
+        """
+        TODO: test this
+        """
+        if df.size == 0:
+            return None
+        described = df.describe(include="all")
+        try:
+            central_stats = described.loc["top"].copy()
+            central_stats.update(described.loc["mean"])
+        except:
+            # no categorical values, only numeric.
+            central_stats = described.loc["mean"].copy()
+
+        central_stats = central_stats.to_frame(name="baseline").T.infer_objects()
+        return central_stats
+
     def compute_residuals(self, training_dataframe: pd.DataFrame, kind: str) -> pd.DataFrame:
         """
         Compute the residuals the model.
@@ -1706,6 +1723,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self.entry = entries.copy()
         self.weights = weights.copy()
         self.regressors, Xs = self._create_design_info_and_matrices(regressors, df)
+        self._central_values = self._compute_central_values_of_raw_training_data(df)
 
         self._check_values_pre_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
@@ -2461,12 +2479,12 @@ class ParametricRegressionFitter(RegressionFitter):
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, times=None, **kwargs):
+    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, times=None, y="survival_function", **kwargs):
         """
-        Produces a plot comparing the baseline survival curve of the model versus
+        Produces a plot comparing the baseline curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
-        subjects' survival as we vary covariate(s), all else being held equal. The baseline survival
-        curve is equal to the predicted survival curve at all average values in the original dataset.
+        subjects' as we vary covariate(s), all else being held equal. The baseline
+        curve is equal to the predicted y-curve at all average values in the original dataset.
 
         Parameters
         ----------
@@ -2478,6 +2496,8 @@ class ParametricRegressionFitter(RegressionFitter):
             also display the baseline survival, defined as the survival at the mean of the original dataset.
         times:
             pass in a times to plot
+        y: str
+            one of "survival_function", "hazard", "cumulative_hazard". Default "survival_function"
         kwargs:
             pass in additional plotting commands
 
@@ -2517,7 +2537,7 @@ class ParametricRegressionFitter(RegressionFitter):
         if len(covariates) != values.shape[1]:
             raise ValueError("The number of covariates must equal to second dimension of the values array.")
 
-        original_columns = self.params_.index.get_level_values(1)
+        original_columns = self._central_values.columns
         for covariate in covariates:
             if covariate not in original_columns:
                 raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
@@ -2526,18 +2546,18 @@ class ParametricRegressionFitter(RegressionFitter):
             ax = plt.gca()
 
         # model X
-        x_bar = self._norm_mean.to_frame().T
+        x_bar = self._central_values
         X = pd.concat([x_bar] * values.shape[0])
         if np.array_equal(np.eye(len(covariates)), values):
             X.index = ["%s=1" % c for c in covariates]
         else:
-            X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+            X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
         for covariate, value in zip(covariates, values.T):
             X[covariate] = value
 
-        self.predict_survival_function(X, times=times).plot(ax=ax, **kwargs)
+        getattr(self, "predict_%s" % y)(X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
-            self.predict_survival_function(x_bar, times=times).rename(columns={0: "baseline survival"}).plot(
+            getattr(self, "predict_%s" % y)(x_bar, times=times).rename(columns={0: "baseline survival"}).plot(
                 ax=ax, ls=":", color="k"
             )
         return ax
