@@ -1750,12 +1750,12 @@ def find_best_parametric_model(
     censoring_type = CensoringType.MAP[censoring_type]
 
     evaluation_lookup = {
-        "AIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_,
+        "AIC": lambda model: model.AIC_,
         "BIC": lambda model: 2 * len(model._fitted_parameter_names)
         - 2 * model.log_likelihood_ * np.log(model.event_observed.shape[0]),
     }
 
-    eval = evaluation_lookup[scoring_method]
+    eval_ = evaluation_lookup[scoring_method]
 
     if censoring_type != CensoringType.INTERVAL:
         event_times = (event_times,)
@@ -1807,7 +1807,7 @@ def find_best_parametric_model(
                     ci_labels=ci_labels,
                     timeline=timeline
                 )
-            score_ = eval(model)
+            score_ = eval_(model)
 
             if show_progress:
                 print(model._label, ", Score: %.2f" % score_)

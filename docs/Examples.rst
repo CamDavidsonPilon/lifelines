@@ -12,7 +12,7 @@ This section goes through some examples and recipes to help you use *lifelines*.
 Worked Examples
 ####################
 
-If you are looking for some full examples of *lifelines*, `there are full Jupyter notebooks and scripts here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_ and `examples and ideas on the development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>`_.
+If you are looking for some full examples of *lifelines*, there are `full Jupyter notebooks and scripts here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_ and examples and ideas on the `development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>`_.
 
 
 Statistically compare two populations
@@ -167,33 +167,6 @@ the log(-log) transformation implicitly and compares the survival-ness of popula
     results.print_summary()
 
 
-Subtraction and division between survival functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you are interested in taking the difference between two survival functions, simply trying to
-subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
-the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
-
-.. code-block:: python
-
-    from lifelines.datasets import load_waltons
-    from lifelines import KaplanMeierFitter
-
-
-    df = load_waltons()
-    ix = df['group'] == 'miR-137'
-    T_exp, E_exp = df.loc[ix, 'T'], df.loc[ix, 'E']
-    T_con, E_con = df.loc[~ix, 'T'], df.loc[~ix, 'E']
-
-    kmf1 = KaplanMeierFitter().fit(T_exp, E_exp, label="exp")
-    kmf2 = KaplanMeierFitter().fit(T_con, E_con, label="con")
-
-
-    kmf1.subtract(kmf2)
-
-will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, *lifelines* comes with a statistics library. See below.
-
-
 Restricted mean survival times (RMST)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 *lifelines* has a function to accurately compute the restricted mean survival time, defined as
@@ -312,13 +285,16 @@ Selecting a parametric model using AIC
 ###############################################
 
 
-For univariate models (later to be extended to regression models), a natural way to compare different models is the AIC:
+A natural way to compare different models is the AIC:
 
 .. math::  \text{AIC}(\text{model}) = -2 \text{ll} + 2k
 
 where :math:`k` is the number of parameters (degrees-of-freedom) of the model and :math:`\text{ll}` is the maximum log-likelihood. The model with the lowest AIC is desirable, since it's a trade off between maximizing the log-likelihood with as few parameters as possible.
 
-*lifelines* has a built in function to automate AIC comparisons between univariate parametric models:
+All lifelines models have the `AIC_` property after fitting.
+
+
+Further more, *lifelines* has a built in function to automate AIC comparisons between univariate parametric models:
 
 .. code:: python
 
@@ -328,7 +304,7 @@ where :math:`k` is the number of parameters (degrees-of-freedom) of the model an
     T = load_lymph_node()['rectime']
     E = load_lymph_node()['censrec']
 
-    best_model, best_aic_ = find_best_parametric_model(T, E)
+    best_model, best_aic_ = find_best_parametric_model(T, E, scoring_method="AIC")
 
     print(best_model)
     # <lifelines.SplineFitter:"Spline_estimate", fitted with 686 total observations, 387 right-censored observations>
