@@ -35,7 +35,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         the level in the confidence intervals.
 
     fit_intercept: bool, optional (default=True)
-        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
+        Allow lifelines to add an intercept column of 1s to df, and ancillary if applicable.
 
     penalizer: float or array, optional (default=0.0)
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
@@ -113,7 +113,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         self,
         df: pd.DataFrame,
         *,
-        ancillary_df: Optional[pd.DataFrame] = None,
+        ancillary: Optional[pd.DataFrame] = None,
         p: float = 0.5,
         conditional_after: Optional[ndarray] = None
     ) -> pd.Series:
@@ -150,7 +150,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
 
         if conditional_after is None:
             return pd.Series(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p) - 1)), index=_get_index(df))
@@ -163,7 +163,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
                 exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after, index=_get_index(df)
             )
 
-    def predict_expectation(self, df: pd.DataFrame, ancillary_df: Optional[pd.DataFrame] = None) -> pd.Series:
+    def predict_expectation(self, df: pd.DataFrame, ancillary: Optional[pd.DataFrame] = None) -> pd.Series:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -189,5 +189,5 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         --------
         predict_median
         """
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
         return pd.Series(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(df))

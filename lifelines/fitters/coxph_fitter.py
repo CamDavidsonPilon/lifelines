@@ -760,8 +760,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             self.formula = " + ".join(df.columns)
         X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
 
-        if not hasattr(self, "_design_info"):
-            self._design_info = X.design_info
+        self._design_info = X.design_info
 
         X = X.drop("Intercept", axis=1)
 
@@ -1672,7 +1671,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             order = hazard_names
             (X,) = patsy.build_design_matrices([self._design_info], X, return_type="dataframe")
             X = X.reindex(order, axis="columns")
-            X = X.astype(float)
             X = X.values
 
         X = X.astype(float)

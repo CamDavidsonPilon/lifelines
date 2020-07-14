@@ -558,8 +558,8 @@ The Weibull AFT model is implemented under :class:`~lifelines.fitters.weibull_af
             mar         0.311      1.365     0.273  1.139   0.255     1.973      -0.224       0.847
             paro        0.059      1.061     0.140  0.421   0.674     0.570      -0.215       0.333
             prio       -0.066      0.936     0.021 -3.143   0.002     9.224      -0.107      -0.025
-            _intercept  3.990     54.062     0.419  9.521 <0.0005    68.979       3.169       4.812
-    rho_    _intercept  0.339      1.404     0.089  3.809 <0.0005    12.808       0.165       0.514
+            Intercept  3.990     54.062     0.419  9.521 <0.0005    68.979       3.169       4.812
+    rho_    Intercept  0.339      1.404     0.089  3.809 <0.0005    12.808       0.165       0.514
     ---
     Concordance = 0.640
     AIC = 1377.833
@@ -585,25 +585,27 @@ What does the ``rho_    _intercept`` row mean in the above table? Internally, we
 Modeling ancillary parameters
 -----------------------------------------------
 
-In the above model, we left the parameter :math:`\rho` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogeneity in the :math:`\rho` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model :math:`\rho`, we use the ``ancillary_df`` keyword argument in the call to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.fit`. There are four valid options:
+In the above model, we left the parameter :math:`\rho` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogeneity in the :math:`\rho` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model :math:`\rho`, we use the ``ancillary`` keyword argument in the call to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.fit`. There are four valid options:
 
 1. ``False`` or ``None``: explicitly do not model the ``rho_`` parameter (except for its intercept).
 2. a Pandas DataFrame. This option will use the columns in the Pandas DataFrame as the covariates in the regression for ``rho_``. This DataFrame could be a equal to, or a subset of, the original dataset using for modeling ``lambda_``, or it could be a totally different dataset.
 3. ``True``. Passing in ``True`` will internally reuse the dataset that is being used to model ``lambda_``.
+4. A R-like formula.
 
 .. code:: python
 
     aft = WeibullAFTFitter()
 
-    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=False)
-    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=None)
+    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=False)
+    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=None)
 
 
-    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=some_df)
+    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=some_df)
 
 
-    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=True)
-    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=rossi)
+    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=True)
+    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=rossi)
+    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary="fin + age + race + wexp + mar + paro + prio")
 
     aft.print_summary()
 
@@ -625,7 +627,7 @@ In the above model, we left the parameter :math:`\rho` as a single unknown. We c
             mar         0.26       1.30      0.30  0.86   0.39      1.35       -0.33        0.85
             paro        0.09       1.10      0.15  0.61   0.54      0.88       -0.21        0.39
             prio       -0.08       0.92      0.02 -4.24 <0.005     15.46       -0.12       -0.04
-            _intercept  2.68      14.65      0.60  4.50 <0.005     17.14        1.51        3.85
+            Intercept  2.68      14.65      0.60  4.50 <0.005     17.14        1.51        3.85
     rho_    fin        -0.01       0.99      0.15 -0.09   0.92      0.11       -0.31        0.29
             age        -0.05       0.95      0.02 -3.10 <0.005      9.01       -0.08       -0.02
             race       -0.46       0.63      0.25 -1.79   0.07      3.77       -0.95        0.04
@@ -633,7 +635,7 @@ In the above model, we left the parameter :math:`\rho` as a single unknown. We c
             mar         0.10       1.10      0.27  0.36   0.72      0.47       -0.44        0.63
             paro        0.02       1.02      0.16  0.12   0.90      0.15       -0.29        0.33
             prio        0.03       1.03      0.02  1.44   0.15      2.73       -0.01        0.08
-            _intercept  1.48       4.41      0.41  3.60 <0.005     11.62        0.68        2.29
+            Intercept  1.48       4.41      0.41  3.60 <0.005     11.62        0.68        2.29
     ---
     Concordance = 0.63
     Log-likelihood ratio test = 54.45 on 14 df, -log2(p)=19.83
@@ -650,7 +652,7 @@ The plotting API is the same as in :class:`~lifelines.fitters.coxph_fitter.CoxPH
 
     from matplotlib import pyplot as plt
 
-    wft = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=True)
+    wft = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=True)
     wft.plot()
 
 .. image:: images/weibull_aft_forest.png
@@ -665,11 +667,11 @@ We can observe the influence a variable in the model by plotting the *outcome* (
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
 
     times = np.arange(0, 100)
-    wft_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=True, timeline=times)
+    wft_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=True, timeline=times)
     wft_model_rho.plot_covariate_groups('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[0])
     ax[0].set_title("Modelling rho_")
 
-    wft_not_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=False, timeline=times)
+    wft_not_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=False, timeline=times)
     wft_not_model_rho.plot_covariate_groups('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[1])
     ax[1].set_title("Not modelling rho_");
 
@@ -702,11 +704,11 @@ Given a new subject, we ask questions about their future survival? When are they
 
     X = rossi.loc[:10]
 
-    aft.predict_cumulative_hazard(X, ancillary_df=X)
-    aft.predict_survival_function(X, ancillary_df=X)
-    aft.predict_median(X, ancillary_df=X)
-    aft.predict_percentile(X, p=0.9, ancillary_df=X)
-    aft.predict_expectation(X, ancillary_df=X)
+    aft.predict_cumulative_hazard(X, ancillary=X)
+    aft.predict_survival_function(X, ancillary=X)
+    aft.predict_median(X, ancillary=X)
+    aft.predict_percentile(X, p=0.9, ancillary=X)
+    aft.predict_expectation(X, ancillary=X)
 
 
 There are two hyper-parameters that can be used to to achieve a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_. (However, *lifelines* will also accept an array for custom penalizer per variable, see `Cox docs above <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#penalties-and-sparse-regression>`_)
@@ -740,8 +742,8 @@ There are two hyper-parameters that can be used to to achieve a better test scor
             mar         0.00       1.00      0.14  0.01   0.99      0.01       -0.27        0.28
             paro        0.00       1.00      0.08  0.01   0.99      0.01       -0.16        0.16
             prio        0.00       1.00      0.01  0.00   1.00      0.00       -0.03        0.03
-            _intercept  0.00       1.00      0.19  0.00   1.00      0.00       -0.38        0.38
-    rho_    _intercept -0.00       1.00       nan   nan    nan       nan         nan         nan
+            Intercept  0.00       1.00      0.19  0.00   1.00      0.00       -0.38        0.38
+    rho_    Intercept -0.00       1.00       nan   nan    nan       nan         nan         nan
     ---
     Concordance = 0.64
     AIC = 1377.91
@@ -819,10 +821,10 @@ Often, you don't know *a priori* which parametric model to use. Each model has s
 
 
     # with some heterogeneity in the ancillary parameters
-    ancillary_df = rossi[['prio']]
-    llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
-    lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
-    wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
+    ancillary = rossi[['prio']]
+    llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest', ancillary=ancillary)
+    lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest', ancillary=ancillary)
+    wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=ancillary)
 
     print(llf.AIC_) # 1377.89, the best model here, but not the overall best.
     print(lnf.AIC_) # 1380.79
@@ -865,8 +867,8 @@ The parametric models have APIs that handle left and interval censored data, too
     ---
                         coef exp(coef)  se(coef)      z      p  -log2(p)  lower 0.95  upper 0.95
     lambda_ gender      0.05      1.05      0.03   1.66   0.10      3.38       -0.01        0.10
-            _intercept  2.91     18.32      0.02 130.15 <0.005       inf        2.86        2.95
-    rho_    _intercept  1.04      2.83      0.03  36.91 <0.005    988.46        0.98        1.09
+            Intercept  2.91     18.32      0.02 130.15 <0.005       inf        2.86        2.95
+    rho_    Intercept  1.04      2.83      0.03  36.91 <0.005    988.46        0.98        1.09
     ---
     Log-likelihood ratio test = 2.74 on 1 df, -log2(p)=3.35
     """

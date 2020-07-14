@@ -312,15 +312,15 @@ The same dataset, but with a *Weibull accelerated failure time model*. This mode
     lambda_ var1        -0.08       0.92       0.02            -0.13            -0.04                 0.88                 0.97
             var2        -0.02       0.98       0.03            -0.07             0.04                 0.93                 1.04
             var3        -0.08       0.92       0.02            -0.13            -0.03                 0.88                 0.97
-            _intercept   2.53      12.57       0.05             2.43             2.63                11.41                13.85
-    rho_    _intercept   1.09       2.98       0.05             0.99             1.20                 2.68                 3.32
+            Intercept   2.53      12.57       0.05             2.43             2.63                11.41                13.85
+    rho_    Intercept   1.09       2.98       0.05             0.99             1.20                 2.68                 3.32
 
                            z      p   -log2(p)
     lambda_ var1       -3.45 <0.005      10.78
             var2       -0.56   0.57       0.80
             var3       -3.33 <0.005      10.15
-            _intercept 51.12 <0.005        inf
-    rho_    _intercept 20.12 <0.005     296.66
+            Intercept 51.12 <0.005        inf
+    rho_    Intercept 20.12 <0.005     296.66
     ---
     Concordance = 0.58
     AIC = 1018.97

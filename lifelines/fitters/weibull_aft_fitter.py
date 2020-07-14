@@ -41,7 +41,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         the level in the confidence intervals.
 
     fit_intercept: boolean, optional (default=True)
-        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
+        Allow lifelines to add an intercept column of 1s to df, and ancillary if applicable.
 
     penalizer: float or array, optional (default=0.0)
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
@@ -124,7 +124,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         self,
         df: pd.DataFrame,
         *,
-        ancillary_df: Optional[pd.DataFrame] = None,
+        ancillary: Optional[pd.DataFrame] = None,
         p: float = 0.5,
         conditional_after: Optional[np.array] = None
     ) -> pd.Series:
@@ -139,7 +139,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
             a (n,d)  DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_df: DataFrame, optional
+        ancillary: DataFrame, optional
             a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
@@ -156,7 +156,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
 
         """
 
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
 
         if conditional_after is None and len(df.shape) == 2:
             conditional_after = np.zeros(df.shape[0])
@@ -168,7 +168,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
             index=_get_index(df),
         )
 
-    def predict_expectation(self, df: pd.DataFrame, ancillary_df: Optional[pd.DataFrame] = None) -> pd.Series:
+    def predict_expectation(self, df: pd.DataFrame, ancillary: Optional[pd.DataFrame] = None) -> pd.Series:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -178,7 +178,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
             a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_df:  DataFrame, optional
+        ancillary:  DataFrame, optional
             a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
@@ -194,5 +194,5 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         --------
         predict_median
         """
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
         return pd.Series((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(df))

@@ -7,6 +7,7 @@ import time
 
 import numpy as np
 import pandas as pd
+import patsy
 from scipy import stats
 
 from numpy.linalg import norm, inv
@@ -105,6 +106,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         robust=False,
         strata=None,
         initial_point=None,
+        formula: str = None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Proportional Hazard model to a time varying dataset. Tied survival times
@@ -146,6 +148,8 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
+        formula: str, optional
+            A R-like formula for transforming the covariates
 
         Returns
         --------
@@ -162,6 +166,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         self.id_col = id_col
         self.stop_col = stop_col
         self.start_col = start_col
+        self.formula = formula
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
 
         df = df.copy()
@@ -195,6 +200,12 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         )
         weights = df.pop("__weights").astype(float)
 
+        if self.formula is None:
+            self.formula = " + ".join(df.columns)
+        df = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
+        self._design_info = df.design_info
+        df = df.drop("Intercept", axis=1)
+
         df = df.astype(float)
         self._check_values(df, events, start, stop)
 
@@ -212,7 +223,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
             step_size=step_size,
         )
 
-        self.params_ = pd.Series(params_, index=df.columns, name="coef") / self._norm_std
+        self.params_ = pd.Series(params_, index=pd.Index(df.columns, name="covariate"), name="coef") / self._norm_std
         self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=df.columns)
         self.standard_errors_ = self._compute_standard_errors(
             normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
@@ -594,10 +605,13 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
+        hazard_names = self.params_.index
+
         if isinstance(X, pd.DataFrame):
-            order = self.params_.index
-            X = X[order]
-            check_for_numeric_dtypes_or_raise(X)
+            order = hazard_names
+            (X,) = patsy.build_design_matrices([self._design_info], X, return_type="dataframe")
+            X = X.reindex(order, axis="columns")
+            X = X.values
 
         X = X.astype(float)
         index = _get_index(X)

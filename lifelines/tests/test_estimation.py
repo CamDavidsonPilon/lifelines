@@ -1627,14 +1627,16 @@ class TestParametricRegressionFitter:
         assert abs(wf_array.summary.loc[("lambda_", "age"), "coef"]) > abs(wf_float.summary.loc[("lambda_", "age"), "coef"])
 
     def test_custom_weibull_model_gives_the_same_data_as_implemented_weibull_model(self):
+        from lifelines.utils.safe_exp import safe_exp
+
         class CustomWeibull(ParametricRegressionFitter):
             _scipy_fit_method = "SLSQP"
             _scipy_fit_options = {"ftol": 1e-10, "maxiter": 200}
             _fitted_parameter_names = ["lambda_", "rho_"]
 
             def _cumulative_hazard(self, params, T, Xs):
-                lambda_ = anp.exp(anp.dot(Xs["lambda_"], params["lambda_"]))
-                rho_ = anp.exp(anp.dot(Xs["rho_"], params["rho_"]))
+                lambda_ = safe_exp(anp.dot(Xs["lambda_"], params["lambda_"]))
+                rho_ = safe_exp(anp.dot(Xs["rho_"], params["rho_"]))
 
                 return (T / lambda_) ** rho_
 
@@ -2194,7 +2196,7 @@ class TestAFTFitters:
             LogNormalAFTFitter(fit_intercept=False),
             LogLogisticAFTFitter(fit_intercept=False),
         ]:
-            fitter.fit(rossi, "week", "arrest", ancillary_df=rossi[["intercept"]])
+            fitter.fit(rossi, "week", "arrest", ancillary=rossi[["intercept"]])
 
     def test_warning_is_present_if_entry_greater_than_duration(self, rossi, models):
         rossi["start"] = 10
@@ -2207,15 +2209,15 @@ class TestAFTFitters:
         rossi["start"] = 0.0
 
         for fitter in models:
-            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary_df=False)
+            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary=False)
             assert "weights" not in fitter.params_.index.get_level_values(1)
             assert "start" not in fitter.params_.index.get_level_values(1)
 
-            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary_df=True)
+            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary=True)
             assert "weights" not in fitter.params_.index.get_level_values(1)
             assert "start" not in fitter.params_.index.get_level_values(1)
 
-            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary_df=rossi)
+            fitter.fit(rossi, "week", "arrest", weights_col="weights", entry_col="start", ancillary=rossi)
             assert "weights" not in fitter.params_.index.get_level_values(1)
             assert "start" not in fitter.params_.index.get_level_values(1)
 
@@ -2346,7 +2348,7 @@ class TestLogNormalAFTFitter:
         r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio + sdlog(prio) + sdlog(age), data=df, dist='lnorm')
         r$coef
         """
-        aft.fit(rossi, "week", "arrest", ancillary_df=rossi[["prio", "age"]])
+        aft.fit(rossi, "week", "arrest", ancillary=rossi[["prio", "age"]])
 
         npt.assert_allclose(aft.summary.loc[("mu_", "paro"), "coef"], 0.09698076, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("mu_", "prio"), "coef"], -0.10216665, rtol=1e-3)
@@ -2367,7 +2369,7 @@ class TestLogLogisticAFTFitter:
         r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio + shape(prio) + shape(age), data=df, dist='llogis')
         r$coef
         """
-        aft.fit(rossi, "week", "arrest", ancillary_df=rossi[["prio", "age"]])
+        aft.fit(rossi, "week", "arrest", ancillary=rossi[["prio", "age"]])
 
         npt.assert_allclose(aft.summary.loc[("alpha_", "paro"), "coef"], 0.07512732, rtol=1e-1)
         npt.assert_allclose(aft.summary.loc[("alpha_", "prio"), "coef"], -0.08837948, rtol=1e-2)
@@ -2503,7 +2505,7 @@ class TestWeibullAFTFitter:
         r = flexsurvreg(Surv(week, arrest) ~ fin + age + race + wexp + mar + paro + prio + shape(prio) + shape(age), data=df, dist='weibull')
         r$coef
         """
-        aft.fit(rossi, "week", "arrest", ancillary_df=rossi[["prio", "age"]])
+        aft.fit(rossi, "week", "arrest", ancillary=rossi[["prio", "age"]])
 
         npt.assert_allclose(aft.summary.loc[("lambda_", "paro"), "coef"], 0.088364095, rtol=1e-3)
         npt.assert_allclose(aft.summary.loc[("lambda_", "prio"), "coef"], -0.074052141, rtol=1e-3)
@@ -2514,36 +2516,36 @@ class TestWeibullAFTFitter:
 
     def test_ancillary_True_is_same_as_full_df(self, rossi):
 
-        aft1 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=True)
-        aft2 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=rossi)
+        aft1 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary=True)
+        aft2 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary=rossi)
 
         assert_frame_equal(aft1.summary, aft2.summary, check_like=True)
 
     def test_ancillary_None_is_same_as_False(self, rossi):
 
-        aft1 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=None)
-        aft2 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=False)
+        aft1 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary=None)
+        aft2 = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary=False)
 
         assert_frame_equal(aft1.summary, aft2.summary)
 
     def test_fit_intercept(self, rossi):
         aft_without_intercept = WeibullAFTFitter(fit_intercept=True)
-        aft_without_intercept.fit(rossi, "week", "arrest", ancillary_df=rossi)
+        aft_without_intercept.fit(rossi, "week", "arrest", ancillary=rossi)
 
         rossi["Intercept"] = 1.0
         aft_with_intercept = WeibullAFTFitter(fit_intercept=False)
-        aft_with_intercept.fit(rossi, "week", "arrest", ancillary_df=rossi)
+        aft_with_intercept.fit(rossi, "week", "arrest", ancillary=rossi)
 
         assert_frame_equal(aft_with_intercept.summary, aft_without_intercept.summary)
 
-    def test_passing_in_additional_ancillary_df_in_predict_methods_if_fitted_with_one(self, rossi):
+    def test_passing_in_additional_ancillary_in_predict_methods_if_fitted_with_one(self, rossi):
 
-        aft = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary_df=True)
-        aft.predict_median(rossi, ancillary_df=rossi)
-        aft.predict_percentile(rossi, ancillary_df=rossi)
-        aft.predict_cumulative_hazard(rossi, ancillary_df=rossi)
-        aft.predict_hazard(rossi, ancillary_df=rossi)
-        aft.predict_survival_function(rossi, ancillary_df=rossi)
+        aft = WeibullAFTFitter().fit(rossi, "week", "arrest", ancillary=True)
+        aft.predict_median(rossi, ancillary=rossi)
+        aft.predict_percentile(rossi, ancillary=rossi)
+        aft.predict_cumulative_hazard(rossi, ancillary=rossi)
+        aft.predict_hazard(rossi, ancillary=rossi)
+        aft.predict_survival_function(rossi, ancillary=rossi)
 
         aft.predict_median(rossi)
         aft.predict_percentile(rossi)
@@ -2551,13 +2553,13 @@ class TestWeibullAFTFitter:
         aft.predict_hazard(rossi)
         aft.predict_survival_function(rossi)
 
-    def test_passing_in_additional_ancillary_df_in_predict_methods_okay_if_not_fitted_with_one(self, rossi, aft):
+    def test_passing_in_additional_ancillary_in_predict_methods_okay_if_not_fitted_with_one(self, rossi, aft):
 
-        aft.fit(rossi, "week", "arrest", ancillary_df=False)
-        aft.predict_median(rossi, ancillary_df=rossi)
-        aft.predict_percentile(rossi, ancillary_df=rossi)
-        aft.predict_hazard(rossi, ancillary_df=rossi)
-        aft.predict_survival_function(rossi, ancillary_df=rossi)
+        aft.fit(rossi, "week", "arrest", ancillary=False)
+        aft.predict_median(rossi, ancillary=rossi)
+        aft.predict_percentile(rossi, ancillary=rossi)
+        aft.predict_hazard(rossi, ancillary=rossi)
+        aft.predict_survival_function(rossi, ancillary=rossi)
 
     def test_robust_errors_against_R(self, rossi, aft):
         # r = survreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio + age, data=df, dist='weibull', robust=TRUE)
@@ -2628,19 +2630,19 @@ class TestWeibullAFTFitter:
             npt.assert_allclose(aft.summary.loc[("lambda_", "Intercept"), "se(coef)"], 0.42273, rtol=1e-1)
             npt.assert_allclose(aft.summary.loc[("rho_", "Intercept"), "se(coef)"], 0.08356, rtol=1e-1)
 
-        aft.fit_interval_censoring(df, "left", "right", "E", ancillary_df=True)
+        aft.fit_interval_censoring(df, "left", "right", "E", ancillary=True)
 
         npt.assert_allclose(aft.log_likelihood_, -2025.813, rtol=1e-3)
 
         with pytest.raises(AssertionError):
             npt.assert_allclose(aft.summary.loc[("rho_", "gender"), "coef"], 0.1670, rtol=1e-4)
 
-    def test_interval_censoring_with_ancillary_df(self, aft):
+    def test_interval_censoring_with_ancillary(self, aft):
         df = load_c_botulinum_lag_phase()
 
-        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary_df=df)
-        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary_df=True)
-        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary_df="pH")
+        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary=df)
+        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary=True)
+        aft.fit_interval_censoring(df, "lower_bound_days", "upper_bound_days", ancillary="pH")
 
     def test_aft_weibull_with_weights(self, rossi, aft):
         """
@@ -2665,7 +2667,7 @@ class TestWeibullAFTFitter:
         r = flexsurvreg(Surv(week, arrest) ~ fin + race + wexp + mar + paro + prio + shape(prio), data=df, dist='weibull', weights=age)
         r$coef
         """
-        wf = WeibullAFTFitter(penalizer=0).fit(rossi, "week", "arrest", weights_col="age", ancillary_df=rossi[["prio"]])
+        wf = WeibullAFTFitter(penalizer=0).fit(rossi, "week", "arrest", weights_col="age", ancillary=rossi[["prio"]])
 
         npt.assert_allclose(wf.summary.loc[("lambda_", "fin"), "coef"], 0.39347, rtol=1e-3)
         npt.assert_allclose(wf.summary.loc[("lambda_", "Intercept"), "coef"], np.log(140.55112), rtol=1e-2)

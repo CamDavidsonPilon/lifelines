@@ -5,7 +5,7 @@
 ##### New features
  - Formulas! *lifelines* now supports R-like formulas in regression models. See docs [here]().
  - `calibration.survival_probability_calibration` now works with out-of-sample data.
- - `plot_covariate_group` now can plot other y-values like hazards and cumulative hazards, (default: survival function).
+ - `plot_covariate_group` now can plot other y-values like hazards and cumulative hazards (default: survival function).
 
 
 ##### API Changes

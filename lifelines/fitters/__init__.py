@@ -1183,6 +1183,7 @@ class RegressionFitter(BaseFitter):
     def _compute_central_values_of_raw_training_data(self, df):
         """
         TODO: test this
+        TODO: median instead of mean?
         """
         if df.size == 0:
             return None
@@ -1363,7 +1364,6 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-        formula: str = None,
     ) -> "self":
         """
         Fit the regression model to a left-censored dataset.
@@ -1393,7 +1393,7 @@ class ParametricRegressionFitter(RegressionFitter):
             diagnostics. Useful if convergence is failing.
 
         regressors: dict, optional
-            a dictionary of parameter names -> list of column names that maps model parameters
+            a dictionary of parameter names -> {list of column names, formula} that maps model parameters
             to a linear combination of variables. If left as None, all variables
             will be used for all parameters.
 
@@ -1449,7 +1449,7 @@ class ParametricRegressionFitter(RegressionFitter):
         lower_bound_col,
         upper_bound_col,
         event_col=None,
-        ancillary_df=None,
+        ancillary=None,
         regressors=None,
         show_progress=False,
         timeline=None,
@@ -1457,7 +1457,6 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-        formula: str = None,
     ) -> "self":
         """
         Fit the regression model to a interval-censored dataset.
@@ -1487,7 +1486,7 @@ class ParametricRegressionFitter(RegressionFitter):
             diagnostics. Useful if convergence is failing.
 
         regressors: dict, optional
-            a dictionary of parameter names -> list of column names that maps model parameters
+            a dictionary of parameter names -> {list of column names, formula} that maps model parameters
             to a linear combination of variables. If left as None, all variables
             will be used for all parameters.
 
@@ -1507,9 +1506,6 @@ class ParametricRegressionFitter(RegressionFitter):
         entry_col: string
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
-
-        formula:
-            TODO
 
         Returns
         -------
@@ -1591,7 +1587,7 @@ class ParametricRegressionFitter(RegressionFitter):
             diagnostics. Useful if convergence is failing.
 
         regressors: dict, optional
-            a dictionary of parameter names -> list of column names that maps model parameters
+            a dictionary of parameter names -> {list of column names, formula} that maps model parameters
             to a linear combination of variables. If left as None, all variables
             will be used for all parameters.
 
@@ -1611,9 +1607,6 @@ class ParametricRegressionFitter(RegressionFitter):
         entry_col: string
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
-
-        formula: string
-            TODO
 
         Returns
         -------
@@ -1732,15 +1725,8 @@ class ParametricRegressionFitter(RegressionFitter):
 
         self._check_values_pre_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
-        self._norm_mean = Xs.mean(0)
-
-        if self._KNOWN_MODEL and hasattr(self, "_ancillary_parameter_name") and hasattr(self, "_primary_parameter_name"):
-            # Known AFT model
-            self._norm_mean_primary = Xs[self._primary_parameter_name].mean(0)
-            self._norm_mean_ancillary = Xs[self._ancillary_parameter_name].mean(0)
-
-        _index = Xs.columns
         _norm_std = Xs.std(0)
+        _index = Xs.columns
 
         self._cols_to_not_penalize = self._find_cols_to_not_penalize(_norm_std)
         self._norm_std = Xs.std(0)
@@ -2609,7 +2595,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         df,
         duration_col,
         event_col=None,
-        ancillary_df=None,
+        ancillary=None,
         fit_intercept=None,
         show_progress=False,
         timeline=None,
@@ -2643,7 +2629,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
-        ancillary_df: None, boolean, or DataFrame, optional (default=None)
+        ancillary: None, boolean, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates/formula as ``df``.
@@ -2671,7 +2657,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
         formula: string
-            TODO
+            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
 
         Returns
         -------
@@ -2698,7 +2684,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             aft.predict_median(df)
 
             aft = WeibullAFTFitter()
-            aft.fit(df, 'T', 'E', ancillary_df=df)
+            aft.fit(df, 'T', 'E', ancillary=df)
             aft.print_summary()
             aft.predict_median(df)
 
@@ -2723,28 +2709,26 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
 
-        if isinstance(ancillary_df, pd.DataFrame):
+        if isinstance(ancillary, pd.DataFrame):
             self.model_ancillary = True
-            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference(
+            assert ancillary.shape[0] == df.shape[0], "ancillary must be the same shape[0] as df"
+            regressors[self._ancillary_parameter_name] = ancillary.columns.difference(
                 [self.duration_col, self.event_col, self.entry_col, self.weights_col]
             ).tolist()
 
-            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
-                [self.duration_col, self.event_col]
-            )
-            df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
+            ancillary_cols_to_consider = ancillary.columns.difference(df.columns).difference([self.duration_col, self.event_col])
+            df = pd.concat([df, ancillary[ancillary_cols_to_consider]], axis=1)
 
-        elif isinstance(ancillary_df, str):
+        elif isinstance(ancillary, str):
             # patsy formula
             self.model_ancillary = True
-            regressors[self._ancillary_parameter_name] = [ancillary_df]
+            regressors[self._ancillary_parameter_name] = [ancillary]
 
-        elif (ancillary_df is True) or self.model_ancillary:
+        elif (ancillary is True) or self.model_ancillary:
             self.model_ancillary = True
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
-        elif (ancillary_df is None) or (ancillary_df is False):
+        elif (ancillary is None) or (ancillary is False):
             regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
 
         if self.fit_intercept:
@@ -2753,7 +2737,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         elif not self.fit_intercept:
             regressors[self._primary_parameter_name].append("0")
             regressors[self._ancillary_parameter_name].append("0")
-            if (ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary:
+            if (ancillary is None) or (ancillary is False) or not self.model_ancillary:
                 regressors[self._ancillary_parameter_name].append("1")
 
         super(ParametericAFTRegressionFitter, self)._fit(
@@ -2778,7 +2762,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         lower_bound_col,
         upper_bound_col,
         event_col=None,
-        ancillary_df=None,
+        ancillary=None,
         fit_intercept=None,
         show_progress=False,
         timeline=None,
@@ -2809,7 +2793,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, will be inferred from the start and stop columns (lower_bound==upper_bound means uncensored)
 
-        ancillary_df: None, boolean, or DataFrame, optional (default=None)
+        ancillary: None, boolean, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
@@ -2839,8 +2823,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
-        formula: str
-            TODO
+        formula: string
+            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
 
         Returns
         -------
@@ -2868,7 +2852,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             aft.predict_median(df)
 
             aft = WeibullAFTFitter()
-            aft.fit_interval_censoring(df, 'start', 'stop', 'E', ancillary_df=df)
+            aft.fit_interval_censoring(df, 'start', 'stop', 'E', ancillary=df)
             aft.print_summary()
             aft.predict_median(df)
         """
@@ -2909,28 +2893,28 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
 
-        if isinstance(ancillary_df, pd.DataFrame):
+        if isinstance(ancillary, pd.DataFrame):
             self.model_ancillary = True
-            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference(
+            assert ancillary.shape[0] == df.shape[0], "ancillary must be the same shape[0] as df"
+            regressors[self._ancillary_parameter_name] = ancillary.columns.difference(
                 [self.upper_bound_col, self.lower_bound_col, self.event_col, self.weights_col, self.entry_col]
             ).tolist()
 
-            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
+            ancillary_cols_to_consider = ancillary.columns.difference(df.columns).difference(
                 [self.upper_bound_col, self.lower_bound_col, self.event_col]
             )
-            df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
+            df = pd.concat([df, ancillary[ancillary_cols_to_consider]], axis=1)
 
-        elif isinstance(ancillary_df, str):
+        elif isinstance(ancillary, str):
             # patsy formula
             self.model_ancillary = True
-            regressors[self._ancillary_parameter_name] = [ancillary_df]
+            regressors[self._ancillary_parameter_name] = [ancillary]
 
-        elif (ancillary_df is True) or self.model_ancillary:
+        elif (ancillary is True) or self.model_ancillary:
             self.model_ancillary = True
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
-        elif (ancillary_df is None) or (ancillary_df is False):
+        elif (ancillary is None) or (ancillary is False):
             regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
 
         if self.fit_intercept:
@@ -2938,7 +2922,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors[self._ancillary_parameter_name].append("1")
         elif not self.fit_intercept:
             regressors[self._primary_parameter_name].append("0")
-            if (ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary:
+            if (ancillary is None) or (ancillary is False) or not self.model_ancillary:
                 regressors[self._ancillary_parameter_name].append("1")
 
         super(ParametericAFTRegressionFitter, self)._fit(
@@ -2962,7 +2946,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         df,
         duration_col=None,
         event_col=None,
-        ancillary_df=None,
+        ancillary=None,
         fit_intercept=None,
         show_progress=False,
         timeline=None,
@@ -2992,11 +2976,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
-        ancillary_df: None, boolean, or DataFrame, optional (default=None)
+        ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+            If str, must be a valid formula
 
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
@@ -3022,8 +3007,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
-        formula:
-            TODO
+        formula: string
+            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+
 
         Returns
         -------
@@ -3050,7 +3036,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             aft.predict_median(df)
 
             aft = WeibullAFTFitter()
-            aft.fit_left_censoring(df, 'T', 'E', ancillary_df=df)
+            aft.fit_left_censoring(df, 'T', 'E', ancillary=df)
             aft.print_summary()
             aft.predict_median(df)
         """
@@ -3074,28 +3060,26 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
 
-        if isinstance(ancillary_df, pd.DataFrame):
+        if isinstance(ancillary, pd.DataFrame):
             self.model_ancillary = True
-            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference(
+            assert ancillary.shape[0] == df.shape[0], "ancillary must be the same shape[0] as df"
+            regressors[self._ancillary_parameter_name] = ancillary.columns.difference(
                 [self.duration_col, self.event_col, self.entry_col, self.weights_col]
             ).tolist()
 
-            ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
-                [self.duration_col, self.event_col]
-            )
-            df = pd.concat([df, ancillary_df[ancillary_cols_to_consider]], axis=1)
+            ancillary_cols_to_consider = ancillary.columns.difference(df.columns).difference([self.duration_col, self.event_col])
+            df = pd.concat([df, ancillary[ancillary_cols_to_consider]], axis=1)
 
-        elif isinstance(ancillary_df, str):
+        elif isinstance(ancillary, str):
             # patsy formula
             self.model_ancillary = True
-            regressors[self._ancillary_parameter_name] = [ancillary_df]
+            regressors[self._ancillary_parameter_name] = [ancillary]
 
-        elif (ancillary_df is True) or self.model_ancillary:
+        elif (ancillary is True) or self.model_ancillary:
             self.model_ancillary = True
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
-        elif (ancillary_df is None) or (ancillary_df is False):
+        elif (ancillary is None) or (ancillary is False):
             regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
 
         if self.fit_intercept:
@@ -3103,7 +3087,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors[self._ancillary_parameter_name].append("1")
         elif not self.fit_intercept:
             regressors[self._primary_parameter_name].append("0")
-            if (ancillary_df is None) or (ancillary_df is False) or not self.model_ancillary:
+            if (ancillary is None) or (ancillary is False) or not self.model_ancillary:
                 regressors[self._ancillary_parameter_name].append("1")
 
         super(ParametericAFTRegressionFitter, self)._fit(
@@ -3290,7 +3274,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if len(covariates) != values.shape[1]:
             raise ValueError("The number of covariates must equal to second dimension of the values array.")
 
-        original_columns = self.params_.index.get_level_values(1)
+        original_columns = self._central_values.columns
         for covariate in covariates:
             if covariate not in original_columns:
                 raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
@@ -3299,7 +3283,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             ax = plt.gca()
 
         # model X
-        x_bar = self._norm_mean_primary.to_frame().T
+        x_bar = self._central_values
         X = pd.concat([x_bar] * values.shape[0])
         if np.array_equal(np.eye(len(covariates)), values):
             X.index = ["%s=1" % c for c in covariates]
@@ -3309,7 +3293,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             X[covariate] = value
 
         # model ancillary X
-        x_bar_anc = self._norm_mean_ancillary.to_frame().T
+        x_bar_anc = self._central_values
         ancillary_X = pd.concat([x_bar_anc] * values.shape[0])
         for covariate, value in zip(covariates, values.T):
             ancillary_X[covariate] = value
@@ -3318,11 +3302,11 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             X["Intercept"] = 1.0
             ancillary_X["Intercept"] = 1.0
 
-        self.predict_survival_function(X, ancillary_df=ancillary_X, times=times).plot(ax=ax, **kwargs)
+        self.predict_survival_function(X, ancillary=ancillary_X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
-            self.predict_survival_function(x_bar, ancillary_df=x_bar_anc, times=times).rename(
-                columns={0: "baseline survival"}
-            ).plot(ax=ax, ls=":", color="k")
+            self.predict_survival_function(x_bar, ancillary=x_bar_anc, times=times).rename(columns={0: "baseline survival"}).plot(
+                ax=ax, ls=":", color="k"
+            )
         return ax
 
     def _prep_inputs_for_prediction_and_return_scores(self, X, ancillary_X):
@@ -3356,7 +3340,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return primary_scores, ancillary_scores
 
-    def predict_survival_function(self, df, times=None, conditional_after=None, ancillary_df=None) -> pd.DataFrame:
+    def predict_survival_function(self, df, times=None, conditional_after=None, ancillary=None) -> pd.DataFrame:
         """
         Predict the survival function for individuals, given their covariates. This assumes that the individual
         just entered the study (that is, we do not condition on how long they have already lived for.)
@@ -3383,10 +3367,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
         with np.errstate(divide="ignore"):
             return np.exp(
-                -self.predict_cumulative_hazard(df, ancillary_df=ancillary_df, times=times, conditional_after=conditional_after)
+                -self.predict_cumulative_hazard(df, ancillary=ancillary, times=times, conditional_after=conditional_after)
             )
 
-    def predict_median(self, df, *, ancillary_df=None, conditional_after=None) -> pd.DataFrame:
+    def predict_median(self, df, *, ancillary=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -3410,18 +3394,18 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         """
 
-        return self.predict_percentile(df, ancillary_df=ancillary_df, p=0.5, conditional_after=conditional_after)
+        return self.predict_percentile(df, ancillary=ancillary, p=0.5, conditional_after=conditional_after)
 
-    def predict_percentile(self, df, *, ancillary_df=None, p=0.5, conditional_after=None) -> pd.Series:
+    def predict_percentile(self, df, *, ancillary=None, p=0.5, conditional_after=None) -> pd.Series:
         warnings.warn(
             "Approximating using `predict_survival_function`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.\n",
             utils.ApproximationWarning,
         )
         return utils.qth_survival_times(
-            p, self.predict_survival_function(df, ancillary_df=ancillary_df, conditional_after=conditional_after)
+            p, self.predict_survival_function(df, ancillary=ancillary, conditional_after=conditional_after)
         )
 
-    def predict_hazard(self, df, *, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
+    def predict_hazard(self, df, *, ancillary=None, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the median lifetimes for the individuals. If the survival curve of an
         individual does not cross 0.5, then the result is infinity.
@@ -3455,10 +3439,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         n = df.shape[0]
 
-        if isinstance(ancillary_df, pd.DataFrame):
-            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            for c in ancillary_df.columns.difference(df.columns):
-                df[c] = ancillary_df[c]
+        if isinstance(ancillary, pd.DataFrame):
+            assert ancillary.shape[0] == df.shape[0], "ancillary must be the same shape[0] as df"
+            for c in ancillary.columns.difference(df.columns):
+                df[c] = ancillary[c]
 
         if self.fit_intercept:
             df["Intercept"] = 1.0
@@ -3473,7 +3457,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             # TODO
             raise NotImplementedError()
 
-    def predict_cumulative_hazard(self, df, *, ancillary_df=None, times=None, conditional_after=None) -> pd.DataFrame:
+    def predict_cumulative_hazard(self, df, *, ancillary=None, times=None, conditional_after=None) -> pd.DataFrame:
         """
         Predict the cumulative hazard for the individuals.
 
@@ -3506,10 +3490,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         n = df.shape[0]
 
-        if isinstance(ancillary_df, pd.DataFrame):
-            assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            for c in ancillary_df.columns.difference(df.columns):
-                df[c] = ancillary_df[c]
+        if isinstance(ancillary, pd.DataFrame):
+            assert ancillary.shape[0] == df.shape[0], "ancillary must be the same shape[0] as df"
+            for c in ancillary.columns.difference(df.columns):
+                df[c] = ancillary[c]
 
         if self.fit_intercept:
             df["Intercept"] = 1.0
