@@ -90,7 +90,7 @@ from lifelines.generate_datasets import generate_hazard_rates, generate_random_l
 @pytest.fixture
 def sample_lifetimes():
     N = 30
-    return (np.random.randint(20, size=N), np.random.randint(2, size=N))
+    return (np.random.randint(1, 20, size=N), np.random.randint(2, size=N))
 
 
 @pytest.fixture
@@ -1036,6 +1036,7 @@ class TestWeibullFitter:
 
 
 class TestGeneralizedGammaFitter:
+    @flaky
     def test_exponential_data_inference(self):
         T = np.random.exponential(1.0, size=20000)
         gg = GeneralizedGammaFitter().fit(T)
@@ -1061,6 +1062,7 @@ class TestGeneralizedGammaFitter:
         gg.print_summary(4)
         assert abs(gg.summary.loc["lambda_"]["coef"]) < 0.05
 
+    @flaky
     def test_inverse_weibull_inference(self):
         T = invweibull(5).rvs(10000)
         gg = GeneralizedGammaFitter().fit(T)
@@ -1710,12 +1712,11 @@ class TestCustomRegressionModel:
     @pytest.fixture
     def rossi(self):
         rossi = load_rossi()
-        rossi["intercept"] = 1.0
         return rossi
 
     def test_reparameterization_flips_the_sign(self, rossi):
 
-        regressors = {"lambda_": rossi.columns, "rho_": ["intercept"], "beta_": ["intercept", "fin"]}
+        regressors = {"lambda_": rossi.columns.difference(["arrest", "week"]), "rho_": ["1"], "beta_": ["fin + 1"]}
 
         cmA = CureModelA()
         cmB = CureModelB()
@@ -1727,11 +1728,7 @@ class TestCustomRegressionModel:
             rossi,
             "week",
             event_col="arrest",
-            regressors={
-                "lambda_": rossi.columns.difference(["week", "arrest"]),
-                "beta_": ["intercept", "fin"],
-                "rho_": ["intercept"],
-            },
+            regressors={"lambda_": rossi.columns.difference(["week", "arrest"]), "rho_": ["1"], "beta_": ["fin + 1"]},
         )
         assert_frame_equal(cmA.summary.loc["lambda_"], cmB.summary.loc["lambda_"])
         assert_frame_equal(cmA.summary.loc["rho_"], cmB.summary.loc["rho_"])
@@ -2285,11 +2282,11 @@ class TestAFTFitters:
         for aft in models:
             aft.fit(rossi, "week", "arrest")
 
-            subject = aft._norm_mean.to_frame().T
+            subject = aft._central_values
 
             baseline_survival = aft.predict_median(subject).squeeze()
 
-            subject.loc[0, "prio"] += 1
+            subject.loc["baseline", "prio"] += 1
             accelerated_survival = aft.predict_median(subject).squeeze()
             factor = aft.summary.loc[(aft._primary_parameter_name, "prio"), "exp(coef)"]
             npt.assert_allclose(accelerated_survival, baseline_survival * factor)
@@ -2298,11 +2295,11 @@ class TestAFTFitters:
         for aft in models:
             aft.fit(rossi, "week", "arrest")
 
-            subject = aft._norm_mean.to_frame().T
+            subject = aft._central_values
 
             baseline_survival = aft.predict_expectation(subject).squeeze()
 
-            subject.loc[0, "prio"] += 1
+            subject.loc["baseline", "prio"] += 1
             accelerated_survival = aft.predict_expectation(subject).squeeze()
             factor = aft.summary.loc[(aft._primary_parameter_name, "prio"), "exp(coef)"]
             npt.assert_allclose(accelerated_survival, baseline_survival * factor)
@@ -2372,8 +2369,8 @@ class TestLogLogisticAFTFitter:
         """
         aft.fit(rossi, "week", "arrest", ancillary_df=rossi[["prio", "age"]])
 
-        npt.assert_allclose(aft.summary.loc[("alpha_", "paro"), "coef"], 0.07512732, rtol=1e-2)
-        npt.assert_allclose(aft.summary.loc[("alpha_", "prio"), "coef"], -0.08837948, rtol=1e-3)
+        npt.assert_allclose(aft.summary.loc[("alpha_", "paro"), "coef"], 0.07512732, rtol=1e-1)
+        npt.assert_allclose(aft.summary.loc[("alpha_", "prio"), "coef"], -0.08837948, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("alpha_", "Intercept"), "coef"], 2.75013722, rtol=1e-2)
         npt.assert_allclose(aft.summary.loc[("beta_", "Intercept"), "coef"], 1.22928200, rtol=1e-1)
         npt.assert_allclose(aft.summary.loc[("beta_", "prio"), "coef"], 0.02707661, rtol=1e-2)
@@ -2383,11 +2380,11 @@ class TestLogLogisticAFTFitter:
 
         aft.fit(rossi, "week", "arrest")
 
-        subject = aft._norm_mean.to_frame().T
+        subject = aft._central_values
 
         baseline_survival = aft.predict_survival_function(subject).squeeze()
 
-        subject.loc[0, "prio"] += 1
+        subject.loc["baseline", "prio"] += 1
         accelerated_survival = aft.predict_survival_function(subject).squeeze()
 
         factor = aft.summary.loc[("alpha_", "prio"), "exp(coef)"]
@@ -2807,10 +2804,10 @@ class TestCoxPHFitter:
         assert cph.summary.index.tolist() == ["age", "race", "age:race"]
 
         cph_spline.fit(rossi, "week", "arrest", formula="age + race")
-        assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race"]
+        assert cph_spline.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race"]
 
         cph_spline.fit(rossi, "week", "arrest", formula="age * race")
-        assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race", "age:race"]
+        assert cph_spline.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race", "age:race"]
 
     def test_formulas_can_be_used_with_prediction(self, rossi, cph, cph_spline):
         cph.fit(rossi, "week", "arrest", formula="age * race")
@@ -5236,6 +5233,7 @@ class TestAalenJohansenFitter:
 
 
 class TestMixtureCureFitter:
+    @flaky
     def test_exponential_data_produces_correct_inference_for_both_cure_and_non_cure_fractions(self):
         N = 1000000
         scale = 5

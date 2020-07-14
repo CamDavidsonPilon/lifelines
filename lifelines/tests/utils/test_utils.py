@@ -9,6 +9,7 @@ from pandas.testing import assert_frame_equal, assert_series_equal
 import numpy.testing as npt
 from numpy.linalg import norm, lstsq
 from numpy.random import randn
+from flaky import flaky
 
 from lifelines import CoxPHFitter, WeibullAFTFitter, KaplanMeierFitter, ExponentialFitter
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
@@ -1018,6 +1019,7 @@ def test_rmst_exactely_with_known_solution():
     assert abs(utils.restricted_mean_survival_time(exp, t=lambda_) - lambda_ * (np.e - 1) / np.e) < 0.001
 
 
+@flaky
 def test_rmst_approximate_solution():
 
     T = np.random.exponential(2, 1000)

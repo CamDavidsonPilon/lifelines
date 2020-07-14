@@ -41,9 +41,6 @@ An example dataset we will use is the Rossi recidivism dataset, available in *li
 The DataFrame ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column denotes if the event occurred, and the other columns represent variables we wish to regress against.
 
 
-If you need to first clean or transform your dataset (encode categorical variables, add interaction terms, etc.), that should happen *before* using *lifelines*. Libraries like Pandas and Patsy help with that.
-
-
 Cox's proportional hazard model
 =================================
 
@@ -67,10 +64,10 @@ The implementation of the Cox model in *lifelines* is under :class:`~lifelines.f
     from lifelines import CoxPHFitter
     from lifelines.datasets import load_rossi
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
 
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi, duration_col='week', event_col='arrest')
 
     cph.print_summary()  # access the results using cph.summary
 
@@ -107,6 +104,61 @@ The implementation of the Cox model in *lifelines* is under :class:`~lifelines.f
     log-likelihood ratio test = 33.27 on 7 df
     -log2(p) of ll-ratio test = 15.37
     """
+
+New in v0.25.0, We can also use ✨formulas✨ to handle the right-hand-side of linear equation. For example:
+
+.. code:: python
+
+    cph.fit(rossi, duration_col='week', event_col='arrest', formula="fin + wexp + age * prio")
+
+is analgous to the linear model:
+
+.. math::
+   \beta_1\text{fin} + \beta_2\text{wexp} + \beta_3 \text{age} + \beta_4 \text{prio} + \beta_5 \text{age} \cdot \text{prio}
+
+.. code:: python
+
+    cph.fit(rossi, duration_col='week', event_col='arrest', formula="fin + wexp + age * prio")
+    cph.print_summary()
+
+    """
+    <lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
+                 duration col = 'week'
+                    event col = 'arrest'
+          baseline estimation = breslow
+       number of observations = 432
+    number of events observed = 114
+       partial log-likelihood = -659.39
+             time fit was run = 2020-07-13 19:30:33 UTC
+
+    ---
+                coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+    covariate
+    fin        -0.33       0.72       0.19            -0.70             0.04                 0.49                 1.05
+    wexp       -0.24       0.79       0.21            -0.65             0.17                 0.52                 1.19
+    age        -0.03       0.97       0.03            -0.09             0.03                 0.92                 1.03
+    prio        0.31       1.36       0.17            -0.03             0.64                 0.97                 1.90
+    age:prio   -0.01       0.99       0.01            -0.02             0.01                 0.98                 1.01
+
+                  z    p   -log2(p)
+    covariate
+    fin       -1.73 0.08       3.57
+    wexp      -1.14 0.26       1.97
+    age       -0.93 0.35       1.51
+    prio       1.80 0.07       3.80
+    age:prio  -1.28 0.20       2.32
+    ---
+    Concordance = 0.64
+    Partial AIC = 1328.77
+    log-likelihood ratio test = 31.99 on 5 df
+    -log2(p) of ll-ratio test = 17.35
+    """
+
+Formulas can be used to create interactions, encode categorical variables, create splines, and so on. The formulas used are (almost) the same as what's available in R and statsmodels.
+
+
+Interpretation
+-----------------------
 
 To access the coefficients and the baseline hazard directly, you can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.params_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` respectively. Taking a look at these coefficients for a moment, ``prio`` (the number of prior arrests) has a coefficient of about 0.09. Thus, a one unit increase in ``prio`` means the the baseline hazard will increase by a factor of :math:`\exp{(0.09)} = 1.10` - about a 10% increase. Recall, in the Cox proportional hazard model, a higher hazard means more at risk of the event occurring. The value :math:`\exp{(0.09)}` is called the *hazard ratio*, a name that will be clear with another example.
 
@@ -246,9 +298,8 @@ holding everything else equal. This is useful to understand the impact of a cova
     :width: 600px
     :align: center
 
-The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method can accept multiple covariates as well. This is useful for two purposes:
 
-1. There are derivative features in your dataset. For example, suppose you have included ``prio`` and ``prio**2`` in your dataset. It doesn't make sense to just vary ``year`` and leave ``year**2`` fixed. You'll need to specify manually the values the covariates take on in a N-d array or list (where N is the number of covariates being varied.)
+If there are derivative features in your dataset, for example, suppose you have included ``prio`` and ``prio**2`` in your dataset. It doesn't make sense to just vary ``year`` and leave ``year**2`` fixed. You'll need to specify manually the values the covariates take on in a N-d array or list (where N is the number of covariates being varied.)
 
 .. code:: python
 

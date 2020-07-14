@@ -218,8 +218,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         batch_mode: bool, optional
             enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
 
-        formula: str
-            TODO
+        formula: str, optional
+            an Wilkinson formula, like in R and statsmodels, for the RHS. If left as None, all columns not assigned as durations, weights, etc. are used.
 
         Returns
         -------
@@ -710,6 +710,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             self._predicted_partial_hazards_ = (
                 self.predict_partial_hazard(df)
                 .to_frame(name="P")
+                .reindex(original_index)
                 .assign(T=self.durations, E=self.event_observed, W=self.weights)
                 .set_index(X.index)
             )
@@ -1658,11 +1659,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         hazard_names = self.params_.index
 
         if isinstance(X, pd.Series) and ((X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))):
-            X = X.to_frame().T
+            X = X.to_frame().T.infer_objects()
             return self.predict_log_partial_hazard(X)
         elif isinstance(X, pd.Series):
             assert len(hazard_names) == 1, "Series not the correct argument"
-            X = X.to_frame().T
+            X = X.to_frame().T.infer_objects()
             return self.predict_log_partial_hazard(X)
 
         index = utils._get_index(X)
@@ -1704,7 +1705,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         """
         if isinstance(X, pd.Series):
-            return self.predict_cumulative_hazard(X.to_frame().T, times=times, conditional_after=conditional_after)
+            return self.predict_cumulative_hazard(
+                X.to_frame().T.infer_objects(), times=times, conditional_after=conditional_after
+            )
 
         n = X.shape[0]
 
@@ -2429,7 +2432,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
         """
         if isinstance(df, pd.Series):
-            df = df.to_frame().T
+            df = df.to_frame().T.infer_objects()
 
         df = df.copy()
         df["Intercept"] = 1

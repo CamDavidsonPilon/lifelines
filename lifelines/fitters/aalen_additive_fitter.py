@@ -322,7 +322,7 @@ It's important to know that the naive variance estimates of the coefficients are
             order = order.drop("Intercept") if self.fit_intercept else order
             X_ = X[order].values
         elif isinstance(X, pd.Series):
-            return self.predict_cumulative_hazard(X.to_frame().T)
+            return self.predict_cumulative_hazard(X.to_frame().T.infer_objects())
         else:
             X_ = X
 

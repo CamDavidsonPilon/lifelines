@@ -1186,13 +1186,15 @@ class RegressionFitter(BaseFitter):
         """
         if df.size == 0:
             return None
+
         described = df.describe(include="all")
-        try:
+        if "top" in described.index and "mean" not in described.index:
+            central_stats = described.loc["top"].copy()
+        elif "mean" in described.index and "top" not in described.index:
+            central_stats = described.loc["mean"].copy()
+        elif "top" in described.index and "mean" in described.index:
             central_stats = described.loc["top"].copy()
             central_stats.update(described.loc["mean"])
-        except:
-            # no categorical values, only numeric.
-            central_stats = described.loc["mean"].copy()
 
         central_stats = central_stats.to_frame(name="baseline").T.infer_objects()
         return central_stats
@@ -1657,6 +1659,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         regressors = {}
         Xs = {}
+        user_inputed_regressor_lookup = dict(sorted(user_inputed_regressor_lookup.items()))
         for param, value in user_inputed_regressor_lookup.items():
             if isinstance(value, (list, pd.Index)):
                 # list of covariates
@@ -1722,8 +1725,10 @@ class ParametricRegressionFitter(RegressionFitter):
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
-        self.regressors, Xs = self._create_design_info_and_matrices(regressors, df)
         self._central_values = self._compute_central_values_of_raw_training_data(df)
+
+        self.regressors, Xs = self._create_design_info_and_matrices(regressors, df)
+        # part of https://github.com/CamDavidsonPilon/lifelines/issues/931
 
         self._check_values_pre_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
@@ -2256,7 +2261,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
     def predict_percentile(self, df, *, p=0.5, conditional_after=None) -> pd.Series:
         if isinstance(df, pd.Series):
-            df = df.to_frame().T
+            df = df.to_frame().infer_objects().infer_objects().T
         subjects = utils._get_index(df)
 
         warnings.warn(
@@ -2293,7 +2298,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         """
         if isinstance(df, pd.Series):
-            df = df.to_frame().T
+            df = df.to_frame().T.infer_objects()
 
         df = df.copy()
 
@@ -2346,7 +2351,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         """
         if isinstance(df, pd.Series):
-            df = df.to_frame().T
+            df = df.to_frame().T.infer_objects()
 
         df = df.copy()
         times = utils.coalesce(times, self.timeline)
@@ -2721,7 +2726,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if isinstance(ancillary_df, pd.DataFrame):
             self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference([self.duration_col, event_col]).tolist()
+            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference(
+                [self.duration_col, self.event_col, self.entry_col, self.weights_col]
+            ).tolist()
 
             ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
                 [self.duration_col, self.event_col]
@@ -2906,7 +2913,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
             regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference(
-                [self.upper_bound_col, self.lower_bound_col, self.event_col]
+                [self.upper_bound_col, self.lower_bound_col, self.event_col, self.weights_col, self.entry_col]
             ).tolist()
 
             ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
@@ -3070,7 +3077,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if isinstance(ancillary_df, pd.DataFrame):
             self.model_ancillary = True
             assert ancillary_df.shape[0] == df.shape[0], "ancillary_df must be the same shape[0] as df"
-            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference([self.duration_col, event_col]).tolist()
+            regressors[self._ancillary_parameter_name] = ancillary_df.columns.difference(
+                [self.duration_col, self.event_col, self.entry_col, self.weights_col]
+            ).tolist()
 
             ancillary_cols_to_consider = ancillary_df.columns.difference(df.columns).difference(
                 [self.duration_col, self.event_col]
@@ -3323,7 +3332,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             design_info = self.regressors[self._primary_parameter_name]
             primary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
         elif isinstance(X, pd.Series):
-            return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T, ancillary_X)
+            return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T.infer_objects(), ancillary_X)
         else:
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
 
@@ -3331,7 +3340,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             design_info = self.regressors[self._ancillary_parameter_name]
             ancillary_X, = patsy.build_design_matrices([design_info], ancillary_X, return_type="dataframe")
         elif isinstance(ancillary_X, pd.Series):
-            return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T)
+            return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T.infer_objects())
         elif ancillary_X is None:
             design_info = self.regressors[self._ancillary_parameter_name]
             ancillary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
@@ -3435,14 +3444,14 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
 
         if isinstance(df, pd.Series):
-            df = df.to_frame().T
+            df = df.to_frame().T.infer_objects()
 
         df = df.copy()
         times = utils.coalesce(times, self.timeline)
         times = np.atleast_1d(times).astype(float)
 
         if isinstance(df, pd.Series):
-            df = df.to_frame().T
+            df = df.to_frame().T.infer_objects()
 
         n = df.shape[0]
 
@@ -3489,7 +3498,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         predict_percentile, predict_expectation, predict_survival_function
         """
         if isinstance(df, pd.Series):
-            df = df.to_frame().T
+            df = df.to_frame().T.infer_objects()
 
         df = df.copy()
         times = utils.coalesce(times, self.timeline)
