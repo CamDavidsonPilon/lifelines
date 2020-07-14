@@ -33,7 +33,7 @@ class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return [
             {
-                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "gamma0_": np.array([0.0]), "gamma1_": np.array([0.1])},
+                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "gamma0_": np.array([0.0]), "gamma1_": np.array([0.1])},
                 **{"gamma%d_" % i: np.array([0.0]) for i in range(2, self.n_baseline_knots)},
             }
         ]

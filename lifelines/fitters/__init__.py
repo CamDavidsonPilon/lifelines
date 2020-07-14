@@ -2405,14 +2405,14 @@ class ParametricRegressionFitter(RegressionFitter):
         """
         The median survival time of the average subject in the training dataset.
         """
-        return self.predict_median(self._norm_mean.to_frame().T).squeeze()
+        return self.predict_median(self._central_values).squeeze()
 
     @property
     def mean_survival_time_(self):
         """
         The mean survival time of the average subject in the training dataset.
         """
-        return self.predict_expectation(self._norm_mean.to_frame().T).squeeze()
+        return self.predict_expectation(self._central_values).squeeze()
 
     def plot(self, columns=None, parameter=None, ax=None, **errorbar_kwargs):
         """

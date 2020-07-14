@@ -52,6 +52,7 @@ The wrapped classes can even be used in more complex scikit-learn functions (ex:
 
 .. code:: python
 
+    import numpy as np
     from lifelines import WeibullAFTFitter
     from sklearn.model_selection import cross_val_score
 

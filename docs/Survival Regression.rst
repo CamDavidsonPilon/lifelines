@@ -199,7 +199,7 @@ After fitting, you can use use the suite of prediction methods: :meth:`~lifeline
 
 .. code:: python
 
-    X = rossi_dataset
+    X = rossi
 
     cph.predict_survival_function(X)
     cph.predict_median(X)
@@ -266,9 +266,9 @@ With a fitted model, an alternative way to view the coefficients and their range
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi, duration_col='week', event_col='arrest')
 
     cph.plot()
 
@@ -288,9 +288,9 @@ holding everything else equal. This is useful to understand the impact of a cova
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi, duration_col='week', event_col='arrest')
 
     cph.plot_covariate_groups(covariates='prio', values=[0, 2, 4, 6, 8, 10], cmap='coolwarm')
 
@@ -303,9 +303,9 @@ If there are derivative features in your dataset, for example, suppose you have 
 
 .. code:: python
 
-    rossi_dataset['prio**2'] = rossi_dataset['prio'] ** 2
+    rossi['prio**2'] = rossi['prio'] ** 2
 
-    cph.fit(rossi_dataset, 'week', 'arrest')
+    cph.fit(rossi, 'week', 'arrest')
 
     cph.plot_covariate_groups(
         covariates=['prio', 'prio**2'],
@@ -318,28 +318,28 @@ If there are derivative features in your dataset, for example, suppose you have 
         ],
         cmap='coolwarm')
 
-2. This feature is also useful for analyzing categorical variables. In your regression, you may have dummy variables (also called one-hot-encoded variables) in your DataFrame that represent some categorical variable. To simultaneously plot the survival curves of each category, all else being equal, we can use (assuming no reference category)
 
+However, if you used the ``formula`` kwarg in fit, all the necessary transformations will be made internally for you.
+
+.. code:: python
+
+    cph.fit(rossi, 'week', 'arrest', formula="prio + prio**2")
+
+    cph.plot_covariate_groups(
+        covariates=['prio'],
+        values=[0, 1, 2, 3, 8],
+        cmap='coolwarm')
+
+This feature is also useful for analyzing categorical variables:
 
 .. code:: python
 
     cph.plot_covariate_groups(
-        covariates=['d1', 'd2', 'd3', 'd4', 'd5'],
-        values=np.eye(5),
+        covariates=["some_categorical_variable"]
+        values=["catA", "catB", ...],
         plot_baseline=False)
 
 The reason why we use ``np.eye`` is because we want each row of the matrix to "turn on" one category and "turn off" the others.
-
-If there is a reference category, say `"d0"`, we can add another row to our values matrix that is all zeros, denoting all other columns are turned off (and by default `"d0"` is turned on):
-
-.. code:: python
-
-    import numpy as np
-
-    cph.plot_covariate_groups(
-        covariates=['d1', 'd2', 'd3', 'd4', 'd5'],
-        values=np.append(np.eye(5), np.zeros((5, 1)), axis=1),
-        plot_baseline=False)
 
 Checking the proportional hazards assumption
 -----------------------------------------------
@@ -363,10 +363,10 @@ To specify variables to be used in stratification, we define them in the call to
 
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
 
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
+    cph.fit(rossi, 'week', event_col='arrest', strata=['race'])
     cph.print_summary()
 
     """
@@ -480,10 +480,10 @@ Normally, the Cox model is *semi-parametric*, which means that its baseline haza
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
 
     cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
-    cph.fit(rossi_dataset, 'week', event_col='arrest')
+    cph.fit(rossi, 'week', event_col='arrest')
 
 To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`
 
@@ -533,10 +533,10 @@ The Weibull AFT model is implemented under :class:`~lifelines.fitters.weibull_af
     from lifelines import WeibullAFTFitter
     from lifelines.datasets import load_rossi
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
 
     aft = WeibullAFTFitter()
-    aft.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    aft.fit(rossi, duration_col='week', event_col='arrest')
 
     aft.print_summary(3)  # access the results using aft.summary
 
@@ -778,23 +778,22 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
     from lifelines.datasets import load_rossi
 
     df = load_rossi()
-    df['constant'] = 1.
 
     # this will regress df against all 3 parameters
-    ggf = GeneralizedGammaRegressionFitter(penalizer=0.1).fit(df, 'week', 'arrest')
+    ggf = GeneralizedGammaRegressionFitter(penalizer=1.).fit(df, 'week', 'arrest')
     ggf.print_summary()
 
 
-    # if we only want to regress against the scale parameter, `mu_`
+    # If we want fine control over the parameters <-> covariates.
+    # The values in the dict become can be formulas, or column names in lists:
     regressors = {
-        'mu_': rossi.columns,
-        'sigma_': ['constant'],
-        'lambda_': ['constant']
+        'mu_': rossi.columns.difference(['arrest', 'week']),
+        'sigma_': ["1"],
+        'lambda_': 'age + 1',
     }
 
-    ggf = GeneralizedGammaRegressionFitter(penalizer=0.1).fit(df, 'week', 'arrest', regressors=regressors)
+    ggf = GeneralizedGammaRegressionFitter(penalizer=0.0001).fit(df, 'week', 'arrest', regressors=regressors)
     ggf.print_summary()
-
 
 
 
