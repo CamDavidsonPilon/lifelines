@@ -3,15 +3,20 @@
 #### 0.25.0 - unreleased
 
 ##### New features
- - Formulas! *lifelines* now supports Patsy formulas in regression models. See docs [here]().
+ - Formulas! *lifelines* now supports R-like formulas in regression models. See docs [here]().
+ - `calibration.survival_probability_calibration` now works with out-of-sample data.
+ - `plot_covariate_group` now can plot other y-values like hazards and cumulative hazards, (default: survival function).
+
 
 ##### API Changes
+ - With the introduction of formulas, all models are using formulas under the hood. For custom regression models, this means that you no longer need to add a constant column to your dataframe. I've updated the models in the `\examples` folder with examples of this new model building.
  - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using `"Intercept"`.
+ - In AFT models, `ancillary_df` has been replaced with `ancillary`. This reflects the more general use of the kwarg (not always a df, but could be a boolean or string, too).
  - The never used "lifelines.metrics" is deleted.
+ - With the introduction of formulas, `plot_covariate_groups` behaves differently for transformed variables. Users no longer need to add "derivatives" features, and encoding is done implicitly. See docs [here](https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#plotting-the-effect-of-varying-a-covariate).
 
 ##### Bug fixes
- - The p-value of the log-likelihood ratio test for the CoxPHFitter with splines was returning the wrong result because the
- degrees of freedom was incorrect.
+ - The p-value of the log-likelihood ratio test for the CoxPHFitter with splines was returning the wrong result because the degrees of freedom was incorrect.
 
 #### 0.24.15 - 2020-07-09
 
