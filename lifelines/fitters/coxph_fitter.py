@@ -1,28 +1,28 @@
 # -*- coding: utf-8 -*-
 import time
+from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
+from textwrap import dedent, fill
 from datetime import datetime
 import warnings
-from textwrap import dedent, fill
-from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
 
-import numpy as np
 from numpy import dot, einsum, log, exp, zeros, arange, multiply, ndarray
+import numpy as np
 from scipy.linalg import solve as spsolve, LinAlgError, norm, inv
 from scipy.integrate import trapz
 from scipy import stats
-import pandas as pd
 from pandas import DataFrame, Series, Index
-from autograd import numpy as anp
+import pandas as pd
 from autograd import elementwise_grad
+from autograd import numpy as anp
 import patsy
 
+from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio, concordance_index
 from lifelines.fitters import RegressionFitter, SemiParametricRegressionFittter, ParametricRegressionFitter
 from lifelines.fitters.mixins import SplineFitterMixin, ProportionalHazardMixin
-from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
-from lifelines.utils.printer import Printer
+from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.utils.safe_exp import safe_exp
-from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio, concordance_index
+from lifelines.utils.printer import Printer
 from lifelines import utils
 
 __all__ = ["CoxPHFitter"]

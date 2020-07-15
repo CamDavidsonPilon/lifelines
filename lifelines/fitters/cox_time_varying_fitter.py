@@ -12,7 +12,9 @@ from scipy import stats
 
 from numpy.linalg import norm, inv
 from numpy import sum as array_sum_to_scalar
+
 from scipy.linalg import solve as spsolve, LinAlgError
+
 from autograd import elementwise_grad
 from autograd import numpy as anp
 
@@ -202,18 +204,18 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
 
         if self.formula is None:
             self.formula = " + ".join(df.columns)
-        df = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
-        self._design_info = df.design_info
-        df = df.drop("Intercept", axis=1)
+        X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
+        self._design_info = X.design_info
+        X = X.drop("Intercept", axis=1)
 
-        df = df.astype(float)
-        self._check_values(df, events, start, stop)
+        X = X.astype(float)
+        self._check_values(X, events, start, stop)
 
-        self._norm_mean = df.mean(0)
-        self._norm_std = df.std(0)
+        self._norm_mean = X.mean(0)
+        self._norm_std = X.std(0)
 
         params_ = self._newton_rhaphson(
-            normalize(df, self._norm_mean, self._norm_std),
+            normalize(X, self._norm_mean, self._norm_std),
             events,
             start,
             stop,
@@ -223,10 +225,10 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
             step_size=step_size,
         )
 
-        self.params_ = pd.Series(params_, index=pd.Index(df.columns, name="covariate"), name="coef") / self._norm_std
+        self.params_ = pd.Series(params_, index=pd.Index(X.columns, name="covariate"), name="coef") / self._norm_std
         self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=df.columns)
         self.standard_errors_ = self._compute_standard_errors(
-            normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
+            normalize(X, self._norm_mean, self._norm_std), events, start, stop, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, events, start, stop, weights)
@@ -235,8 +237,8 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         self.start_stop_and_events = pd.DataFrame({"event": events, "start": start, "stop": stop})
         self.weights = weights
 
-        self._n_examples = df.shape[0]
-        self._n_unique = df.index.unique().shape[0]
+        self._n_examples = X.shape[0]
+        self._n_unique = X.index.unique().shape[0]
         return self
 
     def _check_values(self, df, events, start, stop):

@@ -4697,7 +4697,7 @@ class TestCoxTimeVaryingFitter:
 
         """
         dfcv["var4"] = np.nan
-        with pytest.raises(TypeError):
+        with pytest.raises(patsy.PatsyError):
             ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
     def test_inference_against_known_R_output_with_weights(self, ctv, dfcv):
@@ -4883,7 +4883,7 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(ctv.summary["se(coef)"].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary["p"].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
 
-    def test_error_is_raised_if_using_non_numeric_data(self, ctv):
+    def test_non_numeric_data_is_okay_with_patsy(self, ctv):
         ctv = CoxTimeVaryingFitter(penalizer=1.0)
         df = pd.DataFrame.from_dict(
             {
@@ -4901,12 +4901,9 @@ class TestCoxTimeVaryingFitter:
             }
         )
 
-        for subset in [["start", "end", "e", "id", "categoryb_"], ["start", "end", "e", "id", "string_"]]:
-            with pytest.raises(ValueError):
-                ctv.fit(df[subset], id_col="id", event_col="e", stop_col="end")
-
         for subset in [
-            ["start", "end", "e", "id", "categorya_"],
+            ["start", "end", "e", "id", "categoryb_"],
+            ["start", "end", "e", "id", "string_"]["start", "end", "e", "id", "categorya_"],
             ["start", "end", "e", "id", "bool_"],
             ["start", "end", "e", "id", "int_"],
             ["start", "end", "e", "id", "float_"],

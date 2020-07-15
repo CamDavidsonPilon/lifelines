@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 
-import warnings
-import collections
+from typing import Union, Any, Tuple, List, Callable, Optional, Dict
 from datetime import datetime
 from functools import wraps
 from textwrap import dedent
-from typing import Union, Any, Tuple, List, Callable, Optional, Dict
+import collections
+import warnings
 
-import numpy as np
 from numpy import ndarray
+import numpy as np
+
+from scipy.integrate import quad, trapz
 from scipy.linalg import solve
 from scipy import stats
-from scipy.integrate import quad, trapz
+
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
