@@ -1219,9 +1219,11 @@ class RegressionFitter(BaseFitter):
 
         """
         assert kind in self._ALLOWED_RESIDUALS, "kind must be in %s" % self._ALLOWED_RESIDUALS
+        if self.entry_col is not None:
+            raise NotImplementedError("Residuals for entries not implemented.")
 
         warnings.filterwarnings("ignore", category=utils.ConvergenceWarning)
-        X, Ts, E, weights, shuffled_original_index, _ = self._preprocess_dataframe(training_dataframe)
+        X, Ts, E, weights, _, shuffled_original_index, _ = self._preprocess_dataframe(training_dataframe)
 
         resids = getattr(self, "_compute_%s" % kind)(X, Ts, E, weights, index=shuffled_original_index)
         return resids

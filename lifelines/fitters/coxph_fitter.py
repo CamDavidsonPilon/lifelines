@@ -1396,24 +1396,29 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             schoenfeld_residuals = np.empty((0, d))
 
             for schoenfeld_residuals_in_strata in self._partition_by_strata_and_apply(
-                X, T, E, weights, self._compute_schoenfeld_within_strata
+                X, T, E, weights, None, self._compute_schoenfeld_within_strata
             ):
                 schoenfeld_residuals = np.append(schoenfeld_residuals, schoenfeld_residuals_in_strata, axis=0)
 
         else:
-            schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T.values, E.values, weights.values)
+            schoenfeld_residuals = self._compute_schoenfeld_within_strata(X, T, E, weights, None)
 
         # schoenfeld residuals are only defined for subjects with a non-zero event.
         df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.params_.index, index=index[E])
         return df
 
-    def _compute_schoenfeld_within_strata(self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray) -> ndarray:
+    def _compute_schoenfeld_within_strata(self, X: DataFrame, T: Series, E: Series, weights: Series, entries: None) -> ndarray:
         """
         A positive value of the residual shows an X value that is higher than expected at that death time.
 
         """
         # TODO: the diff_against is gross
         # This uses Efron ties.
+
+        X = X.values
+        E = E.values
+        T = T.values
+        weights = weights.values
 
         n, d = X.shape
 
@@ -1520,22 +1525,28 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             score_residuals = np.empty((0, d))
 
             for score_residuals_in_strata in self._partition_by_strata_and_apply(
-                X, T, E, weights, self._compute_score_within_strata
+                X, T, E, weights, None, self._compute_score_within_strata
             ):
                 score_residuals = np.append(score_residuals, score_residuals_in_strata, axis=0)
 
         else:
-            score_residuals = self._compute_score_within_strata(X.values, T, E.values, weights.values)
+            score_residuals = self._compute_score_within_strata(X, T, E, weights, None)
 
         return pd.DataFrame(score_residuals, columns=self.params_.index, index=index)
 
-    def _compute_score_within_strata(self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray) -> ndarray:
+    def _compute_score_within_strata(
+        self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray, entries: None
+    ) -> ndarray:
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
         # Assumes X already sorted by T with strata
         # TODO: doesn't handle ties.
         # TODO: _T unused
+
+        X = X.values
+        E = E.values
+        weights = weights.values
 
         n, d = X.shape
 
@@ -2400,7 +2411,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline hazard at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_hazard(self._norm_mean["beta_"], times=times)
+        v = self.predict_hazard(self._central_values, times=times)
         v.columns = ["baseline hazard"]
         return v
 
@@ -2409,7 +2420,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline survival at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_survival_function(self._norm_mean["beta_"], times=times)
+        v = self.predict_survival_function(self._central_values, times=times)
         v.columns = ["baseline survival"]
         return v
 
@@ -2418,7 +2429,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline cumulative hazard at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_cumulative_hazard(self._norm_mean["beta_"], times=times)
+        v = self.predict_cumulative_hazard(self._central_values, times=times)
         v.columns = ["baseline cumulative hazard"]
         return v
 

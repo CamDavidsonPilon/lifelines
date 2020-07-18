@@ -2700,15 +2700,10 @@ class TestCoxPHFitter_SemiParametric:
         return SemiParametricPHFitter()
 
     def test_single_efron_computed_by_hand_examples(self, data_nus, cph):
-        X = data_nus["x"][:, None]
+        X = data_nus[["x"]]
         T = data_nus["t"]
         E = data_nus["E"]
-        weights = np.ones_like(T)
-
-        # Enforce numpy arrays
-        X = np.array(X)
-        T = np.array(T)
-        E = np.array(E)
+        weights = pd.Series(np.ones_like(T))
 
         # Want as bools
         E = E.astype(bool)
@@ -2716,7 +2711,7 @@ class TestCoxPHFitter_SemiParametric:
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([0])
 
-        l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_single(X, T, E, weights, None, beta)
         l = -l
 
         assert np.abs(u[0] - -2.51) < 0.05
@@ -2724,7 +2719,7 @@ class TestCoxPHFitter_SemiParametric:
         beta = beta + u / l[0]
         assert np.abs(beta - -0.0326) < 0.05
 
-        l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_single(X, T, E, weights, None, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.83) < 0.05
@@ -2732,7 +2727,7 @@ class TestCoxPHFitter_SemiParametric:
         beta = beta + u / l[0]
         assert np.abs(beta - -0.0325) < 0.01
 
-        l, u, _ = cph._get_efron_values_single(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_single(X, T, E, weights, None, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.70) < 0.01
@@ -2741,15 +2736,10 @@ class TestCoxPHFitter_SemiParametric:
         assert np.abs(beta - -0.0335) < 0.01
 
     def test_batch_efron_computed_by_hand_examples(self, data_nus, cph):
-        X = data_nus["x"][:, None]
+        X = data_nus[["x"]]
         T = data_nus["t"]
         E = data_nus["E"]
-        weights = np.ones_like(T)
-
-        # Enforce numpy arrays
-        X = np.array(X)
-        T = np.array(T)
-        E = np.array(E)
+        weights = pd.Series(np.ones_like(T))
 
         # Want as bools
         E = E.astype(bool)
@@ -2757,7 +2747,7 @@ class TestCoxPHFitter_SemiParametric:
         # tests from http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
         beta = np.array([0])
 
-        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, None, beta)
         l = -l
 
         assert np.abs(u[0] - -2.51) < 0.05
@@ -2765,7 +2755,7 @@ class TestCoxPHFitter_SemiParametric:
         beta = beta + u / l[0]
         assert np.abs(beta - -0.0326) < 0.05
 
-        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, None, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.83) < 0.05
@@ -2773,7 +2763,7 @@ class TestCoxPHFitter_SemiParametric:
         beta = beta + u / l[0]
         assert np.abs(beta - -0.0325) < 0.01
 
-        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, beta)
+        l, u, _ = cph._get_efron_values_batch(X, T, E, weights, None, beta)
         l = -l
 
         assert np.abs(l[0][0] - 72.70) < 0.01
@@ -2785,8 +2775,9 @@ class TestCoxPHFitter_SemiParametric:
         cph._batch_mode = False
         newton = cph._newton_rhapson_for_efron_model
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
+        entries = None
 
-        assert np.abs(newton(X, T, E, W)[0] - -0.0335) < 0.0001
+        assert np.abs(newton(X, T, E, W, entries)[0] - -0.0335) < 0.0001
 
 
 class TestCoxPHFitter:
@@ -4940,7 +4931,8 @@ class TestCoxTimeVaryingFitter:
 
         for subset in [
             ["start", "end", "e", "id", "categoryb_"],
-            ["start", "end", "e", "id", "string_"]["start", "end", "e", "id", "categorya_"],
+            ["start", "end", "e", "id", "string_"],
+            ["start", "end", "e", "id", "categorya_"],
             ["start", "end", "e", "id", "bool_"],
             ["start", "end", "e", "id", "int_"],
             ["start", "end", "e", "id", "float_"],
