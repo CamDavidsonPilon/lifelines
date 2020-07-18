@@ -160,7 +160,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         batch_mode: Optional[bool] = None,
         timeline: Optional[Iterator] = None,
         formula: str = None,
-        entry_col=entry_col,
+        entry_col: str = None,
     ) -> "CoxPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
@@ -310,8 +310,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             raise ValueError("Invalid model estimation.")
 
     def _fit_model_breslow(self, *args, **kwargs):
-        if kwargs["entry_col"] is not None:
-            raise ValueError("entry_col not supported with Breslow baseline estimation. Try spline baseline estimation.")
         model = SemiParametricPHFitter(
             penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self.strata, alpha=self.alpha, label=self._label
         )
@@ -373,6 +371,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             headers.append(("event col", "'%s'" % self.event_col))
         if self.weights_col:
             headers.append(("weights col", "'%s'" % self.weights_col))
+        if self.entry_col:
+            headers.append(("entry col", "'%s'" % self.entry_col))
         if self.cluster_col:
             headers.append(("cluster col", "'%s'" % self.cluster_col))
         if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
@@ -559,6 +559,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         batch_mode: Optional[bool] = None,
         timeline: Optional[Iterator] = None,
         formula: str = None,
+        entry_col: str = None,
     ) -> "SemiParametricPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
@@ -678,12 +679,14 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         self._batch_mode = batch_mode
         self.strata = utils.coalesce(strata, self.strata)
         self.formula = formula
+        self.entry_col = entry_col
 
-        X, T, E, weights, original_index, self._clusters = self._preprocess_dataframe(df)
+        X, T, E, weights, entries, original_index, self._clusters = self._preprocess_dataframe(df)
 
         self.durations = T.copy()
         self.event_observed = E.copy()
         self.weights = weights.copy()
+        self.entries = entries
 
         if self.strata is not None:
             self.durations.index = original_index
@@ -702,7 +705,14 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         )
 
         params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_, model = self._fit_model(
-            X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size
+            X_norm,
+            T,
+            E,
+            weights=weights,
+            entries=entries,
+            initial_point=initial_point,
+            show_progress=show_progress,
+            step_size=step_size,
         )
 
         self.log_likelihood_ = ll_
@@ -749,7 +759,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             df = df.sort_values(by=sort_by)
             original_index = df.index.copy()
 
-        # Extract time and event
+        # Extract time, event and metadata
         T = df.pop(self.duration_col)
         E = (
             df.pop(self.event_col)
@@ -761,6 +771,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             if (self.weights_col is not None)
             else pd.Series(np.ones((self._n_examples,)), index=df.index, name="weights")
         )
+        entries = df.pop(self.entry_col) if (self.entry_col is not None) else None
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
@@ -780,7 +791,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         self._check_values_pre_fitting(X, T, E, W)
 
-        return X, T, E, W, original_index, _clusters
+        return X, T, E, W, entries, original_index, _clusters
 
     def _check_values_post_fitting(self, X, T, E, W):
         """
@@ -815,12 +826,13 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T: Series,
         E: Series,
         weights: Series,
+        entries: Optional[Series],
         initial_point: Optional[ndarray] = None,
         step_size: Optional[float] = None,
         show_progress: bool = True,
     ):
         beta_, ll_, hessian_ = self._newton_rhapson_for_efron_model(
-            X, T, E, weights, initial_point=initial_point, step_size=step_size, show_progress=show_progress
+            X, T, E, weights, entries, initial_point=initial_point, step_size=step_size, show_progress=show_progress
         )
 
         # compute the baseline hazard here.
@@ -841,12 +853,25 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         return params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_, None
 
+    def _choose_gradient_calculator(self, T, X, entries):
+
+        if entries is not None:
+            from lifelines import CoxTimeVaryingFitter
+
+            return lambda X, T, E, weights, entries, beta: CoxTimeVaryingFitter._get_gradients(
+                X.values, E.values, entries.values, T.values, weights.values, beta
+            )
+
+        decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *X.shape)
+        return getattr(self, "_get_efron_values_%s" % decision)
+
     def _newton_rhapson_for_efron_model(
         self,
         X: DataFrame,
         T: Series,
         E: Series,
         weights: Series,
+        entries: Optional[Series],
         initial_point: Optional[ndarray] = None,
         step_size: Optional[float] = None,
         precision: float = 1e-07,
@@ -889,7 +914,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
         # soft penalizer functions, from https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
-        penalizer = (
+        elastic_net_penalty = (
             lambda beta, a: n
             * 0.5
             * (
@@ -897,12 +922,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 + (1 - self.l1_ratio) * (self.penalizer * beta ** 2).sum()
             )
         )
-        d_penalizer = elementwise_grad(penalizer)
-        dd_penalizer = elementwise_grad(d_penalizer)
+        d_elastic_net_penalty = elementwise_grad(elastic_net_penalty)
+        dd_elastic_net_penalty = elementwise_grad(d_elastic_net_penalty)
 
-        decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *X.shape)
-        self._batch_mode = decision == _BatchVsSingle.BATCH
-        get_gradients = getattr(self, "_get_efron_values_%s" % decision)
+        get_gradients = self._choose_gradient_calculator(T, X, entries)
 
         # make sure betas are correct size.
         if initial_point is not None:
@@ -927,13 +950,13 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if self.strata is None:
 
-                h, g, ll_ = get_gradients(X.values, T.values, E.values, weights.values, beta)
+                h, g, ll_ = get_gradients(X, T, E, weights, entries, beta)
 
             else:
                 g = np.zeros_like(beta)
                 h = zeros((beta.shape[0], beta.shape[0]))
                 ll_ = 0
-                for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, get_gradients, beta):
+                for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, entries, get_gradients, beta):
                     g += _g
                     h += _h
                     ll_ += _ll
@@ -945,9 +968,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 self._ll_null_ = ll_
 
             if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
-                ll_ -= penalizer(beta, 1.3 ** i)
-                g -= d_penalizer(beta, 1.3 ** i)
-                h[np.diag_indices(d)] -= dd_penalizer(beta, 1.3 ** i)
+                ll_ -= elastic_net_penalty(beta, 1.3 ** i)
+                g -= d_elastic_net_penalty(beta, 1.3 ** i)
+                h[np.diag_indices(d)] -= dd_elastic_net_penalty(beta, 1.3 ** i)
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
@@ -1038,7 +1061,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         return beta, ll_, hessian
 
     def _get_efron_values_single(
-        self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
+        self, X: DataFrame, T: Series, E: Series, weights: Series, entries: None, beta: ndarray
     ) -> Tuple[ndarray, ndarray, float]:
         """
         Calculates the first and second order vector differentials, with respect to beta.
@@ -1076,6 +1099,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             (1, d) numpy array
         log_likelihood: float
         """
+
+        X = X.values
+        T = T.values
+        E = E.values
+        weights = weights.values
 
         n, d = X.shape
         hessian = zeros((d, d))
@@ -1166,7 +1194,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         return hessian, gradient, log_lik
 
     def _get_efron_values_batch(
-        self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
+        self, X: DataFrame, T: Series, E: Series, weights: Series, entries: None, beta: ndarray
     ) -> Tuple[ndarray, ndarray, float]:  # pylint: disable=too-many-locals
         """
         Assumes sorted on ascending on T
@@ -1183,6 +1211,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         gradient: (1, d) numpy array
         log_likelihood: float
         """
+        X = X.values
+        T = T.values
+        E = E.values
+        weights = weights.values
 
         n, d = X.shape
         hessian = zeros((d, d))
@@ -1275,17 +1307,22 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return hessian, gradient, log_lik
 
-    def _partition_by_strata(self, X: DataFrame, T: Series, E: Series, weights: Series, as_dataframes: bool = False):
+    def _partition_by_strata(self, X: DataFrame, T: Series, E: Series, entries: Optional[Series], weights: Series):
         for stratum, stratified_X in X.groupby(self.strata):
-            stratified_E, stratified_T, stratified_W = (E.loc[[stratum]], T.loc[[stratum]], weights.loc[[stratum]])
-            if not as_dataframes:
-                yield (stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values), stratum
+            if entries is None:
+                stratified_entries = None
             else:
-                yield (stratified_X, stratified_T, stratified_E, stratified_W), stratum
+                stratified_entries = entries.loc[[stratum]]
+            stratified_E, stratified_T, stratified_W = (E.loc[[stratum]], T.loc[[stratum]], weights.loc[[stratum]])
+            yield (stratified_X, stratified_T, stratified_E, stratified_W, stratified_entries), stratum
 
-    def _partition_by_strata_and_apply(self, X: DataFrame, T: Series, E: Series, weights: Series, function: Callable, *args):
-        for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
-            yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
+    def _partition_by_strata_and_apply(
+        self, X: DataFrame, T: Series, E: Series, entries: Optional[Series], weights: Series, function: Callable, *args
+    ):
+        for (stratified_X, stratified_T, stratified_E, stratified_W, stratified_entries), _ in self._partition_by_strata(
+            X, T, E, weights, entries
+        ):
+            yield function(stratified_X, stratified_T, stratified_E, stratified_W, stratified_entries, *args)
 
     def _compute_martingale(
         self, X: DataFrame, T: Series, E: Series, _weights: Series, index: Optional[Index] = None
@@ -1597,8 +1634,13 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             return df
 
     def _trivial_log_likelihood(self):
+        # TODO
         df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "W": self.weights})
-        trivial_model = self.__class__().fit_right_censoring(df, "E", weights_col="W", batch_mode=self.batch_mode)
+        if self.entry_col is not None:
+            df["entry"] = self.entries
+            trivial_model = self.__class__().fit_right_censoring(df, "E", weights_col="W", entry_col="entry")
+        else:
+            trivial_model = self.__class__().fit_right_censoring(df, "E", weights_col="W")
         return trivial_model.log_likelihood_
 
     def log_likelihood_ratio_test(self) -> StatisticalResult:
@@ -2208,18 +2250,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df = df.sort_values([self.duration_col, self.event_col])
         T = df.pop(self.duration_col).astype(float)
         E = df.pop(self.event_col).astype(bool)
-
-        if self.weights_col:
-            W = df.pop(self.weights_col)
-        else:
-            W = pd.Series(np.ones_like(E), index=T.index)
+        W = df.pop(self.weights_col) if self.weights_col else pd.Series(np.ones_like(E), index=T.index)
+        entries = df.pop(self.entry_col) if self.entry_col else None
 
         if scoring_method == "log_likelihood":
 
             df = utils.normalize(df, self._norm_mean.values, 1.0)
 
-            decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *df.shape)
-            get_gradients = getattr(self, "_get_efron_values_%s" % decision)
+            get_gradients = self._choose_gradient_calculator(T, df, entries)
             optimal_beta = self.params_.values
 
             if self.strata is None:

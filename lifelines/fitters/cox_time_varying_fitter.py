@@ -494,14 +494,15 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         return beta
 
-    def _get_gradients(self, X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
+    @staticmethod
+    def _get_gradients(X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
         Returns
         -------
         hessian: (d, d) numpy array,
-        gradient: (d,) numpy array
+        gradient: (1, d) numpy array
         log_likelihood: float
         """
 
