@@ -160,6 +160,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         batch_mode: Optional[bool] = None,
         timeline: Optional[Iterator] = None,
         formula: str = None,
+        entry_col=entry_col,
     ) -> "CoxPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
@@ -189,13 +190,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             identical observations.
             This can be used for sampling weights. In that case, use ``robust=True`` to get more accurate standard errors.
 
-        show_progress: bool, optional (default=False)
-            since the fitter is iterative, show convergence
-            diagnostics. Useful if convergence is failing.
+        cluster_col: string, optional
+            specifies what column has unique identifiers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+            be used.
 
-        initial_point: (d,) numpy array, optional
-            initialize the starting point of the iterative
-            algorithm. Default is the zero vector.
+        entry_col: str, optional
+            a column denoting when a subject entered the study, i.e. left-truncation. Only available for spline-based models.
+            TODO: test this.
 
         strata: list or string, optional
             specify a column or list of columns n to use in stratification. This is useful if a
@@ -203,23 +204,27 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             is used similar to the ``strata`` expression in R.
             See http://courses.washington.edu/b515/l17.pdf.
 
-        step_size: float, optional
-            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
-
         robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
             ties, so if there are high number of ties, results may significantly differ. See
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
 
-        cluster_col: string, optional
-            specifies what column has unique identifiers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
-            be used.
+        formula: str, optional
+            an Wilkinson formula, like in R and statsmodels, for the RHS. If left as None, all columns not assigned as durations, weights, etc. are used.
 
         batch_mode: bool, optional
             enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
 
-        formula: str, optional
-            an Wilkinson formula, like in R and statsmodels, for the RHS. If left as None, all columns not assigned as durations, weights, etc. are used.
+        step_size: float, optional
+            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
+
+        show_progress: bool, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
 
         Returns
         -------
@@ -279,6 +284,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             batch_mode=batch_mode,
             timeline=timeline,
             formula=formula,
+            entry_col=entry_col,
         )
         return self
 
@@ -301,9 +307,11 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         elif self.baseline_estimation_method == "spline":
             return self._fit_model_spline(*args, **kwargs)
         else:
-            raise ValueError("Invalid baseline estimate supplied.")
+            raise ValueError("Invalid model estimation.")
 
     def _fit_model_breslow(self, *args, **kwargs):
+        if kwargs["entry_col"] is not None:
+            raise ValueError("entry_col not supported with Breslow baseline estimation. Try spline baseline estimation.")
         model = SemiParametricPHFitter(
             penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self.strata, alpha=self.alpha, label=self._label
         )
