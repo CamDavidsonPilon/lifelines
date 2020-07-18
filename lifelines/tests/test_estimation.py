@@ -2798,6 +2798,43 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
 
+    def test_trival_entry_col(self, rossi):
+        cph_without_entry_summary = CoxPHFitter().fit(rossi, "week", "arrest").summary
+        cphs_without_entry_summary = (
+            CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2).fit(rossi, "week", "arrest").summary
+        )
+
+        rossi["entry"] = 0
+        cph_with_entry_summary = CoxPHFitter().fit(rossi, "week", "arrest", entry_col="entry").summary
+        cphs_with_entry_summary = (
+            CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2)
+            .fit(rossi, "week", "arrest", entry_col="entry")
+            .summary
+        )
+
+        assert_frame_equal(cph_without_entry_summary, cph_with_entry_summary)
+        assert_frame_equal(cphs_without_entry_summary, cphs_with_entry_summary)
+
+    def test_trival_entry_col_with_strata(self, rossi):
+        cph_without_entry_summary = CoxPHFitter().fit(rossi, "week", "arrest", strata=["fin"]).summary
+
+        rossi["entry"] = 0
+        cph_with_entry_summary = CoxPHFitter().fit(rossi, "week", "arrest", entry_col="entry", strata=["fin"]).summary
+
+        assert_frame_equal(cph_without_entry_summary, cph_with_entry_summary)
+
+    def test_entry_col_against_R(self, cph):
+        """
+        library(survival)
+        df = read.csv("~/code/lifelines/lifelines/datasets/multicenter_aids_cohort.tsv", sep="\t")
+        coxph(Surv(W, T, D) ~ AIDSY, data=df)
+        """
+        df = load_multicenter_aids_cohort_study()
+        cph.fit(df, "T", "D", entry_col="W")
+        npt.assert_allclose(cph.summary.loc["AIDSY", "coef"], 0.02322, rtol=2)
+        npt.assert_allclose(cph.summary.loc["AIDSY", "se(coef)"], 0.24630, rtol=3)
+        npt.assert_allclose(cph.log_likelihood_, -95.15478, rtol=2)
+
     def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline):
         cph.fit(rossi, "week", "arrest", formula="age + race")
         assert cph.summary.index.tolist() == ["age", "race"]
