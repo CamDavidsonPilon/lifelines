@@ -106,6 +106,7 @@ called :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.survival_
 The property is a Pandas DataFrame, so we can call :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.plot` on it:
 
 .. code:: python
+
     from matplotlib import pyplot as plt
 
 
@@ -178,6 +179,7 @@ times we are interested in and are returned a DataFrame with the
 probabilities of survival at those points:
 
 .. code:: python
+
     import numpy as np
 
     ax = plt.subplot(111)
@@ -185,19 +187,12 @@ probabilities of survival at those points:
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
     ax = kmf.plot(ax=ax)
-    print("Median survival time of democratic:", kmf.median_survival_time_)
 
     kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
     ax = kmf.plot(ax=ax)
-    print("Median survival time of non-democratic:", kmf.median_survival_time_)
 
     plt.ylim(0, 1)
     plt.title("Lifespans of different global regimes");
-
-    """
-    Median survival time of democratic: 3
-    Median survival time of non-democratic: 6
-    """
 
 .. image:: images/lifelines_intro_multi_kmf_fitter_2.png
     :width: 650px
@@ -523,7 +518,7 @@ In lifelines, estimation is available using the :class:`~lifelines.fitters.weibu
     """
 
 .. image:: images/survival_weibull.png
-    :width: 600px
+    :width: 550px
     :align: center
 
 
@@ -751,7 +746,7 @@ Data can also be interval censored. An example of this is periodically recording
     :align: center
 
 
-Above, we can see that some subjects' death was exactly observed (denoted by a red ●), and some subjects' deaths is bounded between two times (denoted by the interval between the red ▶︎ ◀︎).  We can perform inference on the data using any of our models. Note the use of calling `fit_interval_censoring` instead of `fit`.
+Above, we can see that some subjects' death was exactly observed (denoted by a red ●), and some subjects' deaths is bounded between two times (denoted by the interval between the red ▶︎ ◀︎).  We can perform inference on the data using any of our models. Note the use of calling ``fit_interval_censoring`` instead of ``fit``.
 
 .. code:: python
 

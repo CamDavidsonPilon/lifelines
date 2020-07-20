@@ -1082,10 +1082,9 @@ Model selection based on predictive power and fit
 ---------------------------------------------------
 
 If censoring is present, it's not appropriate to use a loss function like mean-squared-error or
-mean-absolute-loss. This is because the difference between a censored value and the predicted value could be
-due to poor prediction *or* due to censoring. Below we introduce alternative ways to measure prediction performance.
+mean-absolute-loss. This is because the difference between a censored value and the predicted value could be due to poor prediction *or* due to censoring. Below we introduce alternative ways to measure prediction performance.
 
-Out-of-sample validation
+Log-likelihood
 ****************************
 
 
@@ -1106,9 +1105,8 @@ In this author's opinion, the best way to measure predictive performance is eval
     print(cph_l2.score(test_rossi))
     print(cph_l1.score(test_rossi)) # better model
 
-
-Within-sample validation
-****************************
+Akaike information criterion (AIC)
+*****************************************
 
 For within-sample validation, the AIC is a great metric for comparing models as it relies on the log-likelihood. It's available under ``AIC_`` for parametric models, and ``AIC_partial_`` for Cox models (because the Cox model maximizes a *partial* log-likelihood, it can't be reliably compared to parametric model's AIC.)
 
@@ -1126,10 +1124,11 @@ For within-sample validation, the AIC is a great metric for comparing models as 
     print(cph_l2.AIC_partial_) # lower is better
     print(cph_l1.AIC_partial_)
 
+Concordance Index
+*****************************************
 
 
-Another censoring-sensitive measure is the concordance-index, also known as the c-index. This measure
-evaluates the accuracy of the *ranking* of predicted time. It is in fact a generalization
+Another censoring-sensitive measure is the concordance-index, also known as the c-index. This measure evaluates the accuracy of the *ranking* of predicted time. It is in fact a generalization
 of AUC, another common loss function, and is interpreted similarly:
 
 * 0.5 is the expected result from random predictions,
