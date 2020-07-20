@@ -277,6 +277,10 @@ class UnivariateFitter(BaseFitter):
         return utils.qth_survival_times(p, self.survival_function_)
 
 
+class NonParametricUnivariateFitter(UnivariateFitter):
+    pass
+
+
 class ParametricUnivariateFitter(UnivariateFitter):
     """
     Without overriding anything, assumes all parameters must be greater than 0.
@@ -614,7 +618,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             df["coef upper %g%%" % ci] = lower_upper_bounds["upper-bound"]
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -np.log2(df["p"])
+            df["-log2(p)"] = -utils.quiet_log2(df["p"])
         return df
 
     def print_summary(self, decimals=2, style=None, **kwargs):
@@ -2119,7 +2123,7 @@ class ParametricRegressionFitter(RegressionFitter):
             df["exp(coef) upper %g%%" % ci] = np.exp(self.params_) * np.exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -np.log2(df["p"])
+            df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
     def print_summary(self, decimals=2, style=None, **kwargs):
@@ -2181,7 +2185,7 @@ class ParametricRegressionFitter(RegressionFitter):
                     "log-likelihood ratio test",
                     "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
                 ),
-                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.safe_log2(sr.p_value), prec=decimals)),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)),
             ]
         )
 
@@ -2731,7 +2735,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
         elif (ancillary is None) or (ancillary is False):
-            regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
+            regressors[self._ancillary_parameter_name] = ["1"]
 
         if self.fit_intercept:
             regressors[self._primary_parameter_name].append("1")
@@ -2917,7 +2921,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
         elif (ancillary is None) or (ancillary is False):
-            regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
+            regressors[self._ancillary_parameter_name] = ["1"]
 
         if self.fit_intercept:
             regressors[self._primary_parameter_name].append("1")
@@ -3082,7 +3086,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
         elif (ancillary is None) or (ancillary is False):
-            regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: ["1"]}
+            regressors[self._ancillary_parameter_name] = ["1"]
 
         if self.fit_intercept:
             regressors[self._primary_parameter_name].append("1")

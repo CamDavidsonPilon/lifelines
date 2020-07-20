@@ -311,7 +311,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * np.exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -utils.safe_log2(df["p"])
+            df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
     def _newton_rhaphson(
@@ -693,7 +693,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                     "log-likelihood ratio test",
                     "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
                 ),
-                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.safe_log2(sr.p_value), prec=decimals)),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)),
             ]
         )
 

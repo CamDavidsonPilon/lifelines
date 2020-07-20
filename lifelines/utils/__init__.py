@@ -45,7 +45,6 @@ class CensoringType:
     RIGHT = 3
 
     MAP = {"right": RIGHT, "left": LEFT, "interval": INTERVAL}
-
     HUMAN_MAP = {LEFT: "left", RIGHT: "right", INTERVAL: "interval"}
 
     @classmethod
@@ -305,7 +304,9 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
         raise ValueError("Can't compute RMST of object %s" % model_or_survival_function)
 
 
-def _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t: float = np.inf) -> float:
+def _expected_value_of_survival_squared_up_to_t(
+    model_or_survival_function: Union["UnivariateFitter", pd.DataFrame], t: float = np.inf
+) -> float:
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
@@ -345,7 +346,7 @@ def _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t: f
 
 def group_survival_table_from_events(
     groups, durations, event_observed, birth_times=None, limit=-1
-):  # pylint: disable=too-many-locals
+) -> Tuple[ndarray, pd.DataFrame, pd.DataFrame, pd.DataFrame]:  # pylint: disable=too-many-locals
     """
     Joins multiple event series together into DataFrames. A generalization of
     `survival_table_from_events` to data with groups.
@@ -1816,7 +1817,7 @@ def find_best_parametric_model(
     return best_model, best_score
 
 
-def safe_log2(p):
+def quiet_log2(p):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r"divide by zero encountered in log2")
         return np.log2(p)

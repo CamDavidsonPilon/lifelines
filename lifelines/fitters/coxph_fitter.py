@@ -414,7 +414,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         footers.append(
             ("log-likelihood ratio test", "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals))
         )
-        footers.append(("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.safe_log2(sr.p_value), prec=decimals)))
+        footers.append(("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)))
 
         p = Printer(self, headers, footers, justify, decimals, kwargs)
         p.print(style=style)
@@ -742,7 +742,9 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         return self
 
-    def _preprocess_dataframe(self, df: DataFrame) -> Tuple[DataFrame, Series, Series, Series, Index, Optional[Series]]:
+    def _preprocess_dataframe(
+        self, df: DataFrame
+    ) -> Tuple[DataFrame, Series, Series, Series, Optional[Series], Index, Optional[Series]]:
         # this should be a pure function
 
         df = df.copy()
@@ -1641,7 +1643,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -utils.safe_log2(df["p"])
+            df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
     def _trivial_log_likelihood(self):
@@ -2272,10 +2274,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             optimal_beta = self.params_.values
 
             if self.strata is None:
-                *_, ll_ = get_gradients(df.values, T.values, E.values, W.values, optimal_beta)
+                *_, ll_ = get_gradients(df, T, E, W, entries, optimal_beta)
             else:
                 ll_ = 0
-                for *_, _ll in self._partition_by_strata_and_apply(df, T, E, W, get_gradients, optimal_beta):
+                for *_, _ll in self._partition_by_strata_and_apply(df, T, E, W, entries, get_gradients, optimal_beta):
                     ll_ += _ll
             return ll_ / df.shape[0]
 
@@ -2329,8 +2331,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
 class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, ProportionalHazardMixin):
     r"""
-
-
     Proportional hazard model with cubic splines model for the baseline hazard.
 
     .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)

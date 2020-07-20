@@ -179,8 +179,7 @@ class StatisticalResult:
         meta_data = self._stringify_meta_data(extra_kwargs)
 
         df = self.summary
-        with np.errstate(invalid="ignore", divide="ignore"):
-            df["-log2(p)"] = -np.log2(df["p"])
+        df["-log2(p)"] = -utils.quiet_log2(df["p"])
 
         s = self.__repr__()
         s += "\n" + meta_data + "\n"

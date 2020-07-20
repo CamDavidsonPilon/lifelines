@@ -4,13 +4,13 @@ import warnings
 # pylint: disable=wrong-import-position
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
 
-from collections import Counter
-from collections.abc import Iterable
-import os
-import pickle
-from itertools import combinations
-
 from io import StringIO, BytesIO as stringio
+from collections.abc import Iterable
+from itertools import combinations
+from collections import Counter
+import pickle
+import os
+
 
 import numpy as np
 import pandas as pd
