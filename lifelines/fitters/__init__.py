@@ -621,7 +621,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
         return df
 
-    def print_summary(self, decimals=2, style=None, **kwargs):
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -631,6 +631,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
             specify the number of decimal places to show
         style: string
             {html, ascii, latex}
+        columns:
+            only display a subset of `summary` columns. Default all.
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -654,8 +656,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
             ],
             [],
             justify,
-            decimals,
             kwargs,
+            decimals,
+            columns,
         )
 
         p.print(style=style)
@@ -1187,19 +1190,18 @@ class RegressionFitter(BaseFitter):
     def _compute_central_values_of_raw_training_data(self, df):
         """
         TODO: test this
-        TODO: median instead of mean?
         """
         if df.size == 0:
             return None
 
         described = df.describe(include="all")
-        if "top" in described.index and "mean" not in described.index:
+        if "top" in described.index and "50%" not in described.index:
             central_stats = described.loc["top"].copy()
-        elif "mean" in described.index and "top" not in described.index:
-            central_stats = described.loc["mean"].copy()
-        elif "top" in described.index and "mean" in described.index:
+        elif "50%" in described.index and "top" not in described.index:
+            central_stats = described.loc["50%"].copy()
+        elif "top" in described.index and "50%" in described.index:
             central_stats = described.loc["top"].copy()
-            central_stats.update(described.loc["mean"])
+            central_stats.update(described.loc["50%"])
 
         central_stats = central_stats.to_frame(name="baseline").T.infer_objects()
         return central_stats
@@ -2126,7 +2128,7 @@ class ParametricRegressionFitter(RegressionFitter):
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
-    def print_summary(self, decimals=2, style=None, **kwargs):
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -2136,6 +2138,8 @@ class ParametricRegressionFitter(RegressionFitter):
             specify the number of decimal places to show
         style: string
             {html, ascii, latex}
+        columns:
+            only display a subset of `summary` columns. Default all.
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -2189,7 +2193,7 @@ class ParametricRegressionFitter(RegressionFitter):
             ]
         )
 
-        p = Printer(self, headers, footers, justify, decimals, kwargs)
+        p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
 
         p.print(style=style)
 

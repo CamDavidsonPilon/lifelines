@@ -646,7 +646,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         """
         return np.exp(self.predict_log_partial_hazard(X))
 
-    def print_summary(self, decimals=2, style=None, **kwargs):
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -656,6 +656,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             specify the number of decimal places to show
         style: string
             {html, ascii, latex}
+        columns:
+            only display a subset of `summary` columns. Default all.
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -697,7 +699,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             ]
         )
 
-        p = Printer(self, headers, footers, justify, decimals, kwargs)
+        p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
         p.print(style=style)
 
     def log_likelihood_ratio_test(self):

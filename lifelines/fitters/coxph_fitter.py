@@ -345,7 +345,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         model.fit(df, *args[1:], regressors=regressors, **kwargs)
         return model
 
-    def print_summary(self, decimals: int = 2, style: Optional[str] = None, **kwargs) -> None:
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -355,6 +355,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             specify the number of decimal places to show
         style: string
             {html, ascii, latex}
+        columns:
+            only display a subset of `summary` columns. Default all.
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -416,7 +418,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         )
         footers.append(("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)))
 
-        p = Printer(self, headers, footers, justify, decimals, kwargs)
+        p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
         p.print(style=style)
 
     def compute_followup_hazard_ratios(self, training_df: DataFrame, followup_times: Iterable) -> DataFrame:
@@ -2107,7 +2109,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         Produces a plot comparing the baseline curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
         subjects' survival as we vary covariate(s), all else being held equal. The baseline
-        curve is equal to the predicted curve at all average values in the original dataset.
+        curve is equal to the predicted curve at all average values (median for ordinal, and mode for categorical)
+        in the original dataset.
 
         Parameters
         ----------
@@ -2158,9 +2161,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
             # if you have categorical variables, you can do the following to see the
             # effect of all the categories on one plot.
-            cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-            # same as:
-            cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
+            cph.plot_covariate_groups('categorical_var', values=["A", "B", "C"])
 
 
         """
@@ -2201,7 +2202,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         else:
             axes = []
-            for stratum, baseline_survival_ in self.baseline_survival_.iteritems():
+            for stratum, _ in self.baseline_survival_.index:
                 ax = plt.figure().add_subplot(1, 1, 1)
                 x_bar = self._central_values
 
@@ -2219,7 +2220,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 getattr(self, "predict_%s" % y)(X).plot(ax=ax, **kwargs)
                 if plot_baseline:
                     getattr(self, "predict_%s" % y)(x_bar).plot(
-                        ax=ax, ls=":", label="stratum %s baseline survival" % str(stratum), drawstyle=drawstyle
+                        ax=ax, ls=":", label="stratum %s baseline %s" % (str(stratum), y), drawstyle=drawstyle
                     )
                 plt.legend()
                 axes.append(ax)

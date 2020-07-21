@@ -60,12 +60,14 @@ def survival_probability_calibration(model: RegressionFitter, training_df: pd.Da
 
     # this model is from examples/royson_crowther_clements_splines.py
     crc = CRCSplineFitter(knots, penalizer=0)
-    if CensoringType.is_right_censoring(model):
-        crc.fit_right_censoring(prediction_df, T, E, regressors=regressors)
-    elif CensoringType.is_left_censoring(model):
-        crc.fit_left_censoring(prediction_df, T, E, regressors=regressors)
-    elif CensoringType.is_interval_censoring(model):
-        crc.fit_interval_censoring(prediction_df, T, E, regressors=regressors)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        if CensoringType.is_right_censoring(model):
+            crc.fit_right_censoring(prediction_df, T, E, regressors=regressors)
+        elif CensoringType.is_left_censoring(model):
+            crc.fit_left_censoring(prediction_df, T, E, regressors=regressors)
+        elif CensoringType.is_interval_censoring(model):
+            crc.fit_interval_censoring(prediction_df, T, E, regressors=regressors)
 
     # predict new model at values 0 to 1, but remember to ccl it!
     x = np.linspace(np.clip(predictions_at_t0.min() - 0.01, 0, 1), np.clip(predictions_at_t0.max() + 0.01, 0, 1), 100)

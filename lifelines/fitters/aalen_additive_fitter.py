@@ -529,7 +529,7 @@ It's important to know that the naive variance estimates of the coefficients are
         df["se(slope(coef))"] = se
         return df
 
-    def print_summary(self, decimals=2, style=None, **kwargs):
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -539,6 +539,8 @@ It's important to know that the naive variance estimates of the coefficients are
             specify the number of decimal places to show
         style: string
             {html, ascii, latex}
+        columns:
+            only display a subset of `summary` columns. Default all.
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -567,7 +569,7 @@ It's important to know that the naive variance estimates of the coefficients are
         )
 
         footers = [("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals))]
-        p = Printer(self, headers, footers, justify, decimals, kwargs)
+        p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
 
         p.print(style=style)
 
