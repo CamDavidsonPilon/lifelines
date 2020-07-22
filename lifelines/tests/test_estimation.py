@@ -43,7 +43,7 @@ from lifelines.utils import (
     qth_survival_time,
 )
 
-from lifelines.fitters import BaseFitter, ParametricUnivariateFitter, ParametricRegressionFitter
+from lifelines.fitters import BaseFitter, ParametricUnivariateFitter, ParametricRegressionFitter, RegressionFitter
 from lifelines.fitters.coxph_fitter import SemiParametricPHFitter
 
 from lifelines import (
@@ -330,9 +330,9 @@ class TestParametricUnivariateFitters:
         for f in known_parametric_univariate_fitters:
             f = f()
             f.fit(T)
-            f.print_summary(style="ascii")
-            f.print_summary(style="html")
-            f.print_summary(style="latex")
+            f.print_summary(style="ascii", decimals=4, columns=["coef", "p"])
+            f.print_summary(style="html", decimals=4, columns=["coef", "p"])
+            f.print_summary(style="latex", decimals=4, columns=["coef", "p"])
 
 
 class TestUnivariateFitters:
@@ -1805,6 +1805,25 @@ class TestRegressionFitters:
         regression_models_sans_strata_model.append(CoxPHFitter(strata=["race", "paro", "mar", "wexp"]))
         return regression_models_sans_strata_model
 
+    def test_compute_central_values_of_raw_training_data(self):
+
+        central_values = RegressionFitter()._compute_central_values_of_raw_training_data
+
+        empty_df = pd.DataFrame([])
+        assert central_values(empty_df) is None
+
+        all_categorical = pd.DataFrame([{"var1": "A", "var2": "C"}, {"var1": "B", "var2": "C"}, {"var1": "B", "var2": "C"}])
+
+        assert_frame_equal(central_values(all_categorical), pd.DataFrame([{"var1": "B", "var2": "C"}], index=["baseline"]))
+
+        all_numeric = pd.DataFrame([{"var1": 0.4, "var2": -1}, {"var1": 0.5, "var2": -2}, {"var1": 0.6, "var2": -100}])
+
+        assert_frame_equal(central_values(all_numeric), pd.DataFrame([{"var1": 0.5, "var2": -2.0}], index=["baseline"]))
+
+        mix = pd.DataFrame([{"var1": "A", "var2": -1}, {"var1": "A", "var2": -2}, {"var1": "B", "var2": -100}])
+
+        assert_frame_equal(central_values(mix), pd.DataFrame([{"var1": "A", "var2": -2.0}], index=["baseline"]))
+
     def test_alpha_will_vary_the_statistics_in_summary(self, rossi):
         reg_005 = WeibullAFTFitter(alpha=0.05).fit(rossi, "week", "arrest")
         reg_010 = WeibullAFTFitter(alpha=0.10).fit(rossi, "week", "arrest")
@@ -1842,7 +1861,7 @@ class TestRegressionFitters:
     def test_print_summary(self, rossi, regression_models):
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
-            fitter.print_summary()
+            fitter.print_summary(columns=["p", "coef", "std(coef)"], decimals=3)
 
     def test_pickle_serialization(self, rossi, regression_models):
         for fitter in regression_models:

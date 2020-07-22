@@ -71,9 +71,7 @@ class Printer:
             columns = summary_df.columns
         else:
             columns = summary_df.columns.intersection(self.columns)
-        import pdb
 
-        pdb.set_trace()
         headers = self.headers.copy()
         headers.insert(0, ("model", "lifelines." + self.model._class_name))
 
@@ -167,7 +165,7 @@ class Printer:
 
         with np.errstate(invalid="ignore", divide="ignore"):
 
-            repr_string += "---" + "\n"
+            repr_string += "\n" + "---" + "\n"
             for string, value in self.footers:
                 repr_string += "{} = {}".format(string, value) + "\n"
         return repr_string

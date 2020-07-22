@@ -16,9 +16,7 @@ class SplineFitterMixin:
 
     def basis(self, x: np.array, knot: float, min_knot: float, max_knot: float):
         lambda_ = (max_knot - knot) / (max_knot - min_knot)
-        return self.relu(x - knot) ** 3 - (
-            lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3
-        )
+        return self.relu(x - knot) ** 3 - (lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3)
 
 
 class ProportionalHazardMixin:
@@ -94,9 +92,7 @@ class ProportionalHazardMixin:
             )
 
         residuals = self.compute_residuals(training_df, kind="scaled_schoenfeld")
-        test_results = proportional_hazard_test(
-            self, training_df, time_transform=["rank", "km"], precomputed_residuals=residuals
-        )
+        test_results = proportional_hazard_test(self, training_df, time_transform=["rank", "km"], precomputed_residuals=residuals)
 
         residuals_and_duration = residuals.join(training_df[self.duration_col])
 
@@ -255,16 +251,14 @@ class ProportionalHazardMixin:
         """
         results = {}
         for t in sorted(followup_times):
-            assert (
-                t <= training_df[self.duration_col].max()
-            ), "all follow-up times must be less than max observed duration"
+            assert t <= training_df[self.duration_col].max(), "all follow-up times must be less than max observed duration"
             df = training_df.copy()
             # if we "rollback" the df to time t, who is dead and who is censored
             df[self.event_col] = (df[self.duration_col] <= t) & df[self.event_col]
             df[self.duration_col] = np.minimum(df[self.duration_col], t)
 
             model = self.__class__(penalizer=self.penalizer, l1_ratio=self.l1_ratio).fit(
-                df, self.duration_col, self.event_col, weights_col=self.weights_col
+                df, self.duration_col, self.event_col, weights_col=self.weights_col, entry_col=self.entry_col
             )
             results[t] = model.hazard_ratios_
         return DataFrame(results).T

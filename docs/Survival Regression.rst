@@ -48,15 +48,15 @@ The idea behind Cox's proportional hazard model model is that the log-hazard of 
 
 .. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease the baseline hazard.
+Note a few behaviors about this model: the only *time* component is in the baseline hazard, :math:`b_0(t)`. In the above equation, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus changes in covariates will only inflate or deflate the baseline survival.
 
-.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
+.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset or formula.
 
 
 Fitting the regression
 -----------------------
 
-The implementation of the Cox model in *lifelines* is under :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. We fit the model to the dataset using :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit`. Like R, it has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
+The implementation of the Cox model in *lifelines* is under :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. We fit the model to the dataset using :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit`. It has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
 
 
 .. code:: python
@@ -69,7 +69,7 @@ The implementation of the Cox model in *lifelines* is under :class:`~lifelines.f
     cph = CoxPHFitter()
     cph.fit(rossi, duration_col='week', event_col='arrest')
 
-    cph.print_summary()  # access the results using cph.summary
+    cph.print_summary()  # access the individual results using cph.summary
 
     """
     <lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
@@ -111,7 +111,7 @@ New in v0.25.0, We can also use ✨formulas✨ to handle the right-hand-side of 
 
     cph.fit(rossi, duration_col='week', event_col='arrest', formula="fin + wexp + age * prio")
 
-is analgous to the linear model:
+is analgous to the linear model with interaction term:
 
 .. math::
    \beta_1\text{fin} + \beta_2\text{wexp} + \beta_3 \text{age} + \beta_4 \text{prio} + \beta_5 \text{age} \cdot \text{prio}
@@ -154,7 +154,7 @@ is analgous to the linear model:
     -log2(p) of ll-ratio test = 17.35
     """
 
-Formulas can be used to create interactions, encode categorical variables, create splines, and so on. The formulas used are (almost) the same as what's available in R and statsmodels.
+Formulas can be used to create interactions, encode categorical variables, create basis splines, and so on. The formulas used are (almost) the same as what's available in R and statsmodels.
 
 
 Interpretation
@@ -472,7 +472,7 @@ After fitting a Cox model, we can look back and compute important model residual
 Modeling baseline hazard and survival with splines
 -----------------------------------------------------
 
-Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. There is an option to create a parametric baseline with cubic splines:
+Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. There is an option to fit to a parametric baseline with cubic splines (popularized by the invesntors of the model, Royston and Parmer):
 
 .. code:: python
 
@@ -482,10 +482,27 @@ Normally, the Cox model is *semi-parametric*, which means that its baseline haza
 
     rossi = load_rossi()
 
-    cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
-    cph.fit(rossi, 'week', event_col='arrest')
+    cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
+    cph_spline.fit(rossi, 'week', event_col='arrest')
 
-To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`
+To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`.
+
+Below we compare the non-parametric and the fully parametric baseline survivals:
+
+.. code:: python
+
+    cph_semi = CoxPHFitter().fit(rossi, 'week', event_col='arrest')
+
+    ax = cph_spline.baseline_survival_.plot()
+    cph_semi.baseline_survival_.plot(ax=ax, drawstyle="steps-post")
+
+
+.. image:: images/spline_and_semi.png
+    :width: 600px
+    :align: center
+
+    Modelling the baseline survival with splines vs non-parametric.
+
 
 
 Parametric survival models

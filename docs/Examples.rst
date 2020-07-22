@@ -1007,3 +1007,20 @@ New in version 0.23.1, *lifelines* models now have the ability to output a LaTeX
 
 
 In order to use the produced table summary in LaTeX, make sure you import the package ``booktabs`` in your preamble (``\usepackage{booktabs}``), since it is required to `display the table properly. <https://en.wikibooks.org/wiki/LaTeX/Tables#Using_booktabs>`_
+
+
+Filter a ``print_summary`` table
+##########################################
+
+The information provided by ``print_summary`` can be a lot, and even too much for some screens. You can filter to specific columns use the ``columns`` kwarg (default is to display all columns):
+
+.. code-block:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi = load_rossi()
+
+    cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+
+    cph.print_summary(columns=["coef", "se(coef)", "p"])

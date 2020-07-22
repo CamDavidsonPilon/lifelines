@@ -1189,7 +1189,9 @@ class RegressionFitter(BaseFitter):
 
     def _compute_central_values_of_raw_training_data(self, df):
         """
-        TODO: test this
+        Compute our "baseline" observation for function like plot_covariate_groups.
+        - Categoricals are transformed to their mode value.
+        - Numerics are transformed to their median value.
         """
         if df.size == 0:
             return None
@@ -3464,8 +3466,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if conditional_after is None:
             return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
         else:
-            # TODO
-            raise NotImplementedError()
+            conditional_after = np.asarray(conditional_after)
+            times_to_evaluate_at = (conditional_after.reshape((n, 1)) + np.tile(times, (n, 1))).T
+            return pd.DataFrame(self._hazard(params_dict, times_to_evaluate_at, Xs), index=times, columns=df.index)
 
     def predict_cumulative_hazard(self, df, *, ancillary=None, times=None, conditional_after=None) -> pd.DataFrame:
         """

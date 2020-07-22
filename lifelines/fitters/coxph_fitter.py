@@ -195,8 +195,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             be used.
 
         entry_col: str, optional
-            a column denoting when a subject entered the study, i.e. left-truncation. Only available for spline-based models.
-            TODO: test this.
+            a column denoting when a subject entered the study, i.e. left-truncation.
 
         strata: list or string, optional
             specify a column or list of columns n to use in stratification. This is useful if a
@@ -450,7 +449,14 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                 strata=self.strata,
                 baseline_estimation_method=self.baseline_estimation_method,
                 n_baseline_knots=self.n_baseline_knots,
-            ).fit(df, self.duration_col, self.event_col, weights_col=self.weights_col, cluster_col=self.cluster_col)
+            ).fit(
+                df,
+                self.duration_col,
+                self.event_col,
+                weights_col=self.weights_col,
+                cluster_col=self.cluster_col,
+                entry_col=self.entry_col,
+            )
             results[t] = model.hazard_ratios_
         return DataFrame(results).T
 
@@ -1649,7 +1655,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             return df
 
     def _trivial_log_likelihood(self):
-        # TODO
         df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "W": self.weights})
         if self.entry_col is not None:
             df["entry"] = self.entries

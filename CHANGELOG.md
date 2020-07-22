@@ -7,11 +7,12 @@
  - `plot_covariate_group` now can plot other y-values like hazards and cumulative hazards (default: survival function).
  - `CoxPHFitter` now accepts late entries via `entry_col`.
  - `calibration.survival_probability_calibration` now works with out-of-sample data.
- - `print_summary` now accepts a `column` argument to filter down the displayed values.
+ - `print_summary` now accepts a `column` argument to filter down the displayed values. This helps with clutter in notebooks, latex, or on the terminal.
 
 
 ##### API Changes
  - With the introduction of formulas, all models are using formulas under the hood. For custom regression models, this means that you no longer need to add a constant column to your DataFrame. I've updated the models in the `\examples` folder with examples of this new model building.
+ - The baseline in `plot_covariate_groups` has changed from the *mean* observation (including dummy-encoded categorical variables) to *median* for ordinal (including continuous) and *mode* for categorical.
  - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using `"Intercept"`.
  - In AFT models, `ancillary_df` kwarg has been renamed to `ancillary`. This reflects the more general use of the kwarg (not always a DataFrame, but could be a boolean or string now, too).
  - The never used "lifelines.metrics" is deleted.

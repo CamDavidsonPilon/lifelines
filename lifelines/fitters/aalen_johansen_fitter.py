@@ -59,7 +59,7 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
     """
 
     def __init__(self, jitter_level=0.0001, seed=None, alpha=0.05, calculate_variance=True, **kwargs):
-        UnivariateFitter.__init__(self, alpha=alpha, **kwargs)
+        NonParametricUnivariateFitter.__init__(self, alpha=alpha, **kwargs)
         self._jitter_level = jitter_level
         self._seed = seed  # Seed is for the jittering process
         self._calc_var = calculate_variance  # Optionally skips calculating variance to save time on bootstraps
