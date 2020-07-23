@@ -22,6 +22,8 @@
 ##### Bug fixes
  - The p-value of the log-likelihood ratio test for the CoxPHFitter with splines was returning the wrong result because the degrees of freedom was incorrect.
  - better `print_summary` logic in IDEs and Jupyter exports. Previously it should not be displayed.
+ - p-values have been corrected in the `SplineFitter`. Previously, the "null hypothesis" was no coefficient=0, but coefficient=0.01. This is now set to the former.
+ - fixed NaN bug in `survival_table_from_events` with intervals when no events would occur in a interval.
 
 #### 0.24.15 - 2020-07-09
 

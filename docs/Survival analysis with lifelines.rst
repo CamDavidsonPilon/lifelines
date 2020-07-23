@@ -265,8 +265,29 @@ Lets compare the different *types* of regimes present in the dataset:
 
 
 .. image:: images/lifelines_intro_all_regimes.png
+    :align: center
+    :figclass: align-center
 
 
+Best practices for presenting Kaplan Meier plots
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A recent survey of statisticians, medical professionals, and other stakeholders suggested that the addition
+of two pieces of information, summary tables and confidence intervals, greatly increased the effectiveness of Kaplan Meier plots, see "Morris TP, Jarvis CI, Cragg W, et al. Proposals on Kaplan–Meier plots in medical research and a survey of stakeholder views: KMunicate. BMJ Open 2019;9:e030215. doi:10.1136/bmjopen-2019-030215".
+
+In *lifelines*, confidence intervals are automatically added, but there is the `at_risk_counts` kwarg to add summary tables as well:
+
+..code:: python
+
+    kmf = KaplanMeierFitter().fit(T, E, label="all_regimes")
+    kmf.plot(at_risk_counts=True)
+
+
+.. image:: images/intro_add_at_risk.png
+    :align: center
+    :figclass: align-center
+
+For more details, and how to extend this to multiple curves, see `docs here <https://lifelines.readthedocs.io/en/latest/Examples.html#displaying-multiple-at-risk-counts-below-plots>`_.
 
 Getting data into the right format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

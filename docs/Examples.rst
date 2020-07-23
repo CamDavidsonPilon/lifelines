@@ -460,7 +460,7 @@ Displaying at-risk counts below plots
 Displaying multiple at-risk counts below plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add At-Risk counts at the bottom of your figures. For example:
+The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add counts at the bottom of your figures. For example:
 
 .. code-block:: python
 
