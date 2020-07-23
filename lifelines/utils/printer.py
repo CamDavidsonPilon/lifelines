@@ -105,8 +105,7 @@ class Printer:
         for string, value in self.headers:
             repr_string += "{} = {}".format(justify(string), value) + "\n"
 
-        repr_string += "\n"
-        repr_string += "---"
+        repr_string += "\n" + "---" + "\n"
 
         df.columns = utils.map_leading_space(df.columns)
 

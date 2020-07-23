@@ -1994,10 +1994,10 @@ class TestRegressionFitters:
                 "bool_": [True, False, False, True],
                 "int_": [1, -1, 0, 2],
                 "uint8_": pd.Series([1, 0, 2, 1], dtype="uint8"),
-                "string_": ["2.5", "a", "2.5", "a"],
+                "string_": ["2.5", "2.5", "a", "a"],
                 "float_": [1.2, -0.5, 0.0, 2.2],
                 "categorya_": pd.Series([1, 2, 2, 1], dtype="category"),
-                "categoryb_": pd.Series(["a", "b", "a", "b"], dtype="category"),
+                "categoryb_": pd.Series(["a", "a", "b", "b"], dtype="category"),
             }
         )
 

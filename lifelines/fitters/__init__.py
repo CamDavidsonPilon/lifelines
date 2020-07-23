@@ -204,6 +204,8 @@ class UnivariateFitter(BaseFitter):
         estimate = getattr(self, self._estimation_method)
         if not interpolate:
             return estimate.asof(times).squeeze()
+
+        warnings.warn("Approximating using linear interpolation`.\n", utils.ApproximationWarning)
         return utils.interpolate_at_times_and_return_pandas(estimate, times)
 
     @property
@@ -301,6 +303,10 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         if "alpha" in self._fitted_parameter_names:
             raise NameError("'alpha' in _fitted_parameter_names is a lifelines reserved word. Try 'alpha_' instead.")
+
+    @property
+    def params_(self):
+        return self.summary["coef"]
 
     @property
     def AIC_(self) -> float:
@@ -654,7 +660,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     ),
                 ),
             ],
-            [],
+            [("AIC", "{:.{prec}f}".format(self.AIC_, prec=decimals))],
             justify,
             kwargs,
             decimals,
@@ -3310,10 +3316,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         for covariate, value in zip(covariates, values.T):
             ancillary_X[covariate] = value
 
-        if self.fit_intercept:
-            X["Intercept"] = 1.0
-            ancillary_X["Intercept"] = 1.0
-
         self.predict_survival_function(X, ancillary=ancillary_X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
             self.predict_survival_function(x_bar, ancillary=x_bar_anc, times=times).rename(columns={0: "baseline survival"}).plot(
@@ -3456,9 +3458,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             for c in ancillary.columns.difference(df.columns):
                 df[c] = ancillary[c]
 
-        if self.fit_intercept:
-            df["Intercept"] = 1.0
-
         Xs = self._create_Xs_dict(df)
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
@@ -3507,9 +3506,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             assert ancillary.shape[0] == df.shape[0], "ancillary must be the same shape[0] as df"
             for c in ancillary.columns.difference(df.columns):
                 df[c] = ancillary[c]
-
-        if self.fit_intercept:
-            df["Intercept"] = 1.0
 
         Xs = self._create_Xs_dict(df)
 

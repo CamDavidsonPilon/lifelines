@@ -573,12 +573,12 @@ def _group_event_table_by_intervals(event_table, intervals) -> pd.DataFrame:
 
         intervals = np.arange(0, event_max + bin_width, bin_width)
 
-    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals)).agg(
+    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals, include_lowest=True)).agg(
         {"removed": ["sum"], "observed": ["sum"], "censored": ["sum"], "at_risk": ["max"]}
     )
     # convert columns from multiindex
     event_table.columns = event_table.columns.droplevel(1)
-    return event_table
+    return event_table.bfill()
 
 
 def survival_events_from_table(survival_table, observed_deaths_col="observed", censored_col="censored"):

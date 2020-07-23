@@ -114,8 +114,9 @@ class TestPlotting:
         self.plt.show(block=block)
 
     def test_kmf_add_at_risk_counts_with_subplot(self, block, kmf):
-        data1 = np.random.exponential(10, size=(100))
-        kmf.fit(data1)
+        T = np.random.exponential(10, size=(100))
+        E = np.random.binomial(1, 0.8, size=(100))
+        kmf.fit(T, E)
 
         fig = self.plt.figure()
         axes = fig.subplots(1, 2)
@@ -142,7 +143,7 @@ class TestPlotting:
         half_inch = 0.5 / height  # in percent height
         _fig = plt.figure(figsize=(6, height), dpi=100)
         gs = mpl.gridspec.GridSpec(img_no, 1)
-        plt.subplots_adjust(left=0.08, right=0.98, bottom=half_inch, top=1 - half_inch)
+        # plt.subplots_adjust(left=0.08, right=0.98, bottom=half_inch, top=1 - half_inch)
 
         for i in range(img_no):
             ax = plt.subplot(gs[i, 0])

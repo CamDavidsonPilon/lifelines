@@ -8,6 +8,7 @@
  - `CoxPHFitter` now accepts late entries via `entry_col`.
  - `calibration.survival_probability_calibration` now works with out-of-sample data.
  - `print_summary` now accepts a `column` argument to filter down the displayed values. This helps with clutter in notebooks, latex, or on the terminal.
+ - `add_at_risk_counts` now follows the cool new KMunicate suggestions
 
 
 ##### API Changes
