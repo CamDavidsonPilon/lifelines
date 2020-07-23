@@ -293,6 +293,13 @@ def test_group_survival_table_from_events_on_waltons_data():
     assert all(removed.index == censored.index)
 
 
+def test_survival_table_from_events_binned_with_empty_bin():
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    event_table = utils.survival_table_from_events(df.loc[ix]["T"], df.loc[ix]["E"], intervals=[0, 10, 20, 30, 40, 50])
+    assert not pd.isnull(event_table).any().any()
+
+
 def test_survival_table_from_events_at_risk_column():
     df = load_waltons()
     # from R

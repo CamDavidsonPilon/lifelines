@@ -460,10 +460,11 @@ def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]
             # a) to align with R (and intuition), we do a subtraction off the at_risk column
             # b) we group by the tick intervals
             # c) we want to start at 0, so we give it it's own interval
+
             event_table_slice = (
-                _group_event_table_by_intervals(f.event_table, np.append([-1], ax2.get_xticks()))
-                .assign(at_risk=lambda x: x.at_risk - x.removed)
-                .loc[tick]
+                f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed)
+                .loc[:tick, ["at_risk", "censored", "observed"]]
+                .agg({"at_risk": "min", "censored": "sum", "observed": "sum"})
             )
             counts.extend([int(c) for c in event_table_slice.loc[["at_risk", "censored", "observed"]]])
 
@@ -472,7 +473,7 @@ def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]
             for i, c in enumerate(counts):
                 if i % 3 == 0:
                     if is_latex_enabled():
-                        lbl += ("\n" if i > 0 else "") + r"$\textbf{%s}$\n" % labels[int(i / 3)] + "\n"
+                        lbl += ("\n" if i > 0 else "") + r"\textbf{%s}" % labels[int(i / 3)] + "\n"
                     else:
                         lbl += ("\n" if i > 0 else "") + r"$\mathit{%s}$" % labels[int(i / 3)] + "\n"
 
