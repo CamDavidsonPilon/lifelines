@@ -23,7 +23,8 @@ def tempdir():
 
 # uncomment to use locally.
 # run `py.test` in the docs folder
-
+"""
 pytest_collect_file = Sybil(
     parsers=[DocTestParser(), CodeBlockParser(future_imports=["print_function"])], pattern="*.rst", fixtures=["tempdir"]
 ).pytest()
+"""

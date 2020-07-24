@@ -23,6 +23,7 @@ from lifelines.fitters import SemiParametricRegressionFittter
 from lifelines.fitters.mixins import ProportionalHazardMixin
 from lifelines.utils.printer import Printer
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
+from lifelines.exceptions import ConvergenceError, ConvergenceWarning
 from lifelines.utils import (
     _get_index,
     _to_list,
@@ -35,8 +36,6 @@ from lifelines.utils import (
     check_for_instantaneous_events_at_death_time,
     check_for_nonnegative_intervals,
     pass_for_numeric_dtypes_or_raise_array,
-    ConvergenceError,
-    ConvergenceWarning,
     inv_normal_cdf,
     normalize,
     StepSizer,
@@ -204,9 +203,13 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
 
         if self.formula is None:
             self.formula = " + ".join(df.columns)
-        X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
-        self._design_info = X.design_info
-        X = X.drop("Intercept", axis=1)
+
+            X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
+            self.regressors = {"beta_": X.design_info}
+            X = X.drop("Intercept", axis=1)
+        else:
+            X = df
+            self.regressors = {"beta_": X.columns}
 
         X = X.astype(float)
         self._check_values(X, events, start, stop)
@@ -612,7 +615,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         if isinstance(X, pd.DataFrame):
             order = hazard_names
-            (X,) = patsy.build_design_matrices([self._design_info], X, return_type="dataframe")
+            if self.formula:
+                (X,) = patsy.build_design_matrices([self._design_info], X, return_type="dataframe")
             X = X.reindex(order, axis="columns")
             X = X.values
 

@@ -4,16 +4,15 @@ import numpy as np
 import pandas as pd
 
 from lifelines.fitters import NonParametricUnivariateFitter
+from lifelines.exceptions import StatError, StatisticalWarning
 from lifelines.utils import (
     _preprocess_inputs,
     _additive_estimate,
     _to_1d_array,
-    StatError,
     inv_normal_cdf,
     median_survival_times,
     qth_survival_time,
     check_nans_or_infs,
-    StatisticalWarning,
     coalesce,
     CensoringType,
     pass_for_numeric_dtypes_or_raise_array,

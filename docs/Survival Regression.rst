@@ -105,7 +105,7 @@ The implementation of the Cox model in *lifelines* is under :class:`~lifelines.f
     -log2(p) of ll-ratio test = 15.37
     """
 
-New in v0.25.0, We can also use ✨formulas✨ to handle the right-hand-side of linear equation. For example:
+New in v0.25.0, We can also use ✨formulas✨ to handle the right-hand-side of the linear model. For example:
 
 .. code:: python
 
@@ -236,7 +236,7 @@ To use this in *lifelines*, both the ``penalizer`` and ``l1_ratio`` can be speci
 
 Instead of a float, an *array* can be provided that is the same size as the number of penalized parameters. The values in the array are specific penalty coefficients for each covariate. This is useful for more complicated covariate structure. Some examples:
 
-i) you have lots of confounders you wish to penalizer, but not the main treatment(s).
+1. you have lots of confounders you wish to penalizer, but not the main treatment(s).
 
 .. code:: python
 
@@ -252,9 +252,9 @@ i) you have lots of confounders you wish to penalizer, but not the main treatmen
     cph.fit(rossi, 'week', 'arrest')
     cph.print_summary()
 
-ii) you have to `fuse categories together <https://stats.stackexchange.com/questions/146907/principled-way-of-collapsing-categorical-variables-with-many-levels>`_.
+2. you have to `fuse categories together <https://stats.stackexchange.com/questions/146907/principled-way-of-collapsing-categorical-variables-with-many-levels>`_.
 
-
+3. you want to implement a `very sparse solution <https://dataorigami.net/blogs/napkin-folding/an-l1-2-penalty-in-cox-regression>`_.
 
 Plotting the coefficients
 ------------------------------
@@ -335,11 +335,10 @@ This feature is also useful for analyzing categorical variables:
 .. code:: python
 
     cph.plot_covariate_groups(
-        covariates=["some_categorical_variable"]
-        values=["catA", "catB", ...],
+        covariates=["a_categorical_variable"]
+        values=["A", "B", ...],
         plot_baseline=False)
 
-The reason why we use ``np.eye`` is because we want each row of the matrix to "turn on" one category and "turn off" the others.
 
 Checking the proportional hazards assumption
 -----------------------------------------------
@@ -472,7 +471,9 @@ After fitting a Cox model, we can look back and compute important model residual
 Modeling baseline hazard and survival with splines
 -----------------------------------------------------
 
-Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. There is an option to fit to a parametric baseline with cubic splines (popularized by the invesntors of the model, Royston and Parmer):
+Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. A parametric baseline makes survival predictions more robust, allows for better understanding of baseline behaviour.
+
+In *lifelines*, there is an option to fit to a parametric baseline with cubic splines:
 
 .. code:: python
 
@@ -497,16 +498,17 @@ Below we compare the non-parametric and the fully parametric baseline survivals:
     cph_semi.baseline_survival_.plot(ax=ax, drawstyle="steps-post")
 
 
-.. image:: images/spline_and_semi.png
+.. figure:: images/spline_and_semi.png
     :width: 600px
     :align: center
 
-    Modelling the baseline survival with splines vs non-parametric.
+    Modeling the baseline survival with splines vs non-parametric.
 
 
 
 Parametric survival models
 ==================================
+
 
 Accelerated failure time models
 -----------------------------------------------
@@ -1145,12 +1147,13 @@ Concordance Index
 *****************************************
 
 
-Another censoring-sensitive measure is the concordance-index, also known as the c-index. This measure evaluates the accuracy of the *ranking* of predicted time. It is in fact a generalization
-of AUC, another common loss function, and is interpreted similarly:
+Another censoring-sensitive measure is the concordance-index, also known as the c-index. This measure evaluates the accuracy of the *ranking* of predicted time. It is in fact a generalization of AUC, another common loss function, and is interpreted similarly:
 
 * 0.5 is the expected result from random predictions,
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
+
+`Here <https://stats.stackexchange.com/a/478305/11867>`_ is an excellent introduction & description of the c-index for new users.
 
 Fitted survival models typically have a concordance index between 0.55 and 0.75 (this may seem bad, but even a perfect model has a lot of noise than can make a high score impossible). In *lifelines*, a fitted model's concordance-index is present in the output of :meth:`~lifelines.fitters.cox_ph_fitter.CoxPHFitter.score`, but also available under the ``concordance_index_`` property. Generally, the measure is implemented in *lifelines* under :meth:`lifelines.utils.concordance_index` and accepts the actual times (along with any censored subjects) and the predicted times.
 

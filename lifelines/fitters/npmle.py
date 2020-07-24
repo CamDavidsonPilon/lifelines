@@ -12,7 +12,7 @@ import warnings
 import numpy as np
 from numpy.linalg import norm
 import pandas as pd
-from lifelines.utils import ConvergenceWarning
+from lifelines.exceptions import ConvergenceWarning
 from typing import *
 
 interval = namedtuple("Interval", ["left", "right"])

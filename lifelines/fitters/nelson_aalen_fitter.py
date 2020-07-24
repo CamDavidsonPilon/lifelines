@@ -7,13 +7,13 @@ import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.plotting import _plot_estimate
+from lifelines.exceptions import StatisticalWarning
 from lifelines.utils import (
     _preprocess_inputs,
     _additive_estimate,
     epanechnikov_kernel,
     inv_normal_cdf,
     check_nans_or_infs,
-    StatisticalWarning,
     CensoringType,
     coalesce,
 )

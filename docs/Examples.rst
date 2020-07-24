@@ -1024,3 +1024,50 @@ The information provided by ``print_summary`` can be a lot, and even too much fo
     cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
 
     cph.print_summary(columns=["coef", "se(coef)", "p"])
+
+
+
+Fixing a ``FormulaSyntaxError``
+##############################################
+
+As a of *lifelines* v0.25.0, formulas are used internally (even if not explicity used in the call to ``fit``). This may cause problems if your dataframe has column names with spaces, periods, or other characters. The cheapest way to fix this is to change your column names:
+
+
+.. code-block:: python
+
+    df = pd.DataFrame({
+        'T': [1, 2, 3, 4],
+        'column with spaces': [1.5, 1.0, 2.5, 1.0],
+        'column.with.periods': [2.5, -1.0, -2.5, 1.0],
+        'column': [2.0, 1.0, 3.0, 4.0]
+    })
+
+    cph = CoxPHFitter().fit(df, 'T')
+
+    """
+    FormulaSyntaxError:
+        ...
+    """
+
+    df.columns = df.columns.str.replace(' ', '')
+    df.columns = df.columns.str.replace('.', '')
+    cph = CoxPHFitter().fit(df, 'T')
+
+    """
+    👍
+    """
+
+
+Another option is to use the formula syntax to handle this:
+
+
+.. code-block:: python
+
+    df = pd.DataFrame({
+        'T': [1, 2, 3, 4],
+        'column with spaces': [1.5, 1.0, 2.5, 1.0],
+        'column.with.periods': [2.5, -1.0, -2.5, 1.0],
+        'column': [2.0, 1.0, 3.0, 4.0]
+    })
+
+    cph = CoxPHFitter().fit(df, 'T', formula="column + Q('column with spaces') + Q('column.with.periods')")

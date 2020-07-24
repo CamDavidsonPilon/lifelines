@@ -12,12 +12,16 @@
 
 
 ##### API Changes
- - With the introduction of formulas, all models are using formulas under the hood. For custom regression models, this means that you no longer need to add a constant column to your DataFrame. I've updated the models in the `\examples` folder with examples of this new model building.
+ - With the introduction of formulas, all models are using formulas under the hood.
+    - For datasets with columns names with spaces, non-ASCII characters, etc., the column names may need to be modified to remove these values _or_ you can adopt formulas and use the `Q()` syntax.
+    - For both custom regression models or non-AFT regression models, this means that you no longer need to add a constant column to your DataFrame (instead add a `1` as a formula string in the `regressors` dict). You may also need to remove the T and E columns from `regressors`. I've updated the models in the `\examples` folder with examples of this new model building.
  - The baseline in `plot_covariate_groups` has changed from the *mean* observation (including dummy-encoded categorical variables) to *median* for ordinal (including continuous) and *mode* for categorical.
  - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using `"Intercept"`.
  - In AFT models, `ancillary_df` kwarg has been renamed to `ancillary`. This reflects the more general use of the kwarg (not always a DataFrame, but could be a boolean or string now, too).
+ - Some column names in datasets shipped with lifelines have changed.
  - The never used "lifelines.metrics" is deleted.
  - With the introduction of formulas, `plot_covariate_groups` behaves differently for transformed variables. Users no longer need to add "derivatives" features, and encoding is done implicitly. See docs [here](https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#plotting-the-effect-of-varying-a-covariate).
+ - all exceptions and warnings have moved to `lifelines.exceptions`
 
 ##### Bug fixes
  - The p-value of the log-likelihood ratio test for the CoxPHFitter with splines was returning the wrong result because the degrees of freedom was incorrect.

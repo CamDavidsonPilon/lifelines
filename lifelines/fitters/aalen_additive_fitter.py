@@ -10,6 +10,7 @@ from scipy.integrate import trapz
 
 from lifelines.fitters import RegressionFitter
 from lifelines.utils.printer import Printer
+from lifelines.exceptions import StatisticalWarning, ConvergenceWarning
 from lifelines.utils import (
     _get_index,
     inv_normal_cdf,
@@ -19,7 +20,6 @@ from lifelines.utils import (
     check_for_numeric_dtypes_or_raise,
     concordance_index,
     check_nans_or_infs,
-    ConvergenceWarning,
     normalize,
     string_justify,
     _to_list,
@@ -27,7 +27,6 @@ from lifelines.utils import (
     format_p_value,
     format_exp_floats,
     survival_table_from_events,
-    StatisticalWarning,
     CensoringType,
 )
 

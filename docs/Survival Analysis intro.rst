@@ -86,7 +86,7 @@ that we would be severely underestimating the true average lifespan.
     print("Observed lifetimes at time %d:\n" % (CURRENT_TIME), observed_lifetimes)
 
 
-.. image:: images/survival_analysis_intro_censoring.png
+.. figure:: images/survival_analysis_intro_censoring.png
     :width: 650px
     :align: center
     :figclass: align-center
@@ -115,9 +115,10 @@ information at :math:`t=10`).
     ax.set_xlim(0, 25)
 
 
-.. image:: images/survival_analysis_intro_censoring_revealed.png
-    :width: 750px
+.. figure:: images/survival_analysis_intro_censoring_revealed.png
+    :width: 650px
     :align: center
+    :figclass: align-center
 
     Revealing the actual lifetimes of individuals.
 

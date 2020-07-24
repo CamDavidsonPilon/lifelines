@@ -22,6 +22,7 @@ from lifelines.fitters.mixins import SplineFitterMixin, ProportionalHazardMixin
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
 from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.utils.safe_exp import safe_exp
+from lifelines import exceptions
 from lifelines.utils.printer import Printer
 from lifelines import utils
 
@@ -785,13 +786,36 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
-        if self.formula is None:
-            self.formula = " + ".join(df.columns)
-        X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
+        if self.formula is not None:
+            try:
+                X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
+            except SyntaxError as e:
+                import traceback
 
-        self._design_info = X.design_info
+                column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
+                raise utils.FormulaSyntaxError(
+                    (
+                        """
+    It looks like the DataFrame has non-standard column names. See below for which column:
 
-        X = X.drop("Intercept", axis=1)
+    %s
+
+    As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
+        i) have no non-traditional characters (this includes spaces and periods)
+        ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
+
+    See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
+                """
+                        % column_error
+                    )
+                )
+
+            self.regressors = {"beta_": X.design_info}
+            X = X.drop("Intercept", axis=1)
+
+        else:
+            X = df
+            self.regressors = {"beta_": X.columns}
 
         T = T.astype(float)
 
@@ -825,7 +849,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
 """,
-                    utils.StatisticalWarning,
+                    exceptions.StatisticalWarning,
                 )
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
@@ -988,12 +1012,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             except (ValueError, LinAlgError) as e:
                 self._check_values_post_fitting(X, T, E, weights)
                 if "infs or NaNs" in str(e):
-                    raise utils.ConvergenceError(
+                    raise exceptions.ConvergenceError(
                         """Hessian or gradient contains nan or inf value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS),
                         e,
                     )
                 elif isinstance(e, LinAlgError):
-                    raise utils.ConvergenceError(
+                    raise exceptions.ConvergenceError(
                         """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. {0}""".format(
                             CONVERGENCE_DOCS
                         ),
@@ -1007,7 +1031,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if np.any(np.isnan(delta)):
                 self._check_values_post_fitting(X, T, E, weights)
-                raise utils.ConvergenceError("""delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS))
+                raise exceptions.ConvergenceError(
+                    """delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS)
+                )
 
             # Save these as pending result
             hessian, gradient = h, g
@@ -1044,7 +1070,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 warnings.warn(
                     "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.stackexchange.com/q/11109/11867 for more.\n",
-                    utils.ConvergenceWarning,
+                    exceptions.ConvergenceWarning,
                 )
                 converging, success = False, False
 
@@ -1062,11 +1088,13 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             warnings.warn(
                 "Newton-Rhaphson convergence completed successfully but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
                 % norm_delta,
-                utils.ConvergenceWarning,
+                exceptions.ConvergenceWarning,
             )
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
-            warnings.warn("Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, utils.ConvergenceWarning)
+            warnings.warn(
+                "Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, exceptions.ConvergenceWarning
+            )
 
         return beta, ll_, hessian
 
@@ -1739,7 +1767,9 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         if isinstance(X, pd.DataFrame):
             order = hazard_names
-            (X,) = patsy.build_design_matrices([self._design_info], X, return_type="dataframe")
+            if self.formula:
+                (X,) = patsy.build_design_matrices([self.regressors["beta_"]], X, return_type="dataframe")
+
             X = X.reindex(order, axis="columns")
             X = X.values
 
@@ -1796,7 +1826,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 try:
                     strata_c_0 = self.baseline_cumulative_hazard_[[stratum]]
                 except KeyError:
-                    raise utils.StatError(
+                    raise exceptions.StatError(
                         dedent(
                             """The stratum %s was not found in the original training data. For example, try
                             the following on the original dataset, df: `df.groupby(%s).size()`. Expected is that %s is not present in the output."""
@@ -2334,6 +2364,12 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             return self.concordance_index_
         return self._concordance_index_
 
+    @property
+    def AIC_(self):
+        raise exceptions.StatError(
+            "Since the model is semi-parametric (and not fully-parametric), the AIC does not exist. You probably want the `.AIC_partial_` property instead"
+        )
+
 
 class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, ProportionalHazardMixin):
     r"""
@@ -2514,11 +2550,9 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
     @property
     def AIC_partial_(self):
-        warnings.warn(
-            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead",
-            StatisticalWarning,
+        raise exceptions.StatError(
+            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead"
         )
-        return None
 
 
 class _BatchVsSingle:

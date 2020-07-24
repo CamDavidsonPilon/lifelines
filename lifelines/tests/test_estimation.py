@@ -38,11 +38,10 @@ from lifelines.utils import (
     to_episodic_format,
     ConvergenceError,
     median_survival_times,
-    StatisticalWarning,
-    ApproximationWarning,
     qth_survival_time,
 )
 
+from lifelines.exceptions import StatisticalWarning, ApproximationWarning
 from lifelines.fitters import BaseFitter, ParametricUnivariateFitter, ParametricRegressionFitter, RegressionFitter
 from lifelines.fitters.coxph_fitter import SemiParametricPHFitter
 
@@ -1862,6 +1861,11 @@ class TestRegressionFitters:
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
             fitter.print_summary(columns=["p", "coef", "std(coef)"], decimals=3)
+
+    def test_all_models_have_regressors_property(self, rossi, regression_models):
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+            assert hasattr(fitter, "regressors")
 
     def test_pickle_serialization(self, rossi, regression_models):
         for fitter in regression_models:

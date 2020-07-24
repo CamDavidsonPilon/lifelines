@@ -26,6 +26,7 @@ import patsy
 
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
 from lifelines.utils.printer import Printer
+from lifelines import exceptions
 from lifelines import utils
 
 
@@ -330,7 +331,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                         class_name, values.__repr__()
                     )
                 ),
-                utils.StatisticalWarning,
+                exceptions.StatisticalWarning,
             )
 
         derivative_of_cumulative_hazard = self._hazard(values, durations)
@@ -349,7 +350,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                         class_name, values.__repr__()
                     )
                 ),
-                utils.StatisticalWarning,
+                exceptions.StatisticalWarning,
             )
 
     def _initial_values_from_bounds(self):
@@ -965,7 +966,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     """
                     % self._class_name
                 )
-                warnings.warn(warning_text, utils.StatisticalWarning)
+                warnings.warn(warning_text, exceptions.StatisticalWarning)
 
         self.variance_matrix_ = pd.DataFrame(
             variance_matrix_, index=self._fitted_parameter_names, columns=self._fitted_parameter_names
@@ -1236,7 +1237,7 @@ class RegressionFitter(BaseFitter):
         if self.entry_col is not None:
             raise NotImplementedError("Residuals for entries not implemented.")
 
-        warnings.filterwarnings("ignore", category=utils.ConvergenceWarning)
+        warnings.filterwarnings("ignore", category=exceptions.ConvergenceWarning)
         X, Ts, E, weights, _, shuffled_original_index, _ = self._preprocess_dataframe(training_dataframe)
 
         resids = getattr(self, "_compute_%s" % kind)(X, Ts, E, weights, index=shuffled_original_index)
@@ -1284,7 +1285,7 @@ class ParametricRegressionFitter(RegressionFitter):
                                         It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
                                         estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"""
                     ),
-                    utils.StatisticalWarning,
+                    exceptions.StatisticalWarning,
                 )
             if (weights <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
@@ -2011,7 +2012,7 @@ class ParametricRegressionFitter(RegressionFitter):
                     """
                     % self._class_name
                 )
-                warnings.warn(warning_text, utils.StatisticalWarning)
+                warnings.warn(warning_text, exceptions.StatisticalWarning)
 
         return unit_scaled_variance_matrix_ / np.outer(self._norm_std, self._norm_std)
 
