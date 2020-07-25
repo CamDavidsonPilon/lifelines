@@ -333,7 +333,10 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         df = args[0].copy()
 
         formula = kwargs.pop("formula")
-        regressors = {**{"beta_": formula}, **{"phi%d_" % i: ["1"] for i in range(1, self.n_baseline_knots + 2)}}
+        if type(formula) == str:
+            formula += "-1"
+
+        regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(0, self.n_baseline_knots + 2)}}
 
         model = ParametricSplinePHFitter(
             penalizer=self.penalizer,
@@ -815,7 +818,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         else:
             X = df
-            self.regressors = {"beta_": X.columns}
+            self.regressors = {"beta_": X.columns.tolist()}
 
         T = T.astype(float)
 
@@ -2406,7 +2409,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             n_baseline_knots is not None and n_baseline_knots > 0
         ), "n_baseline_knots must be a positive integer. Set in class instantiation"
         self.n_baseline_knots = n_baseline_knots
-        self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 2)]
+        self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(0, self.n_baseline_knots + 2)]
         super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)
 
     def _set_knots(self, T, E):
@@ -2420,7 +2423,12 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
         v = [
             {
-                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
+                **{
+                    "beta_": np.zeros(len(Xs["beta_"].columns)),
+                    "phi0_": np.array([0.0]),
+                    "phi1_": np.array([0.05]),
+                    "phi2_": np.array([-0.05]),
+                },
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
             }
         ]
@@ -2428,7 +2436,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
     def _cumulative_hazard(self, params, T, Xs):
         lT = anp.log(T)
-        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi1_"] * lT)
+        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi0_"] + params["phi1_"] * lT)
 
         for i in range(2, self.n_baseline_knots + 2):
             H *= safe_exp(

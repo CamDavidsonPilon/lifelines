@@ -30,18 +30,15 @@ import numpy.testing as npt
 
 from lifelines.utils import (
     k_fold_cross_validation,
-    StatError,
     concordance_index,
-    ConvergenceWarning,
     to_long_format,
     normalize,
     to_episodic_format,
-    ConvergenceError,
     median_survival_times,
     qth_survival_time,
 )
 
-from lifelines.exceptions import StatisticalWarning, ApproximationWarning
+from lifelines.exceptions import StatisticalWarning, ApproximationWarning, StatError, ConvergenceWarning, ConvergenceError
 from lifelines.fitters import BaseFitter, ParametricUnivariateFitter, ParametricRegressionFitter, RegressionFitter
 from lifelines.fitters.coxph_fitter import SemiParametricPHFitter
 
@@ -4496,7 +4493,7 @@ log-likelihood ratio test = 33.27 on 7 df
 
     def test_what_happens_to_nans(self, rossi, cph):
         rossi["var4"] = np.nan
-        with pytest.raises(patsy.PatsyError):
+        with pytest.raises(TypeError):
             cph.fit(rossi, duration_col="week", event_col="arrest")
 
     def test_check_assumptions_fails_for_nonunique_index(self, cph, rossi):

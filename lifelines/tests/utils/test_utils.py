@@ -14,7 +14,6 @@ from flaky import flaky
 from lifelines import CoxPHFitter, WeibullAFTFitter, KaplanMeierFitter, ExponentialFitter
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
 from lifelines import utils
-from lifelines import metrics
 from lifelines.utils.sklearn_adapter import sklearn_adapter
 from lifelines.utils.safe_exp import safe_exp
 
@@ -73,40 +72,6 @@ def test_lstsq_returns_correct_values():
     assert norm(beta - expected_beta) < 10e-4
     for V_row, e_v_row in zip(V, expected_v):
         assert norm(V_row - e_v_row) < 1e-4
-
-
-def test_l1_log_loss_with_no_observed():
-    actual = np.array([1, 1, 1])
-    predicted = np.array([1, 1, 1])
-    assert metrics.uncensored_l1_log_loss(actual, predicted) == 0.0
-    predicted = predicted + 1
-    assert metrics.uncensored_l1_log_loss(actual, predicted) == np.log(2)
-
-
-def test_l1_log_loss_with_observed():
-    E = np.array([0, 1, 1])
-    actual = np.array([1, 1, 1])
-    predicted = np.array([1, 1, 1])
-    assert metrics.uncensored_l1_log_loss(actual, predicted, E) == 0.0
-    predicted = np.array([2, 1, 1])
-    assert metrics.uncensored_l1_log_loss(actual, predicted, E) == 0.0
-
-
-def test_l2_log_loss_with_no_observed():
-    actual = np.array([1, 1, 1])
-    predicted = np.array([1, 1, 1])
-    assert metrics.uncensored_l2_log_loss(actual, predicted) == 0.0
-    predicted = predicted + 1
-    assert abs(metrics.uncensored_l2_log_loss(actual, predicted) - np.log(2) ** 2) < 10e-8
-
-
-def test_l2_log_loss_with_observed():
-    E = np.array([0, 1, 1])
-    actual = np.array([1, 1, 1])
-    predicted = np.array([1, 1, 1])
-    assert metrics.uncensored_l2_log_loss(actual, predicted, E) == 0.0
-    predicted = np.array([2, 1, 1])
-    assert metrics.uncensored_l2_log_loss(actual, predicted, E) == 0.0
 
 
 def test_unnormalize():

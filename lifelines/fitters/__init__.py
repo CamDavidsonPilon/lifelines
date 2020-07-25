@@ -1655,16 +1655,13 @@ class ParametricRegressionFitter(RegressionFitter):
 
     def _create_design_info_and_matrices(self, user_inputed_regressor_lookup, df):
 
-        # convert user_inputed_regressor_lookup to a dict {str: design_info}
+        # convert user_inputed_regressor_lookup to a dict {str: Optional[design_info, list]}
 
         if user_inputed_regressor_lookup is None:
-            formula = " + ".join(df.columns.tolist())
-            df_transformed = patsy.dmatrix(formula, df, return_type="dataframe")
+            cols = df.columns.tolist()
             return (
-                {name: df_transformed.design_info for name in sorted(self._fitted_parameter_names)},
-                pd.concat(
-                    {name: df_transformed for name in sorted(self._fitted_parameter_names)}, axis=1, names=("param", "covariate")
-                ),
+                {name: cols for name in sorted(self._fitted_parameter_names)},
+                pd.concat({name: df for name in sorted(self._fitted_parameter_names)}, axis=1, names=("param", "covariate")),
             )
 
         regressors = {}
@@ -1673,16 +1670,18 @@ class ParametricRegressionFitter(RegressionFitter):
         for param, value in user_inputed_regressor_lookup.items():
             if isinstance(value, (list, pd.Index)):
                 # list of covariates
-                formula = " + ".join(value)
+                df_transformed_ = df[value]
+                mapping_ = list(value)
             elif isinstance(value, str):
                 # submitted formula
-                formula = value
+                df_transformed_ = patsy.dmatrix(value, df, return_type="dataframe")
+                mapping_ = df_transformed_.design_info
             elif value is None:
-                # use all covariates available
-                formula = " + ".join(df.columns)
+                # use all the columns in df
+                df_transformed_ = df
+                mapping_ = df.columns.tolist()
 
-            df_transformed_ = patsy.dmatrix(formula, df, return_type="dataframe")
-            regressors[param] = df_transformed_.design_info
+            regressors[param] = mapping_
             Xs[param] = df_transformed_
         return regressors, pd.concat(Xs, axis=1, names=("param", "covariate"))
 
@@ -1907,8 +1906,12 @@ class ParametricRegressionFitter(RegressionFitter):
 
     def _create_Xs_dict(self, df):
         Xs = {}
+
         for param, design_info in self.regressors.items():
-            df_transformed_, = patsy.build_design_matrices([design_info], df, return_type="dataframe")
+            if type(design_info) == list:
+                df_transformed_ = df[design_info]
+            else:
+                df_transformed_, = patsy.build_design_matrices([design_info], df, return_type="dataframe")
             Xs[param] = df_transformed_
         return utils.DataframeSlicer(pd.concat(Xs, axis=1, names=("param", "covariate")))
 
@@ -2001,7 +2004,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 """
                 % self._class_name
             )
-            warnings.warn(warning_text, utils.ApproximationWarning)
+            warnings.warn(warning_text, exceptions.ApproximationWarning)
         finally:
             if (unit_scaled_variance_matrix_.diagonal() < 0).any():
                 warning_text = dedent(
@@ -2064,7 +2067,7 @@ class ParametricRegressionFitter(RegressionFitter):
         if hasattr(self, "_ll_null_"):
             return self._ll_null_
 
-        regressors = {name: ["1"] for name in self._fitted_parameter_names}
+        regressors = {name: "1" for name in self._fitted_parameter_names}
         df = pd.DataFrame({"entry": self.entry, "w": self.weights})
 
         # some fitters will have custom __init__ fields that need to be provided (Piecewise, Spline...)

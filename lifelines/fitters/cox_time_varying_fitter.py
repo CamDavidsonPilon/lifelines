@@ -209,7 +209,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
             X = X.drop("Intercept", axis=1)
         else:
             X = df
-            self.regressors = {"beta_": X.columns}
+            self.regressors = {"beta_": X.columns.tolist()}
 
         X = X.astype(float)
         self._check_values(X, events, start, stop)
@@ -616,7 +616,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if isinstance(X, pd.DataFrame):
             order = hazard_names
             if self.formula:
-                (X,) = patsy.build_design_matrices([self._design_info], X, return_type="dataframe")
+                (X,) = patsy.build_design_matrices(self.regressors["beta"], X, return_type="dataframe")
             X = X.reindex(order, axis="columns")
             X = X.values
 

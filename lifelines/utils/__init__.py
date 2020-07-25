@@ -17,6 +17,7 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
+from lifelines.exceptions import ConvergenceWarning
 
 
 __all__ = [
