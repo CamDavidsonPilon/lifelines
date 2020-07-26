@@ -66,7 +66,7 @@ lnf.print_summary()
 
 # H-AFT log normal model
 haft = HAFT()
-covariates = {"mu_": aft_string, "sigma_": ["C(rx, Treatment('Obs'))"]}
+covariates = {"mu_": aft_string, "sigma_": "C(rx, Treatment('Obs'))"}
 
 haft.fit(df, "time", event_col="status", regressors=covariates)
 haft.print_summary(4)

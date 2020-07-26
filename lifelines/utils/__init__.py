@@ -1866,6 +1866,12 @@ class CovariateParameterMappings:
             else:
                 raise ValueError("Unexpected transform.")
 
+            if self.force_no_intercept:
+                try:
+                    X = X.drop(self.INTERCEPT_COL, axis=1)
+                except:
+                    pass
+
             Xs[param_name] = X
 
         Xs = pd.concat(Xs, axis=1, names=("param", "covariate")).astype(float)
@@ -1893,8 +1899,6 @@ class CovariateParameterMappings:
         # user input a formula, hopefully
         import patsy
 
-        if self.force_no_intercept:
-            formula += "+ 0"
         if self.force_intercept:
             formula += "+ 1"
 

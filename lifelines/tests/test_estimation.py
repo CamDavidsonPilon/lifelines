@@ -2822,6 +2822,16 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
 
+    def test_categorical_variables_are_still_encoded_correctly(self, cph):
+        """
+        We must drop the intercept in the design matrix, but still have proper dummy encoding
+        """
+
+        df = pd.DataFrame({"cat": ["A", "B", "A", "C", "C", "A", "B"], "T": [1.0, 2.0, 3.0, 4, 5, 6, 7]})
+
+        cph.fit(df, "T", formula="C(cat)")
+        assert cph.summary.shape[0] == 2
+
     def test_trival_entry_col(self, rossi):
         cph_without_entry_summary = CoxPHFitter().fit(rossi, "week", "arrest").summary
         cphs_without_entry_summary = (

@@ -63,7 +63,7 @@ def generate_data(n=20000):
 df = generate_data()
 
 
-regressors = {"beta_": ["X + Z - 1"], "gamma0_": ["1"], "gamma1_": ["1"], "gamma2_": ["1"]}
+regressors = {"beta_": "X + Z - 1", "gamma0_": "1", "gamma1_": "1", "gamma2_": "1"}
 
 cf = CRCSplineFitter(3).fit(df, "T", "E", regressors=regressors)
 cf.print_summary()
@@ -106,7 +106,7 @@ def generate_data(n=1000):
 df = generate_data()
 WeibullAFTFitter().fit(df, "T", "E").print_summary()
 
-regressors = {"beta_": ["X - 1"], "gamma0_": ["1"], "gamma1_": ["1"], "gamma2_": ["1"], "gamma3_": ["1"]}
+regressors = {"beta_": "X - 1", "gamma0_": "1", "gamma1_": "1", "gamma2_": "1", "gamma3_": "1"}
 
 cf = CRCSplineFitter(4).fit(df, "T", "E", regressors=regressors)
 # beta_   X should be around 0.5

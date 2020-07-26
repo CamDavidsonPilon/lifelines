@@ -43,11 +43,11 @@ rossi = load_rossi()
 rossi["week"] = rossi["week"] / 54.0
 
 covariates = {
-    "lambda1": rossi.columns.difference(["week", "arrest"]),
-    "lambda2": rossi.columns.difference(["week", "arrest"]),
-    "rho1": ["1"],
-    "rho2": ["1"],
-    "alpha": ["1"],
+    "lambda1": "+".join(rossi.columns.difference(["week", "arrest"])),
+    "lambda2": "+".join(rossi.columns.difference(["week", "arrest"])),
+    "rho1": "1",
+    "rho2": "1",
+    "alpha": "1",
 }
 
 swf.fit(rossi, "week", event_col="arrest", regressors=covariates, timeline=np.linspace(0, 2))
