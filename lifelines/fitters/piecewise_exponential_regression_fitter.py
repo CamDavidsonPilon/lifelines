@@ -88,11 +88,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            design_info = self.regressors["lambda_0_"]
-            if type(design_info) == list:
-                X = X[design_info]
-            else:
-                X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
+            X = self.regressors.transform_df(X)["lambda_0_"]
 
         return np.array([np.exp(np.dot(X, self.params_["lambda_%d_" % i])) for i in range(self.n_breakpoints + 1)])
 

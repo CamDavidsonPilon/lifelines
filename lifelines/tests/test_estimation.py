@@ -1649,18 +1649,18 @@ class TestParametricRegressionFitter:
         wf = WeibullAFTFitter(penalizer=0.0)
 
         rossi = load_rossi()
-        regressors = {"lambda_": rossi.columns.difference(["week", "arrest"]), "rho_": "1"}
+        regressors = {"lambda_": "+".join(rossi.columns.difference(["week", "arrest"])), "rho_": "1"}
 
         cb.fit(rossi, "week", "arrest", regressors=regressors)
         wf.fit(rossi, "week", "arrest")
 
-        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1, check_like=True)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
 
         cb.fit_left_censoring(rossi, "week", "arrest", regressors=regressors)
         wf.fit_left_censoring(rossi, "week", "arrest")
 
-        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1, check_like=True)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
 
         rossi = rossi.loc[rossi["arrest"].astype(bool)]
@@ -1669,7 +1669,7 @@ class TestParametricRegressionFitter:
         cb.fit_interval_censoring(rossi, "week", "week_end", regressors=regressors)
         wf.fit_interval_censoring(rossi, "week", "week_end")
 
-        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1)
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1, check_like=True)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_, rtol=0.01)
 
 

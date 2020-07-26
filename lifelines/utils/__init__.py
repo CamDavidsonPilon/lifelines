@@ -18,7 +18,7 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
-from lifelines.exceptions import ConvergenceWarning
+from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
 
 
 __all__ = [
@@ -1720,7 +1720,7 @@ def find_best_parametric_model(
     if additional_models is None:
         additional_models = []
 
-    censoring_type = CensoringType.MAP[censoring_type]
+    censoring_type = CensoringType(censoring_type)
 
     evaluation_lookup = {
         "AIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_,
@@ -1771,7 +1771,7 @@ def find_best_parametric_model(
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                getattr(model, "fit_" + CensoringType.HUMAN_MAP[censoring_type] + "_censoring")(
+                getattr(model, "fit_" + censoring_type.value + "_censoring")(
                     *event_times,
                     event_observed=event_observed,
                     weights=weights,

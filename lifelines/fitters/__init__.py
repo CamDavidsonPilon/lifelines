@@ -1737,6 +1737,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self.weights = weights.copy()
         self._central_values = self._compute_central_values_of_raw_training_data(df)
 
+        regressors = utils.coalesce(regressors, {p: None for p in self._fitted_parameter_names})
         self.regressors = utils.CovariateParameterMappings(regressors, df, force_intercept=self.fit_intercept)
         Xs = self.regressors.transform_df(df)
 
@@ -3308,12 +3309,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            # X["Intercept"] = 1
-            # design_info = self.regressors[self._primary_parameter_name]
-            # if type(design_info) == list:
-            #    primary_X = X[design_info]
-            # else:
-            #    primary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
             Xs = self.regressors.transform_df(X)
             primary_X = Xs[self._primary_parameter_name]
             ancillary_X = Xs[self._ancillary_parameter_name]
@@ -3321,24 +3316,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T.infer_objects(), ancillary_X)
         else:
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
-
-        # if isinstance(ancillary_X, pd.DataFrame):
-        #    design_info = self.regressors[self._ancillary_parameter_name]
-        #    if type(design_info) == list:
-        #        ancillary_X = X[design_info]
-        #    else:
-        #        ancillary_X, = patsy.build_design_matrices([design_info], ancillary_X, return_type="dataframe")
-        # elif isinstance(ancillary_X, pd.Series):
-        #    return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T.infer_objects())
-        # elif ancillary_X is None:
-        #    design_info = self.regressors[self._ancillary_parameter_name]
-        #    if type(design_info) == list:
-        #        ancillary_X = X[design_info]
-        #    else:
-        #        ancillary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
-        # else:
-        #    # provided numpy array
-        #    assert ancillary_X.shape[1] == (self.params_.loc[self._ancillary_parameter_name].shape[0] + 1)  # 1 for _intercept
 
         primary_params = self.params_[self._primary_parameter_name]
         ancillary_params = self.params_[self._ancillary_parameter_name]
