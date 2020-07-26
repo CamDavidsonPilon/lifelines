@@ -1809,16 +1809,30 @@ class TestRegressionFitters:
         assert central_values(empty_df) is None
 
         all_categorical = pd.DataFrame([{"var1": "A", "var2": "C"}, {"var1": "B", "var2": "C"}, {"var1": "B", "var2": "C"}])
-
         assert_frame_equal(central_values(all_categorical), pd.DataFrame([{"var1": "B", "var2": "C"}], index=["baseline"]))
 
         all_numeric = pd.DataFrame([{"var1": 0.4, "var2": -1}, {"var1": 0.5, "var2": -2}, {"var1": 0.6, "var2": -100}])
-
         assert_frame_equal(central_values(all_numeric), pd.DataFrame([{"var1": 0.5, "var2": -2.0}], index=["baseline"]))
 
         mix = pd.DataFrame([{"var1": "A", "var2": -1}, {"var1": "A", "var2": -2}, {"var1": "B", "var2": -100}])
-
         assert_frame_equal(central_values(mix), pd.DataFrame([{"var1": "A", "var2": -2.0}], index=["baseline"]))
+
+    def test_compute_central_values_of_raw_training_data_with_strata(self):
+
+        central_values = RegressionFitter()._compute_central_values_of_raw_training_data
+
+        df = pd.DataFrame(
+            [
+                {"var1": 0.1, "var2": "D", "strata": "s1"},
+                {"var1": 0.1, "var2": "C", "strata": "s2"},
+                {"var1": 0.1, "var2": "D", "strata": "s1"},
+                {"var1": 0.2, "var2": "C", "strata": "s2"},
+            ]
+        )
+        assert_frame_equal(
+            central_values(df, strata="strata"),
+            pd.DataFrame([{"var1": 0.1, "var2": "D"}, {"var1": 0.15, "var2": "C"}], index=["s1", "s2"]),
+        )
 
     def test_alpha_will_vary_the_statistics_in_summary(self, rossi):
         reg_005 = WeibullAFTFitter(alpha=0.05).fit(rossi, "week", "arrest")

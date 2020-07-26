@@ -1194,7 +1194,7 @@ class RegressionFitter(BaseFitter):
     def __init__(self, *args, **kwargs):
         super(RegressionFitter, self).__init__(*args, **kwargs)
 
-    def _compute_central_values_of_raw_training_data(self, df):
+    def _compute_central_values_of_raw_training_data(self, df, strata=None, name="baseline"):
         """
         Compute our "baseline" observation for function like plot_covariate_groups.
         - Categoricals are transformed to their mode value.
@@ -1203,17 +1203,25 @@ class RegressionFitter(BaseFitter):
         if df.size == 0:
             return None
 
-        described = df.describe(include="all")
-        if "top" in described.index and "50%" not in described.index:
-            central_stats = described.loc["top"].copy()
-        elif "50%" in described.index and "top" not in described.index:
-            central_stats = described.loc["50%"].copy()
-        elif "top" in described.index and "50%" in described.index:
-            central_stats = described.loc["top"].copy()
-            central_stats.update(described.loc["50%"])
+        if strata is not None:
+            # apply this function within each stratified dataframe
+            central_stats = []
+            for stratum, df_ in df.groupby(strata):
+                central_stats.append(self._compute_central_values_of_raw_training_data(df_, name=stratum).drop(strata, axis=1))
+            return pd.concat(central_stats)
 
-        central_stats = central_stats.to_frame(name="baseline").T.infer_objects()
-        return central_stats
+        else:
+            described = df.describe(include="all")
+            if "top" in described.index and "50%" not in described.index:
+                central_stats = described.loc["top"].copy()
+            elif "50%" in described.index and "top" not in described.index:
+                central_stats = described.loc["50%"].copy()
+            elif "top" in described.index and "50%" in described.index:
+                central_stats = described.loc["top"].copy()
+                central_stats.update(described.loc["50%"])
+
+            central_stats = central_stats.to_frame(name=name).T.infer_objects()
+            return central_stats
 
     def compute_residuals(self, training_dataframe: pd.DataFrame, kind: str) -> pd.DataFrame:
         """
