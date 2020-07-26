@@ -474,6 +474,14 @@ class TestPlotting:
         self.plt.title("test_coxph_plot_covariate_groups")
         self.plt.show(block=block)
 
+    def test_coxph_plot_covariate_groups_with_cumulative_hazard(self, block):
+        df = load_rossi()
+        cp = CoxPHFitter()
+        cp.fit(df, "week", "arrest")
+        cp.plot_covariate_groups("age", [10, 50, 80], y="cumulative_hazard")
+        self.plt.title("test_coxph_plot_covariate_groups")
+        self.plt.show(block=block)
+
     def test_coxph_plot_covariate_groups_with_strata(self, block):
         df = load_rossi()
         cp = CoxPHFitter()

@@ -2126,9 +2126,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         Produces a plot comparing the baseline curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
-        subjects' survival as we vary covariate(s), all else being held equal. The baseline
-        curve is equal to the predicted curve at all average values (median for ordinal, and mode for categorical)
-        in the original dataset.
+        subjects' survival as we vary covariate(s), all else being held equal.
+
+        The baseline curve is equal to the predicted curve at all average values (median for ordinal, and mode for categorical)
+        in the original dataset. This same logic is applied to the stratified datasets if ``strata`` was used in fitting.
 
         Parameters
         ----------
