@@ -15,7 +15,7 @@ if __name__ == "__main__":
     df = pd.concat([df] * reps)
     print(df.shape)
 
-    cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2)
+    cph = CoxPHFitter()
     start_time = time.time()
     cph.fit(df, duration_col="week", event_col="arrest", show_progress=False)
     cph.print_summary()

@@ -4,6 +4,7 @@ from typing import Union, Any, Tuple, List, Callable, Optional, Dict
 from datetime import datetime
 from functools import wraps
 from textwrap import dedent
+from enum import Enum
 import collections
 import warnings
 
@@ -39,64 +40,58 @@ __all__ = [
 ]
 
 
-class CensoringType:
+class CensoringType(Enum):
 
-    LEFT = 1
-    INTERVAL = 2
-    RIGHT = 3
-
-    MAP = {"right": RIGHT, "left": LEFT, "interval": INTERVAL}
-    HUMAN_MAP = {LEFT: "left", RIGHT: "right", INTERVAL: "interval"}
+    LEFT = "left"
+    INTERVAL = "interval"
+    RIGHT = "right"
 
     @classmethod
     def right_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.RIGHT
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.RIGHT)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def left_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.LEFT
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.LEFT)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def interval_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.INTERVAL
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.INTERVAL)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def is_right_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.RIGHT
+        return cls.get_censoring_type(model) == cls.RIGHT
 
     @classmethod
     def is_left_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.LEFT
+        return cls.get_censoring_type(model) == cls.LEFT
 
     @classmethod
     def is_interval_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.INTERVAL
+        return cls.get_censoring_type(model) == cls.INTERVAL
 
     @classmethod
-    def get_human_readable_censoring_type(cls, model) -> str:
-        if cls.is_interval_censoring(model):
-            return cls.HUMAN_MAP[cls.INTERVAL]
-        elif cls.is_right_censoring(model):
-            return cls.HUMAN_MAP[cls.RIGHT]
-        elif cls.is_left_censoring(model):
-            return cls.HUMAN_MAP[cls.LEFT]
-        else:
-            return
+    def get_censoring_type(cls, model) -> str:
+        return model._censoring_type
+
+    @classmethod
+    def set_censoring_type(cls, model, censoring_type) -> None:
+        model._censoring_type = censoring_type
 
 
 def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
@@ -1239,7 +1234,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1) ->
     # how many rows/cols do I need?
     n_dftv = int(np.ceil(df[stop_col]).sum())
 
-    # alocate temporary numpy array to insert into
+    # allocate temporary numpy array to insert into
     tv_array = np.empty((n_dftv, d_dftv), dtype=dtype_dftv)
 
     special_columns = [stop_col, start_col, event_col]
@@ -1799,3 +1794,91 @@ def quiet_log2(p):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r"divide by zero encountered in log2")
         return np.log2(p)
+
+
+class CovariateParameterMappings:
+
+    INTERCEPT_COL = "Intercept"
+
+    def __init__(self, seed_mapping: Dict, df: pd.DataFrame, force_intercept: bool = False, force_no_intercept: bool = False):
+        self.mappings = {}
+        self.force_intercept = force_intercept
+        self.force_no_intercept = force_no_intercept
+
+        for param, seed_transform in seed_mapping.items():
+
+            if isinstance(seed_transform, str):
+                # user input a formula, hopefully
+                import patsy
+
+                formula = seed_transform
+                if self.force_no_intercept:
+                    formula += "+ 0"
+                if self.force_intercept:
+                    formula += "+ 1"
+
+                try:
+                    _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
+
+                except SyntaxError as e:
+                    import traceback
+
+                    column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
+                    raise utils.FormulaSyntaxError(
+                        (
+                            """
+It looks like the DataFrame has non-standard column names. See below for which column:
+
+%s
+
+As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
+    i) have no non-traditional characters (this includes spaces and periods)
+    ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
+
+See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
+                    """
+                            % column_error
+                        )
+                    )
+                self.mappings[param] = _X.design_info
+
+            elif isinstance(seed_transform, list):
+                # user inputted a list of column names, as strings
+                if self.force_intercept:
+                    seed_transform.append(INTERCEPT_COL)
+                self.mappings[param] = seed_transform
+
+            elif isinstance(seed_transform, pd.DataFrame):
+                seed_transform = seed_transform.columns.tolist()
+                if self.force_intercept:
+                    seed_transform.append(INTERCEPT_COL)
+                self.mappings[param] = seed_transform
+
+            elif seed_transform is None:
+                # use all the columns in df
+                cols = df.columns.tolist()
+                if self.force_intercept:
+                    cols.append(INTERCEPT_COL)
+                self.mappings[param] = cols
+
+    def transform_df(self, df):
+        import patsy
+
+        Xs = {}
+        for param_name, transform in self.mappings.items():
+            if isinstance(transform, patsy.design_info.DesignInfo):
+                (X,) = patsy.build_design_matrices([transform], df, return_type="dataframe")
+            elif isinstance(transform, list):
+                X = df[transform]
+            else:
+                raise ValueError("Improper transform.")
+            Xs[param_name] = X
+
+        Xs = pd.concat(Xs, axis=1, names=("param", "covariate"))
+
+        # we can't concat empty dataframes, so we create a "fake" dataframe (acts like a dataframe)
+        # to return.
+        if Xs.size == 0:
+            return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
+        else:
+            return Xs

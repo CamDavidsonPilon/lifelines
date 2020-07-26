@@ -14,6 +14,7 @@ from flaky import flaky
 from lifelines import CoxPHFitter, WeibullAFTFitter, KaplanMeierFitter, ExponentialFitter
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
 from lifelines import utils
+from lifelines import exceptions
 from lifelines.utils.sklearn_adapter import sklearn_adapter
 from lifelines.utils.safe_exp import safe_exp
 
@@ -998,7 +999,7 @@ def test_rmst_approximate_solution():
     exp = ExponentialFitter().fit(T)
     lambda_ = exp.lambda_
 
-    with pytest.warns(utils.ApproximationWarning) as w:
+    with pytest.warns(exceptions.ApproximationWarning) as w:
 
         assert (
             abs(

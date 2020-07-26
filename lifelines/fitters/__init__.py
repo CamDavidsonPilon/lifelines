@@ -65,7 +65,7 @@ class BaseFitter:
                 label_string,
                 self.weights.sum(),
                 self.weights.sum() - self.weights[self.event_observed > 0].sum(),
-                utils.CensoringType.get_human_readable_censoring_type(self),
+                utils.CensoringType.get_censoring_type(self),
             )
         except AttributeError:
             s = """<lifelines.%s>""" % classname
@@ -206,7 +206,7 @@ class UnivariateFitter(BaseFitter):
         if not interpolate:
             return estimate.asof(times).squeeze()
 
-        warnings.warn("Approximating using linear interpolation`.\n", utils.ApproximationWarning)
+        warnings.warn("Approximating using linear interpolation`.\n", exceptions.ApproximationWarning)
         return utils.interpolate_at_times_and_return_pandas(estimate, times)
 
     @property
@@ -275,7 +275,7 @@ class UnivariateFitter(BaseFitter):
         """
         warnings.warn(
             "Approximating using `survival_function_`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.\n",
-            utils.ApproximationWarning,
+            exceptions.ApproximationWarning,
         )
         return utils.qth_survival_times(p, self.survival_function_)
 
@@ -546,7 +546,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             if show_progress:
                 print(minimizing_results)
             if self._KNOWN_MODEL:
-                raise utils.ConvergenceError(
+                raise exceptions.ConvergenceError(
                     dedent(
                         """\
                     Fitting did not converge. This is mostly a lifelines problem, but a few things you can check:
@@ -562,7 +562,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 )
 
             else:
-                raise utils.ConvergenceError(
+                raise exceptions.ConvergenceError(
                     dedent(
                         """\
                     Fitting did not converge.
@@ -953,7 +953,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 """
                 % self._class_name
             )
-            warnings.warn(warning_text, utils.ApproximationWarning)
+            warnings.warn(warning_text, exceptions.ApproximationWarning)
         finally:
             if (variance_matrix_.diagonal() < 0).any():
                 warning_text = dedent(
@@ -1886,7 +1886,7 @@ class ParametricRegressionFitter(RegressionFitter):
         else:
             print(minimum_results)
             self._check_values_post_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
-            raise utils.ConvergenceError(
+            raise exceptions.ConvergenceError(
                 dedent(
                     """\
                 Fitting did not converge. Try the following:
@@ -1906,7 +1906,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
     def _create_Xs_dict(self, df):
         Xs = {}
-
+        df["Intercept"] = 1
         for param, design_info in self.regressors.items():
             if type(design_info) == list:
                 df_transformed_ = df[design_info]
@@ -2274,7 +2274,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         warnings.warn(
             "Approximating using `predict_survival_function`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.\n",
-            utils.ApproximationWarning,
+            exceptions.ApproximationWarning,
         )
         return utils.qth_survival_times(
             p, self.predict_survival_function(df, conditional_after=conditional_after)[subjects]
@@ -2403,7 +2403,7 @@ class ParametricRegressionFitter(RegressionFitter):
         predict_median
         predict_percentile
         """
-        warnings.warn("""Approximating the expected value using trapezoid rule.\n""", utils.ApproximationWarning)
+        warnings.warn("""Approximating the expected value using trapezoid rule.\n""", exceptions.ApproximationWarning)
         subjects = utils._get_index(X)
         v = self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
         return pd.Series(trapz(v.values.T, v.index), index=subjects).squeeze()
@@ -2611,6 +2611,25 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         self.fit_intercept = fit_intercept
         self.model_ancillary = model_ancillary
 
+    # TODO: move me.
+    def _add_intercept(self, string_or_list):
+        if type(string_or_list) == str:
+            string_or_list += "+ 1"
+        elif type(string_or_list) == list:
+            string_or_list.append("Intercept")
+        else:
+            raise TypeError("Something went wrong.")
+        return string_or_list
+
+    def _state_no_intercept(self, string_or_list):
+        if type(string_or_list) == str:
+            string_or_list += "+ 0"
+        elif type(string_or_list) == list:
+            pass
+        else:
+            raise TypeError("Something went wrong.")
+        return string_or_list
+
     @utils.CensoringType.right_censoring
     def fit(
         self,
@@ -2723,13 +2742,13 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         self.durations = T.copy()
 
         if formula:
-            primary_columns_or_formula = [formula]
+            primary_columns_or_formula = formula
         else:
             primary_columns_or_formula = df.columns.difference(
                 [self.duration_col, self.event_col, self.entry_col, self.weights_col]
             ).tolist()
 
-        regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
+        regressors = {self._primary_parameter_name: primary_columns_or_formula}
 
         if isinstance(ancillary, pd.DataFrame):
             self.model_ancillary = True
@@ -2751,16 +2770,17 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
         elif (ancillary is None) or (ancillary is False):
-            regressors[self._ancillary_parameter_name] = ["1"]
+            regressors[self._ancillary_parameter_name] = "1"
 
         if self.fit_intercept:
-            regressors[self._primary_parameter_name].append("1")
-            regressors[self._ancillary_parameter_name].append("1")
+            df["Intercept"] = 1
+            regressors[self._primary_parameter_name] = self._add_intercept(regressors[self._primary_parameter_name])
+            regressors[self._ancillary_parameter_name] = self._add_intercept(regressors[self._ancillary_parameter_name])
         elif not self.fit_intercept:
-            regressors[self._primary_parameter_name].append("0")
-            regressors[self._ancillary_parameter_name].append("0")
+            regressors[self._primary_parameter_name] = self._state_no_intercept(regressors[self._primary_parameter_name])
+            regressors[self._ancillary_parameter_name] = self._state_no_intercept(regressors[self._ancillary_parameter_name])
             if (ancillary is None) or (ancillary is False) or not self.model_ancillary:
-                regressors[self._ancillary_parameter_name].append("1")
+                regressors[self._ancillary_parameter_name] = self._add_intercept(regressors[self._ancillary_parameter_name])
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_right_censoring,
@@ -2937,7 +2957,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
         elif (ancillary is None) or (ancillary is False):
-            regressors[self._ancillary_parameter_name] = ["1"]
+            regressors[self._ancillary_parameter_name] = "1"
 
         if self.fit_intercept:
             regressors[self._primary_parameter_name].append("1")
@@ -3102,7 +3122,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             regressors[self._ancillary_parameter_name] = regressors[self._primary_parameter_name]
 
         elif (ancillary is None) or (ancillary is False):
-            regressors[self._ancillary_parameter_name] = ["1"]
+            regressors[self._ancillary_parameter_name] = "1"
 
         if self.fit_intercept:
             regressors[self._primary_parameter_name].append("1")
@@ -3331,8 +3351,12 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
+            X["Intercept"] = 1
             design_info = self.regressors[self._primary_parameter_name]
-            primary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
+            if type(design_info) == list:
+                primary_X = X[design_info]
+            else:
+                primary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
         elif isinstance(X, pd.Series):
             return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T.infer_objects(), ancillary_X)
         else:
@@ -3340,12 +3364,18 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         if isinstance(ancillary_X, pd.DataFrame):
             design_info = self.regressors[self._ancillary_parameter_name]
-            ancillary_X, = patsy.build_design_matrices([design_info], ancillary_X, return_type="dataframe")
+            if type(design_info) == list:
+                ancillary_X = X[design_info]
+            else:
+                ancillary_X, = patsy.build_design_matrices([design_info], ancillary_X, return_type="dataframe")
         elif isinstance(ancillary_X, pd.Series):
             return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T.infer_objects())
         elif ancillary_X is None:
             design_info = self.regressors[self._ancillary_parameter_name]
-            ancillary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
+            if type(design_info) == list:
+                ancillary_X = X[design_info]
+            else:
+                ancillary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
         else:
             # provided numpy array
             assert ancillary_X.shape[1] == (self.params_.loc[self._ancillary_parameter_name].shape[0] + 1)  # 1 for _intercept
@@ -3417,7 +3447,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
     def predict_percentile(self, df, *, ancillary=None, p=0.5, conditional_after=None) -> pd.Series:
         warnings.warn(
             "Approximating using `predict_survival_function`. To increase accuracy, try using or increasing the resolution of the timeline kwarg in `.fit(..., timeline=timeline)`.\n",
-            utils.ApproximationWarning,
+            exceptions.ApproximationWarning,
         )
         return utils.qth_survival_times(
             p, self.predict_survival_function(df, ancillary=ancillary, conditional_after=conditional_after)

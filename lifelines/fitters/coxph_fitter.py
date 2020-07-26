@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-import time
 from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
 from textwrap import dedent, fill
 from datetime import datetime
 import warnings
+import time
 
 from numpy import dot, einsum, log, exp, zeros, arange, multiply, ndarray
 import numpy as np
@@ -22,8 +22,8 @@ from lifelines.fitters.mixins import SplineFitterMixin, ProportionalHazardMixin
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
 from lifelines.plotting import set_kwargs_drawstyle
 from lifelines.utils.safe_exp import safe_exp
-from lifelines import exceptions
 from lifelines.utils.printer import Printer
+from lifelines import exceptions
 from lifelines import utils
 
 __all__ = ["CoxPHFitter"]
@@ -369,7 +369,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         # Print information about data first
         justify = utils.string_justify(25)
 
-        headers: List[Tuple[str, Any]] = []
+        headers = []
         headers.append(("duration col", "'%s'" % self.duration_col))
 
         if self.event_col:
@@ -416,10 +416,15 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         elif self.baseline_estimation_method == "spline":
             footers.append(("AIC", "{:.{prec}f}".format(self.AIC_, prec=decimals)))
 
-        footers.append(
-            ("log-likelihood ratio test", "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals))
+        footers.extend(
+            [
+                (
+                    "log-likelihood ratio test",
+                    "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
+                ),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)),
+            ]
         )
-        footers.append(("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)))
 
         p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
         p.print(style=style)
@@ -559,7 +564,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
     def fit(
         self,
         df: pd.DataFrame,
-        duration_col: Optional[str] = None,
+        duration_col: str = None,
         event_col: Optional[str] = None,
         show_progress: bool = False,
         initial_point: Optional[ndarray] = None,
@@ -678,9 +683,6 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             cph.predict_median(df)
 
         """
-        if duration_col is None:
-            raise TypeError("duration_col cannot be None.")
-
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
@@ -789,36 +791,33 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
-        if self.formula is not None:
-            try:
-                X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
-            except SyntaxError as e:
-                import traceback
+        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
+        X = self.regressors.transform_df(df)["beta_"]
 
-                column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
-                raise utils.FormulaSyntaxError(
-                    (
-                        """
-    It looks like the DataFrame has non-standard column names. See below for which column:
-
-    %s
-
-    As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
-        i) have no non-traditional characters (this includes spaces and periods)
-        ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
-
-    See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
-                """
-                        % column_error
-                    )
-                )
-
-            self.regressors = {"beta_": X.design_info}
-            X = X.drop("Intercept", axis=1)
-
-        else:
-            X = df
-            self.regressors = {"beta_": X.columns.tolist()}
+        #        if self.formula is not None:
+        #            try:
+        #
+        #                X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
+        #            except SyntaxError as e:
+        #                import traceback
+        #
+        #                column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
+        #                raise utils.FormulaSyntaxError(
+        #                    (
+        #                        """
+        #    It looks like the DataFrame has non-standard column names. See below for which column:
+        #
+        #    %s
+        #
+        #    As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
+        #        i) have no non-traditional characters (this includes spaces and periods)
+        #        ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
+        #
+        #    See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
+        #                """
+        #                        % column_error
+        #                    )
+        #                )
 
         T = T.astype(float)
 
@@ -834,6 +833,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         """
         Functions here check why a fit may have non-obviously failed
         """
+        utils.check_dimensions(X)
         utils.check_complete_separation(X, E, T, self.event_col)
 
     def _check_values_pre_fitting(self, X, T, E, W):
@@ -1769,11 +1769,15 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         index = utils._get_index(X)
 
         if isinstance(X, pd.DataFrame):
+
+            X = self.regressors.transform_df(X)["beta_"]
+            """
             order = hazard_names
             if self.formula:
                 (X,) = patsy.build_design_matrices([self.regressors["beta_"]], X, return_type="dataframe")
 
             X = X.reindex(order, axis="columns")
+            """
             X = X.values
 
         X = X.astype(float)
@@ -2315,9 +2319,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             if self.strata is None:
                 *_, ll_ = get_gradients(df, T, E, W, entries, optimal_beta)
             else:
-                ll_ = 0
-                for *_, _ll in self._partition_by_strata_and_apply(df, T, E, W, entries, get_gradients, optimal_beta):
-                    ll_ += _ll
+                ll_ = sum(r[-1] for r in self._partition_by_strata_and_apply(df, T, E, W, entries, get_gradients, optimal_beta))
             return ll_ / df.shape[0]
 
         elif scoring_method == "concordance_index":

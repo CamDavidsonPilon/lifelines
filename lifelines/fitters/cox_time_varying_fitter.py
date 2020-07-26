@@ -616,7 +616,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if isinstance(X, pd.DataFrame):
             order = hazard_names
             if self.formula:
-                (X,) = patsy.build_design_matrices(self.regressors["beta"], X, return_type="dataframe")
+                (X,) = patsy.build_design_matrices([self.regressors["beta_"]], X, return_type="dataframe")
             X = X.reindex(order, axis="columns")
             X = X.values
 

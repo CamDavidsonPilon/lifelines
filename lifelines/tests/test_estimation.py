@@ -1649,7 +1649,7 @@ class TestParametricRegressionFitter:
         wf = WeibullAFTFitter(penalizer=0.0)
 
         rossi = load_rossi()
-        regressors = {"lambda_": rossi.columns.difference(["week", "arrest"]), "rho_": ["1"]}
+        regressors = {"lambda_": rossi.columns.difference(["week", "arrest"]), "rho_": "1"}
 
         cb.fit(rossi, "week", "arrest", regressors=regressors)
         wf.fit(rossi, "week", "arrest")
@@ -1714,7 +1714,7 @@ class TestCustomRegressionModel:
 
     def test_reparameterization_flips_the_sign(self, rossi):
 
-        regressors = {"lambda_": rossi.columns.difference(["arrest", "week"]), "rho_": ["1"], "beta_": ["fin + 1"]}
+        regressors = {"lambda_": rossi.columns.difference(["arrest", "week"]), "rho_": "1", "beta_": "fin + 1"}
 
         cmA = CureModelA()
         cmB = CureModelB()
@@ -1726,7 +1726,7 @@ class TestCustomRegressionModel:
             rossi,
             "week",
             event_col="arrest",
-            regressors={"lambda_": rossi.columns.difference(["week", "arrest"]), "rho_": ["1"], "beta_": ["fin + 1"]},
+            regressors={"lambda_": rossi.columns.difference(["week", "arrest"]), "rho_": "1", "beta_": "fin + 1"},
         )
         assert_frame_equal(cmA.summary.loc["lambda_"], cmB.summary.loc["lambda_"])
         assert_frame_equal(cmA.summary.loc["rho_"], cmB.summary.loc["rho_"])
@@ -1768,7 +1768,7 @@ class TestCustomRegressionModel:
 
     def test_formulas_can_be_used_for_regressors(self, rossi):
 
-        regressors = {"lambda_": ["1"], "mu_": ["age + prio + paro + 1"], "sigma_": ["fin + age + 1"]}
+        regressors = {"lambda_": "1", "mu_": "age + prio + paro + 1", "sigma_": "fin + age + 1"}
         gg = GeneralizedGammaRegressionFitter()
         gg.fit(rossi, "week", "arrest", regressors=regressors)
         assert gg.summary.shape[0] == 8
