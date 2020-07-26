@@ -4745,7 +4745,7 @@ class TestCoxTimeVaryingFitter:
 
         """
         dfcv["var4"] = np.nan
-        with pytest.raises(patsy.PatsyError):
+        with pytest.raises(TypeError):
             ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
     def test_inference_against_known_R_output_with_weights(self, ctv, dfcv):
@@ -4931,7 +4931,7 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(ctv.summary["se(coef)"].values, [0.0137, 0.0705, 0.3672, 0.3138], decimal=3)
         npt.assert_almost_equal(ctv.summary["p"].values, [0.048, 0.038, 0.083, 0.974], decimal=3)
 
-    def test_non_numeric_data_is_okay_with_patsy(self, ctv):
+    def test_non_numeric_data_is_okay_with_formulas(self, ctv):
         ctv = CoxTimeVaryingFitter(penalizer=1.0)
         df = pd.DataFrame.from_dict(
             {
@@ -4958,7 +4958,9 @@ class TestCoxTimeVaryingFitter:
             ["start", "end", "e", "id", "float_"],
             ["start", "end", "e", "id", "uint8_"],
         ]:
-            ctv.fit(df[subset], id_col="id", event_col="e", stop_col="end")
+            df_ = df[subset]
+            formula = subset[-1]
+            ctv.fit(df_, id_col="id", event_col="e", stop_col="end", formula=formula)
 
     def test_ctv_prediction_methods(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event")
