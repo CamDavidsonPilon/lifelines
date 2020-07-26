@@ -65,7 +65,7 @@ class BaseFitter:
                 label_string,
                 self.weights.sum(),
                 self.weights.sum() - self.weights[self.event_observed > 0].sum(),
-                utils.CensoringType.get_censoring_type(self),
+                utils.CensoringType.str_censoring_type(self),
             )
         except AttributeError:
             s = """<lifelines.%s>""" % classname
@@ -1257,6 +1257,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
+    fit_intercept = False
 
     def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0, **kwargs):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha, **kwargs)
@@ -1736,8 +1737,8 @@ class ParametricRegressionFitter(RegressionFitter):
         self.weights = weights.copy()
         self._central_values = self._compute_central_values_of_raw_training_data(df)
 
-        self.regressors, Xs = self._create_design_info_and_matrices(regressors, df)
-        # part of https://github.com/CamDavidsonPilon/lifelines/issues/931
+        self.regressors = utils.CovariateParameterMappings(regressors, df, force_intercept=self.fit_intercept)
+        Xs = self.regressors.transform_df(df)
 
         self._check_values_pre_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
@@ -1971,7 +1972,8 @@ class ParametricRegressionFitter(RegressionFitter):
             if getattr(self, "fit_intercept", False):
                 df["Intercept"] = 1.0
 
-            Xs = self._create_Xs_dict(df)
+            Xs = utils.DataframeSlicer(self.regressors.transform_df(df))
+
             return -self._neg_likelihood(self.params_.values, Ts, E, W, entries, Xs)
 
         elif scoring_method == "concordance_index":
@@ -2314,7 +2316,7 @@ class ParametricRegressionFitter(RegressionFitter):
         times = np.atleast_1d(times).astype(float)
 
         n = df.shape[0]
-        Xs = self._create_Xs_dict(df)
+        Xs = self.regressors.transform_df(df, to_dataframeslicer=True)
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
@@ -2366,7 +2368,7 @@ class ParametricRegressionFitter(RegressionFitter):
         times = np.atleast_1d(times).astype(float)
 
         n = df.shape[0]
-        Xs = self._create_Xs_dict(df)
+        Xs = self.regressors.transform_df(df)
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
@@ -2611,25 +2613,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         self.fit_intercept = fit_intercept
         self.model_ancillary = model_ancillary
 
-    # TODO: move me.
-    def _add_intercept(self, string_or_list):
-        if type(string_or_list) == str:
-            string_or_list += "+ 1"
-        elif type(string_or_list) == list:
-            string_or_list.append("Intercept")
-        else:
-            raise TypeError("Something went wrong.")
-        return string_or_list
-
-    def _state_no_intercept(self, string_or_list):
-        if type(string_or_list) == str:
-            string_or_list += "+ 0"
-        elif type(string_or_list) == list:
-            pass
-        else:
-            raise TypeError("Something went wrong.")
-        return string_or_list
-
     @utils.CensoringType.right_censoring
     def fit(
         self,
@@ -2763,7 +2746,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         elif isinstance(ancillary, str):
             # patsy formula
             self.model_ancillary = True
-            regressors[self._ancillary_parameter_name] = [ancillary]
+            regressors[self._ancillary_parameter_name] = ancillary
 
         elif (ancillary is True) or self.model_ancillary:
             self.model_ancillary = True
@@ -2771,16 +2754,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         elif (ancillary is None) or (ancillary is False):
             regressors[self._ancillary_parameter_name] = "1"
-
-        if self.fit_intercept:
-            df["Intercept"] = 1
-            regressors[self._primary_parameter_name] = self._add_intercept(regressors[self._primary_parameter_name])
-            regressors[self._ancillary_parameter_name] = self._add_intercept(regressors[self._ancillary_parameter_name])
-        elif not self.fit_intercept:
-            regressors[self._primary_parameter_name] = self._state_no_intercept(regressors[self._primary_parameter_name])
-            regressors[self._ancillary_parameter_name] = self._state_no_intercept(regressors[self._ancillary_parameter_name])
-            if (ancillary is None) or (ancillary is False) or not self.model_ancillary:
-                regressors[self._ancillary_parameter_name] = self._add_intercept(regressors[self._ancillary_parameter_name])
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_right_censoring,
@@ -2933,24 +2906,24 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
                 [self.lower_bound_col, self.upper_bound_col, self.event_col, self.entry_col, self.weights_col]
             ).tolist()
 
-        regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
+        regressors = {self._primary_parameter_name: primary_columns_or_formula}
 
         if isinstance(ancillary, pd.DataFrame):
             self.model_ancillary = True
             assert ancillary.shape[0] == df.shape[0], "ancillary must be the same shape[0] as df"
             regressors[self._ancillary_parameter_name] = ancillary.columns.difference(
-                [self.upper_bound_col, self.lower_bound_col, self.event_col, self.weights_col, self.entry_col]
+                [self.lower_bound_col, self.upper_bound_col, self.event_col, self.entry_col, self.weights_col]
             ).tolist()
 
             ancillary_cols_to_consider = ancillary.columns.difference(df.columns).difference(
-                [self.upper_bound_col, self.lower_bound_col, self.event_col]
+                [self.lower_bound_col, self.upper_bound_col, self.event_col]
             )
             df = pd.concat([df, ancillary[ancillary_cols_to_consider]], axis=1)
 
         elif isinstance(ancillary, str):
-            # patsy formula
+            # formula
             self.model_ancillary = True
-            regressors[self._ancillary_parameter_name] = [ancillary]
+            regressors[self._ancillary_parameter_name] = ancillary
 
         elif (ancillary is True) or self.model_ancillary:
             self.model_ancillary = True
@@ -2958,14 +2931,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         elif (ancillary is None) or (ancillary is False):
             regressors[self._ancillary_parameter_name] = "1"
-
-        if self.fit_intercept:
-            regressors[self._primary_parameter_name].append("1")
-            regressors[self._ancillary_parameter_name].append("1")
-        elif not self.fit_intercept:
-            regressors[self._primary_parameter_name].append("0")
-            if (ancillary is None) or (ancillary is False) or not self.model_ancillary:
-                regressors[self._ancillary_parameter_name].append("1")
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_interval_censoring,
@@ -3094,13 +3059,13 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         self.durations = T.copy()
 
         if formula:
-            primary_columns_or_formula = [formula]
+            primary_columns_or_formula = formula
         else:
             primary_columns_or_formula = df.columns.difference(
                 [self.duration_col, self.event_col, self.entry_col, self.weights_col]
             ).tolist()
 
-        regressors = {self._primary_parameter_name: primary_columns_or_formula, self._ancillary_parameter_name: []}
+        regressors = {self._primary_parameter_name: primary_columns_or_formula}
 
         if isinstance(ancillary, pd.DataFrame):
             self.model_ancillary = True
@@ -3115,7 +3080,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         elif isinstance(ancillary, str):
             # patsy formula
             self.model_ancillary = True
-            regressors[self._ancillary_parameter_name] = [ancillary]
+            regressors[self._ancillary_parameter_name] = ancillary
 
         elif (ancillary is True) or self.model_ancillary:
             self.model_ancillary = True
@@ -3123,14 +3088,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         elif (ancillary is None) or (ancillary is False):
             regressors[self._ancillary_parameter_name] = "1"
-
-        if self.fit_intercept:
-            regressors[self._primary_parameter_name].append("1")
-            regressors[self._ancillary_parameter_name].append("1")
-        elif not self.fit_intercept:
-            regressors[self._primary_parameter_name].append("0")
-            if (ancillary is None) or (ancillary is False) or not self.model_ancillary:
-                regressors[self._ancillary_parameter_name].append("1")
 
         super(ParametericAFTRegressionFitter, self)._fit(
             self._log_likelihood_left_censoring,
@@ -3351,34 +3308,37 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            X["Intercept"] = 1
-            design_info = self.regressors[self._primary_parameter_name]
-            if type(design_info) == list:
-                primary_X = X[design_info]
-            else:
-                primary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
+            # X["Intercept"] = 1
+            # design_info = self.regressors[self._primary_parameter_name]
+            # if type(design_info) == list:
+            #    primary_X = X[design_info]
+            # else:
+            #    primary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
+            Xs = self.regressors.transform_df(X)
+            primary_X = Xs[self._primary_parameter_name]
+            ancillary_X = Xs[self._ancillary_parameter_name]
         elif isinstance(X, pd.Series):
             return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T.infer_objects(), ancillary_X)
         else:
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
 
-        if isinstance(ancillary_X, pd.DataFrame):
-            design_info = self.regressors[self._ancillary_parameter_name]
-            if type(design_info) == list:
-                ancillary_X = X[design_info]
-            else:
-                ancillary_X, = patsy.build_design_matrices([design_info], ancillary_X, return_type="dataframe")
-        elif isinstance(ancillary_X, pd.Series):
-            return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T.infer_objects())
-        elif ancillary_X is None:
-            design_info = self.regressors[self._ancillary_parameter_name]
-            if type(design_info) == list:
-                ancillary_X = X[design_info]
-            else:
-                ancillary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
-        else:
-            # provided numpy array
-            assert ancillary_X.shape[1] == (self.params_.loc[self._ancillary_parameter_name].shape[0] + 1)  # 1 for _intercept
+        # if isinstance(ancillary_X, pd.DataFrame):
+        #    design_info = self.regressors[self._ancillary_parameter_name]
+        #    if type(design_info) == list:
+        #        ancillary_X = X[design_info]
+        #    else:
+        #        ancillary_X, = patsy.build_design_matrices([design_info], ancillary_X, return_type="dataframe")
+        # elif isinstance(ancillary_X, pd.Series):
+        #    return self._prep_inputs_for_prediction_and_return_scores(X, ancillary_X.to_frame().T.infer_objects())
+        # elif ancillary_X is None:
+        #    design_info = self.regressors[self._ancillary_parameter_name]
+        #    if type(design_info) == list:
+        #        ancillary_X = X[design_info]
+        #    else:
+        #        ancillary_X, = patsy.build_design_matrices([design_info], X, return_type="dataframe")
+        # else:
+        #    # provided numpy array
+        #    assert ancillary_X.shape[1] == (self.params_.loc[self._ancillary_parameter_name].shape[0] + 1)  # 1 for _intercept
 
         primary_params = self.params_[self._primary_parameter_name]
         ancillary_params = self.params_[self._ancillary_parameter_name]
@@ -3492,7 +3452,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             for c in ancillary.columns.difference(df.columns):
                 df[c] = ancillary[c]
 
-        Xs = self._create_Xs_dict(df)
+        Xs = self.regressors.transform_df(df, to_dataframeslicer=True)
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
@@ -3541,7 +3501,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             for c in ancillary.columns.difference(df.columns):
                 df[c] = ancillary[c]
 
-        Xs = self._create_Xs_dict(df)
+        Xs = self.regressors.transform_df(df, to_dataframeslicer=True)
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 

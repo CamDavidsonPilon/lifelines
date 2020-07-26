@@ -90,6 +90,10 @@ class CensoringType(Enum):
         return model._censoring_type
 
     @classmethod
+    def str_censoring_type(cls, model) -> str:
+        return model._censoring_type.value
+
+    @classmethod
     def set_censoring_type(cls, model, censoring_type) -> None:
         model._censoring_type = censoring_type
 
@@ -1808,60 +1812,28 @@ class CovariateParameterMappings:
         for param, seed_transform in seed_mapping.items():
 
             if isinstance(seed_transform, str):
-                # user input a formula, hopefully
-                import patsy
-
-                formula = seed_transform
-                if self.force_no_intercept:
-                    formula += "+ 0"
-                if self.force_intercept:
-                    formula += "+ 1"
-
-                try:
-                    _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
-
-                except SyntaxError as e:
-                    import traceback
-
-                    column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
-                    raise utils.FormulaSyntaxError(
-                        (
-                            """
-It looks like the DataFrame has non-standard column names. See below for which column:
-
-%s
-
-As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
-    i) have no non-traditional characters (this includes spaces and periods)
-    ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
-
-See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
-                    """
-                            % column_error
-                        )
-                    )
-                self.mappings[param] = _X.design_info
+                self.mappings[param] = self._string_seed_transform(seed_transform, df)
 
             elif isinstance(seed_transform, list):
                 # user inputted a list of column names, as strings
-                if self.force_intercept:
-                    seed_transform.append(INTERCEPT_COL)
-                self.mappings[param] = seed_transform
+                self.mappings[param] = self._list_seed_transform(seed_transform)
 
             elif isinstance(seed_transform, pd.DataFrame):
-                seed_transform = seed_transform.columns.tolist()
-                if self.force_intercept:
-                    seed_transform.append(INTERCEPT_COL)
-                self.mappings[param] = seed_transform
+                # use all the columns in df
+                self.mappings[param] = self._list_seed_transform(seed_transform.columns.tolist())
 
             elif seed_transform is None:
                 # use all the columns in df
-                cols = df.columns.tolist()
-                if self.force_intercept:
-                    cols.append(INTERCEPT_COL)
-                self.mappings[param] = cols
+                self.mappings[param] = self._list_seed_transform(df.columns.tolist())
 
-    def transform_df(self, df):
+            elif isinstance(seed_transform, pd.Index):
+                # similar to providing a list
+                self.mappings[param] = self._list_seed_transform(seed_transform.tolist())
+
+            else:
+                raise ValueError("Unexpected transform.")
+
+    def transform_df(self, df, to_dataframeslicer=False):
         import patsy
 
         Xs = {}
@@ -1869,16 +1841,65 @@ See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fix
             if isinstance(transform, patsy.design_info.DesignInfo):
                 (X,) = patsy.build_design_matrices([transform], df, return_type="dataframe")
             elif isinstance(transform, list):
+                if self.force_intercept:
+                    df[self.INTERCEPT_COL] = 1.0
                 X = df[transform]
             else:
-                raise ValueError("Improper transform.")
+                raise ValueError("Unexpected transform.")
+
             Xs[param_name] = X
 
-        Xs = pd.concat(Xs, axis=1, names=("param", "covariate"))
+        Xs = pd.concat(Xs, axis=1, names=("param", "covariate")).astype(float)
 
-        # we can't concat empty dataframes, so we create a "fake" dataframe (acts like a dataframe)
-        # to return.
+        # we can't concat empty dataframes and return a column MultiIndex,
+        # so we create a "fake" dataframe (acts like a dataframe) to return.
         if Xs.size == 0:
             return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
         else:
-            return Xs
+            if to_dataframeslicer:
+                return DataframeSlicer(Xs)
+            else:
+                return Xs
+
+    def keys(self):
+        yield from self.mappings.keys()
+
+    def _list_seed_transform(self, list_):
+        list_ = list_.copy()
+        if self.force_intercept:
+            list_.append(self.INTERCEPT_COL)
+        return list_
+
+    def _string_seed_transform(self, formula, df):
+        # user input a formula, hopefully
+        import patsy
+
+        if self.force_no_intercept:
+            formula += "+ 0"
+        if self.force_intercept:
+            formula += "+ 1"
+
+        try:
+            _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
+
+        except SyntaxError as e:
+            import traceback
+
+            column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
+            raise utils.FormulaSyntaxError(
+                (
+                    """
+It looks like the DataFrame has non-standard column names. See below for which column:
+
+%s
+
+As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
+i) have no non-traditional characters (this includes spaces and periods)
+ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
+
+See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
+            """
+                    % column_error
+                )
+            )
+        return _X.design_info

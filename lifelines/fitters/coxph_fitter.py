@@ -794,31 +794,6 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
         X = self.regressors.transform_df(df)["beta_"]
 
-        #        if self.formula is not None:
-        #            try:
-        #
-        #                X = patsy.dmatrix(self.formula, df, 1, return_type="dataframe", NA_action="raise")
-        #            except SyntaxError as e:
-        #                import traceback
-        #
-        #                column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
-        #                raise utils.FormulaSyntaxError(
-        #                    (
-        #                        """
-        #    It looks like the DataFrame has non-standard column names. See below for which column:
-        #
-        #    %s
-        #
-        #    As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
-        #        i) have no non-traditional characters (this includes spaces and periods)
-        #        ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
-        #
-        #    See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
-        #                """
-        #                        % column_error
-        #                    )
-        #                )
-
         T = T.astype(float)
 
         # we check nans here because converting to bools maps NaNs to True..

@@ -2556,7 +2556,7 @@ class TestWeibullAFTFitter:
         aft_with_intercept = WeibullAFTFitter(fit_intercept=False)
         aft_with_intercept.fit(rossi, "week", "arrest", ancillary=rossi)
 
-        assert_frame_equal(aft_with_intercept.summary, aft_without_intercept.summary)
+        assert_frame_equal(aft_with_intercept.summary.sort_index(), aft_without_intercept.summary.sort_index())
 
     def test_passing_in_additional_ancillary_in_predict_methods_if_fitted_with_one(self, rossi):
 
@@ -2854,10 +2854,10 @@ class TestCoxPHFitter:
         assert cph.summary.index.tolist() == ["age", "race", "age:race"]
 
         cph_spline.fit(rossi, "week", "arrest", formula="age + race")
-        assert cph_spline.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race"]
+        assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race"]
 
         cph_spline.fit(rossi, "week", "arrest", formula="age * race")
-        assert cph_spline.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race", "age:race"]
+        assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race", "age:race"]
 
     def test_formulas_can_be_used_with_prediction(self, rossi, cph, cph_spline):
         cph.fit(rossi, "week", "arrest", formula="age * race")
