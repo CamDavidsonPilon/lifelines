@@ -7,7 +7,6 @@ import time
 
 import numpy as np
 import pandas as pd
-import patsy
 from scipy import stats
 
 from numpy.linalg import norm, inv

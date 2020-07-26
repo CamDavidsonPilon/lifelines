@@ -21,7 +21,6 @@ from scipy.integrate import trapz
 from scipy import stats
 
 import pandas as pd
-import patsy
 
 
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
@@ -1662,38 +1661,6 @@ class ParametricRegressionFitter(RegressionFitter):
 
         return self
 
-    def _create_design_info_and_matrices(self, user_inputed_regressor_lookup, df):
-
-        # convert user_inputed_regressor_lookup to a dict {str: Optional[design_info, list]}
-
-        if user_inputed_regressor_lookup is None:
-            cols = df.columns.tolist()
-            return (
-                {name: cols for name in sorted(self._fitted_parameter_names)},
-                pd.concat({name: df for name in sorted(self._fitted_parameter_names)}, axis=1, names=("param", "covariate")),
-            )
-
-        regressors = {}
-        Xs = {}
-        user_inputed_regressor_lookup = dict(sorted(user_inputed_regressor_lookup.items()))
-        for param, value in user_inputed_regressor_lookup.items():
-            if isinstance(value, (list, pd.Index)):
-                # list of covariates
-                df_transformed_ = df[value]
-                mapping_ = list(value)
-            elif isinstance(value, str):
-                # submitted formula
-                df_transformed_ = patsy.dmatrix(value, df, return_type="dataframe")
-                mapping_ = df_transformed_.design_info
-            elif value is None:
-                # use all the columns in df
-                df_transformed_ = df
-                mapping_ = df.columns.tolist()
-
-            regressors[param] = mapping_
-            Xs[param] = df_transformed_
-        return regressors, pd.concat(Xs, axis=1, names=("param", "covariate"))
-
     def _fit(
         self,
         log_likelihood_function,
@@ -1913,17 +1880,6 @@ class ParametricRegressionFitter(RegressionFitter):
                     )
                 )
             )
-
-    def _create_Xs_dict(self, df):
-        Xs = {}
-        df["Intercept"] = 1
-        for param, design_info in self.regressors.items():
-            if type(design_info) == list:
-                df_transformed_ = df[design_info]
-            else:
-                df_transformed_, = patsy.build_design_matrices([design_info], df, return_type="dataframe")
-            Xs[param] = df_transformed_
-        return utils.DataframeSlicer(pd.concat(Xs, axis=1, names=("param", "covariate")))
 
     def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
         """
@@ -2667,7 +2623,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates/formula as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
-            If string, must be a patsy formula.
+            If string, must be a R-like formula.
 
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
@@ -2753,7 +2709,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             df = pd.concat([df, ancillary[ancillary_cols_to_consider]], axis=1)
 
         elif isinstance(ancillary, str):
-            # patsy formula
+            # R-like formula
             self.model_ancillary = True
             regressors[self._ancillary_parameter_name] = ancillary
 
@@ -3087,7 +3043,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             df = pd.concat([df, ancillary[ancillary_cols_to_consider]], axis=1)
 
         elif isinstance(ancillary, str):
-            # patsy formula
+            # R-like formula
             self.model_ancillary = True
             regressors[self._ancillary_parameter_name] = ancillary
 

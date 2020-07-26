@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
 import pandas as pd
-import patsy
 
 from lifelines.utils import coalesce, _get_index, CensoringType
 from lifelines.fitters import ParametricRegressionFitter

@@ -4,7 +4,6 @@ Reimplementation of "A Heteroscedastic Accelerated Failure Time Model
 for Survival Analysis", Wang, You, Lysy, 2019
 """
 import pandas as pd
-from patsy import dmatrix
 import autograd.numpy as np
 from autograd.scipy.stats import norm
 from lifelines.fitters import ParametricRegressionFitter

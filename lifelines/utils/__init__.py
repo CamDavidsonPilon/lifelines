@@ -1801,6 +1801,24 @@ def quiet_log2(p):
 
 
 class CovariateParameterMappings:
+    """
+    This class controls the mapping, possible trivial, between covariates and parameters. User, or lifelines, create
+    a seed mapping, and this class takes over and creates logic and pieces to make the transformation simple.
+
+    Ideally all transformation of datasets to parameters handled by this class.
+
+    Parameters
+    -----------
+
+    seed_mapping: dict
+        a mapping of parameters to covariates, specified through a list of column names, or formula.
+    df: DataFrame
+        the training dataset
+    force_intercept:
+        True to always add an constant column.
+    force_no_intercept:
+        True to always remove an constant column.
+    """
 
     INTERCEPT_COL = "Intercept"
 
@@ -1834,6 +1852,7 @@ class CovariateParameterMappings:
                 raise ValueError("Unexpected transform.")
 
     def transform_df(self, df, to_dataframeslicer=False):
+
         import patsy
 
         Xs = {}

@@ -18,7 +18,6 @@ import pytest
 from scipy.stats import weibull_min, norm, logistic, invweibull, invgamma
 from autograd.scipy.special import expit
 from autograd import numpy as anp
-import patsy
 
 try:
     from flaky import flaky

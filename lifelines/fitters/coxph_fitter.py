@@ -14,7 +14,6 @@ from pandas import DataFrame, Series, Index
 import pandas as pd
 from autograd import elementwise_grad
 from autograd import numpy as anp
-import patsy
 
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio, concordance_index
 from lifelines.fitters import RegressionFitter, SemiParametricRegressionFittter, ParametricRegressionFitter
@@ -1747,13 +1746,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if isinstance(X, pd.DataFrame):
 
             X = self.regressors.transform_df(X)["beta_"]
-            """
-            order = hazard_names
-            if self.formula:
-                (X,) = patsy.build_design_matrices([self.regressors["beta_"]], X, return_type="dataframe")
-
-            X = X.reindex(order, axis="columns")
-            """
             X = X.values
 
         X = X.astype(float)
