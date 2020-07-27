@@ -1742,7 +1742,7 @@ class ParametricRegressionFitter(RegressionFitter):
             user_supplied_initial_point=initial_point,
         )
 
-        # align the coefficients again.
+        # assert the coefficients are aligned.
         # https://github.com/CamDavidsonPilon/lifelines/issues/931
         assert list(self.regressors.keys()) == list(self._norm_std.index.get_level_values(0).unique())
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
@@ -1829,7 +1829,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         # scoring this function in `score`
         self._neg_likelihood = partial(self._create_neg_likelihood_with_penalty_function, likelihood=likelihood)
-        print(Ts, E, weights, entries, Xs)
+
         minimum_ll = np.inf
         minimum_results = None
         for _initial_point in inital_points_as_arrays:
@@ -1936,7 +1936,6 @@ class ParametricRegressionFitter(RegressionFitter):
                 entries = np.zeros_like(E, dtype=float)
 
             Xs = self.regressors.transform_df(df)
-            print(Ts, E, W, entries, Xs)
 
             return -self._neg_likelihood(self.params_.values, Ts, E, W, entries, utils.DataframeSlicer(Xs))
 

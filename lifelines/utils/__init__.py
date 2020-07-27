@@ -1874,7 +1874,10 @@ class CovariateParameterMappings:
 
             Xs[param_name] = X
 
+        # in pandas 0.23.4, the Xs as a dict is sorted differently from the Xs as a DataFrame's columns
+        # hence we need to reorder, see https://github.com/CamDavidsonPilon/lifelines/issues/931
         Xs = pd.concat(Xs, axis=1, names=("param", "covariate")).astype(float)
+        Xs = Xs[list(self.mappings.keys())]
 
         # we can't concat empty dataframes and return a column MultiIndex,
         # so we create a "fake" dataframe (acts like a dataframe) to return.

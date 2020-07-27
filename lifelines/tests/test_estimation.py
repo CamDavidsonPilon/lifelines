@@ -1861,7 +1861,7 @@ class TestRegressionFitters:
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
 
-        regression_models = [CustomRegressionModelTesting(), PiecewiseExponentialRegressionFitter(breakpoints=[25.0])]
+        regression_models = [PiecewiseExponentialRegressionFitter(breakpoints=[25.0])]
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
