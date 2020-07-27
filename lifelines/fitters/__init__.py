@@ -2279,7 +2279,7 @@ class ParametricRegressionFitter(RegressionFitter):
         times = np.atleast_1d(times).astype(float)
 
         n = df.shape[0]
-        Xs = self.regressors.transform_df(df, to_dataframeslicer=True)
+        Xs = utils.DataframeSlicer(self.regressors.transform_df(df))
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
@@ -3391,7 +3391,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             for c in ancillary.columns.difference(df.columns):
                 df[c] = ancillary[c]
 
-        Xs = self.regressors.transform_df(df, to_dataframeslicer=True)
+        Xs = utils.DataframeSlicer(self.regressors.transform_df(df))
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
@@ -3440,7 +3440,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             for c in ancillary.columns.difference(df.columns):
                 df[c] = ancillary[c]
 
-        Xs = self.regressors.transform_df(df, to_dataframeslicer=True)
+        Xs = utils.DataframeSlicer(self.regressors.transform_df(df))
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 

@@ -1851,7 +1851,7 @@ class CovariateParameterMappings:
             else:
                 raise ValueError("Unexpected transform.")
 
-    def transform_df(self, df, to_dataframeslicer=False):
+    def transform_df(self, df):
 
         import patsy
 
@@ -1884,10 +1884,7 @@ class CovariateParameterMappings:
         if Xs.size == 0:
             return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
         else:
-            if to_dataframeslicer:
-                return DataframeSlicer(Xs)
-            else:
-                return Xs
+            return Xs
 
     def keys(self):
         yield from self.mappings.keys()
