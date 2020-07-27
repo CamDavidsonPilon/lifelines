@@ -1195,7 +1195,7 @@ class RegressionFitter(BaseFitter):
 
     def _compute_central_values_of_raw_training_data(self, df, strata=None, name="baseline"):
         """
-        Compute our "baseline" observation for function like plot_covariate_groups.
+        Compute our "baseline" observation for function like plot_partial_effects_on_outcome.
         - Categoricals are transformed to their mode value.
         - Numerics are transformed to their median value.
         """
@@ -2457,7 +2457,16 @@ class ParametricRegressionFitter(RegressionFitter):
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, times=None, y="survival_function", **kwargs):
+    def plot_covariate_groups(*args, **kwargs):
+        """
+        Deprecated as of v0.25.0. Use plot_partial_effects_on_outcome instead.
+        """
+        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
+        return plot_partial_effects_on_outcome(*args, **kwargs)
+
+    def plot_partial_effects_on_outcome(
+        self, covariates, values, plot_baseline=True, ax=None, times=None, y="survival_function", **kwargs
+    ):
         """
         Produces a plot comparing the baseline curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
@@ -2491,18 +2500,17 @@ class ParametricRegressionFitter(RegressionFitter):
             from lifelines import datasets, WeibullAFTFitter
             rossi = datasets.load_rossi()
             wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
-            wf.plot_covariate_groups('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
+            wf.plot_partial_effects_on_outcome('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
 
         .. image:: images/plot_covariate_example3.png
 
         .. code:: python
 
             # multiple variables at once
-            wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
+            wf.plot_partial_effects_on_outcome(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
 
             # if you have categorical variables, you can simply things:
-            wf.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
-
+            wf.plot_partial_effects_on_outcome(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
 
         """
         from matplotlib import pyplot as plt
@@ -3183,7 +3191,14 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, ax=None, times=None, **kwargs):
+    def plot_covariate_groups(*args, **kwargs):
+        """
+        Deprecated as of v0.25.0. Use plot_partial_effects_on_outcome instead.
+        """
+        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
+        return plot_partial_effects_on_outcome(*args, **kwargs)
+
+    def plot_partial_effects_on_outcome(self, covariates, values, plot_baseline=True, ax=None, times=None, **kwargs):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
@@ -3216,14 +3231,10 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             from lifelines import datasets, WeibullAFTFitter
             rossi = datasets.load_rossi()
             wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
-            wf.plot_covariate_groups('prio', values=np.arange(0, 15), cmap='coolwarm')
+            wf.plot_partial_effects_on_outcome('prio', values=np.arange(0, 15), cmap='coolwarm')
 
             # multiple variables at once
-            wf.plot_covariate_groups(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm')
-
-            # if you have categorical variables, you can simply things:
-            wf.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
-
+            wf.plot_partial_effects_on_outcome(['prio', 'paro'], values=[[0, 0], [5, 0], [10, 0], [0, 1], [5, 1], [10, 1]], cmap='coolwarm', y="hazard")
 
         """
         from matplotlib import pyplot as plt

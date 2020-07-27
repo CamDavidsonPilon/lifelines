@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.25.0 - unreleased
+#### 0.25.0 - 2020-07-27
 
 ##### New features
  - Formulas! *lifelines* now supports R-like formulas in regression models. See docs [here]().
@@ -15,12 +15,13 @@
  - With the introduction of formulas, all models can be using formulas under the hood.
     - For both custom regression models or non-AFT regression models, this means that you no longer need to add a constant column to your DataFrame (instead add a `1` as a formula string in the `regressors` dict). You may also need to remove the T and E columns from `regressors`. I've updated the models in the `\examples` folder with examples of this new model building.
  - Unfortunately, if using formulas, your model will not be able to be pickled. This is a problem with an upstream library, and I hope to have it resolved in the near future.
+ - `plot_covariate_groups` has been deprecated in favour of `plot_partial_effects_on_outcome`.
  - The baseline in `plot_covariate_groups` has changed from the *mean* observation (including dummy-encoded categorical variables) to *median* for ordinal (including continuous) and *mode* for categorical.
  - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using `"Intercept"`.
  - In AFT models, `ancillary_df` kwarg has been renamed to `ancillary`. This reflects the more general use of the kwarg (not always a DataFrame, but could be a boolean or string now, too).
  - Some column names in datasets shipped with lifelines have changed.
  - The never used "lifelines.metrics" is deleted.
- - With the introduction of formulas, `plot_covariate_groups` behaves differently for transformed variables. Users no longer need to add "derivatives" features, and encoding is done implicitly. See docs [here](https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#plotting-the-effect-of-varying-a-covariate).
+ - With the introduction of formulas, `plot_covariate_groups` (now called `plot_partial_effects_on_outcome`) behaves differently for transformed variables. Users no longer need to add "derivatives" features, and encoding is done implicitly. See docs [here](https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#plotting-the-effect-of-varying-a-covariate).
  - all exceptions and warnings have moved to `lifelines.exceptions`
 
 ##### Bug fixes

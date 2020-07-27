@@ -2113,7 +2113,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return ax
 
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, y="survival_function", **kwargs):
+    def plot_covariate_groups(*args, **kwargs):
+        """
+        Deprecated as of v0.25.0. Use plot_partial_effects_on_outcome instead.
+        """
+        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
+        return plot_partial_effects_on_outcome(*args, **kwargs)
+
+    def plot_partial_effects_on_outcome(self, covariates, values, plot_baseline=True, y="survival_function", **kwargs):
         """
         Produces a plot comparing the baseline curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
@@ -2149,14 +2156,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             rossi = datasets.load_rossi()
 
             cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
-            cph.plot_covariate_groups('prio', values=arange(0, 15, 3), cmap='coolwarm')
+            cph.plot_partial_effects_on_outcome('prio', values=arange(0, 15, 3), cmap='coolwarm')
 
         .. image:: /images/plot_covariate_example1.png
 
         .. code:: python
 
             # multiple variables at once
-            cph.plot_covariate_groups(['prio', 'paro'], values=[
+            cph.plot_partial_effects_on_outcome(['prio', 'paro'], values=[
              [0,  0],
              [5,  0],
              [10, 0],
@@ -2171,7 +2178,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
             # if you have categorical variables, you can do the following to see the
             # effect of all the categories on one plot.
-            cph.plot_covariate_groups('categorical_var', values=["A", "B", "C"])
+            cph.plot_partial_effects_on_outcome('categorical_var', values=["A", "B", "C"])
 
 
         """

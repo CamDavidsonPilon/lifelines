@@ -280,8 +280,14 @@ With a fitted model, an alternative way to view the coefficients and their range
 Plotting the effect of varying a covariate
 -------------------------------------------
 
+
+
 After fitting, we can plot what the survival curves look like as we vary a single covariate while
-holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method and give it the covariate of interest, and the values to display.
+holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_partial_effects_on_outcome` method and give it the covariate of interest, and the values to display.
+
+.. note::
+    Prior to lifelines v0.25.0, this method used to be called ``plot_covariate_groups``. It's been renamed to ``plot_partial_effects_on_outcome`` (a much clearer name, I hope).
+
 
 .. code:: python
 
@@ -292,7 +298,7 @@ holding everything else equal. This is useful to understand the impact of a cova
     cph = CoxPHFitter()
     cph.fit(rossi, duration_col='week', event_col='arrest')
 
-    cph.plot_covariate_groups(covariates='prio', values=[0, 2, 4, 6, 8, 10], cmap='coolwarm')
+    cph.plot_partial_effects_on_outcome(covariates='prio', values=[0, 2, 4, 6, 8, 10], cmap='coolwarm')
 
 .. image:: images/coxph_plot_covarite_groups.png
     :width: 600px
@@ -307,7 +313,7 @@ If there are derivative features in your dataset, for example, suppose you have 
 
     cph.fit(rossi, 'week', 'arrest')
 
-    cph.plot_covariate_groups(
+    cph.plot_partial_effects_on_outcome(
         covariates=['prio', 'prio**2'],
         values=[
             [0, 0],
@@ -325,7 +331,7 @@ However, if you used the ``formula`` kwarg in fit, all the necessary transformat
 
     cph.fit(rossi, 'week', 'arrest', formula="prio + prio^2")
 
-    cph.plot_covariate_groups(
+    cph.plot_partial_effects_on_outcome(
         covariates=['prio'],
         values=[0, 1, 2, 3, 8],
         cmap='coolwarm')
@@ -334,7 +340,7 @@ This feature is also useful for analyzing categorical variables:
 
 .. code:: python
 
-    cph.plot_covariate_groups(
+    cph.plot_partial_effects_on_outcome(
         covariates=["a_categorical_variable"]
         values=["A", "B", ...],
         plot_baseline=False)
@@ -679,7 +685,11 @@ The plotting API is the same as in :class:`~lifelines.fitters.coxph_fitter.CoxPH
     :align: center
 
 
-We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_covariate_groups`, and this is also a nice time to observe the effects of modeling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
+We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_partial_effects_on_outcome`, and this is also a nice time to observe the effects of modeling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
+
+
+.. note::
+    Prior to lifelines v0.25.0, this method used to be called ``plot_covariate_group``. It's been renamed to ``plot_partial_effects_on_outcome`` (a much clearer name, I hope).
 
 .. code:: python
 
@@ -687,11 +697,11 @@ We can observe the influence a variable in the model by plotting the *outcome* (
 
     times = np.arange(0, 100)
     wft_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=True, timeline=times)
-    wft_model_rho.plot_covariate_groups('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[0])
+    wft_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[0])
     ax[0].set_title("Modelling rho_")
 
     wft_not_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=False, timeline=times)
-    wft_not_model_rho.plot_covariate_groups('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[1])
+    wft_not_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[1])
     ax[1].set_title("Not modelling rho_");
 
 .. image:: images/weibull_aft_two_models.png
@@ -703,15 +713,15 @@ Comparing a few of these survival functions side by side:
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 4))
 
-    wft_model_rho.plot_covariate_groups('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, lw=2, plot_baseline=False)
-    wft_not_model_rho.plot_covariate_groups('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, ls='--', lw=2, plot_baseline=False)
+    wft_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, lw=2, plot_baseline=False)
+    wft_not_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, ls='--', lw=2, plot_baseline=False)
     ax.get_legend().remove()
 
 .. image:: images/weibull_aft_two_models_side_by_side.png
     :width: 500px
     :align: center
 
-You read more about and see other examples of the extensions to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_covariate_groups`
+You read more about and see other examples of the extensions to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_partial_effects_on_outcome`
 
 
 Prediction

@@ -10,6 +10,11 @@ CoxPHFitter
         see :meth:`~lifelines.fitters.coxph_fitter.SemiParametricPHFitter.plot_covariate_groups`
 
 
+    .. method:: plot_partial_effects_on_outcome()
+
+        see :meth:`~lifelines.fitters.coxph_fitter.SemiParametricPHFitter.plot_partial_effects_on_outcome`
+
+
     .. method:: plot()
 
         see :meth:`~lifelines.fitters.coxph_fitter.SemiParametricPHFitter.plot`
