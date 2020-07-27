@@ -790,8 +790,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
-        if not hasattr(self, "regressors"):
-            self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
+        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
         X = self.regressors.transform_df(df)["beta_"]
 
         T = T.astype(float)

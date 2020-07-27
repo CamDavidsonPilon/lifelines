@@ -200,8 +200,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         )
         weights = df.pop("__weights").astype(float)
 
-        if not hasattr(self, "regressors"):
-            self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
+        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
         X = self.regressors.transform_df(df)["beta_"]
 
         self._check_values(X, events, start, stop)

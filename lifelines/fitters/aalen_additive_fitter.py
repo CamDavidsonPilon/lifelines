@@ -315,14 +315,14 @@ It's important to know that the naive variance estimates of the coefficients are
             same order as the training data.
 
         """
-        n = X.shape[0]
-        X = X.astype(float)
 
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):
             X = self.regressors.transform_df(X)["beta_"]
         elif isinstance(X, pd.Series):
             return self.predict_cumulative_hazard(X.to_frame().T.infer_objects())
+
+        X = X.astype(float)
 
         timeline = self._index
         individual_cumulative_hazards_ = pd.DataFrame(np.dot(self.cumulative_hazards_, X.T), index=timeline, columns=cols)
