@@ -12,9 +12,9 @@
 
 
 ##### API Changes
- - With the introduction of formulas, all models are using formulas under the hood.
-    - For datasets with columns names with spaces, non-ASCII characters, etc., the column names may need to be modified to remove these values _or_ you can adopt formulas and use the `Q()` syntax.
+ - With the introduction of formulas, all models can be using formulas under the hood.
     - For both custom regression models or non-AFT regression models, this means that you no longer need to add a constant column to your DataFrame (instead add a `1` as a formula string in the `regressors` dict). You may also need to remove the T and E columns from `regressors`. I've updated the models in the `\examples` folder with examples of this new model building.
+ - Unfortunately, if using formulas, your model will not be able to be pickled. This is a problem with an upstream library, and I hope to have it resolved in the near future.
  - The baseline in `plot_covariate_groups` has changed from the *mean* observation (including dummy-encoded categorical variables) to *median* for ordinal (including continuous) and *mode* for categorical.
  - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using `"Intercept"`.
  - In AFT models, `ancillary_df` kwarg has been renamed to `ancillary`. This reflects the more general use of the kwarg (not always a DataFrame, but could be a boolean or string now, too).

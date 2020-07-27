@@ -778,7 +778,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
         best_ylim = ax.get_ylim()
-        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65, color="k")
         ax.set_ylim(best_ylim)
 
         tick_labels = [columns[i] for i in order]

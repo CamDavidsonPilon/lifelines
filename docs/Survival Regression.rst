@@ -323,7 +323,7 @@ However, if you used the ``formula`` kwarg in fit, all the necessary transformat
 
 .. code:: python
 
-    cph.fit(rossi, 'week', 'arrest', formula="prio + prio**2")
+    cph.fit(rossi, 'week', 'arrest', formula="prio + prio^2")
 
     cph.plot_covariate_groups(
         covariates=['prio'],
@@ -799,17 +799,17 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
     from lifelines.datasets import load_rossi
 
     df = load_rossi()
+    df['Intercept'] = 1.
 
     # this will regress df against all 3 parameters
     ggf = GeneralizedGammaRegressionFitter(penalizer=1.).fit(df, 'week', 'arrest')
     ggf.print_summary()
 
-
     # If we want fine control over the parameters <-> covariates.
     # The values in the dict become can be formulas, or column names in lists:
     regressors = {
         'mu_': rossi.columns.difference(['arrest', 'week']),
-        'sigma_': ["1"],
+        'sigma_': ["age", "Intercept"],
         'lambda_': 'age + 1',
     }
 

@@ -126,7 +126,7 @@ class CustomRegressionModelTesting(ParametricRegressionFitter):
 
     def __init__(self, **kwargs):
         cols = load_rossi().drop(["week", "arrest"], axis=1).columns
-        self.regressors = {"lambda_": cols, "beta_": cols, "rho_": cols}
+        self.regressors = {"lambda_": "1", "beta_": "1", "rho_": "1"}
         super(CustomRegressionModelTesting, self).__init__(**kwargs)
 
     def _cumulative_hazard(self, params, T, Xs):
@@ -1867,6 +1867,15 @@ class TestRegressionFitters:
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
             npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
 
+    @pytest.mark.xfail
+    def test_score_method_returns_same_value_for_unpenalized_models_fails_for_an_unknown_reason(self, rossi):
+
+        regression_models = [CustomRegressionModelTesting()]
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+            npt.assert_almost_equal(fitter.score(rossi, scoring_method="log_likelihood"), fitter.log_likelihood_ / rossi.shape[0])
+            npt.assert_almost_equal(fitter.score(rossi, scoring_method="concordance_index"), fitter.concordance_index_)
+
     def test_print_summary(self, rossi, regression_models):
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
@@ -2017,7 +2026,8 @@ class TestRegressionFitters:
 
         for fitter in [CoxPHFitter(), WeibullAFTFitter()]:
             for subset in [["t", "categoryb_"], ["t", "string_"], ["t", "uint8_"], ["t", "categorya_"], ["t", "bool_"]]:
-                fitter.fit(df[subset], duration_col="t")
+                formula = "%s" % subset[-1]
+                fitter.fit(df[subset], duration_col="t", formula=formula)
 
     @pytest.mark.xfail
     def test_regression_model_has_concordance_index_(self, regression_models, rossi):
@@ -4532,6 +4542,11 @@ class TestAalenAdditiveFitter:
     @pytest.fixture()
     def aaf(self):
         return AalenAdditiveFitter()
+
+    def test_can_accept_formula(self, aaf, regression_dataset):
+        aaf.fit(regression_dataset, "T", "E", formula="var1 * var2 + var3")
+        assert aaf.summary.shape[0] == 5
+        aaf.predict_survival_function(regression_dataset)
 
     def test_slope_tests_against_R(self, aaf, regression_dataset):
         """

@@ -1265,6 +1265,7 @@ class ParametricRegressionFitter(RegressionFitter):
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
     fit_intercept = False
+    regressors = None
 
     def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0, **kwargs):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha, **kwargs)
@@ -1712,7 +1713,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self.weights = weights.copy()
         self._central_values = self._compute_central_values_of_raw_training_data(df)
 
-        regressors = utils.coalesce(regressors, {p: None for p in self._fitted_parameter_names})
+        regressors = utils.coalesce(regressors, self.regressors, {p: None for p in self._fitted_parameter_names})
         self.regressors = utils.CovariateParameterMappings(regressors, df, force_intercept=self.fit_intercept)
         Xs = self.regressors.transform_df(df)
 
@@ -1828,7 +1829,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         # scoring this function in `score`
         self._neg_likelihood = partial(self._create_neg_likelihood_with_penalty_function, likelihood=likelihood)
-
+        print(Ts, E, weights, entries, Xs)
         minimum_ll = np.inf
         minimum_results = None
         for _initial_point in inital_points_as_arrays:
@@ -1925,21 +1926,19 @@ class ParametricRegressionFitter(RegressionFitter):
                 try:
                     W = df.pop(self.weights_col).values
                 except:
-                    W = np.ones_like(E)
+                    W = np.ones_like(E, dtype=float)
             else:
-                W = np.ones_like(E)
+                W = np.ones_like(E, dtype=float)
 
             if self.entry_col:
                 entries = df.pop(self.entry_col).values
             else:
-                entries = np.zeros_like(E)
+                entries = np.zeros_like(E, dtype=float)
 
-            if getattr(self, "fit_intercept", False):
-                df["Intercept"] = 1.0
+            Xs = self.regressors.transform_df(df)
+            print(Ts, E, W, entries, Xs)
 
-            Xs = utils.DataframeSlicer(self.regressors.transform_df(df))
-
-            return -self._neg_likelihood(self.params_.values, Ts, E, W, entries, Xs)
+            return -self._neg_likelihood(self.params_.values, Ts, E, W, entries, utils.DataframeSlicer(Xs))
 
         elif scoring_method == "concordance_index":
             T = df.pop(self.duration_col).values
@@ -2446,7 +2445,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         ax.errorbar(hazards["coefs"], yaxis_locations, xerr=hazards["se"], **errorbar_kwargs)
         best_ylim = ax.get_ylim()
-        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65, color="k")
         ax.set_ylim(best_ylim)
 
         if isinstance(columns[0], tuple):
@@ -3172,7 +3171,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         ax.errorbar(hazards["coefs"], yaxis_locations, xerr=hazards["se"], **errorbar_kwargs)
         best_ylim = ax.get_ylim()
-        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65, color="k")
         ax.set_ylim(best_ylim)
 
         if isinstance(columns[0], tuple):

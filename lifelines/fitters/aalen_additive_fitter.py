@@ -11,6 +11,7 @@ from scipy.integrate import trapz
 from lifelines.fitters import RegressionFitter
 from lifelines.utils.printer import Printer
 from lifelines.exceptions import StatisticalWarning, ConvergenceWarning
+from lifelines import utils
 from lifelines.utils import (
     _get_index,
     inv_normal_cdf,
@@ -92,7 +93,7 @@ class AalenAdditiveFitter(RegressionFitter):
             raise ValueError("penalizer parameters must be >= 0.")
 
     @CensoringType.right_censoring
-    def fit(self, df, duration_col, event_col=None, weights_col=None, show_progress=False):
+    def fit(self, df, duration_col, event_col=None, weights_col=None, show_progress=False, formula: str = None):
         """
         Parameters
         ----------
@@ -126,6 +127,9 @@ class AalenAdditiveFitter(RegressionFitter):
         show_progress: bool, optional (default=False)
             Since the fitter is iterative, show iteration number.
 
+        formula: str
+            an R-like formula
+
 
         Returns
         -------
@@ -158,6 +162,7 @@ class AalenAdditiveFitter(RegressionFitter):
         self.duration_col = duration_col
         self.event_col = event_col
         self.weights_col = weights_col
+        self.formula = formula
 
         self._n_examples = df.shape[0]
 
@@ -287,17 +292,15 @@ It's important to know that the naive variance estimates of the coefficients are
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-        X = df.astype(float)
+        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_intercept=self.fit_intercept)
+        X = self.regressors.transform_df(df)["beta_"]
+
         T = T.astype(float)
 
         check_nans_or_infs(E)
         E = E.astype(bool)
 
         self._check_values(df, T, E)
-
-        if self.fit_intercept:
-            assert "Intercept" not in df.columns, "_intercept is an internal lifelines column, please rename your column first."
-            X["Intercept"] = 1.0
 
         return X, T, E, W
 
@@ -317,18 +320,12 @@ It's important to know that the naive variance estimates of the coefficients are
 
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):
-            order = self.cumulative_hazards_.columns
-            order = order.drop("Intercept") if self.fit_intercept else order
-            X_ = X[order].values
+            X = self.regressors.transform_df(X)["beta_"]
         elif isinstance(X, pd.Series):
             return self.predict_cumulative_hazard(X.to_frame().T.infer_objects())
-        else:
-            X_ = X
-
-        X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
 
         timeline = self._index
-        individual_cumulative_hazards_ = pd.DataFrame(np.dot(self.cumulative_hazards_, X_.T), index=timeline, columns=cols)
+        individual_cumulative_hazards_ = pd.DataFrame(np.dot(self.cumulative_hazards_, X.T), index=timeline, columns=cols)
 
         return individual_cumulative_hazards_
 
