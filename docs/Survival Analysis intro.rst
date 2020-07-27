@@ -86,9 +86,13 @@ that we would be severely underestimating the true average lifespan.
     print("Observed lifetimes at time %d:\n" % (CURRENT_TIME), observed_lifetimes)
 
 
-.. image:: images/survival_analysis_intro_censoring.png
-    :width: 750px
+.. figure:: images/survival_analysis_intro_censoring.png
+    :width: 650px
     :align: center
+    :figclass: align-center
+
+    Example lifetimes of individuals. We only observe up to time 10, but the blue individuals have not died yet (i.e. they are censored).
+
 
 .. parsed-literal::
 
@@ -111,9 +115,13 @@ information at :math:`t=10`).
     ax.set_xlim(0, 25)
 
 
-.. image:: images/survival_analysis_intro_censoring_revealed.png
-    :width: 750px
+.. figure:: images/survival_analysis_intro_censoring_revealed.png
+    :width: 650px
     :align: center
+    :figclass: align-center
+
+    Revealing the actual lifetimes of individuals.
+
 
 Survival analysis was originally developed to solve this type of
 problem, that is, to deal with estimation when our data is
@@ -157,15 +165,17 @@ Simply, the survival function defines the probability the death event has not oc
 Here's an example of a survival function:
 
 .. image:: images/intro_survival_function.png
-    :width: 650px
+    :width: 550px
     :align: center
+
+Reading from this graph, we can see that at time 40, about 75% of the population is still alive.
 
 Hazard function
 -----------------
 
 
 We are also interested in the probability of the death event occurring at time :math:`t`,
-given that the death event has not occurred until time :math:`t`. Mathematically, that is:
+given that the death event has not occurred yet. Mathematically, that is:
 
 .. math::  \lim_{\delta t \rightarrow 0 } \; Pr( t \le T \le t + \delta t | T > t)
 
@@ -192,8 +202,8 @@ The integral has a more common name: the *cumulative hazard function*, denoted :
 
 What I love about the above equation is that it defines **all** survival
 functions. Notice that we can now speak either about the
-survival function, :math:`S(t)`, or the cumulative hazard function,
-:math:`H(t)`, and we can convert back and forth quite easily.
+survival function, :math:`S(t)`, the hazard, :math:`h(t)`, or the cumulative hazard function,
+:math:`H(t)`, and we can convert back and forth quite easily. Below is a graphic of all the relationships between the quantities.
 
 
 .. figure:: images/map.png
@@ -209,7 +219,7 @@ survival function, :math:`S(t)`, or the cumulative hazard function,
 The two figures below represent the hazard and the cumulative hazard of the survival function in the figure above.
 
 .. image:: images/intro_hazards.png
-    :width: 650px
+    :width: 550px
     :align: center
 
 

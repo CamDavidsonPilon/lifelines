@@ -47,7 +47,7 @@ class StatisticalResult:
     test_statistic: iterable or float
         the test statistics of a statistical test(s). Must be the same size as p-values if iterable.
     test_name: string
-        the test that was used. Lifelines should set this.
+        the test that was used. lifelines should set this.
     name: iterable or string
         if this class holds multiple results (ex: from a pairwise comparison), this can hold the names. Must be the same size as p-values if iterable.
     kwargs:
@@ -179,8 +179,7 @@ class StatisticalResult:
         meta_data = self._stringify_meta_data(extra_kwargs)
 
         df = self.summary
-        with np.errstate(invalid="ignore", divide="ignore"):
-            df["-log2(p)"] = -np.log2(df["p"])
+        df["-log2(p)"] = -utils.quiet_log2(df["p"])
 
         s = self.__repr__()
         s += "\n" + meta_data + "\n"

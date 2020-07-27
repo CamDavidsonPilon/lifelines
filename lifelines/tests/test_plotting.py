@@ -114,8 +114,9 @@ class TestPlotting:
         self.plt.show(block=block)
 
     def test_kmf_add_at_risk_counts_with_subplot(self, block, kmf):
-        data1 = np.random.exponential(10, size=(100))
-        kmf.fit(data1)
+        T = np.random.exponential(10, size=(100))
+        E = np.random.binomial(1, 0.8, size=(100))
+        kmf.fit(T, E)
 
         fig = self.plt.figure()
         axes = fig.subplots(1, 2)
@@ -142,7 +143,7 @@ class TestPlotting:
         half_inch = 0.5 / height  # in percent height
         _fig = plt.figure(figsize=(6, height), dpi=100)
         gs = mpl.gridspec.GridSpec(img_no, 1)
-        plt.subplots_adjust(left=0.08, right=0.98, bottom=half_inch, top=1 - half_inch)
+        # plt.subplots_adjust(left=0.08, right=0.98, bottom=half_inch, top=1 - half_inch)
 
         for i in range(img_no):
             ax = plt.subplot(gs[i, 0])
@@ -465,54 +466,62 @@ class TestPlotting:
         self.plt.title("test_coxph_plotting_with_subset_of_columns")
         self.plt.show(block=block)
 
-    def test_coxph_plot_covariate_groups(self, block):
+    def test_coxph_plot_partial_effects_on_outcome(self, block):
         df = load_rossi()
         cp = CoxPHFitter()
         cp.fit(df, "week", "arrest")
-        cp.plot_covariate_groups("age", [10, 50, 80])
-        self.plt.title("test_coxph_plot_covariate_groups")
+        cp.plot_partial_effects_on_outcome("age", [10, 50, 80])
+        self.plt.title("test_coxph_plot_partial_effects_on_outcome")
         self.plt.show(block=block)
 
-    def test_coxph_plot_covariate_groups_with_strata(self, block):
+    def test_coxph_plot_partial_effects_on_outcome_with_cumulative_hazard(self, block):
+        df = load_rossi()
+        cp = CoxPHFitter()
+        cp.fit(df, "week", "arrest")
+        cp.plot_partial_effects_on_outcome("age", [10, 50, 80], y="cumulative_hazard")
+        self.plt.title("test_coxph_plot_partial_effects_on_outcome")
+        self.plt.show(block=block)
+
+    def test_coxph_plot_partial_effects_on_outcome_with_strata(self, block):
         df = load_rossi()
         cp = CoxPHFitter()
         cp.fit(df, "week", "arrest", strata=["paro", "fin"])
-        cp.plot_covariate_groups("age", [10, 50, 80])
-        self.plt.title("test_coxph_plot_covariate_groups_with_strata")
+        cp.plot_partial_effects_on_outcome("age", [10, 50, 80])
+        self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_strata")
         self.plt.show(block=block)
 
-    def test_coxph_plot_covariate_groups_with_single_strata(self, block):
+    def test_coxph_plot_partial_effects_on_outcome_with_single_strata(self, block):
         df = load_rossi()
         cp = CoxPHFitter()
         cp.fit(df, "week", "arrest", strata="paro")
-        cp.plot_covariate_groups("age", [10, 50, 80])
-        self.plt.title("test_coxph_plot_covariate_groups_with_strata")
+        cp.plot_partial_effects_on_outcome("age", [10, 50, 80])
+        self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_strata")
         self.plt.show(block=block)
 
-    def test_coxph_plot_covariate_groups_with_nonnumeric_strata(self, block):
+    def test_coxph_plot_partial_effects_on_outcome_with_nonnumeric_strata(self, block):
         df = load_rossi()
         df["strata"] = np.random.choice(["A", "B"], size=df.shape[0])
         cp = CoxPHFitter()
         cp.fit(df, "week", "arrest", strata="strata")
-        cp.plot_covariate_groups("age", [10, 50, 80])
-        self.plt.title("test_coxph_plot_covariate_groups_with_single_strata")
+        cp.plot_partial_effects_on_outcome("age", [10, 50, 80])
+        self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_single_strata")
         self.plt.show(block=block)
 
-    def test_coxph_plot_covariate_groups_with_multiple_variables(self, block):
+    def test_coxph_plot_partial_effects_on_outcome_with_multiple_variables(self, block):
         df = load_rossi()
         cp = CoxPHFitter()
         cp.fit(df, "week", "arrest")
-        cp.plot_covariate_groups(["age", "prio"], [[10, 0], [50, 10], [80, 90]])
-        self.plt.title("test_coxph_plot_covariate_groups_with_multiple_variables")
+        cp.plot_partial_effects_on_outcome(["age", "prio"], [[10, 0], [50, 10], [80, 90]])
+        self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_multiple_variables")
         self.plt.show(block=block)
 
-    def test_coxph_plot_covariate_groups_with_multiple_variables_and_strata(self, block):
+    def test_coxph_plot_partial_effects_on_outcome_with_multiple_variables_and_strata(self, block):
         df = load_rossi()
         df["strata"] = np.random.choice(["A", "B"], size=df.shape[0])
         cp = CoxPHFitter()
         cp.fit(df, "week", "arrest", strata="strata")
-        cp.plot_covariate_groups(["age", "prio"], [[10, 0], [50, 10], [80, 90]])
-        self.plt.title("test_coxph_plot_covariate_groups_with_multiple_variables_and_strata")
+        cp.plot_partial_effects_on_outcome(["age", "prio"], [[10, 0], [50, 10], [80, 90]])
+        self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_multiple_variables_and_strata")
         self.plt.show(block=block)
 
     def test_coxtv_plotting_with_subset_of_columns(self, block):
@@ -610,22 +619,22 @@ class TestPlotting:
         self.plt.title("test_weibull_aft_plotting_with_subset_of_columns")
         self.plt.show(block=block)
 
-    def test_weibull_aft_plot_covariate_groups(self, block):
+    def test_weibull_aft_plot_partial_effects_on_outcome(self, block):
         df = load_rossi()
         aft = WeibullAFTFitter()
         aft.fit(df, "week", "arrest")
-        aft.plot_covariate_groups("age", [10, 50, 80])
+        aft.plot_partial_effects_on_outcome("age", [10, 50, 80])
         self.plt.tight_layout()
-        self.plt.title("test_weibull_aft_plot_covariate_groups")
+        self.plt.title("test_weibull_aft_plot_partial_effects_on_outcome")
         self.plt.show(block=block)
 
-    def test_weibull_aft_plot_covariate_groups_with_multiple_columns(self, block):
+    def test_weibull_aft_plot_partial_effects_on_outcome_with_multiple_columns(self, block):
         df = load_rossi()
         aft = WeibullAFTFitter()
         aft.fit(df, "week", "arrest")
-        aft.plot_covariate_groups(["age", "prio"], [[10, 0], [50, 10], [80, 50]])
+        aft.plot_partial_effects_on_outcome(["age", "prio"], [[10, 0], [50, 10], [80, 50]])
         self.plt.tight_layout()
-        self.plt.title("test_weibull_aft_plot_covariate_groups_with_multiple_columns")
+        self.plt.title("test_weibull_aft_plot_partial_effects_on_outcome_with_multiple_columns")
         self.plt.show(block=block)
 
     def test_left_censorship_cdf_plots(self, block):

@@ -3,6 +3,7 @@ from lifelines.fitters import ParametricRegressionFitter
 from autograd.scipy.special import expit
 from autograd import numpy as np
 from lifelines.utils.safe_exp import safe_exp
+from lifelines.datasets import load_rossi
 
 exp = safe_exp
 dot = np.dot
@@ -36,18 +37,17 @@ class CopulaFrailtyWeilbullModel(ParametricRegressionFitter):
         return ((T / lambda1) ** rho1 + (T / lambda2) ** rho2) ** alpha
 
 
-swf = CopulaFrailtyWeilbullModel(penalizer=0.1)
+swf = CopulaFrailtyWeilbullModel(penalizer=0.001)
 
 rossi = load_rossi()
-rossi["intercept"] = 1.0
 rossi["week"] = rossi["week"] / 54.0
 
 covariates = {
-    "lambda1": rossi.columns,
-    "lambda2": rossi.columns,
-    "rho1": ["intercept"],
-    "rho2": ["intercept"],
-    "alpha": ["intercept"],
+    "lambda1": "+".join(rossi.columns.difference(["week", "arrest"])),
+    "lambda2": "+".join(rossi.columns.difference(["week", "arrest"])),
+    "rho1": "1",
+    "rho2": "1",
+    "alpha": "1",
 }
 
 swf.fit(rossi, "week", event_col="arrest", regressors=covariates, timeline=np.linspace(0, 2))

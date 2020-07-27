@@ -35,10 +35,9 @@ def somers_d(event_times, x, event_observed=None) -> float:
 
 def concordance_index(event_times, predicted_scores, event_observed=None) -> float:
     """
-    Calculates the concordance index (C-index) between two series
-    of event times. The first is the real survival times from
-    the experimental data, and the other is the predicted survival
-    times from a model of some kind.
+    Calculates the concordance index (C-index) between a series
+    of event times and a predicted score. The first is the real survival times from
+    the observational data, and the other is the predicted score from a model of some kind.
 
     The c-index is the average of how often a model says X is greater than Y when, in the observed
     data, X is indeed greater than Y. The c-index also handles how to handle censored values
@@ -50,6 +49,15 @@ def concordance_index(event_times, predicted_scores, event_observed=None) -> flo
     - 0.5 is the expected result from random predictions,
     - 1.0 is perfect concordance and,
     - 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
+
+    The calculation internally done is
+
+    >>> (pairs_correct + 0.5 * pairs_tied) / admissable_pairs
+
+    where ``pairs_correct`` is the number of pairs s.t. if ``t_x > t_y``, then ``s_x > s_y``, pairs,
+    ``pairs_tied`` is the number of pairs where ``s_x = s_y``, and ``admissable_pairs`` is all possible pairs. The subtleties
+    are in how censored observation are handled (ex: not all pairs can be evaluated due to censoring).
+
 
     Parameters
     ----------

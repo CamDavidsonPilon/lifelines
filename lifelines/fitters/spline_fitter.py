@@ -84,6 +84,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
         assert self.n_knots > 1, "knot_locations must have two or more elements."
         self._fitted_parameter_names = ["phi_%d_" % i for i in range(self.n_knots)]
         self._bounds = [(None, None)] * (self.n_knots)
+        self._compare_to_values = np.zeros(self.n_knots)
         super(SplineFitter, self).__init__(*args, **kwargs)
 
     def _create_initial_point(self, Ts, E, entry, weights):

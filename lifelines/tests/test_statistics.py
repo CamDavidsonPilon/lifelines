@@ -6,7 +6,7 @@ import pytest
 
 from lifelines import statistics as stats
 from lifelines import CoxPHFitter
-from lifelines.utils import StatisticalWarning
+from lifelines.exceptions import StatisticalWarning
 from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset, load_leukemia
 
 

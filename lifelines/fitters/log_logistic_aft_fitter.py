@@ -33,7 +33,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         the level in the confidence intervals.
 
     fit_intercept: boolean, optional (default=True)
-        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
+        Allow lifelines to add an intercept column of 1s to df, and ancillary if applicable.
 
     penalizer: float or array, optional (default=0.0)
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
@@ -112,7 +112,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         beta_ = safe_exp(log_beta_)
         return -np.logaddexp(-beta_ * (np.log(T) - np.log(alpha_)), 0)
 
-    def predict_percentile(self, df, ancillary_df=None, p=0.5, conditional_after=None) -> pd.Series:
+    def predict_percentile(self, df, ancillary=None, p=0.5, conditional_after=None) -> pd.Series:
         """
         Returns the median lifetimes for the individuals, by default. If the survival curve of an
         individual does not cross ``p``, then the result is infinity.
@@ -140,7 +140,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
-        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
 
         if conditional_after is None:
             return pd.Series(alpha_ * (1 / (p) - 1) ** (1 / beta_), index=_get_index(df))
@@ -149,7 +149,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
             S = 1 / (1 + (conditional_after / alpha_) ** beta_)
             return pd.Series(alpha_ * (1 / (p * S) - 1) ** (1 / beta_) - conditional_after, index=_get_index(df))
 
-    def predict_expectation(self, df, ancillary_df=None) -> pd.Series:
+    def predict_expectation(self, df, ancillary=None) -> pd.Series:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -175,7 +175,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         --------
         predict_median
         """
-        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        alpha_, beta_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
         v = (alpha_ * np.pi / beta_) / np.sin(np.pi / beta_)
         v = np.where(beta_ > 1, v, np.nan)
         return pd.Series(v, index=_get_index(df))

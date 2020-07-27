@@ -7,6 +7,10 @@ from scipy.stats import weibull_min
 
 
 class CureModel(ParametricRegressionFitter):
+    """
+    This is a Weibull survival model with a cure component.
+
+    """
 
     _fitted_parameter_names = ["lambda_", "beta_", "rho_"]
 
@@ -21,12 +25,15 @@ class CureModel(ParametricRegressionFitter):
 
 from lifelines.datasets import load_rossi
 
-swf = CureModel(penalizer=0.0)
+swf = CureModel(penalizer=0.00001)
 
 rossi = load_rossi()
-rossi["intercept"] = 1.0
 
-covariates = {"lambda_": rossi.columns, "rho_": ["intercept"], "beta_": rossi.columns}
+covariates = {
+    "lambda_": rossi.columns.difference(["week", "arrest"]),
+    "rho_": ["1"],
+    "beta_": rossi.columns.difference(["week", "arrest"]),
+}
 
 swf.fit(rossi, "week", event_col="arrest", regressors=covariates)  # TODO: name
 swf.print_summary(4)

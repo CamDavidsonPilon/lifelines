@@ -11,7 +11,9 @@ from scipy import stats
 
 from numpy.linalg import norm, inv
 from numpy import sum as array_sum_to_scalar
+
 from scipy.linalg import solve as spsolve, LinAlgError
+
 from autograd import elementwise_grad
 from autograd import numpy as anp
 
@@ -20,6 +22,7 @@ from lifelines.fitters import SemiParametricRegressionFittter
 from lifelines.fitters.mixins import ProportionalHazardMixin
 from lifelines.utils.printer import Printer
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
+from lifelines.exceptions import ConvergenceError, ConvergenceWarning
 from lifelines.utils import (
     _get_index,
     _to_list,
@@ -32,8 +35,6 @@ from lifelines.utils import (
     check_for_instantaneous_events_at_death_time,
     check_for_nonnegative_intervals,
     pass_for_numeric_dtypes_or_raise_array,
-    ConvergenceError,
-    ConvergenceWarning,
     inv_normal_cdf,
     normalize,
     StepSizer,
@@ -105,6 +106,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         robust=False,
         strata=None,
         initial_point=None,
+        formula: str = None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Proportional Hazard model to a time varying dataset. Tied survival times
@@ -146,6 +148,8 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
+        formula: str, optional
+            A R-like formula for transforming the covariates
 
         Returns
         --------
@@ -162,6 +166,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         self.id_col = id_col
         self.stop_col = stop_col
         self.start_col = start_col
+        self.formula = formula
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
 
         df = df.copy()
@@ -195,14 +200,16 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         )
         weights = df.pop("__weights").astype(float)
 
-        df = df.astype(float)
-        self._check_values(df, events, start, stop)
+        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
+        X = self.regressors.transform_df(df)["beta_"]
 
-        self._norm_mean = df.mean(0)
-        self._norm_std = df.std(0)
+        self._check_values(X, events, start, stop)
+
+        self._norm_mean = X.mean(0)
+        self._norm_std = X.std(0)
 
         params_ = self._newton_rhaphson(
-            normalize(df, self._norm_mean, self._norm_std),
+            normalize(X, self._norm_mean, self._norm_std),
             events,
             start,
             stop,
@@ -212,10 +219,10 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
             step_size=step_size,
         )
 
-        self.params_ = pd.Series(params_, index=df.columns, name="coef") / self._norm_std
-        self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=df.columns)
+        self.params_ = pd.Series(params_, index=pd.Index(X.columns, name="covariate"), name="coef") / self._norm_std
+        self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns)
         self.standard_errors_ = self._compute_standard_errors(
-            normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
+            normalize(X, self._norm_mean, self._norm_std), events, start, stop, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, events, start, stop, weights)
@@ -224,8 +231,8 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
         self.start_stop_and_events = pd.DataFrame({"event": events, "start": start, "stop": stop})
         self.weights = weights
 
-        self._n_examples = df.shape[0]
-        self._n_unique = df.index.unique().shape[0]
+        self._n_examples = X.shape[0]
+        self._n_unique = X.index.unique().shape[0]
         return self
 
     def _check_values(self, df, events, start, stop):
@@ -298,7 +305,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMi
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * np.exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -utils.safe_log2(df["p"])
+            df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
     def _newton_rhaphson(
@@ -481,14 +488,15 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         return beta
 
-    def _get_gradients(self, X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
+    @staticmethod
+    def _get_gradients(X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
         Returns
         -------
         hessian: (d, d) numpy array,
-        gradient: (d,) numpy array
+        gradient: (1, d) numpy array
         log_likelihood: float
         """
 
@@ -594,10 +602,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
+        hazard_names = self.params_.index
+
         if isinstance(X, pd.DataFrame):
-            order = self.params_.index
-            X = X[order]
-            check_for_numeric_dtypes_or_raise(X)
+            X = self.regressors.transform_df(X)["beta_"]
+            X = X.values
 
         X = X.astype(float)
         index = _get_index(X)
@@ -629,7 +638,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         """
         return np.exp(self.predict_log_partial_hazard(X))
 
-    def print_summary(self, decimals=2, style=None, **kwargs):
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -639,6 +648,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             specify the number of decimal places to show
         style: string
             {html, ascii, latex}
+        columns:
+            only display a subset of `summary` columns. Default all.
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -676,11 +687,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                     "log-likelihood ratio test",
                     "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
                 ),
-                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.safe_log2(sr.p_value), prec=decimals)),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)),
             ]
         )
 
-        p = Printer(self, headers, footers, justify, decimals, kwargs)
+        p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
         p.print(style=style)
 
     def log_likelihood_ratio_test(self):
@@ -766,7 +777,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
         best_ylim = ax.get_ylim()
-        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65, color="k")
         ax.set_ylim(best_ylim)
 
         tick_labels = [columns[i] for i in order]

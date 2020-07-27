@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -51,23 +52,23 @@ def survival_probability_calibration(model: RegressionFitter, training_df: pd.Da
     predictions_at_t0 = np.clip(1 - model.predict_survival_function(training_df, times=[t0]).T.squeeze(), 1e-10, 1 - 1e-10)
 
     # create new dataset with the predictions
-    prediction_df = pd.DataFrame(
-        {"ccl_at_%d" % t0: ccl(predictions_at_t0), "constant": 1, T: model.durations, E: model.event_observed}
-    )
+    prediction_df = pd.DataFrame({"ccl_at_%d" % t0: ccl(predictions_at_t0), T: model.durations, E: model.event_observed})
 
     # fit new dataset to flexible spline model
     # this new model connects prediction probabilities and actual survival. It should be very flexible, almost to the point of overfitting. It's goal is just to smooth out the data!
     knots = 3
-    regressors = {"beta_": ["ccl_at_%d" % t0], "gamma0_": ["constant"], "gamma1_": ["constant"], "gamma2_": ["constant"]}
+    regressors = {"beta_": ["ccl_at_%d" % t0], "gamma0_": "1", "gamma1_": "1", "gamma2_": "1"}
 
     # this model is from examples/royson_crowther_clements_splines.py
     crc = CRCSplineFitter(knots, penalizer=0)
-    if CensoringType.is_right_censoring(model):
-        crc.fit_right_censoring(prediction_df, T, E, regressors=regressors)
-    elif CensoringType.is_left_censoring(model):
-        crc.fit_left_censoring(prediction_df, T, E, regressors=regressors)
-    elif CensoringType.is_interval_censoring(model):
-        crc.fit_interval_censoring(prediction_df, T, E, regressors=regressors)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        if CensoringType.is_right_censoring(model):
+            crc.fit_right_censoring(prediction_df, T, E, regressors=regressors)
+        elif CensoringType.is_left_censoring(model):
+            crc.fit_left_censoring(prediction_df, T, E, regressors=regressors)
+        elif CensoringType.is_interval_censoring(model):
+            crc.fit_interval_censoring(prediction_df, T, E, regressors=regressors)
 
     # predict new model at values 0 to 1, but remember to ccl it!
     x = np.linspace(np.clip(predictions_at_t0.min() - 0.01, 0, 1), np.clip(predictions_at_t0.max() + 0.01, 0, 1), 100)

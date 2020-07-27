@@ -41,9 +41,6 @@ An example dataset we will use is the Rossi recidivism dataset, available in *li
 The DataFrame ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column denotes if the event occurred, and the other columns represent variables we wish to regress against.
 
 
-If you need to first clean or transform your dataset (encode categorical variables, add interaction terms, etc.), that should happen *before* using *lifelines*. Libraries like Pandas and Patsy help with that.
-
-
 Cox's proportional hazard model
 =================================
 
@@ -51,15 +48,15 @@ The idea behind Cox's proportional hazard model model is that the log-hazard of 
 
 .. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note a few facts about this model: the only time component is in the baseline hazard, :math:`b_0(t)`. In the above product, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus a changes in covariates will only increase or decrease the baseline hazard.
+Note a few behaviors about this model: the only *time* component is in the baseline hazard, :math:`b_0(t)`. In the above equation, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus changes in covariates will only inflate or deflate the baseline survival.
 
-.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset.
+.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset or formula.
 
 
 Fitting the regression
 -----------------------
 
-The implementation of the Cox model in *lifelines* is under :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. We fit the model to the dataset using :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit`. Like R, it has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
+The implementation of the Cox model in *lifelines* is under :class:`~lifelines.fitters.coxph_fitter.CoxPHFitter`. We fit the model to the dataset using :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit`. It has a :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.print_summary` function that prints a tabular view of coefficients and related stats.
 
 
 .. code:: python
@@ -67,12 +64,12 @@ The implementation of the Cox model in *lifelines* is under :class:`~lifelines.f
     from lifelines import CoxPHFitter
     from lifelines.datasets import load_rossi
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
 
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi, duration_col='week', event_col='arrest')
 
-    cph.print_summary()  # access the results using cph.summary
+    cph.print_summary()  # access the individual results using cph.summary
 
     """
     <lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
@@ -107,6 +104,61 @@ The implementation of the Cox model in *lifelines* is under :class:`~lifelines.f
     log-likelihood ratio test = 33.27 on 7 df
     -log2(p) of ll-ratio test = 15.37
     """
+
+New in v0.25.0, We can also use ✨formulas✨ to handle the right-hand-side of the linear model. For example:
+
+.. code:: python
+
+    cph.fit(rossi, duration_col='week', event_col='arrest', formula="fin + wexp + age * prio")
+
+is analgous to the linear model with interaction term:
+
+.. math::
+   \beta_1\text{fin} + \beta_2\text{wexp} + \beta_3 \text{age} + \beta_4 \text{prio} + \beta_5 \text{age} \cdot \text{prio}
+
+.. code:: python
+
+    cph.fit(rossi, duration_col='week', event_col='arrest', formula="fin + wexp + age * prio")
+    cph.print_summary()
+
+    """
+    <lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
+                 duration col = 'week'
+                    event col = 'arrest'
+          baseline estimation = breslow
+       number of observations = 432
+    number of events observed = 114
+       partial log-likelihood = -659.39
+             time fit was run = 2020-07-13 19:30:33 UTC
+
+    ---
+                coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+    covariate
+    fin        -0.33       0.72       0.19            -0.70             0.04                 0.49                 1.05
+    wexp       -0.24       0.79       0.21            -0.65             0.17                 0.52                 1.19
+    age        -0.03       0.97       0.03            -0.09             0.03                 0.92                 1.03
+    prio        0.31       1.36       0.17            -0.03             0.64                 0.97                 1.90
+    age:prio   -0.01       0.99       0.01            -0.02             0.01                 0.98                 1.01
+
+                  z    p   -log2(p)
+    covariate
+    fin       -1.73 0.08       3.57
+    wexp      -1.14 0.26       1.97
+    age       -0.93 0.35       1.51
+    prio       1.80 0.07       3.80
+    age:prio  -1.28 0.20       2.32
+    ---
+    Concordance = 0.64
+    Partial AIC = 1328.77
+    log-likelihood ratio test = 31.99 on 5 df
+    -log2(p) of ll-ratio test = 17.35
+    """
+
+Formulas can be used to create interactions, encode categorical variables, create basis splines, and so on. The formulas used are (almost) the same as what's available in R and statsmodels.
+
+
+Interpretation
+-----------------------
 
 To access the coefficients and the baseline hazard directly, you can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.params_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` respectively. Taking a look at these coefficients for a moment, ``prio`` (the number of prior arrests) has a coefficient of about 0.09. Thus, a one unit increase in ``prio`` means the the baseline hazard will increase by a factor of :math:`\exp{(0.09)} = 1.10` - about a 10% increase. Recall, in the Cox proportional hazard model, a higher hazard means more at risk of the event occurring. The value :math:`\exp{(0.09)}` is called the *hazard ratio*, a name that will be clear with another example.
 
@@ -147,7 +199,7 @@ After fitting, you can use use the suite of prediction methods: :meth:`~lifeline
 
 .. code:: python
 
-    X = rossi_dataset
+    X = rossi
 
     cph.predict_survival_function(X)
     cph.predict_median(X)
@@ -184,7 +236,7 @@ To use this in *lifelines*, both the ``penalizer`` and ``l1_ratio`` can be speci
 
 Instead of a float, an *array* can be provided that is the same size as the number of penalized parameters. The values in the array are specific penalty coefficients for each covariate. This is useful for more complicated covariate structure. Some examples:
 
-i) you have lots of confounders you wish to penalizer, but not the main treatment(s).
+1. you have lots of confounders you wish to penalizer, but not the main treatment(s).
 
 .. code:: python
 
@@ -200,9 +252,9 @@ i) you have lots of confounders you wish to penalizer, but not the main treatmen
     cph.fit(rossi, 'week', 'arrest')
     cph.print_summary()
 
-ii) you have to `fuse categories together <https://stats.stackexchange.com/questions/146907/principled-way-of-collapsing-categorical-variables-with-many-levels>`_.
+2. you have to `fuse categories together <https://stats.stackexchange.com/questions/146907/principled-way-of-collapsing-categorical-variables-with-many-levels>`_.
 
-
+3. you want to implement a `very sparse solution <https://dataorigami.net/blogs/napkin-folding/an-l1-2-penalty-in-cox-regression>`_.
 
 Plotting the coefficients
 ------------------------------
@@ -214,9 +266,9 @@ With a fitted model, an alternative way to view the coefficients and their range
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi, duration_col='week', event_col='arrest')
 
     cph.plot()
 
@@ -228,35 +280,40 @@ With a fitted model, an alternative way to view the coefficients and their range
 Plotting the effect of varying a covariate
 -------------------------------------------
 
+
+
 After fitting, we can plot what the survival curves look like as we vary a single covariate while
-holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method and give it the covariate of interest, and the values to display.
+holding everything else equal. This is useful to understand the impact of a covariate, *given the model*. To do this, we use the :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_partial_effects_on_outcome` method and give it the covariate of interest, and the values to display.
+
+.. note::
+    Prior to lifelines v0.25.0, this method used to be called ``plot_covariate_groups``. It's been renamed to ``plot_partial_effects_on_outcome`` (a much clearer name, I hope).
+
 
 .. code:: python
 
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    cph.fit(rossi, duration_col='week', event_col='arrest')
 
-    cph.plot_covariate_groups(covariates='prio', values=[0, 2, 4, 6, 8, 10], cmap='coolwarm')
+    cph.plot_partial_effects_on_outcome(covariates='prio', values=[0, 2, 4, 6, 8, 10], cmap='coolwarm')
 
 .. image:: images/coxph_plot_covarite_groups.png
     :width: 600px
     :align: center
 
-The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` method can accept multiple covariates as well. This is useful for two purposes:
 
-1. There are derivative features in your dataset. For example, suppose you have included ``prio`` and ``prio**2`` in your dataset. It doesn't make sense to just vary ``year`` and leave ``year**2`` fixed. You'll need to specify manually the values the covariates take on in a N-d array or list (where N is the number of covariates being varied.)
+If there are derivative features in your dataset, for example, suppose you have included ``prio`` and ``prio**2`` in your dataset. It doesn't make sense to just vary ``year`` and leave ``year**2`` fixed. You'll need to specify manually the values the covariates take on in a N-d array or list (where N is the number of covariates being varied.)
 
 .. code:: python
 
-    rossi_dataset['prio**2'] = rossi_dataset['prio'] ** 2
+    rossi['prio**2'] = rossi['prio'] ** 2
 
-    cph.fit(rossi_dataset, 'week', 'arrest')
+    cph.fit(rossi, 'week', 'arrest')
 
-    cph.plot_covariate_groups(
+    cph.plot_partial_effects_on_outcome(
         covariates=['prio', 'prio**2'],
         values=[
             [0, 0],
@@ -267,28 +324,27 @@ The :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.plot_covariate_groups` me
         ],
         cmap='coolwarm')
 
-2. This feature is also useful for analyzing categorical variables. In your regression, you may have dummy variables (also called one-hot-encoded variables) in your DataFrame that represent some categorical variable. To simultaneously plot the survival curves of each category, all else being equal, we can use (assuming no reference category)
 
-
-.. code:: python
-
-    cph.plot_covariate_groups(
-        covariates=['d1', 'd2', 'd3', 'd4', 'd5'],
-        values=np.eye(5),
-        plot_baseline=False)
-
-The reason why we use ``np.eye`` is because we want each row of the matrix to "turn on" one category and "turn off" the others.
-
-If there is a reference category, say `"d0"`, we can add another row to our values matrix that is all zeros, denoting all other columns are turned off (and by default `"d0"` is turned on):
+However, if you used the ``formula`` kwarg in fit, all the necessary transformations will be made internally for you.
 
 .. code:: python
 
-    import numpy as np
+    cph.fit(rossi, 'week', 'arrest', formula="prio + prio^2")
 
-    cph.plot_covariate_groups(
-        covariates=['d1', 'd2', 'd3', 'd4', 'd5'],
-        values=np.append(np.eye(5), np.zeros((5, 1)), axis=1),
+    cph.plot_partial_effects_on_outcome(
+        covariates=['prio'],
+        values=[0, 1, 2, 3, 8],
+        cmap='coolwarm')
+
+This feature is also useful for analyzing categorical variables:
+
+.. code:: python
+
+    cph.plot_partial_effects_on_outcome(
+        covariates=["a_categorical_variable"]
+        values=["A", "B", ...],
         plot_baseline=False)
+
 
 Checking the proportional hazards assumption
 -----------------------------------------------
@@ -312,10 +368,10 @@ To specify variables to be used in stratification, we define them in the call to
 
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
 
     cph = CoxPHFitter()
-    cph.fit(rossi_dataset, 'week', event_col='arrest', strata=['race'])
+    cph.fit(rossi, 'week', event_col='arrest', strata=['race'])
     cph.print_summary()
 
     """
@@ -421,7 +477,9 @@ After fitting a Cox model, we can look back and compute important model residual
 Modeling baseline hazard and survival with splines
 -----------------------------------------------------
 
-Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. There is an option to create a parametric baseline with cubic splines:
+Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. A parametric baseline makes survival predictions more robust, allows for better understanding of baseline behaviour.
+
+In *lifelines*, there is an option to fit to a parametric baseline with cubic splines:
 
 .. code:: python
 
@@ -429,16 +487,34 @@ Normally, the Cox model is *semi-parametric*, which means that its baseline haza
     from lifelines.datasets import load_rossi
     from lifelines import CoxPHFitter
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
 
-    cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
-    cph.fit(rossi_dataset, 'week', event_col='arrest')
+    cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
+    cph_spline.fit(rossi, 'week', event_col='arrest')
 
-To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`
+To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`.
+
+Below we compare the non-parametric and the fully parametric baseline survivals:
+
+.. code:: python
+
+    cph_semi = CoxPHFitter().fit(rossi, 'week', event_col='arrest')
+
+    ax = cph_spline.baseline_survival_.plot()
+    cph_semi.baseline_survival_.plot(ax=ax, drawstyle="steps-post")
+
+
+.. figure:: images/spline_and_semi.png
+    :width: 600px
+    :align: center
+
+    Modeling the baseline survival with splines vs non-parametric.
+
 
 
 Parametric survival models
 ==================================
+
 
 Accelerated failure time models
 -----------------------------------------------
@@ -482,10 +558,10 @@ The Weibull AFT model is implemented under :class:`~lifelines.fitters.weibull_af
     from lifelines import WeibullAFTFitter
     from lifelines.datasets import load_rossi
 
-    rossi_dataset = load_rossi()
+    rossi = load_rossi()
 
     aft = WeibullAFTFitter()
-    aft.fit(rossi_dataset, duration_col='week', event_col='arrest')
+    aft.fit(rossi, duration_col='week', event_col='arrest')
 
     aft.print_summary(3)  # access the results using aft.summary
 
@@ -507,8 +583,8 @@ The Weibull AFT model is implemented under :class:`~lifelines.fitters.weibull_af
             mar         0.311      1.365     0.273  1.139   0.255     1.973      -0.224       0.847
             paro        0.059      1.061     0.140  0.421   0.674     0.570      -0.215       0.333
             prio       -0.066      0.936     0.021 -3.143   0.002     9.224      -0.107      -0.025
-            _intercept  3.990     54.062     0.419  9.521 <0.0005    68.979       3.169       4.812
-    rho_    _intercept  0.339      1.404     0.089  3.809 <0.0005    12.808       0.165       0.514
+            Intercept  3.990     54.062     0.419  9.521 <0.0005    68.979       3.169       4.812
+    rho_    Intercept  0.339      1.404     0.089  3.809 <0.0005    12.808       0.165       0.514
     ---
     Concordance = 0.640
     AIC = 1377.833
@@ -534,25 +610,27 @@ What does the ``rho_    _intercept`` row mean in the above table? Internally, we
 Modeling ancillary parameters
 -----------------------------------------------
 
-In the above model, we left the parameter :math:`\rho` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogeneity in the :math:`\rho` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model :math:`\rho`, we use the ``ancillary_df`` keyword argument in the call to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.fit`. There are four valid options:
+In the above model, we left the parameter :math:`\rho` as a single unknown. We can also choose to model this parameter as well. Why might we want to do this? It can help in survival prediction to allow heterogeneity in the :math:`\rho` parameter. The model is no longer an AFT model, but we can still recover and understand the influence of changing a covariate by looking at its outcome plot (see section below). To model :math:`\rho`, we use the ``ancillary`` keyword argument in the call to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.fit`. There are four valid options:
 
 1. ``False`` or ``None``: explicitly do not model the ``rho_`` parameter (except for its intercept).
 2. a Pandas DataFrame. This option will use the columns in the Pandas DataFrame as the covariates in the regression for ``rho_``. This DataFrame could be a equal to, or a subset of, the original dataset using for modeling ``lambda_``, or it could be a totally different dataset.
 3. ``True``. Passing in ``True`` will internally reuse the dataset that is being used to model ``lambda_``.
+4. A R-like formula.
 
 .. code:: python
 
     aft = WeibullAFTFitter()
 
-    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=False)
-    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=None)
+    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=False)
+    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=None)
 
 
-    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=some_df)
+    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=some_df)
 
 
-    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=True)
-    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary_df=rossi)
+    aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=True)
+    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary=rossi)
+    # identical to aft.fit(rossi, duration_col='week', event_col='arrest', ancillary="fin + age + race + wexp + mar + paro + prio")
 
     aft.print_summary()
 
@@ -574,7 +652,7 @@ In the above model, we left the parameter :math:`\rho` as a single unknown. We c
             mar         0.26       1.30      0.30  0.86   0.39      1.35       -0.33        0.85
             paro        0.09       1.10      0.15  0.61   0.54      0.88       -0.21        0.39
             prio       -0.08       0.92      0.02 -4.24 <0.005     15.46       -0.12       -0.04
-            _intercept  2.68      14.65      0.60  4.50 <0.005     17.14        1.51        3.85
+            Intercept  2.68      14.65      0.60  4.50 <0.005     17.14        1.51        3.85
     rho_    fin        -0.01       0.99      0.15 -0.09   0.92      0.11       -0.31        0.29
             age        -0.05       0.95      0.02 -3.10 <0.005      9.01       -0.08       -0.02
             race       -0.46       0.63      0.25 -1.79   0.07      3.77       -0.95        0.04
@@ -582,7 +660,7 @@ In the above model, we left the parameter :math:`\rho` as a single unknown. We c
             mar         0.10       1.10      0.27  0.36   0.72      0.47       -0.44        0.63
             paro        0.02       1.02      0.16  0.12   0.90      0.15       -0.29        0.33
             prio        0.03       1.03      0.02  1.44   0.15      2.73       -0.01        0.08
-            _intercept  1.48       4.41      0.41  3.60 <0.005     11.62        0.68        2.29
+            Intercept  1.48       4.41      0.41  3.60 <0.005     11.62        0.68        2.29
     ---
     Concordance = 0.63
     Log-likelihood ratio test = 54.45 on 14 df, -log2(p)=19.83
@@ -599,7 +677,7 @@ The plotting API is the same as in :class:`~lifelines.fitters.coxph_fitter.CoxPH
 
     from matplotlib import pyplot as plt
 
-    wft = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=True)
+    wft = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=True)
     wft.plot()
 
 .. image:: images/weibull_aft_forest.png
@@ -607,19 +685,23 @@ The plotting API is the same as in :class:`~lifelines.fitters.coxph_fitter.CoxPH
     :align: center
 
 
-We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_covariate_groups`, and this is also a nice time to observe the effects of modeling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
+We can observe the influence a variable in the model by plotting the *outcome* (i.e. survival) of changing the variable. This is done using :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_partial_effects_on_outcome`, and this is also a nice time to observe the effects of modeling ``rho_`` vs keeping it fixed. Below we fit the Weibull model to the same dataset twice, but in the first model we model ``rho_`` and in the second model we don't. We when vary the ``prio`` (which is the number of prior arrests) and observe how the survival changes.
+
+
+.. note::
+    Prior to lifelines v0.25.0, this method used to be called ``plot_covariate_group``. It's been renamed to ``plot_partial_effects_on_outcome`` (a much clearer name, I hope).
 
 .. code:: python
 
     fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
 
     times = np.arange(0, 100)
-    wft_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=True, timeline=times)
-    wft_model_rho.plot_covariate_groups('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[0])
+    wft_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=True, timeline=times)
+    wft_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[0])
     ax[0].set_title("Modelling rho_")
 
-    wft_not_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=False, timeline=times)
-    wft_not_model_rho.plot_covariate_groups('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[1])
+    wft_not_model_rho = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=False, timeline=times)
+    wft_not_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 3), cmap='coolwarm', ax=ax[1])
     ax[1].set_title("Not modelling rho_");
 
 .. image:: images/weibull_aft_two_models.png
@@ -631,15 +713,15 @@ Comparing a few of these survival functions side by side:
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 4))
 
-    wft_model_rho.plot_covariate_groups('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, lw=2, plot_baseline=False)
-    wft_not_model_rho.plot_covariate_groups('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, ls='--', lw=2, plot_baseline=False)
+    wft_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, lw=2, plot_baseline=False)
+    wft_not_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, ls='--', lw=2, plot_baseline=False)
     ax.get_legend().remove()
 
 .. image:: images/weibull_aft_two_models_side_by_side.png
     :width: 500px
     :align: center
 
-You read more about and see other examples of the extensions to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_covariate_groups`
+You read more about and see other examples of the extensions to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_partial_effects_on_outcome`
 
 
 Prediction
@@ -651,11 +733,11 @@ Given a new subject, we ask questions about their future survival? When are they
 
     X = rossi.loc[:10]
 
-    aft.predict_cumulative_hazard(X, ancillary_df=X)
-    aft.predict_survival_function(X, ancillary_df=X)
-    aft.predict_median(X, ancillary_df=X)
-    aft.predict_percentile(X, p=0.9, ancillary_df=X)
-    aft.predict_expectation(X, ancillary_df=X)
+    aft.predict_cumulative_hazard(X, ancillary=X)
+    aft.predict_survival_function(X, ancillary=X)
+    aft.predict_median(X, ancillary=X)
+    aft.predict_percentile(X, p=0.9, ancillary=X)
+    aft.predict_expectation(X, ancillary=X)
 
 
 There are two hyper-parameters that can be used to to achieve a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_. (However, *lifelines* will also accept an array for custom penalizer per variable, see `Cox docs above <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#penalties-and-sparse-regression>`_)
@@ -689,8 +771,8 @@ There are two hyper-parameters that can be used to to achieve a better test scor
             mar         0.00       1.00      0.14  0.01   0.99      0.01       -0.27        0.28
             paro        0.00       1.00      0.08  0.01   0.99      0.01       -0.16        0.16
             prio        0.00       1.00      0.01  0.00   1.00      0.00       -0.03        0.03
-            _intercept  0.00       1.00      0.19  0.00   1.00      0.00       -0.38        0.38
-    rho_    _intercept -0.00       1.00       nan   nan    nan       nan         nan         nan
+            Intercept  0.00       1.00      0.19  0.00   1.00      0.00       -0.38        0.38
+    rho_    Intercept -0.00       1.00       nan   nan    nan       nan         nan         nan
     ---
     Concordance = 0.64
     AIC = 1377.91
@@ -727,23 +809,22 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
     from lifelines.datasets import load_rossi
 
     df = load_rossi()
-    df['constant'] = 1.
+    df['Intercept'] = 1.
 
     # this will regress df against all 3 parameters
-    ggf = GeneralizedGammaRegressionFitter(penalizer=0.1).fit(df, 'week', 'arrest')
+    ggf = GeneralizedGammaRegressionFitter(penalizer=1.).fit(df, 'week', 'arrest')
     ggf.print_summary()
 
-
-    # if we only want to regress against the scale parameter, `mu_`
+    # If we want fine control over the parameters <-> covariates.
+    # The values in the dict become can be formulas, or column names in lists:
     regressors = {
-        'mu_': rossi.columns,
-        'sigma_': ['constant'],
-        'lambda_': ['constant']
+        'mu_': rossi.columns.difference(['arrest', 'week']),
+        'sigma_': ["age", "Intercept"],
+        'lambda_': 'age + 1',
     }
 
-    ggf = GeneralizedGammaRegressionFitter(penalizer=0.1).fit(df, 'week', 'arrest', regressors=regressors)
+    ggf = GeneralizedGammaRegressionFitter(penalizer=0.0001).fit(df, 'week', 'arrest', regressors=regressors)
     ggf.print_summary()
-
 
 
 
@@ -769,10 +850,10 @@ Often, you don't know *a priori* which parametric model to use. Each model has s
 
 
     # with some heterogeneity in the ancillary parameters
-    ancillary_df = rossi[['prio']]
-    llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
-    lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
-    wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary_df=ancillary_df)
+    ancillary = rossi[['prio']]
+    llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest', ancillary=ancillary)
+    lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest', ancillary=ancillary)
+    wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest', ancillary=ancillary)
 
     print(llf.AIC_) # 1377.89, the best model here, but not the overall best.
     print(lnf.AIC_) # 1380.79
@@ -815,8 +896,8 @@ The parametric models have APIs that handle left and interval censored data, too
     ---
                         coef exp(coef)  se(coef)      z      p  -log2(p)  lower 0.95  upper 0.95
     lambda_ gender      0.05      1.05      0.03   1.66   0.10      3.38       -0.01        0.10
-            _intercept  2.91     18.32      0.02 130.15 <0.005       inf        2.86        2.95
-    rho_    _intercept  1.04      2.83      0.03  36.91 <0.005    988.46        0.98        1.09
+            Intercept  2.91     18.32      0.02 130.15 <0.005       inf        2.86        2.95
+    rho_    Intercept  1.04      2.83      0.03  36.91 <0.005    988.46        0.98        1.09
     ---
     Log-likelihood ratio test = 2.74 on 1 df, -log2(p)=3.35
     """
@@ -1030,10 +1111,9 @@ Model selection based on predictive power and fit
 ---------------------------------------------------
 
 If censoring is present, it's not appropriate to use a loss function like mean-squared-error or
-mean-absolute-loss. This is because the difference between a censored value and the predicted value could be
-due to poor prediction *or* due to censoring. Below we introduce alternative ways to measure prediction performance.
+mean-absolute-loss. This is because the difference between a censored value and the predicted value could be due to poor prediction *or* due to censoring. Below we introduce alternative ways to measure prediction performance.
 
-Out-of-sample validation
+Log-likelihood
 ****************************
 
 
@@ -1054,9 +1134,8 @@ In this author's opinion, the best way to measure predictive performance is eval
     print(cph_l2.score(test_rossi))
     print(cph_l1.score(test_rossi)) # better model
 
-
-Within-sample validation
-****************************
+Akaike information criterion (AIC)
+*****************************************
 
 For within-sample validation, the AIC is a great metric for comparing models as it relies on the log-likelihood. It's available under ``AIC_`` for parametric models, and ``AIC_partial_`` for Cox models (because the Cox model maximizes a *partial* log-likelihood, it can't be reliably compared to parametric model's AIC.)
 
@@ -1074,15 +1153,17 @@ For within-sample validation, the AIC is a great metric for comparing models as 
     print(cph_l2.AIC_partial_) # lower is better
     print(cph_l1.AIC_partial_)
 
+Concordance Index
+*****************************************
 
 
-Another censoring-sensitive measure is the concordance-index, also known as the c-index. This measure
-evaluates the accuracy of the *ranking* of predicted time. It is in fact a generalization
-of AUC, another common loss function, and is interpreted similarly:
+Another censoring-sensitive measure is the concordance-index, also known as the c-index. This measure evaluates the accuracy of the *ranking* of predicted time. It is in fact a generalization of AUC, another common loss function, and is interpreted similarly:
 
 * 0.5 is the expected result from random predictions,
 * 1.0 is perfect concordance and,
 * 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
+
+`Here <https://stats.stackexchange.com/a/478305/11867>`_ is an excellent introduction & description of the c-index for new users.
 
 Fitted survival models typically have a concordance index between 0.55 and 0.75 (this may seem bad, but even a perfect model has a lot of noise than can make a high score impossible). In *lifelines*, a fitted model's concordance-index is present in the output of :meth:`~lifelines.fitters.cox_ph_fitter.CoxPHFitter.score`, but also available under the ``concordance_index_`` property. Generally, the measure is implemented in *lifelines* under :meth:`lifelines.utils.concordance_index` and accepts the actual times (along with any censored subjects) and the predicted times.
 

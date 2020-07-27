@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
+import pandas as pd
+
 from lifelines.utils import coalesce, _get_index, CensoringType
 from lifelines.fitters import ParametricRegressionFitter
-import pandas as pd
 from lifelines.utils.safe_exp import safe_exp
 
 
@@ -86,7 +87,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            X = X[self.params_["lambda_0_"].index]
+            X = self.regressors.transform_df(X)["lambda_0_"]
 
         return np.array([np.exp(np.dot(X, self.params_["lambda_%d_" % i])) for i in range(self.n_breakpoints + 1)])
 

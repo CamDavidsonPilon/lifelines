@@ -436,7 +436,7 @@ Displaying at-risk counts below plots
 Displaying multiple at-risk counts below plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add At-Risk counts at the bottom of your figures. For example:
+The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add counts at the bottom of your figures. For example:
 
 .. code-block:: python
 
@@ -983,3 +983,67 @@ New in version 0.23.1, *lifelines* models now have the ability to output a LaTeX
 
 
 In order to use the produced table summary in LaTeX, make sure you import the package ``booktabs`` in your preamble (``\usepackage{booktabs}``), since it is required to `display the table properly. <https://en.wikibooks.org/wiki/LaTeX/Tables#Using_booktabs>`_
+
+
+Filter a ``print_summary`` table
+##########################################
+
+The information provided by ``print_summary`` can be a lot, and even too much for some screens. You can filter to specific columns use the ``columns`` kwarg (default is to display all columns):
+
+.. code-block:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi = load_rossi()
+
+    cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+
+    cph.print_summary(columns=["coef", "se(coef)", "p"])
+
+
+
+Fixing a ``FormulaSyntaxError``
+##############################################
+
+As a of *lifelines* v0.25.0, formulas are used internally (even if not explicity used in the call to ``fit``). This may cause problems if your dataframe has column names with spaces, periods, or other characters. The cheapest way to fix this is to change your column names:
+
+
+.. code-block:: python
+
+    df = pd.DataFrame({
+        'T': [1, 2, 3, 4],
+        'column with spaces': [1.5, 1.0, 2.5, 1.0],
+        'column.with.periods': [2.5, -1.0, -2.5, 1.0],
+        'column': [2.0, 1.0, 3.0, 4.0]
+    })
+
+    cph = CoxPHFitter().fit(df, 'T')
+
+    """
+    FormulaSyntaxError:
+        ...
+    """
+
+    df.columns = df.columns.str.replace(' ', '')
+    df.columns = df.columns.str.replace('.', '')
+    cph = CoxPHFitter().fit(df, 'T')
+
+    """
+    👍
+    """
+
+
+Another option is to use the formula syntax to handle this:
+
+
+.. code-block:: python
+
+    df = pd.DataFrame({
+        'T': [1, 2, 3, 4],
+        'column with spaces': [1.5, 1.0, 2.5, 1.0],
+        'column.with.periods': [2.5, -1.0, -2.5, 1.0],
+        'column': [2.0, 1.0, 3.0, 4.0]
+    })
+
+    cph = CoxPHFitter().fit(df, 'T', formula="column + Q('column with spaces') + Q('column.with.periods')")

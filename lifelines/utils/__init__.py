@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 
-import warnings
-import collections
+from typing import Union, Any, Tuple, List, Callable, Optional, Dict
 from datetime import datetime
 from functools import wraps
 from textwrap import dedent
-from typing import Union, Any, Tuple, List, Callable, Optional, Dict
+from enum import Enum
+import collections
+import warnings
 
-import numpy as np
 from numpy import ndarray
+import numpy as np
+
+from scipy.integrate import quad, trapz
 from scipy.linalg import solve
 from scipy import stats
-from scipy.integrate import quad, trapz
+
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
+from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
 
 
 __all__ = [
@@ -36,88 +40,62 @@ __all__ = [
 ]
 
 
-class CensoringType:
+class CensoringType(Enum):
 
-    LEFT = 1
-    INTERVAL = 2
-    RIGHT = 3
-
-    MAP = {"right": RIGHT, "left": LEFT, "interval": INTERVAL}
-
-    HUMAN_MAP = {LEFT: "left", RIGHT: "right", INTERVAL: "interval"}
+    LEFT = "left"
+    INTERVAL = "interval"
+    RIGHT = "right"
 
     @classmethod
     def right_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.RIGHT
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.RIGHT)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def left_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.LEFT
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.LEFT)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def interval_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.INTERVAL
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.INTERVAL)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def is_right_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.RIGHT
+        return cls.get_censoring_type(model) == cls.RIGHT
 
     @classmethod
     def is_left_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.LEFT
+        return cls.get_censoring_type(model) == cls.LEFT
 
     @classmethod
     def is_interval_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.INTERVAL
+        return cls.get_censoring_type(model) == cls.INTERVAL
 
     @classmethod
-    def get_human_readable_censoring_type(cls, model) -> str:
-        if cls.is_interval_censoring(model):
-            return cls.HUMAN_MAP[cls.INTERVAL]
-        elif cls.is_right_censoring(model):
-            return cls.HUMAN_MAP[cls.RIGHT]
-        elif cls.is_left_censoring(model):
-            return cls.HUMAN_MAP[cls.LEFT]
-        else:
-            return
+    def get_censoring_type(cls, model) -> str:
+        return model._censoring_type
 
+    @classmethod
+    def str_censoring_type(cls, model) -> str:
+        return model._censoring_type.value
 
-class StatError(Exception):
-    pass
-
-
-class ConvergenceError(ValueError):
-    # inherits from ValueError for backwards compatibility reasons
-    def __init__(self, msg, original_exception=""):
-        super(ConvergenceError, self).__init__(msg + "%s" % original_exception)
-        self.original_exception = original_exception
-
-
-class ConvergenceWarning(RuntimeWarning):
-    pass
-
-
-class StatisticalWarning(RuntimeWarning):
-    pass
-
-
-class ApproximationWarning(RuntimeWarning):
-    pass
+    @classmethod
+    def set_censoring_type(cls, model, censoring_type) -> None:
+        model._censoring_type = censoring_type
 
 
 def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
@@ -303,7 +281,9 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
         raise ValueError("Can't compute RMST of object %s" % model_or_survival_function)
 
 
-def _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t: float = np.inf) -> float:
+def _expected_value_of_survival_squared_up_to_t(
+    model_or_survival_function: Union["UnivariateFitter", pd.DataFrame], t: float = np.inf
+) -> float:
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
@@ -343,7 +323,7 @@ def _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t: f
 
 def group_survival_table_from_events(
     groups, durations, event_observed, birth_times=None, limit=-1
-):  # pylint: disable=too-many-locals
+) -> Tuple[ndarray, pd.DataFrame, pd.DataFrame, pd.DataFrame]:  # pylint: disable=too-many-locals
     """
     Joins multiple event series together into DataFrames. A generalization of
     `survival_table_from_events` to data with groups.
@@ -570,12 +550,12 @@ def _group_event_table_by_intervals(event_table, intervals) -> pd.DataFrame:
 
         intervals = np.arange(0, event_max + bin_width, bin_width)
 
-    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals)).agg(
+    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals, include_lowest=True)).agg(
         {"removed": ["sum"], "observed": ["sum"], "censored": ["sum"], "at_risk": ["max"]}
     )
     # convert columns from multiindex
     event_table.columns = event_table.columns.droplevel(1)
-    return event_table
+    return event_table.bfill()
 
 
 def survival_events_from_table(survival_table, observed_deaths_col="observed", censored_col="censored"):
@@ -1092,7 +1072,7 @@ def check_low_var(df, prescript="", postscript=""):
         cols = str(list(df.columns[low_var]))
         warning_text = (
             "%sColumn(s) %s have very low variance. \
-This may harm convergence. Try dropping this redundant column before fitting \
+This may harm convergence. 1) Are you using formula's? Did you mean to add '-1' to the end. 2) Try dropping this redundant column before fitting \
 if convergence fails.%s\n"
             % (prescript, cols, postscript)
         )
@@ -1154,7 +1134,7 @@ def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, dur
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
     See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression\n"
-                    % (col)
+                    % (str(col))
                 )
                 warnings.warn(dedent(warning_text), ConvergenceWarning)
 
@@ -1258,7 +1238,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1) ->
     # how many rows/cols do I need?
     n_dftv = int(np.ceil(df[stop_col]).sum())
 
-    # alocate temporary numpy array to insert into
+    # allocate temporary numpy array to insert into
     tv_array = np.empty((n_dftv, d_dftv), dtype=dtype_dftv)
 
     special_columns = [stop_col, start_col, event_col]
@@ -1659,30 +1639,23 @@ def safe_zip(first, second):
         yield from zip(first, second)
 
 
-class DataframeSliceDict:
-    def __init__(self, df: pd.DataFrame, mappings: Dict[str, List[str]]):
+class DataframeSlicer:
+    """
+    Changed in v0.25.0
+
+    The purpose of this is to wrap column (multi-) indexing to return a Numpy Array
+    instead of a Pandas DataFrame.
+    """
+
+    def __init__(self, df: pd.DataFrame):
         self.df = df
-        self.mappings = mappings
-        self.size = sum(len(v) for v in self.mappings.values())
 
     def __getitem__(self, key):
-        columns = self.mappings[key]
-        if columns == "*":
-            return self.df.values
-        else:
-            return self.df[columns].values
+        return self.df[key].values
 
-    def __iter__(self):
-        for k in self.mappings:
-            yield (k, self[k])
-
-    def filter(self, ix) -> "DataframeSliceDict":
+    def filter(self, ix) -> "DataframeSlicer":
         ix = _to_1d_array(ix)
-        return DataframeSliceDict(self.df[ix], self.mappings)
-
-    def iterdicts(self):
-        for _, x in self.df.iterrows():
-            yield DataframeSliceDict(x.to_frame().T, self.mappings)
+        return DataframeSlicer(self.df[ix])
 
 
 def find_best_parametric_model(
@@ -1747,7 +1720,7 @@ def find_best_parametric_model(
     if additional_models is None:
         additional_models = []
 
-    censoring_type = CensoringType.MAP[censoring_type]
+    censoring_type = CensoringType(censoring_type)
 
     evaluation_lookup = {
         "AIC": lambda model: model.AIC_,
@@ -1798,7 +1771,7 @@ def find_best_parametric_model(
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                getattr(model, "fit_" + CensoringType.HUMAN_MAP[censoring_type] + "_censoring")(
+                getattr(model, "fit_" + censoring_type.value + "_censoring")(
                     *event_times,
                     event_observed=event_observed,
                     weights=weights,
@@ -1821,7 +1794,135 @@ def find_best_parametric_model(
     return best_model, best_score
 
 
-def safe_log2(p):
+def quiet_log2(p):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", r"divide by zero encountered in log2")
         return np.log2(p)
+
+
+class CovariateParameterMappings:
+    """
+    This class controls the mapping, possible trivial, between covariates and parameters. User, or lifelines, create
+    a seed mapping, and this class takes over and creates logic and pieces to make the transformation simple.
+
+    Ideally all transformation of datasets to parameters handled by this class.
+
+    Parameters
+    -----------
+
+    seed_mapping: dict
+        a mapping of parameters to covariates, specified through a list of column names, or formula.
+    df: DataFrame
+        the training dataset
+    force_intercept:
+        True to always add an constant column.
+    force_no_intercept:
+        True to always remove an constant column.
+    """
+
+    INTERCEPT_COL = "Intercept"
+
+    def __init__(self, seed_mapping: Dict, df: pd.DataFrame, force_intercept: bool = False, force_no_intercept: bool = False):
+        self.mappings = {}
+        self.force_intercept = force_intercept
+        self.force_no_intercept = force_no_intercept
+
+        for param, seed_transform in seed_mapping.items():
+
+            if isinstance(seed_transform, str):
+                self.mappings[param] = self._string_seed_transform(seed_transform, df)
+
+            elif isinstance(seed_transform, list):
+                # user inputted a list of column names, as strings
+                self.mappings[param] = self._list_seed_transform(seed_transform)
+
+            elif isinstance(seed_transform, pd.DataFrame):
+                # use all the columns in df
+                self.mappings[param] = self._list_seed_transform(seed_transform.columns.tolist())
+
+            elif seed_transform is None:
+                # use all the columns in df
+                self.mappings[param] = self._list_seed_transform(df.columns.tolist())
+
+            elif isinstance(seed_transform, pd.Index):
+                # similar to providing a list
+                self.mappings[param] = self._list_seed_transform(seed_transform.tolist())
+
+            else:
+                raise ValueError("Unexpected transform.")
+
+    def transform_df(self, df):
+
+        import patsy
+
+        Xs = {}
+        for param_name, transform in self.mappings.items():
+            if isinstance(transform, patsy.design_info.DesignInfo):
+                (X,) = patsy.build_design_matrices([transform], df, return_type="dataframe")
+            elif isinstance(transform, list):
+                if self.force_intercept:
+                    df[self.INTERCEPT_COL] = 1.0
+                X = df[transform]
+            else:
+                raise ValueError("Unexpected transform.")
+
+            if self.force_no_intercept:
+                try:
+                    X = X.drop(self.INTERCEPT_COL, axis=1)
+                except:
+                    pass
+
+            Xs[param_name] = X
+
+        # in pandas 0.23.4, the Xs as a dict is sorted differently from the Xs as a DataFrame's columns
+        # hence we need to reorder, see https://github.com/CamDavidsonPilon/lifelines/issues/931
+        Xs = pd.concat(Xs, axis=1, names=("param", "covariate")).astype(float)
+        Xs = Xs[list(self.mappings.keys())]
+
+        # we can't concat empty dataframes and return a column MultiIndex,
+        # so we create a "fake" dataframe (acts like a dataframe) to return.
+        if Xs.size == 0:
+            return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
+        else:
+            return Xs
+
+    def keys(self):
+        yield from self.mappings.keys()
+
+    def _list_seed_transform(self, list_):
+        list_ = list_.copy()
+        if self.force_intercept:
+            list_.append(self.INTERCEPT_COL)
+        return list_
+
+    def _string_seed_transform(self, formula, df):
+        # user input a formula, hopefully
+        import patsy
+
+        if self.force_intercept:
+            formula += "+ 1"
+
+        try:
+            _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
+
+        except SyntaxError as e:
+            import traceback
+
+            column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
+            raise utils.FormulaSyntaxError(
+                (
+                    """
+It looks like the DataFrame has non-standard column names. See below for which column:
+
+%s
+
+As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
+i) have no non-traditional characters (this includes spaces and periods)
+ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
+
+See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
+            """
+                    % column_error
+                )
+            )
+        return _X.design_info
