@@ -165,7 +165,6 @@ an ``axis`` object, that can be used for plotting further estimates:
     kmf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
     kmf.plot(ax=ax)
 
-    plt.ylim(0, 1);
     plt.title("Lifespans of different global regimes");
 
 
@@ -191,7 +190,6 @@ probabilities of survival at those points:
     kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
     ax = kmf.plot(ax=ax)
 
-    plt.ylim(0, 1)
     plt.title("Lifespans of different global regimes");
 
 .. image:: images/lifelines_intro_multi_kmf_fitter_2.png

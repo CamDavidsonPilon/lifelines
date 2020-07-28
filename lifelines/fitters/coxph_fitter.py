@@ -358,7 +358,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         style: string
             {html, ascii, latex}
         columns:
-            only display a subset of `summary` columns. Default all.
+            only display a subset of ``summary`` columns. Default all.
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -2115,7 +2115,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
     def plot_covariate_groups(*args, **kwargs):
         """
-        Deprecated as of v0.25.0. Use plot_partial_effects_on_outcome instead.
+        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
         """
         warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
         return plot_partial_effects_on_outcome(*args, **kwargs)

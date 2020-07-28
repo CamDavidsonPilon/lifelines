@@ -773,4 +773,13 @@ class TestPlotting:
         rossi = load_rossi()
         cph = CoxPHFitter().fit(rossi, "week", "arrest")
         survival_probability_calibration(cph, rossi, 25)
+        self.plt.title("test_survival_probability_calibration")
+        self.plt.show(block=block)
+
+    def test_survival_probability_calibration_on_out_of_sample_data(self, block):
+        rossi = load_rossi()
+        rossi = rossi.sample(frac=1.0)
+        cph = CoxPHFitter().fit(rossi.loc[:300], "week", "arrest")
+        survival_probability_calibration(cph.loc[300:], rossi, 25)
+        self.plt.title("test_survival_probability_calibration_on_out_of_sample_data")
         self.plt.show(block=block)

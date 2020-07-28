@@ -536,7 +536,7 @@ It's important to know that the naive variance estimates of the coefficients are
         style: string
             {html, ascii, latex}
         columns:
-            only display a subset of `summary` columns. Default all.
+            only display a subset of ``summary`` columns. Default all.
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.

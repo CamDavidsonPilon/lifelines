@@ -80,7 +80,7 @@ class BaseFitter:
 
         See Also
         ---------
-        ``fit``
+        fit
         """
         return self.fit(*args, **kwargs)
 
@@ -612,7 +612,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         See Also
         --------
-        ``print_summary``
+        print_summary
         """
         with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
             ci = (1 - self.alpha) * 100
@@ -638,7 +638,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         style: string
             {html, ascii, latex}
         columns:
-            only display a subset of `summary` columns. Default all.
+            only display a subset of ``summary`` columns. Default all.
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -2086,7 +2086,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         See Also
         --------
-        ``print_summary``
+        print_summary
         """
 
         ci = (1 - self.alpha) * 100
@@ -2116,7 +2116,7 @@ class ParametricRegressionFitter(RegressionFitter):
         style: string
             {html, ascii, latex}
         columns:
-            only display a subset of `summary` columns. Default all.
+            only display a subset of ``summary`` columns. Default all.
         kwargs:
             print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
@@ -2459,7 +2459,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
     def plot_covariate_groups(*args, **kwargs):
         """
-        Deprecated as of v0.25.0. Use plot_partial_effects_on_outcome instead.
+        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
         """
         warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
         return plot_partial_effects_on_outcome(*args, **kwargs)
@@ -2624,12 +2624,15 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             since the fitter is iterative, show convergence
             diagnostics. Useful if convergence is failing.
 
-        ancillary: None, boolean, or DataFrame, optional (default=None)
+        formula: string
+            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+
+        ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
-            If True, model the ancillary parameters with the same covariates/formula as ``df``.
+            If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
-            If string, must be a R-like formula.
+            If str, should be a formula
 
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
@@ -2650,9 +2653,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         entry_col: string
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
-
-        formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
 
         Returns
         -------
@@ -2779,11 +2779,15 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, will be inferred from the start and stop columns (lower_bound==upper_bound means uncensored)
 
-        ancillary: None, boolean, or DataFrame, optional (default=None)
+        formula: string
+            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+
+        ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
+            If str, should be a formula
 
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
@@ -2809,8 +2813,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
-        formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
 
         Returns
         -------
@@ -2954,12 +2956,15 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
 
+        formula: string
+            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
             If None or False, explicitly do not fit the ancillary parameters using any covariates.
             If True, model the ancillary parameters with the same covariates as ``df``.
             If DataFrame, provide covariates to model the ancillary parameters. Must be the same row count as ``df``.
-            If str, must be a valid formula
+            If str, should be a formula
 
         fit_intercept: bool, optional
             If true, add a constant column to the regression. Overrides value set in class instantiation.
@@ -2984,9 +2989,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         entry_col: str
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
-
-        formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
 
 
         Returns
@@ -3193,12 +3195,14 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
     def plot_covariate_groups(*args, **kwargs):
         """
-        Deprecated as of v0.25.0. Use plot_partial_effects_on_outcome instead.
+        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
         """
         warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
         return plot_partial_effects_on_outcome(*args, **kwargs)
 
-    def plot_partial_effects_on_outcome(self, covariates, values, plot_baseline=True, ax=None, times=None, **kwargs):
+    def plot_partial_effects_on_outcome(
+        self, covariates, values, plot_baseline=True, times=None, y="survival", ax=None, **kwargs
+    ):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus
         what happens when a covariate(s) is varied over values in a group. This is useful to compare
@@ -3271,9 +3275,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         for covariate, value in zip(covariates, values.T):
             ancillary_X[covariate] = value
 
-        self.predict_survival_function(X, ancillary=ancillary_X, times=times).plot(ax=ax, **kwargs)
+        getattr(self, "predict_%s" % y)(X, ancillary=ancillary_X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
-            self.predict_survival_function(x_bar, ancillary=x_bar_anc, times=times).rename(columns={0: "baseline survival"}).plot(
+            getattr(self, "predict_%s" % y)(x_bar, ancillary=x_bar_anc, times=times).rename(columns={0: "baseline %s" % y}).plot(
                 ax=ax, ls=":", color="k"
             )
         return ax
@@ -3310,10 +3314,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_X: numpy array or DataFrame, optional
-            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
-            can be in any order. If a numpy array, columns must be in the
-            same order as the training data.
+        ancillary:
+            supply an dataframe to regress ancillary parameters against, if necessary.
         times: iterable, optional
             an iterable of increasing times to predict the survival function at. Default
             is the set of all durations (observed and unobserved).
@@ -3339,6 +3341,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        ancillary:
+            supply an dataframe to regress ancillary parameters against, if necessary.
         conditional_after: iterable, optional
             Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
@@ -3374,6 +3378,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             a (n,d) covariate numpy array, Series, or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        ancillary:
+            supply an dataframe to regress ancillary parameters against, if necessary.
         times: iterable, optional
             an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved).
@@ -3423,6 +3429,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        ancillary:
+            supply an dataframe to regress ancillary parameters against, if necessary.
         times: iterable, optional
             an iterable of increasing times to predict the cumulative hazard at. Default
             is the set of all durations (observed and unobserved).

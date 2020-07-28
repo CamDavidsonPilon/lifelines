@@ -357,7 +357,7 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]] = None, **kwargs):
+def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]] = None, hide_censoring_row=False, **kwargs):
     """
     Add counts showing how many individuals were at risk at each time point in
     survival/hazard plots.
@@ -419,13 +419,10 @@ def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]
 
     if labels is None:
         labels = [f._label for f in fitters]
+        labels = [l.replace("_", r"\_") for l in labels]
     elif labels is False:
         labels = [None] * len(fitters)
 
-    labels = [l.replace("_", r"\_") for l in labels]
-
-    # remove xlabel
-    ax.set_xlabel("")
     # Create another axes where we can put size ticks
     ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
@@ -554,8 +551,8 @@ def plot_interval_censored_lifetimes(
     label_plot_bars = type(lower_bound) is pd.Series and type(lower_bound.index) is not pd.RangeIndex
 
     N = lower_bound.shape[0]
-    if N > 80:
-        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
+    if N > 25:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 25 individuals.")
 
     assert upper_bound.shape[0] == N
 
@@ -649,8 +646,8 @@ def plot_lifetimes(
     label_plot_bars = type(durations) is pd.Series and type(durations.index) is not pd.RangeIndex
 
     N = durations.shape[0]
-    if N > 80:
-        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
+    if N > 25:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 25 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)

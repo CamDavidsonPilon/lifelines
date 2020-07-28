@@ -1,5 +1,12 @@
 ## Changelog
 
+#### 0.25.1 - unreleased
+
+##### Bug fixes
+ - ok _actually_ ship the out-of-sample calibration code
+ - fix `labels=False` in `add_at_risk_counts`
+
+
 #### 0.25.0 - 2020-07-27
 
 ##### New features

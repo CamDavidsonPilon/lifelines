@@ -28,7 +28,6 @@ service, and a death is when the user leaves the service.
 Censoring
 ----------
 
-
 At the time you want to make inferences about durations, it is possible that not all the death events have occurred yet. For example, a
 medical professional will not wait 50 years for each individual in the
 study to pass away before investigating -- he or she is interested in

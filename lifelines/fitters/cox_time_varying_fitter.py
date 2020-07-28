@@ -649,7 +649,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         style: string
             {html, ascii, latex}
         columns:
-            only display a subset of `summary` columns. Default all.
+            only display a subset of ``summary`` columns. Default all.
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
