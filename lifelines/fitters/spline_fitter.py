@@ -52,10 +52,9 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
         The estimated survival function (with custom timeline if provided)
     cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
-    density: DataFrame
+    density_: DataFrame
         The estimated density function (PDF) (with custom timeline if provided)
-
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     median_survival_time_: float
         The median time to event
@@ -71,8 +70,10 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
         The time line to use for plotting and indexing
     entry: array or None
         The entry array provided, or None
-    knot_locations:
-        The locations of the cubic breakpoints.
+    knot_locations: array
+        The locations of the breakpoints.
+    n_knots: int
+        Count of breakpoints
 
     """
     _scipy_fit_method = "SLSQP"

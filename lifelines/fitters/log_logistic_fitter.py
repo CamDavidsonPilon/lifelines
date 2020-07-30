@@ -57,9 +57,9 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
         The estimated survival function (with custom timeline if provided)
     cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
-    density: DataFrame
+    density_: DataFrame
         The estimated density function (PDF) (with custom timeline if provided)
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     median_survival_time_: float
         The median time to event

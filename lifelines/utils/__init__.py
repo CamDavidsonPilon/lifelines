@@ -1851,7 +1851,7 @@ class CovariateParameterMappings:
             else:
                 raise ValueError("Unexpected transform.")
 
-    def transform_df(self, df):
+    def transform_df(self, df: pd.DataFrame):
 
         import patsy
 
@@ -1876,26 +1876,26 @@ class CovariateParameterMappings:
 
         # in pandas 0.23.4, the Xs as a dict is sorted differently from the Xs as a DataFrame's columns
         # hence we need to reorder, see https://github.com/CamDavidsonPilon/lifelines/issues/931
-        Xs = pd.concat(Xs, axis=1, names=("param", "covariate")).astype(float)
-        Xs = Xs[list(self.mappings.keys())]
+        Xs_df = pd.concat(Xs, axis=1, names=("param", "covariate")).astype(float)
+        Xs_df = Xs_df[list(self.mappings.keys())]
 
         # we can't concat empty dataframes and return a column MultiIndex,
         # so we create a "fake" dataframe (acts like a dataframe) to return.
-        if Xs.size == 0:
+        if Xs_df.size == 0:
             return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
         else:
-            return Xs
+            return Xs_df
 
     def keys(self):
         yield from self.mappings.keys()
 
-    def _list_seed_transform(self, list_):
+    def _list_seed_transform(self, list_: List):
         list_ = list_.copy()
         if self.force_intercept:
             list_.append(self.INTERCEPT_COL)
         return list_
 
-    def _string_seed_transform(self, formula, df):
+    def _string_seed_transform(self, formula: str, df: pd.DataFrame):
         # user input a formula, hopefully
         import patsy
 
@@ -1909,7 +1909,7 @@ class CovariateParameterMappings:
             import traceback
 
             column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
-            raise utils.FormulaSyntaxError(
+            raise exceptions.FormulaSyntaxError(
                 (
                     """
 It looks like the DataFrame has non-standard column names. See below for which column:

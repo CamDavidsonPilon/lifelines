@@ -99,7 +99,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         The event_observed variable provided
     weights: Series
         The event_observed variable provided
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     strata: list
         the strata provided
@@ -209,7 +209,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
 
         formula: str, optional
-            an Wilkinson formula, like in R and statsmodels, for the RHS. If left as None, all columns not assigned as durations, weights, etc. are used.
+            an Wilkinson formula, like in R and statsmodels, for the right-hand-side. If left as None, all columns not assigned as durations, weights, etc. are used.
 
         batch_mode: bool, optional
             enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
@@ -265,7 +265,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             cph = CoxPHFitter()
             cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
             cph.print_summary()
-            cph.predict_median(df)
 
         """
         self.strata = utils.coalesce(strata, self.strata)
@@ -530,7 +529,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         The event_observed variable provided
     weights: Series
         The event_observed variable provided
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     strata: list
         the strata provided
