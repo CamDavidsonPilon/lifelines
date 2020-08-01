@@ -347,7 +347,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         setattr(self, secondary_estimate_name, pd.DataFrame(1 - np.exp(log_estimate), columns=[self._label]))
 
         self.__estimate = getattr(self, primary_estimate_name)
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha, ci_labels)
+        self.confidence_interval_ = self._bounds(cumulative_sq_.values[:, None], alpha, ci_labels)
         self._median = median_survival_times(self.survival_function_)
         self._cumulative_sq_ = cumulative_sq_
 

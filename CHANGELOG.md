@@ -7,6 +7,7 @@
  - fix `labels=False` in `add_at_risk_counts`
  - all for specific rows to be shown in `add_at_risk_counts`
  - put `patsy` as a proper dependency.
+ - suppress some Pandas 1.1 warnings.
 
 
 #### 0.25.0 - 2020-07-27
