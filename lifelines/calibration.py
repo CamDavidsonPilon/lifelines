@@ -73,7 +73,7 @@ def survival_probability_calibration(model: RegressionFitter, df: pd.DataFrame, 
 
     # predict new model at values 0 to 1, but remember to ccl it!
     x = np.linspace(np.clip(predictions_at_t0.min() - 0.01, 0, 1), np.clip(predictions_at_t0.max() + 0.01, 0, 1), 100)
-    y = 1 - crc.predict_survival_function(pd.DataFrame({"ccl_at_%d" % t0: ccl(x), "constant": 1}), times=[t0]).T.squeeze()
+    y = 1 - crc.predict_survival_function(pd.DataFrame({"ccl_at_%d" % t0: ccl(x)}), times=[t0]).T.squeeze()
 
     # plot our results
     ax.set_title("Smoothed calibration curve of \npredicted vs observed probabilities of t ≤ %d mortality" % t0)
