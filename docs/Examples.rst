@@ -175,7 +175,7 @@ Restricted mean survival times (RMST)
     .. math::  \text{RMST}(t) = \int_0^t S(\tau) d\tau
 
 
-This is a good metric for comparing two survival curves, as their difference represents the area between the curves (see figure below). The upper limit is often finite because the tail of the estimated survival curve has high variance and can strongly influence the integral.
+This is a good metric for comparing two survival curves, as their difference represents the area between the curves (see figure below) which is a measure of "time lost". The upper limit of the integral above is often finite because the tail of the estimated survival curve has high variance and can strongly influence the integral.
 
 .. code-block:: python
 
@@ -1006,7 +1006,7 @@ The information provided by ``print_summary`` can be a lot, and even too much fo
 Fixing a ``FormulaSyntaxError``
 ##############################################
 
-As a of *lifelines* v0.25.0, formulas are used internally (even if not explicity used in the call to ``fit``). This may cause problems if your dataframe has column names with spaces, periods, or other characters. The cheapest way to fix this is to change your column names:
+As a of *lifelines* v0.25.0, formulas can be used to model your dataframe. This may cause problems if your dataframe has column names with spaces, periods, or other characters. The cheapest way to fix this is to change your column names:
 
 
 .. code-block:: python

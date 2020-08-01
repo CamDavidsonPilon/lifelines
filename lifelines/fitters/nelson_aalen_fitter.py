@@ -133,7 +133,7 @@ class NelsonAalenFitter(UnivariateFitter):
         # estimates
         self._label = coalesce(label, self._label, "NA_estimate")
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
+        self.confidence_interval_ = self._bounds(cumulative_sq_.values[:, None], alpha if alpha else self.alpha, ci_labels)
         self.confidence_interval_cumulative_hazard_ = self.confidence_interval_
         self._cumulative_sq = cumulative_sq_
 

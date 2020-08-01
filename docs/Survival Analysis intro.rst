@@ -28,7 +28,6 @@ service, and a death is when the user leaves the service.
 Censoring
 ----------
 
-
 At the time you want to make inferences about durations, it is possible that not all the death events have occurred yet. For example, a
 medical professional will not wait 50 years for each individual in the
 study to pass away before investigating -- he or she is interested in
@@ -200,7 +199,15 @@ The integral has a more common name: the *cumulative hazard function*, denoted :
 .. math:: S(t) = \exp\left(-H(t) \right)
 
 
-What I love about the above equation is that it defines **all** survival
+With that, the two figures below represent the hazard and the cumulative hazard, respectively, of the survival function in the figure above.
+
+.. image:: images/intro_hazards.png
+    :width: 550px
+    :align: center
+
+
+
+What I like about the above relationships is that it defines **all** survival
 functions. Notice that we can now speak either about the
 survival function, :math:`S(t)`, the hazard, :math:`h(t)`, or the cumulative hazard function,
 :math:`H(t)`, and we can convert back and forth quite easily. Below is a graphic of all the relationships between the quantities.
@@ -212,20 +219,14 @@ survival function, :math:`S(t)`, the hazard, :math:`h(t)`, or the cumulative haz
     :align: center
     :figclass: align-center
 
-    Map of the mathematical entities used in the survival analysis and the transforms between them.
+    Map of the mathematical entities used in survival analysis and the transforms between them.
     Don't panic: *lifelines* does this all for you.
 
-
-The two figures below represent the hazard and the cumulative hazard of the survival function in the figure above.
-
-.. image:: images/intro_hazards.png
-    :width: 550px
-    :align: center
 
 
 
 Next steps
 -----------------
 
-Of course, we do not observe the true survival function of a population. We
+Of course, we do not observe the true survival function or hazard of a population. We
 must use the observed data to estimate it. There are many ways to estimate the survival function and the hazard functions, which brings us to :doc:`estimation using lifelines</Survival analysis with lifelines>`.

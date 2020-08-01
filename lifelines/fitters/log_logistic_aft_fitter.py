@@ -61,7 +61,7 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
         The event_observed variable provided
     weights: Series
         The event_observed variable provided
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     standard_errors_: Series
         the standard errors of the estimates

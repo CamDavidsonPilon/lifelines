@@ -74,7 +74,13 @@ def create_scipy_stats_model_from_lifelines_model(model):
 
 def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
     """
+    This plot compares the empirical CDF (derived by KaplanMeier) vs the model CDF.
 
+    Parameters
+    ------------
+    model: lifelines univariate model
+    timeline: iterable
+    ax: matplotlib axis
 
     """
     from lifelines import KaplanMeierFitter
@@ -357,9 +363,9 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]] = None, **kwargs):
+def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ax=None, **kwargs):
     """
-    Add counts showing how many individuals were at risk at each time point in
+    Add counts showing how many individuals were at risk, censored, and observed, at each time point in
     survival/hazard plots.
 
     Parameters
@@ -372,6 +378,8 @@ def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]
     labels:
         provide labels for the fitters, default is to use the provided fitter label. Set to
         False for no labels.
+    rows_to_show: list
+        list of a subset of {'At risk', 'Censored', 'Events'}. Default shows all columns.
 
     Returns
     --------
@@ -422,10 +430,10 @@ def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]
     elif labels is False:
         labels = [None] * len(fitters)
 
-    labels = [l.replace("_", r"\_") for l in labels]
+    if rows_to_show is None:
+        rows_to_show = ["At risk", "Censored", "Events"]
+    n_rows = len(rows_to_show)
 
-    # remove xlabel
-    ax.set_xlabel("")
     # Create another axes where we can put size ticks
     ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
@@ -465,27 +473,29 @@ def add_at_risk_counts(*fitters, ax=None, labels: Optional[Union[Iterable, bool]
                 f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed)
                 .loc[:tick, ["at_risk", "censored", "observed"]]
                 .agg({"at_risk": "min", "censored": "sum", "observed": "sum"})
+                .rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
             )
-            counts.extend([int(c) for c in event_table_slice.loc[["at_risk", "censored", "observed"]]])
+            counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
 
         if tick == ax2.get_xticks()[0]:
             max_length = len(str(max(counts)))
             for i, c in enumerate(counts):
-                if i % 3 == 0:
+                if i % n_rows == 0:
                     if is_latex_enabled():
-                        lbl += ("\n" if i > 0 else "") + r"\textbf{%s}" % labels[int(i / 3)] + "\n"
+                        lbl += ("\n" if i > 0 else "") + r"\textbf{%s}" % labels[int(i / n_rows)] + "\n"
                     else:
-                        lbl += ("\n" if i > 0 else "") + r"$\mathit{%s}$" % labels[int(i / 3)] + "\n"
+                        lbl += ("\n" if i > 0 else "") + r"%s" % labels[int(i / n_rows)] + "\n"
 
-                l = ["  At risk", "Censored  ", " Events  "][i % 3]
-                s = "{}   ".format(l) + "{{:>{}d}}\n".format(max_length)
+                l = rows_to_show[i % n_rows]
+                l = {"At risk": "  At risk", "Censored": "Censored  ", "Events": " Events  "}.get(l)
+                s = "{}   ".format(l.rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
                 lbl += s.format(c)
 
         else:
             # Create tick label
             lbl += ""
             for i, c in enumerate(counts):
-                if i % 3 == 0 and i > 0:
+                if i % n_rows == 0 and i > 0:
                     lbl += "\n\n"
                 s = "\n{}"
                 lbl += s.format(c)
@@ -554,8 +564,8 @@ def plot_interval_censored_lifetimes(
     label_plot_bars = type(lower_bound) is pd.Series and type(lower_bound.index) is not pd.RangeIndex
 
     N = lower_bound.shape[0]
-    if N > 80:
-        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
+    if N > 25:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 25 individuals.")
 
     assert upper_bound.shape[0] == N
 
@@ -649,8 +659,8 @@ def plot_lifetimes(
     label_plot_bars = type(durations) is pd.Series and type(durations.index) is not pd.RangeIndex
 
     N = durations.shape[0]
-    if N > 80:
-        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
+    if N > 25:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 25 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
