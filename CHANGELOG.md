@@ -13,7 +13,7 @@
 #### 0.25.0 - 2020-07-27
 
 ##### New features
- - Formulas! *lifelines* now supports R-like formulas in regression models. See docs [here]().
+ - Formulas! *lifelines* now supports R-like formulas in regression models. See docs [here](https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#fitting-the-regression).
  - `plot_covariate_group` now can plot other y-values like hazards and cumulative hazards (default: survival function).
  - `CoxPHFitter` now accepts late entries via `entry_col`.
  - `calibration.survival_probability_calibration` now works with out-of-sample data.
@@ -40,7 +40,7 @@
  - p-values have been corrected in the `SplineFitter`. Previously, the "null hypothesis" was no coefficient=0, but coefficient=0.01. This is now set to the former.
  - fixed NaN bug in `survival_table_from_events` with intervals when no events would occur in a interval.
 
-#### 0.24.15 - 2020-07-09
+#### 0.24.16 - 2020-07-09
 
 ##### New features
  - improved algorithm choice for large DataFrames for Cox models. Should see a significant performance boost.
