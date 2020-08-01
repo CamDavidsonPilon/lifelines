@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.25.1 - unreleased
+#### 0.25.1 - 2020-08-01
 
 ##### Bug fixes
  - ok _actually_ ship the out-of-sample calibration code
