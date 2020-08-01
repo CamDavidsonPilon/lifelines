@@ -3201,7 +3201,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         return plot_partial_effects_on_outcome(*args, **kwargs)
 
     def plot_partial_effects_on_outcome(
-        self, covariates, values, plot_baseline=True, times=None, y="survival", ax=None, **kwargs
+        self, covariates, values, plot_baseline=True, times=None, y="survival_function", ax=None, **kwargs
     ):
         """
         Produces a visual representation comparing the baseline survival curve of the model versus

@@ -431,7 +431,7 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
         labels = [None] * len(fitters)
 
     if rows_to_show is None:
-        rows_to_show = ["At Risk", "Censored", "Events"]
+        rows_to_show = ["At risk", "Censored", "Events"]
     n_rows = len(rows_to_show)
 
     # Create another axes where we can put size ticks
