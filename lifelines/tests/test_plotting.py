@@ -127,6 +127,19 @@ class TestPlotting:
         self.plt.title("test_kmf_add_at_risk_counts_with_subplot")
         self.plt.show(block=block)
 
+    def test_kmf_add_at_risk_counts_with_specific_rows(self, block, kmf):
+        T = np.random.exponential(10, size=(100))
+        E = np.random.binomial(1, 0.8, size=(100))
+        kmf.fit(T, E)
+
+        fig = self.plt.figure()
+        ax = fig.subplots(1, 1)
+        kmf.plot(ax=ax)
+        add_at_risk_counts(kmf, ax=ax, rows_to_show=["Censored", "At risk"])
+
+        self.plt.title("test_kmf_add_at_risk_counts_with_specific_rows")
+        self.plt.show(block=block)
+
     def test_kmf_add_at_risk_counts_with_custom_subplot(self, block, kmf):
         # https://github.com/CamDavidsonPilon/lifelines/issues/991#issuecomment-614427882
         import lifelines
