@@ -2546,20 +2546,20 @@ class _BatchVsSingle:
     SINGLE = "single"
 
     def decide(self, batch_mode: Optional[bool], n_unique: int, n_total: int, n_vars: int) -> str:
-        frac_dups = n_unique / n_total
+        log_frac_dups = np.log(n_unique / n_total)
         if batch_mode or (
             # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
             # new values from from perf/batch_vs_single script.
             (batch_mode is None)
             and (
-                2.909_374e-01
-                + n_total * -8.411_575e-07
-                + frac_dups * 5.084_471e00
-                + n_total * frac_dups * 2.110_770e-08
-                + frac_dups ** 2 * -3.578_701e00
-                + n_total ** 2 * 6.094_380e-13
-                + n_vars * -1.428_580e-03
-                + n_vars * n_total * 1.612_768e-09
+                1.537_271e00
+                + n_total * 4.771_387e-06
+                + log_frac_dups * 2.610_877e-01
+                + n_total * log_frac_dups * -3.830_987e-11
+                + log_frac_dups ** 2 * 1.389_890e-02
+                + n_total ** 2 * 3.129_870e-14
+                + n_vars * 3.196_517e-03
+                + n_vars * n_total * -7.356_722e-07
             )
             < 1
         ):
