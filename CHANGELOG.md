@@ -1,5 +1,12 @@
 ## Changelog
 
+#### 0.25.2 - unreleased
+
+##### Bug fixes
+ - fix CoxPHFitter with splines when predict_hazard was called.
+ -
+
+
 #### 0.25.1 - 2020-08-01
 
 ##### Bug fixes

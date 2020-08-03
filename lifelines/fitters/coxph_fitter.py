@@ -329,12 +329,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         kwargs.pop("batch_mode")
 
         df = args[0].copy()
+        df["1"] = 1
 
         formula = kwargs.pop("formula")
         if type(formula) == str:
             formula += "-1"
 
-        regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(0, self.n_baseline_knots + 2)}}
+        regressors = {**{"beta_": formula}, **{"phi%d_" % i: ["1"] for i in range(0, self.n_baseline_knots + 2)}}
 
         model = ParametricSplinePHFitter(
             penalizer=self.penalizer,
