@@ -39,7 +39,7 @@ from lifelines.utils import (
     normalize,
     StepSizer,
     check_nans_or_infs,
-    string_justify,
+    string_rjustify,
     coalesce,
 )
 from lifelines import utils
@@ -655,7 +655,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             multiple outputs.
 
         """
-        justify = string_justify(18)
+        justify = string_rjustify(18)
 
         headers = []
 

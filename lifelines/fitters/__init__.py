@@ -645,7 +645,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         """
 
-        justify = utils.string_justify(25)
+        justify = utils.string_rjustify(25)
 
         p = Printer(
             self,
@@ -2122,7 +2122,7 @@ class ParametricRegressionFitter(RegressionFitter):
             multiple outputs.
 
         """
-        justify = utils.string_justify(25)
+        justify = utils.string_rjustify(25)
         headers = []
 
         if utils.CensoringType.is_interval_censoring(self):

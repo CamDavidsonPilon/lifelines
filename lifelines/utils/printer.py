@@ -66,6 +66,7 @@ class Printer:
 
     def to_html(self):
         summary_df = self.model.summary
+
         decimals = self.decimals
         if self.columns is None:
             columns = summary_df.columns
@@ -76,9 +77,12 @@ class Printer:
         headers.insert(0, ("model", "lifelines." + self.model._class_name))
 
         header_df = pd.DataFrame.from_records(headers).set_index(0)
+
         header_html = header_df.to_html(header=False, notebook=True, index_names=False)
 
         summary_html = summary_df[columns].to_html(
+            col_space=12,
+            index_names=False,
             float_format=utils.format_floats(decimals),
             formatters={
                 **{c: utils.format_exp_floats(decimals) for c in columns if "exp(" in c},
@@ -88,7 +92,7 @@ class Printer:
 
         if self.footers:
             footer_df = pd.DataFrame.from_records(self.footers).set_index(0)
-            footer_html = footer_df.to_html(header=False, notebook=True, index_names=False)
+            footer_html = "<br>" + footer_df.to_html(header=False, notebook=True, index_names=False)
         else:
             footer_html = ""
         return header_html + summary_html + footer_html

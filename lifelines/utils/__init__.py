@@ -1627,7 +1627,8 @@ def interpolate_at_times_and_return_pandas(df_or_series, new_times) -> Union[pd.
     return pd.DataFrame(interpolate_at_times(df_or_series, new_times), index=new_times, columns=cols).squeeze()
 
 
-string_justify = lambda width: lambda s: s.rjust(width, " ")
+string_rjustify = lambda width: lambda s: s.rjust(width, " ")
+string_ljustify = lambda width: lambda s: s.ljust(width, " ")
 
 
 def safe_zip(first, second):

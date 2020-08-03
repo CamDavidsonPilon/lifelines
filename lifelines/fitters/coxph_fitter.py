@@ -365,7 +365,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         """
 
         # Print information about data first
-        justify = utils.string_justify(25)
+        justify = utils.string_rjustify(25)
 
         headers = []
         headers.append(("duration col", "'%s'" % self.duration_col))
@@ -2522,7 +2522,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         times = np.atleast_1d(times).astype(float)
 
         n = df.shape[0]
-        Xs = self._create_Xs_dict(df)
+        Xs = self.regressors.transform_df(df)
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 

@@ -2995,6 +2995,10 @@ class TestCoxPHFitter:
         assert list(cph_spline.baseline_survival_.columns) == ["baseline survival"]
         assert list(cph_spline.baseline_cumulative_hazard_.columns) == ["baseline cumulative hazard"]
 
+        assert cph_spline.baseline_survival_at_times([1, 2, 3]).shape[0] == 3
+        assert cph_spline.baseline_cumulative_hazard_at_times([1, 2, 3]).shape[0] == 3
+        assert cph_spline.baseline_hazard_at_times([1, 2, 3]).shape[0] == 3
+
     def test_conditional_after_in_prediction(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
         cph.fit(rossi, "week", "arrest")
