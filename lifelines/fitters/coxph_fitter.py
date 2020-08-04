@@ -317,7 +317,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
     def _fit_model_spline(self, *args, **kwargs):
 
         df = args[0].copy()
-        # add intercept col for phi variables.
 
         # handle if they provided a formla
         formula = kwargs.pop("formula")
