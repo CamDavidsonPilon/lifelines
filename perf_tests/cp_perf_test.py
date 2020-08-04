@@ -16,9 +16,8 @@ if __name__ == "__main__":
     df = pd.concat([df] * reps)
     print(df.shape)
 
-    cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, strata=["wexp"])
+    cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, strata=["wexp", "mar"])
     start_time = time.time()
     cph.fit(df, duration_col="week", event_col="arrest", show_progress=True, timeline=np.linspace(1, 60, 100))
-    cph.print_summary()
-    cph.plot_partial_effects_on_outcome(covariates=["age"], values=np.arange(20, 50, 10))
+    print(cph.baseline_hazard_)
     print("--- %s seconds ---" % (time.time() - start_time))

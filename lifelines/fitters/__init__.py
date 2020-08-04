@@ -1212,7 +1212,6 @@ class RegressionFitter(BaseFitter):
         if strata is not None:
             # apply this function within each stratified dataframe
             central_stats = []
-
             for stratum, df_ in df.groupby(strata):
                 central_stats_ = self._compute_central_values_of_raw_training_data(df_, name=stratum)
                 try:
@@ -2250,7 +2249,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
     def predict_percentile(self, df, *, p=0.5, conditional_after=None) -> pd.Series:
         if isinstance(df, pd.Series):
-            df = df.to_frame().infer_objects().infer_objects().T
+            df = df.to_frame().infer_objects().T
         subjects = utils._get_index(df)
 
         warnings.warn(

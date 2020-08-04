@@ -586,15 +586,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             for stratum in self.baseline_survival_.columns:
                 ax = plt.figure().add_subplot(1, 1, 1)
 
-                x_bar = self._central_values.loc[stratum].rename("stratum %s baseline %s" % (str(stratum), y))
-
-                # we turn this into an object so stratum values that are ints are not converted to floats.
-                x_bar = x_bar.astype(object)
+                # we turn this into a DF so stratum values that are ints are not converted to floats, etc.
+                x_bar = self._central_values.loc[stratum].rename("stratum %s baseline %s" % (str(stratum), y)).to_frame().T
 
                 for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
                     x_bar[name] = value
 
-                X = pd.concat([x_bar.to_frame().T] * values.shape[0])
+                X = pd.concat([x_bar] * values.shape[0])
 
                 if np.array_equal(np.eye(len(covariates)), values):
                     X.index = ["%s=1" % c for c in covariates]
@@ -2523,6 +2521,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         times = utils.coalesce(times, self.timeline)
         if self.strata is not None:
             v = self.predict_hazard(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
         else:
             v = self.predict_hazard(self._central_values, times=times)
             v.columns = ["baseline hazard"]
@@ -2535,6 +2534,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         times = utils.coalesce(times, self.timeline)
         if self.strata is not None:
             v = self.predict_survival_function(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
         else:
             v = self.predict_survival_function(self._central_values, times=times)
             v.columns = ["baseline survival"]
@@ -2547,6 +2547,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         times = utils.coalesce(times, self.timeline)
         if self.strata is not None:
             v = self.predict_cumulative_hazard(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
         else:
             v = self.predict_cumulative_hazard(self._central_values, times=times)
             v.columns = ["baseline cumulative hazard"]
