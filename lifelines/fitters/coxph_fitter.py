@@ -348,9 +348,9 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             strata_values = df.groupby(strata).size().index.tolist()
             regressors = {"beta_": formula}
             for stratum in strata_values:
-                regressors = {**regressors, **{spline_namer(stratum, i): "1" for i in range(0, self.n_baseline_knots + 2)}}
+                regressors.update({spline_namer(stratum, i): "1" for i in range(0, self.n_baseline_knots + 2)})
         else:
-            raise ValueError("Wrong type for strata. Str or list")
+            raise ValueError("Wrong type for strata. String or list of strings")
 
         model = ParametricSplinePHFitter(
             strata=strata,
@@ -2397,7 +2397,6 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
     _FAST_MEDIAN_PREDICT = False
 
     cluster_col = None
-    strata = None
 
     def __init__(self, strata, strata_values, n_baseline_knots=1, *args, **kwargs):
         self.strata = strata
@@ -2434,19 +2433,20 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
         if self.strata is not None:
-            v = {"beta_": np.zeros(len(Xs["beta_"].columns))}
-            # TODO messy code.
+            params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
             for stratum in self.strata_values:
-                v = {
-                    **v,
-                    **{
+                params.update(
+                    {
                         self._strata_spline_labeler(stratum, 0): np.array([0.0]),
                         self._strata_spline_labeler(stratum, 1): np.array([0.05]),
                         self._strata_spline_labeler(stratum, 2): np.array([-0.05]),
-                    },
-                    **{self._strata_spline_labeler(stratum, i): np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
-                }
-            return v
+                    }
+                )
+                params.update(
+                    {self._strata_spline_labeler(stratum, i): np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)}
+                )
+
+            return params
 
         else:
             return {
@@ -2459,42 +2459,55 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
             }
 
-    def _cumulative_hazard(self, params, T, Xs):
+    def _cumulative_hazard_with_strata(self, params, T, Xs):
         lT = anp.log(T)
-        if self.strata is not None:
-            output = anp.array([])
-            # hack for iterating over Ts
-            start, stop = 0, 0
-            # I can assume Xs is sorted by strata values
-            for stratum, Xs_ in Xs.groupby(self.strata):
-                stop = stop + Xs_.size()
+        output = []
+
+        # hack for iterating over stratified T
+        start, stop = 0, 0
+
+        # I can assume Xs is sorted by strata values
+        for stratum, Xs_ in Xs.groupby(self.strata):
+            stop = stop + Xs_.size
+
+            if T.ndim > 1:
+                lT_ = lT[:, start:stop]
+            else:
                 lT_ = lT[start:stop]
 
-                H_ = safe_exp(
-                    anp.dot(Xs_["beta_"], params["beta_"])
-                    + params[self._strata_spline_labeler(stratum, 0)]
-                    + params[self._strata_spline_labeler(stratum, 1)] * lT_
-                )
-
-                for i in range(2, self.n_baseline_knots + 2):
-                    H_ = H_ * safe_exp(
-                        params[self._strata_spline_labeler(stratum, i)]
-                        * self.basis(lT_, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
-                    )
-
-                output = anp.hstack((output, H_))
-                start = stop
-            return output
-
-        else:
-            H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi0_"] + params["phi1_"] * lT)
+            H_ = safe_exp(
+                anp.dot(Xs_["beta_"], params["beta_"])
+                + params[self._strata_spline_labeler(stratum, 0)]
+                + params[self._strata_spline_labeler(stratum, 1)] * lT_
+            )
 
             for i in range(2, self.n_baseline_knots + 2):
-                H = H * safe_exp(
-                    params["phi%d_" % i]
-                    * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+                H_ = H_ * safe_exp(
+                    params[self._strata_spline_labeler(stratum, i)]
+                    * self.basis(lT_, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
                 )
-            return H
+
+            output.append(H_)
+            start = stop
+
+        return anp.hstack(output) if output else anp.array([])
+
+    def _cumulative_hazard_sans_strata(self, params, T, Xs):
+        lT = anp.log(T)
+
+        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi0_"] + params["phi1_"] * lT)
+
+        for i in range(2, self.n_baseline_knots + 2):
+            H = H * safe_exp(
+                params["phi%d_" % i] * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+            )
+        return H
+
+    def _cumulative_hazard(self, params, T, Xs):
+        if self.strata is not None:
+            return self._cumulative_hazard_with_strata(params, T, Xs)
+        else:
+            return self._cumulative_hazard_sans_strata(params, T, Xs)
 
     @property
     def baseline_hazard_(self):
@@ -2562,9 +2575,34 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         """
         df = df.copy()
         df["Intercept"] = 1
-        return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
-            df, times=times, conditional_after=conditional_after
-        )
+
+        if self.strata is not None:
+            df = df.reset_index().set_index(self.strata)
+
+            cumulative_hazard = pd.DataFrame()
+            if conditional_after is not None:
+                # need to pass this into the groupby
+                df["conditional_after_"] = conditional_after
+
+            for stratum, stratified_X in df.groupby(self.strata):
+
+                if conditional_after is not None:
+                    conditional_after_ = stratified_X.pop("conditional_after_")
+                else:
+                    conditional_after_ = None
+
+                cumulative_hazard_ = super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
+                    stratified_X, times=times, conditional_after=conditional_after_
+                )
+                cumulative_hazard_.columns = stratified_X["index"]
+                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
+
+            return cumulative_hazard
+
+        else:
+            return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
+                df, times=times, conditional_after=conditional_after
+            )
 
     def predict_hazard(self, df, *, times=None):
         """

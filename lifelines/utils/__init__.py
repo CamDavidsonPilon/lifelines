@@ -1658,9 +1658,10 @@ class DataframeSlicer:
         ix = _to_1d_array(ix)
         return DataframeSlicer(self.df[ix])
 
-    def groupby(self, groups):
-        yield from ((name, DataframeSlicer(df_)) for (name, df_) in self.df.groupby(groups))
+    def groupby(self, *args, **kwargs):
+        yield from ((name, DataframeSlicer(df_)) for (name, df_) in self.df.groupby(*args, **kwargs))
 
+    @property
     def size(self):
         return self.df.shape[0]
 

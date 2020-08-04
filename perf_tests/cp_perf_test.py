@@ -20,4 +20,5 @@ if __name__ == "__main__":
     start_time = time.time()
     cph.fit(df, duration_col="week", event_col="arrest", show_progress=True, strata=["mar", "paro"])
     cph.print_summary()
+    r = cph.predict_cumulative_hazard(df)
     print("--- %s seconds ---" % (time.time() - start_time))
