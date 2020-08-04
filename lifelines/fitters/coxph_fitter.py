@@ -341,13 +341,14 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(0, self.n_baseline_knots + 2)}}
             strata_values = None
         elif type(strata) in [str, list]:  # gross
+            spline_namer = ParametricSplinePHFitter._strata_spline_labeler
             strata = utils._to_list(strata)
             # how many unique strata are there?
             df = df.set_index(strata).sort_index()
             strata_values = df.groupby(strata).size().index.tolist()
             regressors = {"beta_": formula}
             for stratum in strata_values:
-                regressors = {**regressors, **{"%s_phi%d_" % (stratum, i): "1" for i in range(0, self.n_baseline_knots + 2)}}
+                regressors = {**regressors, **{spline_namer(stratum, i): "1" for i in range(0, self.n_baseline_knots + 2)}}
         else:
             raise ValueError("Wrong type for strata. Str or list")
 
@@ -2409,12 +2410,16 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         self.n_baseline_knots = n_baseline_knots
         super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)
 
+    @staticmethod
+    def _strata_spline_labeler(stratum, i):
+        return "s%s_phi%d_" % (stratum, i)
+
     @property
     def _fitted_parameter_names(self):
         if self.strata is not None:
             names = ["beta_"]
             for stratum in self.strata_values:
-                names += ["%s_phi%d_" % (stratum, i) for i in range(0, self.n_baseline_knots + 2)]
+                names += [self._strata_spline_labeler(stratum, i) for i in range(0, self.n_baseline_knots + 2)]
             return names
         else:
             return ["beta_"] + ["phi%d_" % i for i in range(0, self.n_baseline_knots + 2)]
@@ -2435,11 +2440,11 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
                 v = {
                     **v,
                     **{
-                        "%s_phi0_" % (stratum,): np.array([0.0]),
-                        "%s_phi1_" % (stratum,): np.array([0.05]),
-                        "%s_phi2_" % (stratum,): np.array([-0.05]),
+                        self._strata_spline_labeler(stratum, 0): np.array([0.0]),
+                        self._strata_spline_labeler(stratum, 1): np.array([0.05]),
+                        self._strata_spline_labeler(stratum, 2): np.array([-0.05]),
                     },
-                    **{"%s_phi%d_" % (stratum, i): np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
+                    **{self._strata_spline_labeler(stratum, i): np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
                 }
             return v
 
@@ -2467,13 +2472,13 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
                 H_ = safe_exp(
                     anp.dot(Xs_["beta_"], params["beta_"])
-                    + params["%s_phi0_" % (stratum,)]
-                    + params["%s_phi1_" % (stratum,)] * lT_
+                    + params[self._strata_spline_labeler(stratum, 0)]
+                    + params[self._strata_spline_labeler(stratum, 1)] * lT_
                 )
 
                 for i in range(2, self.n_baseline_knots + 2):
                     H_ = H_ * safe_exp(
-                        params["%s_phi%d_" % (stratum, i)]
+                        params[self._strata_spline_labeler(stratum, i)]
                         * self.basis(lT_, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
                     )
 
@@ -2493,15 +2498,15 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
     @property
     def baseline_hazard_(self):
-        return self.baseline_hazard_at_times()
+        return self.baseline_hazard_at_times(self.timeline)
 
     @property
     def baseline_survival_(self):
-        return self.baseline_survival_at_times()
+        return self.baseline_survival_at_times(self.timeline)
 
     @property
     def baseline_cumulative_hazard_(self):
-        return self.baseline_cumulative_hazard_at_times()
+        return self.baseline_cumulative_hazard_at_times(self.timeline)
 
     def baseline_hazard_at_times(self, times=None):
         """
