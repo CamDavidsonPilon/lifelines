@@ -1797,7 +1797,10 @@ class TestRegressionFitters:
 
     @pytest.fixture
     def regression_models(self, regression_models_sans_strata_model):
-        regression_models_sans_strata_model.append(CoxPHFitter(strata=["race", "paro", "mar", "wexp"]))
+        regression_models_sans_strata_model.append(CoxPHFitter(strata=["wexp"]))
+        regression_models_sans_strata_model.append(
+            CoxPHFitter(strata=["wexp"], baseline_estimation_method="spline", n_baseline_knots=2)
+        )
         return regression_models_sans_strata_model
 
     def test_compute_central_values_of_raw_training_data(self):
@@ -1830,7 +1833,7 @@ class TestRegressionFitters:
         )
         assert_frame_equal(
             central_values(df, strata="strata"),
-            pd.DataFrame([{"var1": 0.1, "var2": "D"}, {"var1": 0.15, "var2": "C"}], index=["s1", "s2"]),
+            pd.DataFrame([{"var1": 0.1, "var2": "D"}, {"var1": 0.15, "var2": "C"}], index=pd.Index(["s1", "s2"], name="strata")),
         )
 
     def test_alpha_will_vary_the_statistics_in_summary(self, rossi):
@@ -2986,6 +2989,37 @@ class TestCoxPHFitter:
             < CoxPHFitter(penalizer=0, baseline_estimation_method="spline", n_baseline_knots=1)
             .fit(rossi, "week", "arrest")
             .log_likelihood_
+        )
+
+    def test_strata_estimation_for_spline(self, rossi, cph_spline):
+        cph_spline.fit(rossi, "week", "arrest", strata="wexp")
+
+        assert cph_spline.baseline_cumulative_hazard_.shape[1] == 2
+        assert cph_spline.baseline_hazard_.shape[1] == 2
+        assert cph_spline.baseline_survival_.shape[1] == 2
+
+        cph_spline.fit(rossi, "week", "arrest", strata=["wexp", "paro"])
+
+        assert cph_spline.baseline_cumulative_hazard_.shape[1] == 4
+        assert cph_spline.baseline_hazard_.shape[1] == 4
+        assert cph_spline.baseline_survival_.shape[1] == 4
+
+    def test_strata_estimation_is_same_if_using_trivial_strata(self, rossi, cph_spline):
+        rossi["strata"] = "a"
+        trivial_strata_cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
+        trivial_strata_cph.fit(rossi, "week", "arrest", strata="strata")
+
+        cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
+        cph.fit(rossi.drop("strata", axis=1), "week", "arrest")
+
+        assert_frame_equal(
+            cph.summary.loc[[("beta_", "fin"), ("beta_", "mar"), ("beta_", "paro")]],
+            trivial_strata_cph.summary.loc[[("beta_", "fin"), ("beta_", "mar"), ("beta_", "paro")]],
+        )
+
+        assert_frame_equal(
+            cph.summary.loc[[("phi0_", "Intercept"), ("phi1_", "Intercept")]].reset_index(drop=True),
+            trivial_strata_cph.summary.loc[[("sa_phi0_", "Intercept"), ("sa_phi1_", "Intercept")]].reset_index(drop=True),
         )
 
     def test_baseline_estimation_for_spline(self, rossi, cph_spline):

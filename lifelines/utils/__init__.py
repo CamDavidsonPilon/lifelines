@@ -1658,6 +1658,22 @@ class DataframeSlicer:
         ix = _to_1d_array(ix)
         return DataframeSlicer(self.df[ix])
 
+    def groupby(self, *args, **kwargs):
+        yield from ((name, DataframeSlicer(df_)) for (name, df_) in self.df.groupby(*args, **kwargs))
+
+    @property
+    def size(self):
+        return self.df.shape[0]
+
+
+def make_simpliest_hashable(ele):
+    if type(ele) == list:
+        if len(ele) == 1:
+            return str(ele[0])
+        else:
+            return tuple(ele)
+    return ele
+
 
 def find_best_parametric_model(
     event_times,

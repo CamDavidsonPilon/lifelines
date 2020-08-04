@@ -18,7 +18,7 @@ from autograd import elementwise_grad
 from autograd import numpy as anp
 
 
-from lifelines.fitters import SemiParametricRegressionFittter
+from lifelines.fitters import SemiParametricRegressionFitter
 from lifelines.fitters.mixins import ProportionalHazardMixin
 from lifelines.utils.printer import Printer
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
@@ -49,7 +49,7 @@ __all__ = ["CoxTimeVaryingFitter"]
 matrix_axis_0_sum_to_1d_array = lambda m: np.sum(m, 0)
 
 
-class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMixin):
+class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMixin):
     r"""
     This class implements fitting Cox's time-varying proportional hazard model:
 
