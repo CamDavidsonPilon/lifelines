@@ -315,29 +315,45 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         return model
 
     def _fit_model_spline(self, *args, **kwargs):
-        # handle strata and cluster_col
-        if kwargs["strata"] is not None:
-            raise ValueError("strata is not available for this baseline estimation method")
-        if kwargs["cluster_col"] is not None:
-            raise ValueError("cluster_col is not available for this baseline estimation method")
-        assert self.n_baseline_knots is not None, "n_baseline_knots must be set in initialization."
-
-        # these are not needed
-        kwargs.pop("strata")
-        kwargs.pop("cluster_col")
-        kwargs.pop("step_size")
-        kwargs.pop("batch_mode")
 
         df = args[0].copy()
-        df["1"] = 1
+        # add intercept col for phi variables.
 
+        # handle if they provided a formla
         formula = kwargs.pop("formula")
         if type(formula) == str:
             formula += "-1"
 
-        regressors = {**{"beta_": formula}, **{"phi%d_" % i: ["1"] for i in range(0, self.n_baseline_knots + 2)}}
+        # handle cluster_col
+        if kwargs["cluster_col"] is not None:
+            raise ValueError("cluster_col is not available for this baseline estimation method")
+        assert self.n_baseline_knots is not None, "n_baseline_knots must be set in initialization."
+
+        # these are not needed, should be popped off.
+        kwargs.pop("cluster_col")
+        kwargs.pop("step_size")
+        kwargs.pop("batch_mode")
+
+        # handle strata
+        strata = kwargs.pop("strata")
+
+        if strata is None:
+            regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(0, self.n_baseline_knots + 2)}}
+            strata_values = None
+        elif type(strata) in [str, list]:  # gross
+            strata = utils._to_list(strata)
+            # how many unique strata are there?
+            df = df.set_index(strata).sort_index()
+            strata_values = df.groupby(strata).size().index.tolist()
+            regressors = {"beta_": formula}
+            for stratum in strata_values:
+                regressors = {**regressors, **{"%s_phi%d_" % (stratum, i): "1" for i in range(0, self.n_baseline_knots + 2)}}
+        else:
+            raise ValueError("Wrong type for strata. Str or list")
 
         model = ParametricSplinePHFitter(
+            strata=strata,
+            strata_values=strata_values,
             penalizer=self.penalizer,
             l1_ratio=self.l1_ratio,
             n_baseline_knots=self.n_baseline_knots,
@@ -2382,13 +2398,26 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
     cluster_col = None
     strata = None
 
-    def __init__(self, n_baseline_knots=1, *args, **kwargs):
+    def __init__(self, strata, strata_values, n_baseline_knots=1, *args, **kwargs):
+        self.strata = strata
+        self.strata_values = strata_values
+
         assert (
             n_baseline_knots is not None and n_baseline_knots > 0
         ), "n_baseline_knots must be a positive integer. Set in class instantiation"
+
         self.n_baseline_knots = n_baseline_knots
-        self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(0, self.n_baseline_knots + 2)]
         super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)
+
+    @property
+    def _fitted_parameter_names(self):
+        if self.strata is not None:
+            names = ["beta_"]
+            for stratum in self.strata_values:
+                names += ["%s_phi%d_" % (stratum, i) for i in range(0, self.n_baseline_knots + 2)]
+            return names
+        else:
+            return ["beta_"] + ["phi%d_" % i for i in range(0, self.n_baseline_knots + 2)]
 
     def _set_knots(self, T, E):
         self.knots = np.percentile(T[E.astype(bool).values], np.linspace(5, 95, self.n_baseline_knots + 2))
@@ -2399,8 +2428,23 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
-        v = [
-            {
+        if self.strata is not None:
+            v = {"beta_": np.zeros(len(Xs["beta_"].columns))}
+            # TODO messy code.
+            for stratum in self.strata_values:
+                v = {
+                    **v,
+                    **{
+                        "%s_phi0_" % (stratum,): np.array([0.0]),
+                        "%s_phi1_" % (stratum,): np.array([0.05]),
+                        "%s_phi2_" % (stratum,): np.array([-0.05]),
+                    },
+                    **{"%s_phi%d_" % (stratum, i): np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
+                }
+            return v
+
+        else:
+            return {
                 **{
                     "beta_": np.zeros(len(Xs["beta_"].columns)),
                     "phi0_": np.array([0.0]),
@@ -2409,18 +2453,43 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
                 },
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
             }
-        ]
-        return v
 
     def _cumulative_hazard(self, params, T, Xs):
         lT = anp.log(T)
-        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi0_"] + params["phi1_"] * lT)
+        if self.strata is not None:
+            output = anp.array([])
+            # hack for iterating over Ts
+            start, stop = 0, 0
+            # I can assume Xs is sorted by strata values
+            for stratum, Xs_ in Xs.groupby(self.strata):
+                stop = stop + Xs_.size()
+                lT_ = lT[start:stop]
 
-        for i in range(2, self.n_baseline_knots + 2):
-            H *= safe_exp(
-                params["phi%d_" % i] * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
-            )
-        return H
+                H_ = safe_exp(
+                    anp.dot(Xs_["beta_"], params["beta_"])
+                    + params["%s_phi0_" % (stratum,)]
+                    + params["%s_phi1_" % (stratum,)] * lT_
+                )
+
+                for i in range(2, self.n_baseline_knots + 2):
+                    H_ = H_ * safe_exp(
+                        params["%s_phi%d_" % (stratum, i)]
+                        * self.basis(lT_, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+                    )
+
+                output = anp.hstack((output, H_))
+                start = stop
+            return output
+
+        else:
+            H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi0_"] + params["phi1_"] * lT)
+
+            for i in range(2, self.n_baseline_knots + 2):
+                H = H * safe_exp(
+                    params["phi%d_" % i]
+                    * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+                )
+            return H
 
     @property
     def baseline_hazard_(self):
