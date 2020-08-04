@@ -2526,8 +2526,11 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline hazard at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_hazard(self._central_values, times=times)
-        v.columns = ["baseline hazard"]
+        if self.strata is not None:
+            v = self.predict_hazard(self._central_values.reset_index(), times=times)
+        else:
+            v = self.predict_hazard(self._central_values, times=times)
+            v.columns = ["baseline hazard"]
         return v
 
     def baseline_survival_at_times(self, times=None):
@@ -2535,8 +2538,11 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline survival at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_survival_function(self._central_values, times=times)
-        v.columns = ["baseline survival"]
+        if self.strata is not None:
+            v = self.predict_survival_function(self._central_values.reset_index(), times=times)
+        else:
+            v = self.predict_survival_function(self._central_values, times=times)
+            v.columns = ["baseline survival"]
         return v
 
     def baseline_cumulative_hazard_at_times(self, times=None):
@@ -2544,8 +2550,11 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         Predict the baseline cumulative hazard at times (Defaults to observed durations)
         """
         times = utils.coalesce(times, self.timeline)
-        v = self.predict_cumulative_hazard(self._central_values, times=times)
-        v.columns = ["baseline cumulative hazard"]
+        if self.strata is not None:
+            v = self.predict_cumulative_hazard(self._central_values.reset_index(), times=times)
+        else:
+            v = self.predict_cumulative_hazard(self._central_values, times=times)
+            v.columns = ["baseline cumulative hazard"]
         return v
 
     def predict_cumulative_hazard(self, df, *, times=None, conditional_after=None):
@@ -2573,6 +2582,9 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             the cumulative hazards of individuals over the timeline
 
         """
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T.infer_objects()
+
         df = df.copy()
         df["Intercept"] = 1
 
@@ -2604,7 +2616,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
                 df, times=times, conditional_after=conditional_after
             )
 
-    def predict_hazard(self, df, *, times=None):
+    def predict_hazard(self, df, *, conditional_after=None, times=None):
         """
         Predict the hazard for individuals, given their covariates.
 
@@ -2631,15 +2643,32 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
         df = df.copy()
         df["Intercept"] = 1
-        times = utils.coalesce(times, self.timeline)
-        times = np.atleast_1d(times).astype(float)
 
-        n = df.shape[0]
-        Xs = self.regressors.transform_df(df)
+        if self.strata is not None:
+            df = df.reset_index().set_index(self.strata)
 
-        params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
+            cumulative_hazard = pd.DataFrame()
+            if conditional_after is not None:
+                # need to pass this into the groupby
+                df["conditional_after_"] = conditional_after
 
-        return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+            for stratum, stratified_X in df.groupby(self.strata):
+
+                if conditional_after is not None:
+                    conditional_after_ = stratified_X.pop("conditional_after_")
+                else:
+                    conditional_after_ = None
+
+                cumulative_hazard_ = super(ParametricSplinePHFitter, self).predict_hazard(
+                    stratified_X, times=times, conditional_after=conditional_after_
+                )
+                cumulative_hazard_.columns = stratified_X["index"]
+                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
+
+            return cumulative_hazard
+
+        else:
+            return super(ParametricSplinePHFitter, self).predict_hazard(df, times=times, conditional_after=conditional_after)
 
     def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
         df = df.copy()

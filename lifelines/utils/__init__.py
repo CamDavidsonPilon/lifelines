@@ -1666,6 +1666,15 @@ class DataframeSlicer:
         return self.df.shape[0]
 
 
+def make_simpliest_hashable(ele):
+    if type(ele) == list:
+        if len(ele) == 1:
+            return str(ele[0])
+        else:
+            return tuple(ele)
+    return ele
+
+
 def find_best_parametric_model(
     event_times,
     event_observed=None,

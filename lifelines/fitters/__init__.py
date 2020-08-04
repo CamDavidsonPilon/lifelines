@@ -1205,9 +1205,17 @@ class RegressionFitter(BaseFitter):
         if strata is not None:
             # apply this function within each stratified dataframe
             central_stats = []
+
             for stratum, df_ in df.groupby(strata):
-                central_stats.append(self._compute_central_values_of_raw_training_data(df_, name=stratum).drop(strata, axis=1))
-            return pd.concat(central_stats)
+                central_stats_ = self._compute_central_values_of_raw_training_data(df_, name=stratum)
+                try:
+                    central_stats_ = central_stats_.drop(strata, axis=1)
+                except:
+                    pass
+                central_stats.append(central_stats_)
+            v = pd.concat(central_stats)
+            v.index.rename(utils.make_simpliest_hashable(strata), inplace=True)
+            return v
 
         else:
             described = df.describe(include="all")
@@ -1266,6 +1274,7 @@ class ParametricRegressionFitter(RegressionFitter):
     _scipy_fit_options: Dict[str, Any] = dict()
     fit_intercept = False
     regressors = None
+    strata = None
 
     def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0, **kwargs):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha, **kwargs)
@@ -1711,7 +1720,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
-        self._central_values = self._compute_central_values_of_raw_training_data(df)
+        self._central_values = self._compute_central_values_of_raw_training_data(df, self.strata)
 
         regressors = utils.coalesce(regressors, self.regressors, {p: None for p in self._fitted_parameter_names})
         self.regressors = utils.CovariateParameterMappings(regressors, df, force_intercept=self.fit_intercept)
@@ -2301,7 +2310,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 columns=columns,
             )
 
-    def predict_hazard(self, df, *, times=None):
+    def predict_hazard(self, df, *, conditional_after=None, times=None):
         """
         Predict the hazard for individuals, given their covariates.
 
@@ -2335,7 +2344,12 @@ class ParametricRegressionFitter(RegressionFitter):
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
-        return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+        if conditional_after is None:
+            return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+        else:
+            conditional_after = np.asarray(conditional_after)
+            times_to_evaluate_at = (conditional_after.reshape((n, 1)) + np.tile(times, (n, 1))).T
+            return pd.DataFrame(self._hazard(params_dict, times_to_evaluate_at, Xs), index=times, columns=df.index)
 
     def predict_expectation(self, X, conditional_after=None) -> pd.Series:
         r"""
