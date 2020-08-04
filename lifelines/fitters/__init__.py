@@ -1193,6 +1193,13 @@ class RegressionFitter(BaseFitter):
     def __init__(self, *args, **kwargs):
         super(RegressionFitter, self).__init__(*args, **kwargs)
 
+    def plot_covariate_groups(*args, **kwargs):
+        """
+        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
+        """
+        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
+        return plot_partial_effects_on_outcome(*args, **kwargs)
+
     def _compute_central_values_of_raw_training_data(self, df, strata=None, name="baseline"):
         """
         Compute our "baseline" observation for function like plot_partial_effects_on_outcome.
@@ -1259,7 +1266,7 @@ class RegressionFitter(BaseFitter):
         return resids
 
 
-class SemiParametricRegressionFittter(RegressionFitter):
+class SemiParametricRegressionFitter(RegressionFitter):
     @property
     def AIC_partial_(self) -> float:
         """
@@ -2471,13 +2478,6 @@ class ParametricRegressionFitter(RegressionFitter):
 
         return ax
 
-    def plot_covariate_groups(*args, **kwargs):
-        """
-        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
-        """
-        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
-        return plot_partial_effects_on_outcome(*args, **kwargs)
-
     def plot_partial_effects_on_outcome(
         self, covariates, values, plot_baseline=True, ax=None, times=None, y="survival_function", **kwargs
     ):
@@ -3206,13 +3206,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         plt.xlabel("log(accelerated failure rate) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
-
-    def plot_covariate_groups(*args, **kwargs):
-        """
-        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
-        """
-        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
-        return plot_partial_effects_on_outcome(*args, **kwargs)
 
     def plot_partial_effects_on_outcome(
         self, covariates, values, plot_baseline=True, times=None, y="survival_function", ax=None, **kwargs

@@ -16,7 +16,7 @@ from autograd import elementwise_grad
 from autograd import numpy as anp
 
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio, concordance_index
-from lifelines.fitters import RegressionFitter, SemiParametricRegressionFittter, ParametricRegressionFitter
+from lifelines.fitters import RegressionFitter, SemiParametricRegressionFitter, ParametricRegressionFitter
 from lifelines.fitters.mixins import SplineFitterMixin, ProportionalHazardMixin
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
 from lifelines.plotting import set_kwargs_drawstyle
@@ -485,8 +485,135 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             results[t] = model.hazard_ratios_
         return DataFrame(results).T
 
+    def plot_partial_effects_on_outcome(self, covariates, values, plot_baseline=True, y="survival_function", **kwargs):
+        """
+        Produces a plot comparing the baseline curve of the model versus
+        what happens when a covariate(s) is varied over values in a group. This is useful to compare
+        subjects' survival as we vary covariate(s), all else being held equal.
 
-class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFittter):
+        The baseline curve is equal to the predicted curve at all average values (median for ordinal, and mode for categorical)
+        in the original dataset. This same logic is applied to the stratified datasets if ``strata`` was used in fitting.
+
+        Parameters
+        ----------
+        covariates: string or list
+            a string (or list of strings) of the covariate(s) in the original dataset that we wish to vary.
+        values: 1d or 2d iterable
+            an iterable of the specific values we wish the covariate(s) to take on.
+        plot_baseline: bool
+            also display the baseline survival, defined as the survival at the mean of the original dataset.
+        y: str
+            one of "survival_function", or "cumulative_hazard"
+        kwargs:
+            pass in additional plotting commands.
+
+        Returns
+        -------
+        ax: matplotlib axis, or list of axis'
+            the matplotlib axis that be edited.
+
+
+        Examples
+        ---------
+        .. code:: python
+
+            from lifelines import datasets, CoxPHFitter
+            rossi = datasets.load_rossi()
+
+            cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+            cph.plot_partial_effects_on_outcome('prio', values=arange(0, 15, 3), cmap='coolwarm')
+
+        .. image:: /images/plot_covariate_example1.png
+
+        .. code:: python
+
+            # multiple variables at once
+            cph.plot_partial_effects_on_outcome(['prio', 'paro'], values=[
+             [0,  0],
+             [5,  0],
+             [10, 0],
+             [0,  1],
+             [5,  1],
+             [10, 1]
+            ], cmap='coolwarm')
+
+        .. image:: /images/plot_covariate_example2.png
+
+        .. code:: python
+
+            # if you have categorical variables, you can do the following to see the
+            # effect of all the categories on one plot.
+            cph.plot_partial_effects_on_outcome('categorical_var', values=["A", "B", "C"])
+
+
+        """
+        from matplotlib import pyplot as plt
+
+        covariates = utils._to_list(covariates)
+        n_covariates = len(covariates)
+        values = np.asarray(values)
+        if len(values.shape) == 1:
+            values = values[None, :].T
+
+        if n_covariates != values.shape[1]:
+            raise ValueError("The number of covariates must equal to second dimension of the values array.")
+
+        for covariate in covariates:
+            if covariate not in self._central_values.columns:
+                raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
+
+        drawstyle = "steps-post" if isinstance(self._model, SemiParametricRegressionFitter) else None
+        set_kwargs_drawstyle(kwargs, drawstyle)
+
+        if self.strata is None:
+            axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
+            x_bar = self._central_values
+            X = pd.concat([x_bar] * values.shape[0])
+
+            if np.array_equal(np.eye(n_covariates), values) or np.array_equal(
+                np.append(np.eye(n_covariates), np.zeros((n_covariates, 1)), axis=1), values
+            ):
+                X.index = ["%s=1" % c for c in covariates]
+            else:
+                X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+            for covariate, value in zip(covariates, values.T):
+                X[covariate] = value
+            getattr(self, "predict_%s" % y)(X).plot(ax=axes, **kwargs)
+            if plot_baseline:
+                getattr(self, "predict_%s" % y)(x_bar).plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
+
+        else:
+            axes = []
+            for stratum in self.baseline_survival_.columns:
+                ax = plt.figure().add_subplot(1, 1, 1)
+
+                x_bar = self._central_values.loc[stratum].rename("stratum %s baseline %s" % (str(stratum), y))
+
+                # we turn this into an object so stratum values that are ints are not converted to floats.
+                x_bar = x_bar.astype(object)
+
+                for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
+                    x_bar[name] = value
+
+                X = pd.concat([x_bar.to_frame().T] * values.shape[0])
+
+                if np.array_equal(np.eye(len(covariates)), values):
+                    X.index = ["%s=1" % c for c in covariates]
+                else:
+                    X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+
+                for covariate, value in zip(covariates, values.T):
+                    X[covariate] = value
+
+                getattr(self, "predict_%s" % y)(X).plot(ax=ax, **kwargs)
+                if plot_baseline:
+                    getattr(self, "predict_%s" % y)(x_bar).plot(ax=ax, ls=":", drawstyle=drawstyle)
+                plt.legend()
+                axes.append(ax)
+        return axes
+
+
+class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFitter):
     r"""
     This class implements fitting Cox's proportional hazard model using Efron's method for ties.
 
@@ -2130,137 +2257,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return ax
 
-    def plot_covariate_groups(*args, **kwargs):
-        """
-        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
-        """
-        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
-        return plot_partial_effects_on_outcome(*args, **kwargs)
-
-    def plot_partial_effects_on_outcome(self, covariates, values, plot_baseline=True, y="survival_function", **kwargs):
-        """
-        Produces a plot comparing the baseline curve of the model versus
-        what happens when a covariate(s) is varied over values in a group. This is useful to compare
-        subjects' survival as we vary covariate(s), all else being held equal.
-
-        The baseline curve is equal to the predicted curve at all average values (median for ordinal, and mode for categorical)
-        in the original dataset. This same logic is applied to the stratified datasets if ``strata`` was used in fitting.
-
-        Parameters
-        ----------
-        covariates: string or list
-            a string (or list of strings) of the covariate(s) in the original dataset that we wish to vary.
-        values: 1d or 2d iterable
-            an iterable of the specific values we wish the covariate(s) to take on.
-        plot_baseline: bool
-            also display the baseline survival, defined as the survival at the mean of the original dataset.
-        y: str
-            one of "survival_function", or "cumulative_hazard"
-        kwargs:
-            pass in additional plotting commands.
-
-        Returns
-        -------
-        ax: matplotlib axis, or list of axis'
-            the matplotlib axis that be edited.
-
-
-        Examples
-        ---------
-        .. code:: python
-
-            from lifelines import datasets, CoxPHFitter
-            rossi = datasets.load_rossi()
-
-            cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
-            cph.plot_partial_effects_on_outcome('prio', values=arange(0, 15, 3), cmap='coolwarm')
-
-        .. image:: /images/plot_covariate_example1.png
-
-        .. code:: python
-
-            # multiple variables at once
-            cph.plot_partial_effects_on_outcome(['prio', 'paro'], values=[
-             [0,  0],
-             [5,  0],
-             [10, 0],
-             [0,  1],
-             [5,  1],
-             [10, 1]
-            ], cmap='coolwarm')
-
-        .. image:: /images/plot_covariate_example2.png
-
-        .. code:: python
-
-            # if you have categorical variables, you can do the following to see the
-            # effect of all the categories on one plot.
-            cph.plot_partial_effects_on_outcome('categorical_var', values=["A", "B", "C"])
-
-
-        """
-        from matplotlib import pyplot as plt
-
-        covariates = utils._to_list(covariates)
-        n_covariates = len(covariates)
-        values = np.asarray(values)
-        if len(values.shape) == 1:
-            values = values[None, :].T
-
-        if n_covariates != values.shape[1]:
-            raise ValueError("The number of covariates must equal to second dimension of the values array.")
-
-        for covariate in covariates:
-            if covariate not in self._central_values.columns:
-                raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
-
-        drawstyle = "steps-post"
-        set_kwargs_drawstyle(kwargs, drawstyle)
-
-        if self.strata is None:
-            axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
-            x_bar = self._central_values
-            X = pd.concat([x_bar] * values.shape[0])
-
-            if np.array_equal(np.eye(n_covariates), values) or np.array_equal(
-                np.append(np.eye(n_covariates), np.zeros((n_covariates, 1)), axis=1), values
-            ):
-                X.index = ["%s=1" % c for c in covariates]
-            else:
-                X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
-            for covariate, value in zip(covariates, values.T):
-                X[covariate] = value
-            getattr(self, "predict_%s" % y)(X).plot(ax=axes, **kwargs)
-            if plot_baseline:
-                getattr(self, "predict_%s" % y)(x_bar).plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
-
-        else:
-            axes = []
-            for stratum in self.baseline_survival_.columns:
-                ax = plt.figure().add_subplot(1, 1, 1)
-
-                x_bar = self._central_values.loc[stratum].rename("stratum %s baseline %s" % (str(stratum), y))
-
-                for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
-                    x_bar[name] = value
-
-                X = pd.concat([x_bar.to_frame().T] * values.shape[0])
-
-                if np.array_equal(np.eye(len(covariates)), values):
-                    X.index = ["%s=1" % c for c in covariates]
-                else:
-                    X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
-
-                for covariate, value in zip(covariates, values.T):
-                    X[covariate] = value
-
-                getattr(self, "predict_%s" % y)(X).plot(ax=ax, **kwargs)
-                if plot_baseline:
-                    getattr(self, "predict_%s" % y)(x_bar).plot(ax=ax, ls=":", drawstyle=drawstyle)
-                plt.legend()
-                axes.append(ax)
-        return axes
-
     def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
         """
         Score the data in df on the fitted model. With default scoring method, returns
@@ -2603,9 +2599,11 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
                 else:
                     conditional_after_ = None
 
-                cumulative_hazard_ = super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
-                    stratified_X, times=times, conditional_after=conditional_after_
-                )
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=UserWarning)
+                    cumulative_hazard_ = super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
+                        stratified_X, times=times, conditional_after=conditional_after_
+                    )
                 cumulative_hazard_.columns = stratified_X["index"]
                 cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
 
