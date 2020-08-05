@@ -477,7 +477,7 @@ After fitting a Cox model, we can look back and compute important model residual
 Modeling baseline hazard and survival with splines
 -----------------------------------------------------
 
-Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. A parametric baseline makes survival predictions more robust, allows for better understanding of baseline behaviour.
+Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. A parametric baseline makes survival predictions more efficient, allows for better understanding of baseline behaviour, and allows interpolation/extrapolation.
 
 In *lifelines*, there is an option to fit to a parametric baseline with cubic splines:
 
@@ -510,15 +510,17 @@ Below we compare the non-parametric and the fully parametric baseline survivals:
 
     Modeling the baseline survival with splines vs non-parametric.
 
+Spline models can also handle almost all the non-parametric options, including: `strata`, `penalizer`, `timeline`, `formula`, etc.
+
 
 
 Parametric survival models
 ==================================
 
+We ended the previous section discussing a *fully*-parametric Cox model, but there are many many more parametric models to consider. Below we go over these, starting with the most common: AFT models.
 
 Accelerated failure time models
 -----------------------------------------------
-
 
 Suppose we have two populations, A and B, with different survival functions, :math:`S_A(t)` and :math:`S_B(t)`, and they are related by some *accelerated failure rate*, :math:`\lambda`:
 
