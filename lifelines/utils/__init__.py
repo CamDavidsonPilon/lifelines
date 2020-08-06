@@ -18,7 +18,7 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
-from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
+from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError, FormulaSyntaxError
 
 
 __all__ = [
@@ -1926,7 +1926,7 @@ class CovariateParameterMappings:
             import traceback
 
             column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
-            raise exceptions.FormulaSyntaxError(
+            raise FormulaSyntaxError(
                 (
                     """
 It looks like the DataFrame has non-standard column names. See below for which column:
