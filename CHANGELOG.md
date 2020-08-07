@@ -5,8 +5,13 @@
 ##### New features
  - Spline `CoxPHFitter` can now use `strata`.
 
+##### API Changes
+ - a small parameterization change of the spline `CoxPHFitter`. The linear term in the spline part was moved to a new `Intercept` term in the `beta_`.
+
 ##### Bug fixes
  - fix splines `CoxPHFitter` with  when `predict_hazard` was called.
+ - fix some exception imports I missed.
+ - fix log-likelihood p-value in splines `CoxPHFitter`
 
 
 #### 0.25.1 - 2020-08-01

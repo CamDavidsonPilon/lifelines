@@ -2835,6 +2835,11 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
 
+    def test_spline_strata_null_dof(self, cph_spline, rossi):
+        cph_spline.fit(rossi, "week", "arrest", strata="paro", formula="age")
+        cph_spline.print_summary()
+        assert cph_spline._ll_null_dof < cph_spline.params_.shape[0]
+
     def test_categorical_variables_are_still_encoded_correctly(self, cph):
         """
         We must drop the intercept in the design matrix, but still have proper dummy encoding
@@ -2890,10 +2895,10 @@ class TestCoxPHFitter:
         assert cph.summary.index.tolist() == ["age", "race", "age:race"]
 
         cph_spline.fit(rossi, "week", "arrest", formula="age + race")
-        assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race"]
+        assert cph_spline.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race"]
 
         cph_spline.fit(rossi, "week", "arrest", formula="age * race")
-        assert cph_spline.summary.loc["beta_"].index.tolist() == ["age", "race", "age:race"]
+        assert cph_spline.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race", "age:race"]
 
     def test_formulas_can_be_used_with_prediction(self, rossi, cph, cph_spline):
         cph.fit(rossi, "week", "arrest", formula="age * race")
@@ -3018,8 +3023,8 @@ class TestCoxPHFitter:
         )
 
         assert_frame_equal(
-            cph.summary.loc[[("phi0_", "Intercept"), ("phi1_", "Intercept")]].reset_index(drop=True),
-            trivial_strata_cph.summary.loc[[("sa_phi0_", "Intercept"), ("sa_phi1_", "Intercept")]].reset_index(drop=True),
+            cph.summary.loc[[("beta_", "Intercept"), ("phi1_", "Intercept")]].reset_index(drop=True),
+            trivial_strata_cph.summary.loc[[("beta_", "Intercept"), ("sa_phi1_", "Intercept")]].reset_index(drop=True),
         )
 
     def test_baseline_estimation_for_spline(self, rossi, cph_spline):

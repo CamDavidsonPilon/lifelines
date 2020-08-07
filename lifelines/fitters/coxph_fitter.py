@@ -318,10 +318,14 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         df = args[0].copy()
 
-        # handle if they provided a formla
+        # handle if they provided a formula
         formula = kwargs.pop("formula")
-        if type(formula) == str:
-            formula += "-1"
+        if type(formula) == str:  # TODO: change me
+            # expand like a formula with an intercept, and then drop the intercept.
+            # see https://patsy.readthedocs.io/en/latest/R-comparison.html
+            formula = "%s + 1" % formula
+        elif formula is None:
+            df["Intercept"] = 1
 
         # handle cluster_col
         if kwargs["cluster_col"] is not None:
@@ -337,19 +341,21 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         strata = kwargs.pop("strata")
 
         if strata is None:
-            regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(0, self.n_baseline_knots + 2)}}
+            regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(1, self.n_baseline_knots + 2)}}
             strata_values = None
-        elif type(strata) in [str, list]:  # gross
+        elif isinstance(strata, (list, str)):
             spline_namer = ParametricSplinePHFitter._strata_spline_labeler
             strata = utils._to_list(strata)
-            # how many unique strata are there?
+
             df = df.set_index(strata).sort_index()
+
+            # how many unique strata values are there?
             strata_values = df.groupby(strata).size().index.tolist()
             regressors = {"beta_": formula}
             for stratum in strata_values:
-                regressors.update({spline_namer(stratum, i): "1" for i in range(0, self.n_baseline_knots + 2)})
+                regressors.update({spline_namer(stratum, i): "1" for i in range(1, self.n_baseline_knots + 2)})
         else:
-            raise ValueError("Wrong type for strata. String or list of strings")
+            raise ValueError("Wrong type for strata. String, None, or list of strings")
 
         model = ParametricSplinePHFitter(
             strata=strata,
@@ -1953,7 +1959,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 times_ = times
                 n_ = stratified_X.shape[0]
                 if conditional_after is not None:
-                    conditional_after_ = stratified_X.pop("_conditional_after")[:, None]
+                    conditional_after_ = stratified_X.pop("_conditional_after").values[:, None]
                     times_to_evaluate_at = np.tile(times_, (n_, 1)) + conditional_after_
 
                     c_0_ = utils.interpolate_at_times(strata_c_0, times_to_evaluate_at)
@@ -2411,10 +2417,10 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
         if self.strata is not None:
             names = ["beta_"]
             for stratum in self.strata_values:
-                names += [self._strata_spline_labeler(stratum, i) for i in range(0, self.n_baseline_knots + 2)]
+                names += [self._strata_spline_labeler(stratum, i) for i in range(1, self.n_baseline_knots + 2)]
             return names
         else:
-            return ["beta_"] + ["phi%d_" % i for i in range(0, self.n_baseline_knots + 2)]
+            return ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 2)]
 
     def _set_knots(self, T, E):
         self.knots = np.percentile(T[E.astype(bool).values], np.linspace(5, 95, self.n_baseline_knots + 2))
@@ -2430,7 +2436,6 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             for stratum in self.strata_values:
                 params.update(
                     {
-                        self._strata_spline_labeler(stratum, 0): np.array([0.0]),
                         self._strata_spline_labeler(stratum, 1): np.array([0.05]),
                         self._strata_spline_labeler(stratum, 2): np.array([-0.05]),
                     }
@@ -2443,12 +2448,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
         else:
             return {
-                **{
-                    "beta_": np.zeros(len(Xs["beta_"].columns)),
-                    "phi0_": np.array([0.0]),
-                    "phi1_": np.array([0.05]),
-                    "phi2_": np.array([-0.05]),
-                },
+                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
                 **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
             }
 
@@ -2468,11 +2468,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             else:
                 lT_ = lT[start:stop]
 
-            H_ = safe_exp(
-                anp.dot(Xs_["beta_"], params["beta_"])
-                + params[self._strata_spline_labeler(stratum, 0)]
-                + params[self._strata_spline_labeler(stratum, 1)] * lT_
-            )
+            H_ = safe_exp(anp.dot(Xs_["beta_"], params["beta_"]) + params[self._strata_spline_labeler(stratum, 1)] * lT_)
 
             for i in range(2, self.n_baseline_knots + 2):
                 H_ = H_ * safe_exp(
@@ -2488,7 +2484,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
     def _cumulative_hazard_sans_strata(self, params, T, Xs):
         lT = anp.log(T)
 
-        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi0_"] + params["phi1_"] * lT)
+        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi1_"] * lT)
 
         for i in range(2, self.n_baseline_knots + 2):
             H = H * safe_exp(

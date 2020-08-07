@@ -2067,7 +2067,6 @@ class ParametricRegressionFitter(RegressionFitter):
             if utils.CensoringType.is_left_censoring(self):
                 df["T"], df["E"] = self.durations, self.event_observed
                 model.fit_left_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
-
         self._ll_null_ = model.log_likelihood_
         self._ll_null_dof = model.params_.shape[0]
         return self._ll_null_
@@ -2082,7 +2081,6 @@ class ParametricRegressionFitter(RegressionFitter):
 
         ll_null = self._ll_null
         ll_alt = self.log_likelihood_
-
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.params_.shape[0] - self._ll_null_dof  # delta in number of parameters between models
         p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
