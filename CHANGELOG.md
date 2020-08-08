@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.25.2 - unreleased
+#### 0.25.2 - 2020-08-08
 
 ##### New features
  - Spline `CoxPHFitter` can now use `strata`.

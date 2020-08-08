@@ -489,7 +489,7 @@ In *lifelines*, there is an option to fit to a parametric baseline with cubic sp
 
     rossi = load_rossi()
 
-    cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
+    cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=5)
     cph_spline.fit(rossi, 'week', event_col='arrest')
 
 To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`.
